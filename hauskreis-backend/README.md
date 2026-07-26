@@ -92,16 +92,31 @@ genau diese Version:
 curl -i .../locations/<id>                  # -> ETag: W/"0"
 curl -X PATCH -H 'If-Match: W/"0"' …        # -> 200, ETag: W/"1"
 curl -X PATCH -H 'If-Match: W/"0"' …        # -> 412 Precondition Failed
+curl -X PATCH …                             # -> 428 Precondition Required
 ```
 
 | Fall                      | Antwort                                                           |
 | ------------------------- | ----------------------------------------------------------------- |
-| Kein `If-Match`           | Schreibt durch (abwärtskompatibel)                                |
+| Kein `If-Match`           | `428 Precondition Required`                                       |
 | `If-Match` passt          | `200`, Version wird erhöht                                        |
 | `If-Match` veraltet       | `412` — Datensatz bleibt unverändert                              |
 | `If-Match: *`             | Schreibt durch, solange die Ressource existiert                   |
 | `If-Match` unlesbar       | `412` (schlägt bewusst fehl statt stillschweigend zu akzeptieren) |
 | Ressource existiert nicht | `404` (nicht `412`)                                               |
+
+`If-Match` ist **Pflicht**, nicht optional. Ein optionaler Header schützt nur die
+Aufrufer, die daran denken — ein vergessener Header würde verlorene Updates
+unbemerkt wieder zulassen. Mit `428` wird das Weglassen zum sichtbaren Fehler.
+
+Betroffen sind ausschließlich Änderungen an versionierten Entitäten. **Ohne**
+`If-Match` funktionieren weiterhin:
+
+- `POST` zum Anlegen — es gibt noch keine Version, gegen die man prüfen könnte
+- `PUT …/meetings/:id/attendance` — idempotent, siehe unten
+
+Das Frontend braucht dafür keinen Extra-Request: die Entitäten enthalten ihr
+`version`-Feld auch in Listen-Antworten, der ETag lässt sich also als
+`W/"<version>"` selbst bilden.
 
 ### Für neue Endpunkte
 
@@ -241,8 +256,8 @@ aus einem anderen Hauskreis wird mit `400` abgelehnt.
 | `POST`                  | `…/meetings/generate`                        | `admin` (manueller Generator-Trigger)    |
 
 Alle `GET`s beantworten `If-None-Match` mit `304`. Die `PATCH`-Endpunkte auf
-Personen, Locations und Terminen sowie `…/meetings/:id/cancel` werten `If-Match`
-aus und antworten bei veralteter Version mit `412` — Details siehe
+Personen, Locations und Terminen sowie `…/meetings/:id/cancel` **verlangen**
+`If-Match` (`428` ohne, `412` bei veralteter Version) — Details siehe
 [Conditional Requests](#conditional-requests-etag-304-412).
 
 > Der Invite-Endpunkt legt den Keycloak-Account an, weist die Realm-Rolle zu und

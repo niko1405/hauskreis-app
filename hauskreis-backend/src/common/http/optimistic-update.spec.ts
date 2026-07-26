@@ -1,11 +1,15 @@
 import { NotFoundException, PreconditionFailedException } from '@nestjs/common';
-import { updateWithVersionCheck } from './optimistic-update';
+import {
+  PreconditionRequiredException,
+  updateWithVersionCheck,
+} from './optimistic-update';
 import type { IfMatchCondition } from './etag';
 
 function setup(options: {
   count: number;
   exists?: unknown;
   condition?: IfMatchCondition;
+  requireIfMatch?: boolean;
 }) {
   const update = jest.fn().mockResolvedValue({ count: options.count });
   const exists = jest.fn().mockResolvedValue(options.exists ?? null);
@@ -14,6 +18,7 @@ function setup(options: {
   const run = () =>
     updateWithVersionCheck({
       condition: options.condition,
+      requireIfMatch: options.requireIfMatch,
       update,
       exists,
       reload,
@@ -25,14 +30,24 @@ function setup(options: {
 
 describe('updateWithVersionCheck', () => {
   it('returns the reloaded entity when the update hit a row', async () => {
-    const { run, reload } = setup({ count: 1 });
+    const { run, reload } = setup({
+      count: 1,
+      condition: { kind: 'versions', versions: [0] },
+    });
 
     await expect(run()).resolves.toEqual({ id: 'x', version: 1 });
     expect(reload).toHaveBeenCalled();
   });
 
-  it('passes no version constraint when there is no precondition', async () => {
+  it('demands an If-Match header by default', async () => {
     const { run, update } = setup({ count: 1 });
+
+    await expect(run()).rejects.toThrow(PreconditionRequiredException);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('passes no version constraint when the requirement is waived', async () => {
+    const { run, update } = setup({ count: 1, requireIfMatch: false });
 
     await run();
 
@@ -79,10 +94,10 @@ describe('updateWithVersionCheck', () => {
     await expect(run()).rejects.toThrow(NotFoundException);
   });
 
-  it('reports 404 rather than 412 when there was no precondition at all', async () => {
-    // Nothing matched and the client asked for no version, so the only
+  it('reports 404 rather than 412 when the requirement was waived', async () => {
+    // Nothing matched and the caller asked for no version, so the only
     // explanation is that the row does not exist.
-    const { run } = setup({ count: 0, exists: null });
+    const { run } = setup({ count: 0, exists: null, requireIfMatch: false });
 
     await expect(run()).rejects.toThrow(NotFoundException);
   });
