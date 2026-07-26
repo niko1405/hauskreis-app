@@ -64,7 +64,66 @@ curl -s -X POST http://localhost:8080/realms/hauskreis/protocol/openid-connect/t
 - **Ein Feature = ein NestJS-Modul** (`src/<feature>/`), Abhängigkeiten explizit über `imports`/`exports`.
 - **Rollen leben in Keycloak**, nicht in der Datenbank. `@Roles('admin')` + globaler `RolesGuard` erzwingen sie; `@Public()` öffnet einzelne Routen.
 - **`person.keycloakUserId`** ist bewusst nullable: Admins können Personen anlegen, bevor diese sich je eingeloggt haben. Beim ersten `GET /api/me` wird per E-Mail-Match verknüpft.
-- **Validierung ausschließlich über Zod-DTOs** (`createZodDto`). Die globale Pipe läuft mit `strictSchemaDeclaration`, meldet also Endpunkte, die versehentlich ohne Validierung arbeiten. Werte aus Custom-Decorators (`@CurrentUser()`) sind davon ausgenommen — siehe [`src/common/pipes/zod-validation.pipe.ts`](src/common/pipes/zod-validation.pipe.ts).
+- **Validierung ausschließlich über Zod-DTOs** (`createZodDto`). Die globale Pipe läuft mit `strictSchemaDeclaration`, meldet also Endpunkte, die versehentlich ohne Validierung arbeiten. Werte aus Custom-Decorators (`@CurrentUser()`, `@IfMatch()`) sind davon ausgenommen — siehe [`src/common/pipes/zod-validation.pipe.ts`](src/common/pipes/zod-validation.pipe.ts).
+- **Schreibende Endpunkte auf versionierten Entitäten** gehen über `updateWithVersionCheck` und akzeptieren `If-Match` — siehe [Conditional Requests](#conditional-requests-etag-304-412).
+
+## Conditional Requests (ETag, 304, 412)
+
+### Lesen — funktioniert von allein
+
+Express hasht den Response-Body, setzt einen `ETag` und beantwortet
+`If-None-Match` selbst mit `304 Not Modified`. Dafür ist **kein Code nötig**,
+auch nicht für neue Endpunkte.
+
+```bash
+curl -i .../locations            # -> 200 + ETag: W/"1ab-aawRnAM…"
+curl -i -H 'If-None-Match: W/"1ab-aawRnAM…' .../locations   # -> 304
+```
+
+### Schreiben — Optimistic Locking
+
+Was Express **nicht** tut: `If-Match` auswerten. Ohne das überschreiben sich zwei
+Leute, die denselben Termin bearbeiten, gegenseitig lautlos (Lost Update).
+
+Deshalb trägt jede veränderliche Entität eine `version`-Spalte, und ihr ETag ist
+genau diese Version:
+
+```bash
+curl -i .../locations/<id>                  # -> ETag: W/"0"
+curl -X PATCH -H 'If-Match: W/"0"' …        # -> 200, ETag: W/"1"
+curl -X PATCH -H 'If-Match: W/"0"' …        # -> 412 Precondition Failed
+```
+
+| Fall                      | Antwort                                                           |
+| ------------------------- | ----------------------------------------------------------------- |
+| Kein `If-Match`           | Schreibt durch (abwärtskompatibel)                                |
+| `If-Match` passt          | `200`, Version wird erhöht                                        |
+| `If-Match` veraltet       | `412` — Datensatz bleibt unverändert                              |
+| `If-Match: *`             | Schreibt durch, solange die Ressource existiert                   |
+| `If-Match` unlesbar       | `412` (schlägt bewusst fehl statt stillschweigend zu akzeptieren) |
+| Ressource existiert nicht | `404` (nicht `412`)                                               |
+
+### Für neue Endpunkte
+
+1. Entität im Prisma-Schema mit `version Int @default(0)` versehen.
+2. Im Service **nicht** `update()` verwenden, sondern
+   [`updateWithVersionCheck`](src/common/http/optimistic-update.ts).
+3. Im Controller `@IfMatch() ifMatch?: IfMatchCondition` als Parameter ergänzen
+   und durchreichen.
+
+Den ETag setzt der globale
+[`EtagInterceptor`](src/common/http/etag.interceptor.ts) automatisch, sobald der
+Response-Body ein numerisches `version`-Feld hat — pro Endpunkt ist dafür nichts
+zu tun.
+
+Der Versionsvergleich passiert in der `WHERE`-Klausel des `UPDATE` selbst, nicht
+als vorgelagerter Read. Nur so bleibt zwischen Prüfung und Schreiben kein Fenster,
+in das sich ein zweiter Writer schieben kann.
+
+**Bewusst ohne Versionierung:** `PUT …/meetings/:id/attendance`. Der Endpunkt
+setzt den Teilnahmestatus _einer_ Person und ist idempotent — hier ist
+Last-Write-Wins die richtige Semantik, ein Konflikt zwischen zwei Schreibern
+existiert praktisch nicht.
 
 ## Seeding
 
@@ -180,6 +239,11 @@ aus einem anderen Hauskreis wird mit `400` abgelehnt.
 | `PUT`                   | `…/meetings/:id/attendance`                  | eingeloggt                               |
 | `DELETE`                | `…/meetings/:id`                             | `admin`                                  |
 | `POST`                  | `…/meetings/generate`                        | `admin` (manueller Generator-Trigger)    |
+
+Alle `GET`s beantworten `If-None-Match` mit `304`. Die `PATCH`-Endpunkte auf
+Personen, Locations und Terminen sowie `…/meetings/:id/cancel` werten `If-Match`
+aus und antworten bei veralteter Version mit `412` — Details siehe
+[Conditional Requests](#conditional-requests-etag-304-412).
 
 > Der Invite-Endpunkt legt den Keycloak-Account an, weist die Realm-Rolle zu und
 > verschickt die Einladung. Lokal landet die Mail in Mailpit (<http://localhost:8025>).
