@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
+import { updateWithVersionCheck } from '../common/http/optimistic-update';
+import type { IfMatchCondition } from '../common/http/etag';
 import { toUtcDate } from './meeting-schedule';
 import type {
   CreateMeetingDto,
@@ -86,36 +88,54 @@ export class MeetingService {
     });
   }
 
-  async update(hauskreisId: string, id: string, dto: UpdateMeetingDto) {
+  async update(
+    hauskreisId: string,
+    id: string,
+    dto: UpdateMeetingDto,
+    condition?: IfMatchCondition,
+  ) {
     await this.findOne(hauskreisId, id);
     await this.assertReferencesBelongToHauskreis(hauskreisId, dto);
 
-    return this.prisma.meeting.update({
-      where: { id },
-      data: {
-        type: dto.type,
-        status: dto.status,
-        // `undefined` leaves a field alone, `null` clears it — that distinction
-        // is what lets a host or location be un-assigned.
-        locationId: dto.locationId,
-        hostPersonId: dto.hostPersonId,
-        title: dto.title,
-        testimonyText: dto.testimonyText,
-        actionstepText: dto.actionstepText,
-        summaryText: dto.summaryText,
-        infoText: dto.infoText,
-      },
-      include: meetingInclude,
+    return updateWithVersionCheck({
+      condition,
+      update: (versionConstraint) =>
+        this.prisma.meeting.updateMany({
+          where: { id, hauskreisId, ...versionConstraint },
+          data: {
+            type: dto.type,
+            status: dto.status,
+            // `undefined` leaves a field alone, `null` clears it — that
+            // distinction is what lets a host or location be un-assigned.
+            locationId: dto.locationId,
+            hostPersonId: dto.hostPersonId,
+            title: dto.title,
+            testimonyText: dto.testimonyText,
+            actionstepText: dto.actionstepText,
+            summaryText: dto.summaryText,
+            infoText: dto.infoText,
+            version: { increment: 1 },
+          },
+        }),
+      exists: () =>
+        this.prisma.meeting.findFirst({ where: { id, hauskreisId } }),
+      reload: () => this.findOne(hauskreisId, id),
+      notFoundMessage: `Meeting ${id} not found`,
     });
   }
 
-  async cancel(hauskreisId: string, id: string) {
-    await this.findOne(hauskreisId, id);
-
-    return this.prisma.meeting.update({
-      where: { id },
-      data: { status: MeetingStatus.CANCELLED },
-      include: meetingInclude,
+  cancel(hauskreisId: string, id: string, condition?: IfMatchCondition) {
+    return updateWithVersionCheck({
+      condition,
+      update: (versionConstraint) =>
+        this.prisma.meeting.updateMany({
+          where: { id, hauskreisId, ...versionConstraint },
+          data: { status: MeetingStatus.CANCELLED, version: { increment: 1 } },
+        }),
+      exists: () =>
+        this.prisma.meeting.findFirst({ where: { id, hauskreisId } }),
+      reload: () => this.findOne(hauskreisId, id),
+      notFoundMessage: `Meeting ${id} not found`,
     });
   }
 

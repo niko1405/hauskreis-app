@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import { updateWithVersionCheck } from '../common/http/optimistic-update';
+import type { IfMatchCondition } from '../common/http/etag';
 import type {
   CreatePersonDto,
   InvitePersonDto,
@@ -47,19 +49,31 @@ export class PersonService {
     });
   }
 
-  async update(hauskreisId: string, id: string, dto: UpdatePersonDto) {
-    await this.findOne(hauskreisId, id);
-
-    return this.prisma.person.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        email: dto.email,
-        birthdate: dto.birthdate ? new Date(dto.birthdate) : undefined,
-        playsInstrument: dto.playsInstrument,
-        canHost: dto.canHost,
-        active: dto.active,
-      },
+  update(
+    hauskreisId: string,
+    id: string,
+    dto: UpdatePersonDto,
+    condition?: IfMatchCondition,
+  ) {
+    return updateWithVersionCheck({
+      condition,
+      update: (versionConstraint) =>
+        this.prisma.person.updateMany({
+          where: { id, hauskreisId, ...versionConstraint },
+          data: {
+            name: dto.name,
+            email: dto.email,
+            birthdate: dto.birthdate ? new Date(dto.birthdate) : undefined,
+            playsInstrument: dto.playsInstrument,
+            canHost: dto.canHost,
+            active: dto.active,
+            version: { increment: 1 },
+          },
+        }),
+      exists: () =>
+        this.prisma.person.findFirst({ where: { id, hauskreisId } }),
+      reload: () => this.findOne(hauskreisId, id),
+      notFoundMessage: `Person ${id} not found`,
     });
   }
 

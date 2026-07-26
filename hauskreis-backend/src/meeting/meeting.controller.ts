@@ -23,6 +23,8 @@ import {
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { Roles } from '../auth/roles.decorator';
 import { ROLE_ADMIN } from '../auth/auth.types';
+import { IfMatch } from '../common/http/if-match.decorator';
+import type { IfMatchCondition } from '../common/http/etag';
 
 @Controller('hauskreise/:hauskreisId/meetings')
 export class MeetingController {
@@ -50,14 +52,28 @@ export class MeetingController {
   }
 
   @Patch(':id')
-  update(@Param() params: MeetingParamsDto, @Body() dto: UpdateMeetingDto) {
-    return this.meetingService.update(params.hauskreisId, params.id, dto);
+  update(
+    @Param() params: MeetingParamsDto,
+    @Body() dto: UpdateMeetingDto,
+    @IfMatch() ifMatch?: IfMatchCondition,
+  ) {
+    return this.meetingService.update(
+      params.hauskreisId,
+      params.id,
+      dto,
+      ifMatch,
+    );
   }
 
   /** Cancelling keeps the meeting visible; use DELETE to remove it entirely. */
   @Post(':id/cancel')
-  cancel(@Param() params: MeetingParamsDto) {
-    return this.meetingService.cancel(params.hauskreisId, params.id);
+  // Returns the updated meeting rather than creating anything, so 200 not 201.
+  @HttpCode(HttpStatus.OK)
+  cancel(
+    @Param() params: MeetingParamsDto,
+    @IfMatch() ifMatch?: IfMatchCondition,
+  ) {
+    return this.meetingService.cancel(params.hauskreisId, params.id, ifMatch);
   }
 
   @Put(':id/attendance')

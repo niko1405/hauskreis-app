@@ -18,6 +18,8 @@ import {
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { Roles } from '../auth/roles.decorator';
 import { ROLE_ADMIN } from '../auth/auth.types';
+import { IfMatch } from '../common/http/if-match.decorator';
+import type { IfMatchCondition } from '../common/http/etag';
 
 @Controller('hauskreise/:hauskreisId/locations')
 export class LocationController {
@@ -41,8 +43,17 @@ export class LocationController {
 
   @Patch(':id')
   @Roles(ROLE_ADMIN)
-  update(@Param() params: LocationParamsDto, @Body() dto: UpdateLocationDto) {
-    return this.locationService.update(params.hauskreisId, params.id, dto);
+  update(
+    @Param() params: LocationParamsDto,
+    @Body() dto: UpdateLocationDto,
+    @IfMatch() ifMatch?: IfMatchCondition,
+  ) {
+    return this.locationService.update(
+      params.hauskreisId,
+      params.id,
+      dto,
+      ifMatch,
+    );
   }
 
   @Delete(':id')
