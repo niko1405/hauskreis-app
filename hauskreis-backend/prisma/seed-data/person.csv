@@ -1,0 +1,10 @@
+hauskreisName,name,email,birthdate,playsInstrument,canHost,active
+Holy-Homies,Niko,niko@example.com,,true,true,true
+Holy-Homies,Antonia,toni@example.com,,true,true,true
+Holy-Homies,Reini,reini@example.com,,true,true,true
+Holy-Homies,Julian,julian@example.com,,true,true,true
+Holy-Homies,Marlene,marlene@example.com,,false,true,true
+Holy-Homies,chris,chris@example.com,,false,true,true
+Holy-Homies,elisha,elisha@example.com,,false,true,true
+Holy-Homies,erik,erik@example.com,,false,true,true
+Holy-Homies,sofie,sofie@example.com,,false,false,true

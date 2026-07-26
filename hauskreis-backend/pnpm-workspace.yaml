@@ -1,0 +1,25 @@
+# pnpm 11 reads settings from here instead of the "pnpm" field in package.json.
+
+# Install scripts are blocked by default; only these may run.
+# Prisma fetches its query engines, unrs-resolver is oxlint's native resolver.
+allowBuilds:
+  '@prisma/engines': true
+  prisma: true
+  unrs-resolver: true
+
+# Patch transitive dependencies flagged by `pnpm audit`. All three are pulled in
+# by tooling (Prisma CLI, Jest, oxlint) and only need a patch-level bump:
+#   find-my-way     GHSA-… fixed in 9.6.1   (via @prisma/dev)
+#   valibot         GHSA-5qjj-4xww-7phc     (via @prisma/dev)
+#   brace-expansion GHSA-mh99-v99m-4gvg     (via jest/oxlint)
+# Re-check with `pnpm audit` after dependency upgrades and drop entries that
+# are no longer needed.
+overrides:
+  find-my-way: '>=9.7.0'
+  valibot: '>=1.4.2'
+  brace-expansion: '>=5.0.8'
+
+# The registry can be flaky over this connection; be patient before failing.
+fetchRetries: 6
+fetchRetryMaxtimeout: 120000
+fetchTimeout: 300000

@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "jest"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "warn"
+  },
+  "env": {
+    "node": true,
+    "es2024": true
+  },
+  "ignorePatterns": ["dist", "generated", "node_modules", "coverage"],
+  "rules": {
+    "no-unused-vars": [
+      "error",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+    ],
+    "typescript/no-explicit-any": "error",
+    "typescript/consistent-type-imports": "off",
+    "no-console": "off",
+    "typescript/no-extraneous-class": ["error", { "allowWithDecorator": true }]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.spec.ts", "test/**/*.ts"],
+      "rules": {
+        "typescript/no-explicit-any": "off"
+      }
+    },
+    {
+      "files": ["prisma/**/*.ts", "scripts/**/*.ts"],
+      "rules": {
+        "no-console": "off",
+        // Seeding writes rows sequentially on purpose: people depend on their
+        // hauskreis existing first, and the data set is tiny.
+        "no-await-in-loop": "off"
+      }
+    }
+  ]
+}
