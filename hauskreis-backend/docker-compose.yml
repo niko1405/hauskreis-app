@@ -33,12 +33,16 @@ services:
 
   # Catches every outgoing mail locally so invitation emails can be inspected
   # instead of being delivered. Web UI: http://localhost:8025
+  #
+  # Only the web UI is published. Keycloak reaches SMTP over the compose network
+  # as mailpit:1025, so exposing 1025 on the host would only invite stray
+  # connections — those show up in the log as "500 5.5.2 Syntax error" from the
+  # docker gateway IP and are unrelated to the invite flow.
   mailpit:
     image: axllent/mailpit:latest
     container_name: hauskreis-mailpit
     ports:
       - '8025:8025'
-      - '1025:1025'
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.4
