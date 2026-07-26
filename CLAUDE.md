@@ -27,9 +27,20 @@ Ziel ist eine **PWA**, die die Organisation des Hauskreises übernimmt – einfa
 |---|---|
 | Medium | PWA (kein natives App-Store-Release nötig) |
 | Frontend | Next.js + PWA-Plugin (`@ducanh2912/next-pwa`) |
-| Hosting Frontend | Vercel (kostenlos) |
-| Backend | Supabase (Postgres, Auth, Edge Functions, Realtime) |
-| Mögliches Hosting Backend | Supabase Free Tier |
+| Backend | NestJS 11 (TypeScript, Express-Adapter) |
+| Datenbank / ORM | PostgreSQL 17 + Prisma 7 (Driver Adapter `@prisma/adapter-pg`) |
+| Auth | Keycloak 26 (OIDC), Token-Prüfung via JWKS (`jose`); Rollen als Realm-Rollen |
+| Validierung | Zod 4 über `nestjs-zod` (global registrierte Pipe) |
+| Paketmanager | pnpm |
+| Lint/Format | oxlint + Prettier |
+| Jobs | `@nestjs/schedule` (in-process, da dauerhaft laufender Server) |
+| Hosting Backend | dedizierter Node-Host (Keycloak braucht einen laufenden Prozess) |
+
+Das Backend liegt in [`hauskreis-backend/`](hauskreis-backend/) – Setup, Konventionen
+und API-Übersicht stehen im dortigen [README](hauskreis-backend/README.md).
+
+> Hinweis: Ursprünglich war Supabase als Backend vorgesehen. Die Entscheidung wurde
+> bewusst zugunsten eines eigenen NestJS-Servers mit Keycloak revidiert.
 
 ## 4. Grundprinzipien für die Zuteilungs-Logik
 
