@@ -1,0 +1,41 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+  // Emit extensionless relative imports so the CommonJS build, ts-node and
+  // Jest all resolve the generated files without extra mapping.
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Hauskreis {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  people Person[]
+
+  @@map("hauskreis")
+}
+
+model Person {
+  id              String    @id @default(uuid()) @db.Uuid
+  hauskreisId     String    @map("hauskreis_id") @db.Uuid
+  keycloakUserId  String?   @unique @map("keycloak_user_id")
+  name            String
+  email           String
+  birthdate       DateTime? @db.Date
+  playsInstrument Boolean   @default(false) @map("plays_instrument")
+  canHost         Boolean   @default(true) @map("can_host")
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  hauskreis Hauskreis @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+
+  @@unique([hauskreisId, email])
+  @@index([hauskreisId])
+  @@map("person")
+}
