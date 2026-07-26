@@ -1,7 +1,8 @@
 import { NotFoundException } from '@nestjs/common';
 import { PersonService } from './person.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { KeycloakAdminService } from '../auth/keycloak-admin.service';
+// Type-only: keeps Jest from loading the real PrismaClient.
+import type { PrismaService } from '../prisma/prisma.service';
+import type { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
 type PersonDelegate = {

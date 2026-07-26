@@ -11,6 +11,8 @@ import { HealthController } from './health/health.controller';
 import { AuthModule } from './auth/auth.module';
 import { HauskreisModule } from './hauskreis/hauskreis.module';
 import { PersonModule } from './person/person.module';
+import { LocationModule } from './location/location.module';
+import { MeetingModule } from './meeting/meeting.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { PersonModule } from './person/person.module';
     AuthModule,
     HauskreisModule,
     PersonModule,
+    LocationModule,
+    MeetingModule,
   ],
   controllers: [HealthController],
   providers: [

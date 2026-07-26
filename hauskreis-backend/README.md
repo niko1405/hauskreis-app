@@ -98,6 +98,11 @@ Zwei bewusste Regel-Anpassungen:
 pnpm check          # lint + format:check + tsc --noEmit + tests (das volle Gate)
 ```
 
+Jest läuft mit `maxWorkers: 1`. Jeder Worker lädt sonst den kompletten generierten
+Prisma-Client, was die Suite von ~4 s auf über 100 s aufbläht und zusätzlich die
+Warnung „worker process has failed to exit gracefully" produziert. In Specs
+deshalb `import type` verwenden, wo eine Klasse nur als Typ gebraucht wird.
+
 ## Skripte
 
 ```bash
@@ -128,18 +133,53 @@ Prisma-Pakete und oxlints Resolver (`allowBuilds`).
 - Prisma 7 braucht zwingend einen **Driver Adapter**; die Verbindung läuft über `@prisma/adapter-pg` (siehe `src/prisma/prisma.service.ts`).
 - Der Generator ist auf `moduleFormat = "cjs"` und `importFileExtension = ""` gestellt, damit Build, `ts-node` und Jest die generierten Dateien identisch auflösen.
 
-## API (Stand: Phase 1)
+## Termine
 
-| Methode      | Pfad                                         | Rechte                                   |
-| ------------ | -------------------------------------------- | ---------------------------------------- |
-| `GET`        | `/api/health`                                | öffentlich                               |
-| `GET`        | `/api/me`                                    | eingeloggt (verknüpft beim ersten Login) |
-| `GET`/`POST` | `/api/hauskreise`                            | eingeloggt                               |
-| `GET`        | `/api/hauskreise/:hauskreisId/people`        | eingeloggt                               |
-| `POST`       | `/api/hauskreise/:hauskreisId/people`        | `admin`                                  |
-| `POST`       | `/api/hauskreise/:hauskreisId/people/invite` | `admin`                                  |
-| `PATCH`      | `/api/hauskreise/:hauskreisId/people/:id`    | eingeloggt                               |
-| `DELETE`     | `/api/hauskreise/:hauskreisId/people/:id`    | `admin`                                  |
+Alle Pfade sind relativ zu `/api/hauskreise/:hauskreisId`.
+
+Der `MeetingGeneratorService` läuft täglich um 3 Uhr und sorgt dafür, dass immer
+die nächsten **7 Dienstage** als Termin existieren. Der jeweils letzte Dienstag
+eines Monats wird als `LOBPREIS_GEBET` angelegt, alle anderen als `STANDARD`.
+
+Der Lauf ist **idempotent**: ein Datum, an dem bereits _irgendein_ Termin liegt,
+bleibt unangetastet — unabhängig vom Typ. Genau das schützt selbst angelegte
+`CUSTOM`-Termine (z. B. „Geburtstag von …") davor, durch einen generierten
+Standardtermin ersetzt zu werden. Abgesichert ist das zusätzlich durch einen
+Unique-Index auf `(hauskreis_id, date)`.
+
+Die Datumslogik liegt bewusst als reine Funktionen in
+[`meeting-schedule.ts`](src/meeting/meeting-schedule.ts) (UTC-Mitternacht, damit
+Kalendertage nicht über Zeitzonen verrutschen) und ist dort direkt getestet.
+
+Ein Termin **ohne** Host, Location oder Thema ist ein gültiger Zustand, kein
+unvollständiger Datensatz. Beim Bearbeiten gilt: ein weggelassenes Feld bleibt
+unverändert, `null` löscht die Zuordnung.
+
+Zuweisungen werden gegen die Mandantengrenze geprüft — eine Person oder Location
+aus einem anderen Hauskreis wird mit `400` abgelehnt.
+
+## API (Stand: Phase 2)
+
+| Methode                 | Pfad                                         | Rechte                                   |
+| ----------------------- | -------------------------------------------- | ---------------------------------------- |
+| `GET`                   | `/api/health`                                | öffentlich                               |
+| `GET`                   | `/api/me`                                    | eingeloggt (verknüpft beim ersten Login) |
+| `GET`/`POST`            | `/api/hauskreise`                            | eingeloggt                               |
+| `GET`                   | `/api/hauskreise/:hauskreisId/people`        | eingeloggt                               |
+| `POST`                  | `/api/hauskreise/:hauskreisId/people`        | `admin`                                  |
+| `POST`                  | `/api/hauskreise/:hauskreisId/people/invite` | `admin`                                  |
+| `PATCH`                 | `/api/hauskreise/:hauskreisId/people/:id`    | eingeloggt                               |
+| `DELETE`                | `/api/hauskreise/:hauskreisId/people/:id`    | `admin`                                  |
+| `GET`                   | `…/locations`, `…/locations/:id`             | eingeloggt                               |
+| `POST`/`PATCH`/`DELETE` | `…/locations[/:id]`                          | `admin`                                  |
+| `GET`                   | `…/meetings?scope=upcoming\|past\|all`       | eingeloggt                               |
+| `GET`                   | `…/meetings/:id`                             | eingeloggt                               |
+| `POST`                  | `…/meetings`                                 | eingeloggt                               |
+| `PATCH`                 | `…/meetings/:id`                             | eingeloggt                               |
+| `POST`                  | `…/meetings/:id/cancel`                      | eingeloggt                               |
+| `PUT`                   | `…/meetings/:id/attendance`                  | eingeloggt                               |
+| `DELETE`                | `…/meetings/:id`                             | `admin`                                  |
+| `POST`                  | `…/meetings/generate`                        | `admin` (manueller Generator-Trigger)    |
 
 > Der Invite-Endpunkt legt den Keycloak-Account an, weist die Realm-Rolle zu und
 > verschickt die Einladung. Lokal landet die Mail in Mailpit (<http://localhost:8025>).

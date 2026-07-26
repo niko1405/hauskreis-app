@@ -1,7 +1,7 @@
 generator client {
-  provider     = "prisma-client"
-  output       = "../generated/prisma"
-  moduleFormat = "cjs"
+  provider            = "prisma-client"
+  output              = "../generated/prisma"
+  moduleFormat        = "cjs"
   // Emit extensionless relative imports so the CommonJS build, ts-node and
   // Jest all resolve the generated files without extra mapping.
   importFileExtension = ""
@@ -11,12 +11,46 @@ datasource db {
   provider = "postgresql"
 }
 
+/// A meeting that follows the usual format: one topic, prepared by someone.
+/// Generated automatically for every upcoming Tuesday.
+///
+/// LOBPREIS_GEBET replaces the last standard meeting of each month and carries
+/// a testimony (or just songs) instead of a topic.
+///
+/// CUSTOM is anything the group schedules themselves (birthdays, one-offs) and
+/// has no required host, topic or location.
+enum MeetingType {
+  STANDARD
+  LOBPREIS_GEBET
+  CUSTOM
+
+  @@map("meeting_type")
+}
+
+enum MeetingStatus {
+  PLANNED
+  CANCELLED
+  COMPLETED
+
+  @@map("meeting_status")
+}
+
+enum AttendanceStatus {
+  ATTENDING
+  ABSENT
+  UNKNOWN
+
+  @@map("attendance_status")
+}
+
 model Hauskreis {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
   createdAt DateTime @default(now()) @map("created_at")
 
-  people Person[]
+  people    Person[]
+  locations Location[]
+  meetings  Meeting[]
 
   @@map("hauskreis")
 }
@@ -33,9 +67,77 @@ model Person {
   active          Boolean   @default(true)
   createdAt       DateTime  @default(now()) @map("created_at")
 
-  hauskreis Hauskreis @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  hauskreis      Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  hostedMeetings Meeting[]           @relation("MeetingHost")
+  attendances    MeetingAttendance[]
 
   @@unique([hauskreisId, email])
   @@index([hauskreisId])
   @@map("person")
+}
+
+model Location {
+  id              String   @id @default(uuid()) @db.Uuid
+  hauskreisId     String   @map("hauskreis_id") @db.Uuid
+  name            String
+  /// Relative weight for the location suggestion logic: the few main homes
+  /// should come up more often than the occasional ones further out.
+  /// Float rather than Decimal — it only feeds a ranking score, and Decimal
+  /// would serialise as a string and force the frontend to parse it.
+  frequencyFactor Float    @default(1.0) @map("frequency_factor")
+  /// False for places like the Schlosspark — those meetings have no host at all,
+  /// which is a valid state rather than missing data.
+  requiresHost    Boolean  @default(true) @map("requires_host")
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  hauskreis Hauskreis @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  meetings  Meeting[]
+
+  @@unique([hauskreisId, name])
+  @@index([hauskreisId])
+  @@map("location")
+}
+
+model Meeting {
+  id             String        @id @default(uuid()) @db.Uuid
+  hauskreisId    String        @map("hauskreis_id") @db.Uuid
+  date           DateTime      @db.Date
+  type           MeetingType   @default(STANDARD)
+  status         MeetingStatus @default(PLANNED)
+  locationId     String?       @map("location_id") @db.Uuid
+  hostPersonId   String?       @map("host_person_id") @db.Uuid
+  /// Only used by CUSTOM meetings ("Geburtstag von …").
+  title          String?
+  /// Only used by LOBPREIS_GEBET meetings.
+  testimonyText  String?       @map("testimony_text")
+  actionstepText String?       @map("actionstep_text")
+  summaryText    String?       @map("summary_text")
+  infoText       String?       @map("info_text")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  hauskreis   Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  location    Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  host        Person?             @relation("MeetingHost", fields: [hostPersonId], references: [id], onDelete: SetNull)
+  attendances MeetingAttendance[]
+
+  /// One meeting per date per group — this is what makes the generator idempotent.
+  @@unique([hauskreisId, date])
+  @@index([hauskreisId, date])
+  @@map("meeting")
+}
+
+model MeetingAttendance {
+  meetingId String           @map("meeting_id") @db.Uuid
+  personId  String           @map("person_id") @db.Uuid
+  status    AttendanceStatus @default(UNKNOWN)
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([meetingId, personId])
+  @@index([personId])
+  @@map("meeting_attendance")
 }
