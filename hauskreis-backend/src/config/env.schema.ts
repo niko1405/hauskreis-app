@@ -22,6 +22,14 @@ export const envSchema = z.object({
   // Gate for the CSV seed script. Note: z.coerce.boolean() would turn the
   // string "false" into true, so parse the literal instead.
   SEED_ENABLED: z.stringbool().default(false),
+
+  // Web Push (VAPID). Generate a pair with `npx web-push generate-vapid-keys`.
+  // Optional so the app still boots without them — push is then disabled and
+  // logged once, rather than taking the whole server down.
+  VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+  VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+  /// Contact address the push service can reach you at, per the VAPID spec.
+  VAPID_SUBJECT: z.string().min(1).default('mailto:admin@hauskreis.local'),
 });
 
 export type Env = z.infer<typeof envSchema>;
