@@ -19,6 +19,8 @@ import {
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { Roles } from '../auth/roles.decorator';
 import { ROLE_ADMIN } from '../auth/auth.types';
+import { IfMatch } from '../common/http/if-match.decorator';
+import type { IfMatchCondition } from '../common/http/etag';
 
 @Controller('hauskreise/:hauskreisId/people')
 export class PersonController {
@@ -47,8 +49,17 @@ export class PersonController {
   }
 
   @Patch(':id')
-  update(@Param() params: PersonParamsDto, @Body() dto: UpdatePersonDto) {
-    return this.personService.update(params.hauskreisId, params.id, dto);
+  update(
+    @Param() params: PersonParamsDto,
+    @Body() dto: UpdatePersonDto,
+    @IfMatch() ifMatch?: IfMatchCondition,
+  ) {
+    return this.personService.update(
+      params.hauskreisId,
+      params.id,
+      dto,
+      ifMatch,
+    );
   }
 
   @Delete(':id')

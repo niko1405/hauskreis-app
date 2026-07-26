@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { updateWithVersionCheck } from '../common/http/optimistic-update';
+import type { IfMatchCondition } from '../common/http/etag';
 import type { CreateLocationDto, UpdateLocationDto } from './dto/location.dto';
 
 @Injectable()
@@ -36,17 +38,29 @@ export class LocationService {
     });
   }
 
-  async update(hauskreisId: string, id: string, dto: UpdateLocationDto) {
-    await this.findOne(hauskreisId, id);
-
-    return this.prisma.location.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        frequencyFactor: dto.frequencyFactor,
-        requiresHost: dto.requiresHost,
-        active: dto.active,
-      },
+  update(
+    hauskreisId: string,
+    id: string,
+    dto: UpdateLocationDto,
+    condition?: IfMatchCondition,
+  ) {
+    return updateWithVersionCheck({
+      condition,
+      update: (versionConstraint) =>
+        this.prisma.location.updateMany({
+          where: { id, hauskreisId, ...versionConstraint },
+          data: {
+            name: dto.name,
+            frequencyFactor: dto.frequencyFactor,
+            requiresHost: dto.requiresHost,
+            active: dto.active,
+            version: { increment: 1 },
+          },
+        }),
+      exists: () =>
+        this.prisma.location.findFirst({ where: { id, hauskreisId } }),
+      reload: () => this.findOne(hauskreisId, id),
+      notFoundMessage: `Location ${id} not found`,
     });
   }
 

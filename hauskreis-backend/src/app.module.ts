@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule } from 'nestjs-pino';
 import { AppConfigModule } from './config/config.module';
@@ -7,6 +7,7 @@ import { AppConfigService } from './config/config.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { ZodValidationPipe } from './common/pipes/zod-validation.pipe';
+import { EtagInterceptor } from './common/http/etag.interceptor';
 import { HealthController } from './health/health.controller';
 import { AuthModule } from './auth/auth.module';
 import { HauskreisModule } from './hauskreis/hauskreis.module';
@@ -41,6 +42,7 @@ import { MeetingModule } from './meeting/meeting.module';
   providers: [
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    { provide: APP_INTERCEPTOR, useClass: EtagInterceptor },
   ],
 })
 export class AppModule {}
