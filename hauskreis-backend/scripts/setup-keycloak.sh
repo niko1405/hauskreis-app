@@ -164,8 +164,12 @@ create_user() {
   echo "    role '${role}' assigned"
 }
 
-create_user "testadmin" "testadmin@example.com" "test1234" "admin"
-create_user "testmember" "testmember@example.com" "test1234" "member"
+# The e-mail addresses deliberately match rows in prisma/seed-data/person.csv.
+# GET /api/me links a Keycloak account to a person row by e-mail, so this is
+# what makes `pnpm db:seed` + this script produce a login that actually maps
+# onto a seeded member instead of a dead end.
+create_user "testadmin" "niko@example.com" "test1234" "admin"
+create_user "testmember" "toni@example.com" "test1234" "member"
 
 echo ""
 echo "Keycloak setup complete."
