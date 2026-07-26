@@ -46,10 +46,14 @@ pnpm start:dev
 
 Vom Setup-Skript angelegt (Passwort jeweils `test1234`):
 
-| User         | Realm-Rolle |
-| ------------ | ----------- |
-| `testadmin`  | `admin`     |
-| `testmember` | `member`    |
+| User         | E-Mail             | Realm-Rolle |
+| ------------ | ------------------ | ----------- |
+| `testadmin`  | `niko@example.com` | `admin`     |
+| `testmember` | `toni@example.com` | `member`    |
+
+Die E-Mails entsprechen bewusst Zeilen aus `prisma/seed-data/person.csv`:
+`GET /api/me` verknüpft Keycloak-Account und Person über die E-Mail, dadurch
+landet man nach `pnpm db:seed` direkt auf einem echten Mitglied.
 
 Access-Token holen:
 
@@ -139,6 +143,59 @@ in das sich ein zweiter Writer schieben kann.
 setzt den Teilnahmestatus _einer_ Person und ist idempotent — hier ist
 Last-Write-Wins die richtige Semantik, ein Konflikt zwischen zwei Schreibern
 existiert praktisch nicht.
+
+## Push-Benachrichtigungen
+
+Web Push (VAPID) über [`web-push`](https://www.npmjs.com/package/web-push).
+Schlüsselpaar erzeugen und in die `.env` eintragen:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+**Ohne Schlüssel startet der Server normal** — Push ist dann deaktiviert und
+wird einmal geloggt. Lokale Entwicklung und Tests brauchen also keine
+Credentials.
+
+| Methode  | Pfad                      | Zweck                                      |
+| -------- | ------------------------- | ------------------------------------------ |
+| `GET`    | `/api/push/public-key`    | VAPID-Key für `pushManager.subscribe()`    |
+| `GET`    | `/api/push/subscriptions` | eigene registrierte Geräte                 |
+| `POST`   | `/api/push/subscriptions` | Gerät registrieren                         |
+| `DELETE` | `/api/push/subscriptions` | Gerät abmelden                             |
+| `POST`   | `/api/push/test`          | Testbenachrichtigung an die eigenen Geräte |
+
+Die Routen liegen bewusst außerhalb von `/hauskreise/:id` — eine Subscription
+gehört zur eingeloggten Person, nicht zur Gruppe. `POST` nimmt das Objekt
+entgegen, das `PushSubscription.toJSON()` im Browser liefert, und kann
+unverändert durchgereicht werden.
+
+### Warum ein Notification-Log
+
+Reminder-Jobs laufen täglich und würden dieselbe Nachricht sonst jeden Tag
+erneut schicken. `NotificationService.notify()` schreibt deshalb einen
+Log-Eintrag pro (Person, Typ, Termin) und überspringt alles, was dort schon
+steht. Der Eintrag entsteht **vor** dem Versand: stürzt der Prozess mitten drin
+ab, kostet das eine ausgefallene Erinnerung statt einer täglichen Wiederholung.
+
+### Umgang mit toten Endpoints
+
+Antwortet der Push-Dienst mit `404`/`410`, ist die Subscription endgültig weg
+(App deinstalliert, Browserdaten gelöscht) und wird entfernt. Jeder andere
+Fehler gilt als möglicherweise vorübergehend — das Gerät bleibt erhalten und
+wird beim nächsten Lauf erneut versucht. Das Ergebnis unterscheidet beides
+explizit:
+
+```json
+{ "delivered": 2, "pruned": 1, "failed": 0 }
+```
+
+### Für kommende Reminder
+
+`NotificationModule` importieren und `NotificationService` injizieren — **nicht**
+direkt `web-push` verwenden. Nur so gelten Deduplizierung, Endpoint-Cleanup und
+das Verhalten ohne VAPID-Keys überall gleich. Neue Anlässe brauchen einen
+zusätzlichen Wert in `NotificationType`.
 
 ## Seeding
 

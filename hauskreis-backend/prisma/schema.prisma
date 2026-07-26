@@ -35,6 +35,17 @@ enum MeetingStatus {
   @@map("meeting_status")
 }
 
+/// What a notification was about. Together with the person and the related
+/// meeting this is what stops the same reminder going out twice.
+enum NotificationType {
+  HOST_REMINDER
+  ACTIONSTEP_REMINDER
+  PRAYER_BUDDY_ASSIGNED
+  TOPIC_REMINDER
+
+  @@map("notification_type")
+}
+
 enum AttendanceStatus {
   ATTENDING
   ABSENT
@@ -71,9 +82,11 @@ model Person {
   /// Optimistic locking counter, see docs/conditional requests.
   version         Int       @default(0)
 
-  hauskreis      Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
-  hostedMeetings Meeting[]           @relation("MeetingHost")
-  attendances    MeetingAttendance[]
+  hauskreis         Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  hostedMeetings    Meeting[]           @relation("MeetingHost")
+  attendances       MeetingAttendance[]
+  pushSubscriptions PushSubscription[]
+  notifications     NotificationLog[]
 
   @@unique([hauskreisId, email])
   @@index([hauskreisId])
@@ -125,15 +138,55 @@ model Meeting {
   /// Optimistic locking counter, see docs/conditional requests.
   version        Int           @default(0)
 
-  hauskreis   Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
-  location    Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  host        Person?             @relation("MeetingHost", fields: [hostPersonId], references: [id], onDelete: SetNull)
-  attendances MeetingAttendance[]
+  hauskreis     Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  location      Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  host          Person?             @relation("MeetingHost", fields: [hostPersonId], references: [id], onDelete: SetNull)
+  attendances   MeetingAttendance[]
+  notifications NotificationLog[]
 
   /// One meeting per date per group — this is what makes the generator idempotent.
   @@unique([hauskreisId, date])
   @@index([hauskreisId, date])
   @@map("meeting")
+}
+
+/// One Web Push endpoint, i.e. one browser on one device. People install the
+/// PWA on several devices, so a person can have many.
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  personId  String   @map("person_id") @db.Uuid
+  /// The push service URL. Unique because re-subscribing in the same browser
+  /// yields the same endpoint and must update rather than duplicate.
+  endpoint  String   @unique
+  p256dhKey String   @map("p256dh_key")
+  authKey   String   @map("auth_key")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+  @@map("push_subscription")
+}
+
+/// Records that a notification was sent, so a job that runs daily does not
+/// remind the same person about the same meeting over and over.
+model NotificationLog {
+  id               String           @id @default(uuid()) @db.Uuid
+  personId         String           @map("person_id") @db.Uuid
+  type             NotificationType
+  relatedMeetingId String?          @map("related_meeting_id") @db.Uuid
+  sentAt           DateTime         @default(now()) @map("sent_at")
+
+  person         Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  relatedMeeting Meeting? @relation(fields: [relatedMeetingId], references: [id], onDelete: Cascade)
+
+  /// The deduplication key. A partial unique index would be tidier for rows
+  /// without a meeting, but Prisma cannot express one; those are deduplicated
+  /// by the callers instead.
+  @@unique([personId, type, relatedMeetingId])
+  @@index([personId, sentAt])
+  @@map("notification_log")
 }
 
 model MeetingAttendance {
