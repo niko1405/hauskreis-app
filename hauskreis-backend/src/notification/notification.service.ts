@@ -23,7 +23,7 @@ export interface DeliveryResult {
 }
 
 export interface SendResult extends DeliveryResult {
-  /** Skipped because the same reminder had already been logged. */
+  /** No attempt was made: already logged, or push is not configured. */
   skipped: number;
 }
 
@@ -89,6 +89,16 @@ export class NotificationService implements OnModuleInit {
     relatedMeetingId?: string | null;
     payload: NotificationPayload;
   }): Promise<SendResult> {
+    if (!this.enabled) {
+      // Deliberately returns before writing the log: nothing was attempted, so
+      // nothing is recorded as sent. Once VAPID keys are configured the
+      // reminder still goes out rather than having been silently swallowed.
+      this.logger.debug(
+        `Push disabled, not sending ${params.type} to person ${params.personId}`,
+      );
+      return { delivered: 0, skipped: 1, pruned: 0, failed: 0 };
+    }
+
     const alreadySent = await this.hasBeenSent(params);
 
     if (alreadySent) {

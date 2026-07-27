@@ -197,6 +197,38 @@ direkt `web-push` verwenden. Nur so gelten Deduplizierung, Endpoint-Cleanup und
 das Verhalten ohne VAPID-Keys überall gleich. Neue Anlässe brauchen einen
 zusätzlichen Wert in `NotificationType`.
 
+### Offen: was das Frontend noch beitragen muss
+
+Der Weg vom Backend bis zum Push-Dienst ist verifiziert (Registrieren, Upsert,
+Abmelden, Fehlerbehandlung). **Die Zustellung an ein echtes Gerät ist es nicht** —
+dafür fehlen Bausteine, die es nur im Frontend gibt. Ohne die folgenden Punkte
+kommt trotz funktionierendem Backend nichts an:
+
+1. **HTTPS.** Die Notification-API braucht einen Secure Context. `localhost`
+   gilt als sicher, jeder andere Host nicht — für Tests am Handy also ein
+   Tunnel (ngrok/Cloudflare Tunnel) oder ein echtes Zertifikat.
+2. **`manifest.json` mit `"display": "standalone"`.**
+3. **Service Worker mit `push`-Handler.** Ohne registrierten Service Worker
+   schlägt `pushManager.subscribe()` fehl. Im Handler zwingend
+   `event.waitUntil(self.registration.showNotification(...))` — ohne das bricht
+   der Browser die Subscription nach wenigen Nachrichten ab.
+4. **`notificationclick`-Handler**, der das `url`-Feld aus dem Payload öffnet.
+   Der Server schickt `{ title, body, url }` als JSON-String.
+5. **`Notification.requestPermission()` nur auf Klick.** Automatisch beim Laden
+   lehnen Browser dauerhaft ab — und eine einmal blockierte Erlaubnis lässt sich
+   aus der App nicht zurückholen.
+6. **VAPID-Key vor der Subscription holen.** `GET /api/push/public-key` liefert
+   `{ publicKey, enabled }`; bei `enabled: false` den Button gar nicht erst
+   anzeigen. Der Key muss für `applicationServerKey` von base64url in ein
+   `Uint8Array` konvertiert werden.
+7. **Ergebnis von `subscribe()` unverändert posten.** `subscription.toJSON()`
+   passt 1:1 auf das DTO.
+8. **iOS:** Push funktioniert erst nach „Zum Home-Bildschirm hinzufügen" — im
+   normalen Safari-Tab ist die API deaktiviert, auch auf aktuellen Versionen.
+9. **Re-Subscribe behandeln.** Browser rollieren Endpoints; bei
+   `pushsubscriptionchange` oder abweichendem Endpoint beim App-Start erneut
+   posten. Der Upsert auf `endpoint` macht das gefahrlos wiederholbar.
+
 ## Seeding
 
 Die Seed-**Daten** liegen als CSV in [`prisma/seed-data/`](prisma/seed-data/) und werden
@@ -289,7 +321,95 @@ unverändert, `null` löscht die Zuordnung.
 Zuweisungen werden gegen die Mandantengrenze geprüft — eine Person oder Location
 aus einem anderen Hauskreis wird mit `400` abgelehnt.
 
-## API (Stand: Phase 2)
+## Vorschläge (Host & Location)
+
+Die App **schlägt vor, sie teilt nicht zu**. Beide Endpunkte sind read-only und
+unverbindlich; eingetragen wird ganz normal per `PATCH …/meetings/:id`. Ein
+Termin ohne Host bleibt ein gültiger Zustand.
+
+```
+GET …/meetings/:id/host-suggestions
+GET …/meetings/:id/location-suggestions
+```
+
+Zurück kommt die **komplette** Liste, nach Passung sortiert und mit `rank` —
+die UI zeigt die ersten 2–3 und kann den Rest aufklappen. Jeder Eintrag bringt
+die Fakten mit, auf denen er beruht, damit nachvollziehbar bleibt, warum jemand
+oben steht (CLAUDE.md §4: keine Blackbox):
+
+```json
+{
+  "personId": "…",
+  "name": "Marlene",
+  "rank": 4,
+  "facts": {
+    "lastAssignedAt": "2026-06-09",
+    "daysSinceLastAssignment": 84,
+    "timesAssigned": 1,
+    "upcomingCommitments": [{ "role": "HOST", "date": "2026-09-08" }]
+  }
+}
+```
+
+### Wie sortiert wird
+
+Die Reihenfolge der Kriterien ist die eigentliche Fachlogik:
+
+1. **Wer hat am wenigsten zu tun** — Aufgaben ab dem Termindatum, über _alle_
+   Rollen gezählt. Wer an dem Abend schon das Thema hat, soll nicht zusätzlich
+   hosten.
+2. **Wer war am längsten nicht dran** — in _dieser_ Rolle; wer noch nie dran war,
+   steht ganz oben.
+3. **Wer war insgesamt am seltensten dran** — trennt zwei Personen, die zuletzt
+   am selben Abend dran waren.
+4. **Name** — damit dieselben Daten immer dieselbe Liste ergeben und sich die
+   Reihenfolge nicht bei jedem Aufruf umsortiert.
+
+Nicht berücksichtigt werden inaktive Personen, Personen mit `canHost = false`
+und **abgesagte Termine** — ein Abend, der nie stattgefunden hat, zählt nicht als
+„du warst doch gerade erst dran". Der Termin selbst fließt ebenfalls nicht in
+seine eigene Historie ein.
+
+### Locations
+
+Locations rotieren nicht gleichmäßig: `frequencyFactor` beschreibt den
+gewünschten Mix (drei Haupt-Locations häufiger als die am Stadtrand). Die
+Sortierung fragt deshalb, **wer am weitesten unter seinem Soll liegt** —
+`expectedShare` aus dem Faktor gegen `actualShare` aus der Historie. Ein Ort über
+seinem Soll rutscht nach unten, einer darunter nach oben, und das Verhältnis
+pendelt sich von selbst auf den gewünschten Mix ein. Gleichstand entscheidet der
+längere Abstand zur letzten Nutzung.
+
+Locations, die nicht mehr aktiv sind, zählen auch nicht mehr im Nenner — sonst
+würde ein aufgegebener Ort den Anteil aller anderen dauerhaft verzerren.
+
+### Erweitern (Phase 5/6)
+
+Thema und Song folgen demselben Muster. Nötig ist jeweils:
+
+1. ein Wert mehr in `AssignmentRole`,
+2. ein Adapter, der die Zuweisungen als `RoleAssignmentEvent[]` einsammelt,
+3. ggf. ein Eligibility-Filter (bei Songs `playsInstrument = true`).
+
+Die Ranking-Funktion in [`ranking.ts`](src/role-suggestion/ranking.ts) bleibt
+unverändert — sie ist bewusst eine reine Funktion über bereits geladene Daten
+und ohne Datenbank testbar.
+
+## Host-Erinnerungen
+
+`HostReminderService` läuft täglich um 9 Uhr und erinnert jeden Host, dessen
+Termin in den nächsten **3 Tagen** liegt (Samstag für den Dienstag).
+
+Gesucht wird ein **Zeitfenster** statt „genau in 3 Tagen": steht der Server an
+dem einen Tag still, holt der nächste Lauf die Erinnerung nach. Tragfähig ist das
+nur wegen der Deduplizierung über `notification_log` — ohne die ginge dieselbe
+Erinnerung drei Tage hintereinander raus.
+
+Manuell auslösbar über `POST …/meetings/host-reminders` (`admin`, auf die Gruppe
+begrenzt). Antwort: `{ "notified": 1, "skipped": 0 }` — `skipped` zählt sowohl
+bereits Erinnerte als auch den Fall, dass Push gar nicht konfiguriert ist.
+
+## API (Stand: Phase 4)
 
 | Methode                 | Pfad                                         | Rechte                                   |
 | ----------------------- | -------------------------------------------- | ---------------------------------------- |
@@ -305,12 +425,15 @@ aus einem anderen Hauskreis wird mit `400` abgelehnt.
 | `POST`/`PATCH`/`DELETE` | `…/locations[/:id]`                          | `admin`                                  |
 | `GET`                   | `…/meetings?scope=upcoming\|past\|all`       | eingeloggt                               |
 | `GET`                   | `…/meetings/:id`                             | eingeloggt                               |
+| `GET`                   | `…/meetings/:id/host-suggestions`            | eingeloggt                               |
+| `GET`                   | `…/meetings/:id/location-suggestions`        | eingeloggt                               |
 | `POST`                  | `…/meetings`                                 | eingeloggt                               |
 | `PATCH`                 | `…/meetings/:id`                             | eingeloggt                               |
 | `POST`                  | `…/meetings/:id/cancel`                      | eingeloggt                               |
 | `PUT`                   | `…/meetings/:id/attendance`                  | eingeloggt                               |
 | `DELETE`                | `…/meetings/:id`                             | `admin`                                  |
 | `POST`                  | `…/meetings/generate`                        | `admin` (manueller Generator-Trigger)    |
+| `POST`                  | `…/meetings/host-reminders`                  | `admin` (manueller Reminder-Trigger)     |
 
 Alle `GET`s beantworten `If-None-Match` mit `304`. Die `PATCH`-Endpunkte auf
 Personen, Locations und Terminen sowie `…/meetings/:id/cancel` **verlangen**
