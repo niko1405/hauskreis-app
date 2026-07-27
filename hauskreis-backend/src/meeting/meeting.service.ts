@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
+import { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
+import { LocationSuggestionService } from '../role-suggestion/location-suggestion.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import type { IfMatchCondition } from '../common/http/etag';
 import { toUtcDate } from './meeting-schedule';
@@ -25,7 +27,11 @@ const meetingInclude = {
 
 @Injectable()
 export class MeetingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly roleSuggestions: RoleSuggestionService,
+    private readonly locationSuggestions: LocationSuggestionService,
+  ) {}
 
   findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
     const today = toUtcDate(new Date());
@@ -137,6 +143,33 @@ export class MeetingService {
       reload: () => this.findOne(hauskreisId, id),
       notFoundMessage: `Meeting ${id} not found`,
     });
+  }
+
+  /**
+   * Who could host this meeting, best fit first.
+   *
+   * The meeting itself is excluded from the history — otherwise re-opening the
+   * picker on a meeting that already has a host would push that host down the
+   * list because of the very assignment being reconsidered.
+   */
+  async suggestHosts(hauskreisId: string, id: string) {
+    const meeting = await this.findOne(hauskreisId, id);
+
+    return this.roleSuggestions.suggestHosts(hauskreisId, meeting.date, {
+      excludeMeetingId: meeting.id,
+    });
+  }
+
+  async suggestLocations(hauskreisId: string, id: string) {
+    const meeting = await this.findOne(hauskreisId, id);
+
+    return this.locationSuggestions.suggestLocations(
+      hauskreisId,
+      meeting.date,
+      {
+        excludeMeetingId: meeting.id,
+      },
+    );
   }
 
   async remove(hauskreisId: string, id: string) {

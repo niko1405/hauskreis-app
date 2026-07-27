@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { MeetingService } from './meeting.service';
 import { MeetingGeneratorService } from './meeting-generator.service';
+import { HostReminderService } from './host-reminder.service';
 import {
   CreateMeetingDto,
   ListMeetingsQueryDto,
@@ -31,6 +32,7 @@ export class MeetingController {
   constructor(
     private readonly meetingService: MeetingService,
     private readonly generator: MeetingGeneratorService,
+    private readonly hostReminders: HostReminderService,
   ) {}
 
   @Get()
@@ -44,6 +46,22 @@ export class MeetingController {
   @Get(':id')
   findOne(@Param() params: MeetingParamsDto) {
     return this.meetingService.findOne(params.hauskreisId, params.id);
+  }
+
+  /**
+   * Ranked hosting suggestions with the facts behind them.
+   *
+   * Read-only and non-binding — assigning still happens through `PATCH :id`
+   * with `hostPersonId`, exactly as if it had been picked by hand.
+   */
+  @Get(':id/host-suggestions')
+  suggestHosts(@Param() params: MeetingParamsDto) {
+    return this.meetingService.suggestHosts(params.hauskreisId, params.id);
+  }
+
+  @Get(':id/location-suggestions')
+  suggestLocations(@Param() params: MeetingParamsDto) {
+    return this.meetingService.suggestLocations(params.hauskreisId, params.id);
   }
 
   @Post()
@@ -100,5 +118,15 @@ export class MeetingController {
   @Roles(ROLE_ADMIN)
   generate(@Param() params: HauskreisParamsDto) {
     return this.generator.generateFor(params.hauskreisId);
+  }
+
+  /** Manual trigger for the daily host reminders, scoped to this group. */
+  @Post('host-reminders')
+  @Roles(ROLE_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  runHostReminders(@Param() params: HauskreisParamsDto) {
+    return this.hostReminders.sendDueReminders({
+      hauskreisId: params.hauskreisId,
+    });
   }
 }
