@@ -49,19 +49,17 @@ export class MeetingController {
   }
 
   /**
-   * Ranked hosting suggestions with the facts behind them.
+   * Ranked hosting suggestions — person *and* home together, with the facts
+   * behind them.
    *
-   * Read-only and non-binding — assigning still happens through `PATCH :id`
-   * with `hostPersonId`, exactly as if it had been picked by hand.
+   * Read-only and non-binding: assigning still happens through `PATCH :id`
+   * with `hostPersonId` and `locationId`, exactly as if it had been picked by
+   * hand. Meeting somewhere without a host (Schlosspark) is not part of this
+   * ranking at all — those places are a plain choice from `…/locations`.
    */
   @Get(':id/host-suggestions')
   suggestHosts(@Param() params: MeetingParamsDto) {
     return this.meetingService.suggestHosts(params.hauskreisId, params.id);
-  }
-
-  @Get(':id/location-suggestions')
-  suggestLocations(@Param() params: MeetingParamsDto) {
-    return this.meetingService.suggestLocations(params.hauskreisId, params.id);
   }
 
   @Post()

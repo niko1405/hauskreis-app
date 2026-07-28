@@ -61,3 +61,29 @@ export interface RoleSuggestion {
   rank: number;
   facts: SuggestionFacts;
 }
+
+/**
+ * Hosting is the one role where person and place are the same decision: "bei
+ * Niko" *is* Niko hosting. The suggestion therefore carries the home it comes
+ * from, and the ranking runs over homes first — see `suggestHosts`.
+ */
+export interface HostSuggestion extends RoleSuggestion {
+  facts: SuggestionFacts & {
+    home: HomeSuggestionFacts;
+    /** Everyone in this household is busy that evening. */
+    deferred: boolean;
+  };
+}
+
+export interface HomeSuggestionFacts {
+  locationId: string;
+  locationName: string;
+  hostWeight: number;
+  /** Evenings this home is owed; negative means it has hosted above its share. */
+  credit: number;
+  timesUsed: number;
+  lastUsedAt: string | null;
+  daysSinceLastUse: number | null;
+  expectedShare: number;
+  actualShare: number;
+}

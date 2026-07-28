@@ -3,8 +3,10 @@ import { z } from 'zod';
 
 export const createLocationSchema = z.object({
   name: z.string().trim().min(1).max(100),
-  /// Higher means "pick this place more often" in the suggestion logic.
-  frequencyFactor: z.number().positive().max(99).default(1),
+  /// Higher means "meet here more often". 0 keeps a home on the list without
+  /// it ever being suggested. Ignored when `requiresHost` is false — places
+  /// without a host are outside the fairness ranking.
+  hostWeight: z.number().min(0).max(99).default(1),
   requiresHost: z.boolean().default(true),
 });
 

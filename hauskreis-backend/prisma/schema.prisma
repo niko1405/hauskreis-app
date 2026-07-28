@@ -77,12 +77,19 @@ model Person {
   birthdate       DateTime? @db.Date
   playsInstrument Boolean   @default(false) @map("plays_instrument")
   canHost         Boolean   @default(true) @map("can_host")
+  /// Where this person hosts. Null for anyone who brings no home into the
+  /// rotation — they can still take every other role.
+  ///
+  /// Only ever answers "who lives here *now*". Past evenings are attributed via
+  /// `meeting.location_id`, so moving house does not rewrite history.
+  locationId      String?   @map("location_id") @db.Uuid
   active          Boolean   @default(true)
   createdAt       DateTime  @default(now()) @map("created_at")
   /// Optimistic locking counter, see docs/conditional requests.
   version         Int       @default(0)
 
   hauskreis         Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  location          Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
   hostedMeetings    Meeting[]           @relation("MeetingHost")
   attendances       MeetingAttendance[]
   pushSubscriptions PushSubscription[]
@@ -97,20 +104,27 @@ model Location {
   id              String   @id @default(uuid()) @db.Uuid
   hauskreisId     String   @map("hauskreis_id") @db.Uuid
   name            String
-  /// Relative weight for the location suggestion logic: the few main homes
-  /// should come up more often than the occasional ones further out.
+  /// How often this home should come up relative to the others — the few
+  /// central ones far more than the occasional ones further out. The weight
+  /// belongs to the home, not to its residents: hosting costs the household,
+  /// so two people sharing a flat share one weight rather than getting one each.
+  ///
+  /// `0` keeps a home on the list without it ever being suggested.
   /// Float rather than Decimal — it only feeds a ranking score, and Decimal
   /// would serialise as a string and force the frontend to parse it.
-  frequencyFactor Float    @default(1.0) @map("frequency_factor")
+  hostWeight   Float    @default(1.0) @map("host_weight")
   /// False for places like the Schlosspark — those meetings have no host at all,
-  /// which is a valid state rather than missing data.
-  requiresHost    Boolean  @default(true) @map("requires_host")
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now()) @map("created_at")
+  /// which is a valid state rather than missing data. Host-less places are
+  /// outside the fairness ranking entirely: they are a weather-dependent option,
+  /// not somewhere that is ever "owed" a turn.
+  requiresHost Boolean  @default(true) @map("requires_host")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
   /// Optimistic locking counter, see docs/conditional requests.
-  version         Int      @default(0)
+  version      Int      @default(0)
 
   hauskreis Hauskreis @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  residents Person[]
   meetings  Meeting[]
 
   @@unique([hauskreisId, name])

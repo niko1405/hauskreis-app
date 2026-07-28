@@ -6,7 +6,6 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
 import { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
-import { LocationSuggestionService } from '../role-suggestion/location-suggestion.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import type { IfMatchCondition } from '../common/http/etag';
 import { toUtcDate } from './meeting-schedule';
@@ -30,7 +29,6 @@ export class MeetingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly roleSuggestions: RoleSuggestionService,
-    private readonly locationSuggestions: LocationSuggestionService,
   ) {}
 
   findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
@@ -146,7 +144,7 @@ export class MeetingService {
   }
 
   /**
-   * Who could host this meeting, best fit first.
+   * Who could host this meeting, and where, best fit first.
    *
    * The meeting itself is excluded from the history — otherwise re-opening the
    * picker on a meeting that already has a host would push that host down the
@@ -158,18 +156,6 @@ export class MeetingService {
     return this.roleSuggestions.suggestHosts(hauskreisId, meeting.date, {
       excludeMeetingId: meeting.id,
     });
-  }
-
-  async suggestLocations(hauskreisId: string, id: string) {
-    const meeting = await this.findOne(hauskreisId, id);
-
-    return this.locationSuggestions.suggestLocations(
-      hauskreisId,
-      meeting.date,
-      {
-        excludeMeetingId: meeting.id,
-      },
-    );
   }
 
   async remove(hauskreisId: string, id: string) {
