@@ -1,3 +1,5 @@
+import type { DeferralReason, HomeFacts } from './host-ranking';
+
 /**
  * The shared vocabulary of the suggestion engine.
  *
@@ -69,21 +71,16 @@ export interface RoleSuggestion {
  */
 export interface HostSuggestion extends RoleSuggestion {
   facts: SuggestionFacts & {
-    home: HomeSuggestionFacts;
-    /** Everyone in this household is busy that evening. */
+    /** Set aside for this evening; still listed, just at the back. */
     deferred: boolean;
+    deferredReason: DeferralReason | null;
+    home: HomeSuggestionFacts;
   };
 }
 
-export interface HomeSuggestionFacts {
+/** Composed rather than restated, so the two cannot drift apart. */
+export type HomeSuggestionFacts = HomeFacts & {
   locationId: string;
   locationName: string;
   hostWeight: number;
-  /** Evenings this home is owed; negative means it has hosted above its share. */
-  credit: number;
-  timesUsed: number;
-  lastUsedAt: string | null;
-  daysSinceLastUse: number | null;
-  expectedShare: number;
-  actualShare: number;
-}
+};

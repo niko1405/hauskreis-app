@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { MeetingStatus } from '../../generated/prisma/enums';
+import { AttendanceStatus, MeetingStatus } from '../../generated/prisma/enums';
 import { rankForRole } from './ranking';
 import { rankHomes, type HomeUse, type RankableHome } from './host-ranking';
 import {
@@ -48,17 +48,19 @@ export class RoleSuggestionService {
     targetDate: Date,
     options: { excludeMeetingId?: string } = {},
   ): Promise<HostSuggestion[]> {
-    const [households, uses, events] = await Promise.all([
+    const [households, uses, events, expectedAttendance] = await Promise.all([
       this.findHouseholds(hauskreisId),
       this.collectHomeUses(hauskreisId, options.excludeMeetingId),
       this.collectEvents(hauskreisId, options.excludeMeetingId),
+      this.countExpectedAttendance(hauskreisId, options.excludeMeetingId),
     ]);
 
     const ranked = rankHomes({
       homes: households.map((household) => household.home),
       uses,
       targetDate,
-      deferredHomeIds: findDeferredHomes(households, events, targetDate),
+      expectedAttendance,
+      busyHomeIds: findBusyHomes(households, events, targetDate),
     });
 
     const residentsByHome = new Map(
@@ -80,6 +82,7 @@ export class RoleSuggestionService {
           facts: {
             ...suggestion.facts,
             deferred: entry.deferred,
+            deferredReason: entry.deferredReason,
             home: {
               locationId: entry.home.id,
               locationName: entry.home.name,
@@ -109,6 +112,7 @@ export class RoleSuggestionService {
         id: true,
         name: true,
         hostWeight: true,
+        capacity: true,
         residents: {
           where: { active: true, canHost: true },
           select: { id: true, name: true },
@@ -123,9 +127,44 @@ export class RoleSuggestionService {
           id: location.id,
           name: location.name,
           hostWeight: location.hostWeight,
+          capacity: location.capacity,
         },
         residents: location.residents,
       }));
+  }
+
+  /**
+   * How many people to expect, for the homes that have a size limit.
+   *
+   * Everyone active counts unless they have said they are not coming. An
+   * undecided answer counts as coming: the mistake worth avoiding is picking a
+   * home that turns out too small on the night, not the other way round.
+   *
+   * Right now only explicit per-meeting answers reduce the number, so far-off
+   * evenings look full and the tight homes stay set aside until people actually
+   * decline. The absence periods from Phase 9 will feed in here too, which is
+   * what makes a holiday declared weeks ahead count at planning time.
+   */
+  private async countExpectedAttendance(
+    hauskreisId: string,
+    meetingId?: string,
+  ): Promise<number | null> {
+    if (!meetingId) {
+      return null;
+    }
+
+    const [active, declined] = await Promise.all([
+      this.prisma.person.count({ where: { hauskreisId, active: true } }),
+      this.prisma.meetingAttendance.count({
+        where: {
+          meetingId,
+          status: AttendanceStatus.ABSENT,
+          person: { hauskreisId, active: true },
+        },
+      }),
+    ]);
+
+    return active - declined;
   }
 
   /**
@@ -195,7 +234,7 @@ export class RoleSuggestionService {
  * meeting per date). It starts doing work in Phase 5, when someone can be down
  * for the topic on the evening they would otherwise host.
  */
-function findDeferredHomes(
+function findBusyHomes(
   households: Household[],
   events: RoleAssignmentEvent[],
   targetDate: Date,

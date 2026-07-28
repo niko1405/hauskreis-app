@@ -23,7 +23,17 @@ export interface RankableHome {
   name: string;
   /** Relative share of evenings this home should carry. */
   hostWeight: number;
+  /** How many people fit. Null means no meaningful limit. */
+  capacity: number | null;
 }
+
+/**
+ * Why a home is set aside for one evening.
+ *
+ * `TOO_SMALL` — more people are coming than fit.
+ * `HOUSEHOLD_BUSY` — every eligible resident already has another job that night.
+ */
+export type DeferralReason = 'TOO_SMALL' | 'HOUSEHOLD_BUSY';
 
 /** One past evening that took place at a host-bound home. */
 export interface HomeUse {
@@ -37,6 +47,9 @@ export interface HomeFacts {
    * its share, negative means it has hosted more than its share.
    */
   credit: number;
+  /** What the home takes, and how many are expected — both for the UI to explain. */
+  capacity: number | null;
+  expectedAttendance: number | null;
   timesUsed: number;
   lastUsedAt: string | null;
   daysSinceLastUse: number | null;
@@ -50,11 +63,11 @@ export interface HomeRanking {
   home: RankableHome;
   facts: HomeFacts;
   /**
-   * True when every eligible resident already has something else on that
-   * evening. The home is pushed to the back rather than removed — a demotion
-   * survives having no better option left, a filter does not.
+   * Set aside for this one evening. Pushed to the back rather than removed — a
+   * demotion survives having no better option left, a filter does not.
    */
   deferred: boolean;
+  deferredReason: DeferralReason | null;
 }
 
 /**
@@ -75,15 +88,28 @@ export interface HomeRanking {
  * residents are away simply earns nothing for those evenings, so no backlog
  * builds up in the first place and the cap stays the safety net it is meant to
  * be. That is why the accrual is per meeting and not a closed formula.
+ *
+ * Being set aside for one evening is deliberately *not* that case. A home that
+ * is too small for a full house, or whose residents are busy, keeps earning —
+ * it was ready and the circumstances said no. That is what lets a small home
+ * build up enough credit to win the rare evening it does fit, instead of
+ * competing from scratch every time and effectively never hosting.
  */
 export function rankHomes(params: {
   homes: RankableHome[];
   uses: HomeUse[];
   targetDate: Date;
+  /**
+   * How many people are expected. Null when it cannot be told yet, which
+   * counts as "everyone" — the cautious reading, since a home that turns out
+   * too small on the night is the failure worth avoiding.
+   */
+  expectedAttendance?: number | null;
   /** Homes whose every eligible resident is busy that evening. */
-  deferredHomeIds?: ReadonlySet<string>;
+  busyHomeIds?: ReadonlySet<string>;
 }): HomeRanking[] {
-  const { homes, uses, targetDate, deferredHomeIds } = params;
+  const { homes, uses, targetDate, busyHomeIds } = params;
+  const expectedAttendance = params.expectedAttendance ?? null;
 
   const totalWeight = homes.reduce((sum, home) => sum + home.hostWeight, 0);
 
@@ -132,15 +158,19 @@ export function rankHomes(params: {
   settle();
 
   return homes
-    .map((home) => {
+    .map((home): HomeRanking => {
       const used = timesUsed.get(home.id) as number;
       const last = lastUsedAt.get(home.id);
+      const reason = deferralReason(home, expectedAttendance, busyHomeIds);
 
       return {
         home,
-        deferred: deferredHomeIds?.has(home.id) ?? false,
+        deferred: reason !== null,
+        deferredReason: reason,
         facts: {
           credit: round(credit.get(home.id) as number),
+          capacity: home.capacity,
+          expectedAttendance,
           timesUsed: used,
           lastUsedAt: last ? isoDate(last) : null,
           daysSinceLastUse: last
@@ -152,6 +182,25 @@ export function rankHomes(params: {
       };
     })
     .toSorted(compare);
+}
+
+/**
+ * Too small beats busy when both apply: it is the fact the group can act on
+ * ("erst wenn genug absagen"), while a busy household is a scheduling detail.
+ */
+function deferralReason(
+  home: RankableHome,
+  expectedAttendance: number | null,
+  busyHomeIds: ReadonlySet<string> | undefined,
+): DeferralReason | null {
+  if (
+    home.capacity !== null &&
+    (expectedAttendance ?? Infinity) > home.capacity
+  ) {
+    return 'TOO_SMALL';
+  }
+
+  return busyHomeIds?.has(home.id) ? 'HOUSEHOLD_BUSY' : null;
 }
 
 function compare(a: HomeRanking, b: HomeRanking): number {
