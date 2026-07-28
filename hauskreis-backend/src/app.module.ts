@@ -14,6 +14,7 @@ import { HauskreisModule } from './hauskreis/hauskreis.module';
 import { PersonModule } from './person/person.module';
 import { LocationModule } from './location/location.module';
 import { MeetingModule } from './meeting/meeting.module';
+import { TopicModule } from './topic/topic.module';
 import { NotificationModule } from './notification/notification.module';
 
 @Module({
@@ -38,6 +39,7 @@ import { NotificationModule } from './notification/notification.module';
     PersonModule,
     LocationModule,
     MeetingModule,
+    TopicModule,
     NotificationModule,
   ],
   controllers: [HealthController],

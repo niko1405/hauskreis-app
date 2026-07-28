@@ -9,6 +9,20 @@ import type {
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+/**
+ * How far ahead a booked job still counts as "hat zu tun".
+ *
+ * Matches the planning window the meeting generator keeps filled (7 Tuesdays),
+ * plus a week of slack — so it is the horizon the group is actually planning
+ * within, not a number picked for its own sake. Beyond it nothing is really
+ * decided yet.
+ *
+ * Without a bound, saying yes to an evening three months out would drag someone
+ * down every single ranking until then. That punishes exactly the people who
+ * plan ahead, and a job that far off makes no evening in between any harder.
+ */
+export const LOAD_HORIZON_DAYS = 8 * 7;
+
 function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
@@ -44,32 +58,47 @@ export function rankForRole(params: {
 }): RoleSuggestion[] {
   const { people, events, role, targetDate } = params;
 
-  const facts = new Map<string, SuggestionFacts>(
+  const horizonEnd = targetDate.getTime() + LOAD_HORIZON_DAYS * MS_PER_DAY;
+
+  interface Tally {
+    /** Distinct past slots of the ranked role — a multi-part job counts once. */
+    doneSlots: Set<string>;
+    lastAssignedAt: string | null;
+    /** Slot key -> the evening it starts, so a job spanning weeks counts once. */
+    upcoming: Map<string, UpcomingCommitment>;
+  }
+
+  const tallies = new Map<string, Tally>(
     people.map((person) => [
       person.id,
-      {
-        lastAssignedAt: null,
-        daysSinceLastAssignment: null,
-        timesAssigned: 0,
-        upcomingCommitments: [],
-      },
+      { doneSlots: new Set(), lastAssignedAt: null, upcoming: new Map() },
     ]),
   );
 
   for (const event of events) {
-    const personFacts = facts.get(event.personId);
+    const tally = tallies.get(event.personId);
 
     // Events for people outside the eligible set (inactive, cannot host, or
     // from another role's history) are simply not counted.
-    if (!personFacts) {
+    if (!tally) {
       continue;
     }
 
+    const key = slotKey(event);
+
     if (event.date.getTime() >= targetDate.getTime()) {
-      personFacts.upcomingCommitments.push({
-        role: event.role,
-        date: isoDate(event.date),
-      });
+      if (event.date.getTime() > horizonEnd) {
+        continue;
+      }
+
+      const existing = tally.upcoming.get(key);
+      const date = isoDate(event.date);
+
+      // A topic running over several evenings is one job, dated at the first
+      // of them — CLAUDE.md §5: ein mehrteiliges Thema zählt wie ein Slot.
+      if (!existing || date < existing.date) {
+        tally.upcoming.set(key, { role: event.role, date });
+      }
       continue;
     }
 
@@ -77,27 +106,36 @@ export function rankForRole(params: {
       continue;
     }
 
-    personFacts.timesAssigned += 1;
+    tally.doneSlots.add(key);
 
-    const isMoreRecent =
-      personFacts.lastAssignedAt === null ||
-      isoDate(event.date) > personFacts.lastAssignedAt;
-
-    if (isMoreRecent) {
-      personFacts.lastAssignedAt = isoDate(event.date);
-      personFacts.daysSinceLastAssignment = daysBetween(event.date, targetDate);
+    const date = isoDate(event.date);
+    if (tally.lastAssignedAt === null || date > tally.lastAssignedAt) {
+      tally.lastAssignedAt = date;
     }
   }
 
-  for (const personFacts of facts.values()) {
-    personFacts.upcomingCommitments.sort(byDateThenRole);
-  }
-
   return people
-    .map((person) => ({
-      person,
-      facts: facts.get(person.id) as SuggestionFacts,
-    }))
+    .map((person) => {
+      const tally = tallies.get(person.id) as Tally;
+      const lastAssignedAt = tally.lastAssignedAt;
+
+      return {
+        person,
+        facts: {
+          lastAssignedAt,
+          daysSinceLastAssignment: lastAssignedAt
+            ? daysBetween(
+                new Date(`${lastAssignedAt}T00:00:00.000Z`),
+                targetDate,
+              )
+            : null,
+          timesAssigned: tally.doneSlots.size,
+          upcomingCommitments: [...tally.upcoming.values()].toSorted(
+            byDateThenRole,
+          ),
+        } satisfies SuggestionFacts,
+      };
+    })
     .toSorted((a, b) => compare(a, b))
     .map((entry, index) => ({
       personId: entry.person.id,
@@ -105,6 +143,15 @@ export function rankForRole(params: {
       rank: index + 1,
       facts: entry.facts,
     }));
+}
+
+/**
+ * Identifies one job. Events sharing a key are the same job seen on several
+ * evenings — a topic that runs for three weeks, say. Without `slotKey` every
+ * event stands alone, which is right for hosting: one evening, one job.
+ */
+function slotKey(event: RoleAssignmentEvent): string {
+  return `${event.role}:${event.slotKey ?? isoDate(event.date)}`;
 }
 
 function byDateThenRole(a: UpcomingCommitment, b: UpcomingCommitment): number {

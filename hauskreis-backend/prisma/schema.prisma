@@ -46,6 +46,14 @@ enum NotificationType {
   @@map("notification_type")
 }
 
+enum TopicStatus {
+  /// Carries over to the next meeting on its own.
+  RUNNING
+  COMPLETED
+
+  @@map("topic_status")
+}
+
 enum AttendanceStatus {
   ATTENDING
   ABSENT
@@ -64,6 +72,7 @@ model Hauskreis {
   people    Person[]
   locations Location[]
   meetings  Meeting[]
+  topics    Topic[]
 
   @@map("hauskreis")
 }
@@ -88,12 +97,13 @@ model Person {
   /// Optimistic locking counter, see docs/conditional requests.
   version         Int       @default(0)
 
-  hauskreis         Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
-  location          Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  hostedMeetings    Meeting[]           @relation("MeetingHost")
-  attendances       MeetingAttendance[]
-  pushSubscriptions PushSubscription[]
-  notifications     NotificationLog[]
+  hauskreis             Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  location              Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  hostedMeetings        Meeting[]           @relation("MeetingHost")
+  topicResponsibilities TopicResponsible[]
+  attendances           MeetingAttendance[]
+  pushSubscriptions     PushSubscription[]
+  notifications         NotificationLog[]
 
   @@unique([hauskreisId, email])
   @@index([hauskreisId])
@@ -101,9 +111,9 @@ model Person {
 }
 
 model Location {
-  id              String   @id @default(uuid()) @db.Uuid
-  hauskreisId     String   @map("hauskreis_id") @db.Uuid
-  name            String
+  id           String   @id @default(uuid()) @db.Uuid
+  hauskreisId  String   @map("hauskreis_id") @db.Uuid
+  name         String
   /// How often this home should come up relative to the others — the few
   /// central ones far more than the occasional ones further out. The weight
   /// belongs to the home, not to its residents: hosting costs the household,
@@ -147,6 +157,9 @@ model Meeting {
   status         MeetingStatus @default(PLANNED)
   locationId     String?       @map("location_id") @db.Uuid
   hostPersonId   String?       @map("host_person_id") @db.Uuid
+  /// Nullable and shared: a topic can span several meetings, and a
+  /// LOBPREIS_GEBET evening has none at all.
+  topicId        String?       @map("topic_id") @db.Uuid
   /// Only used by CUSTOM meetings ("Geburtstag von …").
   title          String?
   /// Only used by LOBPREIS_GEBET meetings.
@@ -162,6 +175,7 @@ model Meeting {
   hauskreis     Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
   location      Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
   host          Person?             @relation("MeetingHost", fields: [hostPersonId], references: [id], onDelete: SetNull)
+  topic         Topic?              @relation(fields: [topicId], references: [id], onDelete: SetNull)
   attendances   MeetingAttendance[]
   notifications NotificationLog[]
 
@@ -169,6 +183,42 @@ model Meeting {
   @@unique([hauskreisId, date])
   @@index([hauskreisId, date])
   @@map("meeting")
+}
+
+/// A subject the group works through. Deliberately *not* tied one-to-one to a
+/// meeting: a topic may run over several evenings, and while it is RUNNING the
+/// next meeting is prefilled with it.
+model Topic {
+  id          String      @id @default(uuid()) @db.Uuid
+  hauskreisId String      @map("hauskreis_id") @db.Uuid
+  /// Optional — not everyone settles on a title in advance.
+  title       String?
+  status      TopicStatus @default(RUNNING)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  /// Optimistic locking counter, see docs/conditional requests.
+  version     Int         @default(0)
+
+  hauskreis    Hauskreis          @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  responsibles TopicResponsible[]
+  meetings     Meeting[]
+
+  @@index([hauskreisId, status])
+  @@map("topic")
+}
+
+/// Who prepares a topic — one or two people. A join table rather than two
+/// nullable columns, so a third would not need a migration.
+model TopicResponsible {
+  topicId  String @map("topic_id") @db.Uuid
+  personId String @map("person_id") @db.Uuid
+
+  topic  Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([topicId, personId])
+  @@index([personId])
+  @@map("topic_responsible")
 }
 
 /// One Web Push endpoint, i.e. one browser on one device. People install the

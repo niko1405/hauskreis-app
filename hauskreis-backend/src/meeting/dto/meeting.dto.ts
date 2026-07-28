@@ -22,6 +22,7 @@ export const createMeetingSchema = z.object({
   type: meetingType.default(MeetingType.CUSTOM),
   locationId: z.uuid().nullish(),
   hostPersonId: z.uuid().nullish(),
+  topicId: z.uuid().nullish(),
   title: z.string().trim().min(1).max(200).nullish(),
   infoText: z.string().trim().max(2000).nullish(),
 });
@@ -31,6 +32,7 @@ export const updateMeetingSchema = z.object({
   status: meetingStatus.optional(),
   locationId: z.uuid().nullish(),
   hostPersonId: z.uuid().nullish(),
+  topicId: z.uuid().nullish(),
   title: z.string().trim().min(1).max(200).nullish(),
   testimonyText: z.string().trim().max(5000).nullish(),
   actionstepText: z.string().trim().max(2000).nullish(),
