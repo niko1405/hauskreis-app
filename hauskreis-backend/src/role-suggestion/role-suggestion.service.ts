@@ -8,6 +8,7 @@ import {
   type EligiblePerson,
   type HostSuggestion,
   type RoleAssignmentEvent,
+  type RoleSuggestion,
 } from './role-assignment.types';
 
 interface Household {
@@ -93,6 +94,38 @@ export class RoleSuggestionService {
         })),
       )
       .map((suggestion, index) => ({ ...suggestion, rank: index + 1 }));
+  }
+
+  /**
+   * Who should prepare the next topic, best fit first.
+   *
+   * No location involved, so this goes straight through `rankForRole` — the
+   * same function and the same four criteria as inside a household. Proof that
+   * the shared engine carries: the only new parts are the event adapter below
+   * and the eligibility filter here (everyone active).
+   */
+  async suggestTopicResponsibles(
+    hauskreisId: string,
+    targetDate: Date,
+    options: { excludeTopicId?: string } = {},
+  ): Promise<RoleSuggestion[]> {
+    const [people, hostEvents, topicEvents] = await Promise.all([
+      this.prisma.person.findMany({
+        where: { hauskreisId, active: true },
+        select: { id: true, name: true },
+      }),
+      this.collectEvents(hauskreisId),
+      this.collectTopicEvents(hauskreisId, options.excludeTopicId),
+    ]);
+
+    return rankForRole({
+      people,
+      // Hosting comes along for the ride: it does not count towards "wann warst
+      // du zuletzt mit dem Thema dran", but it does count as load.
+      events: [...hostEvents, ...topicEvents],
+      role: AssignmentRole.TOPIC,
+      targetDate,
+    });
   }
 
   /**
@@ -219,6 +252,42 @@ export class RoleSuggestionService {
       role: AssignmentRole.HOST,
       date: meeting.date,
     }));
+  }
+
+  /**
+   * Topic assignments, one event per (person, evening the topic is on).
+   *
+   * They all carry the topic id as `slotKey`, which is what collapses a topic
+   * running over three evenings into a single slot — CLAUDE.md §5. The
+   * per-evening granularity still matters: only that tells whether someone is
+   * busy on the exact evening being planned.
+   */
+  private async collectTopicEvents(
+    hauskreisId: string,
+    excludeTopicId?: string,
+  ): Promise<RoleAssignmentEvent[]> {
+    const meetings = await this.prisma.meeting.findMany({
+      where: {
+        hauskreisId,
+        status: { not: MeetingStatus.CANCELLED },
+        topicId: { not: null },
+        ...(excludeTopicId ? { NOT: { topicId: excludeTopicId } } : {}),
+      },
+      select: {
+        date: true,
+        topicId: true,
+        topic: { select: { responsibles: { select: { personId: true } } } },
+      },
+    });
+
+    return meetings.flatMap((meeting) =>
+      (meeting.topic?.responsibles ?? []).map((responsible) => ({
+        personId: responsible.personId,
+        role: AssignmentRole.TOPIC,
+        date: meeting.date,
+        slotKey: meeting.topicId as string,
+      })),
+    );
   }
 }
 

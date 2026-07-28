@@ -62,6 +62,14 @@ export class MeetingController {
     return this.meetingService.suggestHosts(params.hauskreisId, params.id);
   }
 
+  @Get(':id/topic-suggestions')
+  suggestTopicResponsibles(@Param() params: MeetingParamsDto) {
+    return this.meetingService.suggestTopicResponsibles(
+      params.hauskreisId,
+      params.id,
+    );
+  }
+
   @Post()
   create(@Param() params: HauskreisParamsDto, @Body() dto: CreateMeetingDto) {
     return this.meetingService.create(params.hauskreisId, dto);

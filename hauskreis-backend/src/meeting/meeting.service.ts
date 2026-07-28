@@ -19,6 +19,16 @@ import type {
 const meetingInclude = {
   location: true,
   host: { select: { id: true, name: true } },
+  topic: {
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      responsibles: {
+        select: { person: { select: { id: true, name: true } } },
+      },
+    },
+  },
   attendances: {
     select: { personId: true, status: true },
   },
@@ -85,6 +95,7 @@ export class MeetingService {
         type: dto.type,
         locationId: dto.locationId ?? null,
         hostPersonId: dto.hostPersonId ?? null,
+        topicId: dto.topicId ?? null,
         title: dto.title ?? null,
         infoText: dto.infoText ?? null,
       },
@@ -113,6 +124,7 @@ export class MeetingService {
             // distinction is what lets a host or location be un-assigned.
             locationId: dto.locationId,
             hostPersonId: dto.hostPersonId,
+            topicId: dto.topicId,
             title: dto.title,
             testimonyText: dto.testimonyText,
             actionstepText: dto.actionstepText,
@@ -158,6 +170,22 @@ export class MeetingService {
     });
   }
 
+  /**
+   * Who could prepare the topic for this meeting, best fit first.
+   *
+   * A topic already on the meeting is left out of the history, so re-opening
+   * the picker does not push its own people down the list.
+   */
+  async suggestTopicResponsibles(hauskreisId: string, id: string) {
+    const meeting = await this.findOne(hauskreisId, id);
+
+    return this.roleSuggestions.suggestTopicResponsibles(
+      hauskreisId,
+      meeting.date,
+      { excludeTopicId: meeting.topicId ?? undefined },
+    );
+  }
+
   async remove(hauskreisId: string, id: string) {
     await this.findOne(hauskreisId, id);
     await this.prisma.meeting.delete({ where: { id } });
@@ -180,10 +208,26 @@ export class MeetingService {
    */
   private async assertReferencesBelongToHauskreis(
     hauskreisId: string,
-    dto: { locationId?: string | null; hostPersonId?: string | null },
+    dto: {
+      locationId?: string | null;
+      hostPersonId?: string | null;
+      topicId?: string | null;
+    },
   ): Promise<void> {
     if (dto.hostPersonId) {
       await this.assertPersonBelongsToHauskreis(hauskreisId, dto.hostPersonId);
+    }
+
+    if (dto.topicId) {
+      const topic = await this.prisma.topic.findFirst({
+        where: { id: dto.topicId, hauskreisId },
+      });
+
+      if (!topic) {
+        throw new BadRequestException(
+          `Topic ${dto.topicId} does not belong to this Hauskreis`,
+        );
+      }
     }
 
     if (dto.locationId) {
