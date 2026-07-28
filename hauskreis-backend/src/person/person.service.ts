@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import type { AuthenticatedUser } from '../auth/auth.types';
@@ -36,7 +40,9 @@ export class PersonService {
     return person;
   }
 
-  create(hauskreisId: string, dto: CreatePersonDto) {
+  async create(hauskreisId: string, dto: CreatePersonDto) {
+    await this.assertLocationBelongsToHauskreis(hauskreisId, dto.locationId);
+
     return this.prisma.person.create({
       data: {
         hauskreisId,
@@ -45,16 +51,19 @@ export class PersonService {
         birthdate: dto.birthdate ? new Date(dto.birthdate) : null,
         playsInstrument: dto.playsInstrument,
         canHost: dto.canHost,
+        locationId: dto.locationId ?? null,
       },
     });
   }
 
-  update(
+  async update(
     hauskreisId: string,
     id: string,
     dto: UpdatePersonDto,
     condition?: IfMatchCondition,
   ) {
+    await this.assertLocationBelongsToHauskreis(hauskreisId, dto.locationId);
+
     return updateWithVersionCheck({
       condition,
       update: (versionConstraint) =>
@@ -66,6 +75,9 @@ export class PersonService {
             birthdate: dto.birthdate ? new Date(dto.birthdate) : undefined,
             playsInstrument: dto.playsInstrument,
             canHost: dto.canHost,
+            // `undefined` leaves it alone, `null` moves the person out of the
+            // hosting rotation without touching anything else.
+            locationId: dto.locationId,
             active: dto.active,
             version: { increment: 1 },
           },
@@ -83,11 +95,38 @@ export class PersonService {
   }
 
   /**
+   * Guards the multi-tenant boundary: the foreign key alone would happily point
+   * a person at a home from another Hauskreis.
+   */
+  private async assertLocationBelongsToHauskreis(
+    hauskreisId: string,
+    locationId: string | null | undefined,
+  ): Promise<void> {
+    if (!locationId) {
+      return;
+    }
+
+    const location = await this.prisma.location.findFirst({
+      where: { id: locationId, hauskreisId },
+    });
+
+    if (!location) {
+      throw new BadRequestException(
+        `Location ${locationId} does not belong to this Hauskreis`,
+      );
+    }
+  }
+
+  /**
    * Creates the Keycloak account first, then the local person row. If the
    * local insert fails we roll the Keycloak user back, so a failed invite
    * never leaves an orphaned account behind.
    */
   async invite(hauskreisId: string, dto: InvitePersonDto) {
+    // Checked before the Keycloak account exists, so a bad location id cannot
+    // trigger the rollback path.
+    await this.assertLocationBelongsToHauskreis(hauskreisId, dto.locationId);
+
     const { keycloakUserId, invitationEmailSent } =
       await this.keycloakAdmin.inviteUser({
         email: dto.email,
@@ -105,6 +144,7 @@ export class PersonService {
           birthdate: dto.birthdate ? new Date(dto.birthdate) : null,
           playsInstrument: dto.playsInstrument,
           canHost: dto.canHost,
+          locationId: dto.locationId ?? null,
         },
       });
 

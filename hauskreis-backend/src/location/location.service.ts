@@ -32,7 +32,7 @@ export class LocationService {
       data: {
         hauskreisId,
         name: dto.name,
-        frequencyFactor: dto.frequencyFactor,
+        hostWeight: dto.hostWeight,
         requiresHost: dto.requiresHost,
       },
     });
@@ -51,7 +51,7 @@ export class LocationService {
           where: { id, hauskreisId, ...versionConstraint },
           data: {
             name: dto.name,
-            frequencyFactor: dto.frequencyFactor,
+            hostWeight: dto.hostWeight,
             requiresHost: dto.requiresHost,
             active: dto.active,
             version: { increment: 1 },
