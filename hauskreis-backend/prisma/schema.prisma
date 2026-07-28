@@ -73,6 +73,7 @@ model Hauskreis {
   locations Location[]
   meetings  Meeting[]
   topics    Topic[]
+  songs     Song[]
 
   @@map("hauskreis")
 }
@@ -100,6 +101,9 @@ model Person {
   hauskreis             Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
   location              Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
   hostedMeetings        Meeting[]           @relation("MeetingHost")
+  songsCreated          Song[]              @relation("SongCreator")
+  songLeaderships       MeetingSongLeader[] @relation("SongLeader")
+  songsSuggested        MeetingSong[]       @relation("SongSuggester")
   topicResponsibilities TopicResponsible[]
   attendances           MeetingAttendance[]
   pushSubscriptions     PushSubscription[]
@@ -177,6 +181,8 @@ model Meeting {
   host          Person?             @relation("MeetingHost", fields: [hostPersonId], references: [id], onDelete: SetNull)
   topic         Topic?              @relation(fields: [topicId], references: [id], onDelete: SetNull)
   attendances   MeetingAttendance[]
+  songLeaders   MeetingSongLeader[]
+  songs         MeetingSong[]
   notifications NotificationLog[]
 
   /// One meeting per date per group — this is what makes the generator idempotent.
@@ -219,6 +225,67 @@ model TopicResponsible {
   @@id([topicId, personId])
   @@index([personId])
   @@map("topic_responsible")
+}
+
+/// A song the group knows. The database grows by itself: whatever gets
+/// suggested once stays and can be picked again (CLAUDE.md §6).
+///
+/// Lyrics are deliberately not stored — only a link to wherever they live.
+model Song {
+  id                String   @id @default(uuid()) @db.Uuid
+  hauskreisId       String   @map("hauskreis_id") @db.Uuid
+  title             String
+  artist            String?
+  lyricsUrl         String?  @map("lyrics_url")
+  createdByPersonId String?  @map("created_by_person_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+  /// Optimistic locking counter, see docs/conditional requests.
+  version           Int      @default(0)
+
+  hauskreis Hauskreis     @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  createdBy Person?       @relation("SongCreator", fields: [createdByPersonId], references: [id], onDelete: SetNull)
+  pickedIn  MeetingSong[]
+
+  /// Same title *and* artist twice is a duplicate, not a second song. Two songs
+  /// sharing a title by different artists stay separate.
+  @@unique([hauskreisId, title, artist])
+  @@index([hauskreisId])
+  @@map("song")
+}
+
+/// Who looks after the music for one evening. At least one person where there
+/// are songs at all, and several are fine (CLAUDE.md §6).
+model MeetingSongLeader {
+  meetingId String @map("meeting_id") @db.Uuid
+  personId  String @map("person_id") @db.Uuid
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  person  Person  @relation("SongLeader", fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([meetingId, personId])
+  @@index([personId])
+  @@map("meeting_song_leader")
+}
+
+/// A song put forward for one evening. `isSelected` separates the shortlist
+/// from what actually gets sung, so a suggestion that did not make it stays
+/// visible rather than being deleted.
+model MeetingSong {
+  id                  String   @id @default(uuid()) @db.Uuid
+  meetingId           String   @map("meeting_id") @db.Uuid
+  songId              String   @map("song_id") @db.Uuid
+  suggestedByPersonId String?  @map("suggested_by_person_id") @db.Uuid
+  isSelected          Boolean  @default(false) @map("is_selected")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  meeting     Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  song        Song    @relation(fields: [songId], references: [id], onDelete: Cascade)
+  suggestedBy Person? @relation("SongSuggester", fields: [suggestedByPersonId], references: [id], onDelete: SetNull)
+
+  /// One entry per song per evening — suggesting it twice is the same wish.
+  @@unique([meetingId, songId])
+  @@index([songId])
+  @@map("meeting_song")
 }
 
 /// One Web Push endpoint, i.e. one browser on one device. People install the
