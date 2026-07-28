@@ -505,9 +505,9 @@ tauchen erst kurzfristig auf. Die Abwesenheitszeiträume aus Phase 9 haben Start
 und Enddatum und fließen dann hier mit ein — ein früh eingetragener Urlaub zählt
 also schon bei der Planung.
 
-### Wie innerhalb des Haushalts sortiert wird
+### Die Personen-Sortierung: `rankForRole`
 
-`rankForRole` — dieselbe Funktion, die ab Phase 5 auch Thema und Song bedient:
+Dieselbe Funktion für den Haushalt beim Hosten **und** für die Themen-Vergabe:
 
 1. **Wer hat am wenigsten zu tun** — Aufgaben ab dem Termindatum, über _alle_
    Rollen gezählt.
@@ -516,17 +516,82 @@ also schon bei der Planung.
 3. **Wer war insgesamt am seltensten dran**.
 4. **Name**.
 
-### Erweitern (Phase 5/6)
+#### Wie weit die Auslastung nach vorn schaut
 
-Thema und Song hängen an keinem Ort, laufen also direkt über `rankForRole`.
-Nötig ist jeweils:
+`LOAD_HORIZON_DAYS` = **8 Wochen**. Das ist kein frei gewählter Wert, sondern das
+Planungsfenster, das der Termin-Generator offenhält (7 Dienstage), plus eine
+Woche Luft. Weiter draußen ist ohnehin nichts entschieden.
+
+Ohne Grenze würde ein Ja zu einem Abend in drei Monaten jede Rangliste bis dahin
+nach unten ziehen — das bestraft genau die, die vorausplanen, und ein Termin so
+weit weg macht keinen Abend dazwischen anstrengender.
+
+#### Mehrteilige Aufgaben zählen einmal
+
+Ein Thema über drei Abende ist **eine** Vorbereitung, kein dreifacher Einsatz
+(CLAUDE.md §5). Die Events tragen dafür einen `slotKey` — beim Thema die
+Themen-ID:
+
+- `timesAssigned` zählt verschiedene Slots, nicht Termine.
+- `lastAssignedAt` bleibt der **letzte** Abend, an dem die Person zuständig war.
+- `upcomingCommitments` fasst zusammen und datiert auf den **ersten** Abend.
+
+Ohne `slotKey` steht jedes Event für sich — richtig beim Hosten: ein Abend, eine
+Aufgabe.
+
+### Erweitern (Phase 6)
+
+Songs hängen an keinem Ort, laufen also direkt über `rankForRole` wie das Thema.
+Nötig ist:
 
 1. ein Wert mehr in `AssignmentRole`,
-2. ein Adapter, der die Zuweisungen als `RoleAssignmentEvent[]` einsammelt,
+2. ein Adapter, der die Zuweisungen als `RoleAssignmentEvent[]` einsammelt
+   (mit `slotKey`, falls eine Aufgabe über mehrere Abende läuft),
 3. ggf. ein Eligibility-Filter (bei Songs `playsInstrument = true`).
 
 Beide Ranking-Funktionen sind reine Funktionen über bereits geladene Daten und
 ohne Datenbank getestet.
+
+## Themen
+
+Ein Thema ist **nicht** an einen Termin gebunden: es kann über mehrere Abende
+laufen, und ein `LOBPREIS_GEBET`-Abend hat gar keins. Der Titel ist optional —
+nicht jeder legt ihn vorab fest.
+
+| Methode  | Pfad                  | Rechte                      |
+| -------- | --------------------- | --------------------------- |
+| `GET`    | `…/topics?status=`    | eingeloggt                  |
+| `GET`    | `…/topics/:id`        | eingeloggt                  |
+| `POST`   | `…/topics`            | eingeloggt                  |
+| `PATCH`  | `…/topics/:id`        | eingeloggt (`If-Match`)     |
+| `DELETE` | `…/topics/:id`        | `admin`                     |
+| `POST`   | `…/topics/carry-over` | `admin` (manueller Trigger) |
+
+Abgeschlossen wird über `PATCH` mit `{ "status": "COMPLETED" }`. Die
+Verantwortlichen liegen in einer Join-Tabelle statt in zwei nullable Spalten —
+eine dritte Person bräuchte so keine Migration. `responsiblePersonIds` ersetzt
+die Liste komplett, weglassen lässt sie unverändert.
+
+Wer das nächste Thema vorbereiten könnte, liefert
+`GET …/meetings/:id/topic-suggestions` — dieselbe Rangliste wie beim Host, nur
+ohne Ortsbezug.
+
+### Automatische Übernahme
+
+`TopicCarryOverService` läuft nachts um 3:15 Uhr, eine Viertelstunde nach dem
+Termin-Generator, und setzt ein laufendes Thema auf den **nächsten** Termin.
+Betroffen sind nur `STANDARD`-Abende: `LOBPREIS_GEBET` trägt stattdessen ein
+Testimony, `CUSTOM` ist, was die Gruppe daraus macht.
+
+Gesucht wird der **früheste kommende** Termin — bewusst _ohne_ Filter auf „hat
+noch kein Thema". Würde der Job stattdessen zum nächsten themenlosen Abend
+springen, belegte er bei jedem nächtlichen Lauf einen weiteren, und nach einer
+Woche gehörte das ganze Planungsfenster einem Thema, das meist zwei bis drei
+Abende läuft. So bereitet er immer nur den nächsten Abend vor und ist echt
+idempotent.
+
+Ein von Hand gesetztes Thema wird nie überschrieben: das `UPDATE` ist zusätzlich
+auf `topic_id IS NULL` abgesichert.
 
 ## Host-Erinnerungen
 
@@ -542,7 +607,7 @@ Manuell auslösbar über `POST …/meetings/host-reminders` (`admin`, auf die Gr
 begrenzt). Antwort: `{ "notified": 1, "skipped": 0 }` — `skipped` zählt sowohl
 bereits Erinnerte als auch den Fall, dass Push gar nicht konfiguriert ist.
 
-## API (Stand: Phase 4)
+## API (Stand: Phase 5)
 
 | Methode                 | Pfad                                         | Rechte                                   |
 | ----------------------- | -------------------------------------------- | ---------------------------------------- |
@@ -559,6 +624,7 @@ bereits Erinnerte als auch den Fall, dass Push gar nicht konfiguriert ist.
 | `GET`                   | `…/meetings?scope=upcoming\|past\|all`       | eingeloggt                               |
 | `GET`                   | `…/meetings/:id`                             | eingeloggt                               |
 | `GET`                   | `…/meetings/:id/host-suggestions`            | eingeloggt                               |
+| `GET`                   | `…/meetings/:id/topic-suggestions`           | eingeloggt                               |
 | `POST`                  | `…/meetings`                                 | eingeloggt                               |
 | `PATCH`                 | `…/meetings/:id`                             | eingeloggt                               |
 | `POST`                  | `…/meetings/:id/cancel`                      | eingeloggt                               |
@@ -566,9 +632,15 @@ bereits Erinnerte als auch den Fall, dass Push gar nicht konfiguriert ist.
 | `DELETE`                | `…/meetings/:id`                             | `admin`                                  |
 | `POST`                  | `…/meetings/generate`                        | `admin` (manueller Generator-Trigger)    |
 | `POST`                  | `…/meetings/host-reminders`                  | `admin` (manueller Reminder-Trigger)     |
+| `GET`                   | `…/topics?status=RUNNING\|COMPLETED`         | eingeloggt                               |
+| `GET`                   | `…/topics/:id`                               | eingeloggt                               |
+| `POST`                  | `…/topics`                                   | eingeloggt                               |
+| `PATCH`                 | `…/topics/:id`                               | eingeloggt                               |
+| `DELETE`                | `…/topics/:id`                               | `admin`                                  |
+| `POST`                  | `…/topics/carry-over`                        | `admin` (manuelle Themen-Übernahme)      |
 
 Alle `GET`s beantworten `If-None-Match` mit `304`. Die `PATCH`-Endpunkte auf
-Personen, Locations und Terminen sowie `…/meetings/:id/cancel` **verlangen**
+Personen, Locations, Terminen und Themen sowie `…/meetings/:id/cancel` **verlangen**
 `If-Match` (`428` ohne, `412` bei veralteter Version) — Details siehe
 [Conditional Requests](#conditional-requests-etag-304-412).
 
