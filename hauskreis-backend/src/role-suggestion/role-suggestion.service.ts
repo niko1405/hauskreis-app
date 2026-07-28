@@ -129,6 +129,40 @@ export class RoleSuggestionService {
   }
 
   /**
+   * Who should look after the music, best fit first.
+   *
+   * The only difference to the topic ranking is the eligibility filter: not
+   * everyone plays an instrument (CLAUDE.md §6). Four people do, so the pool is
+   * small and the "wer war am längsten nicht dran" criterion carries most of
+   * the weight.
+   *
+   * Note this is a *suggestion* filter, not a rule — `setLeaders` still accepts
+   * whoever the group agreed on.
+   */
+  async suggestSongLeaders(
+    hauskreisId: string,
+    targetDate: Date,
+    options: { excludeMeetingId?: string } = {},
+  ): Promise<RoleSuggestion[]> {
+    const [people, hostEvents, topicEvents, songEvents] = await Promise.all([
+      this.prisma.person.findMany({
+        where: { hauskreisId, active: true, playsInstrument: true },
+        select: { id: true, name: true },
+      }),
+      this.collectEvents(hauskreisId),
+      this.collectTopicEvents(hauskreisId),
+      this.collectSongEvents(hauskreisId, options.excludeMeetingId),
+    ]);
+
+    return rankForRole({
+      people,
+      events: [...hostEvents, ...topicEvents, ...songEvents],
+      role: AssignmentRole.SONG,
+      targetDate,
+    });
+  }
+
+  /**
    * The homes in the rotation, each with the people who could host there.
    *
    * A home without a single eligible resident drops out entirely — that is the
@@ -288,6 +322,32 @@ export class RoleSuggestionService {
         slotKey: meeting.topicId as string,
       })),
     );
+  }
+
+  /**
+   * Music duty, one event per (person, evening). No `slotKey`: songs are picked
+   * per evening, so one evening is one job — unlike a topic.
+   */
+  private async collectSongEvents(
+    hauskreisId: string,
+    excludeMeetingId?: string,
+  ): Promise<RoleAssignmentEvent[]> {
+    const leaders = await this.prisma.meetingSongLeader.findMany({
+      where: {
+        meeting: {
+          hauskreisId,
+          status: { not: MeetingStatus.CANCELLED },
+          ...(excludeMeetingId ? { id: { not: excludeMeetingId } } : {}),
+        },
+      },
+      select: { personId: true, meeting: { select: { date: true } } },
+    });
+
+    return leaders.map((leader) => ({
+      personId: leader.personId,
+      role: AssignmentRole.SONG,
+      date: leader.meeting.date,
+    }));
   }
 }
 
