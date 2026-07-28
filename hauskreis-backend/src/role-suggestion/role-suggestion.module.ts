@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { RoleSuggestionService } from './role-suggestion.service';
-import { LocationSuggestionService } from './location-suggestion.service';
 
 /**
  * The shared suggestion engine. Imported by `MeetingModule` today and by
@@ -8,7 +7,7 @@ import { LocationSuggestionService } from './location-suggestion.service';
  * adapter here instead of writing its own ranking.
  */
 @Module({
-  providers: [RoleSuggestionService, LocationSuggestionService],
-  exports: [RoleSuggestionService, LocationSuggestionService],
+  providers: [RoleSuggestionService],
+  exports: [RoleSuggestionService],
 })
 export class RoleSuggestionModule {}
