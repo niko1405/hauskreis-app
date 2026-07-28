@@ -7,6 +7,9 @@ export const createLocationSchema = z.object({
   /// it ever being suggested. Ignored when `requiresHost` is false — places
   /// without a host are outside the fairness ranking.
   hostWeight: z.number().min(0).max(99).default(1),
+  /// How many people fit. Null/omitted means no meaningful limit — only the
+  /// tight homes need a number.
+  capacity: z.number().int().positive().max(200).nullish(),
   requiresHost: z.boolean().default(true),
 });
 

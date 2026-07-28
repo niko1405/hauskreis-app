@@ -9,11 +9,12 @@ const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const TARGET = utc('2026-09-01');
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 
-const home = (id: string, name: string, hostWeight: number): RankableHome => ({
-  id,
-  name,
-  hostWeight,
-});
+const home = (
+  id: string,
+  name: string,
+  hostWeight: number,
+  capacity: number | null = null,
+): RankableHome => ({ id, name, hostWeight, capacity });
 
 const order = (ranked: { home: { id: string } }[]) =>
   ranked.map((entry) => entry.home.id);
@@ -169,12 +170,103 @@ describe('rankHomes', () => {
       homes,
       uses: [],
       targetDate: TARGET,
-      deferredHomeIds: new Set(['a']),
+      busyHomeIds: new Set(['a']),
     });
 
     // 'a' has the higher weight and would otherwise lead.
     expect(order(result)).toEqual(['b', 'a']);
     expect(result[1].deferred).toBe(true);
+    expect(result[1].deferredReason).toBe('HOUSEHOLD_BUSY');
+  });
+
+  describe('capacity', () => {
+    const homes = () => [
+      home('big', 'Bei Anna', 3),
+      home('small', 'Bei Sofie', 1, 5),
+    ];
+
+    it('sets a home aside when more people are coming than fit', () => {
+      const result = rankHomes({
+        homes: homes(),
+        uses: [],
+        targetDate: TARGET,
+        expectedAttendance: 9,
+      });
+
+      expect(order(result)).toEqual(['big', 'small']);
+      expect(result[1].deferred).toBe(true);
+      expect(result[1].deferredReason).toBe('TOO_SMALL');
+      expect(result[1].facts).toMatchObject({
+        capacity: 5,
+        expectedAttendance: 9,
+      });
+    });
+
+    it('lets it back in once enough people have declined', () => {
+      const result = rankHomes({
+        homes: homes(),
+        uses: [],
+        targetDate: TARGET,
+        expectedAttendance: 5,
+      });
+
+      expect(result.every((entry) => entry.deferred)).toBe(false);
+    });
+
+    it('treats an unknown headcount as a full house', () => {
+      const result = rankHomes({
+        homes: homes(),
+        uses: [],
+        targetDate: TARGET,
+      });
+
+      // Better to leave a tight home out than to pick one that turns out too
+      // small on the night.
+      expect(result[1].deferredReason).toBe('TOO_SMALL');
+    });
+
+    it('leaves homes without a limit alone', () => {
+      const result = rankHomes({
+        homes: [home('big', 'Bei Anna', 3)],
+        uses: [],
+        targetDate: TARGET,
+        expectedAttendance: 99,
+      });
+
+      expect(result[0].deferred).toBe(false);
+    });
+
+    it('keeps earning credit while it is set aside', () => {
+      // 20 full-house evenings that 'small' could never have taken.
+      const uses = weekly(Array.from({ length: 20 }, () => 'big'));
+
+      const result = rankHomes({
+        homes: homes(),
+        uses,
+        targetDate: TARGET,
+        expectedAttendance: 9,
+      });
+
+      // Still last, because it does not fit — but the credit is banked, which
+      // is what wins it the rare evening that does.
+      expect(result[1].home.id).toBe('small');
+      expect(result[1].facts.credit).toBeGreaterThan(1);
+    });
+
+    it('wins the first evening small enough for it', () => {
+      const uses = weekly(Array.from({ length: 20 }, () => 'big'));
+
+      const result = rankHomes({
+        homes: homes(),
+        uses,
+        targetDate: TARGET,
+        expectedAttendance: 4,
+      });
+
+      // Without the banked credit it would compete from scratch against a home
+      // three times its weight, and effectively never host.
+      expect(order(result)).toEqual(['small', 'big']);
+    });
   });
 
   it('still returns a full list when every household is busy', () => {
@@ -184,7 +276,7 @@ describe('rankHomes', () => {
       homes,
       uses: [],
       targetDate: TARGET,
-      deferredHomeIds: new Set(['a', 'b']),
+      busyHomeIds: new Set(['a', 'b']),
     });
 
     expect(order(result)).toEqual(['a', 'b']);

@@ -113,6 +113,13 @@ model Location {
   /// Float rather than Decimal — it only feeds a ranking score, and Decimal
   /// would serialise as a string and force the frontend to parse it.
   hostWeight   Float    @default(1.0) @map("host_weight")
+  /// How many people fit. Null means "everyone fits", which is the normal case —
+  /// only the tight homes need a number.
+  ///
+  /// A home that is too small for an evening is set aside for that evening only.
+  /// It keeps earning its weight in the meantime, unlike a household that is
+  /// away: the opportunity was denied by the guest list, not given up.
+  capacity     Int?     @map("capacity")
   /// False for places like the Schlosspark — those meetings have no host at all,
   /// which is a valid state rather than missing data. Host-less places are
   /// outside the fairness ranking entirely: they are a weather-dependent option,
