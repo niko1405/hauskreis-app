@@ -15,6 +15,7 @@ import type { DeferralReason, HomeFacts } from './host-ranking';
  */
 export const AssignmentRole = {
   HOST: 'HOST',
+  TOPIC: 'TOPIC',
 } as const;
 
 export type AssignmentRole =
@@ -26,6 +27,14 @@ export interface RoleAssignmentEvent {
   role: AssignmentRole;
   /** The meeting date. UTC midnight, matching Prisma's `@db.Date`. */
   date: Date;
+  /**
+   * Ties several evenings together into one job. A topic spanning three
+   * meetings emits three events with the same key and counts once — CLAUDE.md
+   * §5: ein mehrteiliges Thema zählt wie ein einzelner Slot.
+   *
+   * Omitted where one evening is one job, as with hosting.
+   */
+  slotKey?: string;
 }
 
 export interface EligiblePerson {

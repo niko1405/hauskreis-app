@@ -1,4 +1,4 @@
-import { rankForRole } from './ranking';
+import { LOAD_HORIZON_DAYS, rankForRole } from './ranking';
 import {
   AssignmentRole,
   type RoleAssignmentEvent,
@@ -138,5 +138,114 @@ describe('rankForRole', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].facts.timesAssigned).toBe(1);
+  });
+
+  describe('load horizon', () => {
+    const daysAhead = (days: number) =>
+      new Date(TARGET.getTime() + days * 24 * 60 * 60 * 1000);
+
+    it('counts a job inside the planning window as load', () => {
+      const result = rankForRole({
+        people,
+        events: [
+          { personId: 'anna', role: AssignmentRole.HOST, date: daysAhead(21) },
+        ],
+        role: AssignmentRole.HOST,
+        targetDate: TARGET,
+      });
+
+      const anna = result.find((entry) => entry.personId === 'anna');
+      expect(anna?.facts.upcomingCommitments).toHaveLength(1);
+      expect(order(result)).toEqual(['ben', 'carla', 'anna']);
+    });
+
+    it('ignores one far beyond it', () => {
+      const result = rankForRole({
+        people,
+        events: [
+          {
+            personId: 'anna',
+            role: AssignmentRole.HOST,
+            date: daysAhead(LOAD_HORIZON_DAYS + 7),
+          },
+        ],
+        role: AssignmentRole.HOST,
+        targetDate: TARGET,
+      });
+
+      // Saying yes to an evening months out must not drag Anna down today.
+      const anna = result.find((entry) => entry.personId === 'anna');
+      expect(anna?.facts.upcomingCommitments).toEqual([]);
+      expect(order(result)).toEqual(['anna', 'ben', 'carla']);
+    });
+  });
+
+  describe('multi-part jobs', () => {
+    const topic = (personId: string, iso: string, slotKey: string) => ({
+      personId,
+      role: AssignmentRole.TOPIC,
+      date: utc(iso),
+      slotKey,
+    });
+
+    it('counts a topic spanning several evenings once', () => {
+      const result = rankForRole({
+        people: [people[0]],
+        events: [
+          topic('anna', '2026-08-04', 'topic-1'),
+          topic('anna', '2026-08-11', 'topic-1'),
+          topic('anna', '2026-08-18', 'topic-1'),
+        ],
+        role: AssignmentRole.TOPIC,
+        targetDate: TARGET,
+      });
+
+      expect(result[0].facts.timesAssigned).toBe(1);
+      // Recency still tracks the last evening she was actually responsible.
+      expect(result[0].facts.lastAssignedAt).toBe('2026-08-18');
+    });
+
+    it('counts an upcoming multi-part topic as one commitment', () => {
+      const result = rankForRole({
+        people: [people[0]],
+        events: [
+          topic('anna', '2026-09-08', 'topic-2'),
+          topic('anna', '2026-09-15', 'topic-2'),
+          topic('anna', '2026-09-22', 'topic-2'),
+        ],
+        role: AssignmentRole.TOPIC,
+        targetDate: TARGET,
+      });
+
+      // One job to prepare, dated at the evening it starts.
+      expect(result[0].facts.upcomingCommitments).toEqual([
+        { role: 'TOPIC', date: '2026-09-08' },
+      ]);
+    });
+
+    it('still treats separate topics as separate slots', () => {
+      const result = rankForRole({
+        people: [people[0]],
+        events: [
+          topic('anna', '2026-08-04', 'topic-1'),
+          topic('anna', '2026-08-18', 'topic-2'),
+        ],
+        role: AssignmentRole.TOPIC,
+        targetDate: TARGET,
+      });
+
+      expect(result[0].facts.timesAssigned).toBe(2);
+    });
+
+    it('keeps hosting one job per evening', () => {
+      const result = rankForRole({
+        people: [people[0]],
+        events: [hosted('anna', '2026-08-04'), hosted('anna', '2026-08-11')],
+        role: AssignmentRole.HOST,
+        targetDate: TARGET,
+      });
+
+      expect(result[0].facts.timesAssigned).toBe(2);
+    });
   });
 });
