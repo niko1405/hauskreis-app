@@ -15,6 +15,7 @@ import { PersonModule } from './person/person.module';
 import { LocationModule } from './location/location.module';
 import { MeetingModule } from './meeting/meeting.module';
 import { TopicModule } from './topic/topic.module';
+import { SongModule } from './song/song.module';
 import { NotificationModule } from './notification/notification.module';
 
 @Module({
@@ -40,6 +41,7 @@ import { NotificationModule } from './notification/notification.module';
     LocationModule,
     MeetingModule,
     TopicModule,
+    SongModule,
     NotificationModule,
   ],
   controllers: [HealthController],

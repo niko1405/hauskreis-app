@@ -539,15 +539,19 @@ Themen-ID:
 Ohne `slotKey` steht jedes Event für sich — richtig beim Hosten: ein Abend, eine
 Aufgabe.
 
-### Erweitern (Phase 6)
+### Eine weitere Rolle ergänzen
 
-Songs hängen an keinem Ort, laufen also direkt über `rankForRole` wie das Thema.
-Nötig ist:
+Host, Thema und Musik laufen alle über dieselbe Funktion. Für eine vierte
+braucht es genau drei Dinge:
 
 1. ein Wert mehr in `AssignmentRole`,
 2. ein Adapter, der die Zuweisungen als `RoleAssignmentEvent[]` einsammelt
    (mit `slotKey`, falls eine Aufgabe über mehrere Abende läuft),
-3. ggf. ein Eligibility-Filter (bei Songs `playsInstrument = true`).
+3. ggf. ein Eligibility-Filter — beim Thema keiner, bei der Musik
+   `playsInstrument = true`.
+
+Die Filter sind **Vorschlags**-Filter, keine Regeln: eingetragen werden darf
+immer, worauf sich die Gruppe geeinigt hat.
 
 Beide Ranking-Funktionen sind reine Funktionen über bereits geladene Daten und
 ohne Datenbank getestet.
@@ -593,6 +597,50 @@ idempotent.
 Ein von Hand gesetztes Thema wird nie überschrieben: das `UPDATE` ist zusätzlich
 auf `topic_id IS NULL` abgesichert.
 
+## Songs
+
+Zwei Dinge, die zusammenhängen: eine **Song-Datenbank**, die mit der Zeit
+wächst, und pro Abend eine **Auswahl** daraus.
+
+### Die Datenbank
+
+Was einmal vorgeschlagen wurde, bleibt und lässt sich wieder auswählen
+(CLAUDE.md §6). Pflicht ist nur der Titel; Lyrics werden **nicht** gespeichert,
+nur ein Link dorthin.
+
+`GET …/songs?search=` sucht case-insensitiv in Titel **und** Artist — das ist,
+was die Autovervollständigung im „Song eintragen"-Feld aufruft. Umgesetzt als
+`ILIKE`; bei ein paar hundert Zeilen bringt ein Trigram-Index nichts außer einer
+Extension, die installiert sein will.
+
+`POST …/songs` legt an **oder gibt den vorhandenen Song zurück**. Ein `400` bei
+Dubletten würde das Frontend zwingen, erst zu suchen und dann ein Rennen zu
+behandeln, das es nicht gewinnen kann. Als Dublette gilt gleicher Titel _und_
+gleicher Artist — zwei Lieder gleichen Namens von verschiedenen Leuten bleiben
+getrennt.
+
+Löschen ist `admin` und wird abgelehnt, solange der Song noch an einem Abend
+hängt: es würde ihn sonst rückwirkend aus dem Archiv entfernen. Umbenennen ist
+fast immer gemeint.
+
+### Pro Abend
+
+`POST …/meetings/:id/songs` nimmt **entweder** `{ songId }` **oder**
+`{ title, artist?, lyricsUrl? }` — genau eines von beidem, sonst `400`. Das
+bildet ab, wie das Feld sich anfühlt: man tippt einen Titel, und der ist
+entweder bekannt oder nicht. Neues landet in der Datenbank und steht beim
+nächsten Mal zur Auswahl.
+
+`isSelected` trennt die Vorschlagsliste von dem, was am Ende gesungen wird — ein
+Vorschlag, der es nicht geschafft hat, bleibt sichtbar statt gelöscht zu werden.
+Denselben Song zweimal vorzuschlagen ist derselbe Wunsch, kein zweiter Eintrag.
+
+`PUT …/meetings/:id/song-leaders` ersetzt die Zuständigen. Eine **leere** Liste
+ist gültig: nicht jeder Abend hat Lieder, dann braucht es niemanden.
+
+`GET …/meetings/:id/song-leader-suggestions` rankt nur, wer ein Instrument
+spielt — vier der neun. Eingetragen werden darf trotzdem jeder.
+
 ## Host-Erinnerungen
 
 `HostReminderService` läuft täglich um 9 Uhr und erinnert jeden Host, dessen
@@ -607,7 +655,27 @@ Manuell auslösbar über `POST …/meetings/host-reminders` (`admin`, auf die Gr
 begrenzt). Antwort: `{ "notified": 1, "skipped": 0 }` — `skipped` zählt sowohl
 bereits Erinnerte als auch den Fall, dass Push gar nicht konfiguriert ist.
 
-## API (Stand: Phase 5)
+## Paginierte Listen
+
+Listen, die wachsen — Termine, Themen, Songs — antworten mit einem Umschlag
+statt einem nackten Array:
+
+```json
+{ "items": [...], "total": 51, "take": 20, "skip": 0, "hasMore": true }
+```
+
+Ohne `total` wüsste das Archiv nicht, ob noch etwas kommt. `hasMore` ist zwar
+ableitbar, wird aber mitgeliefert: es ist der Wert, auf den man verzweigt, und
+selbst ausrechnen ist die Stelle für Off-by-one-Fehler.
+
+Offset-Paging und nicht Cursor-Paging, weil ein Archiv auf eine Seite springen
+will statt sich dorthin durchzuhangeln. `take` ist auf 100 gedeckelt.
+
+Gemeinsam in [`pagination.ts`](src/common/http/pagination.ts): neue Listen
+erweitern `paginationSchema` im DTO und geben `toPage(items, total, query)`
+zurück.
+
+## API (Stand: Phase 6)
 
 | Methode                 | Pfad                                         | Rechte                                   |
 | ----------------------- | -------------------------------------------- | ---------------------------------------- |
@@ -621,7 +689,7 @@ bereits Erinnerte als auch den Fall, dass Push gar nicht konfiguriert ist.
 | `DELETE`                | `/api/hauskreise/:hauskreisId/people/:id`    | `admin`                                  |
 | `GET`                   | `…/locations`, `…/locations/:id`             | eingeloggt                               |
 | `POST`/`PATCH`/`DELETE` | `…/locations[/:id]`                          | `admin`                                  |
-| `GET`                   | `…/meetings?scope=upcoming\|past\|all`       | eingeloggt                               |
+| `GET`                   | `…/meetings?scope=upcoming\|past\|all`       | eingeloggt (paginiert)                   |
 | `GET`                   | `…/meetings/:id`                             | eingeloggt                               |
 | `GET`                   | `…/meetings/:id/host-suggestions`            | eingeloggt                               |
 | `GET`                   | `…/meetings/:id/topic-suggestions`           | eingeloggt                               |
@@ -632,15 +700,24 @@ bereits Erinnerte als auch den Fall, dass Push gar nicht konfiguriert ist.
 | `DELETE`                | `…/meetings/:id`                             | `admin`                                  |
 | `POST`                  | `…/meetings/generate`                        | `admin` (manueller Generator-Trigger)    |
 | `POST`                  | `…/meetings/host-reminders`                  | `admin` (manueller Reminder-Trigger)     |
-| `GET`                   | `…/topics?status=RUNNING\|COMPLETED`         | eingeloggt                               |
+| `GET`                   | `…/topics?status=RUNNING\|COMPLETED`         | eingeloggt (paginiert)                   |
 | `GET`                   | `…/topics/:id`                               | eingeloggt                               |
 | `POST`                  | `…/topics`                                   | eingeloggt                               |
 | `PATCH`                 | `…/topics/:id`                               | eingeloggt                               |
 | `DELETE`                | `…/topics/:id`                               | `admin`                                  |
 | `POST`                  | `…/topics/carry-over`                        | `admin` (manuelle Themen-Übernahme)      |
+| `GET`                   | `…/songs?search=`                            | eingeloggt (paginiert)                   |
+| `GET`                   | `…/songs/:id`                                | eingeloggt                               |
+| `POST`                  | `…/songs`                                    | eingeloggt (legt an oder gibt zurück)    |
+| `PATCH`                 | `…/songs/:id`                                | eingeloggt                               |
+| `DELETE`                | `…/songs/:id`                                | `admin` (nur wenn nirgends verwendet)    |
+| `GET`/`POST`            | `…/meetings/:id/songs`                       | eingeloggt                               |
+| `PATCH`/`DELETE`        | `…/meetings/:id/songs/:entryId`              | eingeloggt                               |
+| `GET`/`PUT`             | `…/meetings/:id/song-leaders`                | eingeloggt                               |
+| `GET`                   | `…/meetings/:id/song-leader-suggestions`     | eingeloggt                               |
 
 Alle `GET`s beantworten `If-None-Match` mit `304`. Die `PATCH`-Endpunkte auf
-Personen, Locations, Terminen und Themen sowie `…/meetings/:id/cancel` **verlangen**
+Personen, Locations, Terminen, Themen und Songs sowie `…/meetings/:id/cancel` **verlangen**
 `If-Match` (`428` ohne, `412` bei veralteter Version) — Details siehe
 [Conditional Requests](#conditional-requests-etag-304-412).
 

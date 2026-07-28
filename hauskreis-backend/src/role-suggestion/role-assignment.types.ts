@@ -16,6 +16,7 @@ import type { DeferralReason, HomeFacts } from './host-ranking';
 export const AssignmentRole = {
   HOST: 'HOST',
   TOPIC: 'TOPIC',
+  SONG: 'SONG',
 } as const;
 
 export type AssignmentRole =
