@@ -250,7 +250,8 @@ statt still eine leere Zuordnung zu schreiben.
 Zwei Personen dürfen dieselbe `locationName` tragen — das ist der Fall der
 geteilten Wohnung, den die Host-Vorschläge kennen. `locationName` leer lassen
 heißt „bringt kein Zuhause in die Rotation ein"; alle anderen Rollen bleiben
-davon unberührt.
+davon unberührt. `capacity` in `location.csv` leer lassen heißt „passt jeder
+rein" — nur die engen Zuhause brauchen eine Zahl.
 
 ## Code-Qualität
 
@@ -354,11 +355,14 @@ oben steht (CLAUDE.md §4: keine Blackbox):
     "timesAssigned": 3,
     "upcomingCommitments": [{ "role": "HOST", "date": "2027-01-05" }],
     "deferred": false,
+    "deferredReason": null,
     "home": {
       "locationId": "…",
       "locationName": "Bei Julian & Marlene",
       "hostWeight": 5,
       "credit": -0.3243,
+      "capacity": null,
+      "expectedAttendance": 9,
       "timesUsed": 6,
       "lastUsedAt": "2026-12-08",
       "daysSinceLastUse": 7,
@@ -439,18 +443,67 @@ ab Phase 9 Abwesenheit. Ein Zuhause fällt raus, wenn **kein** Bewohner mehr
 stattgefunden hat, ist kein „du warst doch gerade erst dran". Der Termin selbst
 fließt nicht in seine eigene Historie ein.
 
-**Nur Demotion** bei Auslastung: ist am Zieltermin _jeder_ Bewohner schon
-anderweitig eingeteilt, rutscht das Zuhause ans Ende der Liste (`deferred: true`)
-statt zu verschwinden. Eine Verschiebung übersteht den Fall „keine bessere
-Option da", ein Filter nicht.
+**Nur Zurückstellung** für einen einzelnen Abend: das Zuhause rutscht ans Ende
+der Liste (`deferred: true` samt `deferredReason`), statt zu verschwinden. Eine
+Verschiebung übersteht den Fall „keine bessere Option da", ein Filter nicht.
 
-Bewusst zählt dafür **nur der Termintag selbst**. Eine Aufgabe drei Wochen
-später ist kein Konflikt, sondern Last — und Last ist ohnehin schon das erste
-Sortierkriterium innerhalb des Haushalts. Dadurch braucht es kein willkürliches
-„die nächsten N Wochen"-Fenster.
+| `deferredReason` | Wann                                                         |
+| ---------------- | ------------------------------------------------------------ |
+| `TOO_SMALL`      | Es kommen mehr Leute, als reinpassen — siehe unten           |
+| `HOUSEHOLD_BUSY` | Jeder Bewohner ist an dem Abend schon anderweitig eingeteilt |
 
-Solange HOST die einzige Rolle ist, kann `deferred` gar nicht auslösen (ein Host
-pro Abend, ein Termin pro Datum). Ab Phase 5 fängt es an zu greifen.
+Für `HOUSEHOLD_BUSY` zählt bewusst **nur der Termintag selbst**. Eine Aufgabe
+drei Wochen später ist kein Konflikt, sondern Last — und Last ist ohnehin schon
+das erste Sortierkriterium innerhalb des Haushalts. Dadurch braucht es kein
+willkürliches „die nächsten N Wochen"-Fenster. Solange HOST die einzige Rolle
+ist, kann das gar nicht auslösen (ein Host pro Abend, ein Termin pro Datum); ab
+Phase 5 greift es.
+
+### Platz: kleine Wohnungen kommen nur an kleine Abende
+
+`capacity` ist nullable — die meisten Zuhause haben keine echte Grenze, nur die
+engen brauchen eine Zahl. Passt die erwartete Runde nicht rein, wird das Zuhause
+für **diesen einen Abend** zurückgestellt.
+
+Erwartet werden alle aktiven Personen abzüglich derer, die für den Termin
+`ABSENT` eingetragen haben. Ein **unentschiedener** Status zählt als „kommt": der
+Fehler, den man vermeiden will, ist ein Zuhause, das am Abend zu klein ist — nicht
+umgekehrt. Aus demselben Grund gilt eine unbekannte Zahl als volle Runde.
+
+Bei 9 aktiven Personen und `capacity = 5` heißt das: erst ab **vier Absagen**
+taucht das Zuhause im Ranking auf.
+
+**Und jetzt der Punkt, an dem die Gewichtung kippen könnte:** ein
+zurückgestelltes Zuhause **verdient weiter** sein Guthaben. Das ist der
+entscheidende Unterschied zur Abwesenheit (Phase 9), wo es nichts verdient:
+
+- **Abwesend** — der Haushalt _konnte_ nicht. Kein Anspruch entsteht, sonst
+  staut sich ein Rückstand für Zeit auf, in der er gar nicht zur Verfügung stand.
+- **Zurückgestellt** — der Haushalt _wollte und könnte_, die Umstände sagten
+  nein. Der Anspruch bleibt.
+
+Ohne das würde ein kleines Zuhause bei jedem seltenen kleinen Abend wieder bei
+null gegen die großen antreten — und faktisch nie hosten. Mit dem angesparten
+Guthaben gewinnt es den ersten Abend, der passt.
+
+Über 200 Abende simuliert, Sofie (Gewicht 1 von 18.5 → Soll 10.8):
+
+| Wie oft passt ein Abend zu ihr | Ist    | Verhalten                                      |
+| ------------------------------ | ------ | ---------------------------------------------- |
+| 14 von 200 (mehr als ihr Soll) | **10** | trifft ihr Soll und belegt nicht alle kleinen  |
+| 8 von 200 (weniger als Soll)   | **7**  | nimmt fast alle — mehr ist physisch nicht drin |
+| 0 von 200                      | **0**  | die anderen übernehmen anteilig                |
+
+Der Rest verteilt sich in allen drei Fällen weiter nach Gewicht. Im mittleren
+Fall bleiben 7 statt 8 übrig, weil ihr Guthaben nach jedem Hosten fällt und
+gelegentlich ein großes Zuhause knapp vorbeizieht — ein bewusst in Kauf
+genommener Rest, kein Aufbau von Rückstand.
+
+**Praktische Einschränkung:** heute senken nur explizite Absagen am Termin die
+Zahl. Weit entfernte Abende sehen deshalb immer voll aus, und die engen Zuhause
+tauchen erst kurzfristig auf. Die Abwesenheitszeiträume aus Phase 9 haben Start-
+und Enddatum und fließen dann hier mit ein — ein früh eingetragener Urlaub zählt
+also schon bei der Planung.
 
 ### Wie innerhalb des Haushalts sortiert wird
 
