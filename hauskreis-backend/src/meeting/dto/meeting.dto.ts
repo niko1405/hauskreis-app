@@ -5,6 +5,7 @@ import {
   MeetingStatus,
   MeetingType,
 } from '../../../generated/prisma/enums';
+import { paginationSchema } from '../../common/http/pagination';
 
 // Deriving the schemas from Prisma's generated enums keeps the API and the
 // database in sync — adding a value in schema.prisma is enough.
@@ -45,11 +46,9 @@ export const setAttendanceSchema = z.object({
   status: attendanceStatus,
 });
 
-export const listMeetingsQuerySchema = z.object({
+export const listMeetingsQuerySchema = paginationSchema.extend({
   /// 'upcoming' (default) hides past meetings; 'past' powers the archive view.
   scope: z.enum(['upcoming', 'past', 'all']).default('upcoming'),
-  take: z.coerce.number().int().min(1).max(100).default(20),
-  skip: z.coerce.number().int().min(0).default(0),
 });
 
 const meetingParamsSchema = z.object({

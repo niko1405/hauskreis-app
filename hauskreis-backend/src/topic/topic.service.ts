@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { TopicStatus } from '../../generated/prisma/enums';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
+import { toPage } from '../common/http/pagination';
 import type { IfMatchCondition } from '../common/http/etag';
 import type {
   CreateTopicDto,
@@ -27,16 +28,26 @@ const topicInclude = {
 export class TopicService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(hauskreisId: string, query: ListTopicsQueryDto) {
-    return this.prisma.topic.findMany({
-      where: { hauskreisId, ...(query.status ? { status: query.status } : {}) },
-      include: topicInclude,
-      // Newest first: the archive and the "was läuft gerade" view both read
-      // that way round.
-      orderBy: { createdAt: 'desc' },
-      take: query.take,
-      skip: query.skip,
-    });
+  async findAll(hauskreisId: string, query: ListTopicsQueryDto) {
+    const where = {
+      hauskreisId,
+      ...(query.status ? { status: query.status } : {}),
+    };
+
+    const [items, total] = await Promise.all([
+      this.prisma.topic.findMany({
+        where,
+        include: topicInclude,
+        // Newest first: the archive and the "was läuft gerade" view both read
+        // that way round.
+        orderBy: { createdAt: 'desc' },
+        take: query.take,
+        skip: query.skip,
+      }),
+      this.prisma.topic.count({ where }),
+    ]);
+
+    return toPage(items, total, query);
   }
 
   async findOne(hauskreisId: string, id: string) {

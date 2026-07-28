@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
 import { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
+import { toPage } from '../common/http/pagination';
 import type { IfMatchCondition } from '../common/http/etag';
 import { toUtcDate } from './meeting-schedule';
 import type {
@@ -41,7 +42,7 @@ export class MeetingService {
     private readonly roleSuggestions: RoleSuggestionService,
   ) {}
 
-  findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
+  async findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
     const today = toUtcDate(new Date());
 
     const dateFilter =
@@ -51,14 +52,21 @@ export class MeetingService {
           ? { lt: today }
           : undefined;
 
-    return this.prisma.meeting.findMany({
-      where: { hauskreisId, ...(dateFilter ? { date: dateFilter } : {}) },
-      include: meetingInclude,
-      // Upcoming reads best oldest-first, the archive newest-first.
-      orderBy: { date: query.scope === 'past' ? 'desc' : 'asc' },
-      take: query.take,
-      skip: query.skip,
-    });
+    const where = { hauskreisId, ...(dateFilter ? { date: dateFilter } : {}) };
+
+    const [items, total] = await Promise.all([
+      this.prisma.meeting.findMany({
+        where,
+        include: meetingInclude,
+        // Upcoming reads best oldest-first, the archive newest-first.
+        orderBy: { date: query.scope === 'past' ? 'desc' : 'asc' },
+        take: query.take,
+        skip: query.skip,
+      }),
+      this.prisma.meeting.count({ where }),
+    ]);
+
+    return toPage(items, total, query);
   }
 
   async findOne(hauskreisId: string, id: string) {
