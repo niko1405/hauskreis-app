@@ -1,10 +1,10 @@
-hauskreisName,name,email,birthdate,playsInstrument,canHost,active
-Holy-Homies,Niko,niko@example.com,,true,true,true
-Holy-Homies,Antonia,toni@example.com,,true,true,true
-Holy-Homies,Reini,reini@example.com,,true,true,true
-Holy-Homies,Julian,julian@example.com,,true,true,true
-Holy-Homies,Marlene,marlene@example.com,,false,true,true
-Holy-Homies,chris,chris@example.com,,false,true,true
-Holy-Homies,elisha,elisha@example.com,,false,true,true
-Holy-Homies,erik,erik@example.com,,false,true,true
-Holy-Homies,sofie,sofie@example.com,,false,false,true
+hauskreisName,name,email,birthdate,playsInstrument,canHost,locationName,active
+Holy-Homies,Niko,niko@example.com,,true,true,Bei Niko,true
+Holy-Homies,Antonia,toni@example.com,,true,true,Bei Antonia,true
+Holy-Homies,Reini,reini@example.com,,true,true,Bei Reini,true
+Holy-Homies,Julian,julian@example.com,,true,true,Bei Julian & Marlene,true
+Holy-Homies,Marlene,marlene@example.com,,false,true,Bei Julian & Marlene,true
+Holy-Homies,chris,chris@example.com,,false,true,Bei Chris,true
+Holy-Homies,elisha,elisha@example.com,,false,true,Bei Erik & Elisha,true
+Holy-Homies,erik,erik@example.com,,false,true,Bei Erik & Elisha,true
+Holy-Homies,sofie,sofie@example.com,,false,true,Bei Sofie,true

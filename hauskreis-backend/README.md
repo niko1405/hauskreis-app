@@ -242,8 +242,15 @@ Der Import ist doppelt abgesichert und bricht ab, wenn eine der Bedingungen fehl
 - `NODE_ENV` darf **nicht** `production` sein
 
 Neue Spalten/Dateien: CSV ergänzen und in `seed.ts` ein passendes Zod-Row-Schema
-hinterlegen. `person.csv` referenziert den Hauskreis über die Spalte `hauskreisName`,
-die zu einem Eintrag in `hauskreis.csv` passen muss.
+hinterlegen. Referenzen laufen über Namen, nicht über IDs — `person.csv` zeigt
+per `hauskreisName` auf `hauskreis.csv` und per `locationName` auf
+`location.csv`. Ein unbekannter Name bricht den Import mit Zeilennummer ab,
+statt still eine leere Zuordnung zu schreiben.
+
+Zwei Personen dürfen dieselbe `locationName` tragen — das ist der Fall der
+geteilten Wohnung, den die Host-Vorschläge kennen. `locationName` leer lassen
+heißt „bringt kein Zuhause in die Rotation ein"; alle anderen Rollen bleiben
+davon unberührt.
 
 ## Code-Qualität
 
@@ -321,15 +328,14 @@ unverändert, `null` löscht die Zuordnung.
 Zuweisungen werden gegen die Mandantengrenze geprüft — eine Person oder Location
 aus einem anderen Hauskreis wird mit `400` abgelehnt.
 
-## Vorschläge (Host & Location)
+## Vorschläge
 
-Die App **schlägt vor, sie teilt nicht zu**. Beide Endpunkte sind read-only und
+Die App **schlägt vor, sie teilt nicht zu**. Der Endpunkt ist read-only und
 unverbindlich; eingetragen wird ganz normal per `PATCH …/meetings/:id`. Ein
 Termin ohne Host bleibt ein gültiger Zustand.
 
 ```
 GET …/meetings/:id/host-suggestions
-GET …/meetings/:id/location-suggestions
 ```
 
 Zurück kommt die **komplette** Liste, nach Passung sortiert und mit `rank` —
@@ -341,59 +347,133 @@ oben steht (CLAUDE.md §4: keine Blackbox):
 {
   "personId": "…",
   "name": "Marlene",
-  "rank": 4,
+  "rank": 9,
   "facts": {
-    "lastAssignedAt": "2026-06-09",
-    "daysSinceLastAssignment": 84,
-    "timesAssigned": 1,
-    "upcomingCommitments": [{ "role": "HOST", "date": "2026-09-08" }]
+    "lastAssignedAt": "2026-12-08",
+    "daysSinceLastAssignment": 7,
+    "timesAssigned": 3,
+    "upcomingCommitments": [{ "role": "HOST", "date": "2027-01-05" }],
+    "deferred": false,
+    "home": {
+      "locationId": "…",
+      "locationName": "Bei Julian & Marlene",
+      "hostWeight": 5,
+      "credit": -0.3243,
+      "timesUsed": 6,
+      "lastUsedAt": "2026-12-08",
+      "daysSinceLastUse": 7,
+      "expectedShare": 0.2703,
+      "actualShare": 0.3
+    }
   }
 }
 ```
 
-### Wie sortiert wird
+### Host: Person und Ort sind eine Entscheidung
 
-Die Reihenfolge der Kriterien ist die eigentliche Fachlogik:
+„Bei Niko" _ist_ Niko hostet. Zwei getrennte Rankings — eins für Personen, eins
+für Orte — könnten sich widersprechen, deshalb läuft die Host-Empfehlung in
+zwei Stufen und liefert beides zusammen:
+
+1. **Welches Zuhause** ist am ehesten dran ([`host-ranking.ts`](src/role-suggestion/host-ranking.ts)).
+2. **Wer aus dem Haushalt** übernimmt ([`ranking.ts`](src/role-suggestion/ranking.ts),
+   unverändert). Bei einem Bewohner Formsache, bei einer geteilten Wohnung
+   dieselbe „am längsten nicht dran"-Regel wie überall sonst.
+
+`hostWeight` hängt am **Zuhause**, nicht an der Person: Hosten kostet den
+Haushalt, also teilen sich zwei Bewohner ein Gewicht statt je eines zu bekommen.
+Jeder von ihnen hostet dadurch etwa halb so oft wie jemand, der allein wohnt.
+
+Orte **ohne** Host (Schlosspark) sind gar nicht Teil davon. Sie schulden der
+Gruppe nichts, sondern sind eine Wetterfrage — und werden schlicht aus
+`…/locations` ausgewählt.
+
+### Wie das Zuhause bestimmt wird: ein Guthaben
+
+Statt All-Time-Anteile zu vergleichen, spielt die Logik die Historie Abend für
+Abend durch und führt pro Zuhause ein **Guthaben in Terminen**: jeder Abend
+bringt jedem Zuhause seinen Gewichtsanteil ein, wer hostet gibt einen aus.
+Positives Guthaben heißt „ist dran", negatives „war überdurchschnittlich oft".
+
+Das reguliert sich selbst — es gibt keinen Zähler, der zurückgesetzt werden
+müsste. Über 30 Abende mit den Seed-Gewichten:
+
+| Zuhause              | Gewicht | Soll | Ist |
+| -------------------- | ------: | ---: | --: |
+| Bei Julian & Marlene |       5 |  8.1 |   8 |
+| Bei Chris            |       3 |  4.9 |   5 |
+| Bei Erik & Elisha    |       3 |  4.9 |   5 |
+| Bei Niko             |       3 |  4.9 |   5 |
+| Bei Antonia          |       2 |  3.2 |   3 |
+| Bei Reini            |     1.5 |  2.4 |   2 |
+| Bei Sofie            |       1 |  1.6 |   2 |
+
+Bei Gleichstand entscheidet der längere Abstand zur letzten Nutzung, dann der
+Name — damit dieselben Daten immer dieselbe Liste ergeben.
+
+**Warum das Durchspielen und keine Formel?** Wegen der Vergesslichkeit. Kann
+jemand ein halbes Jahr nicht hosten, wächst sein Rückstand sonst ungebremst
+weiter, und bei der Rückkehr blockiert er über Wochen alle anderen. Ein Deckel
+auf einen aus Gesamtsummen _neu berechneten_ Wert hilft dagegen **nicht** — der
+Rohwert steht weiter im Raum und ist nach dem ersten Hosten sofort wieder da.
+Im Durchspielen wirkt er, weil jeder Schritt den gedeckelten Wert weiterträgt.
+
+`MAX_CREDIT_MEETINGS` liegt bei **1.5**. Unbeeinflusst verlässt das Guthaben
+nie den Bereich ±0.8 — der Deckel greift also im Normalbetrieb nie. Er gilt in
+beide Richtungen, was den Abstand auf `2 × 1.5` begrenzt: nach einem halben Jahr
+Pause sind es **drei Abende Aufholen**, dann läuft die normale Rotation weiter.
+
+Nebeneffekt derselben Mechanik: ein **neu angelegtes** Zuhause startet bei null
+statt mit dem Anspruch, erst einmal den All-Time-Stand aller anderen einzuholen.
+
+Und genau hier docken die Abwesenheiten aus Phase 9 an: ein Zuhause, dessen
+Bewohner weg sind, verdient in der Zeit einfach nichts — dann entsteht der
+Rückstand gar nicht erst und der Deckel bleibt das Sicherheitsnetz, das er sein
+soll.
+
+### Was ausgeschlossen wird und was nur nach hinten rutscht
+
+**Harter Ausschluss** nur bei Dauerzuständen: inaktive Personen, `canHost = false`,
+ab Phase 9 Abwesenheit. Ein Zuhause fällt raus, wenn **kein** Bewohner mehr
+übrig ist. Abgesagte Termine zählen nicht als Historie — ein Abend, der nie
+stattgefunden hat, ist kein „du warst doch gerade erst dran". Der Termin selbst
+fließt nicht in seine eigene Historie ein.
+
+**Nur Demotion** bei Auslastung: ist am Zieltermin _jeder_ Bewohner schon
+anderweitig eingeteilt, rutscht das Zuhause ans Ende der Liste (`deferred: true`)
+statt zu verschwinden. Eine Verschiebung übersteht den Fall „keine bessere
+Option da", ein Filter nicht.
+
+Bewusst zählt dafür **nur der Termintag selbst**. Eine Aufgabe drei Wochen
+später ist kein Konflikt, sondern Last — und Last ist ohnehin schon das erste
+Sortierkriterium innerhalb des Haushalts. Dadurch braucht es kein willkürliches
+„die nächsten N Wochen"-Fenster.
+
+Solange HOST die einzige Rolle ist, kann `deferred` gar nicht auslösen (ein Host
+pro Abend, ein Termin pro Datum). Ab Phase 5 fängt es an zu greifen.
+
+### Wie innerhalb des Haushalts sortiert wird
+
+`rankForRole` — dieselbe Funktion, die ab Phase 5 auch Thema und Song bedient:
 
 1. **Wer hat am wenigsten zu tun** — Aufgaben ab dem Termindatum, über _alle_
-   Rollen gezählt. Wer an dem Abend schon das Thema hat, soll nicht zusätzlich
-   hosten.
+   Rollen gezählt.
 2. **Wer war am längsten nicht dran** — in _dieser_ Rolle; wer noch nie dran war,
    steht ganz oben.
-3. **Wer war insgesamt am seltensten dran** — trennt zwei Personen, die zuletzt
-   am selben Abend dran waren.
-4. **Name** — damit dieselben Daten immer dieselbe Liste ergeben und sich die
-   Reihenfolge nicht bei jedem Aufruf umsortiert.
-
-Nicht berücksichtigt werden inaktive Personen, Personen mit `canHost = false`
-und **abgesagte Termine** — ein Abend, der nie stattgefunden hat, zählt nicht als
-„du warst doch gerade erst dran". Der Termin selbst fließt ebenfalls nicht in
-seine eigene Historie ein.
-
-### Locations
-
-Locations rotieren nicht gleichmäßig: `frequencyFactor` beschreibt den
-gewünschten Mix (drei Haupt-Locations häufiger als die am Stadtrand). Die
-Sortierung fragt deshalb, **wer am weitesten unter seinem Soll liegt** —
-`expectedShare` aus dem Faktor gegen `actualShare` aus der Historie. Ein Ort über
-seinem Soll rutscht nach unten, einer darunter nach oben, und das Verhältnis
-pendelt sich von selbst auf den gewünschten Mix ein. Gleichstand entscheidet der
-längere Abstand zur letzten Nutzung.
-
-Locations, die nicht mehr aktiv sind, zählen auch nicht mehr im Nenner — sonst
-würde ein aufgegebener Ort den Anteil aller anderen dauerhaft verzerren.
+3. **Wer war insgesamt am seltensten dran**.
+4. **Name**.
 
 ### Erweitern (Phase 5/6)
 
-Thema und Song folgen demselben Muster. Nötig ist jeweils:
+Thema und Song hängen an keinem Ort, laufen also direkt über `rankForRole`.
+Nötig ist jeweils:
 
 1. ein Wert mehr in `AssignmentRole`,
 2. ein Adapter, der die Zuweisungen als `RoleAssignmentEvent[]` einsammelt,
 3. ggf. ein Eligibility-Filter (bei Songs `playsInstrument = true`).
 
-Die Ranking-Funktion in [`ranking.ts`](src/role-suggestion/ranking.ts) bleibt
-unverändert — sie ist bewusst eine reine Funktion über bereits geladene Daten
-und ohne Datenbank testbar.
+Beide Ranking-Funktionen sind reine Funktionen über bereits geladene Daten und
+ohne Datenbank getestet.
 
 ## Host-Erinnerungen
 
@@ -426,7 +506,6 @@ bereits Erinnerte als auch den Fall, dass Push gar nicht konfiguriert ist.
 | `GET`                   | `…/meetings?scope=upcoming\|past\|all`       | eingeloggt                               |
 | `GET`                   | `…/meetings/:id`                             | eingeloggt                               |
 | `GET`                   | `…/meetings/:id/host-suggestions`            | eingeloggt                               |
-| `GET`                   | `…/meetings/:id/location-suggestions`        | eingeloggt                               |
 | `POST`                  | `…/meetings`                                 | eingeloggt                               |
 | `PATCH`                 | `…/meetings/:id`                             | eingeloggt                               |
 | `POST`                  | `…/meetings/:id/cancel`                      | eingeloggt                               |

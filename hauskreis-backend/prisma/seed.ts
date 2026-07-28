@@ -34,6 +34,14 @@ const hauskreisRow = z.object({
   name: z.string().trim().min(1),
 });
 
+const locationRow = z.object({
+  hauskreisName: z.string().trim().min(1),
+  name: z.string().trim().min(1),
+  hostWeight: z.coerce.number().min(0),
+  requiresHost: csvBool,
+  active: csvBool,
+});
+
 const personRow = z.object({
   hauskreisName: z.string().trim().min(1),
   name: z.string().trim().min(1),
@@ -41,6 +49,11 @@ const personRow = z.object({
   birthdate: optionalDate,
   playsInstrument: csvBool,
   canHost: csvBool,
+  /// Empty for anyone who brings no home into the hosting rotation.
+  locationName: z
+    .string()
+    .trim()
+    .transform((value) => (value === '' ? null : value)),
   active: csvBool,
 });
 
@@ -92,6 +105,7 @@ async function main(): Promise<void> {
 
   try {
     const hauskreise = readCsv('hauskreis.csv', hauskreisRow);
+    const locations = readCsv('location.csv', locationRow);
     const people = readCsv('person.csv', personRow);
 
     const idByName = new Map<string, string>();
@@ -106,12 +120,54 @@ async function main(): Promise<void> {
       idByName.set(record.name, record.id);
     }
 
-    for (const row of people) {
-      const hauskreisId = idByName.get(row.hauskreisName);
-      if (!hauskreisId) {
+    const resolveHauskreis = (file: string, name: string): string => {
+      const id = idByName.get(name);
+      if (!id) {
         throw new Error(
-          `person.csv references unknown hauskreis "${row.hauskreisName}" — add it to hauskreis.csv first.`,
+          `${file} references unknown hauskreis "${name}" — add it to hauskreis.csv first.`,
         );
+      }
+      return id;
+    };
+
+    // Locations first: people reference them by name.
+    const locationIdByName = new Map<string, string>();
+
+    for (const row of locations) {
+      const hauskreisId = resolveHauskreis('location.csv', row.hauskreisName);
+
+      const record = await prisma.location.upsert({
+        where: { hauskreisId_name: { hauskreisId, name: row.name } },
+        update: {
+          hostWeight: row.hostWeight,
+          requiresHost: row.requiresHost,
+          active: row.active,
+        },
+        create: {
+          hauskreisId,
+          name: row.name,
+          hostWeight: row.hostWeight,
+          requiresHost: row.requiresHost,
+          active: row.active,
+        },
+      });
+
+      locationIdByName.set(`${hauskreisId}::${record.name}`, record.id);
+    }
+
+    for (const row of people) {
+      const hauskreisId = resolveHauskreis('person.csv', row.hauskreisName);
+
+      let locationId: string | null = null;
+      if (row.locationName) {
+        locationId =
+          locationIdByName.get(`${hauskreisId}::${row.locationName}`) ?? null;
+
+        if (!locationId) {
+          throw new Error(
+            `person.csv references unknown location "${row.locationName}" — add it to location.csv first.`,
+          );
+        }
       }
 
       await prisma.person.upsert({
@@ -121,6 +177,7 @@ async function main(): Promise<void> {
           birthdate: row.birthdate ? new Date(row.birthdate) : null,
           playsInstrument: row.playsInstrument,
           canHost: row.canHost,
+          locationId,
           active: row.active,
         },
         create: {
@@ -130,13 +187,14 @@ async function main(): Promise<void> {
           birthdate: row.birthdate ? new Date(row.birthdate) : null,
           playsInstrument: row.playsInstrument,
           canHost: row.canHost,
+          locationId,
           active: row.active,
         },
       });
     }
 
     console.log(
-      `Seeded ${hauskreise.length} hauskreis(e) and ${people.length} people from ${SEED_DIR}`,
+      `Seeded ${hauskreise.length} hauskreis(e), ${locations.length} location(s) and ${people.length} people from ${SEED_DIR}`,
     );
   } finally {
     await prisma.$disconnect();
