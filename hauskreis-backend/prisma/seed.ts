@@ -34,10 +34,20 @@ const hauskreisRow = z.object({
   name: z.string().trim().min(1),
 });
 
+const optionalInt = z
+  .string()
+  .trim()
+  .transform((value) => (value === '' ? null : Number(value)))
+  .refine((value) => value === null || (Number.isInteger(value) && value > 0), {
+    message: 'must be a positive whole number, or empty for "no limit"',
+  });
+
 const locationRow = z.object({
   hauskreisName: z.string().trim().min(1),
   name: z.string().trim().min(1),
   hostWeight: z.coerce.number().min(0),
+  /// Empty means "everyone fits" — only the tight homes need a number.
+  capacity: optionalInt,
   requiresHost: csvBool,
   active: csvBool,
 });
@@ -140,6 +150,7 @@ async function main(): Promise<void> {
         where: { hauskreisId_name: { hauskreisId, name: row.name } },
         update: {
           hostWeight: row.hostWeight,
+          capacity: row.capacity,
           requiresHost: row.requiresHost,
           active: row.active,
         },
@@ -147,6 +158,7 @@ async function main(): Promise<void> {
           hauskreisId,
           name: row.name,
           hostWeight: row.hostWeight,
+          capacity: row.capacity,
           requiresHost: row.requiresHost,
           active: row.active,
         },

@@ -33,6 +33,7 @@ export class LocationService {
         hauskreisId,
         name: dto.name,
         hostWeight: dto.hostWeight,
+        capacity: dto.capacity ?? null,
         requiresHost: dto.requiresHost,
       },
     });
@@ -52,6 +53,8 @@ export class LocationService {
           data: {
             name: dto.name,
             hostWeight: dto.hostWeight,
+            // `undefined` leaves it alone, `null` removes the limit.
+            capacity: dto.capacity,
             requiresHost: dto.requiresHost,
             active: dto.active,
             version: { increment: 1 },

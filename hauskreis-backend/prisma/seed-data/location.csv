@@ -1,9 +1,9 @@
-hauskreisName,name,hostWeight,requiresHost,active
-Holy-Homies,Bei Julian & Marlene,5,true,true
-Holy-Homies,Bei Erik & Elisha,3,true,true
-Holy-Homies,Bei Niko,3,true,true
-Holy-Homies,Bei Chris,3,true,true
-Holy-Homies,Bei Antonia,2,true,true
-Holy-Homies,Bei Reini,1.5,true,true
-Holy-Homies,Bei Sofie,1,true,true
-Holy-Homies,Schlosspark,0,false,true
+hauskreisName,name,hostWeight,capacity,requiresHost,active
+Holy-Homies,Bei Julian & Marlene,5,,true,true
+Holy-Homies,Bei Erik & Elisha,3,,true,true
+Holy-Homies,Bei Niko,3,,true,true
+Holy-Homies,Bei Chris,3,,true,true
+Holy-Homies,Bei Antonia,2,,true,true
+Holy-Homies,Bei Reini,1.5,,true,true
+Holy-Homies,Bei Sofie,1,5,true,true
+Holy-Homies,Schlosspark,0,,false,true
