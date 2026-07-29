@@ -14,6 +14,7 @@ import {
 import { MeetingService } from './meeting.service';
 import { MeetingGeneratorService } from './meeting-generator.service';
 import { HostReminderService } from './host-reminder.service';
+import { ActionstepReminderService } from './actionstep-reminder.service';
 import {
   CreateMeetingDto,
   ListMeetingsQueryDto,
@@ -33,6 +34,7 @@ export class MeetingController {
     private readonly meetingService: MeetingService,
     private readonly generator: MeetingGeneratorService,
     private readonly hostReminders: HostReminderService,
+    private readonly actionstepReminders: ActionstepReminderService,
   ) {}
 
   @Get()
@@ -134,5 +136,19 @@ export class MeetingController {
     return this.hostReminders.sendDueReminders({
       hauskreisId: params.hauskreisId,
     });
+  }
+
+  /**
+   * Manual trigger for the actionstep nudge.
+   *
+   * Still respects each person's chosen weekday, so off-day this reports zero
+   * rather than surprising the group — the button exists to check the job, not
+   * to bypass the setting.
+   */
+  @Post('actionstep-reminders')
+  @Roles(ROLE_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  runActionstepReminders(@Param() params: HauskreisParamsDto) {
+    return this.actionstepReminders.sendDueReminders(params.hauskreisId);
   }
 }

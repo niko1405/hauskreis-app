@@ -163,6 +163,38 @@ export class RoleSuggestionService {
   }
 
   /**
+   * Homes that are only an option for this meeting *because* people dropped
+   * out — too small for the full group, big enough for the ones still coming.
+   *
+   * The trigger for telling their residents "bei euch wäre jetzt Platz". Says
+   * nothing about whether that is the fairest choice: the ranking answers that
+   * when somebody opens the picker. This is an invitation, not a decision.
+   */
+  async findHomesUnlockedByAbsences(
+    hauskreisId: string,
+    meetingId: string,
+  ): Promise<Household[]> {
+    const [households, expected, fullGroup] = await Promise.all([
+      this.findHouseholds(hauskreisId),
+      this.countExpectedAttendance(hauskreisId, meetingId),
+      this.prisma.person.count({ where: { hauskreisId, active: true } }),
+    ]);
+
+    if (expected === null) {
+      return [];
+    }
+
+    return households.filter(
+      ({ home }) =>
+        home.capacity !== null &&
+        // Would not have fit the whole group…
+        home.capacity < fullGroup &&
+        // …but fits the people who are actually coming.
+        home.capacity >= expected,
+    );
+  }
+
+  /**
    * The homes in the rotation, each with the people who could host there.
    *
    * A home without a single eligible resident drops out entirely — that is the
