@@ -16,6 +16,7 @@ import { LocationModule } from './location/location.module';
 import { MeetingModule } from './meeting/meeting.module';
 import { TopicModule } from './topic/topic.module';
 import { SongModule } from './song/song.module';
+import { PrayerBuddyModule } from './prayer-buddy/prayer-buddy.module';
 import { NotificationModule } from './notification/notification.module';
 
 @Module({
@@ -42,6 +43,7 @@ import { NotificationModule } from './notification/notification.module';
     MeetingModule,
     TopicModule,
     SongModule,
+    PrayerBuddyModule,
     NotificationModule,
   ],
   controllers: [HealthController],

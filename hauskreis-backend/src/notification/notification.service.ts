@@ -87,6 +87,9 @@ export class NotificationService implements OnModuleInit {
     personId: string;
     type: NotificationType;
     relatedMeetingId?: string | null;
+    /// What a prayer buddy assignment refers to. Without it every rotation
+    /// would look like the first one and only that would ever be announced.
+    relatedGroupId?: string | null;
     payload: NotificationPayload;
   }): Promise<SendResult> {
     if (!this.enabled) {
@@ -110,6 +113,7 @@ export class NotificationService implements OnModuleInit {
         personId: params.personId,
         type: params.type,
         relatedMeetingId: params.relatedMeetingId ?? null,
+        relatedGroupId: params.relatedGroupId ?? null,
       },
     });
 
@@ -198,16 +202,23 @@ export class NotificationService implements OnModuleInit {
     return 'failed';
   }
 
+  /**
+   * The real deduplication check. The unique index cannot do it: Postgres
+   * treats rows with a NULL anywhere in the tuple as distinct, and both
+   * subject columns are nullable by design.
+   */
   private async hasBeenSent(params: {
     personId: string;
     type: NotificationType;
     relatedMeetingId?: string | null;
+    relatedGroupId?: string | null;
   }): Promise<boolean> {
     const existing = await this.prisma.notificationLog.findFirst({
       where: {
         personId: params.personId,
         type: params.type,
         relatedMeetingId: params.relatedMeetingId ?? null,
+        relatedGroupId: params.relatedGroupId ?? null,
       },
     });
 
