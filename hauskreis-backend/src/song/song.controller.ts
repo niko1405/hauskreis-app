@@ -11,6 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { SongService } from './song.service';
+import { SongReminderService } from './song-reminder.service';
 import { PersonService } from '../person/person.service';
 import {
   CreateSongDto,
@@ -32,7 +33,18 @@ export class SongController {
   constructor(
     private readonly songs: SongService,
     private readonly people: PersonService,
+    private readonly reminders: SongReminderService,
   ) {}
+
+  /** Manual trigger for the daily song reminders, scoped to this group. */
+  @Post('reminders')
+  @Roles(ROLE_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  runReminders(@Param() params: HauskreisParamsDto) {
+    return this.reminders.sendDueReminders({
+      hauskreisId: params.hauskreisId,
+    });
+  }
 
   @Get()
   findAll(

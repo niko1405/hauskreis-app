@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { TopicController } from './topic.controller';
 import { TopicService } from './topic.service';
 import { TopicCarryOverService } from './topic-carry-over.service';
+import { TopicReminderService } from './topic-reminder.service';
+import { NotificationModule } from '../notification/notification.module';
 
 /**
  * Owns topics and the carry-over that keeps a running one on the next meeting.
@@ -11,8 +13,9 @@ import { TopicCarryOverService } from './topic-carry-over.service';
  * hosts — only the event adapter and the eligibility filter differ.
  */
 @Module({
+  imports: [NotificationModule],
   controllers: [TopicController],
-  providers: [TopicService, TopicCarryOverService],
-  exports: [TopicService],
+  providers: [TopicService, TopicCarryOverService, TopicReminderService],
+  exports: [TopicService, TopicReminderService],
 })
 export class TopicModule {}

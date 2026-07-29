@@ -1,105 +1,52 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PrismaService } from '../prisma/prisma.service';
-import { NotificationService } from '../notification/notification.service';
-import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
-import { addDays, toUtcDate } from './meeting-schedule';
+import {
+  MeetingReminderService,
+  type ReminderRunOptions,
+  type ReminderRunResult,
+} from '../notification/meeting-reminder.service';
+import { hostReminderBody } from '../notification/reminder-copy';
+import { NotificationType } from '../../generated/prisma/enums';
 
-/** How far ahead hosts are reminded — Saturday for the Tuesday meeting. */
-export const HOST_REMINDER_DAYS_AHEAD = 3;
-
-export interface ReminderRunResult {
-  /** Hosts who got a fresh reminder. */
-  notified: number;
-  /** Hosts already reminded on an earlier run — or push is not configured. */
-  skipped: number;
-}
-
-const dateFormat = new Intl.DateTimeFormat('de-DE', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  timeZone: 'UTC',
-});
-
+/**
+ * Reminds hosts before the evening happens at their place.
+ *
+ * The scan window, each person's lead time and the deduplication all live in
+ * `MeetingReminderService`; what is left here is who the reminder concerns and
+ * what it says. How many days ahead it goes out is no longer a constant — it
+ * is a per-person setting, defaulting to the catalog's three days.
+ */
 @Injectable()
 export class HostReminderService {
-  private readonly logger = new Logger(HostReminderService.name);
-
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly notifications: NotificationService,
-  ) {}
+  constructor(private readonly reminders: MeetingReminderService) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_9AM, { name: 'host-reminders' })
   async handleCron(): Promise<void> {
-    const result = await this.sendDueReminders();
-
-    if (result.notified > 0) {
-      this.logger.log(`Sent ${result.notified} host reminder(s)`);
-    }
+    await this.sendDueReminders();
   }
 
-  /**
-   * Reminds every host whose meeting is within the next few days.
-   *
-   * Uses a window rather than "exactly in 3 days" on purpose: if the server is
-   * down on the day the reminder would fall due, the next run still catches it.
-   * That only works because `notify()` deduplicates per (person, type, meeting)
-   * — without the log this would send the same reminder three days running.
-   */
-  async sendDueReminders(
-    options: { now?: Date; hauskreisId?: string } = {},
+  sendDueReminders(
+    options: ReminderRunOptions = {},
   ): Promise<ReminderRunResult> {
-    const today = toUtcDate(options.now ?? new Date());
-    const horizon = addDays(today, HOST_REMINDER_DAYS_AHEAD);
-
-    const meetings = await this.prisma.meeting.findMany({
-      where: {
-        date: { gte: today, lte: horizon },
-        status: MeetingStatus.PLANNED,
-        hostPersonId: { not: null },
-        // The cron run covers every group; the manual trigger is scoped.
-        ...(options.hauskreisId ? { hauskreisId: options.hauskreisId } : {}),
-      },
-      select: {
-        id: true,
-        date: true,
-        hostPersonId: true,
-        location: { select: { name: true } },
-      },
-    });
-
-    const results = await Promise.all(
-      meetings.map((meeting) =>
-        this.notifications.notify({
-          personId: meeting.hostPersonId as string,
-          type: NotificationType.HOST_REMINDER,
-          relatedMeetingId: meeting.id,
-          payload: {
-            title: 'Du bist dran mit Hosten',
-            body: buildBody(meeting.date, meeting.location?.name ?? null),
-            url: `/meetings/${meeting.id}`,
-          },
-        }),
-      ),
-    );
-
-    return results.reduce<ReminderRunResult>(
-      (total, result) => ({
-        notified: total.notified + (result.skipped === 0 ? 1 : 0),
-        skipped: total.skipped + result.skipped,
-      }),
-      { notified: 0, skipped: 0 },
+    return this.reminders.run(
+      NotificationType.HOST_REMINDER,
+      (meeting) =>
+        meeting.hostPersonId
+          ? [
+              {
+                personId: meeting.hostPersonId,
+                payload: {
+                  title: 'Du bist dran mit Hosten',
+                  body: hostReminderBody(
+                    meeting.date,
+                    meeting.location?.name ?? null,
+                  ),
+                  url: `/meetings/${meeting.id}`,
+                },
+              },
+            ]
+          : [],
+      options,
     );
   }
-}
-
-/** Warm and personal, per the tone laid out in CLAUDE.md §9. */
-function buildBody(date: Date, locationName: string | null): string {
-  const when = dateFormat.format(date);
-
-  return locationName
-    ? `Am ${when} ist der Hauskreis bei dir (${locationName}).`
-    : `Am ${when} ist der Hauskreis bei dir.`;
 }
