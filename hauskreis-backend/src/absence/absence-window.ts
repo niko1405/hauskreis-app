@@ -5,8 +5,6 @@ export interface AbsenceWindow {
   endDate: Date;
 }
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
 /**
  * Answers "is this person away on this date" for a whole set of periods.
  *
@@ -55,52 +53,6 @@ export class AbsenceCalendar {
       personIds.every((personId) => this.isAway(personId, date))
     );
   }
-
-  /**
-   * True when the person is away for *every* day of the range.
-   *
-   * The prayer buddy rotation asks this: being away for a few days of a
-   * fortnight is no reason to leave somebody out, being away for all of it is.
-   */
-  isAwayThroughout(personId: string, from: Date, to: Date): boolean {
-    const windows = this.byPerson.get(personId);
-
-    if (!windows) {
-      return false;
-    }
-
-    for (
-      let day = startOfUtcDay(from).getTime();
-      day <= startOfUtcDay(to).getTime();
-      day += MS_PER_DAY
-    ) {
-      if (!this.isAway(personId, new Date(day))) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  get isEmpty(): boolean {
-    return this.byPerson.size === 0;
-  }
-}
-
-/** Every date in an inclusive range, at midnight UTC. */
-export function datesInRange(from: Date, to: Date): Date[] {
-  const dates: Date[] = [];
-  const last = startOfUtcDay(to).getTime();
-
-  for (
-    let day = startOfUtcDay(from).getTime();
-    day <= last;
-    day += MS_PER_DAY
-  ) {
-    dates.push(new Date(day));
-  }
-
-  return dates;
 }
 
 function startOfUtcDay(date: Date): Date {

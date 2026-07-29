@@ -4,7 +4,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationService } from '../notification/notification.service';
 import { PrayerBuddyService, type Assignment } from './prayer-buddy.service';
 import { buildGroups } from './grouping';
-import { AbsenceCalendar } from '../absence/absence-window';
 import { NotificationType } from '../../generated/prisma/enums';
 import { addDays, toUtcDate } from '../meeting/meeting-schedule';
 
@@ -123,42 +122,33 @@ export class PrayerBuddyGeneratorService {
     periodStart: Date,
     options: { notify: boolean },
   ): Promise<RotationResult> {
-    const [people, config, history, absences] = await Promise.all([
+    const [people, config, history] = await Promise.all([
       this.prisma.person.findMany({
         where: { hauskreisId, active: true },
         select: { id: true, name: true },
       }),
       this.buddies.getConfig(hauskreisId),
       this.buddies.findHistory(hauskreisId),
-      this.prisma.absencePeriod.findMany({
-        where: { hauskreisId },
-        select: { personId: true, startDate: true, endDate: true },
-      }),
     ]);
 
-    const periodEnd = this.buddies.periodEndFor(
-      periodStart,
-      config.periodLengthWeeks,
-    );
-
-    // Away for the *whole* period means there is nobody to pray with for two
-    // weeks, so that person sits this round out. Away for part of it is no
-    // reason to leave them out — praying together is not tied to being in town.
-    const calendar = new AbsenceCalendar(absences);
-    const available = people.filter(
-      (person) => !calendar.isAwayThroughout(person.id, periodStart, periodEnd),
-    );
-
+    // Absence periods are deliberately ignored here, unlike everywhere else.
+    // Praying for each other does not depend on being in town, and skipping a
+    // round would cost the person the one thing a holiday does not interrupt.
     const groups = buildGroups({
-      people: available,
+      people,
       history: history.groupings,
       periodIndex: history.nextPeriodIndex,
     });
 
     if (groups.length === 0) {
-      // Fewer than two people available. Not an error — just nothing to pair.
+      // Fewer than two active people. Not an error — just nothing to pair.
       return { assignment: null, created: false, notified: 0 };
     }
+
+    const periodEnd = this.buddies.periodEndFor(
+      periodStart,
+      config.periodLengthWeeks,
+    );
 
     await this.prisma.$transaction(
       groups.map((group) =>

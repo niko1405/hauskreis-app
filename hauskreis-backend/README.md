@@ -910,11 +910,12 @@ Erste — es macht ja jemand die Tür auf.
 Themen- und Musik-Vorschläge kennen keine Wohnung und lassen Abwesende schlicht
 weg.
 
-### Und bei den Gebetsbuddys
+### Wo Abwesenheit bewusst nicht zählt
 
-Ausgelassen wird nur, wer die **ganze** Periode weg ist. Ein paar Tage Urlaub
-mitten in zwei Wochen sind kein Grund auszusetzen — miteinander beten hängt nicht
-daran, in der Stadt zu sein.
+Die Gebetsbuddy-Rotation ignoriert Abwesenheiten vollständig und teilt weiter
+zu. Füreinander beten hängt nicht daran, in der Stadt zu sein — jemanden für eine
+Runde auszulassen würde ihm ausgerechnet das nehmen, was ein Urlaub nicht
+unterbricht.
 
 ## Gebetsbuddys
 

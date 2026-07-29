@@ -21,10 +21,7 @@ const assignment = {
   ],
 };
 
-function setup(
-  running: { id: string; periodStart: Date }[] = [],
-  absences: { personId: string; startDate: Date; endDate: Date }[] = [],
-) {
+function setup(running: { id: string; periodStart: Date }[] = []) {
   const findMany = jest.fn().mockResolvedValue(running);
   const updateMany = jest.fn().mockResolvedValue({ count: running.length });
   const create = jest.fn();
@@ -38,7 +35,6 @@ function setup(
       ]),
     },
     hauskreis: { findMany: jest.fn().mockResolvedValue([{ id: 'hk-1' }]) },
-    absencePeriod: { findMany: jest.fn().mockResolvedValue(absences) },
     $transaction: jest.fn().mockResolvedValue([]),
   } as unknown as PrismaService;
 
@@ -144,45 +140,5 @@ describe('PrayerBuddyGeneratorService.rotateNow', () => {
     await service.rotateNow('hk-1', { now: TODAY, notify: false });
 
     expect(findMany.mock.calls[0][0].where.discardedAt).toBeNull();
-  });
-});
-
-describe('PrayerBuddyGeneratorService and absences', () => {
-  it('leaves out whoever is away for the whole period', async () => {
-    const { service, prisma } = setup(
-      [],
-      [
-        {
-          personId: 'b',
-          startDate: utc('2026-07-29'),
-          endDate: utc('2026-08-11'),
-        },
-      ],
-    );
-
-    await service.rotateNow('hk-1', { now: TODAY, notify: false });
-
-    // Two people, one gone the whole fortnight: nobody left to pair, so no
-    // assignment rather than a group of one.
-    expect(prisma.$transaction).not.toHaveBeenCalled();
-  });
-
-  it('keeps someone who is only away for part of it', async () => {
-    const { service, prisma } = setup(
-      [],
-      [
-        {
-          personId: 'b',
-          startDate: utc('2026-08-05'),
-          endDate: utc('2026-08-11'),
-        },
-      ],
-    );
-
-    await service.rotateNow('hk-1', { now: TODAY, notify: false });
-
-    // Praying together is not tied to being in town — a week away is no reason
-    // to sit out a fortnight.
-    expect(prisma.$transaction).toHaveBeenCalled();
   });
 });
