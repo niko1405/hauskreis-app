@@ -30,10 +30,16 @@ export interface RankableHome {
 /**
  * Why a home is set aside for one evening.
  *
+ * `AWAY` — nobody who could host there is in town.
  * `TOO_SMALL` — more people are coming than fit.
  * `HOUSEHOLD_BUSY` — every eligible resident already has another job that night.
+ *
+ * `AWAY` is the odd one out and the only one that also changes the arithmetic:
+ * the other two keep earning credit while set aside, because the opportunity was
+ * denied by the circumstances. A household on holiday gave the evening up, so it
+ * earns nothing — see `awayOn` below.
  */
-export type DeferralReason = 'TOO_SMALL' | 'HOUSEHOLD_BUSY';
+export type DeferralReason = 'AWAY' | 'TOO_SMALL' | 'HOUSEHOLD_BUSY';
 
 /** One past evening that took place at a host-bound home. */
 export interface HomeUse {
@@ -107,9 +113,16 @@ export function rankHomes(params: {
   expectedAttendance?: number | null;
   /** Homes whose every eligible resident is busy that evening. */
   busyHomeIds?: ReadonlySet<string>;
+  /**
+   * Whether a home was unavailable on a given date because its household was
+   * away. Asked for every evening in the history, not just the one being
+   * planned: a home that was on holiday must not come back owed three evenings.
+   */
+  awayOn?: (homeId: string, date: Date) => boolean;
 }): HomeRanking[] {
   const { homes, uses, targetDate, busyHomeIds } = params;
   const expectedAttendance = params.expectedAttendance ?? null;
+  const awayOn = params.awayOn ?? (() => false);
 
   const totalWeight = homes.reduce((sum, home) => sum + home.hostWeight, 0);
 
@@ -128,9 +141,35 @@ export function rankHomes(params: {
   const earnPerMeeting = (home: RankableHome) =>
     totalWeight > 0 ? home.hostWeight / totalWeight : 1 / homes.length;
 
-  const settle = () => {
-    for (const home of homes) {
-      const current = (credit.get(home.id) as number) + earnPerMeeting(home);
+  /**
+   * Hands out one evening's worth of credit among the homes that were actually
+   * in the running that night.
+   *
+   * A household on holiday drops out of the denominator as well as out of the
+   * payout. Leaving it in the denominator would mean its share evaporates and
+   * everyone present ends up slightly short — over a long absence the whole
+   * group would drift towards looking underserved, which is the same as nobody
+   * being owed anything.
+   */
+  const settle = (date: Date) => {
+    const present = homes.filter((home) => !awayOn(home.id, date));
+
+    if (present.length === 0) {
+      return;
+    }
+
+    const presentWeight = present.reduce(
+      (sum, home) => sum + home.hostWeight,
+      0,
+    );
+
+    for (const home of present) {
+      const share =
+        presentWeight > 0
+          ? home.hostWeight / presentWeight
+          : 1 / present.length;
+      const current = (credit.get(home.id) as number) + share;
+
       credit.set(
         home.id,
         Math.max(-MAX_CREDIT_MEETINGS, Math.min(MAX_CREDIT_MEETINGS, current)),
@@ -139,7 +178,7 @@ export function rankHomes(params: {
   };
 
   for (const use of history) {
-    settle();
+    settle(use.date);
     credit.set(use.locationId, (credit.get(use.locationId) as number) - 1);
     timesUsed.set(
       use.locationId,
@@ -155,13 +194,18 @@ export function rankHomes(params: {
   // One more round for the evening being planned: the question is who is most
   // owed *including* this slot, which is also what gives a sensible order
   // before any history exists at all.
-  settle();
+  settle(targetDate);
 
   return homes
     .map((home): HomeRanking => {
       const used = timesUsed.get(home.id) as number;
       const last = lastUsedAt.get(home.id);
-      const reason = deferralReason(home, expectedAttendance, busyHomeIds);
+      const reason = deferralReason(
+        home,
+        expectedAttendance,
+        busyHomeIds,
+        awayOn(home.id, targetDate),
+      );
 
       return {
         home,
@@ -185,14 +229,23 @@ export function rankHomes(params: {
 }
 
 /**
- * Too small beats busy when both apply: it is the fact the group can act on
+ * Away beats everything: an empty flat is not a matter of degree, and telling
+ * someone on holiday that their place is merely "too small tonight" would be
+ * misleading.
+ *
+ * Too small then beats busy: it is the fact the group can act on
  * ("erst wenn genug absagen"), while a busy household is a scheduling detail.
  */
 function deferralReason(
   home: RankableHome,
   expectedAttendance: number | null,
   busyHomeIds: ReadonlySet<string> | undefined,
+  away: boolean,
 ): DeferralReason | null {
+  if (away) {
+    return 'AWAY';
+  }
+
   if (
     home.capacity !== null &&
     (expectedAttendance ?? Infinity) > home.capacity

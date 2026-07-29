@@ -77,6 +77,16 @@ enum AttendanceStatus {
   @@map("attendance_status")
 }
 
+enum AttendanceSource {
+  /// The person answered for this evening themselves. Never overwritten by an
+  /// absence period — a deliberate answer outranks a blanket date range.
+  SELF
+  /// Derived from an absence period covering this date.
+  ABSENCE
+
+  @@map("attendance_source")
+}
+
 model Hauskreis {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
@@ -91,6 +101,7 @@ model Hauskreis {
   songs             Song[]
   prayerBuddyGroups PrayerBuddyGroup[]
   prayerBuddyConfig PrayerBuddyCycleConfig?
+  absences          AbsencePeriod[]
 
   @@map("hauskreis")
 }
@@ -129,6 +140,7 @@ model Person {
   notifications         NotificationLog[]
   notificationsAbout    NotificationLog[]        @relation("NotificationSubject")
   notificationSettings  NotificationPreference[]
+  absences              AbsencePeriod[]
 
   @@unique([hauskreisId, email])
   @@index([hauskreisId])
@@ -361,6 +373,34 @@ model PrayerBuddyGroupMember {
   @@map("prayer_buddy_group_member")
 }
 
+/// "Ich bin vom … bis … weg." Both ends inclusive.
+///
+/// The single source of truth for a stretch of time. What it produces —
+/// `meeting_attendance` rows for the evenings it covers — is derived and can be
+/// rebuilt from here at any point, which is what makes editing the period safe.
+model AbsencePeriod {
+  id          String   @id @default(uuid()) @db.Uuid
+  hauskreisId String   @map("hauskreis_id") @db.Uuid
+  personId    String   @map("person_id") @db.Uuid
+  startDate   DateTime @map("start_date") @db.Date
+  /// Inclusive: away "bis 24." means the 24th is still covered. A one-day
+  /// absence has the same value on both ends.
+  endDate     DateTime @map("end_date") @db.Date
+  reason      String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  /// Optimistic locking counter, see docs/conditional requests.
+  version     Int      @default(0)
+
+  hauskreis Hauskreis @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  /// Overlapping periods are allowed on purpose — two trips that touch simply
+  /// union. Forbidding it would make editing one of them needlessly fiddly.
+  @@index([hauskreisId, startDate, endDate])
+  @@index([personId])
+  @@map("absence_period")
+}
+
 /// One Web Push endpoint, i.e. one browser on one device. People install the
 /// PWA on several devices, so a person can have many.
 model PushSubscription {
@@ -441,6 +481,10 @@ model MeetingAttendance {
   meetingId String           @map("meeting_id") @db.Uuid
   personId  String           @map("person_id") @db.Uuid
   status    AttendanceStatus @default(UNKNOWN)
+  /// Who put this answer here. An absence period writes rows on the person's
+  /// behalf, and without this column a later re-sync could not tell them from a
+  /// deliberate "doch, ich komme" and would silently overwrite it.
+  source    AttendanceSource @default(SELF)
   updatedAt DateTime         @updatedAt @map("updated_at")
 
   meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)

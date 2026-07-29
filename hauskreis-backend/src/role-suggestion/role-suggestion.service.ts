@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AttendanceStatus, MeetingStatus } from '../../generated/prisma/enums';
 import { rankForRole } from './ranking';
 import { rankHomes, type HomeUse, type RankableHome } from './host-ranking';
+import { AbsenceCalendar } from '../absence/absence-window';
 import {
   AssignmentRole,
   type EligiblePerson,
@@ -49,12 +50,21 @@ export class RoleSuggestionService {
     targetDate: Date,
     options: { excludeMeetingId?: string } = {},
   ): Promise<HostSuggestion[]> {
-    const [households, uses, events, expectedAttendance] = await Promise.all([
-      this.findHouseholds(hauskreisId),
-      this.collectHomeUses(hauskreisId, options.excludeMeetingId),
-      this.collectEvents(hauskreisId, options.excludeMeetingId),
-      this.countExpectedAttendance(hauskreisId, options.excludeMeetingId),
-    ]);
+    const [households, uses, events, expectedAttendance, calendar] =
+      await Promise.all([
+        this.findHouseholds(hauskreisId),
+        this.collectHomeUses(hauskreisId, options.excludeMeetingId),
+        this.collectEvents(hauskreisId, options.excludeMeetingId),
+        this.countExpectedAttendance(hauskreisId, options.excludeMeetingId),
+        this.loadAbsences(hauskreisId),
+      ]);
+
+    const residentIdsByHome = new Map(
+      households.map((household) => [
+        household.home.id,
+        household.residents.map((resident) => resident.id),
+      ]),
+    );
 
     const ranked = rankHomes({
       homes: households.map((household) => household.home),
@@ -62,6 +72,11 @@ export class RoleSuggestionService {
       targetDate,
       expectedAttendance,
       busyHomeIds: findBusyHomes(households, events, targetDate),
+      // A home counts as away only once *every* resident who could host there
+      // is: one of two flatmates on holiday still leaves someone to open the
+      // door.
+      awayOn: (homeId, date) =>
+        calendar.areAllAway(residentIdsByHome.get(homeId) ?? [], date),
     });
 
     const residentsByHome = new Map(
@@ -69,19 +84,37 @@ export class RoleSuggestionService {
     );
 
     return ranked
-      .flatMap((entry) =>
+      .flatMap((entry) => {
+        const residents = residentsByHome.get(entry.home.id) ?? [];
+
         // Within a household the usual person ranking decides, so a shared home
-        // does not always propose the same one of its residents.
-        rankForRole({
-          people: residentsByHome.get(entry.home.id) ?? [],
-          events,
-          role: AssignmentRole.HOST,
-          targetDate,
-        }).map((suggestion) => ({
+        // does not always propose the same one of its residents. Whoever is
+        // away goes to the back of their own household rather than out of the
+        // list: a name missing without explanation looks like a bug, and the
+        // reason is exactly what makes the ranking checkable (CLAUDE.md §4).
+        const away = new Set(
+          residents
+            .filter((resident) => calendar.isAway(resident.id, targetDate))
+            .map((resident) => resident.id),
+        );
+
+        const rankWithin = (people: EligiblePerson[]) =>
+          rankForRole({
+            people,
+            events,
+            role: AssignmentRole.HOST,
+            targetDate,
+          });
+
+        return [
+          ...rankWithin(residents.filter((person) => !away.has(person.id))),
+          ...rankWithin(residents.filter((person) => away.has(person.id))),
+        ].map((suggestion) => ({
           personId: suggestion.personId,
           name: suggestion.name,
           facts: {
             ...suggestion.facts,
+            away: away.has(suggestion.personId),
             deferred: entry.deferred,
             deferredReason: entry.deferredReason,
             home: {
@@ -91,8 +124,8 @@ export class RoleSuggestionService {
               ...entry.facts,
             },
           },
-        })),
-      )
+        }));
+      })
       .map((suggestion, index) => ({ ...suggestion, rank: index + 1 }));
   }
 
@@ -109,17 +142,20 @@ export class RoleSuggestionService {
     targetDate: Date,
     options: { excludeTopicId?: string } = {},
   ): Promise<RoleSuggestion[]> {
-    const [people, hostEvents, topicEvents] = await Promise.all([
+    const [people, hostEvents, topicEvents, calendar] = await Promise.all([
       this.prisma.person.findMany({
         where: { hauskreisId, active: true },
         select: { id: true, name: true },
       }),
       this.collectEvents(hauskreisId),
       this.collectTopicEvents(hauskreisId, options.excludeTopicId),
+      this.loadAbsences(hauskreisId),
     ]);
 
     return rankForRole({
-      people,
+      people: people.filter(
+        (person) => !calendar.isAway(person.id, targetDate),
+      ),
       // Hosting comes along for the ride: it does not count towards "wann warst
       // du zuletzt mit dem Thema dran", but it does count as load.
       events: [...hostEvents, ...topicEvents],
@@ -144,18 +180,22 @@ export class RoleSuggestionService {
     targetDate: Date,
     options: { excludeMeetingId?: string } = {},
   ): Promise<RoleSuggestion[]> {
-    const [people, hostEvents, topicEvents, songEvents] = await Promise.all([
-      this.prisma.person.findMany({
-        where: { hauskreisId, active: true, playsInstrument: true },
-        select: { id: true, name: true },
-      }),
-      this.collectEvents(hauskreisId),
-      this.collectTopicEvents(hauskreisId),
-      this.collectSongEvents(hauskreisId, options.excludeMeetingId),
-    ]);
+    const [people, hostEvents, topicEvents, songEvents, calendar] =
+      await Promise.all([
+        this.prisma.person.findMany({
+          where: { hauskreisId, active: true, playsInstrument: true },
+          select: { id: true, name: true },
+        }),
+        this.collectEvents(hauskreisId),
+        this.collectTopicEvents(hauskreisId),
+        this.collectSongEvents(hauskreisId, options.excludeMeetingId),
+        this.loadAbsences(hauskreisId),
+      ]);
 
     return rankForRole({
-      people,
+      people: people.filter(
+        (person) => !calendar.isAway(person.id, targetDate),
+      ),
       events: [...hostEvents, ...topicEvents, ...songEvents],
       role: AssignmentRole.SONG,
       targetDate,
@@ -192,6 +232,23 @@ export class RoleSuggestionService {
         // …but fits the people who are actually coming.
         home.capacity >= expected,
     );
+  }
+
+  /**
+   * Every absence in the group, as a calendar the ranking can ask.
+   *
+   * Loaded whole rather than filtered to the target date, because the credit
+   * replay needs to know who was away on each *past* evening too. At nine
+   * people and a handful of holidays a year that is a small table; filtering
+   * per date would mean a query per meeting instead.
+   */
+  private async loadAbsences(hauskreisId: string): Promise<AbsenceCalendar> {
+    const periods = await this.prisma.absencePeriod.findMany({
+      where: { hauskreisId },
+      select: { personId: true, startDate: true, endDate: true },
+    });
+
+    return new AbsenceCalendar(periods);
   }
 
   /**

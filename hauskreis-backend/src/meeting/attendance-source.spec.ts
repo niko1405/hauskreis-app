@@ -1,0 +1,64 @@
+import { MeetingService } from './meeting.service';
+// Type-only imports keep Jest from loading the real PrismaClient and web-push.
+import type { PrismaService } from '../prisma/prisma.service';
+import type { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
+import type { MeetingNotificationService } from './meeting-notification.service';
+import {
+  AttendanceSource,
+  AttendanceStatus,
+} from '../../generated/prisma/enums';
+
+/**
+ * Guards the boundary between "ich habe geantwortet" and "das kam aus einem
+ * Abwesenheitszeitraum".
+ *
+ * Found the hard way: an answer given by hand kept the ABSENCE marker, so the
+ * next sync considered the row its own and would have deleted a deliberate
+ * "doch, ich komme" as soon as the holiday was shortened.
+ */
+function setup() {
+  const upsert = jest.fn().mockResolvedValue({});
+
+  const prisma = {
+    meeting: {
+      findFirst: jest
+        .fn()
+        .mockResolvedValue({ id: 'm-1', hauskreisId: 'hk-1' }),
+    },
+    person: { findFirst: jest.fn().mockResolvedValue({ id: 'niko' }) },
+    meetingAttendance: {
+      findUnique: jest
+        .fn()
+        .mockResolvedValue({ status: AttendanceStatus.ABSENT }),
+      upsert,
+    },
+  } as unknown as PrismaService;
+
+  const service = new MeetingService(
+    prisma,
+    {} as unknown as RoleSuggestionService,
+    { handleDecline: jest.fn() } as unknown as MeetingNotificationService,
+  );
+
+  return { service, upsert };
+}
+
+describe('MeetingService.setAttendance', () => {
+  it('claims the row for the person answering', async () => {
+    const { service, upsert } = setup();
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.ATTENDING,
+    });
+
+    // Both branches: the row may already exist because a holiday wrote it.
+    expect(upsert.mock.calls[0][0].update).toEqual({
+      status: AttendanceStatus.ATTENDING,
+      source: AttendanceSource.SELF,
+    });
+    expect(upsert.mock.calls[0][0].create).toMatchObject({
+      source: AttendanceSource.SELF,
+    });
+  });
+});
