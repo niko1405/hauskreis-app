@@ -157,13 +157,15 @@ npx web-push generate-vapid-keys
 wird einmal geloggt. Lokale Entwicklung und Tests brauchen also keine
 Credentials.
 
-| Methode  | Pfad                      | Zweck                                      |
-| -------- | ------------------------- | ------------------------------------------ |
-| `GET`    | `/api/push/public-key`    | VAPID-Key für `pushManager.subscribe()`    |
-| `GET`    | `/api/push/subscriptions` | eigene registrierte Geräte                 |
-| `POST`   | `/api/push/subscriptions` | Gerät registrieren                         |
-| `DELETE` | `/api/push/subscriptions` | Gerät abmelden                             |
-| `POST`   | `/api/push/test`          | Testbenachrichtigung an die eigenen Geräte |
+| Methode  | Pfad                       | Zweck                                      |
+| -------- | -------------------------- | ------------------------------------------ |
+| `GET`    | `/api/push/public-key`     | VAPID-Key für `pushManager.subscribe()`    |
+| `GET`    | `/api/push/subscriptions`  | eigene registrierte Geräte                 |
+| `POST`   | `/api/push/subscriptions`  | Gerät registrieren                         |
+| `DELETE` | `/api/push/subscriptions`  | Gerät abmelden                             |
+| `POST`   | `/api/push/test`           | Testbenachrichtigung an die eigenen Geräte |
+| `GET`    | `/api/push/settings`       | eigene Einstellungen, alle Typen           |
+| `PUT`    | `/api/push/settings/:type` | einen Typ ein-/ausschalten oder umstellen  |
 
 Die Routen liegen bewusst außerhalb von `/hauskreise/:id` — eine Subscription
 gehört zur eingeloggten Person, nicht zur Gruppe. `POST` nimmt das Objekt
@@ -190,12 +192,101 @@ explizit:
 { "delivered": 2, "pruned": 1, "failed": 0 }
 ```
 
+### Der Katalog: was die App überhaupt verschickt
+
+Alle Typen stehen in [`notification-catalog.ts`](src/notification/notification-catalog.ts),
+jeder mit Label, Begründung und Default-Rhythmus.
+
+| Typ                      | Anlass                                        | Empfänger                     | Default       |
+| ------------------------ | --------------------------------------------- | ----------------------------- | ------------- |
+| `HOST_REMINDER`          | Abend rückt näher                             | der Host                      | 3 Tage vorher |
+| `TOPIC_REMINDER`         | Abend rückt näher                             | Themen-Verantwortliche        | 5 Tage vorher |
+| `SONG_REMINDER`          | Abend rückt näher                             | Musik-Verantwortliche         | 5 Tage vorher |
+| `ACTIONSTEP_REMINDER`    | Actionstep vom letzten Mal                    | alle                          | freitags      |
+| `PRAYER_BUDDY_ASSIGNED`  | neue Rotation                                 | alle                          | sofort        |
+| `MEETING_CANCELLED`      | ganzer Abend fällt aus                        | alle                          | sofort        |
+| `ATTENDANCE_DECLINED`    | jemand sagt ab                                | der Host dieses Abends        | sofort        |
+| `HOST_CAPACITY_UNLOCKED` | genug Absagen, dass eine kleine Wohnung passt | Bewohner:innen dieser Wohnung | sofort        |
+
+Die Vorlauf-Werte sind bewusst verschieden: Inhalte vorbereiten braucht mehr
+Vorlauf als aufräumen. Der Freitag beim Actionstep liegt mittig zwischen zwei
+Dienstagen und lässt das Wochenende noch übrig — montags käme die Nachfrage, wenn
+die Woche schon vorbei ist.
+
+### Einstellungen: nur Abweichungen werden gespeichert
+
+`GET /api/push/settings` liefert **alle** Typen mit Label, Begründung, dem
+möglichen Knopf und dem aktuellen Wert. Keine Zeile in der Datenbank heißt
+„wie im Katalog" — dadurch braucht ein neuer Typ kein Nachtragen von neun Zeilen,
+er ist ab dem Deploy für alle an.
+
+Nicht jeder Typ hat einen Rhythmus. `schedule.kind` sagt, was einstellbar ist:
+
+- **`LEAD_TIME`** — `leadDays`, Grenzen stehen im Katalog (1–14).
+- **`WEEKLY`** — `weekday`, 0 = Sonntag.
+- **`EVENT`** — nur an/aus. „Wie oft" ist bei „du hast neue Gebetsbuddys" keine
+  sinnvolle Frage.
+
+Ein Knopf am falschen Typ ist ein `400` und kein stillschweigend gespeicherter
+Wert, den nie jemand liest.
+
+```bash
+curl -X PUT .../push/settings/HOST_REMINDER -d '{"leadDays":7}'          # 200
+curl -X PUT .../push/settings/HOST_REMINDER -d '{"leadDays":30}'         # 400, max 14
+curl -X PUT .../push/settings/MEETING_CANCELLED -d '{"weekday":3}'       # 400, kein Wochentag
+curl -X PUT .../push/settings/HOST_REMINDER -d '{"leadDays":null}'       # zurück auf Default
+```
+
+**Ausgeschaltet schreibt keinen Log-Eintrag.** Wer einen Typ wieder anschaltet,
+bekommt die Erinnerung für den anstehenden Termin noch — statt dass dort eine
+Zeile steht, die behauptet, sie sei längst erledigt.
+
+### Ein Cron für alle, Rhythmus pro Person
+
+Vorlauf und Wochentag sind persönlich, es gibt also keinen einen Tag, an dem der
+Job laufen könnte. Deshalb läuft er **täglich für alle und fragt pro Person, ob
+heute ihr Tag ist** — ein Cron für die Gruppe statt einem pro Person, und eine
+geänderte Einstellung greift am nächsten Morgen, ohne dass irgendwo etwas
+umgeplant wird.
+
+Das Suchfenster reicht entsprechend so weit wie die **geduldigste** erlaubte
+Einstellung (14 Tage), nicht so weit wie der Default. Ein Fenster auf Default-Basis
+würde den Termin von jemandem mit längerem Vorlauf nie zu sehen bekommen.
+
 ### Für kommende Reminder
 
 `NotificationModule` importieren und `NotificationService` injizieren — **nicht**
-direkt `web-push` verwenden. Nur so gelten Deduplizierung, Endpoint-Cleanup und
-das Verhalten ohne VAPID-Keys überall gleich. Neue Anlässe brauchen einen
-zusätzlichen Wert in `NotificationType`.
+direkt `web-push` verwenden. Nur so gelten Deduplizierung, Endpoint-Cleanup,
+Einstellungen und das Verhalten ohne VAPID-Keys überall gleich.
+
+**Einen neuen Typ ergänzen:**
+
+1. Wert in `NotificationType` (Prisma-Enum) + Migration.
+2. Eintrag in `NOTIFICATION_CATALOG` — Label, Begründung, Rhythmus, Default.
+3. Einen Absender. Bei `LEAD_TIME` ist das eine Funktion „wer ist gemeint und was
+   steht drin", der Rest kommt von
+   [`MeetingReminderService`](src/notification/meeting-reminder.service.ts):
+
+   ```ts
+   this.reminders.run(NotificationType.SONG_REMINDER, (meeting) =>
+     meeting.songLeaders.map((leader) => ({
+       personId: leader.personId,
+       payload: { title: 'Du machst die Musik', body: …, url: … },
+     })),
+   );
+   ```
+
+Danach steht der Typ **von allein** in den Einstellungen, mit Text, Default und
+geprüften Grenzen — die Settings-Route, das DTO und das Frontend bleiben
+unangetastet. `notification-catalog.spec.ts` schlägt fehl, wenn Schritt 2
+vergessen wurde; sonst würde der Typ zwar senden, wäre aber unsichtbar und nicht
+abschaltbar.
+
+**Als Admin in der App neue Typen anlegen ist bewusst nicht vorgesehen.** Eine
+Benachrichtigung besteht aus Auslöser, Empfängerkreis und Text — nur der Text ist
+Daten. Die beiden anderen zur Laufzeit editierbar zu machen hieße, eine kleine
+Regelsprache zu bauen: viel Aufwand für etwas, das niemand debuggen kann, wenn es
+falsch feuert.
 
 ### Offen: was das Frontend noch beitragen muss
 
@@ -641,19 +732,84 @@ ist gültig: nicht jeder Abend hat Lieder, dann braucht es niemanden.
 `GET …/meetings/:id/song-leader-suggestions` rankt nur, wer ein Instrument
 spielt — vier der neun. Eingetragen werden darf trotzdem jeder.
 
-## Host-Erinnerungen
+## Erinnerungen vor dem Abend
 
-`HostReminderService` läuft täglich um 9 Uhr und erinnert jeden Host, dessen
-Termin in den nächsten **3 Tagen** liegt (Samstag für den Dienstag).
+Drei Erinnerungen laufen täglich um 9 Uhr und unterscheiden sich in genau zwei
+Dingen — wer gemeint ist und was drinsteht:
 
-Gesucht wird ein **Zeitfenster** statt „genau in 3 Tagen": steht der Server an
-dem einen Tag still, holt der nächste Lauf die Erinnerung nach. Tragfähig ist das
-nur wegen der Deduplizierung über `notification_log` — ohne die ginge dieselbe
-Erinnerung drei Tage hintereinander raus.
+| Job                    | Empfänger              | Manuell auslösen (`admin`)       |
+| ---------------------- | ---------------------- | -------------------------------- |
+| `HostReminderService`  | Host                   | `POST …/meetings/host-reminders` |
+| `TopicReminderService` | Themen-Verantwortliche | `POST …/topics/reminders`        |
+| `SongReminderService`  | Musik-Verantwortliche  | `POST …/songs/reminders`         |
 
-Manuell auslösbar über `POST …/meetings/host-reminders` (`admin`, auf die Gruppe
-begrenzt). Antwort: `{ "notified": 1, "skipped": 0 }` — `skipped` zählt sowohl
-bereits Erinnerte als auch den Fall, dass Push gar nicht konfiguriert ist.
+Alles andere — Fenster, Vorlauf pro Person, Deduplizierung, Zählung — liegt einmal
+in `MeetingReminderService`. Antwort jeweils `{ "notified": 1, "skipped": 0 }`;
+`skipped` zählt bereits Erinnerte, Abgeschaltete und den Fall, dass Push gar nicht
+konfiguriert ist.
+
+Gesucht wird ein **Zeitfenster** statt „genau in N Tagen": steht der Server an dem
+einen Tag still, holt der nächste Lauf die Erinnerung nach, und wer sich erst
+kurzfristig einträgt, fällt nicht durch. Tragfähig ist das nur wegen der
+Deduplizierung über `notification_log`.
+
+Ein Thema über mehrere Abende erinnert **erneut** — die Deduplizierung hängt am
+Termin, nicht am Thema. Das ist gewollt: Teil zwei muss genauso vorbereitet
+werden.
+
+## Actionstep
+
+`ActionstepReminderService` fragt mitten in der Woche nach, was aus dem Actionstep
+geworden ist. Genommen wird der **jüngste vergangene Termin, der einen hat** —
+nicht schlicht „der letzte Termin". Hat vorletzte Woche niemand einen
+eingetragen, bleibt die Woche still, statt einen zwei Wochen alten Schritt
+aufzuwärmen.
+
+Ein leerer String zählt als „keiner": das Feld ist Freitext, und Leerzeichen sind
+nichts, wofür man neun Leute unterbricht.
+
+Manuell über `POST …/meetings/actionstep-reminders`. Der Knopf hält sich an den
+eingestellten Wochentag und meldet an anderen Tagen `notified: 0` — er dient dazu,
+den Job zu prüfen, nicht dazu, die Einstellung zu übergehen.
+
+## Wenn sich etwas ändert
+
+Drei Benachrichtigungen hängen nicht am Kalender, sondern an einer Änderung.
+Sie werden aus `MeetingService` heraus ausgelöst, **nachdem** geschrieben wurde —
+eine Absage-Meldung zu einem Speichern, das dann fehlschlägt, wäre schlimmer als
+eine späte.
+
+**`MEETING_CANCELLED`** geht an alle, sobald ein Abend abgesagt wird. Ausgelöst
+wird das am Übergang des Status, nicht am Endpunkt: absagen geht über
+`POST …/cancel` **und** über `PATCH { "status": "CANCELLED" }`, und beide Wege
+sollen sich gleich verhalten. Ein bereits abgesagter Abend bleibt still, ein
+vergangener auch — dass Dienstag vor drei Wochen nicht stattgefunden hat, ist
+Buchhaltung und keine Nachricht.
+
+**`ATTENDANCE_DECLINED`** geht an den Host dieses Abends, der schließlich
+einkauft. Nur beim Übergang nach „abwesend" — dieselbe Antwort nochmal zu
+speichern löst nichts aus, und dass man selbst abgesagt hat, muss einem niemand
+mitteilen.
+
+**`HOST_CAPACITY_UNLOCKED`** ist die Umkehrung der Kapazitätsregel weiter oben:
+sagen genug Leute ab, passt der Abend plötzlich auch in eine kleine Wohnung, und
+deren Bewohner:innen bekommen einen Hinweis. Bei neun Personen und Kapazität 5
+also ab der vierten Absage — verifiziert, dass bei drei Absagen noch nichts
+kommt. Still, sobald der Abend einen Host oder einen Ort hat: die Nachricht füllt
+eine Lücke, und die gibt es dann nicht mehr. Es ist eine Einladung, keine
+Entscheidung — wer wirklich dran wäre, beantwortet nach wie vor das Ranking.
+
+### Abgrenzung zu Phase 9
+
+Diese drei reagieren auf **ausdrückliche** Absagen für einen einzelnen Abend.
+Phase 9 ergänzt `absence_period` — „ich bin vom 10. bis 24. weg" — und erzeugt
+daraus automatisch dieselben Absagen. Sie fließen durch denselben Pfad, also
+feuern die Benachrichtigungen dann von allein: **Phase 9 liefert die Daten,
+Phase 8 reagiert darauf.** Neuer Notification-Code entsteht dort nicht.
+
+Praktisch heißt das: der Kapazitäts-Hinweis kommt heute erst, wenn Leute für den
+konkreten Abend absagen. Ein früh angekündigter Urlaub zählt erst mit Phase 9 mit
+— dann aber ohne Änderung an diesem Kapitel.
 
 ## Gebetsbuddys
 
@@ -767,7 +923,7 @@ Gemeinsam in [`pagination.ts`](src/common/http/pagination.ts): neue Listen
 erweitern `paginationSchema` im DTO und geben `toPage(items, total, query)`
 zurück.
 
-## API (Stand: Phase 7)
+## API (Stand: Phase 8)
 
 | Methode                 | Pfad                                         | Rechte                                   |
 | ----------------------- | -------------------------------------------- | ---------------------------------------- |
@@ -792,17 +948,20 @@ zurück.
 | `DELETE`                | `…/meetings/:id`                             | `admin`                                  |
 | `POST`                  | `…/meetings/generate`                        | `admin` (manueller Generator-Trigger)    |
 | `POST`                  | `…/meetings/host-reminders`                  | `admin` (manueller Reminder-Trigger)     |
+| `POST`                  | `…/meetings/actionstep-reminders`            | `admin` (manueller Reminder-Trigger)     |
 | `GET`                   | `…/topics?status=RUNNING\|COMPLETED`         | eingeloggt (paginiert)                   |
 | `GET`                   | `…/topics/:id`                               | eingeloggt                               |
 | `POST`                  | `…/topics`                                   | eingeloggt                               |
 | `PATCH`                 | `…/topics/:id`                               | eingeloggt                               |
 | `DELETE`                | `…/topics/:id`                               | `admin`                                  |
 | `POST`                  | `…/topics/carry-over`                        | `admin` (manuelle Themen-Übernahme)      |
+| `POST`                  | `…/topics/reminders`                         | `admin` (manueller Reminder-Trigger)     |
 | `GET`                   | `…/songs?search=`                            | eingeloggt (paginiert)                   |
 | `GET`                   | `…/songs/:id`                                | eingeloggt                               |
 | `POST`                  | `…/songs`                                    | eingeloggt (legt an oder gibt zurück)    |
 | `PATCH`                 | `…/songs/:id`                                | eingeloggt                               |
 | `DELETE`                | `…/songs/:id`                                | `admin` (nur wenn nirgends verwendet)    |
+| `POST`                  | `…/songs/reminders`                          | `admin` (manueller Reminder-Trigger)     |
 | `GET`/`POST`            | `…/meetings/:id/songs`                       | eingeloggt                               |
 | `PATCH`/`DELETE`        | `…/meetings/:id/songs/:entryId`              | eingeloggt                               |
 | `GET`/`PUT`             | `…/meetings/:id/song-leaders`                | eingeloggt                               |
@@ -812,6 +971,8 @@ zurück.
 | `GET`                   | `…/prayer-buddies/config`                    | eingeloggt                               |
 | `PUT`                   | `…/prayer-buddies/config`                    | `admin`                                  |
 | `POST`                  | `…/prayer-buddies/rotate`                    | `admin` (sofort neu zuteilen)            |
+| `GET`                   | `/api/push/settings`                         | eingeloggt (eigene Einstellungen)        |
+| `PUT`                   | `/api/push/settings/:type`                   | eingeloggt (eigene Einstellungen)        |
 
 Alle `GET`s beantworten `If-None-Match` mit `304`. Die `PATCH`-Endpunkte auf
 Personen, Locations, Terminen, Themen und Songs, `PUT …/prayer-buddies/config`

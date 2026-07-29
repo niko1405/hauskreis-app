@@ -2,6 +2,7 @@ import webpush, { WebPushError } from 'web-push';
 import { NotificationService } from './notification.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AppConfigService } from '../config/config.service';
+import type { NotificationPreferenceService } from './notification-preference.service';
 
 // Only the two network-facing functions are stubbed. WebPushError stays real,
 // so the dead-endpoint handling is exercised against the actual error shape
@@ -28,6 +29,7 @@ function setup(
     subscriptions?: { id: string; endpoint: string }[];
     alreadyLogged?: boolean;
     configured?: boolean;
+    switchedOff?: boolean;
   } = {},
 ) {
   const pushSubscription = {
@@ -51,13 +53,22 @@ function setup(
     get: (key: string) => (options.configured === false ? undefined : env[key]),
   } as unknown as AppConfigService;
 
+  const preferences = {
+    resolve: jest.fn().mockResolvedValue({
+      enabled: options.switchedOff !== true,
+      leadDays: null,
+      weekday: null,
+    }),
+  } as unknown as NotificationPreferenceService;
+
   const service = new NotificationService(
     { pushSubscription, notificationLog } as unknown as PrismaService,
     config,
+    preferences,
   );
   service.onModuleInit();
 
-  return { service, pushSubscription, notificationLog };
+  return { service, pushSubscription, notificationLog, preferences };
 }
 
 beforeEach(() => {
@@ -100,6 +111,51 @@ describe('NotificationService.notify', () => {
 
     expect(notificationLog.create).not.toHaveBeenCalled();
     expect(mockedWebpush.sendNotification).not.toHaveBeenCalled();
+  });
+
+  it('respects a notification the recipient switched off', async () => {
+    const { service, notificationLog } = setup({ switchedOff: true });
+
+    await expect(
+      service.notify({
+        personId: 'p1',
+        type: 'HOST_REMINDER',
+        relatedMeetingId: 'm1',
+        payload,
+      }),
+    ).resolves.toEqual({ delivered: 0, skipped: 1, pruned: 0, failed: 0 });
+
+    // Nothing is logged, so switching it back on still delivers the reminder
+    // for this very meeting instead of finding it marked as handled.
+    expect(notificationLog.create).not.toHaveBeenCalled();
+    expect(mockedWebpush.sendNotification).not.toHaveBeenCalled();
+  });
+
+  it('tells two cancellations for the same evening apart', async () => {
+    const { service, notificationLog } = setup();
+
+    await service.notify({
+      personId: 'host',
+      type: 'ATTENDANCE_DECLINED',
+      relatedMeetingId: 'm1',
+      relatedPersonId: 'antonia',
+      payload,
+    });
+
+    // The meeting alone would make the second drop-out look like a repeat of
+    // the first; the person it is about is what separates them.
+    expect(notificationLog.findFirst).toHaveBeenCalledWith({
+      where: {
+        personId: 'host',
+        type: 'ATTENDANCE_DECLINED',
+        relatedMeetingId: 'm1',
+        relatedGroupId: null,
+        relatedPersonId: 'antonia',
+      },
+    });
+    expect(notificationLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ relatedPersonId: 'antonia' }),
+    });
   });
 
   it('reaches every device of a person', async () => {

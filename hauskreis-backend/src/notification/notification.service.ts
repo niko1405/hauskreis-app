@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import webpush, { WebPushError } from 'web-push';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppConfigService } from '../config/config.service';
+import { NotificationPreferenceService } from './notification-preference.service';
 import type { NotificationType } from '../../generated/prisma/enums';
 
 type DeliveryOutcome = 'delivered' | 'pruned' | 'failed';
@@ -23,7 +24,10 @@ export interface DeliveryResult {
 }
 
 export interface SendResult extends DeliveryResult {
-  /** No attempt was made: already logged, or push is not configured. */
+  /**
+   * No attempt was made: already logged, switched off by the recipient, or
+   * push is not configured.
+   */
   skipped: number;
 }
 
@@ -42,6 +46,7 @@ export class NotificationService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: AppConfigService,
+    private readonly preferences: NotificationPreferenceService,
   ) {}
 
   onModuleInit(): void {
@@ -75,13 +80,18 @@ export class NotificationService implements OnModuleInit {
   }
 
   /**
-   * Sends a notification to one person, at most once per
-   * (person, type, meeting).
+   * Sends a notification to one person, at most once per subject.
    *
    * The reminder jobs run daily and would otherwise re-send the same message
    * every day until the meeting passes. Writing the log entry *before*
    * delivering means a crash mid-send costs one missed reminder rather than a
    * repeat every day.
+   *
+   * The recipient's setting is checked here rather than in each caller, so a
+   * notification switched off in the settings cannot leak through a job that
+   * forgot to ask. What "once per subject" means is up to the caller: pass the
+   * meeting, the prayer buddy group, or the person the message is about — the
+   * combination is the deduplication key.
    */
   async notify(params: {
     personId: string;
@@ -90,8 +100,24 @@ export class NotificationService implements OnModuleInit {
     /// What a prayer buddy assignment refers to. Without it every rotation
     /// would look like the first one and only that would ever be announced.
     relatedGroupId?: string | null;
+    /// Who the message is *about*, when that differs from the recipient.
+    relatedPersonId?: string | null;
     payload: NotificationPayload;
   }): Promise<SendResult> {
+    const setting = await this.preferences.resolve(
+      params.personId,
+      params.type,
+    );
+
+    if (!setting.enabled) {
+      // Nothing is logged: switching the notification back on should let the
+      // next run deliver, not find a row saying it was already handled.
+      this.logger.debug(
+        `Person ${params.personId} has ${params.type} switched off`,
+      );
+      return { delivered: 0, skipped: 1, pruned: 0, failed: 0 };
+    }
+
     if (!this.enabled) {
       // Deliberately returns before writing the log: nothing was attempted, so
       // nothing is recorded as sent. Once VAPID keys are configured the
@@ -114,6 +140,7 @@ export class NotificationService implements OnModuleInit {
         type: params.type,
         relatedMeetingId: params.relatedMeetingId ?? null,
         relatedGroupId: params.relatedGroupId ?? null,
+        relatedPersonId: params.relatedPersonId ?? null,
       },
     });
 
@@ -212,6 +239,7 @@ export class NotificationService implements OnModuleInit {
     type: NotificationType;
     relatedMeetingId?: string | null;
     relatedGroupId?: string | null;
+    relatedPersonId?: string | null;
   }): Promise<boolean> {
     const existing = await this.prisma.notificationLog.findFirst({
       where: {
@@ -219,6 +247,7 @@ export class NotificationService implements OnModuleInit {
         type: params.type,
         relatedMeetingId: params.relatedMeetingId ?? null,
         relatedGroupId: params.relatedGroupId ?? null,
+        relatedPersonId: params.relatedPersonId ?? null,
       },
     });
 

@@ -4,8 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { MeetingStatus } from '../../generated/prisma/enums';
+import { AttendanceStatus, MeetingStatus } from '../../generated/prisma/enums';
 import { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
+import { MeetingNotificationService } from './meeting-notification.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
 import type { IfMatchCondition } from '../common/http/etag';
@@ -40,6 +41,7 @@ export class MeetingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly roleSuggestions: RoleSuggestionService,
+    private readonly meetingNotifications: MeetingNotificationService,
   ) {}
 
   async findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
@@ -117,10 +119,10 @@ export class MeetingService {
     dto: UpdateMeetingDto,
     condition?: IfMatchCondition,
   ) {
-    await this.findOne(hauskreisId, id);
+    const before = await this.findOne(hauskreisId, id);
     await this.assertReferencesBelongToHauskreis(hauskreisId, dto);
 
-    return updateWithVersionCheck({
+    const updated = await updateWithVersionCheck({
       condition,
       update: (versionConstraint) =>
         this.prisma.meeting.updateMany({
@@ -146,10 +148,24 @@ export class MeetingService {
       reload: () => this.findOne(hauskreisId, id),
       notFoundMessage: `Meeting ${id} not found`,
     });
+
+    // A meeting can also be called off through a plain status change, so the
+    // announcement hangs off the transition rather than off `cancel()` — the
+    // two paths would otherwise behave differently for no reason.
+    if (
+      before.status !== MeetingStatus.CANCELLED &&
+      updated.status === MeetingStatus.CANCELLED
+    ) {
+      await this.meetingNotifications.announceCancellation(id);
+    }
+
+    return updated;
   }
 
-  cancel(hauskreisId: string, id: string, condition?: IfMatchCondition) {
-    return updateWithVersionCheck({
+  async cancel(hauskreisId: string, id: string, condition?: IfMatchCondition) {
+    const before = await this.findOne(hauskreisId, id);
+
+    const cancelled = await updateWithVersionCheck({
       condition,
       update: (versionConstraint) =>
         this.prisma.meeting.updateMany({
@@ -161,6 +177,13 @@ export class MeetingService {
       reload: () => this.findOne(hauskreisId, id),
       notFoundMessage: `Meeting ${id} not found`,
     });
+
+    // Cancelling an already-cancelled meeting stays silent.
+    if (before.status !== MeetingStatus.CANCELLED) {
+      await this.meetingNotifications.announceCancellation(id);
+    }
+
+    return cancelled;
   }
 
   /**
@@ -203,11 +226,27 @@ export class MeetingService {
     await this.findOne(hauskreisId, id);
     await this.assertPersonBelongsToHauskreis(hauskreisId, dto.personId);
 
-    return this.prisma.meetingAttendance.upsert({
+    const previous = await this.prisma.meetingAttendance.findUnique({
+      where: { meetingId_personId: { meetingId: id, personId: dto.personId } },
+      select: { status: true },
+    });
+
+    const attendance = await this.prisma.meetingAttendance.upsert({
       where: { meetingId_personId: { meetingId: id, personId: dto.personId } },
       update: { status: dto.status },
       create: { meetingId: id, personId: dto.personId, status: dto.status },
     });
+
+    // Only on the transition into "absent": re-saving the same answer, or
+    // switching between attending and undecided, is nobody's business.
+    if (
+      dto.status === AttendanceStatus.ABSENT &&
+      previous?.status !== AttendanceStatus.ABSENT
+    ) {
+      await this.meetingNotifications.handleDecline(id, dto.personId);
+    }
+
+    return attendance;
   }
 
   /**

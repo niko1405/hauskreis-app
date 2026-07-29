@@ -3,6 +3,8 @@ import { MeetingController } from './meeting.controller';
 import { MeetingService } from './meeting.service';
 import { MeetingGeneratorService } from './meeting-generator.service';
 import { HostReminderService } from './host-reminder.service';
+import { ActionstepReminderService } from './actionstep-reminder.service';
+import { MeetingNotificationService } from './meeting-notification.service';
 import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module';
 import { NotificationModule } from '../notification/notification.module';
 
@@ -12,7 +14,18 @@ import { NotificationModule } from '../notification/notification.module';
   // module owns neither.
   imports: [RoleSuggestionModule, NotificationModule],
   controllers: [MeetingController],
-  providers: [MeetingService, MeetingGeneratorService, HostReminderService],
-  exports: [MeetingService, MeetingGeneratorService, HostReminderService],
+  providers: [
+    MeetingService,
+    MeetingGeneratorService,
+    HostReminderService,
+    ActionstepReminderService,
+    MeetingNotificationService,
+  ],
+  exports: [
+    MeetingService,
+    MeetingGeneratorService,
+    HostReminderService,
+    ActionstepReminderService,
+  ],
 })
 export class MeetingModule {}

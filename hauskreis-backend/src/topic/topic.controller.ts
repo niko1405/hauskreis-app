@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { TopicService } from './topic.service';
 import { TopicCarryOverService } from './topic-carry-over.service';
+import { TopicReminderService } from './topic-reminder.service';
 import {
   CreateTopicDto,
   ListTopicsQueryDto,
@@ -29,6 +30,7 @@ export class TopicController {
   constructor(
     private readonly topicService: TopicService,
     private readonly carryOverService: TopicCarryOverService,
+    private readonly reminders: TopicReminderService,
   ) {}
 
   @Get()
@@ -55,6 +57,16 @@ export class TopicController {
   @HttpCode(HttpStatus.OK)
   carryOver(@Param() params: HauskreisParamsDto) {
     return this.carryOverService.carryOverFor(params.hauskreisId);
+  }
+
+  /** Manual trigger for the daily topic reminders, scoped to this group. */
+  @Post('reminders')
+  @Roles(ROLE_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  runReminders(@Param() params: HauskreisParamsDto) {
+    return this.reminders.sendDueReminders({
+      hauskreisId: params.hauskreisId,
+    });
   }
 
   /** Also how a topic is marked completed — `{ "status": "COMPLETED" }`. */
