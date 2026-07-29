@@ -357,8 +357,34 @@ Zwei bewusste Regel-Anpassungen:
   sequenziell geschrieben.
 
 ```bash
-pnpm check          # lint + format:check + tsc --noEmit + tests (das volle Gate)
+pnpm check          # lint + format:check + typecheck + tests (das volle Gate)
+pnpm typecheck      # nur tsc --noEmit, mit gedeckeltem Heap
 ```
+
+### Speicher unter WSL
+
+Die Entwicklungsmaschine hat 5,9 GB, WSL bekommt davon 3 GB, und der VS-Code-Server
+belegt davon rund 1 GB. Wenn dort mehrere Node-Prozesse gleichzeitig laufen, ist
+nicht der Compiler zu langsam — die VM stirbt.
+
+Deshalb setzt `typecheck` **`--max-old-space-size=900`**. Der Wert ist bewusst
+niedrig: ein kompletter Durchlauf braucht gemessen 474 MB, und ein hohes Limit
+bedeutet nur, dass V8 bis dahin kaum aufräumt. Ein zu großzügiger Wert ist hier
+gefährlicher als ein knapper.
+
+Nicht gleichzeitig laufen lassen:
+
+- `pnpm start:dev` (hält ein eigenes tsc-Programm im Speicher) **und** `pnpm check`
+- `docker compose up` mit Keycloak (JVM, mehrere hundert MB) während eines Testlaufs
+
+Für die End-to-End-Verifikation gegen die laufende API also erst `pnpm check`
+durchlaufen lassen, danach den Stack starten — nicht beides parallel. Nach dem
+Verifizieren `docker compose down`.
+
+Host-seitig liegt eine [`.wslconfig`](https://learn.microsoft.com/windows/wsl/wsl-config)
+im Windows-Benutzerordner. Entscheidend darin ist `swap=8GB`: der Standard von
+1 GB gibt einer Speicherspitze nichts, wohin sie ausweichen kann. Änderungen dort
+greifen erst nach `wsl --shutdown`.
 
 Jest läuft mit `maxWorkers: 1`. Jeder Worker lädt sonst den kompletten generierten
 Prisma-Client, was die Suite von ~4 s auf über 100 s aufbläht und zusätzlich die

@@ -19,11 +19,12 @@
     "lint:fix": "oxlint --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm lint && pnpm format:check && tsc --noEmit -p tsconfig.build.json && pnpm test",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "typecheck": "NODE_OPTIONS='--max-old-space-size=900' tsc --noEmit -p tsconfig.build.json"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
