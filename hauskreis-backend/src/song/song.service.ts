@@ -35,6 +35,11 @@ export class SongService {
    * but an extension to install.
    */
   async findAll(hauskreisId: string, query: ListSongsQueryDto) {
+    // Only evenings the song was actually picked for count as sung. A
+    // suggestion that did not make the list says something about one person's
+    // wish, not about the group's repertoire.
+    const played = { isSelected: true, meeting: { date: { lte: new Date() } } };
+
     const where = {
       hauskreisId,
       ...(query.search
@@ -55,20 +60,50 @@ export class SongService {
             ],
           }
         : {}),
+      ...(query.playedOnly ? { pickedIn: { some: played } } : {}),
     };
 
     const [items, total] = await Promise.all([
       this.prisma.song.findMany({
         where,
-        select: songSelect,
+        select: {
+          ...songSelect,
+          pickedIn: {
+            where: played,
+            select: { meeting: { select: { date: true } } },
+            orderBy: { meeting: { date: 'desc' } },
+          },
+        },
+        // Sorting by usage is done in TypeScript rather than SQL: the counts
+        // come from the same rows that are already being loaded for the facts,
+        // and a group's repertoire is a few hundred songs.
         orderBy: { title: 'asc' },
-        take: query.take,
-        skip: query.skip,
+        ...(query.sort === 'title'
+          ? { take: query.take, skip: query.skip }
+          : {}),
       }),
       this.prisma.song.count({ where }),
     ]);
 
-    return toPage(items, total, query);
+    const withFacts = items.map(({ pickedIn, ...song }) => ({
+      ...song,
+      timesPlayed: pickedIn.length,
+      lastPlayedAt: pickedIn[0] ? isoDate(pickedIn[0].meeting.date) : null,
+    }));
+
+    if (query.sort === 'title') {
+      return toPage(withFacts, total, query);
+    }
+
+    const sorted = withFacts.toSorted(
+      query.sort === 'popular' ? byPopularity : byRecency,
+    );
+
+    return toPage(
+      sorted.slice(query.skip, query.skip + query.take),
+      total,
+      query,
+    );
   }
 
   async findOne(hauskreisId: string, id: string) {
@@ -165,4 +200,39 @@ export class SongService {
 
     await this.prisma.song.delete({ where: { id } });
   }
+}
+
+interface SongWithFacts {
+  title: string;
+  timesPlayed: number;
+  lastPlayedAt: string | null;
+}
+
+/** Most sung first; ties by title so the list never reshuffles on reload. */
+function byPopularity(a: SongWithFacts, b: SongWithFacts): number {
+  return b.timesPlayed - a.timesPlayed || a.title.localeCompare(b.title);
+}
+
+/**
+ * Most recently sung first. Never-sung songs go last rather than first — an
+ * empty date is "wir kennen es noch nicht", not "ewig her".
+ */
+function byRecency(a: SongWithFacts, b: SongWithFacts): number {
+  if (a.lastPlayedAt === b.lastPlayedAt) {
+    return a.title.localeCompare(b.title);
+  }
+
+  if (!a.lastPlayedAt) {
+    return 1;
+  }
+
+  if (!b.lastPlayedAt) {
+    return -1;
+  }
+
+  return b.lastPlayedAt.localeCompare(a.lastPlayedAt);
+}
+
+function isoDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }

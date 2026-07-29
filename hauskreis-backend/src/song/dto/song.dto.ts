@@ -18,6 +18,16 @@ export const listSongsQuerySchema = paginationSchema.extend({
   /// Matches title *or* artist, case-insensitively — this is what the
   /// autocomplete in the "Song eintragen" field calls.
   search: z.string().trim().min(1).max(200).optional(),
+  /// `title` (default) is the one to type against. The other two are the
+  /// archive's questions: what do we actually sing, and what have we not sung
+  /// in ages.
+  sort: z.enum(['title', 'popular', 'recent']).default('title'),
+  /// Only songs the group has actually sung. Suggestions that never made it
+  /// onto an evening are noise in an archive view.
+  playedOnly: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 const songParamsSchema = z.object({
