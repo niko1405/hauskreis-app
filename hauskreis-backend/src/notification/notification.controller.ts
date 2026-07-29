@@ -6,10 +6,13 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
+  Put,
 } from '@nestjs/common';
 import { PushSubscriptionService } from './push-subscription.service';
 import { NotificationService } from './notification.service';
+import { NotificationPreferenceService } from './notification-preference.service';
 import { PersonService } from '../person/person.service';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth.types';
@@ -17,6 +20,10 @@ import {
   CreatePushSubscriptionDto,
   DeletePushSubscriptionDto,
 } from './dto/push-subscription.dto';
+import {
+  NotificationSettingParamsDto,
+  UpdateNotificationSettingDto,
+} from './dto/notification-setting.dto';
 
 /**
  * Push subscriptions always belong to the logged-in person, so these routes sit
@@ -27,8 +34,32 @@ export class NotificationController {
   constructor(
     private readonly subscriptions: PushSubscriptionService,
     private readonly notifications: NotificationService,
+    private readonly preferences: NotificationPreferenceService,
     private readonly people: PersonService,
   ) {}
+
+  /**
+   * Every notification the app can send, with the caller's own answer folded
+   * in — the settings screen renders straight from this, labels and all.
+   *
+   * A type added to the catalog shows up here on its own, so the frontend
+   * never carries a second copy of the list.
+   */
+  @Get('settings')
+  async settings(@CurrentUser() user: AuthenticatedUser) {
+    const person = await this.people.resolveForUser(user);
+    return this.preferences.listForPerson(person.id);
+  }
+
+  @Put('settings/:type')
+  async updateSetting(
+    @Param() params: NotificationSettingParamsDto,
+    @Body() dto: UpdateNotificationSettingDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const person = await this.people.resolveForUser(user);
+    return this.preferences.update(person.id, params.type, dto);
+  }
 
   /** The VAPID public key the browser needs to call `pushManager.subscribe()`. */
   @Get('public-key')
