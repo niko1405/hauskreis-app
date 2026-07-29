@@ -81,6 +81,16 @@ export interface RoleSuggestion {
  */
 export interface HostSuggestion extends RoleSuggestion {
   facts: SuggestionFacts & {
+    /**
+     * This person is away that evening. Listed behind their own flatmates
+     * rather than dropped, so the UI can say why they are not an option — a
+     * name simply missing reads as a bug.
+     *
+     * Not the same as `deferredReason === 'AWAY'`, which says the *whole*
+     * household is gone. One of two flatmates on holiday leaves the home
+     * available and only that person marked.
+     */
+    away: boolean;
     /** Set aside for this evening; still listed, just at the back. */
     deferred: boolean;
     deferredReason: DeferralReason | null;
