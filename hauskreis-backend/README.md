@@ -655,6 +655,98 @@ Manuell auslösbar über `POST …/meetings/host-reminders` (`admin`, auf die Gr
 begrenzt). Antwort: `{ "notified": 1, "skipped": 0 }` — `skipped` zählt sowohl
 bereits Erinnerte als auch den Fall, dass Push gar nicht konfiguriert ist.
 
+## Gebetsbuddys
+
+Alle zwei Wochen (einstellbar) neu zugeteilt: Zweiergruppen, plus eine Dreier,
+wenn die Zahl nicht aufgeht. Bei neun Personen also **2/2/2/3** — zu zweit ist
+das Format, das die Gruppe will, die Dreier existiert nur, weil neun ungerade
+ist.
+
+Bewusst **nicht** Teil der Vorschlags-Engine: die beantwortet „eine Person pro
+Slot", das hier ist ein Paarungsproblem mit anderer Form
+(Architektur-Prinzip 4). Und anders als beim Host wird hier automatisch
+zugeteilt, nicht vorgeschlagen — es gibt nichts abzuwägen.
+
+### Wiederholungs-Vermeidung
+
+Jede Paarung kostet `1 / Perioden seit dem letzten Mal zusammen`, noch nie
+zusammen kostet nichts. Gesucht wird die Aufteilung mit der kleinsten Summe —
+**exakt**, über eine Suche über Teilmengen. Bei neun Personen sind das höchstens
+256 Zustände, da gibt es keinen Grund zu schätzen.
+
+Das erste, naheliegende Verfahren — immer das beste Paar zuerst nehmen — sieht
+gleichwertig aus und ist es nicht: es lässt die Übriggebliebenen am Ende
+zwangsweise miteinander übrig, egal wie kurz das her ist. Im Probelauf standen
+dieselben zwei Personen dadurch **drei Perioden hintereinander** zusammen. Mit
+der exakten Suche liegt der kleinste Abstand einer Wiederholung über 20 Perioden
+bei **zwei** — direkt hintereinander passiert nicht mehr.
+
+Die Kostenfunktion fällt bewusst steil (1/x) statt linear ab. Sonst würde die
+Suche eine „letzte Periode zusammen"-Paarung einkaufen, um drei andere ein wenig
+älter zu machen.
+
+**Wer in die Dreiergruppe kommt**, wird _zuerst_ entschieden, und zwar nach „wer
+war am seltensten drin". Überließe man es der Paarung, wäre es, wer zufällig
+übrig bleibt — und das kann dieselbe Person immer wieder treffen.
+
+Durchgehend deterministisch: Gleichstände entscheidet der Name, dieselbe
+Historie ergibt also immer dieselbe Aufteilung.
+
+### Rotation
+
+`PrayerBuddyGeneratorService` läuft **täglich** um 4 Uhr, nicht alle zwei
+Wochen: ein 14-tägiger Cron würde eine Rotation still überspringen, wenn der
+Server an dem Morgen gerade steht. Die tägliche Frage „ist heute jemand
+zugeteilt" heilt sich selbst und kostet eine Query.
+
+| Methode | Pfad                       | Rechte                 |
+| ------- | -------------------------- | ---------------------- |
+| `GET`   | `…/prayer-buddies/current` | eingeloggt             |
+| `GET`   | `…/prayer-buddies`         | eingeloggt (paginiert) |
+| `GET`   | `…/prayer-buddies/config`  | eingeloggt             |
+| `PUT`   | `…/prayer-buddies/config`  | `admin` (`If-Match`)   |
+| `POST`  | `…/prayer-buddies/rotate`  | `admin`                |
+
+### Was der Admin darf
+
+**Rhythmus ändern** (`PUT …/config`, 1–12 Wochen). Gilt ab der **nächsten**
+Rotation — die laufende Zuteilung behält ihre Daten, damit niemandem seine
+Buddys unter den Füßen weggezogen werden, nur weil eine Einstellung sich
+bewegt hat.
+
+**Sofort neu zuteilen** (`POST …/rotate`), auch mitten in einer laufenden
+Periode. Zwei Fälle, bewusst unterschiedlich:
+
+- **Heute erst gestartet** → die laufende Zuteilung wird als _verworfen_
+  markiert. Sie war nie in Kraft, taucht also nicht im Archiv auf.
+- **Früher gestartet** → sie wird auf gestern beendet. Die Tage haben
+  stattgefunden, die Paarungen bleiben im Archiv.
+
+In beiden Fällen läuft die neue Periode einen vollen Zyklus ab heute: Sinn des
+Neuzuteilens ist ja, dass die neuen Gruppen ihre richtige Zeit miteinander
+bekommen.
+
+Verworfene Zuteilungen werden **markiert, nicht gelöscht** — und genau das
+macht „nochmal würfeln" erst brauchbar. Ohne sie wüsste der deterministische
+Algorithmus nichts von der abgelehnten Aufteilung und gäbe dieselbe zurück.
+Verifiziert: drei Rotationen hintereinander ergeben drei verschiedene
+Aufteilungen, das Archiv zeigt trotzdem nur eine Periode.
+
+`notify: false` im Body würfelt still — nützlich, wenn man zweimal
+hintereinander neu zuteilt und nicht jedes Mal alle anpiepen will.
+
+### Warum das Notification-Log eine Spalte mehr hat
+
+`notification_log` deduplizierte über `(person, typ, termin)`. Gebetsbuddy-
+Zuteilungen hängen an keinem Termin, also wäre jede Rotation als „schon
+geschickt" durchgefallen — **nur die allererste** wäre je angekündigt worden.
+`related_group_id` macht jede Rotation zu ihrer eigenen Nachricht.
+
+Nebenbei festgehalten: der Unique-Index kann das ohnehin nicht erzwingen.
+Postgres behandelt Zeilen mit einem NULL im Tupel als verschieden, und beide
+Bezugsspalten sind nullable. Die echte Prüfung ist die Query in
+`hasBeenSent` — der Index macht sie nur schnell.
+
 ## Paginierte Listen
 
 Listen, die wachsen — Termine, Themen, Songs — antworten mit einem Umschlag
@@ -675,7 +767,7 @@ Gemeinsam in [`pagination.ts`](src/common/http/pagination.ts): neue Listen
 erweitern `paginationSchema` im DTO und geben `toPage(items, total, query)`
 zurück.
 
-## API (Stand: Phase 6)
+## API (Stand: Phase 7)
 
 | Methode                 | Pfad                                         | Rechte                                   |
 | ----------------------- | -------------------------------------------- | ---------------------------------------- |
@@ -715,9 +807,15 @@ zurück.
 | `PATCH`/`DELETE`        | `…/meetings/:id/songs/:entryId`              | eingeloggt                               |
 | `GET`/`PUT`             | `…/meetings/:id/song-leaders`                | eingeloggt                               |
 | `GET`                   | `…/meetings/:id/song-leader-suggestions`     | eingeloggt                               |
+| `GET`                   | `…/prayer-buddies/current`                   | eingeloggt                               |
+| `GET`                   | `…/prayer-buddies`                           | eingeloggt (paginiert)                   |
+| `GET`                   | `…/prayer-buddies/config`                    | eingeloggt                               |
+| `PUT`                   | `…/prayer-buddies/config`                    | `admin`                                  |
+| `POST`                  | `…/prayer-buddies/rotate`                    | `admin` (sofort neu zuteilen)            |
 
 Alle `GET`s beantworten `If-None-Match` mit `304`. Die `PATCH`-Endpunkte auf
-Personen, Locations, Terminen, Themen und Songs sowie `…/meetings/:id/cancel` **verlangen**
+Personen, Locations, Terminen, Themen und Songs, `PUT …/prayer-buddies/config`
+sowie `…/meetings/:id/cancel` **verlangen**
 `If-Match` (`428` ohne, `412` bei veralteter Version) — Details siehe
 [Conditional Requests](#conditional-requests-etag-304-412).
 
