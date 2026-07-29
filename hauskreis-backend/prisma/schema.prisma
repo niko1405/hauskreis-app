@@ -37,11 +37,26 @@ enum MeetingStatus {
 
 /// What a notification was about. Together with the person and the related
 /// meeting this is what stops the same reminder going out twice.
+/// Every value needs a matching entry in `notification-catalog.ts` — that is
+/// what puts it into the settings screen with a label and a default. A value
+/// without an entry fails a unit test rather than silently becoming invisible.
 enum NotificationType {
+  /// Ahead of the meeting you are hosting.
   HOST_REMINDER
-  ACTIONSTEP_REMINDER
-  PRAYER_BUDDY_ASSIGNED
+  /// Ahead of the meeting whose topic you prepare.
   TOPIC_REMINDER
+  /// Ahead of the meeting whose songs you lead.
+  SONG_REMINDER
+  /// Mid-week nudge about the actionstep from the last meeting.
+  ACTIONSTEP_REMINDER
+  /// A new prayer buddy rotation started.
+  PRAYER_BUDDY_ASSIGNED
+  /// A whole meeting was called off.
+  MEETING_CANCELLED
+  /// Someone dropped out of a meeting you are hosting.
+  ATTENDANCE_DECLINED
+  /// Enough people dropped out that a home too small to host now fits.
+  HOST_CAPACITY_UNLOCKED
 
   @@map("notification_type")
 }
@@ -112,6 +127,8 @@ model Person {
   attendances           MeetingAttendance[]
   pushSubscriptions     PushSubscription[]
   notifications         NotificationLog[]
+  notificationsAbout    NotificationLog[]        @relation("NotificationSubject")
+  notificationSettings  NotificationPreference[]
 
   @@unique([hauskreisId, email])
   @@index([hauskreisId])
@@ -374,20 +391,50 @@ model NotificationLog {
   /// would look like the same notification as the first one, and only the very
   /// first assignment would ever be announced.
   relatedGroupId   String?          @map("related_group_id") @db.Uuid
+  /// Who the notification is *about*, when that is somebody other than the
+  /// recipient. A host hearing "Antonia cancelled" would otherwise be told
+  /// about the first drop-out only: the meeting alone is not specific enough
+  /// to tell two cancellations for the same evening apart.
+  relatedPersonId  String?          @map("related_person_id") @db.Uuid
   sentAt           DateTime         @default(now()) @map("sent_at")
 
   person         Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
   relatedMeeting Meeting?          @relation(fields: [relatedMeetingId], references: [id], onDelete: Cascade)
   relatedGroup   PrayerBuddyGroup? @relation(fields: [relatedGroupId], references: [id], onDelete: Cascade)
+  relatedPerson  Person?           @relation("NotificationSubject", fields: [relatedPersonId], references: [id], onDelete: Cascade)
 
   /// The deduplication key. Postgres treats rows with a NULL in the tuple as
   /// distinct, so this index does not actually enforce anything for
   /// notifications without a meeting — the real check is the query in
   /// `NotificationService.hasBeenSent`. The index still earns its keep by
   /// making that query an index lookup.
-  @@unique([personId, type, relatedMeetingId, relatedGroupId])
+  @@unique([personId, type, relatedMeetingId, relatedGroupId, relatedPersonId])
   @@index([personId, sentAt])
   @@map("notification_log")
+}
+
+/// A person's deviation from the default for one notification type.
+///
+/// Only differences are stored — no row means "as the catalog says". That is
+/// what lets a new notification type ship without backfilling a row per person:
+/// it is simply on for everyone from the deploy onwards.
+model NotificationPreference {
+  id        String           @id @default(uuid()) @db.Uuid
+  personId  String           @map("person_id") @db.Uuid
+  type      NotificationType
+  enabled   Boolean          @default(true)
+  /// Days before the meeting, for the reminders tied to one. Null keeps the
+  /// catalog default; meaningless for event-driven types.
+  leadDays  Int?             @map("lead_days")
+  /// Day of week for the recurring reminders, 0 = Sunday. Null keeps the
+  /// catalog default; meaningless for every other kind.
+  weekday   Int?
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, type])
+  @@map("notification_preference")
 }
 
 model MeetingAttendance {
