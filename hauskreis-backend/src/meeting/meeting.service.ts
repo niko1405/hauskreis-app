@@ -4,7 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AttendanceStatus, MeetingStatus } from '../../generated/prisma/enums';
+import {
+  AttendanceSource,
+  AttendanceStatus,
+  MeetingStatus,
+} from '../../generated/prisma/enums';
 import { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
@@ -233,8 +237,16 @@ export class MeetingService {
 
     const attendance = await this.prisma.meetingAttendance.upsert({
       where: { meetingId_personId: { meetingId: id, personId: dto.personId } },
-      update: { status: dto.status },
-      create: { meetingId: id, personId: dto.personId, status: dto.status },
+      // Answering by hand claims the row, even when an absence period wrote it.
+      // Without this a "doch, ich komme" would keep the ABSENCE marker and the
+      // next sync would feel free to delete it again.
+      update: { status: dto.status, source: AttendanceSource.SELF },
+      create: {
+        meetingId: id,
+        personId: dto.personId,
+        status: dto.status,
+        source: AttendanceSource.SELF,
+      },
     });
 
     // Only on the transition into "absent": re-saving the same answer, or

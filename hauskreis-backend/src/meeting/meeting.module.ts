@@ -26,6 +26,9 @@ import { NotificationModule } from '../notification/notification.module';
     MeetingGeneratorService,
     HostReminderService,
     ActionstepReminderService,
+    // For AbsenceModule: a holiday produces ordinary drop-outs, and the host
+    // should hear about them exactly as about a manual cancellation.
+    MeetingNotificationService,
   ],
 })
 export class MeetingModule {}
