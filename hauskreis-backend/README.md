@@ -825,17 +825,96 @@ kommt. Still, sobald der Abend einen Host oder einen Ort hat: die Nachricht fül
 eine Lücke, und die gibt es dann nicht mehr. Es ist eine Einladung, keine
 Entscheidung — wer wirklich dran wäre, beantwortet nach wie vor das Ranking.
 
-### Abgrenzung zu Phase 9
+### Woher die Absagen kommen
 
-Diese drei reagieren auf **ausdrückliche** Absagen für einen einzelnen Abend.
-Phase 9 ergänzt `absence_period` — „ich bin vom 10. bis 24. weg" — und erzeugt
-daraus automatisch dieselben Absagen. Sie fließen durch denselben Pfad, also
-feuern die Benachrichtigungen dann von allein: **Phase 9 liefert die Daten,
-Phase 8 reagiert darauf.** Neuer Notification-Code entsteht dort nicht.
+Diese drei reagieren auf Absagen für einen einzelnen Abend — egal ob jemand sie
+selbst eingetragen hat oder ob sie aus einem Abwesenheitszeitraum stammen. Beide
+laufen durch denselben Pfad, deshalb brauchte die Abwesenheit keinen eigenen
+Notification-Code: **der Zeitraum liefert die Absagen, dieses Kapitel reagiert
+darauf.**
 
-Praktisch heißt das: der Kapazitäts-Hinweis kommt heute erst, wenn Leute für den
-konkreten Abend absagen. Ein früh angekündigter Urlaub zählt erst mit Phase 9 mit
-— dann aber ohne Änderung an diesem Kapitel.
+## Abwesenheit
+
+„Ich bin vom 10. bis 24. weg." Beide Enden **inklusive** — bis zum 24. heißt, der 24. ist noch weg.
+
+| Methode  | Pfad                             | Rechte                            |
+| -------- | -------------------------------- | --------------------------------- |
+| `GET`    | `…/absences?scope=upcoming\|all` | eingeloggt (paginiert)            |
+| `POST`   | `…/absences`                     | eigene; fremde nur `admin`        |
+| `PATCH`  | `…/absences/:id`                 | wie oben, `If-Match` erforderlich |
+| `DELETE` | `…/absences/:id`                 | wie oben                          |
+| `POST`   | `…/absences/sync`                | `admin` (manueller Nachlauf)      |
+
+Die Liste zeigt **alle**, nicht nur die eigenen: wer weg ist, ist genau das, was
+beim Planen eines Abends interessiert. `personId` beim Anlegen ist optional —
+ohne trägt man sich selbst ein, mit darf nur ein Admin, was es möglich macht,
+einen Urlaub für jemanden zu notieren, der sich noch nie eingeloggt hat.
+
+### Der Zeitraum ist die Wahrheit, die Absagen sind abgeleitet
+
+Ein Zeitraum schreibt `meeting_attendance`-Zeilen für die Abende, die er abdeckt.
+Das ist bewusst materialisiert statt bei jeder Frage neu berechnet: sonst müsste
+jede Stelle, die „wer kommt" fragt — der Host, die Gästezahl, die Kapazitätsregel
+— es einzeln nachschlagen, und in der Teilnehmerliste stünde nichts, wo die Leute
+hinschauen.
+
+Die Zeilen tragen deshalb `source`:
+
+- **`SELF`** — jemand hat für diesen Abend geantwortet. Wird **nie** von einem
+  Zeitraum überschrieben oder zurückgenommen.
+- **`ABSENCE`** — aus einem Zeitraum abgeleitet. Wird beim nächsten Abgleich neu
+  aufgebaut.
+
+Ohne diese Spalte ginge ein „doch, ich komme an dem Abend" verloren, sobald der
+Urlaub später bearbeitet wird. Eine Antwort von Hand beansprucht die Zeile
+deshalb auch dann, wenn ein Zeitraum sie angelegt hat.
+
+Der Abgleich läuft **nur vorwärts**. Ein nachträglich eingetragener Urlaub soll
+nicht umschreiben, wer letzte Woche da war.
+
+Bearbeiten heißt „neu aufbauen", nicht „nachbessern": Verkürzen gibt Abende
+zurück, Verlängern nimmt welche weg, und keiner der beiden Fälle braucht zu
+wissen, wie der Zeitraum vorher aussah. Zusätzlich läuft nachts um 3:30 ein
+Abgleich für alle — Termine entstehen im Voraus, und ein Abend, der heute erzeugt
+wird, kann in einen Urlaub von vor drei Wochen fallen.
+
+### Was das für die Vorschläge bedeutet
+
+**Wer weg ist, verdient kein Guthaben.** Das ist die eigentliche Feinheit. Eine
+Wohnung, deren Bewohner:innen im Urlaub sind, fällt für diese Abende aus der
+Rechnung heraus — sowohl aus der Auszahlung als auch aus dem Nenner. Bliebe sie
+im Nenner, verpuffte ihr Anteil und alle Anwesenden sähen mit der Zeit
+unterversorgt aus, was dasselbe ist wie „niemandem steht etwas zu". Und ohne den
+Ausschluss käme jemand aus drei Wochen Urlaub mit drei Abenden Guthaben zurück
+und wäre erstmal Dauerhost.
+
+Das ist der Unterschied zum Zurückstellen: eine Wohnung, die für den Abend zu
+klein ist oder deren Bewohner:innen schon etwas anderes machen, **verdient
+weiter** — die Gelegenheit wurde ihr genommen. Wer wegfährt, hat sie abgegeben.
+
+**Niemand verschwindet kommentarlos.** Abwesende stehen weiterhin in der Liste,
+nur hinten und mit Begründung — dasselbe Prinzip wie bei Sofies Kapazität. Ein
+Name, der einfach fehlt, sieht aus wie ein Fehler:
+
+```
+ 7. Julian    Bei Julian & Marlene   credit=-0.4071
+ 8. Niko      Bei Niko               credit= 0.1622  weg AWAY
+ 9. sofie     Bei Sofie              credit= 0.1186  TOO_SMALL
+```
+
+Zwei getrennte Angaben, weil sie Verschiedenes bedeuten: `facts.away` heißt
+„diese Person ist weg", `deferredReason: 'AWAY'` heißt „die ganze Wohnung ist
+leer". Bei einer geteilten Wohnung, in der eine:r verreist ist, gilt nur das
+Erste — es macht ja jemand die Tür auf.
+
+Themen- und Musik-Vorschläge kennen keine Wohnung und lassen Abwesende schlicht
+weg.
+
+### Und bei den Gebetsbuddys
+
+Ausgelassen wird nur, wer die **ganze** Periode weg ist. Ein paar Tage Urlaub
+mitten in zwei Wochen sind kein Grund auszusetzen — miteinander beten hängt nicht
+daran, in der Stadt zu sein.
 
 ## Gebetsbuddys
 
@@ -949,7 +1028,7 @@ Gemeinsam in [`pagination.ts`](src/common/http/pagination.ts): neue Listen
 erweitern `paginationSchema` im DTO und geben `toPage(items, total, query)`
 zurück.
 
-## API (Stand: Phase 8)
+## API (Stand: Phase 9)
 
 | Methode                 | Pfad                                         | Rechte                                   |
 | ----------------------- | -------------------------------------------- | ---------------------------------------- |
@@ -997,12 +1076,17 @@ zurück.
 | `GET`                   | `…/prayer-buddies/config`                    | eingeloggt                               |
 | `PUT`                   | `…/prayer-buddies/config`                    | `admin`                                  |
 | `POST`                  | `…/prayer-buddies/rotate`                    | `admin` (sofort neu zuteilen)            |
+| `GET`                   | `…/absences?scope=upcoming\|all`             | eingeloggt (paginiert)                   |
+| `GET`                   | `…/absences/:id`                             | eingeloggt                               |
+| `POST`                  | `…/absences`                                 | eigene; fremde nur `admin`               |
+| `PATCH`/`DELETE`        | `…/absences/:id`                             | eigene; fremde nur `admin`               |
+| `POST`                  | `…/absences/sync`                            | `admin` (manueller Nachlauf)             |
 | `GET`                   | `/api/push/settings`                         | eingeloggt (eigene Einstellungen)        |
 | `PUT`                   | `/api/push/settings/:type`                   | eingeloggt (eigene Einstellungen)        |
 
 Alle `GET`s beantworten `If-None-Match` mit `304`. Die `PATCH`-Endpunkte auf
-Personen, Locations, Terminen, Themen und Songs, `PUT …/prayer-buddies/config`
-sowie `…/meetings/:id/cancel` **verlangen**
+Personen, Locations, Terminen, Themen, Songs und Abwesenheiten,
+`PUT …/prayer-buddies/config` sowie `…/meetings/:id/cancel` **verlangen**
 `If-Match` (`428` ohne, `412` bei veralteter Version) — Details siehe
 [Conditional Requests](#conditional-requests-etag-304-412).
 
