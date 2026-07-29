@@ -69,11 +69,13 @@ model Hauskreis {
   /// Optimistic locking counter, see docs/conditional requests.
   version   Int      @default(0)
 
-  people    Person[]
-  locations Location[]
-  meetings  Meeting[]
-  topics    Topic[]
-  songs     Song[]
+  people            Person[]
+  locations         Location[]
+  meetings          Meeting[]
+  topics            Topic[]
+  songs             Song[]
+  prayerBuddyGroups PrayerBuddyGroup[]
+  prayerBuddyConfig PrayerBuddyCycleConfig?
 
   @@map("hauskreis")
 }
@@ -98,13 +100,15 @@ model Person {
   /// Optimistic locking counter, see docs/conditional requests.
   version         Int       @default(0)
 
-  hauskreis             Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
-  location              Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  hostedMeetings        Meeting[]           @relation("MeetingHost")
-  songsCreated          Song[]              @relation("SongCreator")
-  songLeaderships       MeetingSongLeader[] @relation("SongLeader")
-  songsSuggested        MeetingSong[]       @relation("SongSuggester")
+  hauskreis             Hauskreis                @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  location              Location?                @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  hostedMeetings        Meeting[]                @relation("MeetingHost")
+  songsCreated          Song[]                   @relation("SongCreator")
+  songLeaderships       MeetingSongLeader[]      @relation("SongLeader")
+  songsSuggested        MeetingSong[]            @relation("SongSuggester")
   topicResponsibilities TopicResponsible[]
+  prayerBuddyGroups     PrayerBuddyGroupMember[] @relation("PrayerBuddy")
+  cycleConfigEdits      PrayerBuddyCycleConfig[] @relation("CycleConfigEditor")
   attendances           MeetingAttendance[]
   pushSubscriptions     PushSubscription[]
   notifications         NotificationLog[]
@@ -288,6 +292,58 @@ model MeetingSong {
   @@map("meeting_song")
 }
 
+/// How long a prayer buddy assignment lasts. One row per group, created on
+/// first read — a separate table rather than a column on `hauskreis` because it
+/// records *who* changed the rhythm and when.
+model PrayerBuddyCycleConfig {
+  id                String   @id @default(uuid()) @db.Uuid
+  hauskreisId       String   @unique @map("hauskreis_id") @db.Uuid
+  periodLengthWeeks Int      @default(2) @map("period_length_weeks")
+  updatedByPersonId String?  @map("updated_by_person_id") @db.Uuid
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  /// Optimistic locking counter, see docs/conditional requests.
+  version           Int      @default(0)
+
+  hauskreis Hauskreis @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  updatedBy Person?   @relation("CycleConfigEditor", fields: [updatedByPersonId], references: [id], onDelete: SetNull)
+
+  @@map("prayer_buddy_cycle_config")
+}
+
+/// One prayer buddy group for one period. Several rows share a period —
+/// together they are the assignment for that stretch of time.
+model PrayerBuddyGroup {
+  id          String    @id @default(uuid()) @db.Uuid
+  hauskreisId String    @map("hauskreis_id") @db.Uuid
+  periodStart DateTime  @map("period_start") @db.Date
+  periodEnd   DateTime  @map("period_end") @db.Date
+  /// Set when an admin re-rolled before this grouping ever took effect. It is
+  /// kept rather than deleted: "not this one" is exactly what the next roll
+  /// needs to know, otherwise re-rolling returns the identical grouping.
+  /// Hidden from the archive, counted by the repeat avoidance.
+  discardedAt DateTime? @map("discarded_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  hauskreis     Hauskreis                @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  members       PrayerBuddyGroupMember[]
+  notifications NotificationLog[]
+
+  @@index([hauskreisId, periodStart])
+  @@map("prayer_buddy_group")
+}
+
+model PrayerBuddyGroupMember {
+  groupId  String @map("prayer_buddy_group_id") @db.Uuid
+  personId String @map("person_id") @db.Uuid
+
+  group  PrayerBuddyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  person Person           @relation("PrayerBuddy", fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, personId])
+  @@index([personId])
+  @@map("prayer_buddy_group_member")
+}
+
 /// One Web Push endpoint, i.e. one browser on one device. People install the
 /// PWA on several devices, so a person can have many.
 model PushSubscription {
@@ -314,15 +370,22 @@ model NotificationLog {
   personId         String           @map("person_id") @db.Uuid
   type             NotificationType
   relatedMeetingId String?          @map("related_meeting_id") @db.Uuid
+  /// What a prayer buddy notification refers to. Without it every rotation
+  /// would look like the same notification as the first one, and only the very
+  /// first assignment would ever be announced.
+  relatedGroupId   String?          @map("related_group_id") @db.Uuid
   sentAt           DateTime         @default(now()) @map("sent_at")
 
-  person         Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
-  relatedMeeting Meeting? @relation(fields: [relatedMeetingId], references: [id], onDelete: Cascade)
+  person         Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
+  relatedMeeting Meeting?          @relation(fields: [relatedMeetingId], references: [id], onDelete: Cascade)
+  relatedGroup   PrayerBuddyGroup? @relation(fields: [relatedGroupId], references: [id], onDelete: Cascade)
 
-  /// The deduplication key. A partial unique index would be tidier for rows
-  /// without a meeting, but Prisma cannot express one; those are deduplicated
-  /// by the callers instead.
-  @@unique([personId, type, relatedMeetingId])
+  /// The deduplication key. Postgres treats rows with a NULL in the tuple as
+  /// distinct, so this index does not actually enforce anything for
+  /// notifications without a meeting — the real check is the query in
+  /// `NotificationService.hasBeenSent`. The index still earns its keep by
+  /// making that query an index lookup.
+  @@unique([personId, type, relatedMeetingId, relatedGroupId])
   @@index([personId, sentAt])
   @@map("notification_log")
 }
