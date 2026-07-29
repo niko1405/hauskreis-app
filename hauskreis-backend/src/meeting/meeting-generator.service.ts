@@ -1,8 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
-import { MeetingType } from '../../generated/prisma/enums';
-import { isLastTuesdayOfMonth, upcomingTuesdays } from './meeting-schedule';
+import { MeetingStatus, MeetingType } from '../../generated/prisma/enums';
+import {
+  isLastTuesdayOfMonth,
+  toUtcDate,
+  upcomingTuesdays,
+} from './meeting-schedule';
 
 /** How many future meetings should always be available for planning. */
 export const MEETINGS_AHEAD = 7;
@@ -20,13 +24,39 @@ export class MeetingGeneratorService {
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM, { name: 'generate-meetings' })
   async handleCron(): Promise<void> {
-    const result = await this.generateForAllHauskreise();
+    const [result, closed] = await Promise.all([
+      this.generateForAllHauskreise(),
+      this.closePastMeetings(),
+    ]);
 
     if (result.created > 0) {
       this.logger.log(
         `Generated ${result.created} meeting(s), ${result.skipped} date(s) already had one`,
       );
     }
+
+    if (closed > 0) {
+      this.logger.log(`Marked ${closed} past meeting(s) as completed`);
+    }
+  }
+
+  /**
+   * Moves evenings that have been and gone from PLANNED to COMPLETED.
+   *
+   * `COMPLETED` has been in the enum since the meetings were built and nothing
+   * ever set it, so the archive listed evenings from months ago as still
+   * planned. Nobody is going to tick them off by hand every week.
+   *
+   * Cancelled ones keep their status: "fiel aus" is a different fact from "hat
+   * stattgefunden", and the archive should be able to tell them apart.
+   */
+  async closePastMeetings(now = new Date()): Promise<number> {
+    const result = await this.prisma.meeting.updateMany({
+      where: { date: { lt: toUtcDate(now) }, status: MeetingStatus.PLANNED },
+      data: { status: MeetingStatus.COMPLETED },
+    });
+
+    return result.count;
   }
 
   async generateForAllHauskreise(now = new Date()): Promise<GenerationResult> {

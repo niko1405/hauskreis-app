@@ -126,3 +126,24 @@ describe('MeetingGeneratorService.generateForAllHauskreise', () => {
     expect(result.created).toBe(MEETINGS_AHEAD * 2);
   });
 });
+
+describe('MeetingGeneratorService.closePastMeetings', () => {
+  it('marks evenings that have been and gone as completed', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 3 });
+    const service = new MeetingGeneratorService({
+      meeting: { updateMany },
+    } as unknown as PrismaService);
+
+    await expect(
+      service.closePastMeetings(new Date('2026-07-29T10:00:00.000Z')),
+    ).resolves.toBe(3);
+
+    // Cancelled ones keep their status: "fiel aus" is a different fact from
+    // "hat stattgefunden", and the archive should tell them apart.
+    expect(updateMany.mock.calls[0][0].where).toEqual({
+      date: { lt: new Date('2026-07-29T00:00:00.000Z') },
+      status: 'PLANNED',
+    });
+    expect(updateMany.mock.calls[0][0].data).toEqual({ status: 'COMPLETED' });
+  });
+});
