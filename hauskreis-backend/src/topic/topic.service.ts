@@ -29,9 +29,27 @@ export class TopicService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(hauskreisId: string, query: ListTopicsQueryDto) {
+    const createdAt: { gte?: Date; lte?: Date } = {};
+
+    if (query.from) {
+      createdAt.gte = query.from;
+    }
+
+    if (query.to) {
+      // The bound is a date, the column a timestamp — without pushing to the
+      // end of the day a topic started at noon would fall outside "bis heute".
+      createdAt.lte = endOfUtcDay(query.to);
+    }
+
     const where = {
       hauskreisId,
       ...(query.status ? { status: query.status } : {}),
+      ...(query.search
+        ? {
+            title: { contains: query.search, mode: 'insensitive' as const },
+          }
+        : {}),
+      ...(Object.keys(createdAt).length > 0 ? { createdAt } : {}),
     };
 
     const [items, total] = await Promise.all([
@@ -198,4 +216,19 @@ export class TopicService {
       );
     }
   }
+}
+
+/** 23:59:59.999 UTC, so an inclusive `to` really covers that whole day. */
+function endOfUtcDay(date: Date): Date {
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      23,
+      59,
+      59,
+      999,
+    ),
+  );
 }

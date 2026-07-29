@@ -51,14 +51,31 @@ export class MeetingService {
   async findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
     const today = toUtcDate(new Date());
 
-    const dateFilter =
-      query.scope === 'upcoming'
-        ? { gte: today }
-        : query.scope === 'past'
-          ? { lt: today }
-          : undefined;
+    // `from`/`to` narrow the scope rather than replace it: `scope=past` with a
+    // `to` next year must still stop at today, or the archive would quietly
+    // start listing evenings that have not happened.
+    const date: { gte?: Date; lt?: Date; lte?: Date } = {};
 
-    const where = { hauskreisId, ...(dateFilter ? { date: dateFilter } : {}) };
+    if (query.scope === 'upcoming') {
+      date.gte = today;
+    } else if (query.scope === 'past') {
+      date.lt = today;
+    }
+
+    if (query.from) {
+      const from = toUtcDate(query.from);
+      date.gte = date.gte && date.gte > from ? date.gte : from;
+    }
+
+    if (query.to) {
+      date.lte = toUtcDate(query.to);
+    }
+
+    const where = {
+      hauskreisId,
+      ...(Object.keys(date).length > 0 ? { date } : {}),
+      ...buildMeetingSearch(query.search),
+    };
 
     const [items, total] = await Promise.all([
       this.prisma.meeting.findMany({
@@ -316,4 +333,34 @@ export class MeetingService {
       );
     }
   }
+}
+
+/**
+ * Matches free text against everything an evening was written down as.
+ *
+ * Deliberately spread across all the text fields plus the topic's title: the
+ * archive question is "wann ging es nochmal um Vergebung", and nobody
+ * remembers whether that ended up in the summary, the info line or the topic.
+ *
+ * `contains` with `insensitive` rather than full-text search — at a few hundred
+ * evenings the index would cost more to maintain than the scan costs to run,
+ * and substring matching is what people expect from a search box.
+ */
+function buildMeetingSearch(search: string | undefined) {
+  if (!search) {
+    return {};
+  }
+
+  const contains = { contains: search, mode: 'insensitive' as const };
+
+  return {
+    OR: [
+      { title: contains },
+      { summaryText: contains },
+      { actionstepText: contains },
+      { infoText: contains },
+      { testimonyText: contains },
+      { topic: { title: contains } },
+    ],
+  };
 }

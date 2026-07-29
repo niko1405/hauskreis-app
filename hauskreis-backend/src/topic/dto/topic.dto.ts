@@ -26,6 +26,12 @@ export const updateTopicSchema = z.object({
 
 export const listTopicsQuerySchema = paginationSchema.extend({
   status: topicStatus.optional(),
+  /// Matches the title. Topics without one are simply never hits — that is
+  /// honest, since there is nothing to match against.
+  search: z.string().trim().min(1).max(200).optional(),
+  /// Inclusive bounds on when the topic was started.
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
 });
 
 const topicParamsSchema = z.object({

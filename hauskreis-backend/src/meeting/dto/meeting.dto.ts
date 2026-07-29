@@ -49,6 +49,14 @@ export const setAttendanceSchema = z.object({
 export const listMeetingsQuerySchema = paginationSchema.extend({
   /// 'upcoming' (default) hides past meetings; 'past' powers the archive view.
   scope: z.enum(['upcoming', 'past', 'all']).default('upcoming'),
+  /// Free text over everything an evening was written down as: title,
+  /// summary, actionstep, info, testimony and the topic's title. That is the
+  /// archive question — "wann ging es nochmal um Vergebung" — and nobody
+  /// remembers which of those fields it was in.
+  search: z.string().trim().min(1).max(200).optional(),
+  /// Inclusive date bounds, for narrowing the archive to a year or a stretch.
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
 });
 
 const meetingParamsSchema = z.object({

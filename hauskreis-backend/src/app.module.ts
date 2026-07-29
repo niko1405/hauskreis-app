@@ -19,6 +19,7 @@ import { SongModule } from './song/song.module';
 import { PrayerBuddyModule } from './prayer-buddy/prayer-buddy.module';
 import { NotificationModule } from './notification/notification.module';
 import { AbsenceModule } from './absence/absence.module';
+import { ArchiveModule } from './archive/archive.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { AbsenceModule } from './absence/absence.module';
     PrayerBuddyModule,
     NotificationModule,
     AbsenceModule,
+    ArchiveModule,
   ],
   controllers: [HealthController],
   providers: [

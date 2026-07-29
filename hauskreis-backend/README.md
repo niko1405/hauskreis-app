@@ -1029,7 +1029,60 @@ Gemeinsam in [`pagination.ts`](src/common/http/pagination.ts): neue Listen
 erweitern `paginationSchema` im DTO und geben `toPage(items, total, query)`
 zurück.
 
-## API (Stand: Phase 9)
+## Archiv
+
+Das Archiv ist eine **Sicht** auf Vorhandenes, kein eigener Datenbestand. Die
+Listen bleiben deshalb dort, wo die Daten liegen — `…/meetings?scope=past`,
+`…/topics`, `…/songs` — statt als `/archive/meetings` ein zweites Mal zu
+existieren und mit der Zeit auseinanderzulaufen. Alles read-only, es gibt nichts
+zu schreiben.
+
+| Zweck                  | Aufruf                                     |
+| ---------------------- | ------------------------------------------ |
+| Überblick, Jahresliste | `GET …/archive`                            |
+| Vergangene Abende      | `GET …/meetings?scope=past`                |
+| Suche im Archiv        | `…&search=Vergebung`                       |
+| Ein Jahr               | `…&from=2026-01-01&to=2026-12-31`          |
+| Abgeschlossene Themen  | `GET …/topics?status=COMPLETED&search=…`   |
+| Song-Datenbank         | `GET …/songs?sort=popular&playedOnly=true` |
+
+### Suche
+
+Bei Terminen läuft sie über **alle** Textfelder — Titel, Zusammenfassung,
+Actionstep, Info, Testimony und den Titel des Themas. Die Archivfrage lautet
+„wann ging es nochmal um Vergebung", und niemand weiß mehr, in welchem der
+Felder das gelandet ist. `contains` mit `insensitive`, kein Volltext-Index: bei
+ein paar hundert Abenden kostet die Pflege des Index mehr als der Scan.
+
+`from`/`to` **verengen** den Scope, sie ersetzen ihn nicht. `scope=past` mit
+einem `to` im nächsten Jahr hört trotzdem heute auf — sonst würde das Archiv
+still anfangen, Abende aufzuführen, die noch gar nicht stattgefunden haben.
+
+### Songs: was wir wirklich singen
+
+Jeder Song trägt `timesPlayed` und `lastPlayedAt`. Gezählt werden nur Abende, an
+denen er tatsächlich **ausgewählt** war (`isSelected`) — ein Vorschlag, der es
+nicht auf die Liste geschafft hat, sagt etwas über einen Wunsch aus, nicht über
+das Repertoire. `lastPlayedAt: null` heißt „noch nie gesungen".
+
+`sort=title` (Default) ist die Reihenfolge zum Tippen. `popular` und `recent`
+sind die Archivfragen: was singen wir dauernd, und was haben wir ewig nicht mehr
+gesungen. Bei `recent` stehen nie gesungene Songs **hinten** — ein leeres Datum
+heißt „kennen wir noch nicht", nicht „ewig her".
+
+Sortiert wird in TypeScript, nicht in SQL, und **danach** paginiert. Ließe man
+die Datenbank zuerst blättern, würde sie eine alphabetische Seite schneiden und
+erst diese Seite ranken — Seite 2 könnte dann Seite 1 überholen.
+
+### Abende werden abgeschlossen
+
+`MeetingStatus.COMPLETED` stand seit dem Termin-Kern im Enum und wurde nie
+gesetzt; das Archiv führte Abende von vor Monaten als „geplant". Der nächtliche
+Generator setzt vergangene `PLANNED`-Abende jetzt auf `COMPLETED`. Abgesagte
+behalten ihren Status: „fiel aus" ist eine andere Tatsache als „hat
+stattgefunden", und das Archiv soll beides unterscheiden können.
+
+## API (Stand: Phase 10)
 
 | Methode                 | Pfad                                         | Rechte                                   |
 | ----------------------- | -------------------------------------------- | ---------------------------------------- |
@@ -1043,7 +1096,7 @@ zurück.
 | `DELETE`                | `/api/hauskreise/:hauskreisId/people/:id`    | `admin`                                  |
 | `GET`                   | `…/locations`, `…/locations/:id`             | eingeloggt                               |
 | `POST`/`PATCH`/`DELETE` | `…/locations[/:id]`                          | `admin`                                  |
-| `GET`                   | `…/meetings?scope=upcoming\|past\|all`       | eingeloggt (paginiert)                   |
+| `GET`                   | `…/meetings?scope=…&search=&from=&to=`       | eingeloggt (paginiert)                   |
 | `GET`                   | `…/meetings/:id`                             | eingeloggt                               |
 | `GET`                   | `…/meetings/:id/host-suggestions`            | eingeloggt                               |
 | `GET`                   | `…/meetings/:id/topic-suggestions`           | eingeloggt                               |
@@ -1055,14 +1108,14 @@ zurück.
 | `POST`                  | `…/meetings/generate`                        | `admin` (manueller Generator-Trigger)    |
 | `POST`                  | `…/meetings/host-reminders`                  | `admin` (manueller Reminder-Trigger)     |
 | `POST`                  | `…/meetings/actionstep-reminders`            | `admin` (manueller Reminder-Trigger)     |
-| `GET`                   | `…/topics?status=RUNNING\|COMPLETED`         | eingeloggt (paginiert)                   |
+| `GET`                   | `…/topics?status=…&search=&from=&to=`        | eingeloggt (paginiert)                   |
 | `GET`                   | `…/topics/:id`                               | eingeloggt                               |
 | `POST`                  | `…/topics`                                   | eingeloggt                               |
 | `PATCH`                 | `…/topics/:id`                               | eingeloggt                               |
 | `DELETE`                | `…/topics/:id`                               | `admin`                                  |
 | `POST`                  | `…/topics/carry-over`                        | `admin` (manuelle Themen-Übernahme)      |
 | `POST`                  | `…/topics/reminders`                         | `admin` (manueller Reminder-Trigger)     |
-| `GET`                   | `…/songs?search=`                            | eingeloggt (paginiert)                   |
+| `GET`                   | `…/songs?search=&sort=&playedOnly=`          | eingeloggt (paginiert)                   |
 | `GET`                   | `…/songs/:id`                                | eingeloggt                               |
 | `POST`                  | `…/songs`                                    | eingeloggt (legt an oder gibt zurück)    |
 | `PATCH`                 | `…/songs/:id`                                | eingeloggt                               |
@@ -1082,6 +1135,7 @@ zurück.
 | `POST`                  | `…/absences`                                 | eigene; fremde nur `admin`               |
 | `PATCH`/`DELETE`        | `…/absences/:id`                             | eigene; fremde nur `admin`               |
 | `POST`                  | `…/absences/sync`                            | `admin` (manueller Nachlauf)             |
+| `GET`                   | `…/archive`                                  | eingeloggt (Überblick, Jahresliste)      |
 | `GET`                   | `/api/push/settings`                         | eingeloggt (eigene Einstellungen)        |
 | `PUT`                   | `/api/push/settings/:type`                   | eingeloggt (eigene Einstellungen)        |
 
