@@ -1,0 +1,39 @@
+meta {
+  name: Teilnahme setzen
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/attendance
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "personId": "{{myPersonId}}",
+    "status": "ATTENDING"
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("beansprucht die Zeile als eigene Antwort", function () {
+    expect(res.body.source).to.equal("SELF");
+  });
+}
+
+docs {
+  Bewusst ohne If-Match: idempotent, Last-Write-Wins ist hier richtig.
+
+  source=SELF ist wichtig — eine Antwort von Hand darf von einem
+  Abwesenheitszeitraum nicht überschrieben werden.
+}

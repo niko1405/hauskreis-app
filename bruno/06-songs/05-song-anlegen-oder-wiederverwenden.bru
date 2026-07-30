@@ -1,0 +1,37 @@
+meta {
+  name: Song anlegen oder wiederverwenden
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/songs
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Bruno-Testsong",
+    "artist": "Testchor"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("newSongId", res.body.id);
+}
+
+tests {
+  test("antwortet mit 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  Ein zweiter Aufruf gibt denselben Song zurück statt 400 —
+  gewollt: der Aufrufer wollte den Song in der Datenbank, und da ist er.
+}

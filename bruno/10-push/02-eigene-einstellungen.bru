@@ -1,0 +1,31 @@
+meta {
+  name: Eigene Einstellungen
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/push/settings
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("listet jeden Typ mit Label und Default", function () {
+    expect(res.body.length).to.be.greaterThan(0);
+    res.body.forEach(s => {
+      expect(s).to.have.property("label");
+      expect(s).to.have.property("description");
+      expect(s.schedule.kind).to.be.oneOf(["LEAD_TIME","WEEKLY","EVENT"]);
+    });
+  });
+}
+
+docs {
+  Alle Typen, auch die ohne gespeicherte Zeile — keine Zeile heißt
+  "wie im Katalog". Ein neuer Typ erscheint hier von allein.
+}

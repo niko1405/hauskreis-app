@@ -1,0 +1,30 @@
+meta {
+  name: Personen auflisten
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/people
+  body: none
+  auth: inherit
+}
+
+script:post-response {
+  const other = res.body.find(p => p.id !== bru.getEnvVar("myPersonId"));
+  if (other) bru.setEnvVar("otherPersonId", other.id);
+  bru.setEnvVar("personEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("gibt die interne Keycloak-Id nicht heraus", function () {
+    expect(res.body[0]).to.not.have.property("keycloakUserId");
+  });
+}
+
+docs {
+  Setzt {{otherPersonId}} für die Abwesenheits-Tests.
+}

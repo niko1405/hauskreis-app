@@ -1,0 +1,17 @@
+meta {
+  name: Abwesenheit löschen
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/absences/{{absenceId}}
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 204", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

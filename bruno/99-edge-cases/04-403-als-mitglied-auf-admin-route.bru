@@ -1,0 +1,25 @@
+meta {
+  name: 403 als Mitglied auf Admin-Route
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/generate
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{memberToken}}
+}
+
+tests {
+  test("verwehrt Mitgliedern die Admin-Route", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+docs {
+  Braucht {{memberToken}} aus 00-auth.
+}

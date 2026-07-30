@@ -1,0 +1,27 @@
+meta {
+  name: 304 mit If-None-Match
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  If-None-Match: {{meetingEtag}}
+}
+
+tests {
+  test("antwortet 304, wenn sich nichts geändert hat", function () {
+    expect(res.getStatus()).to.equal(304);
+  });
+}
+
+docs {
+  Macht Express von allein, sobald ein ETag gesetzt ist. Damit das
+        Frontend cross-origin überhaupt einen ETag sieht, steht ETag in
+        Access-Control-Expose-Headers.
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Rhythmus lesen
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/prayer-buddies/config
+  body: none
+  auth: inherit
+}
+
+script:post-response {
+  bru.setEnvVar("buddyConfigEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

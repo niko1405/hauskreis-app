@@ -1,0 +1,17 @@
+meta {
+  name: Übernahme auslösen (admin)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/topics/carry-over
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

@@ -1,0 +1,20 @@
+# Installed fresh inside the image — copying the host's tree in would both
+# bloat the context and risk platform-specific binaries.
+node_modules
+dist
+generated
+coverage
+
+# Secrets never belong in an image layer. Configuration comes from the
+# environment at run time.
+.env
+.env.*
+!.env.example
+
+.git
+.gitignore
+*.log
+.vscode
+.idea
+test
+**/*.spec.ts

@@ -1,0 +1,21 @@
+meta {
+  name: Termin einzeln
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}
+  body: none
+  auth: inherit
+}
+
+script:post-response {
+  bru.setEnvVar("meetingEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

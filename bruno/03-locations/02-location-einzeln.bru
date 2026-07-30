@@ -1,0 +1,21 @@
+meta {
+  name: Location einzeln
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/locations/{{locationId}}
+  body: none
+  auth: inherit
+}
+
+script:post-response {
+  bru.setEnvVar("locationEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

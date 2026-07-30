@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Idempotent local Keycloak setup: realm, roles, backend client, test users.
+# Idempotent local Keycloak setup: realm, roles, both clients, test users.
 # Usage: ./scripts/setup-keycloak.sh
 set -euo pipefail
 
@@ -7,6 +7,12 @@ KC_URL="${KEYCLOAK_URL:-http://localhost:8080}"
 REALM="${KEYCLOAK_REALM:-hauskreis}"
 CLIENT_ID="${KEYCLOAK_CLIENT_ID:-hauskreis-backend}"
 CLIENT_SECRET="${KEYCLOAK_CLIENT_SECRET:-local-dev-secret}"
+# The browser-facing client. Public, because a Single Page App has nowhere to
+# keep a secret; PKCE is what protects the code exchange instead.
+FRONTEND_CLIENT_ID="${KEYCLOAK_FRONTEND_CLIENT_ID:-hauskreis-app}"
+FRONTEND_URL="${FRONTEND_URL:-http://localhost:3001}"
+# What the API insists on finding in the token's `aud`.
+API_AUDIENCE="${KEYCLOAK_AUDIENCE:-hauskreis-backend}"
 KC_ADMIN="${KEYCLOAK_ADMIN:-admin}"
 KC_ADMIN_PASSWORD="${KEYCLOAK_ADMIN_PASSWORD:-admin}"
 # 'mailpit' is the compose service name — Keycloak reaches it on the shared network.
@@ -62,10 +68,49 @@ for role in member admin; do
   fi
 done
 
-echo "==> Ensuring client '${CLIENT_ID}'"
-EXISTING=$(curl -sf "${auth[@]}" \
-  "${KC_URL}/admin/realms/${REALM}/clients?clientId=${CLIENT_ID}" \
-  | node -pe 'const a=JSON.parse(require("fs").readFileSync(0,"utf8")); a.length ? a[0].id : ""')
+client_uuid() {
+  curl -sf "${auth[@]}" \
+    "${KC_URL}/admin/realms/${REALM}/clients?clientId=$1" \
+    | node -pe 'const a=JSON.parse(require("fs").readFileSync(0,"utf8")); a.length ? a[0].id : ""'
+}
+
+# The API refuses tokens without the right `aud`, and Keycloak only puts one
+# there when a mapper says so. Both clients get it: the frontend issues the
+# tokens people use, the backend client issues the ones scripts and the Bruno
+# collection use.
+ensure_audience_mapper() {
+  local uuid="$1" name="hauskreis-api-audience"
+
+  local existing
+  existing=$(curl -sf "${auth[@]}" \
+    "${KC_URL}/admin/realms/${REALM}/clients/${uuid}/protocol-mappers/models" \
+    | node -pe "JSON.parse(require('fs').readFileSync(0,'utf8')).filter(m => m.name === '${name}').length")
+
+  if [ "${existing}" = "0" ]; then
+    curl -sf -X POST "${auth[@]}" \
+      "${KC_URL}/admin/realms/${REALM}/clients/${uuid}/protocol-mappers/models" -d "{
+        \"name\": \"${name}\",
+        \"protocol\": \"openid-connect\",
+        \"protocolMapper\": \"oidc-audience-mapper\",
+        \"config\": {
+          \"included.client.audience\": \"${API_AUDIENCE}\",
+          \"access.token.claim\": \"true\",
+          \"id.token.claim\": \"false\"
+        }
+      }" >/dev/null
+    echo "    audience mapper added"
+  else
+    echo "    audience mapper already there"
+  fi
+}
+
+# Two clients on purpose. A browser cannot keep a secret, so the frontend gets a
+# public client with PKCE; the confidential one keeps the service account that
+# drives the Admin API for invitations. Rolling both jobs into one client would
+# mean either shipping the secret to the browser or handing the browser client a
+# service account with realm-admin.
+echo "==> Ensuring backend client '${CLIENT_ID}' (Admin API, no browser flow)"
+EXISTING=$(client_uuid "${CLIENT_ID}")
 
 if [ -z "${EXISTING}" ]; then
   curl -sf -X POST "${KC_URL}/admin/realms/${REALM}/clients" "${auth[@]}" -d "{
@@ -75,15 +120,40 @@ if [ -z "${EXISTING}" ]; then
       \"publicClient\": false,
       \"secret\": \"${CLIENT_SECRET}\",
       \"serviceAccountsEnabled\": true,
-      \"directAccessGrantsEnabled\": true,
-      \"standardFlowEnabled\": true,
-      \"redirectUris\": [\"http://localhost:3001/*\"],
-      \"webOrigins\": [\"http://localhost:3001\"]
+      \"standardFlowEnabled\": false,
+      \"directAccessGrantsEnabled\": true
     }" >/dev/null
   echo "    created"
+  EXISTING=$(client_uuid "${CLIENT_ID}")
 else
   echo "    already exists (${EXISTING})"
 fi
+
+ensure_audience_mapper "${EXISTING}"
+
+echo "==> Ensuring frontend client '${FRONTEND_CLIENT_ID}' (public, PKCE)"
+FRONTEND_UUID=$(client_uuid "${FRONTEND_CLIENT_ID}")
+
+if [ -z "${FRONTEND_UUID}" ]; then
+  curl -sf -X POST "${KC_URL}/admin/realms/${REALM}/clients" "${auth[@]}" -d "{
+      \"clientId\": \"${FRONTEND_CLIENT_ID}\",
+      \"enabled\": true,
+      \"protocol\": \"openid-connect\",
+      \"publicClient\": true,
+      \"serviceAccountsEnabled\": false,
+      \"directAccessGrantsEnabled\": false,
+      \"standardFlowEnabled\": true,
+      \"redirectUris\": [\"${FRONTEND_URL}/*\"],
+      \"webOrigins\": [\"${FRONTEND_URL}\"],
+      \"attributes\": { \"pkce.code.challenge.method\": \"S256\" }
+    }" >/dev/null
+  echo "    created"
+  FRONTEND_UUID=$(client_uuid "${FRONTEND_CLIENT_ID}")
+else
+  echo "    already exists (${FRONTEND_UUID})"
+fi
+
+ensure_audience_mapper "${FRONTEND_UUID}"
 
 # Grant the service account permission to manage users (needed for the invite flow).
 echo "==> Granting realm-management roles to service account"

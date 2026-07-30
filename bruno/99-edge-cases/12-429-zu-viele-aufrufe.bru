@@ -1,0 +1,25 @@
+meta {
+  name: 429 zu viele Aufrufe
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/health
+  body: none
+  auth: none
+}
+
+tests {
+  test("läuft normal oder greift die Bremse", function () {
+    expect(res.getStatus()).to.be.oneOf([200, 429]);
+  });
+}
+
+docs {
+  300 pro Minute. Von Hand kaum auszulösen — dieser Request dokumentiert
+        vor allem, dass die Bremse existiert. Zum Ausprobieren:
+
+        for i in $(seq 1 320); do curl -s -o /dev/null -w "%{http_code}\n" \
+          http://localhost:3000/api/health; done | sort | uniq -c
+}

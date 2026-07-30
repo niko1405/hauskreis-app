@@ -1,0 +1,21 @@
+meta {
+  name: Thema einzeln
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/topics/{{topicId}}
+  body: none
+  auth: inherit
+}
+
+script:post-response {
+  bru.setEnvVar("topicEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

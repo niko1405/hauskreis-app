@@ -1,0 +1,122 @@
+# Production stack. Start with:
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#
+# Differs from the development compose in the ways that matter: Keycloak runs
+# in production mode, nothing is published to the outside world except through
+# a reverse proxy, and no credential is written down in this file.
+services:
+  # Applies pending migrations and exits, before the API is allowed to start.
+  #
+  # A separate step rather than something the app does on the way up: it makes
+  # the ordering explicit, it fails loudly on its own instead of inside a boot
+  # log, and if the app ever runs more than once there is no migration race to
+  # reason about. Runs from the `build` stage, which has the schema and the
+  # migrations folder.
+  #
+  # `migrate deploy` only applies what is already in prisma/migrations and never
+  # generates or resets anything, so a restart is harmless.
+  migrate:
+    build:
+      context: .
+      target: build
+    image: hauskreis-backend-migrate:latest
+    command: pnpm exec prisma migrate deploy
+    environment:
+      DATABASE_URL: postgresql://hauskreis:${POSTGRES_PASSWORD}@postgres:5432/hauskreis?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    build:
+      context: .
+      target: runtime
+    image: hauskreis-backend:latest
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://hauskreis:${POSTGRES_PASSWORD}@postgres:5432/hauskreis?schema=public
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      KEYCLOAK_URL: ${KEYCLOAK_URL}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-hauskreis}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-hauskreis-backend}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-hauskreis-backend}
+      KEYCLOAK_ALLOWED_AZP: ${KEYCLOAK_ALLOWED_AZP:-hauskreis-app}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
+      # Never in production: it would let the CSV seed overwrite real data.
+      SEED_ENABLED: 'false'
+    # Bound to loopback — a reverse proxy terminates TLS and forwards. Exposing
+    # 3000 to the world would serve the API over plain HTTP.
+    ports:
+      - '127.0.0.1:3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # The app must not start against a schema that is one migration behind
+      # the code it was built from.
+      migrate:
+        condition: service_completed_successfully
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hauskreis
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: hauskreis
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    # No published port at all: only the API talks to it, over the compose
+    # network.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U hauskreis -d hauskreis']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  keycloak-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      POSTGRES_DB: keycloak
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U keycloak -d keycloak']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    restart: unless-stopped
+    # `start`, not `start-dev`: enforces the hostname, expects a proxy in front
+    # and refuses the shortcuts the dev mode allows.
+    command: start --optimized
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_HOSTNAME: ${KEYCLOAK_URL}
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: 'true'
+      KC_HEALTH_ENABLED: 'true'
+    ports:
+      - '127.0.0.1:8080:8080'
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  keycloak-db-data:

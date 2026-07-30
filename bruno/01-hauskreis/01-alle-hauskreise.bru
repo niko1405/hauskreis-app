@@ -1,0 +1,21 @@
+meta {
+  name: Alle Hauskreise
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/hauskreise
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Nicht paginiert — es gibt genau einen.
+}

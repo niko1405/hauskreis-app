@@ -1,0 +1,27 @@
+meta {
+  name: Zuletzt gesungen
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/songs?sort=recent&take=5
+  body: none
+  auth: inherit
+}
+
+params:query {
+  sort: recent
+  take: 5
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Nie gesungene Songs stehen hinten — leeres Datum heißt
+  "kennen wir noch nicht", nicht "ewig her".
+}

@@ -1,0 +1,33 @@
+meta {
+  name: 428 ohne If-Match
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "infoText": "ohne If-Match"
+  }
+}
+
+tests {
+  test("verlangt If-Match", function () {
+    expect(res.getStatus()).to.equal(428);
+  });
+}
+
+docs {
+  If-Match ist Pflicht, nicht Kür. Ein optionaler Header schützt nur die
+        Aufrufer, die daran denken — mit 428 wird das Weglassen zum sichtbaren
+        Fehler statt zu einem verlorenen Update.
+}

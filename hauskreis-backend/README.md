@@ -63,6 +63,31 @@ curl -s -X POST http://localhost:8080/realms/hauskreis/protocol/openid-connect/t
   -d username=testadmin -d password=test1234 -d grant_type=password
 ```
 
+## Endpunkte ausprobieren: Bruno
+
+Die komplette API liegt als [Bruno](https://www.usebruno.com/)-Collection im
+Repo, unter [`../bruno/`](../bruno/). 79 Requests, die **von oben nach unten
+durchlaufen**: `00-auth` holt das Token, die Listen-Requests merken sich IDs und
+ETags als Environment-Variablen, alles Weitere greift darauf zu. Keine UUIDs zum
+Abtippen.
+
+```bash
+cp ../bruno/environments/local.example.bru ../bruno/environments/local.bru
+cd ../bruno && npx @usebruno/cli run --env local -r
+```
+
+`environments/local.bru` ist **ignoriert**, nicht vergessen: der Runner schreibt
+gesetzte Variablen dorthin zurück, also auch Access-Tokens.
+
+`99-edge-cases` prüft die Eigenheiten dieser API, die einem sonst erst im
+Frontend auffallen — `428` ohne `If-Match`, `412` mit veraltetem, `403` mit
+Member-Token, `304`, `429`.
+
+Zwei Fallen im `.bru`-Format, falls du Requests ergänzt: ein `params:query`-Block
+wird **nur gesendet, wenn die Query auch in der URL steht**, und eine fehlende
+`auth:`-Zeile bedeutet `none`, nicht `inherit`. Beides fällt still aus, solange
+alle Parameter optional sind.
+
 ## Wichtige Konventionen
 
 - **Ein Feature = ein NestJS-Modul** (`src/<feature>/`), Abhängigkeiten explizit über `imports`/`exports`.
@@ -406,7 +431,41 @@ pnpm db:migrate     # prisma migrate dev
 pnpm db:seed        # CSV-Testdaten (nur mit SEED_ENABLED=true)
 ```
 
-## Abhängigkeiten & Sicherheit
+## Sicherheit
+
+**CORS.** Allowlist aus `CORS_ORIGINS`; ist die Liste leer, wird
+Cross-Origin komplett verweigert (`origin: false`) statt auf `*` zu fallen.
+`ETag` steht in `exposedHeaders` — **ohne das** liest ein Frontend auf einer
+anderen Origin den Header nicht, kann kein `If-Match` schicken, und jeder
+`PATCH` endet in `428`. Das gesamte Optimistic Locking hängt an dieser Zeile.
+
+**Token.** Geprüft werden Signatur (JWKS), `iss`, `aud`, `azp`, `exp` und der
+Algorithmus. `aud`/`azp` sind der Punkt: ohne sie ist jedes Token aus demselben
+Realm gültig, auch eines, das eine ganz andere Anwendung für sich geholt hat.
+Verifiziert mit einem korrekt signierten Token eines fremden Realm-Clients —
+`401`. Keycloak setzt `aud` nur mit Audience-Mapper; den legt
+`scripts/setup-keycloak.sh` beiden Clients an.
+
+**Zwei Clients.** Ein Browser kann kein Secret halten:
+
+| Client              | Art                           | Zweck                   |
+| ------------------- | ----------------------------- | ----------------------- |
+| `hauskreis-app`     | public, PKCE, Standard Flow   | das Frontend im Browser |
+| `hauskreis-backend` | confidential, Service Account | Admin-API (Einladungen) |
+
+`directAccessGrantsEnabled` bleibt am Backend-Client für lokale Skripte und die
+Bruno-Collection — **in der Produktion gehört es aus**.
+
+**Rate-Limiting.** 300/Minute, absichtlich großzügig: es geht um `/api/health`,
+das ohne Token erreichbar ist und pro Aufruf eine Datenbankabfrage macht, und um
+einen Client, der sich in einer Schleife verhakt. Dazu `trust proxy`, sonst zählt
+hinter einem Reverse Proxy die ganze Gruppe als ein Aufrufer.
+
+**Weiteres.** `helmet` mit Defaults, `compression`, Body-Limit explizit auf
+128 kB, Autorisierungs-Header im Log redigiert, unbekannte Exceptions ohne
+Stacktrace nach außen. Die Personenliste liefert `keycloakUserId` nicht aus.
+
+### Abhängigkeiten
 
 `pnpm audit` muss sauber bleiben. Drei transitive Pakete brauchen aktuell
 Patch-Overrides (in [`pnpm-workspace.yaml`](pnpm-workspace.yaml) begründet) —
@@ -1009,6 +1068,40 @@ Postgres behandelt Zeilen mit einem NULL im Tupel als verschieden, und beide
 Bezugsspalten sind nullable. Die echte Prüfung ist die Query in
 `hasBeenSent` — der Index macht sie nur schnell.
 
+## Home-Screen und Zuteilungen
+
+Zwei Routen aus [`src/dashboard/`](src/dashboard/) — eine Sicht auf vorhandene
+Daten, wie das Archiv, ohne eigene Tabellen.
+
+`GET …/assignments?from=&to=&personId=` liefert alle vier Rollenarten als eine
+**flache, einheitlich geformte Liste**. `personId` ist optional: ohne ihn ist es
+die Mehrwochen-Tabelle aus CLAUDE.md §9, mit ihm sind es die Badges für den
+Home-Screen. Eine Route für beides, damit die zwei Ansichten nicht
+unterschiedlicher Meinung darüber sein können, wer an einem Abend dran ist.
+
+```jsonc
+{ "role": "HOST", "date": "2026-08-04", "endDate": null,
+  "meetingId": "…", "person": {…}, "label": "Bei Chris" }
+
+{ "role": "PRAYER_BUDDY", "date": "2026-08-01", "endDate": "2026-08-14",
+  "groupId": "…", "person": {…}, "label": "mit Antonia und Reini" }
+```
+
+Alle Rollen tragen dieselbe Form, obwohl eine Gebetsbuddy-Periode zwei Wochen
+umspannt und eine Termin-Rolle auf einen Tag fällt — sonst müsste jeder Konsument
+auf vier Formen verzweigen. Abgesagte Abende bleiben draußen. Gebetsbuddy-Perioden
+zählen bei **Überlappung**, nicht nur wenn sie ganz im Zeitraum liegen: eine
+Runde, die im Juli begann, läuft im August weiter.
+
+Zwei Prisma-Aufrufe unabhängig vom Zeitraum. Die Spanne ist auf **366 Tage**
+begrenzt, weil es hier keine Pagination gibt, auf die man zurückfallen könnte.
+
+`GET …/home` setzt daraus den ganzen Home-Screen in **einem** Request zusammen:
+nächster Termin mit Ort, Host, Thema und eigenem Teilnahmestatus, eigene Rollen
+der nächsten acht Wochen, offener Actionstep, aktuelle Gebetsbuddys. Auf dem
+Handy sind die Round Trips der Preis. Neue Logik entsteht dabei nicht — der
+Actionstep folgt derselben Regel wie der Reminder.
+
 ## Paginierte Listen
 
 Listen, die wachsen — Termine, Themen, Songs — antworten mit einem Umschlag
@@ -1082,6 +1175,37 @@ Generator setzt vergangene `PLANNED`-Abende jetzt auf `COMPLETED`. Abgesagte
 behalten ihren Status: „fiel aus" ist eine andere Tatsache als „hat
 stattgefunden", und das Archiv soll beides unterscheiden können.
 
+## Produktion: Docker
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+```
+
+Das [Dockerfile](Dockerfile) ist mehrstufig. `prisma generate` muss **vor**
+`nest build` laufen, sonst fehlen die Typen aus `generated/prisma`. Der Container
+läuft als `node`, nicht als root, hat einen `HEALTHCHECK` auf `/api/health` und
+fährt bei SIGTERM sauber herunter (`enableShutdownHooks` schließt den Pool).
+
+**Migrationen sind ein eigener, vorgelagerter Service** (`migrate` im
+Prod-Compose), nicht etwas, das die App beim Start tut: das macht die Reihenfolge
+sichtbar, scheitert für sich statt mitten im Boot-Log, und falls je mehr als eine
+Instanz läuft gibt es kein Rennen. Er läuft aus der `build`-Stufe, die den
+Prisma-CLI hat.
+
+Zwei Dinge, die man wissen sollte:
+
+- **Eine Instanz, nicht mehr.** Die Cron-Jobs (`@nestjs/schedule`) laufen
+  in-process. Mit zwei Instanzen feuern Terminegenerator,
+  Gebetsbuddy-Rotation und alle Reminder doppelt. Für neun Leute ist eine
+  Instanz richtig — aber es muss dastehen.
+- **~570 MB entpackt**, das meiste Prismas Query-Engines. Der Prisma-CLI landet
+  trotz `--prod` im Image, weil er optionaler Peer von `@prisma/client` ist und
+  die Peer-Auflösung im Lockfile steckt. Wissenswert, nicht bekämpfenswert.
+
+Im Prod-Compose läuft Keycloak in `start` statt `start-dev`, Ports hängen an
+`127.0.0.1` statt an allen Interfaces, und keine Zugangsdaten stehen in der
+Datei.
+
 ## API (Stand: Phase 10)
 
 | Methode                 | Pfad                                         | Rechte                                   |
@@ -1136,6 +1260,8 @@ stattgefunden", und das Archiv soll beides unterscheiden können.
 | `PATCH`/`DELETE`        | `…/absences/:id`                             | eigene; fremde nur `admin`               |
 | `POST`                  | `…/absences/sync`                            | `admin` (manueller Nachlauf)             |
 | `GET`                   | `…/archive`                                  | eingeloggt (Überblick, Jahresliste)      |
+| `GET`                   | `…/assignments?from=&to=&personId=`          | eingeloggt (Rollen im Zeitraum)          |
+| `GET`                   | `…/home`                                     | eingeloggt (Home-Screen in einem Aufruf) |
 | `GET`                   | `/api/push/settings`                         | eingeloggt (eigene Einstellungen)        |
 | `PUT`                   | `/api/push/settings/:type`                   | eingeloggt (eigene Einstellungen)        |
 

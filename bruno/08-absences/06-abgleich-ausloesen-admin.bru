@@ -1,0 +1,22 @@
+meta {
+  name: Abgleich auslösen (admin)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/absences/sync
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Läuft auch nachts um 3:30 — Termine entstehen im Voraus und können in
+  einen längst eingetragenen Urlaub fallen.
+}

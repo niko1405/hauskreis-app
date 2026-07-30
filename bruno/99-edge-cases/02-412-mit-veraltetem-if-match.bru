@@ -1,0 +1,36 @@
+meta {
+  name: 412 mit veraltetem If-Match
+  type: http
+  seq: 2
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: W/"0"
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "infoText": "veraltete Version"
+  }
+}
+
+tests {
+  test("weist die veraltete Version ab", function () {
+    expect(res.getStatus()).to.be.oneOf([412, 404]);
+  });
+}
+
+docs {
+  Zwei Leute bearbeiten denselben Termin: der zweite Schreibvorgang
+        scheitert, statt den ersten lautlos zu überschreiben.
+
+        404 statt 412, falls der Termin inzwischen weg ist — die Ressource
+        existiert dann schlicht nicht mehr.
+}

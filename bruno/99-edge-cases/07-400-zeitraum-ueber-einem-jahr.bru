@@ -1,0 +1,28 @@
+meta {
+  name: 400 Zeitraum über einem Jahr
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/assignments?from=2020-01-01&to=2026-12-31
+  body: none
+  auth: inherit
+}
+
+params:query {
+  from: 2020-01-01
+  to: 2026-12-31
+}
+
+tests {
+  test("begrenzt die Spanne", function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(JSON.stringify(res.body)).to.include("366");
+  });
+}
+
+docs {
+  Die Route hat keine Pagination, auf die man zurückfallen könnte — also
+        begrenzt sie die Spanne.
+}

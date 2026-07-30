@@ -1,0 +1,23 @@
+meta {
+  name: Eigene Rollen im Zeitraum
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/assignments?from=2026-08-01&to=2026-10-31&personId={{myPersonId}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  from: 2026-08-01
+  to: 2026-10-31
+  personId: {{myPersonId}}
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

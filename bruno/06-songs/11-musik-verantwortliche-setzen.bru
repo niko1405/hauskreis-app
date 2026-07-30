@@ -1,0 +1,27 @@
+meta {
+  name: Musik-Verantwortliche setzen
+  type: http
+  seq: 11
+}
+
+put {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/song-leaders
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "personIds": ["{{myPersonId}}"]
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

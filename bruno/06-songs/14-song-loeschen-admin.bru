@@ -1,0 +1,21 @@
+meta {
+  name: Song löschen (admin)
+  type: http
+  seq: 14
+}
+
+delete {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/songs/{{newSongId}}
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 204", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Geht nur, solange der Song nirgends verwendet wird — sonst 400.
+}

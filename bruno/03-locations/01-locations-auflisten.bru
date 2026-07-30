@@ -1,0 +1,25 @@
+meta {
+  name: Locations auflisten
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/locations
+  body: none
+  auth: inherit
+}
+
+script:post-response {
+  bru.setEnvVar("locationId", res.body[0].id);
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Setzt {{locationId}}.
+}

@@ -1,0 +1,29 @@
+meta {
+  name: Home-Screen
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/home
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("bringt alles in einem Request", function () {
+    expect(res.body).to.have.property("nextMeeting");
+    expect(res.body).to.have.property("myRoles");
+    expect(res.body).to.have.property("openActionstep");
+    expect(res.body).to.have.property("prayerBuddies");
+  });
+}
+
+docs {
+  Nächster Termin, eigene Rollen, offener Actionstep, aktuelle
+  Gebetsbuddys — auf dem Handy sind die Round Trips der Preis.
+}

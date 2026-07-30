@@ -1,0 +1,28 @@
+meta {
+  name: Überblick
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/archive
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("liefert Jahre, Summen und das erste Treffen", function () {
+    expect(res.body.years).to.be.an("array");
+    expect(res.body.totals).to.have.property("meetings");
+    expect(res.body).to.have.property("firstMeetingDate");
+  });
+}
+
+docs {
+  Das Einzige, was kein Feature-Modul besitzt. Die Listen selbst bleiben
+  bei ihren Modulen: .../meetings?scope=past, .../topics, .../songs.
+}

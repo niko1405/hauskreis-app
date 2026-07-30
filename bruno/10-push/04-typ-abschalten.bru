@@ -1,0 +1,27 @@
+meta {
+  name: Typ abschalten
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/push/settings/ATTENDANCE_DECLINED
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "enabled": false
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

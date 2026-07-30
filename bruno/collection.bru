@@ -1,0 +1,22 @@
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  # Hauskreis API
+
+  Läuft von oben nach unten durch: `00-auth` holt das Token, die Listen-
+  Requests merken sich IDs und ETags als Environment-Variablen, alles
+  Weitere greift darauf zu. Kein Abtippen von UUIDs.
+
+  Voraussetzung: `docker compose up -d`, `./scripts/setup-keycloak.sh`,
+  `pnpm db:migrate && pnpm db:seed`, `pnpm start:dev`.
+
+  `99-edge-cases` prüft die Eigenheiten dieser API, die einem sonst erst
+  im Frontend auffallen: 428 ohne If-Match, 412 mit veraltetem, 403 mit
+  Member-Token, 304 mit If-None-Match, 429 bei zu vielen Aufrufen.
+}

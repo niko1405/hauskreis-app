@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { AppConfigModule } from './config/config.module';
 import { AppConfigService } from './config/config.service';
@@ -20,6 +21,7 @@ import { PrayerBuddyModule } from './prayer-buddy/prayer-buddy.module';
 import { NotificationModule } from './notification/notification.module';
 import { AbsenceModule } from './absence/absence.module';
 import { ArchiveModule } from './archive/archive.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -37,6 +39,11 @@ import { ArchiveModule } from './archive/archive.module';
       }),
     }),
     ScheduleModule.forRoot(),
+    // Deliberately generous: a member opening the app fires a handful of
+    // requests at once, and the home screen alone is several. This is a stop
+    // for runaway loops and for unauthenticated traffic on /api/health, not a
+    // quota anybody should ever notice.
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 300 }]),
     PrismaModule,
     AuthModule,
     HauskreisModule,
@@ -49,9 +56,15 @@ import { ArchiveModule } from './archive/archive.module';
     NotificationModule,
     AbsenceModule,
     ArchiveModule,
+    DashboardModule,
   ],
   controllers: [HealthController],
   providers: [
+    // Nine people cannot generate load, so this is not about capacity. It is
+    // about the endpoints anyone can reach without a token — /api/health does a
+    // database round trip per call — and about a stuck client hammering the API
+    // in a loop.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: EtagInterceptor },

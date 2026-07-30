@@ -1,0 +1,38 @@
+meta {
+  name: Abwesenheit verkürzen
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/absences/{{absenceId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{absenceEtag}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "startDate": "2027-03-01",
+    "endDate": "2027-03-07"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("absenceEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Verkürzen gibt Abende zurück — der Abgleich baut neu auf, statt
+  nachzubessern. Eine Antwort von Hand bleibt dabei unangetastet.
+}
