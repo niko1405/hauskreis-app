@@ -20,6 +20,7 @@ import { PrayerBuddyModule } from './prayer-buddy/prayer-buddy.module';
 import { NotificationModule } from './notification/notification.module';
 import { AbsenceModule } from './absence/absence.module';
 import { ArchiveModule } from './archive/archive.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { ArchiveModule } from './archive/archive.module';
     NotificationModule,
     AbsenceModule,
     ArchiveModule,
+    DashboardModule,
   ],
   controllers: [HealthController],
   providers: [
