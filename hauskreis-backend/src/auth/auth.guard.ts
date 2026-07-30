@@ -15,6 +15,8 @@ interface KeycloakClaims extends JWTPayload {
   email?: string;
   name?: string;
   preferred_username?: string;
+  /// The "authorized party" — the client the token was issued to.
+  azp?: string;
   realm_access?: { roles?: string[] };
 }
 
@@ -22,6 +24,8 @@ interface KeycloakClaims extends JWTPayload {
 export class AuthGuard implements CanActivate {
   private readonly jwks: ReturnType<typeof createRemoteJWKSet>;
   private readonly issuer: string;
+  private readonly audience: string;
+  private readonly allowedAzp: readonly string[];
 
   constructor(
     private readonly config: AppConfigService,
@@ -29,6 +33,8 @@ export class AuthGuard implements CanActivate {
   ) {
     const baseUrl = this.config.get('KEYCLOAK_URL').replace(/\/+$/, '');
     this.issuer = `${baseUrl}/realms/${this.config.get('KEYCLOAK_REALM')}`;
+    this.audience = this.config.get('KEYCLOAK_AUDIENCE');
+    this.allowedAzp = this.config.get('KEYCLOAK_ALLOWED_AZP');
     this.jwks = createRemoteJWKSet(
       new URL(`${this.issuer}/protocol/openid-connect/certs`),
     );
@@ -55,6 +61,12 @@ export class AuthGuard implements CanActivate {
     try {
       const { payload } = await jwtVerify<KeycloakClaims>(token, this.jwks, {
         issuer: this.issuer,
+        // Without an audience check, *any* token from this realm opens the
+        // API — including one a different application obtained for itself.
+        audience: this.audience,
+        // `jose` already limits itself to the algorithms in the JWKS, so this
+        // is belt and braces; it costs nothing and states the intent.
+        algorithms: ['RS256'],
       });
       claims = payload;
     } catch {
@@ -63,6 +75,18 @@ export class AuthGuard implements CanActivate {
 
     if (!claims.sub) {
       throw new UnauthorizedException('Token is missing a subject claim');
+    }
+
+    // `aud` says who the token is *for*, `azp` who asked for it. Checking both
+    // is what keeps a token minted for some other client out, even once that
+    // client has been given this API's audience.
+    if (
+      this.allowedAzp.length > 0 &&
+      (!claims.azp || !this.allowedAzp.includes(claims.azp))
+    ) {
+      throw new UnauthorizedException(
+        'Token was issued for a client that may not use this API',
+      );
     }
 
     const user: AuthenticatedUser = {

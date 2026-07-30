@@ -19,6 +19,23 @@ export const envSchema = z.object({
   KEYCLOAK_REALM: z.string().min(1),
   KEYCLOAK_CLIENT_ID: z.string().min(1),
   KEYCLOAK_CLIENT_SECRET: z.string().min(1),
+  /// What the token's `aud` must contain. Keycloak only sets it when an
+  /// audience mapper says so — `scripts/setup-keycloak.sh` adds one to both
+  /// clients. Without this check any token from the realm would be accepted,
+  /// including one minted for a completely different application.
+  KEYCLOAK_AUDIENCE: z.string().min(1).default('hauskreis-backend'),
+  /// Which clients may issue tokens for this API, matched against `azp`.
+  /// Comma-separated; empty means "do not check", which is the honest default
+  /// for a setup that has not been told about its clients yet.
+  KEYCLOAK_ALLOWED_AZP: z
+    .string()
+    .default('')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((clientId) => clientId.trim())
+        .filter(Boolean),
+    ),
   // Gate for the CSV seed script. Note: z.coerce.boolean() would turn the
   // string "false" into true, so parse the literal instead.
   SEED_ENABLED: z.stringbool().default(false),
