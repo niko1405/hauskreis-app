@@ -3,7 +3,6 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import compression from 'compression';
-import { json } from 'express';
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/config.service';
 
@@ -24,8 +23,11 @@ async function bootstrap(): Promise<void> {
   app.use(helmet());
   app.use(compression());
   // Pinned rather than left to the Express default, so the limit is a decision
-  // on the record. Nothing this API accepts comes close to it.
-  app.use(json({ limit: '128kb' }));
+  // on the record. Nothing this API accepts comes close to it. Nest's own
+  // helper rather than `express.json()`: express is a transitive dependency of
+  // the platform adapter, and importing it directly only works as long as the
+  // package manager happens to hoist it — in the production image it did not.
+  app.useBodyParser('json', { limit: '128kb' });
   app.enableCors({
     origin: corsOrigins.length > 0 ? corsOrigins : false,
     credentials: true,
