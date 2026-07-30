@@ -1,0 +1,35 @@
+# Repo-weite Ignores. Gilt für hauskreis-backend/, hauskreis-frontend/ und
+# bruno/ gleichermaßen — hier steht nur, was in *jedem* Teil gleich gilt.
+# Alles, was nur eine App betrifft (Prismas `generated/`, Nests `dist/`,
+# Next' `.next/`), gehört in deren eigene .gitignore, damit man beim Lesen
+# nicht raten muss, wofür ein Eintrag da ist.
+
+# Abhängigkeiten — bewusst ohne führenden Slash, damit es in jeder Ebene greift
+node_modules/
+.pnpm-store/
+
+# Zugangsdaten. Nie ins Repo, in keiner App.
+# Die *.example-Dateien sind die Vorlage und bleiben getrackt.
+.env
+.env.local
+.env.*.local
+.env.prod
+!.env.example
+
+# Build- und Testausgaben
+coverage/
+*.tsbuildinfo
+
+# Logs
+*.log
+logs/
+
+# Editor / Betriebssystem
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# VS Code: geteilte Empfehlungen bleiben drin, persönliche Einstellungen nicht
+.vscode/*
+!.vscode/extensions.json

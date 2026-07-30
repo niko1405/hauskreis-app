@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { AppConfigService } from '../config/config.service';
+import { internalKeycloakUrl } from './keycloak-url';
 
 interface TokenResponse {
   access_token: string;
@@ -29,7 +30,9 @@ export class KeycloakAdminService {
   private cachedToken?: { value: string; expiresAt: number };
 
   constructor(private readonly config: AppConfigService) {
-    this.baseUrl = this.config.get('KEYCLOAK_URL').replace(/\/+$/, '');
+    // Server-zu-Server, also die interne Adresse — die öffentliche ist aus dem
+    // Container heraus im Zweifel gar nicht auflösbar.
+    this.baseUrl = internalKeycloakUrl(this.config);
     this.realm = this.config.get('KEYCLOAK_REALM');
   }
 

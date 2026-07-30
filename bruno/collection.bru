@@ -16,6 +16,22 @@ docs {
   Voraussetzung: `docker compose up -d`, `./scripts/setup-keycloak.sh`,
   `pnpm db:migrate && pnpm db:seed`, `pnpm start:dev`.
 
+  ## Zuerst
+
+  1. `cp environments/local.example.bru environments/local.bru` — ohne
+     die Datei ist die Environment-Auswahl leer.
+  2. Oben rechts das Environment **local** auswählen. Ohne Auswahl bleibt
+     `{{baseUrl}}` als Text stehen und der Fehler zeigt nicht darauf.
+  3. `00-auth/01-token-admin` ausführen. Setzt `{{token}}`, an dem die
+     Auth dieser Collection hängt — vorher antwortet alles mit 401.
+
+  Das Token hält 5 Minuten. Wenn nach einer Pause plötzlich alles 401
+  gibt: `01-token-admin` nochmal.
+
+  Requests weiter unten brauchen Variablen von weiter oben
+  (`{{hauskreisId}}`, `{{meetingId}}`, die ETags für If-Match). Mitten
+  hineinklicken ergibt eine URL, in der noch `{{meetingId}}` steht.
+
   `99-edge-cases` prüft die Eigenheiten dieser API, die einem sonst erst
   im Frontend auffallen: 428 ohne If-Match, 412 mit veraltetem, 403 mit
   Member-Token, 304 mit If-None-Match, 429 bei zu vielen Aufrufen.

@@ -79,6 +79,39 @@ cd ../bruno && npx @usebruno/cli run --env local -r
 `environments/local.bru` ist **ignoriert**, nicht vergessen: der Runner schreibt
 gesetzte Variablen dorthin zurück, also auch Access-Tokens.
 
+### In der Bruno-App
+
+Vorher muss laufen: `docker compose up -d`, `./scripts/setup-keycloak.sh`,
+`pnpm db:migrate && pnpm db:seed`, `pnpm start:dev`.
+
+1. **Open Collection** → den Ordner `bruno/` wählen (den Ordner, nicht die
+   `bruno.json`).
+2. Die `local.bru` anlegen — der `cp` oben. Ohne sie ist die
+   Environment-Auswahl leer.
+3. Oben rechts das Environment **`local` auswählen**. Bruno startet ohne
+   ausgewähltes Environment; `{{baseUrl}}` bleibt dann als Literal stehen und
+   die Fehlermeldung zeigt nicht darauf.
+4. **`00-auth/01-token-admin` zuerst.** Es setzt `{{token}}`, an dem die
+   Collection-Auth hängt. Vorher antwortet alles mit `401`.
+
+Danach beliebig klicken — mit drei Einschränkungen:
+
+- **Das Token hält 5 Minuten** (Keycloak-Default, im Setup nicht verändert).
+  Wenn nach einer Pause plötzlich alles `401` gibt, ist das der Grund:
+  `01-token-admin` erneut ausführen.
+- **Requests weiter unten bauen auf Variablen von weiter oben.** `04-meetings`
+  braucht `{{hauskreisId}}` aus `01-hauskreis`, `{{meetingId}}` aus der
+  Terminliste. Klickt man mitten hinein, geht der unaufgelöste Platzhalter als
+  Text in die URL — das Ergebnis ist ein `404` auf eine Adresse, in der noch
+  `{{meetingId}}` steht. Einmal von oben durchlaufen, dann stimmt alles.
+- **Bei `PATCH` sitzt der ETag in einer Variable**, die der vorangehende `GET`
+  gesetzt hat. Ohne den `GET` fehlt `If-Match` und die API antwortet `428`.
+  Das ist die Regel der API, kein Fehler der Collection.
+
+Die App schreibt gesetzte Variablen genauso in `environments/local.bru` wie der
+CLI-Runner — die Datei bleibt also auch beim Klicken ignoriert, aus demselben
+Grund.
+
 `99-edge-cases` prüft die Eigenheiten dieser API, die einem sonst erst im
 Frontend auffallen — `428` ohne `If-Match`, `412` mit veraltetem, `403` mit
 Member-Token, `304`, `429`.
@@ -1205,6 +1238,47 @@ Zwei Dinge, die man wissen sollte:
 Im Prod-Compose läuft Keycloak in `start` statt `start-dev`, Ports hängen an
 `127.0.0.1` statt an allen Interfaces, und keine Zugangsdaten stehen in der
 Datei.
+
+### `localhost` gilt nur, solange der Server auf dem Host läuft
+
+Die `.env.example` ist auf die Entwicklung ausgelegt: der Server läuft mit
+`pnpm start:dev` auf dem Host, die Dienste aus `docker-compose.yml`
+veröffentlichen ihre Ports dorthin, und `localhost` stimmt für alles. Sobald der
+Server selbst im Container läuft, zeigt `localhost` auf **den Container** — jede
+dieser Adressen muss auf den Compose-Namen umgestellt werden. Das Prod-Compose
+tut das bereits, aber wer die Werte von Hand setzt, sollte den Unterschied
+kennen:
+
+| Variable                | Entwicklung (Host)      | Compose (Container)         |
+| ----------------------- | ----------------------- | --------------------------- |
+| `DATABASE_URL`          | `…@localhost:5432/…`    | `…@postgres:5432/…`         |
+| `KEYCLOAK_URL`          | `http://localhost:8080` | die **öffentliche** Adresse |
+| `KEYCLOAK_INTERNAL_URL` | leer                    | `http://keycloak:8080`      |
+| `CORS_ORIGINS`          | `http://localhost:3001` | die Origin des Frontends    |
+
+Bei Keycloak reicht ein einzelner Wert nicht, und das ist der Punkt, an dem der
+Umzug typischerweise scheitert. `KEYCLOAK_URL` hat **zwei** Aufgaben, die im
+Container auseinanderfallen:
+
+- Aus ihr wird der **Issuer**, und der wird gegen den `iss` im Token geprüft.
+  Keycloak schreibt dort seinen `KC_HOSTNAME` hinein — die öffentliche Adresse,
+  über die sich der Browser angemeldet hat. Trägt man hier `http://keycloak:8080`
+  ein, passt der Issuer nicht mehr und **jeder** Request endet in `401`.
+- Über sie holt der Server die **Signaturschlüssel** (JWKS) und spricht die
+  Admin-API an. Trägt man hier die öffentliche Adresse ein und der Container
+  kommt nicht an sie heran — was hinter einem Heimrouter ohne Hairpin-NAT der
+  Normalfall ist — schlägt der Abruf fehl, und wieder endet **jeder** Request in
+  `401`.
+
+Deshalb `KEYCLOAK_INTERNAL_URL`: Issuer bleibt öffentlich, der Abruf geht über
+das Compose-Netz. Leer lassen heißt "dieselbe wie `KEYCLOAK_URL`" — richtig für
+alles, was nicht in einem Container läuft. Beide Werte müssen `http://` oder
+`https://` haben; `keycloak:8080` ist für `z.url()` eine gültige URL mit dem
+Schema `keycloak:` und würde sonst erst beim ersten Request auffallen.
+
+Damit das aufgeht, muss `KC_HOSTNAME` bei Keycloak auf dieselbe öffentliche
+Adresse gesetzt sein wie `KEYCLOAK_URL` beim Backend. Das Prod-Compose leitet
+beide aus derselben Variable ab.
 
 ## API (Stand: Phase 10)
 
