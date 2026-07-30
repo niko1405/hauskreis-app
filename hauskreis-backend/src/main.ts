@@ -18,6 +18,10 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: corsOrigins.length > 0 ? corsOrigins : false,
     credentials: true,
+    // Without this the browser hides the ETag from a cross-origin frontend —
+    // only the CORS-safelisted headers are readable by default. No ETag means
+    // no `If-Match`, and every PATCH from the app would come back 428.
+    exposedHeaders: ['ETag'],
   });
   app.setGlobalPrefix('api');
   app.enableShutdownHooks();
