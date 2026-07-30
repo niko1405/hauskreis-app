@@ -1,0 +1,17 @@
+meta {
+  name: Musik-Vorschläge
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/song-leader-suggestions
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

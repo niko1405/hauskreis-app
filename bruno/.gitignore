@@ -1,0 +1,4 @@
+# Der Runner schreibt gesetzte Variablen in die Environment-Datei zurück —
+# darunter Access-Tokens. Deshalb nur die Vorlage im Repo:
+#   cp environments/local.example.bru environments/local.bru
+environments/local.bru

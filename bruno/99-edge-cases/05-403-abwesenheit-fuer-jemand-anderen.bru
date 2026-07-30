@@ -1,0 +1,30 @@
+meta {
+  name: 403 Abwesenheit für jemand anderen
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/absences
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{memberToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "personId": "{{myPersonId}}",
+    "startDate": "2027-05-01",
+    "endDate": "2027-05-02"
+  }
+}
+
+tests {
+  test("Mitglieder dürfen nur für sich selbst eintragen", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

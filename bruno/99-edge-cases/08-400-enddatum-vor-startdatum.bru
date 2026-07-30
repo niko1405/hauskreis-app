@@ -1,0 +1,28 @@
+meta {
+  name: 400 Enddatum vor Startdatum
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/absences
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "startDate": "2027-06-10",
+    "endDate": "2027-06-01"
+  }
+}
+
+tests {
+  test("weist einen rückwärts laufenden Zeitraum ab", function () {
+    expect(res.getStatus()).to.equal(400);
+  });
+}

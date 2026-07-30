@@ -1,0 +1,32 @@
+meta {
+  name: Termin ändern
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{meetingEtag}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "infoText": "Bitte pünktlich"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("meetingEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

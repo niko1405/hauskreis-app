@@ -1,0 +1,21 @@
+meta {
+  name: 401 ohne Token
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings
+  body: none
+  auth: none
+}
+
+tests {
+  test("verweigert ohne Token", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+docs {
+  Jede Route ist standardmäßig geschützt; nur /api/health ist offen.
+}

@@ -1,0 +1,25 @@
+meta {
+  name: VAPID-Key holen
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/push/public-key
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("sagt, ob Push überhaupt eingerichtet ist", function () {
+    expect(res.body).to.have.property("enabled");
+  });
+}
+
+docs {
+  Bei enabled:false den Button im Frontend gar nicht erst anzeigen.
+}

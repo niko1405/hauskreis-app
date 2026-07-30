@@ -1,0 +1,17 @@
+meta {
+  name: Song vom Abend entfernen
+  type: http
+  seq: 13
+}
+
+delete {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/songs/{{meetingSongId}}
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 204", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

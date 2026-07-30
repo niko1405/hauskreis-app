@@ -1,0 +1,45 @@
+meta {
+  name: Token holen (admin)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  client_id: {{clientId}}
+  client_secret: {{clientSecret}}
+  username: {{adminUser}}
+  password: {{password}}
+  grant_type: password
+}
+
+script:post-response {
+  bru.setEnvVar("token", res.body.access_token);
+}
+
+tests {
+  test("liefert ein Token", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.access_token).to.be.a("string");
+  });
+
+  test("Token trägt die Audience, auf der die API besteht", function () {
+    const claims = JSON.parse(
+      Buffer.from(res.body.access_token.split(".")[1], "base64").toString(),
+    );
+    expect(claims.aud).to.include("hauskreis-backend");
+    expect(claims.azp).to.equal("hauskreis-backend");
+  });
+}
+
+docs {
+  Muss als Erstes laufen — setzt {{token}} für alles Weitere.
+
+  Der Audience-Test ist nicht Zierde: ohne den Mapper in
+  setup-keycloak.sh fehlt `aud`, und die API weist jedes Token ab.
+}

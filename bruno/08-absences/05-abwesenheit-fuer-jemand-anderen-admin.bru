@@ -1,0 +1,38 @@
+meta {
+  name: Abwesenheit für jemand anderen (admin)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/absences
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "personId": "{{otherPersonId}}",
+    "startDate": "2027-04-01",
+    "endDate": "2027-04-03"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("otherAbsenceId", res.body.id);
+}
+
+tests {
+  test("antwortet mit 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  Nur Admins. So lässt sich ein Urlaub für jemanden notieren, der sich
+  noch nie eingeloggt hat.
+}

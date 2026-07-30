@@ -1,0 +1,22 @@
+meta {
+  name: Themen durchsuchen
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/topics?search=Bruno&status=COMPLETED
+  body: none
+  auth: inherit
+}
+
+params:query {
+  search: Bruno
+  status: COMPLETED
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

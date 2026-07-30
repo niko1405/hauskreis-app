@@ -1,0 +1,41 @@
+meta {
+  name: Eigene Abwesenheit eintragen
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/absences
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "startDate": "2027-03-01",
+    "endDate": "2027-03-14",
+    "reason": "Urlaub"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("absenceId", res.body.id);
+  bru.setEnvVar("absenceEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  Beide Enden inklusive. Ohne personId trägt man sich selbst ein.
+
+  Schreibt sofort Absagen für die betroffenen Abende — dieselben, die
+  auch der Host als Benachrichtigung bekommt.
+}

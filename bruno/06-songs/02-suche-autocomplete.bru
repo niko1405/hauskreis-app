@@ -1,0 +1,22 @@
+meta {
+  name: Suche (Autocomplete)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/songs?search=a&take=5
+  body: none
+  auth: inherit
+}
+
+params:query {
+  search: a
+  take: 5
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

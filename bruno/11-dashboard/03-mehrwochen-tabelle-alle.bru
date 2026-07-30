@@ -1,0 +1,36 @@
+meta {
+  name: Mehrwochen-Tabelle (alle)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/assignments?from=2026-08-01&to=2026-10-31
+  body: none
+  auth: inherit
+}
+
+params:query {
+  from: 2026-08-01
+  to: 2026-10-31
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("alle Rollen tragen dieselbe Form", function () {
+    res.body.items.forEach(a => {
+      expect(a.role).to.be.oneOf(["HOST","TOPIC","SONG","PRAYER_BUDDY"]);
+      expect(a).to.have.property("date");
+      expect(a).to.have.property("endDate");
+      expect(a.person).to.have.property("name");
+    });
+  });
+}
+
+docs {
+  Ohne personId: alle Zuteilungen im Zeitraum. Dieselbe Route, damit die
+  zwei Ansichten nicht unterschiedlicher Meinung sein können.
+}

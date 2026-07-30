@@ -1,0 +1,32 @@
+meta {
+  name: Auf Default zurücksetzen
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/push/settings/HOST_REMINDER
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "enabled": true,
+    "leadDays": null
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("nimmt wieder den Katalog-Default", function () {
+    expect(res.body.leadDays).to.equal(3);
+  });
+}

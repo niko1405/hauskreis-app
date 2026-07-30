@@ -1,0 +1,17 @@
+meta {
+  name: Thema löschen (admin)
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/topics/{{topicId}}
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 204", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

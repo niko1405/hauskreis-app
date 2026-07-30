@@ -1,0 +1,17 @@
+meta {
+  name: Generator auslösen (admin)
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/generate
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}

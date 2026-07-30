@@ -1,0 +1,17 @@
+meta {
+  name: Registrierte Geräte
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/push/subscriptions
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

@@ -1,0 +1,32 @@
+meta {
+  name: Person ändern
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/people/{{myPersonId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{myPersonEtag}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "playsInstrument": true
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Braucht If-Match — ohne kommt 428, siehe 99-edge-cases.
+}

@@ -1,0 +1,36 @@
+meta {
+  name: Kommende Termine
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings?scope=upcoming&take=10
+  body: none
+  auth: inherit
+}
+
+params:query {
+  scope: upcoming
+  take: 10
+}
+
+script:post-response {
+  bru.setEnvVar("meetingId", res.body.items[0].id);
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("liefert einen Paginierungs-Umschlag", function () {
+    expect(res.body).to.have.property("items");
+    expect(res.body).to.have.property("total");
+    expect(res.body).to.have.property("hasMore");
+  });
+}
+
+docs {
+  Setzt {{meetingId}} für alles Folgende.
+}

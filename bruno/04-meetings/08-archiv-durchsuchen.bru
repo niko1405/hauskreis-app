@@ -1,0 +1,34 @@
+meta {
+  name: Archiv durchsuchen
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings?scope=past&search=minuten&take=5
+  body: none
+  auth: inherit
+}
+
+params:query {
+  scope: past
+  search: minuten
+  take: 5
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("liefert einen Paginierungs-Umschlag", function () {
+    expect(res.body).to.have.property("items");
+    expect(res.body).to.have.property("total");
+    expect(res.body).to.have.property("hasMore");
+  });
+}
+
+docs {
+  Sucht über Titel, Zusammenfassung, Actionstep, Info, Testimony und
+  den Titel des Themas — man weiß hinterher nicht mehr, wo es stand.
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Archiv nach Zeitraum
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings?scope=past&from=2026-01-01&to=2026-06-30
+  body: none
+  auth: inherit
+}
+
+params:query {
+  scope: past
+  from: 2026-01-01
+  to: 2026-06-30
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

@@ -1,0 +1,27 @@
+meta {
+  name: Vorlauf ändern
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/push/settings/HOST_REMINDER
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "leadDays": 5
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

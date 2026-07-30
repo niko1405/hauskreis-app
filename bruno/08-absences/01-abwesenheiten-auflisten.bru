@@ -1,0 +1,32 @@
+meta {
+  name: Abwesenheiten auflisten
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/absences?scope=upcoming
+  body: none
+  auth: inherit
+}
+
+params:query {
+  scope: upcoming
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("liefert einen Paginierungs-Umschlag", function () {
+    expect(res.body).to.have.property("items");
+    expect(res.body).to.have.property("total");
+    expect(res.body).to.have.property("hasMore");
+  });
+}
+
+docs {
+  Zeigt alle, nicht nur die eigenen — wer weg ist, ist genau das, was
+  beim Planen interessiert.
+}

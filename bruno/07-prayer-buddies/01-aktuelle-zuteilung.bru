@@ -1,0 +1,17 @@
+meta {
+  name: Aktuelle Zuteilung
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/prayer-buddies/current
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

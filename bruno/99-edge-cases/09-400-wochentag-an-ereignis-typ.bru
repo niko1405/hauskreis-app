@@ -1,0 +1,33 @@
+meta {
+  name: 400 Wochentag an Ereignis-Typ
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{baseUrl}}/push/settings/MEETING_CANCELLED
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "weekday": 3
+  }
+}
+
+tests {
+  test("lehnt einen sinnlosen Knopf ab", function () {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
+docs {
+  "Wie oft" ist bei "der Hauskreis fällt aus" keine sinnvolle Frage.
+        Ein Knopf am falschen Typ ist ein Fehler, kein still gespeicherter Wert,
+        den nie jemand liest.
+}

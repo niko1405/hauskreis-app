@@ -1,0 +1,32 @@
+meta {
+  name: Sofort neu zuteilen (admin)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/prayer-buddies/rotate
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "notify": false
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  notify:false würfelt still — nützlich, wenn man zweimal hintereinander
+  neu zuteilt.
+}

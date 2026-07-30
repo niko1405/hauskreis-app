@@ -1,0 +1,37 @@
+meta {
+  name: Songs auflisten
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/songs?take=10
+  body: none
+  auth: inherit
+}
+
+params:query {
+  take: 10
+}
+
+script:post-response {
+  if (res.body.items.length) bru.setEnvVar("songId", res.body.items[0].id);
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("liefert einen Paginierungs-Umschlag", function () {
+    expect(res.body).to.have.property("items");
+    expect(res.body).to.have.property("total");
+    expect(res.body).to.have.property("hasMore");
+  });
+
+  test("trägt die Nutzung mit", function () {
+    if (!res.body.items.length) return;
+    expect(res.body.items[0]).to.have.property("timesPlayed");
+    expect(res.body.items[0]).to.have.property("lastPlayedAt");
+  });
+}

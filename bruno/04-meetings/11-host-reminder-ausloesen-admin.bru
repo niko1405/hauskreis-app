@@ -1,0 +1,17 @@
+meta {
+  name: Host-Reminder auslösen (admin)
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/host-reminders
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

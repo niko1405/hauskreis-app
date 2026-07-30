@@ -1,0 +1,34 @@
+meta {
+  name: Meistgesungen
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/songs?sort=popular&playedOnly=true&take=5
+  body: none
+  auth: inherit
+}
+
+params:query {
+  sort: popular
+  playedOnly: true
+  take: 5
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("sortiert absteigend nach Häufigkeit", function () {
+    const n = res.body.items.map(s => s.timesPlayed);
+    expect(n).to.deep.equal([...n].sort((a, b) => b - a));
+  });
+}
+
+docs {
+  Zählt nur Abende, an denen der Song wirklich ausgewählt war — ein
+  Vorschlag, der es nicht auf die Liste geschafft hat, sagt nichts über
+  das Repertoire.
+}

@@ -1,0 +1,26 @@
+meta {
+  name: Host-Vorschläge
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/host-suggestions
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("begründet, warum jemand hinten steht", function () {
+    const set = res.body.filter(s => s.facts.deferred);
+    set.forEach(s => expect(s.facts.deferredReason).to.be.oneOf(["AWAY","TOO_SMALL","HOUSEHOLD_BUSY"]));
+  });
+}
+
+docs {
+  Person und Ort in einer Entscheidung. Wer zurückgestellt ist, steht hinten — mit Grund, nicht kommentarlos fehlend.
+}

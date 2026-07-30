@@ -1,0 +1,35 @@
+meta {
+  name: Song zum Abend vorschlagen
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/songs
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "songId": "{{newSongId}}"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("meetingSongId", res.body.id);
+}
+
+tests {
+  test("antwortet mit 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  Entweder songId ODER title — nicht beides.
+}
