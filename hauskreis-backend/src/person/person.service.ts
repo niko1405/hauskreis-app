@@ -14,6 +14,28 @@ import type {
   UpdatePersonDto,
 } from './dto/person.dto';
 
+/**
+ * What a person looks like to the rest of the group.
+ *
+ * `keycloakUserId` is deliberately absent: it is the internal link to the
+ * identity provider, of no use to any client and not something to hand around.
+ * `email` stays — an admin managing members needs it, and in a group of nine
+ * everyone knows it anyway.
+ */
+const personSelect = {
+  id: true,
+  hauskreisId: true,
+  name: true,
+  email: true,
+  birthdate: true,
+  playsInstrument: true,
+  canHost: true,
+  locationId: true,
+  active: true,
+  createdAt: true,
+  version: true,
+} as const;
+
 @Injectable()
 export class PersonService {
   constructor(
@@ -24,6 +46,7 @@ export class PersonService {
   findAll(hauskreisId: string) {
     return this.prisma.person.findMany({
       where: { hauskreisId },
+      select: personSelect,
       orderBy: { name: 'asc' },
     });
   }
@@ -31,6 +54,7 @@ export class PersonService {
   async findOne(hauskreisId: string, id: string) {
     const person = await this.prisma.person.findFirst({
       where: { id, hauskreisId },
+      select: personSelect,
     });
 
     if (!person) {
