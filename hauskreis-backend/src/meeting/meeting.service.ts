@@ -215,7 +215,7 @@ export class MeetingService {
    * list because of the very assignment being reconsidered.
    */
   async suggestHosts(hauskreisId: string, id: string) {
-    const meeting = await this.findOne(hauskreisId, id);
+    const meeting = await this.loadForSuggestions(hauskreisId, id);
 
     return this.roleSuggestions.suggestHosts(hauskreisId, meeting.date, {
       excludeMeetingId: meeting.id,
@@ -229,13 +229,33 @@ export class MeetingService {
    * the picker does not push its own people down the list.
    */
   async suggestTopicResponsibles(hauskreisId: string, id: string) {
-    const meeting = await this.findOne(hauskreisId, id);
+    const meeting = await this.loadForSuggestions(hauskreisId, id);
 
     return this.roleSuggestions.suggestTopicResponsibles(
       hauskreisId,
       meeting.date,
       { excludeTopicId: meeting.topicId ?? undefined },
     );
+  }
+
+  /**
+   * The three fields the suggestion engines actually need.
+   *
+   * Going through `findOne` would pull the full `meetingInclude` — location,
+   * host, topic with its responsibles, every attendance — to read a date. The
+   * song variant in `meeting-song.controller.ts` already does it this way.
+   */
+  private async loadForSuggestions(hauskreisId: string, id: string) {
+    const meeting = await this.prisma.meeting.findFirst({
+      where: { id, hauskreisId },
+      select: { id: true, date: true, topicId: true },
+    });
+
+    if (!meeting) {
+      throw new NotFoundException(`Meeting ${id} not found`);
+    }
+
+    return meeting;
   }
 
   async remove(hauskreisId: string, id: string) {
