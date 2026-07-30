@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+/**
+ * `z.url()` allein akzeptiert auch `keycloak:8080` — das ist eine gültige URL
+ * mit dem Schema `keycloak:`. Genau der Tippfehler, den man macht, wenn man
+ * eine Adresse von `localhost` auf einen Compose-Namen umstellt und dabei das
+ * `http://` vergisst. Der Server startet dann und wirft erst beim ersten
+ * Request eine Fetch-Fehlermeldung, die nicht nach der Ursache aussieht.
+ */
+const httpUrl = z.url({ protocol: /^https?$/ });
+
 export const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
@@ -15,7 +24,25 @@ export const envSchema = z.object({
         .map((origin) => origin.trim())
         .filter(Boolean),
     ),
-  KEYCLOAK_URL: z.url(),
+  /// Die **öffentliche** Keycloak-Adresse — die, unter der der Browser sich
+  /// anmeldet. Daraus wird der Issuer gebildet, und der muss exakt dem `iss`
+  /// im Token entsprechen. Keycloak setzt `iss` auf seinen `KC_HOSTNAME`,
+  /// unabhängig davon, über welche Adresse das Token geholt wurde.
+  KEYCLOAK_URL: httpUrl,
+  /// Die Adresse, über die *dieser Prozess* Keycloak erreicht — JWKS-Abruf und
+  /// Admin-API. Im Compose-Setup ist das `http://keycloak:8080`, denn im
+  /// Container zeigt `localhost` auf den Container selbst.
+  ///
+  /// Getrennt von `KEYCLOAK_URL`, weil die beiden nur lokal dieselbe Adresse
+  /// sind: Der Issuer muss öffentlich sein, der Abruf muss erreichbar sein.
+  /// Leer lassen heißt "dieselbe wie KEYCLOAK_URL" — richtig für alles, was
+  /// nicht in einem Container läuft. `.optional()` allein reichte dafür nicht:
+  /// eine Zeile `KEYCLOAK_INTERNAL_URL=` in der .env kommt als leerer String
+  /// an, nicht als `undefined`, und wäre dann keine gültige URL.
+  KEYCLOAK_INTERNAL_URL: z
+    .union([httpUrl, z.literal('')])
+    .optional()
+    .transform((value) => value || undefined),
   KEYCLOAK_REALM: z.string().min(1),
   KEYCLOAK_CLIENT_ID: z.string().min(1),
   KEYCLOAK_CLIENT_SECRET: z.string().min(1),

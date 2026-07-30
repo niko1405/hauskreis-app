@@ -1,5 +1,10 @@
 # Hauskreis-App – Backend-Umsetzungsplan
 
+> **Historisch, vollständig umgesetzt (Phase 0–10).** Was tatsächlich gebaut
+> wurde, steht im [Backend-README](../hauskreis-backend/README.md) — das ist die
+> gültige Quelle. Dieses Dokument bleibt liegen, weil es die Begründungen für die
+> Entwurfsentscheidungen festhält, die im README nur noch als Ergebnis auftauchen.
+
 ## Kontext
 
 `CLAUDE.md` beschreibt den fachlichen Bedarf für eine PWA, die die Organisation eines 9-köpfigen Hauskreises übernimmt (Host-Findung, Themen, Songs, Gebetsbuddys, Actionsteps), aktuell komplett über WhatsApp gelöst und dadurch unübersichtlich. Das Repo ist aktuell **komplett leer** (kein Code, kein Git, kein Supabase-Projekt) – nur `CLAUDE.md` und ein leerer Platzhalter-Ordner `hauskreis-backend/` existieren. Es handelt sich also um eine Neuanlage von Grund auf.

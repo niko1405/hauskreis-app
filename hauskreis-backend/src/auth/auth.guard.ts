@@ -9,6 +9,7 @@ import type { Request } from 'express';
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import { AppConfigService } from '../config/config.service';
 import { IS_PUBLIC_KEY } from './public.decorator';
+import { internalKeycloakUrl, trimSlashes } from './keycloak-url';
 import type { AuthenticatedUser } from './auth.types';
 
 interface KeycloakClaims extends JWTPayload {
@@ -31,12 +32,19 @@ export class AuthGuard implements CanActivate {
     private readonly config: AppConfigService,
     private readonly reflector: Reflector,
   ) {
-    const baseUrl = this.config.get('KEYCLOAK_URL').replace(/\/+$/, '');
-    this.issuer = `${baseUrl}/realms/${this.config.get('KEYCLOAK_REALM')}`;
+    const realm = this.config.get('KEYCLOAK_REALM');
+    // Zwei Adressen, zwei Aufgaben. Der Issuer wird gegen den `iss` im Token
+    // geprüft und muss deshalb die öffentliche Adresse sein. Die Schlüssel holt
+    // dieser Prozess selbst — hinter Docker über den Compose-Namen, weil
+    // `localhost` dort auf den eigenen Container zeigt. Ohne die Trennung hat
+    // man die Wahl zwischen "Issuer passt nicht" und "JWKS nicht erreichbar",
+    // und beides endet in 401 auf jedem einzelnen Request.
+    this.issuer = `${trimSlashes(this.config.get('KEYCLOAK_URL'))}/realms/${realm}`;
+    const internalBase = internalKeycloakUrl(this.config);
     this.audience = this.config.get('KEYCLOAK_AUDIENCE');
     this.allowedAzp = this.config.get('KEYCLOAK_ALLOWED_AZP');
     this.jwks = createRemoteJWKSet(
-      new URL(`${this.issuer}/protocol/openid-connect/certs`),
+      new URL(`${internalBase}/realms/${realm}/protocol/openid-connect/certs`),
     );
   }
 

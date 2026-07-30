@@ -39,7 +39,13 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://hauskreis:${POSTGRES_PASSWORD}@postgres:5432/hauskreis?schema=public
       CORS_ORIGINS: ${CORS_ORIGINS}
+      # Die öffentliche Adresse: daraus wird der Issuer, und der muss dem `iss`
+      # im Token entsprechen. Identisch mit KC_HOSTNAME unten.
       KEYCLOAK_URL: ${KEYCLOAK_URL}
+      # Der Weg dorthin von *hier* aus. Ohne das würde der Container die
+      # Signaturschlüssel bei sich selbst suchen und jeder Request käme als 401
+      # zurück — der häufigste Stolperstein beim Umzug von lokal nach Compose.
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-hauskreis}
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-hauskreis-backend}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
