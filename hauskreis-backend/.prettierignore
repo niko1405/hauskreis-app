@@ -4,3 +4,6 @@ node_modules
 coverage
 pnpm-lock.yaml
 prisma/migrations
+
+# Erzeugt, nicht von Hand gepflegt - siehe pnpm openapi.
+openapi.json

@@ -12,6 +12,8 @@ export interface BannerInfo {
   keycloakRealm: string;
   corsOrigins: readonly string[];
   pushEnabled: boolean;
+  /** Außerhalb der Produktion abgeschaltet, siehe `setupSwaggerUi`. */
+  docsEnabled: boolean;
   routes: RouteInfo[];
   groups: RouteGroup[];
   /** Sekunden vom Prozessstart bis zum ersten angenommenen Request. */
@@ -47,6 +49,7 @@ export function renderBanner(info: BannerInfo, colors: boolean): string {
     '',
     `  ${label('Adresse')}${base}`,
     `  ${label('Health')}${base}/health`,
+    ...(info.docsEnabled ? [`  ${label('API-Doku')}${base}/docs`] : []),
     `  ${label('System')}${osType()} ${release()} · ${process.arch} · ${cpus().length} CPUs · ${hostname()}`,
     `  ${label('Laufzeit')}Node ${process.version} · PID ${process.pid}`,
     `  ${label('Keycloak')}${info.keycloakUrl} · Realm ${info.keycloakRealm}`,

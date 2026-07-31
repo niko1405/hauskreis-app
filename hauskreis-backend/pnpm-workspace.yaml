@@ -4,6 +4,10 @@
 # Prisma fetches its query engines, unrs-resolver is oxlint's native resolver.
 allowBuilds:
   '@prisma/engines': true
+  # Ausdrücklich nein: scarf meldet Installationen an einen Analysedienst.
+  # Kommt als transitive Abhängigkeit von @nestjs/swagger mit. Der Eintrag muss
+  # sein, weil pnpm sonst bei jedem Befehl auf eine Entscheidung wartet.
+  '@scarf/scarf': false
   prisma: true
   unrs-resolver: true
 

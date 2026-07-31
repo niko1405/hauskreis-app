@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
+import { isoDay } from '../../common/dto/iso-day';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -14,8 +15,8 @@ export const listAssignmentsQuerySchema = z
   .object({
     /// Both required and both inclusive — an open-ended range is what the cap
     /// exists to prevent.
-    from: z.coerce.date(),
-    to: z.coerce.date(),
+    from: isoDay,
+    to: isoDay,
     /// Omit it for the multi-week table (everyone), pass it for one person's
     /// badges on the home screen.
     personId: z.uuid().optional(),

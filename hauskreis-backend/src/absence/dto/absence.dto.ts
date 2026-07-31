@@ -1,9 +1,10 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import { paginationSchema } from '../../common/http/pagination';
+import { isoDay } from '../../common/dto/iso-day';
 
 /** Date-only, as the group thinks about it: "vom 10. bis 24.". */
-const dateOnly = z.coerce.date();
+const dateOnly = isoDay;
 
 const range = {
   startDate: dateOnly,

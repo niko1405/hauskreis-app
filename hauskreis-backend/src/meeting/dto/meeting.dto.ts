@@ -6,6 +6,7 @@ import {
   MeetingType,
 } from '../../../generated/prisma/enums';
 import { paginationSchema } from '../../common/http/pagination';
+import { isoDay } from '../../common/dto/iso-day';
 
 // Deriving the schemas from Prisma's generated enums keeps the API and the
 // database in sync — adding a value in schema.prisma is enough.
@@ -55,8 +56,8 @@ export const listMeetingsQuerySchema = paginationSchema.extend({
   /// remembers which of those fields it was in.
   search: z.string().trim().min(1).max(200).optional(),
   /// Inclusive date bounds, for narrowing the archive to a year or a stretch.
-  from: z.coerce.date().optional(),
-  to: z.coerce.date().optional(),
+  from: isoDay.optional(),
+  to: isoDay.optional(),
 });
 
 const meetingParamsSchema = z.object({

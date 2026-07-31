@@ -10,6 +10,7 @@ import { collectRoutes, groupRoutes } from './common/bootstrap/routes';
 import { renderBanner } from './common/bootstrap/banner';
 import { appVersion } from './common/bootstrap/version';
 import { QuietBootstrapLogger } from './common/bootstrap/quiet-logger';
+import { setupSwaggerUi } from './common/bootstrap/openapi';
 
 const GLOBAL_PREFIX = 'api';
 const BIND_HOST = '0.0.0.0';
@@ -48,6 +49,9 @@ async function bootstrap(): Promise<void> {
     exposedHeaders: ['ETag'],
   });
   app.setGlobalPrefix(GLOBAL_PREFIX);
+  // Nach setGlobalPrefix, sonst fehlt das /api vor jedem Pfad im Dokument.
+  const docsEnabled = !config.isProduction;
+  setupSwaggerUi(app, docsEnabled);
   installShutdownHandlers(app, logger);
 
   // Die Adresse ist nicht optional, auch wenn der Default meistens reicht.
@@ -76,6 +80,7 @@ async function bootstrap(): Promise<void> {
         pushEnabled: Boolean(
           config.get('VAPID_PUBLIC_KEY') && config.get('VAPID_PRIVATE_KEY'),
         ),
+        docsEnabled,
         routes,
         groups: groupRoutes(routes),
         // `process.uptime()` statt einer eigenen Startmarke: es zählt ab dem

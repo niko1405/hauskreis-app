@@ -2,6 +2,7 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import { TopicStatus } from '../../../generated/prisma/enums';
 import { paginationSchema } from '../../common/http/pagination';
+import { isoDay } from '../../common/dto/iso-day';
 
 const topicStatus = z.enum(TopicStatus);
 
@@ -30,8 +31,8 @@ export const listTopicsQuerySchema = paginationSchema.extend({
   /// honest, since there is nothing to match against.
   search: z.string().trim().min(1).max(200).optional(),
   /// Inclusive bounds on when the topic was started.
-  from: z.coerce.date().optional(),
-  to: z.coerce.date().optional(),
+  from: isoDay.optional(),
+  to: isoDay.optional(),
 });
 
 const topicParamsSchema = z.object({
