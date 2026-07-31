@@ -459,6 +459,20 @@ heißt „bringt kein Zuhause in die Rotation ein"; alle anderen Rollen bleiben
 davon unberührt. `capacity` in `location.csv` leer lassen heißt „passt jeder
 rein" — nur die engen Zuhause brauchen eine Zahl.
 
+`latitude`, `longitude` und `address` dürfen leer bleiben; die Koordinaten aber
+nur **gemeinsam**. Dieselbe Regel wie in der API, hier noch einmal in `seed.ts`,
+weil sich sonst per CSV einsäen ließe, was ein `PATCH` auf denselben Ort mit
+`400` ablehnt:
+
+```
+location.csv row 4 is invalid — longitude: latitude and longitude must be
+filled in together, or both left empty
+```
+
+Die Positionen in den mitgelieferten Daten liegen in Karlsruhe und sind
+**erfunden** — Demodaten, um „In Maps öffnen" ausprobieren zu können, keine
+echten Anschriften.
+
 ## Code-Qualität
 
 `oxlint` ersetzt ESLint (deutlich schneller, keine Plugin-Kette), Prettier bleibt für

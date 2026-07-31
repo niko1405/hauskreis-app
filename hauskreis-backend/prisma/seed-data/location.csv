@@ -1,9 +1,9 @@
-hauskreisName,name,hostWeight,capacity,requiresHost,active
-Holy-Homies,Bei Julian & Marlene,5,,true,true
-Holy-Homies,Bei Erik & Elisha,3,,true,true
-Holy-Homies,Bei Niko,3,,true,true
-Holy-Homies,Bei Chris,3,,true,true
-Holy-Homies,Bei Antonia,2,,true,true
-Holy-Homies,Bei Reini,1.5,,true,true
-Holy-Homies,Bei Sofie,1,5,true,true
-Holy-Homies,Schlosspark,0,,false,true
+hauskreisName,name,hostWeight,capacity,requiresHost,active,latitude,longitude,address
+Holy-Homies,Bei Julian & Marlene,5,,true,true,49.0092,8.4290,"Durlacher Allee 40, 76131 Karlsruhe"
+Holy-Homies,Bei Erik & Elisha,3,,true,true,48.9975,8.4045,"Ettlinger Straße 25, 76137 Karlsruhe"
+Holy-Homies,Bei Niko,3,,true,true,49.0083,8.3805,"Kaiserallee 12, 76133 Karlsruhe"
+Holy-Homies,Bei Chris,3,,true,true,49.0092,8.3915,"Karlstraße 55, 76133 Karlsruhe"
+Holy-Homies,Bei Antonia,2,,true,true,49.0106,8.3610,"Rheinstraße 90, 76185 Karlsruhe"
+Holy-Homies,Bei Reini,1.5,,true,true,48.9989,8.4728,"Pfinztalstraße 15, 76227 Karlsruhe"
+Holy-Homies,Bei Sofie,1,5,true,true,49.0296,8.3898,"Erzbergerstraße 120, 76149 Karlsruhe"
+Holy-Homies,Schlosspark,0,,false,true,49.0138,8.4044,"Schlossbezirk 10, 76131 Karlsruhe"

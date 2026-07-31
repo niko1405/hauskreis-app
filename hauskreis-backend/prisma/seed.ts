@@ -42,15 +42,44 @@ const optionalInt = z
     message: 'must be a positive whole number, or empty for "no limit"',
   });
 
-const locationRow = z.object({
-  hauskreisName: z.string().trim().min(1),
-  name: z.string().trim().min(1),
-  hostWeight: z.coerce.number().min(0),
-  /// Empty means "everyone fits" — only the tight homes need a number.
-  capacity: optionalInt,
-  requiresHost: csvBool,
-  active: csvBool,
-});
+/** A coordinate, or empty for "we have not looked it up". */
+const optionalCoordinate = (limit: number) =>
+  z
+    .string()
+    .trim()
+    .transform((value) => (value === '' ? null : Number(value)))
+    .refine(
+      (value) =>
+        value === null || (Number.isFinite(value) && Math.abs(value) <= limit),
+      { message: `must be a number between -${limit} and ${limit}, or empty` },
+    );
+
+const optionalText = z
+  .string()
+  .trim()
+  .transform((value) => (value === '' ? null : value));
+
+const locationRow = z
+  .object({
+    hauskreisName: z.string().trim().min(1),
+    name: z.string().trim().min(1),
+    hostWeight: z.coerce.number().min(0),
+    /// Empty means "everyone fits" — only the tight homes need a number.
+    capacity: optionalInt,
+    requiresHost: csvBool,
+    active: csvBool,
+    /// Both or neither, same rule the API enforces — see the refine below.
+    latitude: optionalCoordinate(90),
+    longitude: optionalCoordinate(180),
+    address: optionalText,
+  })
+  // Ohne das ließe sich per CSV einsäen, was ein PATCH auf denselben Ort mit
+  // 400 ablehnen würde: eine Breite ohne Länge zeigt auf nichts.
+  .refine((row) => (row.latitude === null) === (row.longitude === null), {
+    message:
+      'latitude and longitude must be filled in together, or both left empty',
+    path: ['longitude'],
+  });
 
 const personRow = z.object({
   hauskreisName: z.string().trim().min(1),
@@ -153,6 +182,9 @@ async function main(): Promise<void> {
           capacity: row.capacity,
           requiresHost: row.requiresHost,
           active: row.active,
+          latitude: row.latitude,
+          longitude: row.longitude,
+          address: row.address,
         },
         create: {
           hauskreisId,
@@ -161,6 +193,9 @@ async function main(): Promise<void> {
           capacity: row.capacity,
           requiresHost: row.requiresHost,
           active: row.active,
+          latitude: row.latitude,
+          longitude: row.longitude,
+          address: row.address,
         },
       });
 
