@@ -474,6 +474,30 @@ Prisma-Client, was die Suite von ~4 s auf über 100 s aufbläht und zusätzlich 
 Warnung „worker process has failed to exit gracefully" produziert. In Specs
 deshalb `import type` verwenden, wo eine Klasse nur als Typ gebraucht wird.
 
+### Erreichbarkeit von Windows aus
+
+`main.ts` bindet ausdrücklich auf `0.0.0.0` statt Nest den Default zu überlassen.
+Der wäre dual-stack `::` — und die localhost-Weiterleitung von WSL nach Windows
+spiegelt davon nur `[::1]`. Ein Windows-Client, der `localhost` auf IPv4 auflöst
+(Bruno tut das), landet dann auf `127.0.0.1:3000`, wo nichts lauscht, und meldet
+`ECONNREFUSED`.
+
+Nachprüfen lässt sich das mit der Windows-Binary, die im Windows-Netzwerk-Stack
+läuft:
+
+```bash
+/mnt/c/Windows/System32/netstat.exe -ano | grep ':3000'
+```
+
+Erwartet wird eine Zeile `TCP 127.0.0.1:3000 … ABHÖREN`. Steht dort nur
+`[::1]:3000`, bindet der Server wieder dual-stack. (Auf einem deutschen Windows
+heißt der Status `ABHÖREN`, nicht `LISTENING` — ein Filter auf das englische Wort
+findet nichts und sieht aus wie „kein Listener".)
+
+Warum Keycloak trotzdem immer erreichbar ist: Docker Desktop veröffentlicht
+seine Ports selbst auf `0.0.0.0` der Windows-Seite und geht am WSL-Relay vorbei.
+Der Vergleich „8080 geht, 3000 nicht" spricht also nicht gegen das Relay.
+
 ## Skripte
 
 ```bash

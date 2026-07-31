@@ -39,7 +39,13 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix('api');
   app.enableShutdownHooks();
 
-  await app.listen(config.get('PORT'));
+  // Die Adresse ist nicht optional, auch wenn der Default meistens reicht.
+  // Ohne sie bindet Node dual-stack auf `::`. Im Container ist das in Ordnung,
+  // unter WSL nicht: die localhost-Weiterleitung nach Windows spiegelt dann nur
+  // `[::1]`, und jeder Client, der `localhost` auf IPv4 auflöst — Bruno tut das —
+  // läuft in ECONNREFUSED auf 127.0.0.1. Explizit auf 0.0.0.0 zu binden ist
+  // ohnehin das, was eine containerisierte App tun soll.
+  await app.listen(config.get('PORT'), '0.0.0.0');
 }
 
 void bootstrap();
