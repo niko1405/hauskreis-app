@@ -63,7 +63,12 @@ export function renderBanner(info: BannerInfo, colors: boolean): string {
     // Die letzte Zeile sagt ausdrücklich, dass es läuft. Nests eigenes
     // "successfully started" ist stummgeschaltet, und ohne Ersatz sieht ein
     // Start, nach dem nichts mehr kommt, aus wie ein hängender Prozess.
-    `  ${bold('Bereit')} in ${info.startupSeconds.toFixed(1)} s ${dim('· Strg+C beendet')}`,
+    //
+    // Der Strg+C-Hinweis nur am Terminal: im Container landet der Banner in
+    // `docker logs`, wo niemand Strg+C drücken kann — dort beendet `docker stop`.
+    `  ${bold('Bereit')} in ${info.startupSeconds.toFixed(1)} s${
+      colors ? dim(' · Strg+C beendet') : ''
+    }`,
     '',
   ];
 

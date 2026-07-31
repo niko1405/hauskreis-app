@@ -53,6 +53,13 @@ describe('renderBanner', () => {
     expect(lines.at(-1)).toContain('Bereit in 1.2 s');
   });
 
+  // Im Container landet der Banner in `docker logs`, wo niemand Strg+C drücken
+  // kann — dort beendet `docker stop`. Der Hinweis gehört also ans Terminal.
+  it('only offers the Ctrl+C hint on a terminal', () => {
+    expect(renderBanner(info, true)).toContain('Strg+C');
+    expect(renderBanner(info, false)).not.toContain('Strg+C');
+  });
+
   // origin: false heißt, dass der Browser jede fremde Origin blockt. Das ist
   // eine Konfiguration, die man beim Start sehen will, kein leeres Feld.
   it('spells out an empty CORS allowlist', () => {
@@ -68,8 +75,13 @@ describe('renderBanner', () => {
 
   // padEnd zählt die unsichtbaren ANSI-Zeichen mit; ohne eigene Breitenrechnung
   // rutscht jede eingefärbte Spalte um acht Zeichen nach links.
+  //
+  // Verglichen wird bis zur Routen-Auflistung: die Schlussfolge darf sich
+  // unterscheiden, weil der Strg+C-Hinweis nur am Terminal steht.
   it('aligns the group columns the same way with and without colour', () => {
-    expect(stripAnsi(renderBanner(info, true))).toBe(renderBanner(info, false));
+    expect(upToGroups(stripAnsi(renderBanner(info, true)))).toBe(
+      upToGroups(renderBanner(info, false)),
+    );
   });
 });
 
@@ -84,6 +96,11 @@ const CSI = '\u001b[';
  */
 // oxlint-disable-next-line no-control-regex
 const ANSI_CODE = /\u001b\[\d+m/g;
+
+/** Der Teil vor der Schlusszeile — dort darf sich die Ausgabe unterscheiden. */
+function upToGroups(text: string): string {
+  return text.split('Bereit')[0]?.trimEnd() ?? '';
+}
 
 function stripAnsi(text: string): string {
   return text.replaceAll(ANSI_CODE, '');

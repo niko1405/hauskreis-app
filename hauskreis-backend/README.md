@@ -1377,8 +1377,32 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 
 Das [Dockerfile](Dockerfile) ist mehrstufig. `prisma generate` muss **vor**
 `nest build` laufen, sonst fehlen die Typen aus `generated/prisma`. Der Container
-läuft als `node`, nicht als root, hat einen `HEALTHCHECK` auf `/api/health` und
-fährt bei SIGTERM sauber herunter (`enableShutdownHooks` schließt den Pool).
+läuft als `node`, nicht als root, und hat einen `HEALTHCHECK` auf `/api/health`.
+
+### Was im Container anders ist
+
+Gegen das gebaute Image geprüft, gegen die lokale Datenbank und Keycloak:
+
+|               |                                                                                                     |
+| ------------- | --------------------------------------------------------------------------------------------------- |
+| Banner        | erscheint in `docker logs`, ohne Farben und ohne Strg+C-Hinweis — `process.stdout.isTTY` ist falsch |
+| Version       | `0.0.1`, denn `package.json` liegt im Image unter dem `WORKDIR /app`                                |
+| Bindung       | `0.0.0.0`, sonst wäre der Port aus dem Container heraus nicht erreichbar                            |
+| `HEALTHCHECK` | nach der `start-period` von 20 s `healthy`                                                          |
+| `docker stop` | 1,3 s, Exit-Code 0, beide Shutdown-Zeilen im Log                                                    |
+| Keycloak      | Issuer aus `KEYCLOAK_URL`, JWKS über `KEYCLOAK_INTERNAL_URL` — `/api/me` antwortet `200`            |
+
+Der Shutdown ist im Container **kein Selbstläufer**: die Exec-Form des `CMD`
+macht node zu **PID 1**, und für PID 1 installiert Linux keine
+Standard-Signalbehandlung. Ein Prozess ohne eigenen SIGTERM-Handler würde das
+Signal schlicht ignorieren, und Docker müsste nach zehn Sekunden SIGKILL
+nachschieben — mit gekappten Datenbankverbindungen. `installShutdownHandlers()`
+registriert den Handler, deshalb sind es 1,3 Sekunden statt zehn.
+
+**Eine Abweichung, die man kennen sollte:** entwickelt und getestet wird auf
+Node 24, das Image liefert Node 22 (`node:22-alpine`). Beides läuft, aber es ist
+nicht dasselbe. Wer angleichen will, setzt im Dockerfile `node:24-alpine` und
+baut neu.
 
 **Migrationen sind ein eigener, vorgelagerter Service** (`migrate` im
 Prod-Compose), nicht etwas, das die App beim Start tut: das macht die Reihenfolge
