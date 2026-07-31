@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, RequestMethod } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -29,6 +29,12 @@ import { DashboardModule } from './dashboard/dashboard.module';
     LoggerModule.forRootAsync({
       inject: [AppConfigService],
       useFactory: (config: AppConfigService) => ({
+        // nestjs-pino hängt seine Middleware standardmäßig an `path: '*'` —
+        // die Express-4-Schreibweise, die es aus Rückwärtskompatibilität
+        // beibehält. Unter Express 5 warnt path-to-regexp darüber bei jedem
+        // Start, zweimal, weil zwei Middlewares registriert werden. Die
+        // benannte Form sagt dasselbe und schweigt.
+        forRoutes: [{ path: '{*splat}', method: RequestMethod.ALL }],
         pinoHttp: {
           level: config.isProduction ? 'info' : 'debug',
           transport: config.isProduction

@@ -78,6 +78,10 @@ async function bootstrap(): Promise<void> {
         ),
         routes,
         groups: groupRoutes(routes),
+        // `process.uptime()` statt einer eigenen Startmarke: es zählt ab dem
+        // Prozessstart und schließt damit auch das Laden der Module ein, das
+        // den Großteil ausmacht.
+        startupSeconds: process.uptime(),
       },
       process.stdout.isTTY === true,
     ),

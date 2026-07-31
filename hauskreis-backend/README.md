@@ -54,14 +54,25 @@ aus dem Express-Router: `express` ist nur eine transitive Abhängigkeit des
 Plattform-Adapters und war im Produktions-Image schon einmal nicht auflösbar.
 
 Dafür sind Nests eigene Start-Meldungen (`RoutesResolver`, `RouterExplorer`,
-`InstanceLoader`) auf `log`-Ebene stummgeschaltet — 110 Zeilen „Mapped {…}
-route" bei jedem Neustart, die der Banner in vier Zeilen zusammenfasst.
-`warn` und `error` kommen immer durch, eine fehlende VAPID-Konfiguration
-verschwindet also nicht. Das ist nicht nur Geschmack: der Banner geht direkt
-über `process.stdout.write` hinaus, pino in der Entwicklung über einen
-`pino-pretty`-Worker-Thread. Die beiden Ströme lassen sich nicht ordnen, und
-der Banner landete zuverlässig **vor** den Routen-Zeilen — also sofort
-weggescrollt. Ohne das Geplauder streitet nichts mehr um die Reihenfolge.
+`InstanceLoader`, `NestApplication`) auf `log`-Ebene stummgeschaltet — 110
+Zeilen „Mapped {…} route" bei jedem Neustart, die der Banner in vier Zeilen
+zusammenfasst. `warn` und `error` kommen immer durch, eine fehlende
+VAPID-Konfiguration verschwindet also nicht. Das ist nicht nur Geschmack: der
+Banner geht direkt über `process.stdout.write` hinaus, pino in der Entwicklung
+über einen `pino-pretty`-Worker-Thread. Die beiden Ströme lassen sich nicht
+ordnen, und der Banner landete zuverlässig **vor** den Routen-Zeilen — also
+sofort weggescrollt. Ohne das Geplauder streitet nichts mehr um die Reihenfolge.
+
+Weil damit auch Nests „successfully started" wegfällt, schließt der Banner
+selbst mit `Bereit in … s · Strg+C beendet`. Ein Start, nach dem nichts mehr
+kommt, sieht sonst aus wie ein hängender Prozess.
+
+Damit wirklich nichts mehr dahinter steht, setzt
+[`app.module.ts`](src/app.module.ts) `forRoutes` für `nestjs-pino` explizit auf
+`{*splat}`. Die Bibliothek hängt ihre Middleware sonst an `path: '*'` — die
+Express-4-Schreibweise, die sie aus Rückwärtskompatibilität beibehält. Unter
+Express 5 warnt `path-to-regexp` darüber bei jedem Start, und zwar **zweimal**,
+weil `pinoHttp` und `bindLoggerMiddleware` getrennt registriert werden.
 
 **Strg+C** (und `docker stop`) fährt geordnet herunter: `app.close()` führt die
 Lifecycle-Hooks aus, `PrismaService.onModuleDestroy` schließt den Pool, und

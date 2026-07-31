@@ -14,6 +14,8 @@ export interface BannerInfo {
   pushEnabled: boolean;
   routes: RouteInfo[];
   groups: RouteGroup[];
+  /** Sekunden vom Prozessstart bis zum ersten angenommenen Request. */
+  startupSeconds: number;
 }
 
 /**
@@ -57,6 +59,11 @@ export function renderBanner(info: BannerInfo, colors: boolean): string {
     '',
     `  ${label('Routen')}${info.routes.length}`,
     ...formatGroups(info.groups, dim),
+    '',
+    // Die letzte Zeile sagt ausdrücklich, dass es läuft. Nests eigenes
+    // "successfully started" ist stummgeschaltet, und ohne Ersatz sieht ein
+    // Start, nach dem nichts mehr kommt, aus wie ein hängender Prozess.
+    `  ${bold('Bereit')} in ${info.startupSeconds.toFixed(1)} s ${dim('· Strg+C beendet')}`,
     '',
   ];
 

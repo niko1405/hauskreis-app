@@ -18,6 +18,7 @@ const info: BannerInfo = {
     { name: 'meetings', count: 19 },
     { name: 'push', count: 7 },
   ],
+  startupSeconds: 1.23,
 };
 
 describe('renderBanner', () => {
@@ -41,6 +42,15 @@ describe('renderBanner', () => {
     const banner = renderBanner({ ...info, pushEnabled: false }, false);
 
     expect(banner).toContain('deaktiviert');
+  });
+
+  // Nests eigenes "successfully started" ist stummgeschaltet. Ohne Ersatz
+  // sieht ein Start, nach dem nichts mehr kommt, aus wie ein hängender
+  // Prozess — genau so ist es einmal gemeldet worden.
+  it('ends by saying that it is actually running', () => {
+    const lines = renderBanner(info, false).trimEnd().split('\n');
+
+    expect(lines.at(-1)).toContain('Bereit in 1.2 s');
   });
 
   // origin: false heißt, dass der Browser jede fremde Origin blockt. Das ist
