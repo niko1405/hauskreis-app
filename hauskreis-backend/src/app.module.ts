@@ -9,6 +9,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { ZodValidationPipe } from './common/pipes/zod-validation.pipe';
 import { EtagInterceptor } from './common/http/etag.interceptor';
+import { ResponseSerializerInterceptor } from './common/http/response-serializer.interceptor';
 import { HealthController } from './health/health.controller';
 import { AuthModule } from './auth/auth.module';
 import { HauskreisModule } from './hauskreis/hauskreis.module';
@@ -74,6 +75,10 @@ import { DashboardModule } from './dashboard/dashboard.module';
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: EtagInterceptor },
+    // Nach dem ETag-Interceptor eingetragen und damit weiter innen: auf dem
+    // Rückweg läuft dieser hier zuerst, der ETag wird also aus der bereits
+    // beschnittenen Antwort gebildet und nicht aus der rohen.
+    { provide: APP_INTERCEPTOR, useClass: ResponseSerializerInterceptor },
   ],
 })
 export class AppModule {}
