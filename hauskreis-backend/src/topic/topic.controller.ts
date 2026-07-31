@@ -24,6 +24,17 @@ import { Roles } from '../auth/roles.decorator';
 import { ROLE_ADMIN } from '../auth/auth.types';
 import { IfMatch } from '../common/http/if-match.decorator';
 import type { IfMatchCondition } from '../common/http/etag';
+import {
+  ApiConditionalWrite,
+  ApiZodNoContent,
+  ApiZodResponse,
+} from '../common/http/api-response.decorator';
+import {
+  CarryOverResultResponseDto,
+  TopicPageResponseDto,
+  TopicResponseDto,
+} from './dto/topic-response.dto';
+import { ReminderRunResultResponseDto } from '../meeting/dto/meeting-response.dto';
 
 @Controller('hauskreise/:hauskreisId/topics')
 export class TopicController {
@@ -34,6 +45,7 @@ export class TopicController {
   ) {}
 
   @Get()
+  @ApiZodResponse(TopicPageResponseDto)
   findAll(
     @Param() params: HauskreisParamsDto,
     @Query() query: ListTopicsQueryDto,
@@ -42,17 +54,22 @@ export class TopicController {
   }
 
   @Get(':id')
+  @ApiZodResponse(TopicResponseDto)
   findOne(@Param() params: TopicParamsDto) {
     return this.topicService.findOne(params.hauskreisId, params.id);
   }
 
   @Post()
+  @ApiZodResponse(TopicResponseDto, { status: 201 })
   create(@Param() params: HauskreisParamsDto, @Body() dto: CreateTopicDto) {
     return this.topicService.create(params.hauskreisId, dto);
   }
 
   /** Manual trigger for the nightly carry-over, handy for setup and testing. */
   @Post('carry-over')
+  @ApiZodResponse(CarryOverResultResponseDto, {
+    description: 'Legt das laufende Thema auf die naechsten Termine',
+  })
   @Roles(ROLE_ADMIN)
   @HttpCode(HttpStatus.OK)
   carryOver(@Param() params: HauskreisParamsDto) {
@@ -61,6 +78,7 @@ export class TopicController {
 
   /** Manual trigger for the daily topic reminders, scoped to this group. */
   @Post('reminders')
+  @ApiZodResponse(ReminderRunResultResponseDto)
   @Roles(ROLE_ADMIN)
   @HttpCode(HttpStatus.OK)
   runReminders(@Param() params: HauskreisParamsDto) {
@@ -71,6 +89,8 @@ export class TopicController {
 
   /** Also how a topic is marked completed — `{ "status": "COMPLETED" }`. */
   @Patch(':id')
+  @ApiZodResponse(TopicResponseDto)
+  @ApiConditionalWrite()
   update(
     @Param() params: TopicParamsDto,
     @Body() dto: UpdateTopicDto,
@@ -85,6 +105,7 @@ export class TopicController {
   }
 
   @Delete(':id')
+  @ApiZodNoContent()
   @Roles(ROLE_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param() params: TopicParamsDto) {

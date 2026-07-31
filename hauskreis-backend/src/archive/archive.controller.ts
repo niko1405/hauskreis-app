@@ -1,6 +1,8 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ArchiveService } from './archive.service';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
+import { ApiZodResponse } from '../common/http/api-response.decorator';
+import { ArchiveSummaryResponseDto } from './dto/archive-response.dto';
 
 @Controller('hauskreise/:hauskreisId/archive')
 export class ArchiveController {
@@ -13,6 +15,7 @@ export class ArchiveController {
    * `…/topics`, `…/songs`, all with search, date bounds and pagination.
    */
   @Get()
+  @ApiZodResponse(ArchiveSummaryResponseDto)
   summary(@Param() params: HauskreisParamsDto) {
     return this.archive.summarise(params.hauskreisId);
   }

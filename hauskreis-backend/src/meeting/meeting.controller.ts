@@ -27,6 +27,23 @@ import { Roles } from '../auth/roles.decorator';
 import { ROLE_ADMIN } from '../auth/auth.types';
 import { IfMatch } from '../common/http/if-match.decorator';
 import type { IfMatchCondition } from '../common/http/etag';
+import {
+  ApiConditionalWrite,
+  ApiZodNoContent,
+  ApiZodResponse,
+} from '../common/http/api-response.decorator';
+import {
+  ActionstepRunResultResponseDto,
+  AttendanceResponseDto,
+  GenerationResultResponseDto,
+  MeetingPageResponseDto,
+  MeetingResponseDto,
+  ReminderRunResultResponseDto,
+} from './dto/meeting-response.dto';
+import {
+  HostSuggestionListResponseDto,
+  RoleSuggestionListResponseDto,
+} from '../role-suggestion/dto/suggestion-response.dto';
 
 @Controller('hauskreise/:hauskreisId/meetings')
 export class MeetingController {
@@ -38,6 +55,9 @@ export class MeetingController {
   ) {}
 
   @Get()
+  @ApiZodResponse(MeetingPageResponseDto, {
+    description: 'Paginiert. `scope=upcoming|past` engt zusätzlich ein.',
+  })
   findAll(
     @Param() params: HauskreisParamsDto,
     @Query() query: ListMeetingsQueryDto,
@@ -46,6 +66,7 @@ export class MeetingController {
   }
 
   @Get(':id')
+  @ApiZodResponse(MeetingResponseDto)
   findOne(@Param() params: MeetingParamsDto) {
     return this.meetingService.findOne(params.hauskreisId, params.id);
   }
@@ -60,11 +81,15 @@ export class MeetingController {
    * ranking at all — those places are a plain choice from `…/locations`.
    */
   @Get(':id/host-suggestions')
+  @ApiZodResponse(HostSuggestionListResponseDto, {
+    description: 'Beste Passung zuerst, mit den Fakten dahinter',
+  })
   suggestHosts(@Param() params: MeetingParamsDto) {
     return this.meetingService.suggestHosts(params.hauskreisId, params.id);
   }
 
   @Get(':id/topic-suggestions')
+  @ApiZodResponse(RoleSuggestionListResponseDto)
   suggestTopicResponsibles(@Param() params: MeetingParamsDto) {
     return this.meetingService.suggestTopicResponsibles(
       params.hauskreisId,
@@ -73,11 +98,14 @@ export class MeetingController {
   }
 
   @Post()
+  @ApiZodResponse(MeetingResponseDto, { status: 201 })
   create(@Param() params: HauskreisParamsDto, @Body() dto: CreateMeetingDto) {
     return this.meetingService.create(params.hauskreisId, dto);
   }
 
   @Patch(':id')
+  @ApiZodResponse(MeetingResponseDto)
+  @ApiConditionalWrite()
   update(
     @Param() params: MeetingParamsDto,
     @Body() dto: UpdateMeetingDto,
@@ -93,6 +121,10 @@ export class MeetingController {
 
   /** Cancelling keeps the meeting visible; use DELETE to remove it entirely. */
   @Post(':id/cancel')
+  @ApiZodResponse(MeetingResponseDto, {
+    description: 'Sagt den Abend ab und benachrichtigt die Gruppe',
+  })
+  @ApiConditionalWrite()
   // Returns the updated meeting rather than creating anything, so 200 not 201.
   @HttpCode(HttpStatus.OK)
   cancel(
@@ -103,6 +135,7 @@ export class MeetingController {
   }
 
   @Put(':id/attendance')
+  @ApiZodResponse(AttendanceResponseDto)
   setAttendance(
     @Param() params: MeetingParamsDto,
     @Body() dto: SetAttendanceDto,
@@ -115,6 +148,7 @@ export class MeetingController {
   }
 
   @Delete(':id')
+  @ApiZodNoContent()
   @Roles(ROLE_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param() params: MeetingParamsDto) {
@@ -123,6 +157,7 @@ export class MeetingController {
 
   /** Manual trigger for the scheduled generator, handy for setup and testing. */
   @Post('generate')
+  @ApiZodResponse(GenerationResultResponseDto, { status: 201 })
   @Roles(ROLE_ADMIN)
   generate(@Param() params: HauskreisParamsDto) {
     return this.generator.generateFor(params.hauskreisId);
@@ -130,6 +165,7 @@ export class MeetingController {
 
   /** Manual trigger for the daily host reminders, scoped to this group. */
   @Post('host-reminders')
+  @ApiZodResponse(ReminderRunResultResponseDto)
   @Roles(ROLE_ADMIN)
   @HttpCode(HttpStatus.OK)
   runHostReminders(@Param() params: HauskreisParamsDto) {
@@ -146,6 +182,7 @@ export class MeetingController {
    * to bypass the setting.
    */
   @Post('actionstep-reminders')
+  @ApiZodResponse(ActionstepRunResultResponseDto)
   @Roles(ROLE_ADMIN)
   @HttpCode(HttpStatus.OK)
   runActionstepReminders(@Param() params: HauskreisParamsDto) {

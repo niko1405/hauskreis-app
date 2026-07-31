@@ -24,6 +24,18 @@ import {
   NotificationSettingParamsDto,
   UpdateNotificationSettingDto,
 } from './dto/notification-setting.dto';
+import {
+  ApiZodNoContent,
+  ApiZodResponse,
+} from '../common/http/api-response.decorator';
+import {
+  DeliveryResultResponseDto,
+  NotificationSettingListResponseDto,
+  NotificationSettingResponseDto,
+  PushPublicKeyResponseDto,
+  PushSubscriptionListResponseDto,
+  PushSubscriptionResponseDto,
+} from './dto/notification-response.dto';
 
 /**
  * Push subscriptions always belong to the logged-in person, so these routes sit
@@ -46,12 +58,16 @@ export class NotificationController {
    * never carries a second copy of the list.
    */
   @Get('settings')
+  @ApiZodResponse(NotificationSettingListResponseDto, {
+    description: 'Alle Arten, mit den für diese Person geltenden Werten',
+  })
   async settings(@CurrentUser() user: AuthenticatedUser) {
     const person = await this.people.resolveForUser(user);
     return this.preferences.listForPerson(person.id);
   }
 
   @Put('settings/:type')
+  @ApiZodResponse(NotificationSettingResponseDto)
   async updateSetting(
     @Param() params: NotificationSettingParamsDto,
     @Body() dto: UpdateNotificationSettingDto,
@@ -63,6 +79,7 @@ export class NotificationController {
 
   /** The VAPID public key the browser needs to call `pushManager.subscribe()`. */
   @Get('public-key')
+  @ApiZodResponse(PushPublicKeyResponseDto)
   publicKey() {
     return {
       publicKey: this.notifications.getPublicKey() ?? null,
@@ -71,12 +88,14 @@ export class NotificationController {
   }
 
   @Get('subscriptions')
+  @ApiZodResponse(PushSubscriptionListResponseDto)
   async list(@CurrentUser() user: AuthenticatedUser) {
     const person = await this.people.resolveForUser(user);
     return this.subscriptions.findAllForPerson(person.id);
   }
 
   @Post('subscriptions')
+  @ApiZodResponse(PushSubscriptionResponseDto, { status: 201 })
   async subscribe(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreatePushSubscriptionDto,
@@ -87,6 +106,7 @@ export class NotificationController {
   }
 
   @Delete('subscriptions')
+  @ApiZodNoContent()
   @HttpCode(HttpStatus.NO_CONTENT)
   async unsubscribe(
     @CurrentUser() user: AuthenticatedUser,
@@ -98,6 +118,9 @@ export class NotificationController {
 
   /** Sends a test notification to the caller's own devices. */
   @Post('test')
+  @ApiZodResponse(DeliveryResultResponseDto, {
+    description: 'Schickt eine Testnachricht an die eigenen Geräte',
+  })
   async test(@CurrentUser() user: AuthenticatedUser) {
     const person = await this.people.resolveForUser(user);
 

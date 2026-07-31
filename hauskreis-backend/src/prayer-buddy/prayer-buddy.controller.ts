@@ -23,6 +23,16 @@ import { ROLE_ADMIN, type AuthenticatedUser } from '../auth/auth.types';
 import { Roles } from '../auth/roles.decorator';
 import { IfMatch } from '../common/http/if-match.decorator';
 import type { IfMatchCondition } from '../common/http/etag';
+import {
+  ApiConditionalWrite,
+  ApiZodResponse,
+} from '../common/http/api-response.decorator';
+import {
+  CurrentPrayerBuddyResponseDto,
+  PrayerBuddyConfigResponseDto,
+  PrayerBuddyPageResponseDto,
+  RotationResultResponseDto,
+} from './dto/prayer-buddy-response.dto';
 
 @Controller('hauskreise/:hauskreisId/prayer-buddies')
 export class PrayerBuddyController {
@@ -34,11 +44,15 @@ export class PrayerBuddyController {
 
   /** Who is praying with whom right now. `null` when nobody is assigned. */
   @Get('current')
+  @ApiZodResponse(CurrentPrayerBuddyResponseDto, {
+    description: 'null, wenn fuer heute niemand zugeteilt ist',
+  })
   findCurrent(@Param() params: HauskreisParamsDto) {
     return this.buddies.findCurrent(params.hauskreisId);
   }
 
   @Get()
+  @ApiZodResponse(PrayerBuddyPageResponseDto)
   findAll(
     @Param() params: HauskreisParamsDto,
     @Query() query: ListPrayerBuddiesQueryDto,
@@ -47,6 +61,7 @@ export class PrayerBuddyController {
   }
 
   @Get('config')
+  @ApiZodResponse(PrayerBuddyConfigResponseDto)
   getConfig(@Param() params: HauskreisParamsDto) {
     return this.buddies.getConfig(params.hauskreisId);
   }
@@ -57,6 +72,10 @@ export class PrayerBuddyController {
    * under them just because the setting moved.
    */
   @Put('config')
+  @ApiZodResponse(PrayerBuddyConfigResponseDto, {
+    description: 'Gilt ab der naechsten Rotation, nicht rueckwirkend',
+  })
+  @ApiConditionalWrite()
   @Roles(ROLE_ADMIN)
   async updateConfig(
     @Param() params: HauskreisParamsDto,
@@ -79,6 +98,7 @@ export class PrayerBuddyController {
    * off (or replaced, if it only started today) and a full new cycle begins.
    */
   @Post('rotate')
+  @ApiZodResponse(RotationResultResponseDto)
   @Roles(ROLE_ADMIN)
   @HttpCode(HttpStatus.OK)
   rotate(@Param() params: HauskreisParamsDto, @Body() dto: RotateDto) {

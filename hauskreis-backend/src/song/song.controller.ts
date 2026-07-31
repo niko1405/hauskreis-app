@@ -26,6 +26,13 @@ import { Roles } from '../auth/roles.decorator';
 import { ROLE_ADMIN } from '../auth/auth.types';
 import { IfMatch } from '../common/http/if-match.decorator';
 import type { IfMatchCondition } from '../common/http/etag';
+import {
+  ApiConditionalWrite,
+  ApiZodNoContent,
+  ApiZodResponse,
+} from '../common/http/api-response.decorator';
+import { SongPageResponseDto, SongResponseDto } from './dto/song-response.dto';
+import { ReminderRunResultResponseDto } from '../meeting/dto/meeting-response.dto';
 
 /** The group's growing song database, also the archive view (CLAUDE.md §8). */
 @Controller('hauskreise/:hauskreisId/songs')
@@ -38,6 +45,7 @@ export class SongController {
 
   /** Manual trigger for the daily song reminders, scoped to this group. */
   @Post('reminders')
+  @ApiZodResponse(ReminderRunResultResponseDto)
   @Roles(ROLE_ADMIN)
   @HttpCode(HttpStatus.OK)
   runReminders(@Param() params: HauskreisParamsDto) {
@@ -47,6 +55,10 @@ export class SongController {
   }
 
   @Get()
+  @ApiZodResponse(SongPageResponseDto, {
+    description:
+      'Die Lieder-Sammlung, sortierbar nach Titel, Haeufigkeit oder zuletzt gesungen',
+  })
   findAll(
     @Param() params: HauskreisParamsDto,
     @Query() query: ListSongsQueryDto,
@@ -55,12 +67,14 @@ export class SongController {
   }
 
   @Get(':id')
+  @ApiZodResponse(SongResponseDto)
   findOne(@Param() params: SongParamsDto) {
     return this.songs.findOne(params.hauskreisId, params.id);
   }
 
   /** Returns the existing song if the group already knows it. */
   @Post()
+  @ApiZodResponse(SongResponseDto, { status: 201 })
   async create(
     @Param() params: HauskreisParamsDto,
     @Body() dto: CreateSongDto,
@@ -71,6 +85,8 @@ export class SongController {
   }
 
   @Patch(':id')
+  @ApiZodResponse(SongResponseDto)
+  @ApiConditionalWrite()
   update(
     @Param() params: SongParamsDto,
     @Body() dto: UpdateSongDto,
@@ -80,6 +96,7 @@ export class SongController {
   }
 
   @Delete(':id')
+  @ApiZodNoContent()
   @Roles(ROLE_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param() params: SongParamsDto) {

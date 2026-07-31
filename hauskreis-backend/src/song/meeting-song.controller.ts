@@ -24,6 +24,16 @@ import {
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { NotFoundException } from '@nestjs/common';
+import {
+  ApiZodNoContent,
+  ApiZodResponse,
+} from '../common/http/api-response.decorator';
+import {
+  MeetingSongListResponseDto,
+  MeetingSongResponseDto,
+  SongLeadersResponseDto,
+} from './dto/song-response.dto';
+import { RoleSuggestionListResponseDto } from '../role-suggestion/dto/suggestion-response.dto';
 
 /**
  * Songs and music duty for one evening.
@@ -42,12 +52,14 @@ export class MeetingSongController {
   ) {}
 
   @Get('songs')
+  @ApiZodResponse(MeetingSongListResponseDto)
   findAll(@Param() params: MeetingSongListParamsDto) {
     return this.meetingSongs.findAll(params.hauskreisId, params.meetingId);
   }
 
   /** Takes either `{ songId }` or a new song's `{ title, artist?, lyricsUrl? }`. */
   @Post('songs')
+  @ApiZodResponse(MeetingSongResponseDto, { status: 201 })
   async add(
     @Param() params: MeetingSongListParamsDto,
     @Body() dto: AddMeetingSongDto,
@@ -64,6 +76,7 @@ export class MeetingSongController {
   }
 
   @Patch('songs/:id')
+  @ApiZodResponse(MeetingSongResponseDto)
   setSelected(
     @Param() params: MeetingSongParamsDto,
     @Body() dto: UpdateMeetingSongDto,
@@ -77,6 +90,7 @@ export class MeetingSongController {
   }
 
   @Delete('songs/:id')
+  @ApiZodNoContent()
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param() params: MeetingSongParamsDto) {
     return this.meetingSongs.remove(
@@ -87,12 +101,16 @@ export class MeetingSongController {
   }
 
   @Get('song-leaders')
+  @ApiZodResponse(SongLeadersResponseDto)
   findLeaders(@Param() params: MeetingSongListParamsDto) {
     return this.meetingSongs.findLeaders(params.hauskreisId, params.meetingId);
   }
 
   /** Replaces the list; an empty one is valid for an evening without songs. */
   @Put('song-leaders')
+  @ApiZodResponse(SongLeadersResponseDto, {
+    description: 'Ersetzt die Liste; eine leere ist gueltig',
+  })
   setLeaders(
     @Param() params: MeetingSongListParamsDto,
     @Body() dto: SetSongLeadersDto,
@@ -109,6 +127,9 @@ export class MeetingSongController {
    * instrument, since not everyone does (CLAUDE.md §6).
    */
   @Get('song-leader-suggestions')
+  @ApiZodResponse(RoleSuggestionListResponseDto, {
+    description: 'Nur Personen, die ein Instrument spielen',
+  })
   async suggestLeaders(@Param() params: MeetingSongListParamsDto) {
     const meeting = await this.prisma.meeting.findFirst({
       where: { id: params.meetingId, hauskreisId: params.hauskreisId },

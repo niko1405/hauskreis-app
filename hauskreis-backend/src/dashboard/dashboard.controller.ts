@@ -6,6 +6,11 @@ import { ListAssignmentsQueryDto } from './dto/assignment.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import { ApiZodResponse } from '../common/http/api-response.decorator';
+import {
+  AssignmentListResponseDto,
+  HomeScreenResponseDto,
+} from './dto/dashboard-response.dto';
 
 @Controller('hauskreise/:hauskreisId')
 export class DashboardController {
@@ -23,6 +28,10 @@ export class DashboardController {
    * end up disagreeing about who is on for an evening.
    */
   @Get('assignments')
+  @ApiZodResponse(AssignmentListResponseDto, {
+    description:
+      'Ohne personId die Mehrwochen-Tabelle, mit ihr die eigenen Badges',
+  })
   async findAssignments(
     @Param() params: HauskreisParamsDto,
     @Query() query: ListAssignmentsQueryDto,
@@ -40,6 +49,9 @@ export class DashboardController {
 
   /** Everything the home screen shows, in one request. */
   @Get('home')
+  @ApiZodResponse(HomeScreenResponseDto, {
+    description: 'Der ganze Home-Screen in einem Aufruf',
+  })
   async home(
     @Param() params: HauskreisParamsDto,
     @CurrentUser() user: AuthenticatedUser,

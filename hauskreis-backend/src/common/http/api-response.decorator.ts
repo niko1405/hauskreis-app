@@ -68,3 +68,30 @@ export function ApiConditionalWrite() {
     }),
   );
 }
+
+/**
+ * Für die Löschrouten: kein Rumpf, aber der Statuscode gehört beschrieben.
+ *
+ * Ohne das stünde in der Datei nur eine leere `200`-Antwort, und ein Client,
+ * der auf JSON wartet, liefe ins Leere.
+ */
+export function ApiZodNoContent(description = 'Gelöscht, kein Inhalt') {
+  return applyDecorators(
+    ApiResponse({ status: 204, description }),
+    ApiResponse({
+      status: 401,
+      description: 'Nicht angemeldet',
+      type: ErrorDto,
+    }),
+    ApiResponse({
+      status: 403,
+      description: 'Angemeldet, aber ohne das nötige Recht',
+      type: ErrorDto,
+    }),
+    ApiResponse({
+      status: 404,
+      description: 'Nicht vorhanden',
+      type: ErrorDto,
+    }),
+  );
+}

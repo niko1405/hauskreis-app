@@ -25,6 +25,16 @@ import { ROLE_ADMIN, type AuthenticatedUser } from '../auth/auth.types';
 import { Roles } from '../auth/roles.decorator';
 import { IfMatch } from '../common/http/if-match.decorator';
 import type { IfMatchCondition } from '../common/http/etag';
+import {
+  ApiConditionalWrite,
+  ApiZodNoContent,
+  ApiZodResponse,
+} from '../common/http/api-response.decorator';
+import {
+  AbsencePageResponseDto,
+  AbsenceResponseDto,
+  SyncResultResponseDto,
+} from './dto/absence-response.dto';
 
 @Controller('hauskreise/:hauskreisId/absences')
 export class AbsenceController {
@@ -36,6 +46,7 @@ export class AbsenceController {
 
   /** Everyone's, on purpose — who is away is what planning an evening needs. */
   @Get()
+  @ApiZodResponse(AbsencePageResponseDto)
   findAll(
     @Param() params: HauskreisParamsDto,
     @Query() query: ListAbsencesQueryDto,
@@ -44,12 +55,14 @@ export class AbsenceController {
   }
 
   @Get(':id')
+  @ApiZodResponse(AbsenceResponseDto)
   findOne(@Param() params: AbsenceParamsDto) {
     return this.absences.findOne(params.hauskreisId, params.id);
   }
 
   /** Without `personId` this records your own absence. */
   @Post()
+  @ApiZodResponse(AbsenceResponseDto, { status: 201 })
   async create(
     @Param() params: HauskreisParamsDto,
     @Body() dto: CreateAbsenceDto,
@@ -65,6 +78,8 @@ export class AbsenceController {
   }
 
   @Patch(':id')
+  @ApiZodResponse(AbsenceResponseDto)
+  @ApiConditionalWrite()
   async update(
     @Param() params: AbsenceParamsDto,
     @Body() dto: UpdateAbsenceDto,
@@ -83,6 +98,7 @@ export class AbsenceController {
   }
 
   @Delete(':id')
+  @ApiZodNoContent()
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param() params: AbsenceParamsDto,
@@ -103,6 +119,9 @@ export class AbsenceController {
    * newly created evening.
    */
   @Post('sync')
+  @ApiZodResponse(SyncResultResponseDto, {
+    description: 'Gleicht die abgeleiteten Absagen an die Zeitraeume an',
+  })
   @Roles(ROLE_ADMIN)
   @HttpCode(HttpStatus.OK)
   runSync(@Param() params: HauskreisParamsDto) {

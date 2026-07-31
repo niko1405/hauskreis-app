@@ -22,6 +22,7 @@ import { ROLE_ADMIN } from '../auth/auth.types';
 import { IfMatch } from '../common/http/if-match.decorator';
 import {
   ApiConditionalWrite,
+  ApiZodNoContent,
   ApiZodResponse,
 } from '../common/http/api-response.decorator';
 import {
@@ -83,6 +84,7 @@ export class PersonController {
   }
 
   @Delete(':id')
+  @ApiZodNoContent()
   @Roles(ROLE_ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param() params: PersonParamsDto) {

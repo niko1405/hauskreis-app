@@ -124,6 +124,40 @@ curl -s -X POST http://localhost:8080/realms/hauskreis/protocol/openid-connect/t
   -d username=testadmin -d password=test1234 -d grant_type=password
 ```
 
+## Die API beschrieben: OpenAPI
+
+```bash
+pnpm openapi        # -> openapi.json, 69 Operationen auf 44 Pfaden
+pnpm start:dev      # -> http://localhost:3000/api/docs zum Durchklicken
+```
+
+Die Datei wird **erzeugt, nicht gepflegt**. Anfragen, Parameter und Antworten
+stammen aus denselben Zod-Schemas, gegen die zur Laufzeit geprüft wird — eine
+Beschreibung, die man von Hand nachziehen müsste, wäre nach dem zweiten Feature
+falsch, und eine falsche Beschreibung ist schlimmer als gar keine.
+
+Die Antwort-Schemas **beschneiden** dabei: was nicht im Schema steht, verlässt
+den Server nicht, und passt eine Antwort nicht zu ihrem eigenen Schema, gibt es
+`500` statt einer stillen Lüge. Genau so ist beim Einbau aufgefallen, dass
+`GET /api/me` die `keycloakUserId` herausgab — `personSelect` deckte nur
+`findAll` und `findOne` ab, `/me`, `POST …/people` und der Invite gingen daran
+vorbei.
+
+**Warum ein eigener Interceptor statt `ZodResponse` aus nestjs-zod:** der prüft
+den Rückgabewert des Controllers, und der enthält echte `Date`-Objekte aus
+Prisma. Ein Schema, das ein `Date` annimmt, lässt sich aber nicht als JSON
+Schema ausdrücken — Zod 4 lehnt `z.date()` ebenso ab wie jedes `transform()`
+darauf, in beide Richtungen, und weder `.meta()` noch `z.custom()` retten das.
+Man müsste sich zwischen Laufzeitprüfung und brauchbarer Beschreibung
+entscheiden. `ResponseSerializerInterceptor` normalisiert deshalb erst über
+`JSON.parse(JSON.stringify())` — die Umwandlung, die Express ohnehin vornimmt —
+und prüft danach.
+
+Fürs Frontend gehört [`docs/api-fuer-frontend.md`](../docs/api-fuer-frontend.md)
+dazu: die Regeln, die für jeden Aufruf gelten und sich in OpenAPI schlecht
+ausdrücken lassen — Keycloak-PKCE, das `If-Match`-Protokoll, das Fehlerformat,
+und die Stellen, an denen Datumsfelder als Zeitstempel statt als Tag kommen.
+
 ## Endpunkte ausprobieren: Bruno
 
 Die komplette API liegt als [Bruno](https://www.usebruno.com/)-Collection im
