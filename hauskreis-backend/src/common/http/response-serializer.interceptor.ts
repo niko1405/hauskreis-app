@@ -20,8 +20,8 @@ export const RESPONSE_SCHEMA = 'hauskreis:response-schema';
  * **Warum nicht der `ZodSerializerInterceptor` aus nestjs-zod:** der ruft
  * `schema.parse()` auf dem Rückgabewert des Controllers auf, und der enthält
  * echte `Date`-Objekte aus Prisma. Ein Schema, das ein `Date` annimmt, lässt
- * sich aber nicht als JSON Schema ausdrücken — Zod 4 lehnt sowohl `z.date()`
- * als auch jedes `transform()` darauf ab. Man müsste sich zwischen einer
+ * sich aber nicht als JSON Schema ausdrücken — Zod 4 lehnt `z.date()` ab, und
+ * weder `.meta()` noch `z.custom()` retten das. Man müsste sich zwischen einer
  * Prüfung zur Laufzeit und einer brauchbaren OpenAPI-Beschreibung entscheiden.
  *
  * Dieser Interceptor führt die Antwort erst durch `JSON.parse(JSON.stringify())`

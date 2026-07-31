@@ -5708,7 +5708,8 @@
         "required": [
           "status",
           "database"
-        ]
+        ],
+        "additionalProperties": false
       },
       "ErrorDto": {
         "type": "object",
@@ -5778,7 +5779,8 @@
             "name",
             "createdAt",
             "version"
-          ]
+          ],
+          "additionalProperties": false
         }
       },
       "HauskreisResponseDto": {
@@ -5808,7 +5810,8 @@
           "name",
           "createdAt",
           "version"
-        ]
+        ],
+        "additionalProperties": false
       },
       "CreateHauskreisDto": {
         "type": "object",
@@ -5848,8 +5851,8 @@
             },
             "birthdate": {
               "type": "string",
-              "format": "date-time",
-              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
               "nullable": true
             },
             "playsInstrument": {
@@ -5890,7 +5893,8 @@
             "active",
             "createdAt",
             "version"
-          ]
+          ],
+          "additionalProperties": false
         }
       },
       "PersonResponseDto": {
@@ -5916,8 +5920,8 @@
           },
           "birthdate": {
             "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
             "nullable": true
           },
           "playsInstrument": {
@@ -5958,7 +5962,8 @@
           "active",
           "createdAt",
           "version"
-        ]
+        ],
+        "additionalProperties": false
       },
       "CreatePersonDto": {
         "type": "object",
@@ -6067,8 +6072,8 @@
           },
           "birthdate": {
             "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
             "nullable": true
           },
           "playsInstrument": {
@@ -6113,7 +6118,8 @@
           "createdAt",
           "version",
           "invitationEmailSent"
-        ]
+        ],
+        "additionalProperties": false
       },
       "UpdatePersonDto": {
         "type": "object",
@@ -6175,8 +6181,8 @@
           },
           "birthdate": {
             "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
             "nullable": true
           },
           "playsInstrument": {
@@ -6224,7 +6230,8 @@
           "createdAt",
           "version",
           "roles"
-        ]
+        ],
+        "additionalProperties": false
       },
       "LocationListResponseDto": {
         "type": "array",
@@ -6295,7 +6302,8 @@
             "active",
             "createdAt",
             "version"
-          ]
+          ],
+          "additionalProperties": false
         }
       },
       "LocationResponseDto": {
@@ -6365,7 +6373,8 @@
           "active",
           "createdAt",
           "version"
-        ]
+        ],
+        "additionalProperties": false
       },
       "CreateLocationDto": {
         "type": "object",
@@ -6481,8 +6490,8 @@
                 },
                 "date": {
                   "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                 },
                 "type": {
                   "type": "string",
@@ -6621,6 +6630,7 @@
                     "createdAt",
                     "version"
                   ],
+                  "additionalProperties": false,
                   "nullable": true
                 },
                 "host": {
@@ -6639,6 +6649,7 @@
                     "id",
                     "name"
                   ],
+                  "additionalProperties": false,
                   "nullable": true
                 },
                 "topic": {
@@ -6680,12 +6691,14 @@
                             "required": [
                               "id",
                               "name"
-                            ]
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
                           "person"
-                        ]
+                        ],
+                        "additionalProperties": false
                       }
                     }
                   },
@@ -6695,6 +6708,7 @@
                     "status",
                     "responsibles"
                   ],
+                  "additionalProperties": false,
                   "nullable": true
                 },
                 "attendances": {
@@ -6719,7 +6733,8 @@
                     "required": [
                       "personId",
                       "status"
-                    ]
+                    ],
+                    "additionalProperties": false
                   }
                 }
               },
@@ -6744,7 +6759,8 @@
                 "host",
                 "topic",
                 "attendances"
-              ]
+              ],
+              "additionalProperties": false
             }
           },
           "total": {
@@ -6773,7 +6789,8 @@
           "take",
           "skip",
           "hasMore"
-        ]
+        ],
+        "additionalProperties": false
       },
       "MeetingResponseDto": {
         "type": "object",
@@ -6790,8 +6807,8 @@
           },
           "date": {
             "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "type": {
             "type": "string",
@@ -6930,6 +6947,7 @@
               "createdAt",
               "version"
             ],
+            "additionalProperties": false,
             "nullable": true
           },
           "host": {
@@ -6948,6 +6966,7 @@
               "id",
               "name"
             ],
+            "additionalProperties": false,
             "nullable": true
           },
           "topic": {
@@ -6989,12 +7008,14 @@
                       "required": [
                         "id",
                         "name"
-                      ]
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
                     "person"
-                  ]
+                  ],
+                  "additionalProperties": false
                 }
               }
             },
@@ -7004,6 +7025,7 @@
               "status",
               "responsibles"
             ],
+            "additionalProperties": false,
             "nullable": true
           },
           "attendances": {
@@ -7028,7 +7050,8 @@
               "required": [
                 "personId",
                 "status"
-              ]
+              ],
+              "additionalProperties": false
             }
           }
         },
@@ -7053,7 +7076,8 @@
           "host",
           "topic",
           "attendances"
-        ]
+        ],
+        "additionalProperties": false
       },
       "HostSuggestionListResponseDto": {
         "type": "array",
@@ -7116,7 +7140,8 @@
                     "required": [
                       "role",
                       "date"
-                    ]
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "away": {
@@ -7200,7 +7225,8 @@
                     "daysSinceLastUse",
                     "expectedShare",
                     "actualShare"
-                  ]
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
@@ -7212,7 +7238,8 @@
                 "deferred",
                 "deferredReason",
                 "home"
-              ]
+              ],
+              "additionalProperties": false
             }
           },
           "required": [
@@ -7220,7 +7247,8 @@
             "name",
             "rank",
             "facts"
-          ]
+          ],
+          "additionalProperties": false
         }
       },
       "RoleSuggestionListResponseDto": {
@@ -7284,7 +7312,8 @@
                     "required": [
                       "role",
                       "date"
-                    ]
+                    ],
+                    "additionalProperties": false
                   }
                 }
               },
@@ -7293,7 +7322,8 @@
                 "daysSinceLastAssignment",
                 "timesAssigned",
                 "upcomingCommitments"
-              ]
+              ],
+              "additionalProperties": false
             }
           },
           "required": [
@@ -7301,7 +7331,8 @@
             "name",
             "rank",
             "facts"
-          ]
+          ],
+          "additionalProperties": false
         }
       },
       "CreateMeetingDto": {
@@ -7482,7 +7513,8 @@
           "status",
           "source",
           "updatedAt"
-        ]
+        ],
+        "additionalProperties": false
       },
       "GenerationResultResponseDto": {
         "type": "object",
@@ -7501,7 +7533,8 @@
         "required": [
           "created",
           "skipped"
-        ]
+        ],
+        "additionalProperties": false
       },
       "ReminderRunResultResponseDto": {
         "type": "object",
@@ -7520,7 +7553,8 @@
         "required": [
           "notified",
           "skipped"
-        ]
+        ],
+        "additionalProperties": false
       },
       "ActionstepRunResultResponseDto": {
         "type": "object",
@@ -7546,7 +7580,8 @@
           "notified",
           "skipped",
           "meetingId"
-        ]
+        ],
+        "additionalProperties": false
       },
       "NotificationSettingListResponseDto": {
         "type": "array",
@@ -7604,7 +7639,8 @@
                     "defaultLeadDays",
                     "minLeadDays",
                     "maxLeadDays"
-                  ]
+                  ],
+                  "additionalProperties": false
                 },
                 {
                   "type": "object",
@@ -7624,7 +7660,8 @@
                   "required": [
                     "kind",
                     "defaultWeekday"
-                  ]
+                  ],
+                  "additionalProperties": false
                 },
                 {
                   "type": "object",
@@ -7638,7 +7675,8 @@
                   },
                   "required": [
                     "kind"
-                  ]
+                  ],
+                  "additionalProperties": false
                 }
               ]
             },
@@ -7670,7 +7708,8 @@
             "leadDays",
             "weekday",
             "customised"
-          ]
+          ],
+          "additionalProperties": false
         }
       },
       "UpdateNotificationSettingDto": {
@@ -7747,7 +7786,8 @@
                   "defaultLeadDays",
                   "minLeadDays",
                   "maxLeadDays"
-                ]
+                ],
+                "additionalProperties": false
               },
               {
                 "type": "object",
@@ -7767,7 +7807,8 @@
                 "required": [
                   "kind",
                   "defaultWeekday"
-                ]
+                ],
+                "additionalProperties": false
               },
               {
                 "type": "object",
@@ -7781,7 +7822,8 @@
                 },
                 "required": [
                   "kind"
-                ]
+                ],
+                "additionalProperties": false
               }
             ]
           },
@@ -7813,7 +7855,8 @@
           "leadDays",
           "weekday",
           "customised"
-        ]
+        ],
+        "additionalProperties": false
       },
       "PushPublicKeyResponseDto": {
         "type": "object",
@@ -7829,7 +7872,8 @@
         "required": [
           "publicKey",
           "enabled"
-        ]
+        ],
+        "additionalProperties": false
       },
       "PushSubscriptionListResponseDto": {
         "type": "array",
@@ -7860,7 +7904,8 @@
             "endpoint",
             "userAgent",
             "createdAt"
-          ]
+          ],
+          "additionalProperties": false
         }
       },
       "CreatePushSubscriptionDto": {
@@ -7920,7 +7965,8 @@
           "endpoint",
           "userAgent",
           "createdAt"
-        ]
+        ],
+        "additionalProperties": false
       },
       "DeletePushSubscriptionDto": {
         "type": "object",
@@ -7957,7 +8003,8 @@
           "delivered",
           "pruned",
           "failed"
-        ]
+        ],
+        "additionalProperties": false
       },
       "TopicPageResponseDto": {
         "type": "object",
@@ -8023,12 +8070,14 @@
                         "required": [
                           "id",
                           "name"
-                        ]
+                        ],
+                        "additionalProperties": false
                       }
                     },
                     "required": [
                       "person"
-                    ]
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "meetings": {
@@ -8043,14 +8092,15 @@
                       },
                       "date": {
                         "type": "string",
-                        "format": "date-time",
-                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        "format": "date",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                       }
                     },
                     "required": [
                       "id",
                       "date"
-                    ]
+                    ],
+                    "additionalProperties": false
                   }
                 }
               },
@@ -8064,7 +8114,8 @@
                 "version",
                 "responsibles",
                 "meetings"
-              ]
+              ],
+              "additionalProperties": false
             }
           },
           "total": {
@@ -8093,7 +8144,8 @@
           "take",
           "skip",
           "hasMore"
-        ]
+        ],
+        "additionalProperties": false
       },
       "TopicResponseDto": {
         "type": "object",
@@ -8154,12 +8206,14 @@
                   "required": [
                     "id",
                     "name"
-                  ]
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
                 "person"
-              ]
+              ],
+              "additionalProperties": false
             }
           },
           "meetings": {
@@ -8174,14 +8228,15 @@
                 },
                 "date": {
                   "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                 }
               },
               "required": [
                 "id",
                 "date"
-              ]
+              ],
+              "additionalProperties": false
             }
           }
         },
@@ -8195,7 +8250,8 @@
           "version",
           "responsibles",
           "meetings"
-        ]
+        ],
+        "additionalProperties": false
       },
       "CreateTopicDto": {
         "type": "object",
@@ -8229,7 +8285,8 @@
         },
         "required": [
           "filled"
-        ]
+        ],
+        "additionalProperties": false
       },
       "UpdateTopicDto": {
         "type": "object",
@@ -8309,6 +8366,7 @@
                     "id",
                     "name"
                   ],
+                  "additionalProperties": false,
                   "nullable": true
                 },
                 "timesPlayed": {
@@ -8333,7 +8391,8 @@
                 "createdBy",
                 "timesPlayed",
                 "lastPlayedAt"
-              ]
+              ],
+              "additionalProperties": false
             }
           },
           "total": {
@@ -8362,7 +8421,8 @@
           "take",
           "skip",
           "hasMore"
-        ]
+        ],
+        "additionalProperties": false
       },
       "SongResponseDto": {
         "type": "object",
@@ -8410,6 +8470,7 @@
               "id",
               "name"
             ],
+            "additionalProperties": false,
             "nullable": true
           }
         },
@@ -8421,7 +8482,8 @@
           "createdAt",
           "version",
           "createdBy"
-        ]
+        ],
+        "additionalProperties": false
       },
       "CreateSongDto": {
         "type": "object",
@@ -8514,7 +8576,8 @@
                 "title",
                 "artist",
                 "lyricsUrl"
-              ]
+              ],
+              "additionalProperties": false
             },
             "suggestedBy": {
               "type": "object",
@@ -8532,6 +8595,7 @@
                 "id",
                 "name"
               ],
+              "additionalProperties": false,
               "nullable": true
             }
           },
@@ -8541,7 +8605,8 @@
             "createdAt",
             "song",
             "suggestedBy"
-          ]
+          ],
+          "additionalProperties": false
         }
       },
       "AddMeetingSongDto": {
@@ -8613,7 +8678,8 @@
               "title",
               "artist",
               "lyricsUrl"
-            ]
+            ],
+            "additionalProperties": false
           },
           "suggestedBy": {
             "type": "object",
@@ -8631,6 +8697,7 @@
               "id",
               "name"
             ],
+            "additionalProperties": false,
             "nullable": true
           }
         },
@@ -8640,7 +8707,8 @@
           "createdAt",
           "song",
           "suggestedBy"
-        ]
+        ],
+        "additionalProperties": false
       },
       "UpdateMeetingSongDto": {
         "type": "object",
@@ -8670,7 +8738,8 @@
           "required": [
             "id",
             "name"
-          ]
+          ],
+          "additionalProperties": false
         }
       },
       "SetSongLeadersDto": {
@@ -8730,14 +8799,16 @@
                     "required": [
                       "id",
                       "name"
-                    ]
+                    ],
+                    "additionalProperties": false
                   }
                 }
               },
               "required": [
                 "id",
                 "members"
-              ]
+              ],
+              "additionalProperties": false
             }
           }
         },
@@ -8745,7 +8816,8 @@
           "periodStart",
           "periodEnd",
           "groups"
-        ]
+        ],
+        "additionalProperties": false
       },
       "PrayerBuddyPageResponseDto": {
         "type": "object",
@@ -8792,14 +8864,16 @@
                           "required": [
                             "id",
                             "name"
-                          ]
+                          ],
+                          "additionalProperties": false
                         }
                       }
                     },
                     "required": [
                       "id",
                       "members"
-                    ]
+                    ],
+                    "additionalProperties": false
                   }
                 }
               },
@@ -8807,7 +8881,8 @@
                 "periodStart",
                 "periodEnd",
                 "groups"
-              ]
+              ],
+              "additionalProperties": false
             }
           },
           "total": {
@@ -8836,7 +8911,8 @@
           "take",
           "skip",
           "hasMore"
-        ]
+        ],
+        "additionalProperties": false
       },
       "PrayerBuddyConfigResponseDto": {
         "type": "object",
@@ -8888,6 +8964,7 @@
               "id",
               "name"
             ],
+            "additionalProperties": false,
             "nullable": true
           }
         },
@@ -8899,7 +8976,8 @@
           "updatedAt",
           "version",
           "updatedBy"
-        ]
+        ],
+        "additionalProperties": false
       },
       "UpdateCycleConfigDto": {
         "type": "object",
@@ -8966,14 +9044,16 @@
                         "required": [
                           "id",
                           "name"
-                        ]
+                        ],
+                        "additionalProperties": false
                       }
                     }
                   },
                   "required": [
                     "id",
                     "members"
-                  ]
+                  ],
+                  "additionalProperties": false
                 }
               }
             },
@@ -8982,6 +9062,7 @@
               "periodEnd",
               "groups"
             ],
+            "additionalProperties": false,
             "nullable": true
           },
           "created": {
@@ -8997,7 +9078,8 @@
           "assignment",
           "created",
           "notified"
-        ]
+        ],
+        "additionalProperties": false
       },
       "AbsencePageResponseDto": {
         "type": "object",
@@ -9024,13 +9106,13 @@
                 },
                 "startDate": {
                   "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                 },
                 "endDate": {
                   "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                 },
                 "reason": {
                   "type": "string",
@@ -9061,7 +9143,8 @@
                   "required": [
                     "id",
                     "name"
-                  ]
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
@@ -9074,7 +9157,8 @@
                 "createdAt",
                 "version",
                 "person"
-              ]
+              ],
+              "additionalProperties": false
             }
           },
           "total": {
@@ -9103,7 +9187,8 @@
           "take",
           "skip",
           "hasMore"
-        ]
+        ],
+        "additionalProperties": false
       },
       "AbsenceResponseDto": {
         "type": "object",
@@ -9125,13 +9210,13 @@
           },
           "startDate": {
             "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "endDate": {
             "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "reason": {
             "type": "string",
@@ -9162,7 +9247,8 @@
             "required": [
               "id",
               "name"
-            ]
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -9175,7 +9261,8 @@
           "createdAt",
           "version",
           "person"
-        ]
+        ],
+        "additionalProperties": false
       },
       "CreateAbsenceDto": {
         "type": "object",
@@ -9247,7 +9334,8 @@
         "required": [
           "declined",
           "withdrawn"
-        ]
+        ],
+        "additionalProperties": false
       },
       "ArchiveSummaryResponseDto": {
         "type": "object",
@@ -9271,7 +9359,8 @@
               "required": [
                 "year",
                 "meetings"
-              ]
+              ],
+              "additionalProperties": false
             }
           },
           "totals": {
@@ -9303,7 +9392,8 @@
               "topics",
               "songs",
               "songsPlayed"
-            ]
+            ],
+            "additionalProperties": false
           },
           "firstMeetingDate": {
             "type": "string",
@@ -9316,7 +9406,8 @@
           "years",
           "totals",
           "firstMeetingDate"
-        ]
+        ],
+        "additionalProperties": false
       },
       "AssignmentListResponseDto": {
         "type": "object",
@@ -9361,7 +9452,8 @@
                   "required": [
                     "id",
                     "name"
-                  ]
+                  ],
+                  "additionalProperties": false
                 },
                 "meetingId": {
                   "type": "string",
@@ -9388,13 +9480,15 @@
                 "meetingId",
                 "groupId",
                 "label"
-              ]
+              ],
+              "additionalProperties": false
             }
           }
         },
         "required": [
           "items"
-        ]
+        ],
+        "additionalProperties": false
       },
       "HomeScreenResponseDto": {
         "type": "object",
@@ -9455,6 +9549,7 @@
                   "longitude",
                   "address"
                 ],
+                "additionalProperties": false,
                 "nullable": true
               },
               "host": {
@@ -9473,6 +9568,7 @@
                   "id",
                   "name"
                 ],
+                "additionalProperties": false,
                 "nullable": true
               },
               "topic": {
@@ -9492,6 +9588,7 @@
                   "id",
                   "title"
                 ],
+                "additionalProperties": false,
                 "nullable": true
               },
               "myAttendance": {
@@ -9513,6 +9610,7 @@
               "topic",
               "myAttendance"
             ],
+            "additionalProperties": false,
             "nullable": true
           },
           "myRoles": {
@@ -9555,7 +9653,8 @@
                   "required": [
                     "id",
                     "name"
-                  ]
+                  ],
+                  "additionalProperties": false
                 },
                 "meetingId": {
                   "type": "string",
@@ -9582,7 +9681,8 @@
                 "meetingId",
                 "groupId",
                 "label"
-              ]
+              ],
+              "additionalProperties": false
             }
           },
           "openActionstep": {
@@ -9607,6 +9707,7 @@
               "meetingId",
               "date"
             ],
+            "additionalProperties": false,
             "nullable": true
           },
           "prayerBuddies": {
@@ -9628,6 +9729,7 @@
               "until",
               "withNames"
             ],
+            "additionalProperties": false,
             "nullable": true
           }
         },
@@ -9636,7 +9738,8 @@
           "myRoles",
           "openActionstep",
           "prayerBuddies"
-        ]
+        ],
+        "additionalProperties": false
       }
     }
   }

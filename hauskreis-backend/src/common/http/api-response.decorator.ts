@@ -15,6 +15,39 @@ import type { ZodDto } from 'nestjs-zod';
  * Die Fehlerantworten hängen mit dran, weil sie für *jede* Route dieselben sind
  * und ein Frontend sie kennen muss, um sinnvoll zu reagieren.
  */
+const outputDtos = new WeakMap<ZodDto, ZodDto>();
+
+/**
+ * Die Ausgabe-Seite eines DTOs, unter dem Namen des DTOs selbst.
+ *
+ * **Warum überhaupt:** `nestjs-zod` beschreibt ein DTO standardmäßig aus seiner
+ * *Eingabe*-Seite. Bei `isoDateOut` ist das ein Oder aus Tag und Zeitstempel —
+ * was der Server annimmt, nicht was er liefert. Für eine Antwort ist die
+ * Ausgabe-Seite die richtige, dort steht schlicht `format: date`.
+ *
+ * **Warum umbenannt:** `dto.Output` heißt von Haus aus `…Dto_Output`, und
+ * dieser Name landet als Schema-Name in der Datei und damit in jedem erzeugten
+ * Client. Da unsere Antwort-DTOs ohnehin eigene Klassen sind und nie zugleich
+ * als Anfrage-Rumpf dienen, kann der Name so bleiben, wie er hier heißt.
+ *
+ * **Warum gemerkt:** `dto.Output` ist ein Getter, der bei jedem Zugriff eine
+ * neue Klasse baut. Ohne die WeakMap bekäme jede Route ihre eigene Klasse
+ * gleichen Namens, und Swagger müsste sie alle wieder zusammenführen.
+ */
+function outputDto(dto: ZodDto): ZodDto {
+  const cached = outputDtos.get(dto);
+  if (cached) {
+    return cached;
+  }
+
+  const output = dto.Output;
+  Object.defineProperty(output, 'name', {
+    value: (dto as unknown as { name: string }).name,
+  });
+  outputDtos.set(dto, output);
+  return output;
+}
+
 export function ApiZodResponse(
   dto: ZodDto,
   options: { status?: number; description?: string } = {},
@@ -23,7 +56,11 @@ export function ApiZodResponse(
 
   return applyDecorators(
     SetMetadata(RESPONSE_SCHEMA, dto.schema),
-    ApiResponse({ status, description: options.description ?? '', type: dto }),
+    ApiResponse({
+      status,
+      description: options.description ?? '',
+      type: outputDto(dto),
+    }),
     ApiResponse({
       status: 400,
       description: 'Eingabe passt nicht zum Schema — `errors` nennt die Felder',

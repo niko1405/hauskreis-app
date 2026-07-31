@@ -1,6 +1,7 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import {
+  isoDateOut,
   isoDateTimeOut,
   pageSchema,
   personRefSchema,
@@ -19,12 +20,11 @@ export const absenceResponseSchema = z.object({
   id: z.uuid(),
   hauskreisId: z.uuid(),
   personId: z.uuid(),
-  /// `@db.Date`-Spalten, aber Prisma liefert volle Zeitstempel — für die
-  /// Anzeige nur den Datumsteil nehmen.
-  startDate: isoDateTimeOut,
+  /// Beide nur der Tag, ohne Uhrzeit.
+  startDate: isoDateOut,
   /// Einschließlich: „bis 24." deckt den 24. mit ab. Eine eintägige
   /// Abwesenheit trägt auf beiden Seiten dasselbe Datum.
-  endDate: isoDateTimeOut,
+  endDate: isoDateOut,
   reason: z.string().nullable(),
   createdAt: isoDateTimeOut,
   version: z.number().int().nonnegative(),

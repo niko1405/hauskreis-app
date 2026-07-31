@@ -1,6 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import { isoDateTimeOut } from '../../common/dto/response';
+import { isoDateOut, isoDateTimeOut } from '../../common/dto/response';
 
 /**
  * Eine Person, wie sie die Gruppe sieht.
@@ -19,9 +19,8 @@ export const personResponseSchema = z.object({
   hauskreisId: z.uuid(),
   name: z.string(),
   email: z.email(),
-  /// Nur der Tag zählt, aber Prisma liefert einen Zeitstempel — so geht er auch
-  /// über die Leitung. Für die Anzeige interessiert nur der Datumsteil.
-  birthdate: isoDateTimeOut.nullable(),
+  /// Nur der Tag, ohne Uhrzeit — ein Geburtstag hat keine.
+  birthdate: isoDateOut.nullable(),
   playsInstrument: z.boolean(),
   canHost: z.boolean(),
   /// Das Zuhause, das diese Person in die Host-Rotation einbringt. `null` heißt

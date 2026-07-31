@@ -146,17 +146,31 @@ vorbei.
 **Warum ein eigener Interceptor statt `ZodResponse` aus nestjs-zod:** der prüft
 den Rückgabewert des Controllers, und der enthält echte `Date`-Objekte aus
 Prisma. Ein Schema, das ein `Date` annimmt, lässt sich aber nicht als JSON
-Schema ausdrücken — Zod 4 lehnt `z.date()` ebenso ab wie jedes `transform()`
-darauf, in beide Richtungen, und weder `.meta()` noch `z.custom()` retten das.
-Man müsste sich zwischen Laufzeitprüfung und brauchbarer Beschreibung
-entscheiden. `ResponseSerializerInterceptor` normalisiert deshalb erst über
-`JSON.parse(JSON.stringify())` — die Umwandlung, die Express ohnehin vornimmt —
-und prüft danach.
+Schema ausdrücken — Zod 4 lehnt `z.date()` ab, und weder `.meta()` noch
+`z.custom()` retten das. Man müsste sich zwischen Laufzeitprüfung und
+brauchbarer Beschreibung entscheiden. `ResponseSerializerInterceptor`
+normalisiert deshalb erst über `JSON.parse(JSON.stringify())` — die Umwandlung,
+die Express ohnehin vornimmt — und prüft danach.
+
+**Tage und Zeitpunkte.** Die `@db.Date`-Spalten haben in der Datenbank keine
+Uhrzeit, Prisma gibt sie trotzdem als `DateTime` zurück, und über `JSON` wurde
+daraus ein UTC-Mitternachts-Zeitstempel. Wer den lokal formatiert, bekommt
+westlich von UTC den Vortag — ein Fehler, der nur in einem Teil der Welt
+auftritt. `isoDateOut` in [`src/common/dto/response.ts`](src/common/dto/response.ts)
+schneidet ihn deshalb ab, statt ihn zu dokumentieren: es nimmt beide Formen an
+und liefert immer `YYYY-MM-DD`.
+
+Das ist ein `transform()`, dessen Ausgabeseite für sich genommen nicht
+beschreibbar wäre — deshalb das `.pipe()` zurück auf `z.iso.date()`. Und
+deshalb setzt `ApiZodResponse` `dto.Output` statt `dto`: `nestjs-zod`
+beschreibt ein DTO sonst aus seiner _Eingabe_-Seite, und das wäre bei einer
+Antwort die falsche. So steht in der Datei `format: date`, nicht ein Oder aus
+beiden Eingabeformen.
 
 Fürs Frontend gehört [`docs/api-fuer-frontend.md`](../docs/api-fuer-frontend.md)
 dazu: die Regeln, die für jeden Aufruf gelten und sich in OpenAPI schlecht
-ausdrücken lassen — Keycloak-PKCE, das `If-Match`-Protokoll, das Fehlerformat,
-und die Stellen, an denen Datumsfelder als Zeitstempel statt als Tag kommen.
+ausdrücken lassen — Keycloak-PKCE, das `If-Match`-Protokoll, das Fehlerformat
+und die Trennung von Tag und Zeitpunkt.
 
 ## Endpunkte ausprobieren: Bruno
 

@@ -150,25 +150,30 @@ begrenzt ist.
 
 ---
 
-## 6. Datumsfelder — eine Unebenheit
+## 6. Datumsfelder
 
-Hier ist die API **nicht einheitlich**, und das muss man wissen, sonst rutschen
-Tage um eins:
+Zwei Sorten, sauber getrennt — man erkennt sie am Namen:
 
-| Feld                                                                       | Form               | Beispiel                   |
-| -------------------------------------------------------------------------- | ------------------ | -------------------------- |
-| `meeting.date`, `absence.startDate`/`endDate`, `topic.meetings[].date`     | voller Zeitstempel | `2026-08-11T00:00:00.000Z` |
-| `/home` → `nextMeeting.date`, `openActionstep.date`, `prayerBuddies.until` | nur der Tag        | `2026-08-11`               |
-| `/assignments` → `date`, `endDate`                                         | nur der Tag        | `2026-08-11`               |
-| Gebetsbuddy-Zeiträume, `song.lastPlayedAt`, `archive.firstMeetingDate`     | nur der Tag        | `2026-08-11`               |
+| Sorte              | Form                       | Felder                                                                                                                                                            |
+| ------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tag**, ohne Zeit | `2026-08-11`               | `meeting.date`, `absence.startDate`/`endDate`, `person.birthdate`, Gebetsbuddy-Zeiträume, `/home`, `/assignments`, `song.lastPlayedAt`, die Fakten der Vorschläge |
+| **Zeitpunkt**, mit | `2026-07-31T21:46:43.444Z` | ausschließlich `createdAt`, `updatedAt`, `sentAt`                                                                                                                 |
 
-Die Zeitstempel kommen direkt aus Prisma: die Spalten sind `@db.Date`, der
-Client liefert trotzdem ein volles `DateTime`. **Nie `new Date(…)` darauf
-loslassen und dann lokal formatieren** — in Zeitzonen westlich von UTC wird
-daraus der Vortag. Die ersten zehn Zeichen nehmen.
+In OpenAPI stehen sie als `format: date` und `format: date-time` — daran kann
+ein erzeugter Client sie unterscheiden.
 
-Umgekehrt erwarten alle Datumsfelder **in Anfragen** ausschließlich
-`YYYY-MM-DD`. Ein voller Zeitstempel wird abgelehnt (`400`).
+**Ein Tag ist kein Zeitpunkt, und `new Date('2026-08-11')` macht einen daraus:**
+JavaScript liest die Kurzform als UTC-Mitternacht, und lokal formatiert wird
+daraus westlich von UTC der **10. August**. Für die Anzeige den String
+zerlegen, oder mit `new Date(2026, 7, 11)` einen lokalen Tag bauen.
+
+In **Anfragen** gilt dasselbe Format: `YYYY-MM-DD`, ein voller Zeitstempel wird
+abgelehnt (`400`). Ein Tag, den man schickt, kommt genau so zurück.
+
+> Bis Juli 2026 gaben `meeting.date`, `absence.startDate`/`endDate`,
+> `topic.meetings[].date` und `person.birthdate` volle Zeitstempel heraus, weil
+> Prisma `@db.Date`-Spalten als `DateTime` liefert. Das ist behoben; wer gegen
+> die alte Form gebaut hat, kann das Abschneiden entfernen.
 
 ---
 

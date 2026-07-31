@@ -2,6 +2,7 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import { TopicStatus } from '../../../generated/prisma/enums';
 import {
+  isoDateOut,
   isoDateTimeOut,
   pageSchema,
   personRefSchema,
@@ -28,8 +29,7 @@ export const topicResponseSchema = z.object({
   /// Eine oder zwei Personen bereiten vor.
   responsibles: z.array(z.object({ person: personRefSchema })),
   /// Chronologisch, damit „seit wann läuft das" ablesbar ist.
-  /// Zeitstempel, nicht nur der Tag — siehe die Anmerkung am Termin selbst.
-  meetings: z.array(z.object({ id: z.uuid(), date: isoDateTimeOut })),
+  meetings: z.array(z.object({ id: z.uuid(), date: isoDateOut })),
 });
 
 /** Wie viele Termine das laufende Thema uebernommen haben. */

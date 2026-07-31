@@ -11,8 +11,32 @@ import { z } from 'zod';
  * zugleich die Gefahr: ein vergessenes Feld fehlt ab sofort in der Antwort.
  */
 
-/** Datum ohne Uhrzeit, so wie es über die Leitung geht. */
-export const isoDateOut = z.iso.date();
+/** Ein Kalendertag, `YYYY-MM-DD`. */
+const isoDay = z.iso.date();
+
+/**
+ * Ein Kalendertag — **immer** `2026-08-11`, nie `2026-08-11T00:00:00.000Z`.
+ *
+ * Die `@db.Date`-Spalten (`meeting.date`, `absence.startDate`/`endDate`,
+ * `person.birthdate`, die Gebetsbuddy-Zeiträume) haben in der Datenbank gar
+ * keine Uhrzeit, aber Prisma gibt sie als volles `DateTime` zurück, und über
+ * `JSON.stringify` wurde daraus ein UTC-Mitternachts-Zeitstempel. Wer den mit
+ * `new Date(…)` einliest und lokal formatiert, bekommt westlich von UTC den
+ * **Vortag** — ein Fehler, der nur in einem Teil der Welt auftritt und deshalb
+ * spät auffällt.
+ *
+ * Deshalb schneidet dieses Schema den Zeitanteil ab, statt ihn nur zu
+ * dokumentieren. Es nimmt beide Formen an — der eine Dienst schneidet selbst
+ * zu, der andere reicht Prisma durch — und liefert immer dieselbe.
+ *
+ * Der `.pipe()` am Ende ist kein Zierrat: er macht das Ergebnis wieder zu einem
+ * beschreibbaren Schema, sodass in OpenAPI `format: date` steht und nicht das
+ * Oder aus beiden Eingabeformen.
+ */
+export const isoDateOut = z
+  .union([isoDay, z.iso.datetime({ offset: true })])
+  .transform((value) => value.slice(0, 10))
+  .pipe(isoDay);
 
 /** Zeitpunkt mit Uhrzeit, etwa `createdAt`. */
 export const isoDateTimeOut = z.iso.datetime();

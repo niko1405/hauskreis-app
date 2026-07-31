@@ -8,6 +8,7 @@ import {
   TopicStatus,
 } from '../../../generated/prisma/enums';
 import {
+  isoDateOut,
   isoDateTimeOut,
   pageSchema,
   personRefSchema,
@@ -25,11 +26,9 @@ import { locationResponseSchema } from '../../location/dto/location-response.dto
 export const meetingResponseSchema = z.object({
   id: z.uuid(),
   hauskreisId: z.uuid(),
-  /// Achtung: eine `@db.Date`-Spalte, aber Prisma liefert einen vollen
-  /// Zeitstempel, und so geht sie auch hinaus — `2026-08-11T00:00:00.000Z`.
-  /// Für die Anzeige nur den Datumsteil nehmen, sonst rutscht der Tag in
-  /// westlichen Zeitzonen um eins zurück.
-  date: isoDateTimeOut,
+  /// Der Abend selbst — nur der Tag, `2026-08-11`, ohne Uhrzeit und ohne
+  /// Zeitzone. Der Hauskreis ist dienstags, eine Uhrzeit gibt es nicht.
+  date: isoDateOut,
   /// `STANDARD` hat ein Thema, `LOBPREIS_GEBET` stattdessen ein Testimony oder
   /// nur Lieder, `CUSTOM` muss gar nichts erfüllen („Geburtstag von …").
   type: z.enum(MeetingType),
