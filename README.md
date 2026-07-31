@@ -8,9 +8,9 @@ Ein Repo, zwei eigenständige Anwendungen:
 
 | Ordner | Was | Stand |
 |---|---|---|
-| [`hauskreis-backend/`](hauskreis-backend/) | NestJS 11 + Prisma 7 + Postgres 17, Auth über Keycloak | fertig, ~55 Endpunkte |
+| [`hauskreis-backend/`](hauskreis-backend/) | NestJS 11 + Prisma 7 + Postgres 17, Auth über Keycloak | fertig, 69 Endpunkte |
 | [`hauskreis-frontend/`](hauskreis-frontend/) | Next.js-PWA | leer, kommt als Nächstes |
-| [`bruno/`](bruno/) | API-Collection für beide — 79 Requests, läuft von oben nach unten durch | fertig |
+| [`bruno/`](bruno/) | API-Collection für beide — 82 Requests, läuft von oben nach unten durch | fertig |
 | [`docs/`](docs/) | Entwurfsdokumente, historisch | — |
 
 ## Warum kein pnpm-Workspace

@@ -35,6 +35,9 @@ export class LocationService {
         hostWeight: dto.hostWeight,
         capacity: dto.capacity ?? null,
         requiresHost: dto.requiresHost,
+        latitude: dto.latitude ?? null,
+        longitude: dto.longitude ?? null,
+        address: dto.address ?? null,
       },
     });
   }
@@ -56,6 +59,11 @@ export class LocationService {
             // `undefined` leaves it alone, `null` removes the limit.
             capacity: dto.capacity,
             requiresHost: dto.requiresHost,
+            // Ebenso: `null` löscht die Position wieder. Das DTO stellt sicher,
+            // dass Breite und Länge nur gemeinsam ankommen.
+            latitude: dto.latitude,
+            longitude: dto.longitude,
+            address: dto.address,
             active: dto.active,
             version: { increment: 1 },
           },

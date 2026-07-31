@@ -1,0 +1,52 @@
+meta {
+  name: Koordinaten setzen
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/locations/{{locationId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{locationEtag}}
+}
+
+body:json {
+  {
+    "latitude": 48.7758,
+    "longitude": 9.1829,
+    "address": "Königstraße 1, 70173 Stuttgart"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("locationEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("gibt die Position zurück", function () {
+    expect(res.body.latitude).to.equal(48.7758);
+    expect(res.body.longitude).to.equal(9.1829);
+    expect(res.body.address).to.be.a("string");
+  });
+
+  test("liefert Zahlen, keine Strings", function () {
+    // Float statt Decimal im Schema — sonst käme hier "48.7758" an und das
+    // Frontend müsste vor jedem Karten-Link parsen.
+    expect(res.body.latitude).to.be.a("number");
+  });
+}
+
+docs {
+  Braucht {{locationEtag}} aus "Location einzeln" davor.
+
+  Die Position ist optional, aber nur ganz oder gar nicht: siehe
+  "Koordinaten nur halb" in 99-edge-cases.
+}

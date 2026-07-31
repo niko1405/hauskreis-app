@@ -15,7 +15,18 @@ export interface HomeScreen {
     date: string;
     type: string;
     title: string | null;
-    location: { id: string; name: string } | null;
+    /**
+     * Mit Position, damit der Home-Screen ein „In Maps öffnen" anbieten kann,
+     * ohne den Ort einzeln nachzuladen. `latitude`/`longitude` sind entweder
+     * beide gesetzt oder beide null — das erzwingt schon das Location-DTO.
+     */
+    location: {
+      id: string;
+      name: string;
+      latitude: number | null;
+      longitude: number | null;
+      address: string | null;
+    } | null;
     host: { id: string; name: string } | null;
     topic: { id: string; title: string | null } | null;
     /** What *you* answered for that evening. */
@@ -70,7 +81,15 @@ export class DashboardService {
           date: true,
           type: true,
           title: true,
-          location: { select: { id: true, name: true } },
+          location: {
+            select: {
+              id: true,
+              name: true,
+              latitude: true,
+              longitude: true,
+              address: true,
+            },
+          },
           host: { select: { id: true, name: true } },
           topic: { select: { id: true, title: true } },
           attendances: {

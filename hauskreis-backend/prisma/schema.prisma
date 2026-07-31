@@ -172,6 +172,20 @@ model Location {
   /// outside the fairness ranking entirely: they are a weather-dependent option,
   /// not somewhere that is ever "owed" a turn.
   requiresHost Boolean  @default(true) @map("requires_host")
+  /// Wo das ist — für „In Maps öffnen" im Frontend.
+  ///
+  /// Beide Werte oder keiner: eine Länge ohne Breite zeigt auf nichts. Die
+  /// Prüfung sitzt im DTO, weil Prisma keine feldübergreifende Bedingung kennt.
+  ///
+  /// Float statt Decimal, wie schon bei `hostWeight`: Decimal serialisiert als
+  /// String und zwänge das Frontend zum Parsen, bevor es die Zahl in eine
+  /// Karten-URL schreiben kann. Ein Double trifft Koordinaten auf rund
+  /// zehn Nanometer genau — für ein Wohnzimmer reichlich.
+  latitude     Float?   @map("latitude")
+  longitude    Float?   @map("longitude")
+  /// Optionale Anschrift. Nicht aus den Koordinaten ableitbar und umgekehrt:
+  /// zum Navigieren ist der Punkt genauer, zum Vorlesen am Telefon die Adresse.
+  address      String?  @map("address")
   active       Boolean  @default(true)
   createdAt    DateTime @default(now()) @map("created_at")
   /// Optimistic locking counter, see docs/conditional requests.

@@ -42,6 +42,38 @@ pnpm start:dev
 | Keycloak-Admin                   | <http://localhost:8080> (`admin` / `admin`) |
 | Mailpit (alle ausgehenden Mails) | <http://localhost:8025>                     |
 
+### Start und Ende
+
+Beim Start fasst ein Banner zusammen, was man sonst zusammensuchen müsste:
+Adresse und Health-URL, System und Node-Version, die Keycloak-Adresse samt
+Realm, die erlaubten CORS-Origins, ob Push aktiv ist, und die Routen nach
+Gruppen gezählt.
+
+Die Routen kommen aus Nests eigenen Metadaten über `ModulesContainer`, nicht
+aus dem Express-Router: `express` ist nur eine transitive Abhängigkeit des
+Plattform-Adapters und war im Produktions-Image schon einmal nicht auflösbar.
+
+Dafür sind Nests eigene Start-Meldungen (`RoutesResolver`, `RouterExplorer`,
+`InstanceLoader`) auf `log`-Ebene stummgeschaltet — 110 Zeilen „Mapped {…}
+route" bei jedem Neustart, die der Banner in vier Zeilen zusammenfasst.
+`warn` und `error` kommen immer durch, eine fehlende VAPID-Konfiguration
+verschwindet also nicht. Das ist nicht nur Geschmack: der Banner geht direkt
+über `process.stdout.write` hinaus, pino in der Entwicklung über einen
+`pino-pretty`-Worker-Thread. Die beiden Ströme lassen sich nicht ordnen, und
+der Banner landete zuverlässig **vor** den Routen-Zeilen — also sofort
+weggescrollt. Ohne das Geplauder streitet nichts mehr um die Reihenfolge.
+
+**Strg+C** (und `docker stop`) fährt geordnet herunter: `app.close()` führt die
+Lifecycle-Hooks aus, `PrismaService.onModuleDestroy` schließt den Pool, und
+zwei Logzeilen sagen, dass es passiert ist. Exit-Code 0, weil das Beenden
+beabsichtigt war.
+
+Bewusst eigene Handler statt `app.enableShutdownHooks()`: das registriert
+dieselben Signale, nur ohne Ausgabe und ohne Zeitlimit. Man sah nicht, ob die
+Verbindungen wirklich zu waren — und hing `close()` an einer offenen
+Keep-Alive-Verbindung, blieb der Prozess still stehen. Jetzt greift nach
+10 Sekunden ein Zeitlimit, und ein zweites Strg+C beendet sofort.
+
 ### Test-Accounts
 
 Vom Setup-Skript angelegt (Passwort jeweils `test1234`):
@@ -66,7 +98,7 @@ curl -s -X POST http://localhost:8080/realms/hauskreis/protocol/openid-connect/t
 ## Endpunkte ausprobieren: Bruno
 
 Die komplette API liegt als [Bruno](https://www.usebruno.com/)-Collection im
-Repo, unter [`../bruno/`](../bruno/). 79 Requests, die **von oben nach unten
+Repo, unter [`../bruno/`](../bruno/). 82 Requests, die **von oben nach unten
 durchlaufen**: `00-auth` holt das Token, die Listen-Requests merken sich IDs und
 ETags als Environment-Variablen, alles Weitere greift darauf zu. Keine UUIDs zum
 Abtippen.
@@ -650,6 +682,27 @@ Orte **ohne** Host (Schlosspark) sind gar nicht Teil davon. Sie schulden der
 Gruppe nichts, sondern sind eine Wetterfrage — und werden schlicht aus
 `…/locations` ausgewählt.
 
+### Wo der Ort liegt
+
+Ein Ort trägt optional `latitude`, `longitude` und `address` — genug für ein
+„In Maps öffnen" im Frontend, ohne dass das Backend eine Karten-URL bauen und
+sich damit auf einen Anbieter festlegen müsste.
+
+**Beide Koordinaten oder keine.** Eine Breite ohne Länge zeigt auf nichts; das
+Frontend könnte daraus keinen Link bauen und müsste den halben Zustand trotzdem
+behandeln. Das DTO lehnt ihn deshalb mit `400` ab, in beide Richtungen — auch
+das Löschen nur einer Hälfte. Prisma kennt keine feldübergreifende Bedingung,
+also sitzt die Regel im Schema von Zod, nicht in der Datenbank.
+
+`Float`, nicht `Decimal`, aus demselben Grund wie bei `hostWeight`: `Decimal`
+serialisiert als String und zwänge das Frontend zum Parsen, bevor es die Zahl
+in eine URL schreiben kann. Ein Double trifft Koordinaten auf etwa zehn
+Nanometer genau — für ein Wohnzimmer reichlich.
+
+Die Adresse ist keine Ableitung der Koordinaten und umgekehrt: zum Navigieren
+ist der Punkt genauer, zum Vorlesen am Telefon die Anschrift. Der Home-Screen
+liefert alle drei Felder im Kontext des nächsten Treffens gleich mit.
+
 ### Wie das Zuhause bestimmt wird: ein Guthaben
 
 Statt All-Time-Anteile zu vergleichen, spielt die Logik die Historie Abend für
@@ -1183,6 +1236,22 @@ nächster Termin mit Ort, Host, Thema und eigenem Teilnahmestatus, eigene Rollen
 der nächsten acht Wochen, offener Actionstep, aktuelle Gebetsbuddys. Auf dem
 Handy sind die Round Trips der Preis. Neue Logik entsteht dabei nicht — der
 Actionstep folgt derselben Regel wie der Reminder.
+
+Der Ort kommt **mit Position** heraus, damit der Home-Screen ein „In Maps
+öffnen" anbieten kann, ohne den Ort einzeln nachzuladen:
+
+```jsonc
+"location": {
+  "id": "…", "name": "Bei Sofie",
+  "latitude": 48.7758, "longitude": 9.1829,
+  "address": "Königstraße 1, 70173 Stuttgart"
+}
+```
+
+Alle drei Felder sind optional. `latitude` und `longitude` sind entweder beide
+gesetzt oder beide `null` — das erzwingt das Location-DTO, siehe unten. Die
+Adresse ist unabhängig davon: zum Navigieren ist der Punkt genauer, zum
+Vorlesen am Telefon die Anschrift.
 
 ## Paginierte Listen
 

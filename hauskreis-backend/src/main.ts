@@ -5,13 +5,24 @@ import helmet from 'helmet';
 import compression from 'compression';
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/config.service';
+import { installShutdownHandlers } from './common/bootstrap/shutdown';
+import { collectRoutes, groupRoutes } from './common/bootstrap/routes';
+import { renderBanner } from './common/bootstrap/banner';
+import { appVersion } from './common/bootstrap/version';
+import { QuietBootstrapLogger } from './common/bootstrap/quiet-logger';
+
+const GLOBAL_PREFIX = 'api';
+const BIND_HOST = '0.0.0.0';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
   });
 
-  app.useLogger(app.get(Logger));
+  const logger = app.get(Logger);
+  // Nests Routen-Geplauder unterdrücken — der Banner fasst es zusammen, und
+  // ohne es streitet nichts mehr mit ihm um die Reihenfolge der Ausgabe.
+  app.useLogger(new QuietBootstrapLogger(logger));
 
   const config = app.get(AppConfigService);
   const corsOrigins = config.get('CORS_ORIGINS');
@@ -36,8 +47,8 @@ async function bootstrap(): Promise<void> {
     // no `If-Match`, and every PATCH from the app would come back 428.
     exposedHeaders: ['ETag'],
   });
-  app.setGlobalPrefix('api');
-  app.enableShutdownHooks();
+  app.setGlobalPrefix(GLOBAL_PREFIX);
+  installShutdownHandlers(app, logger);
 
   // Die Adresse ist nicht optional, auch wenn der Default meistens reicht.
   // Ohne sie bindet Node dual-stack auf `::`. Im Container ist das in Ordnung,
@@ -45,7 +56,32 @@ async function bootstrap(): Promise<void> {
   // `[::1]`, und jeder Client, der `localhost` auf IPv4 auflöst — Bruno tut das —
   // läuft in ECONNREFUSED auf 127.0.0.1. Explizit auf 0.0.0.0 zu binden ist
   // ohnehin das, was eine containerisierte App tun soll.
-  await app.listen(config.get('PORT'), '0.0.0.0');
+  const port = config.get('PORT');
+  await app.listen(port, BIND_HOST);
+
+  // Erst nach `listen`, damit der Banner nicht behauptet, es liefe etwas, das
+  // gleich noch an einem belegten Port scheitert.
+  const routes = collectRoutes(app, GLOBAL_PREFIX);
+  process.stdout.write(
+    renderBanner(
+      {
+        version: appVersion(),
+        environment: config.get('NODE_ENV'),
+        host: BIND_HOST,
+        port,
+        globalPrefix: `/${GLOBAL_PREFIX}`,
+        keycloakUrl: config.get('KEYCLOAK_URL'),
+        keycloakRealm: config.get('KEYCLOAK_REALM'),
+        corsOrigins,
+        pushEnabled: Boolean(
+          config.get('VAPID_PUBLIC_KEY') && config.get('VAPID_PRIVATE_KEY'),
+        ),
+        routes,
+        groups: groupRoutes(routes),
+      },
+      process.stdout.isTTY === true,
+    ),
+  );
 }
 
 void bootstrap();

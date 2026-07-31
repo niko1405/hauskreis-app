@@ -1,0 +1,36 @@
+meta {
+  name: 400 Koordinaten nur halb
+  type: http
+  seq: 13
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/locations/{{locationId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{locationEtag}}
+}
+
+body:json {
+  {
+    "latitude": 48.7758
+  }
+}
+
+tests {
+  test("antwortet mit 400", function () {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
+docs {
+  Eine Breite ohne Länge zeigt auf nichts. Das Frontend könnte daraus keine
+  Karten-URL bauen und müsste den halben Zustand trotzdem behandeln — also
+  lehnt die API ihn ab, statt ihn zu speichern.
+
+  Gilt in beide Richtungen: auch eine der beiden auf null zu setzen und die
+  andere stehen zu lassen, ist ein 400.
+}

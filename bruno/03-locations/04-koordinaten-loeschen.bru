@@ -1,0 +1,46 @@
+meta {
+  name: Koordinaten löschen
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/locations/{{locationId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{locationEtag}}
+}
+
+body:json {
+  {
+    "latitude": null,
+    "longitude": null,
+    "address": null
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("locationEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("die Position ist wieder weg", function () {
+    expect(res.body.latitude).to.equal(null);
+    expect(res.body.longitude).to.equal(null);
+  });
+}
+
+docs {
+  null löscht, undefined lässt in Ruhe — deshalb entfernt dieser Request die
+  Position wirklich, während ein PATCH ohne diese Felder sie behalten würde.
+
+  Räumt zugleich auf, was der Request davor gesetzt hat, damit die Collection
+  wiederholbar bleibt.
+}
