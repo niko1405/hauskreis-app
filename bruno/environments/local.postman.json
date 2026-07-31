@@ -1,0 +1,55 @@
+{
+  "id": "hauskreis-local",
+  "name": "local",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "keycloakUrl",
+      "value": "http://localhost:8080",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "realm",
+      "value": "hauskreis",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "clientId",
+      "value": "hauskreis-backend",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "clientSecret",
+      "value": "local-dev-secret",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "adminUser",
+      "value": "testadmin",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "memberUser",
+      "value": "testmember",
+      "enabled": true,
+      "type": "default"
+    },
+    {
+      "key": "password",
+      "value": "test1234",
+      "enabled": true,
+      "type": "default"
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

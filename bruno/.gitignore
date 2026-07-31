@@ -1,4 +1,5 @@
 # Der Runner schreibt gesetzte Variablen in die Environment-Datei zurück —
-# darunter Access-Tokens. Deshalb nur die Vorlage im Repo:
+# darunter Access-Tokens. Deshalb nur die Vorlagen im Repo:
 #   cp environments/local.example.bru environments/local.bru
+# local.postman.json ist die Notlösung für den Import-Dialog, siehe README.
 environments/local.bru

@@ -85,7 +85,7 @@ Vorher muss laufen: `docker compose up -d`, `./scripts/setup-keycloak.sh`,
 `pnpm db:migrate && pnpm db:seed`, `pnpm start:dev`.
 
 1. **Open Collection** → den Ordner `bruno/` wählen (den Ordner, nicht die
-   `bruno.json`).
+   `bruno.json`, und nicht das Repo-Root).
 2. Die `local.bru` anlegen — der `cp` oben. Ohne sie ist die
    Environment-Auswahl leer.
 3. Oben rechts das Environment **`local` auswählen**. Bruno startet ohne
@@ -93,6 +93,31 @@ Vorher muss laufen: `docker compose up -d`, `./scripts/setup-keycloak.sh`,
    die Fehlermeldung zeigt nicht darauf.
 4. **`00-auth/01-token-admin` zuerst.** Es setzt `{{token}}`, an dem die
    Collection-Auth hängt. Vorher antwortet alles mit `401`.
+
+#### Wenn das Environment nicht auftaucht
+
+`.bru`-Environments werden **nicht importiert**. Bruno liest sie von selbst aus
+`environments/` innerhalb des Collection-Ordners; der Import-Dialog kann
+ausschließlich Postman-JSON und ist hier der falsche Weg.
+
+Steht `local` trotzdem nicht im Dropdown, der Reihe nach:
+
+- **Zeigt die Collection auf `bruno/`?** Rechtsklick auf den Collection-Namen →
+  _Settings_. Steht dort das Repo-Root, findet Bruno weder `bruno.json` noch die
+  Environments.
+- **Collection schließen und neu öffnen.** Wer sie geöffnet hat, bevor
+  `local.bru` existierte, sieht sie nicht — Bruno bemerkt die neue Datei nicht
+  immer, besonders nicht über einen WSL-Pfad
+  (`\\wsl.localhost\Ubuntu\home\…`), wo der File-Watcher unzuverlässig ist.
+- **Selbst anlegen geht auch**: Environment-Dropdown → _Configure_ → _Create_,
+  Name `local`, die acht Variablen aus
+  [`local.example.bru`](../bruno/environments/local.example.bru) eintragen.
+  Bruno schreibt die `.bru` dann selbst.
+- **Notlösung, falls nur der Import-Dialog funktioniert**:
+  [`environments/local.postman.json`](../bruno/environments/local.postman.json)
+  liegt im Postman-Format bereit und lässt sich damit einlesen. Bruno legt beim
+  Import eine ganz normale `local.bru` an — die JSON-Datei wird danach nicht
+  mehr gebraucht.
 
 Danach beliebig klicken — mit drei Einschränkungen:
 
