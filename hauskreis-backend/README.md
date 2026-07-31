@@ -85,6 +85,24 @@ Verbindungen wirklich zu waren — und hing `close()` an einer offenen
 Keep-Alive-Verbindung, blieb der Prozess still stehen. Jetzt greift nach
 10 Sekunden ein Zeitlimit, und ein zweites Strg+C beendet sofort.
 
+#### `[ELIFECYCLE] Command failed.` nach Strg+C
+
+Kosmetik, kein Fehler. Strg+C schickt SIGINT an die **ganze
+Vordergrund-Prozessgruppe** — also auch an `pnpm` selbst, nicht nur an den
+Server. pnpm stirbt daran mit 130 und meldet das, unabhängig davon, womit das
+Skript geendet hat.
+
+Die Formulierung verrät, welcher Fall vorliegt:
+
+| Meldung                            | Bedeutung                                     |
+| ---------------------------------- | --------------------------------------------- |
+| `Command failed.`                  | pnpm wurde selbst per Signal beendet — normal |
+| `Command failed with exit code N.` | das Skript ist wirklich mit `N` gescheitert   |
+
+Nachgestellt mit einem Minimalskript ohne Nest, das bei SIGINT ausdrücklich
+`process.exit(0)` aufruft — dieselbe Ausgabe. `node dist/src/main` direkt
+gestartet und mit SIGINT beendet liefert dagegen sauber Exit-Code 0.
+
 ### Test-Accounts
 
 Vom Setup-Skript angelegt (Passwort jeweils `test1234`):
