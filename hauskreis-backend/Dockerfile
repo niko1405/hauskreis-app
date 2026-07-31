@@ -34,8 +34,8 @@ RUN pnpm exec prisma generate && pnpm exec nest build
 # Migrations are a separate, ordered step; see the `migrate` service in
 # docker-compose.prod.yml.
 #
-# ~570 MB unpacked, most of it Prisma's query engines. Small enough for a
-# self-hosted group of nine, and not worth contorting the build over.
+# Der Löwenanteil sind Prismas Query-Engines. Für eine selbst gehostete Gruppe
+# von neun Leuten klein genug — der Build muss sich dafür nicht verbiegen.
 # ---------------------------------------------------------------------------
 FROM base AS runtime
 ENV NODE_ENV=production
@@ -46,8 +46,14 @@ RUN pnpm install --prod --frozen-lockfile
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/generated ./generated
 
-# The image ships a `node` user; running as root would be gratuitous.
-RUN chown -R node:node /app
+# Das Image bringt einen `node`-Benutzer mit; als root zu laufen wäre unnötig.
+#
+# Kein `chown -R /app`: Ebenen sind unveränderlich, ein rekursives chown schreibt
+# jede Datei neu und legt damit eine vollständige Kopie des node_modules-Baums
+# als zusätzliche Ebene an — hier waren das 423 MB obendrauf, während das
+# Original darunter liegen bleibt. Nötig ist es ohnehin nicht: die Dateien
+# gehören root und sind für alle lesbar, und die Anwendung schreibt nirgends
+# ins Dateisystem (Logs gehen nach stdout).
 USER node
 
 EXPOSE 3000

@@ -1,4 +1,48 @@
+# Entwicklungs-Umgebung: alles, was die App *umgibt*, aber nicht die App selbst.
+# Die läuft mit `pnpm start:dev` auf dem Host, weil sie dort nach jeder
+# Codeänderung in Sekunden neu startet statt in Minuten neu gebaut zu werden.
+#
+# Ausnahme ist das Profil `image` weiter unten — zum Prüfen des fertigen
+# Produktions-Containers, nicht zum Entwickeln.
 services:
+  # Der Produktions-Container gegen die Dienste hier. Startet NICHT mit einem
+  # gewöhnlichen `docker compose up -d`, sondern nur mit:
+  #
+  #   docker compose --profile image up -d --build api
+  #
+  # Gedacht zum Nachsehen, ob das Image tut, was es soll, bevor es irgendwo
+  # deployt wird. Zum Entwickeln ist es der falsche Weg: jede Codeänderung
+  # bräuchte einen neuen Build.
+  #
+  # Port 3030 auf dem Host, damit ein parallel laufendes `pnpm start:dev`
+  # seinen Port 3000 behält. Im Container bleibt es 3000 — die Schreibweise
+  # ist HOST:CONTAINER.
+  api:
+    profiles: ['image']
+    build:
+      context: .
+      target: runtime
+    container_name: hauskreis-api
+    ports:
+      - '127.0.0.1:3030:3000'
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://hauskreis:hauskreis@postgres:5432/hauskreis?schema=public
+      CORS_ORIGINS: http://localhost:3001
+      # Öffentlich, wie im Token — von hier aus erreichbar über den Compose-Namen.
+      KEYCLOAK_URL: http://localhost:8080
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      KEYCLOAK_REALM: hauskreis
+      KEYCLOAK_CLIENT_ID: hauskreis-backend
+      KEYCLOAK_CLIENT_SECRET: local-dev-secret
+      KEYCLOAK_AUDIENCE: hauskreis-backend
+      KEYCLOAK_ALLOWED_AZP: hauskreis-app,hauskreis-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
   postgres:
     image: postgres:17-alpine
     container_name: hauskreis-postgres

@@ -1416,13 +1416,50 @@ Zwei Dinge, die man wissen sollte:
   in-process. Mit zwei Instanzen feuern Terminegenerator,
   Gebetsbuddy-Rotation und alle Reminder doppelt. Für neun Leute ist eine
   Instanz richtig — aber es muss dastehen.
-- **~570 MB entpackt**, das meiste Prismas Query-Engines. Der Prisma-CLI landet
-  trotz `--prod` im Image, weil er optionaler Peer von `@prisma/client` ist und
-  die Peer-Auflösung im Lockfile steckt. Wissenswert, nicht bekämpfenswert.
+- **1,25 GB**, das meiste Prismas Query-Engines. Der Prisma-CLI landet trotz
+  `--prod` im Image, weil er optionaler Peer von `@prisma/client` ist und die
+  Peer-Auflösung im Lockfile steckt. Wissenswert, nicht bekämpfenswert.
+
+  Es waren einmal 1,78 GB, wegen eines abschließenden `RUN chown -R node:node
+/app`. Ebenen sind unveränderlich: ein rekursives `chown` schreibt jede Datei
+  neu und legt damit eine vollständige Kopie des `node_modules`-Baums als
+  eigene Ebene an — 423 MB obendrauf, während das Original darunter liegen
+  bleibt. Der `chown` ist ersatzlos gestrichen. Nötig war er nie: die Dateien
+  gehören root und sind mit `755`/`644` für alle lesbar, und die Anwendung
+  schreibt nirgends ins Dateisystem. Der Prozess läuft weiterhin als
+  `uid=1000(node)`.
 
 Im Prod-Compose läuft Keycloak in `start` statt `start-dev`, Ports hängen an
 `127.0.0.1` statt an allen Interfaces, und keine Zugangsdaten stehen in der
 Datei.
+
+### Das Image lokal ausprobieren
+
+In der Entwicklung enthält [`docker-compose.yml`](docker-compose.yml) bewusst
+**keinen** API-Container: die App läuft mit `pnpm start:dev` auf dem Host, wo
+sie nach jeder Codeänderung in Sekunden neu startet statt in Minuten neu gebaut
+zu werden. Im Prod-Compose ist sie dabei, weil es dort kein Neuladen gibt.
+
+Wer trotzdem nachsehen will, ob das fertige Image tut, was es soll, nimmt das
+Profil `image` — es hängt den Produktions-Container an dieselben
+Entwicklungsdienste:
+
+```bash
+docker compose --profile image up -d --build api   # starten
+docker compose --profile image logs -f api         # Banner ansehen
+docker compose --profile image down                # wieder weg
+```
+
+Ohne `--profile image` taucht der Dienst gar nicht erst auf, ein gewöhnliches
+`docker compose up -d` startet ihn also nicht versehentlich mit.
+
+**Port 3030 auf dem Host, 3000 im Container.** Die Schreibweise `3030:3000` ist
+`HOST:CONTAINER`; die 3030 hält deinem parallel laufenden `pnpm start:dev`
+seinen Port 3000 frei. Im Banner steht trotzdem `3000` — er wird **im**
+Container ausgegeben, und der Prozess kennt nur seinen eigenen Port. Die
+Weiterleitung entscheidet Docker außerhalb und kann bei jedem Start anders
+aussehen. Auch das `localhost` in der Adresszeile meint aus Containersicht den
+Container selbst, nicht deinen Rechner.
 
 ### `localhost` gilt nur, solange der Server auf dem Host läuft
 
