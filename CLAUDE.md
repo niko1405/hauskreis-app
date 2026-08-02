@@ -26,7 +26,7 @@ Ziel ist eine **PWA**, die die Organisation des Hauskreises übernimmt – einfa
 | Bereich | Wahl |
 |---|---|
 | Medium | PWA (kein natives App-Store-Release nötig) |
-| Frontend | Next.js + PWA-Plugin (`@ducanh2912/next-pwa`) |
+| Frontend | Next.js 16 (App Router) + React 19, TanStack Query, Tailwind 4, PWA über Serwist (`@serwist/next`) |
 | Backend | NestJS 11 (TypeScript, Express-Adapter) |
 | Datenbank / ORM | PostgreSQL 17 + Prisma 7 (Driver Adapter `@prisma/adapter-pg`) |
 | Auth | Keycloak 26 (OIDC), Token-Prüfung via JWKS (`jose`); Rollen als Realm-Rollen |
@@ -38,9 +38,16 @@ Ziel ist eine **PWA**, die die Organisation des Hauskreises übernimmt – einfa
 
 Das Backend liegt in [`hauskreis-backend/`](hauskreis-backend/) – Setup, Konventionen
 und API-Übersicht stehen im dortigen [README](hauskreis-backend/README.md).
+Das Frontend liegt in [`hauskreis-frontend/`](hauskreis-frontend/) – Aufbau,
+Caching-Regeln und die ETag-Mechanik stehen im dortigen
+[README](hauskreis-frontend/README.md).
 
 > Hinweis: Ursprünglich war Supabase als Backend vorgesehen. Die Entscheidung wurde
 > bewusst zugunsten eines eigenen NestJS-Servers mit Keycloak revidiert.
+
+> Hinweis: Für die PWA war ursprünglich `@ducanh2912/next-pwa` vorgesehen. Dessen
+> Autor hat es zugunsten von **Serwist** eingestellt; Serwist unterstützt Next 16
+> und erlaubt eigenen Service-Worker-Code, den wir für Push ohnehin brauchen.
 
 ## 4. Grundprinzipien für die Zuteilungs-Logik
 

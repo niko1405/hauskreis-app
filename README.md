@@ -9,7 +9,7 @@ Ein Repo, zwei eigenständige Anwendungen:
 | Ordner                                       | Was                                                                     | Stand                    |
 | -------------------------------------------- | ----------------------------------------------------------------------- | ------------------------ |
 | [`hauskreis-backend/`](hauskreis-backend/)   | NestJS 11 + Prisma 7 + Postgres 17, Auth über Keycloak                  | fertig, 69 Endpunkte     |
-| [`hauskreis-frontend/`](hauskreis-frontend/) | Next.js-PWA                                                             | leer, kommt als Nächstes |
+| [`hauskreis-frontend/`](hauskreis-frontend/) | Next.js 16 + React 19 + TanStack Query, PWA mit Web Push               | steht                    |
 | [`bruno/`](bruno/)                           | API-Collection für beide — 82 Requests, läuft von oben nach unten durch | fertig                   |
 | [`docs/`](docs/)                             | [API fürs Frontend](docs/api-fuer-frontend.md), Entwurfsdokumente       | —                        |
 
@@ -38,8 +38,18 @@ pnpm db:migrate && pnpm db:seed
 pnpm start:dev                             # http://localhost:3000/api
 ```
 
+Dann in einem zweiten Terminal das Frontend:
+
+```bash
+cd hauskreis-frontend
+cp .env.example .env.local
+pnpm install
+pnpm dev                                   # http://localhost:3001
+```
+
 Details, Test-Accounts und die vollständige Endpunkt-Tabelle:
-[hauskreis-backend/README.md](hauskreis-backend/README.md).
+[hauskreis-backend/README.md](hauskreis-backend/README.md); Aufbau des
+Frontends: [hauskreis-frontend/README.md](hauskreis-frontend/README.md).
 
 ## Was das Frontend vom Backend erwarten kann
 
