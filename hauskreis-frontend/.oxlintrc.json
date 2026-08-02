@@ -1,0 +1,55 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "react", "jsx-a11y", "nextjs"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "warn"
+  },
+  "env": {
+    "browser": true,
+    "es2024": true
+  },
+  "ignorePatterns": [
+    ".next",
+    "node_modules",
+    "public/sw.js",
+    "src/lib/api/schema.d.ts"
+  ],
+  "rules": {
+    "no-unused-vars": [
+      "error",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+    ],
+    "typescript/no-explicit-any": "error",
+    "typescript/consistent-type-imports": "off",
+    "no-console": ["error", { "allow": ["warn", "error"] }],
+    // Der moderne JSX-Transform braucht kein React im Gültigkeitsbereich.
+    "react/react-in-jsx-scope": "off",
+    // Die Regel verlangt <dialog> bzw. <output>. Beides passt hier nicht: das
+    // Sheet ist ein animiertes Panel mit eigener Fokus- und Escape-Logik, der
+    // Toast eine Live-Region ohne Formularbezug.
+    "jsx-a11y/prefer-tag-over-role": "off"
+  },
+  "overrides": [
+    {
+      // Service-Worker-Code: __SW_MANIFEST kommt von Serwist, das
+      // Durchgehen der offenen Fenster ist absichtlich sequenziell (das
+      // erste passende Fenster gewinnt), und Client.postMessage nimmt
+      // anders als window.postMessage kein targetOrigin.
+      "files": ["src/app/sw.ts"],
+      "rules": {
+        "no-underscore-dangle": "off",
+        "no-await-in-loop": "off",
+        "unicorn/require-post-message-target-origin": "off"
+      }
+    },
+    {
+      "files": ["scripts/**"],
+      "rules": {
+        "no-console": "off",
+        "no-await-in-loop": "off"
+      }
+    }
+  ]
+}

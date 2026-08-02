@@ -1,0 +1,14 @@
+# pnpm 11 liest Einstellungen von hier statt aus dem "pnpm"-Feld der package.json.
+# Kein Workspace-Root — Begründung im Repo-README ("Warum kein pnpm-Workspace").
+
+# Install-Skripte sind grundsätzlich blockiert; nur diese dürfen laufen.
+# sharp ist Nexts Bildoptimierung und braucht seine nativen Binaries,
+# unrs-resolver ist der native Resolver von oxlint.
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+
+# Die Registry ist über diese Verbindung gelegentlich zickig.
+fetchRetries: 6
+fetchRetryMaxtimeout: 120000
+fetchTimeout: 300000

@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+next-env.d.ts
+
+# Serwist-Artefakte (aus src/app/sw.ts erzeugt)
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js
