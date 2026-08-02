@@ -17,7 +17,7 @@ import { AuthProvider } from 'react-oidc-context';
 import { ToastProvider } from '@/components/ui/toast';
 import { createQueryClient } from '@/lib/api/query-client';
 import { AuthBridge } from '@/lib/auth/auth-bridge';
-import { getUserManager } from '@/lib/auth/oidc-config';
+import { clearSigninParams, getUserManager } from '@/lib/auth/oidc-config';
 import { HauskreisProvider } from '@/lib/hauskreis/hauskreis-context';
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -25,7 +25,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(createQueryClient);
 
   return (
-    <AuthProvider userManager={getUserManager()}>
+    <AuthProvider
+      userManager={getUserManager()}
+      // Modulfunktion, keine Pfeilfunktion: der Provider hat sie in der
+      // Abhängigkeitsliste seines Init-Effekts.
+      onSigninCallback={clearSigninParams}
+    >
       <QueryClientProvider client={queryClient}>
         <AuthBridge>
           <HauskreisProvider>

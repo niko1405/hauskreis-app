@@ -40,7 +40,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (auth.error) {
+  // Ein gescheiterter stiller Weg ist kein Anmeldefehler, sondern ein
+  // abgelaufenes Token — die richtige Antwort darauf ist der Login-Bildschirm,
+  // keine rote Meldung. `auth.error` bleibt sonst stehen, bis eine Anmeldung
+  // gelingt (der Reducer löscht ihn nur bei INITIALISED/USER_LOADED), und
+  // verdeckt den Anmelde-Knopf dauerhaft.
+  const silentFailure =
+    auth.error?.source === 'signinSilent' ||
+    auth.error?.source === 'renewSilent';
+
+  if (auth.error && !silentFailure) {
     return (
       <FullScreen>
         <ErrorState

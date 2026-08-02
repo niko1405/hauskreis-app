@@ -59,7 +59,18 @@ export function useSessionRestore(): RestoreState {
       setState('restoring');
       void auth
         .signinSilent()
-        .catch(() => undefined)
+        .then((user) => {
+          // `signinSilent` wirft nicht. Der Provider fängt den Fehler selbst,
+          // schreibt ihn nach `auth.error` und gibt `null` zurück — ein
+          // `catch` hier wäre toter Code. `null` heißt: das Refresh-Token
+          // trägt nicht mehr (30 Tage ungenutzt, Realm neu eingespielt,
+          // woanders abgemeldet).
+          //
+          // Dann muss es aus dem Speicher: sonst versucht es jeder weitere
+          // Start erneut und erzeugt jedes Mal einen REFRESH_TOKEN_ERROR bei
+          // Keycloak, ohne dass es je gelingen könnte.
+          if (!user) void auth.removeUser();
+        })
         .finally(() => setState('settled'));
     });
   }, [auth, auth.isLoading, auth.isAuthenticated]);

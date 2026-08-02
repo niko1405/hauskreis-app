@@ -10,7 +10,7 @@
  */
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from 'react-oidc-context';
+import { hasAuthParams, useAuth } from 'react-oidc-context';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/states';
 import { useSlow } from '@/lib/use-slow';
@@ -26,8 +26,19 @@ export default function AuthCallbackPage() {
   const slow = useSlow(!done && !auth.error);
 
   useEffect(() => {
-    if (done) router.replace('/');
-  }, [done, router]);
+    if (done) {
+      router.replace('/');
+      return;
+    }
+    // Seit die Parameter nach dem Tausch aus der Adresszeile fliegen, ist
+    // diese Seite auch ohne sie erreichbar — Neuladen, Lesezeichen, Zurück.
+    // Dann gibt es hier nichts abzuschließen, und das Wartefenster wäre eine
+    // Sackgasse. `isLoading` bleibt bis zum Abschluss des Tauschs gesetzt,
+    // ein laufender Vorgang wird also nicht unterbrochen.
+    if (!auth.isLoading && !auth.activeNavigator && !hasAuthParams()) {
+      router.replace('/');
+    }
+  }, [done, auth.isLoading, auth.activeNavigator, router]);
 
   if (auth.error) {
     return (

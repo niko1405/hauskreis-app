@@ -118,6 +118,23 @@ ein gültiges Refresh-Token danebenliegt. Der Hook schaut vor dem Rendern in den
 Speicher: liegt dort ein Refresh-Token, wird still erneuert; liegt keins da, ist
 es eine echte Abmeldung und der Login-Bildschirm richtig.
 
+**Ein toter Refresh-Token ist kein Fehler, sondern eine Abmeldung.**
+`signinSilent` wirft nicht: der Provider fängt den Fehler selbst, schreibt ihn
+nach `auth.error` und gibt `null` zurück. Und `auth.error` bleibt stehen, bis
+eine Anmeldung gelingt. Ohne Unterscheidung nach `error.source` verdeckte
+deshalb ein abgelaufenes Token dauerhaft den Anmelde-Knopf mit einer roten
+Meldung — bei einem Offline-Token der Normalfall nach 30 Tagen Pause, nach
+einem neu eingespielten Realm oder nach dem Abmelden auf einem anderen Gerät.
+Das gescheiterte Token fliegt zusätzlich aus dem Speicher; sonst versucht es
+jeder weitere Start erneut, ohne dass es je gelingen könnte.
+
+**Nach dem Tausch fliegen `code` und `state` aus der Adresszeile**
+(`clearSigninParams`). Solange sie dort stehen, ist jede weitere Ladung dieser
+Seite ein zweiter Einlöseversuch desselben Codes — ein wiederhergestellter Tab
+genügt. Keycloak weist den zweiten korrekt ab und lässt die Sitzung des ersten
+unangetastet (nachgestellt, auch mit zwei gleichzeitigen Anfragen), aber es
+gibt keinen Grund, ihn zu ermöglichen.
+
 **Abmelden zieht die Tokens zurück** (`revokeTokensOnSignout`). Sonst bliebe ein
 Offline-Token gültig, obwohl sich jemand abgemeldet hat. `signoutRedirect`
 entfernt zusätzlich den gespeicherten Stand, bevor es zu Keycloak weitergeht —

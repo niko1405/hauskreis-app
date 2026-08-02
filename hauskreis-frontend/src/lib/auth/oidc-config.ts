@@ -62,6 +62,23 @@ function buildSettings(): UserManagerSettings {
   };
 }
 
+/**
+ * Nimmt `code` und `state` aus der Adresszeile, sobald der Tausch durch ist.
+ *
+ * Solange die Parameter dort stehen, ist jede weitere Ladung dieser Seite ein
+ * zweiter Einlöseversuch desselben Codes — ein wiederhergestellter Tab, ein
+ * Neuladen, Zurück-und-Neuladen. Keycloak weist den zweiten korrekt ab
+ * (`CODE_TO_TOKEN_ERROR`, die Sitzung des ersten bleibt heil), aber es gibt
+ * keinen Grund, ihn überhaupt zu ermöglichen.
+ *
+ * Der Pfad bleibt dabei stehen. Ein `replaceState` auf `/` würde nur die
+ * Adresszeile ändern, während Next weiter die Callback-Seite rendert — die
+ * Weiterleitung macht dort der Router.
+ */
+export function clearSigninParams(): void {
+  window.history.replaceState({}, '', REDIRECT_PATH);
+}
+
 let cached: UserManager | undefined;
 
 /**
