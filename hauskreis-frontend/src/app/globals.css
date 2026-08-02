@@ -1,0 +1,93 @@
+@import 'tailwindcss';
+
+/**
+ * Die Farben stammen aus dem Entwurf, standen dort aber als Hex-Wert in jeder
+ * einzelnen Datei. Hier bekommen sie Namen — danach heißt es `bg-canvas`
+ * statt `bg-[#FAF6F3]`, und ein Farbwechsel ist eine Zeile statt einer Suche.
+ *
+ * Die Schriften kommen über next/font (siehe layout.tsx) und werden hier nur
+ * eingehängt; ein @import auf Google Fonts würde das erste Rendern blockieren.
+ */
+@theme {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-instrument), ui-serif, Georgia, serif;
+
+  /* Terracotta — die tragende Farbe: Aktion, Auswahl, aktiver Tab */
+  --color-terracotta-50: #f9ebe5;
+  --color-terracotta-100: #f5ddd3;
+  --color-terracotta-400: #d68e75;
+  --color-terracotta-500: #cc7a5e;
+  --color-terracotta-600: #c26b50;
+  --color-terracotta-700: #b16248;
+
+  /* Flächen */
+  --color-shell: #f5efe9;
+  --color-canvas: #faf6f3;
+  --color-card: #fffdfb;
+  --color-line: #f0e5de;
+  --color-line-strong: #eae0d5;
+
+  /* Rollenfarben: Musik grün, Thema amber, Hinweise blau */
+  --color-music: #2d6a4f;
+  --color-music-bg: #e5f0ea;
+  --color-music-line: #c3dccf;
+
+  --color-topic: #a67c33;
+  --color-topic-bg: #fdf3e1;
+  --color-topic-line: #fbeacd;
+
+  --color-info: #1e749c;
+  --color-info-bg: #ddf3fc;
+  --color-info-line: #c5eaf7;
+
+  /* Warnung und Konflikt */
+  --color-alert: #9d3b4c;
+  --color-alert-bg: #fdecee;
+  --color-alert-line: #f6d5da;
+
+  /* Radien: der Entwurf arbeitet mit auffällig weichen Ecken */
+  --radius-sheet: 36px;
+  --radius-card: 28px;
+  --radius-lg: 24px;
+  --radius-md: 20px;
+  --radius-sm: 16px;
+}
+
+:root {
+  /* Der Entwurf ist durchweg hell gedacht; ein halbherziger Dunkelmodus
+     würde die warme Anmutung eher kaputt machen als helfen. */
+  color-scheme: light;
+}
+
+html,
+body {
+  background-color: var(--color-shell);
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Waagerecht scrollende Bereiche (Wochen-Tabelle, Chip-Reihen) sollen keine
+   Scrollbar zeigen — gewischt wird ohnehin. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Sicherheitsabstand zur Home-Indicator-Leiste auf iOS. */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
