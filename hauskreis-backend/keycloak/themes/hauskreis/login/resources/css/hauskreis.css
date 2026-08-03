@@ -1,0 +1,475 @@
+/*
+ * Die Anmeldeseiten in der Sprache der App.
+ *
+ * Der Ansatz: keine kopierten Vorlagen, nur Farbe. Keycloak baut diese Seiten
+ * mit PatternFly 5, und PatternFly stellt seine Werte als CSS-Variablen ein.
+ * Wer die überschreibt, färbt alles mit, was daraus abgeleitet ist — auch
+ * Seiten, die es heute noch nicht gibt.
+ *
+ * Wo PatternFly über Umwege geht (Knöpfe holen ihre Farbe aus einer
+ * `--dark-100`-Variante, nicht aus der, die man erwartet), steht die Regel
+ * ausgeschrieben darunter. Das ist Absicht: lieber eine Zeile zu viel als eine
+ * Anmeldeseite, die nach dem nächsten Update wieder blau ist.
+ *
+ * Die Werte stammen aus hauskreis-frontend/src/app/globals.css. Ändert sich
+ * dort eine Farbe, ändert sie sich hier mit.
+ */
+
+/* -------------------------------------------------------------------------
+ * Schriften
+ *
+ * Mitgeliefert statt von Google geladen: die Anmeldeseite soll nicht auf einen
+ * fremden Server warten müssen, und sie soll auch dann richtig aussehen, wenn
+ * jemand Drittanbieter blockiert. Es sind dieselben Dateien, die next/font im
+ * Frontend ausliefert — der lateinische Ausschnitt, der Umlaute und die
+ * typografischen Anführungszeichen abdeckt.
+ * ---------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  /* Eine Datei für alle Stärken: die Variante ist eine Variable Font. */
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('../fonts/plus-jakarta-sans-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/instrument-serif-latin.woff2') format('woff2');
+}
+
+/* -------------------------------------------------------------------------
+ * Farben und Maße
+ * ---------------------------------------------------------------------- */
+:root {
+  --hk-terracotta: #cc7a5e;
+  --hk-terracotta-dark: #b16248;
+  --hk-terracotta-soft: #f9ebe5;
+  --hk-terracotta-soft-hover: #f5ddd3;
+  --hk-shell: #f5efe9;
+  --hk-canvas: #faf6f3;
+  --hk-card: #fffdfb;
+  --hk-line: #f0e5de;
+  --hk-line-strong: #eae0d5;
+  --hk-ink: #292524;
+  --hk-ink-strong: #1c1917;
+  --hk-ink-soft: #78716c;
+  --hk-ink-faint: #a8a29e;
+  --hk-alert: #9d3b4c;
+  --hk-alert-bg: #fdecee;
+  --hk-alert-line: #f6d5da;
+  --hk-attention: #a67c33;
+  --hk-attention-bg: #fdf3e1;
+  --hk-attention-line: #fbeacd;
+  --hk-success: #2d6a4f;
+  --hk-success-bg: #e5f0ea;
+  --hk-info: #1e749c;
+  --hk-info-bg: #ddf3fc;
+  --hk-radius-card: 28px;
+  --hk-radius-control: 20px;
+
+  /* PatternFlys eigene Regler. Fast alles hängt hieran. */
+  --pf-v5-global--FontFamily--text:
+    'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --pf-v5-global--FontFamily--redhatfont--text: var(
+    --pf-v5-global--FontFamily--text
+  );
+  --pf-v5-global--FontFamily--heading:
+    'Instrument Serif', ui-serif, Georgia, serif;
+  --pf-v5-global--FontFamily--redhatfont--heading: var(
+    --pf-v5-global--FontFamily--heading
+  );
+
+  --pf-v5-global--primary-color--100: var(--hk-terracotta);
+  --pf-v5-global--primary-color--200: var(--hk-terracotta-dark);
+  --pf-v5-global--primary-color--dark-100: var(--hk-terracotta);
+  --pf-v5-global--primary-color--light-100: var(--hk-terracotta);
+  --pf-v5-global--link--Color: var(--hk-terracotta-dark);
+  --pf-v5-global--link--Color--dark: var(--hk-terracotta-dark);
+  --pf-v5-global--link--Color--hover: var(--hk-terracotta);
+  --pf-v5-global--link--Color--dark--hover: var(--hk-terracotta);
+  --pf-v5-global--active-color--100: var(--hk-terracotta);
+
+  --pf-v5-global--Color--100: var(--hk-ink);
+  --pf-v5-global--Color--200: var(--hk-ink-soft);
+  --pf-v5-global--Color--dark-100: var(--hk-ink);
+  --pf-v5-global--Color--dark-200: var(--hk-ink-soft);
+  --pf-v5-global--BackgroundColor--100: var(--hk-card);
+  --pf-v5-global--BackgroundColor--150: var(--hk-canvas);
+  --pf-v5-global--BackgroundColor--200: var(--hk-canvas);
+  --pf-v5-global--BackgroundColor--light-100: var(--hk-card);
+  --pf-v5-global--BackgroundColor--light-200: var(--hk-canvas);
+  --pf-v5-global--BorderColor--100: var(--hk-line);
+  --pf-v5-global--BorderColor--200: var(--hk-line-strong);
+  --pf-v5-global--BorderColor--300: var(--hk-line);
+  --pf-v5-global--BorderColor--light-100: var(--hk-line);
+
+  --pf-v5-global--danger-color--100: var(--hk-alert);
+  --pf-v5-global--danger-color--200: var(--hk-alert);
+  --pf-v5-global--success-color--100: var(--hk-success);
+  --pf-v5-global--info-color--100: var(--hk-info);
+
+  --pf-v5-global--BorderRadius--sm: var(--hk-radius-control);
+  --pf-v5-global--BorderRadius--lg: var(--hk-radius-card);
+  --pf-v5-global--FontSize--3xl: 1.875rem;
+
+  /* Aus dem Eltern-Theme: der Streifen über der Karte und das Hintergrundbild.
+     Beides passt nicht zum Entwurf, siehe weiter unten. */
+  --keycloak-card-top-color: transparent;
+}
+
+/* -------------------------------------------------------------------------
+ * Fläche
+ * ---------------------------------------------------------------------- */
+.login-pf body,
+body#keycloak-bg {
+  /* Das Eltern-Theme legt hier ein Keycloak-Wolkenbild hin. */
+  background: var(--hk-shell) !important;
+  color: var(--hk-ink);
+  font-family: var(--pf-v5-global--FontFamily--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.pf-v5-c-login {
+  padding: 2rem 1.25rem 3rem;
+}
+
+.pf-v5-c-login__container {
+  /* Der Entwurf denkt in Telefonbreite (max-w-sm), nicht in Konsolenbreite. */
+  grid-template-columns: min(26rem, 100%);
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+/* -------------------------------------------------------------------------
+ * Kopf: Logo und Wortmarke
+ *
+ * Der Text kommt aus `loginTitleHtml` (messages/messages_de.properties), das
+ * Zeichen davor aus dieser Regel. Bewusst kein HTML in der Nachricht: was
+ * Keycloak dort einsetzt, läuft durch einen Sanitizer, und ob der ein
+ * class-Attribut durchlässt, wäre eine Wette auf die Keycloak-Version.
+ * ---------------------------------------------------------------------- */
+#kc-header {
+  padding: 0;
+}
+
+#kc-header-wrapper {
+  font-family: var(--pf-v5-global--FontFamily--heading);
+  /* Alles !important, weil das Eltern-Theme hier ebenfalls !important setzt. */
+  font-size: 2rem !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: var(--hk-ink-strong) !important;
+  text-align: center !important;
+  padding: 0;
+}
+
+#kc-header-wrapper::before {
+  content: '';
+  display: block;
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 0.75rem;
+  background: url('../img/logo.png') center / contain no-repeat;
+  border-radius: 22px;
+}
+
+/* -------------------------------------------------------------------------
+ * Karte
+ * ---------------------------------------------------------------------- */
+.pf-v5-c-login__main {
+  background: var(--hk-card);
+  border: 1px solid var(--hk-line);
+  border-radius: var(--hk-radius-card);
+  /* Der Entwurf trägt sehr weiche, sehr flache Schatten. */
+  box-shadow: 0 18px 40px -32px rgba(41, 37, 36, 0.35);
+  overflow: hidden;
+}
+
+.pf-v5-c-login__main-header {
+  /* Das Eltern-Theme setzt hier einen 4px-Balken in Keycloak-Blau. */
+  border-top: none;
+  padding: 1.75rem 1.75rem 0.5rem;
+  gap: 0.75rem;
+}
+
+.pf-v5-c-login__main-body {
+  padding: 1.25rem 1.75rem 1.75rem;
+}
+
+.pf-v5-c-login__main-footer {
+  padding: 0 1.75rem 1.5rem;
+}
+
+#kc-page-title {
+  font-family: var(--pf-v5-global--FontFamily--heading);
+  font-size: 1.625rem;
+  font-weight: 400;
+  line-height: 1.25;
+  color: var(--hk-ink-strong);
+}
+
+/* Erklärtexte unter der Überschrift und im Fuß. Zwei Kästen für dieselbe
+   Sache: `#kc-info` steht in der Vorlage von keycloak.v2, `#kc-info-message`
+   in der von base — je nach Seite greift die eine oder die andere. */
+#kc-info,
+#kc-info-message,
+.pf-v5-c-login__main-footer-band,
+.instruction,
+#kc-form-options,
+.pf-v5-c-login__main-footer-band-item {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--hk-ink-soft);
+}
+
+/* -------------------------------------------------------------------------
+ * Felder
+ * ---------------------------------------------------------------------- */
+.pf-v5-c-form__label,
+.pf-v5-c-form__label-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--hk-ink-soft);
+}
+
+.pf-v5-c-form-control {
+  --pf-v5-c-form-control--BackgroundColor: var(--hk-card);
+  --pf-v5-c-form-control--BorderRadius: var(--hk-radius-control);
+  --pf-v5-c-form-control--Color: var(--hk-ink);
+  --pf-v5-c-form-control--FontSize: 0.875rem;
+  background: var(--hk-card);
+  border: 1px solid var(--hk-line);
+  border-radius: var(--hk-radius-control);
+  padding: 0.625rem 1rem;
+  color: var(--hk-ink);
+  font-size: 0.875rem;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+/* PatternFly zeichnet den Fokus- und Fehlerzustand als Unterstrich über ein
+   ::after-Element. Das passt nicht zu einem Feld mit runden Ecken. */
+.pf-v5-c-form-control::after {
+  display: none;
+}
+
+.pf-v5-c-form-control:hover {
+  border-color: var(--hk-line-strong);
+}
+
+.pf-v5-c-form-control:focus-within,
+.pf-v5-c-form-control > input:focus,
+.pf-v5-c-form-control > select:focus {
+  border-color: #d68e75;
+  box-shadow: 0 0 0 3px var(--hk-terracotta-soft);
+  outline: none;
+}
+
+.pf-v5-c-form-control > input,
+.pf-v5-c-form-control > select {
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  padding: 0;
+}
+
+.pf-v5-c-form-control > input::placeholder {
+  color: #d6d3d1;
+}
+
+.pf-v5-c-form-control.pf-m-error {
+  border-color: var(--hk-alert-line);
+}
+
+.pf-v5-c-form-control.pf-m-error:focus-within {
+  box-shadow: 0 0 0 3px var(--hk-alert-bg);
+}
+
+/* Das Auge neben dem Passwortfeld. */
+.pf-v5-c-input-group,
+.pf-v5-c-input-group__item {
+  background: transparent;
+}
+
+.pf-v5-c-button.pf-m-control {
+  background: transparent;
+  border: none;
+  color: var(--hk-ink-faint);
+  border-radius: 999px;
+}
+
+.pf-v5-c-button.pf-m-control:hover {
+  color: var(--hk-ink-soft);
+  background: #f5f5f4;
+}
+
+.pf-v5-c-check__label {
+  font-size: 0.8125rem;
+  color: var(--hk-ink-soft);
+}
+
+.pf-v5-c-check__input {
+  accent-color: var(--hk-terracotta);
+}
+
+/* -------------------------------------------------------------------------
+ * Knöpfe
+ *
+ * Rund und satt, wie components/ui/button.tsx.
+ * ---------------------------------------------------------------------- */
+.pf-v5-c-button {
+  border-radius: 999px;
+  font-family: var(--pf-v5-global--FontFamily--text);
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.pf-v5-c-button.pf-m-primary {
+  background: var(--hk-terracotta);
+  color: #fff;
+  padding: 0.75rem 1.25rem;
+}
+
+.pf-v5-c-button.pf-m-primary:hover,
+.pf-v5-c-button.pf-m-primary:focus {
+  background: var(--hk-terracotta-dark);
+  color: #fff;
+}
+
+.pf-v5-c-button.pf-m-primary:disabled,
+.pf-v5-c-button.pf-m-primary.pf-m-disabled {
+  background: rgba(204, 122, 94, 0.5);
+  color: #fff;
+}
+
+.pf-v5-c-button.pf-m-secondary {
+  background: var(--hk-terracotta-soft);
+  border: none;
+  color: var(--hk-terracotta-dark);
+  padding: 0.75rem 1.25rem;
+}
+
+.pf-v5-c-button.pf-m-secondary:hover,
+.pf-v5-c-button.pf-m-secondary:focus {
+  background: var(--hk-terracotta-soft-hover);
+  color: var(--hk-terracotta-dark);
+}
+
+.pf-v5-c-button.pf-m-link {
+  color: var(--hk-terracotta-dark);
+  font-weight: 600;
+}
+
+.pf-v5-c-button:focus-visible {
+  outline: 2px solid var(--hk-terracotta);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--hk-terracotta-dark);
+}
+
+a:hover {
+  color: var(--hk-terracotta);
+}
+
+/* -------------------------------------------------------------------------
+ * Meldungen
+ * ---------------------------------------------------------------------- */
+.pf-v5-c-alert {
+  border-radius: var(--hk-radius-control);
+  border: 1px solid transparent;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.pf-v5-c-alert.pf-m-danger {
+  background: var(--hk-alert-bg);
+  border-color: var(--hk-alert-line);
+  color: var(--hk-alert);
+}
+
+/* Bewusst nicht rot: Keycloak schickt auch die Begrüßung der Einladung
+   („Schön, dass du da bist") als Warnung durch. Ein roter Kasten wäre dort
+   genau die falsche Ansage. Amber ist in der App die Farbe für „schau her",
+   nicht für „etwas ist kaputt". */
+.pf-v5-c-alert.pf-m-warning {
+  background: var(--hk-attention-bg);
+  border-color: var(--hk-attention-line);
+  color: var(--hk-attention);
+}
+
+.pf-v5-c-alert.pf-m-success {
+  background: var(--hk-success-bg);
+  border-color: #c3dccf;
+  color: var(--hk-success);
+}
+
+.pf-v5-c-alert.pf-m-info {
+  background: var(--hk-info-bg);
+  border-color: #c5eaf7;
+  color: var(--hk-info);
+}
+
+.pf-v5-c-alert.pf-m-warning .pf-v5-c-alert__icon {
+  color: var(--hk-attention);
+}
+
+.pf-v5-c-alert.pf-m-danger .pf-v5-c-alert__icon {
+  color: var(--hk-alert);
+}
+
+.pf-v5-c-alert.pf-m-success .pf-v5-c-alert__icon {
+  color: var(--hk-success);
+}
+
+.pf-v5-c-alert.pf-m-info .pf-v5-c-alert__icon {
+  color: var(--hk-info);
+}
+
+.kc-feedback-text,
+.pf-m-error .pf-v5-c-helper-text__item-text {
+  color: var(--hk-alert);
+}
+
+/* Die Liste der Passwortregeln beim ersten Setzen. */
+.pf-v5-c-helper-text__item-text {
+  font-size: 0.75rem;
+  color: var(--hk-ink-soft);
+}
+
+/* -------------------------------------------------------------------------
+ * Sprachwahl im Kartenkopf
+ *
+ * Steht nur da, wenn mehr als eine Sprache eingerichtet ist. Aktuell ist es
+ * nur Deutsch, aber ein ungestylter Kasten für den Tag, an dem das nicht mehr
+ * stimmt, ist billiger als die spätere Fehlersuche.
+ * ---------------------------------------------------------------------- */
+.pf-v5-c-login__main-header-utilities .pf-v5-c-form-control {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* -------------------------------------------------------------------------
+ * Auswahl markierter Text — dasselbe Terracotta wie in der App.
+ * ---------------------------------------------------------------------- */
+::selection {
+  background: var(--hk-terracotta);
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

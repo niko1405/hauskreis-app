@@ -49,6 +49,9 @@ export class KeycloakAdminService {
     }
 
     const [firstName, ...rest] = params.name.trim().split(/\s+/);
+    // Ein Konto braucht beim Anlegen einen Nutzernamen, und der einzige, den
+    // wir hier kennen, ist die Adresse. Bleiben muss er nicht: die Einladung
+    // schickt `UPDATE_PROFILE` mit, und dort trägt sich jede:r selbst ein.
     await this.request('/users', {
       method: 'POST',
       body: JSON.stringify({
@@ -90,11 +93,11 @@ export class KeycloakAdminService {
   }
 
   /**
-   * Ändert die Adresse eines Kontos — E-Mail **und** Nutzername.
+   * Ändert die Adresse eines Kontos — nur die Adresse.
    *
-   * Beides, weil der Nutzername beim Einladen auf die E-Mail gesetzt wird
-   * (siehe `inviteUser`). Bliebe er stehen, meldete man sich mit der alten
-   * Adresse an, während in der App die neue steht.
+   * Der Nutzername bleibt bewusst stehen. Er gehört seit der Einladung den
+   * Menschen selbst (`UPDATE_PROFILE`), und ihn beim Adresswechsel
+   * mitzuschreiben hieße, eine selbst getroffene Wahl still zu überschreiben.
    *
    * `emailVerified` fällt zurück auf `false`, und die Bestätigungsmail geht
    * neu raus: dass jemand die alte Adresse nachgewiesen hat, sagt nichts über
@@ -109,9 +112,10 @@ export class KeycloakAdminService {
       );
     }
 
+    // Ein PUT mit Teilmenge: was hier nicht steht, lässt Keycloak in Ruhe.
     await this.request(`/users/${keycloakUserId}`, {
       method: 'PUT',
-      body: JSON.stringify({ email, username: email, emailVerified: false }),
+      body: JSON.stringify({ email, emailVerified: false }),
     });
 
     return this.sendVerificationEmail(keycloakUserId);
@@ -166,6 +170,12 @@ export class KeycloakAdminService {
    * Asks Keycloak to email the invitee a link to set their password. Requires
    * SMTP to be configured on the realm, so a failure here is logged rather
    * than fatal — the account still exists and an admin can resend later.
+   *
+   * Die Reihenfolge ist die, in der Keycloak die Schritte zeigt:
+   * erst der Nutzername (`UPDATE_PROFILE`), dann das Passwort, dann die
+   * Bestätigung der Adresse. `UPDATE_PROFILE` wirkt nur, wenn am Realm
+   * `editUsernameAllowed` steht — sonst ist das Feld gesperrt und der Schritt
+   * zeigt nur Vor- und Nachnamen (siehe scripts/setup-keycloak.sh).
    */
   private async sendInvitationEmail(keycloakUserId: string): Promise<boolean> {
     try {
@@ -173,7 +183,11 @@ export class KeycloakAdminService {
         `/users/${keycloakUserId}/execute-actions-email?lifespan=604800`,
         {
           method: 'PUT',
-          body: JSON.stringify(['UPDATE_PASSWORD', 'VERIFY_EMAIL']),
+          body: JSON.stringify([
+            'UPDATE_PROFILE',
+            'UPDATE_PASSWORD',
+            'VERIFY_EMAIL',
+          ]),
         },
       );
       return true;

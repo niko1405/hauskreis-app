@@ -13,11 +13,14 @@ import { useRouter } from 'next/navigation';
 import { hasAuthParams, useAuth } from 'react-oidc-context';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/states';
+import { useToast } from '@/components/ui/toast';
+import { ACTION_STATUS_PARAM, returnPathOf } from '@/lib/auth/oidc-config';
 import { useSlow } from '@/lib/use-slow';
 
 export default function AuthCallbackPage() {
   const auth = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   const done = auth.isAuthenticated && !auth.activeNavigator;
   // Der Tausch von Code gegen Token hat keine eigene Frist. Reißt die
@@ -27,7 +30,11 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     if (done) {
-      router.replace('/');
+      // Nach einer Konto-Aktion (Passwort ändern) zurück auf den Bildschirm,
+      // von dem sie ausging — sonst steht man ohne Erklärung auf der
+      // Startseite und weiß nicht, ob etwas passiert ist.
+      reportActionStatus(toast);
+      router.replace(returnPathOf(auth.user?.state));
       return;
     }
     // Seit die Parameter nach dem Tausch aus der Adresszeile fliegen, ist
@@ -38,7 +45,14 @@ export default function AuthCallbackPage() {
     if (!auth.isLoading && !auth.activeNavigator && !hasAuthParams()) {
       router.replace('/');
     }
-  }, [done, auth.isLoading, auth.activeNavigator, router]);
+  }, [
+    done,
+    auth.isLoading,
+    auth.activeNavigator,
+    auth.user?.state,
+    router,
+    toast,
+  ]);
 
   if (auth.error) {
     return (
@@ -79,6 +93,27 @@ export default function AuthCallbackPage() {
       )}
     </Centered>
   );
+}
+
+/**
+ * Sagt, wie eine Konto-Aktion ausgegangen ist, und räumt die Spur hinter sich
+ * weg. Das Wegräumen ist kein Kosmetik-Schritt: dadurch darf dieser Aufruf
+ * doppelt passieren (React im Entwicklungsmodus tut das), ohne dass zwei
+ * Meldungen erscheinen.
+ */
+function reportActionStatus(toast: ReturnType<typeof useToast>): void {
+  const status = new URLSearchParams(window.location.search).get(
+    ACTION_STATUS_PARAM,
+  );
+  if (!status) return;
+
+  window.history.replaceState({}, '', window.location.pathname);
+
+  // `cancelled` bleibt still — wer abbricht, weiß, dass nichts passiert ist.
+  if (status === 'success') toast.success('Passwort geändert.');
+  if (status === 'error') {
+    toast.error('Das hat nicht geklappt — dein Passwort ist unverändert.');
+  }
 }
 
 function Centered({ children }: { children: React.ReactNode }) {

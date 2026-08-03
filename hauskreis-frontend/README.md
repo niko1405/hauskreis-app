@@ -141,6 +141,28 @@ entfernt zusätzlich den gespeicherten Stand, bevor es zu Keycloak weitergeht �
 sonst würde die Wiederherstellung von oben einen gerade Abgemeldeten sofort
 wieder hereinlassen.
 
+### Passwort ändern, ohne die App zu verlassen
+
+Der Knopf in der Konto-Karte führt nicht in die Keycloak-Account-Konsole,
+sondern schickt eine gewöhnliche Anmeldung mit `kc_action=UPDATE_PASSWORD`
+los (`accountActionArgs`). Keycloak nennt das eine _application-initiated
+action_: derselbe Ablauf wie beim Anmelden, nur mit einem Zwischenschritt. Das
+ist genau die Seite, die man beim Einstieg schon gesehen hat, im Theme der App
+— die Konsole wäre ein Bruch mitten im Vorgang.
+
+Zurück kommt die Antwort in zwei Teilen, und beide brauchen ein bisschen
+Sorgfalt:
+
+- **Wohin.** `signinRedirect` bekommt ein `state` mit dem Rückweg; die
+  Callback-Seite liest ihn über `returnPathOf`. Das prüft, dass es ein eigener
+  Pfad ist — ein `state` aus fremder Hand wäre sonst eine offene Weiterleitung.
+- **Ob es geklappt hat.** `kc_action_status` steht in der Adresszeile, aber
+  `clearSigninParams` räumt die gerade auf. Statt den Wert in einer
+  Modulvariable zwischenzulagern, schreibt `clearSigninParams` ihn in die neue
+  Adresse (`?done=success`). Die Callback-Seite liest ihn dort, zeigt die
+  Meldung und entfernt ihn — dadurch darf der Effekt doppelt laufen, ohne dass
+  zwei Meldungen erscheinen.
+
 ### Wenn nichts antwortet
 
 Unter WSL reißen Verbindungen gern mal ab, und die betroffenen Stellen haben von

@@ -55,14 +55,24 @@ curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}" "${auth[@]}" -d "{
       \"auth\": \"false\"
     },
     \"emailTheme\": \"hauskreis\",
+    \"loginTheme\": \"hauskreis\",
+    \"editUsernameAllowed\": true,
+    \"resetPasswordAllowed\": true,
     \"internationalizationEnabled\": true,
     \"supportedLocales\": [\"de\"],
     \"defaultLocale\": \"de\"
   }" >/dev/null
 echo "    sender: ${SMTP_FROM} via ${SMTP_HOST}:${SMTP_PORT}"
 # Ohne internationalizationEnabled greift Keycloak zu messages_en und die
-# deutschen Texte im Theme blieben unbenutzt.
-echo "    Mailtexte: Theme 'hauskreis', Sprache de"
+# deutschen Texte in den Themes blieben unbenutzt.
+echo "    Themes: 'hauskreis' für Login und Mail, Sprache de"
+# editUsernameAllowed schaltet das Nutzername-Feld im Profilschritt frei. Ohne
+# das zeigt die Einladung zwar UPDATE_PROFILE, aber nur Vor- und Nachname —
+# der Nutzername bliebe die E-Mail-Adresse aus dem Anlegen.
+echo "    Nutzername: selbst wählbar"
+# Ohne resetPasswordAllowed ist ein vergessenes Passwort eine Sackgasse: die
+# App kennt keinen Weg, eine Einladung erneut zu schicken.
+echo "    Passwort vergessen: möglich"
 
 echo "==> Ensuring realm roles: member, admin"
 for role in member admin; do

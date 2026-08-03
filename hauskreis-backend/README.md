@@ -1697,17 +1697,59 @@ Daran hängt, was `DELETE …/people/:id` tut:
 - **Schon da gewesen** — das Konto bleibt. Es gehört einem Menschen, nicht
   dieser Gruppe.
 
-### Die Mailtexte gehören uns
+### Der Nutzername gehört den Menschen
 
-Keycloaks Standardtexte sind englisch und klingen nach Verwaltungssoftware.
-Das Realm-Theme `hauskreis` ([`keycloak/themes/hauskreis`](keycloak/themes/hauskreis))
-ersetzt sie — **nur die Texte**, nicht die Vorlagen: es erbt von `base` und
-überschreibt `messages_de.properties`. Die `.ftl`-Dateien mitzuschleppen hieße,
-sie bei jedem Keycloak-Update gegen die neuen Fassungen zu halten, für zwei
-Sätze, die sich nie ändern.
+Beim Anlegen setzt `inviteUser` den Nutzernamen auf die E-Mail-Adresse — ein
+Konto braucht einen, und mehr wissen wir zu dem Zeitpunkt nicht. Bleiben muss
+er nicht: die Einladungsmail schickt `UPDATE_PROFILE` mit, und dort trägt sich
+jede:r selbst ein. Damit das Feld nicht gesperrt ist, setzt `setup-keycloak.sh`
+am Realm `editUsernameAllowed`.
+
+Daraus folgt eine Regel für `changeEmail`: der Nutzername wird **nicht**
+mitgeschrieben. Er ist seit der Einladung eine eigene Wahl, und ihn beim
+Adresswechsel zu überschreiben hieße, sie still zu verwerfen. Das PUT an die
+Admin-API schickt deshalb nur `email` und `emailVerified` — was dort nicht
+steht, lässt Keycloak in Ruhe.
+
+Verknüpft bleibt trotzdem die Adresse: `resolveForUser` findet die Person über
+`person.email`, nicht über den Nutzernamen.
+
+Ebenfalls am Realm: `resetPasswordAllowed`. Ohne das wäre ein vergessenes
+Passwort eine Sackgasse — die App kennt keinen Weg, eine Einladung noch einmal
+zu schicken.
+
+### Die Anmeldeseiten gehören uns
+
+Keycloaks Standardtexte sind englisch und klingen nach Verwaltungssoftware, und
+seine Anmeldeseite sieht aus wie Keycloak. Das Realm-Theme `hauskreis`
+([`keycloak/themes/hauskreis`](keycloak/themes/hauskreis)) ändert beides — in
+zwei Teilen, `email/` und `login/`, und in beiden **ohne eigene Vorlagen**:
+
+| | erbt von | ersetzt |
+|---|---|---|
+| `email/` | `base` | `messages_de.properties` |
+| `login/` | `keycloak.v2` | `messages_de.properties`, ein Stylesheet, Logo, Schriften |
+
+Die `.ftl`-Dateien mitzuschleppen hieße, sie bei jedem Keycloak-Update gegen
+die neuen Fassungen zu halten. Eine Handvoll CSS-Variablen überlebt Updates
+unbeaufsichtigt: Keycloak baut diese Seiten mit PatternFly 5, und PatternFly
+stellt seine Werte als CSS-Variablen ein — wer die überschreibt, färbt auch
+Seiten mit, die es heute noch nicht gibt.
+
+Die Farben stammen aus `hauskreis-frontend/src/app/globals.css`, die Schriften
+sind dieselben `.woff2`-Dateien, die next/font ausliefert. Mitgeliefert statt
+von Google geladen: die Anmeldeseite soll nicht auf einen fremden Server warten
+und auch dann stimmen, wenn jemand Drittanbieter blockiert.
 
 Damit die deutschen Texte überhaupt gezogen werden, setzt
 `setup-keycloak.sh` am Realm `internationalizationEnabled` und
-`defaultLocale: de` — ohne das greift Keycloak zu `messages_en` und das Theme
-bliebe unbenutzt. Das Verzeichnis hängt als Volume im Container: eine
-Textänderung kostet einen Neustart, keinen Neubau.
+`defaultLocale: de` — ohne das greift Keycloak zu `messages_en` und beide
+Themes blieben unbenutzt. Das Verzeichnis hängt als Volume im Container: eine
+Änderung kostet einen Neustart, keinen Neubau.
+
+> Ohne Browser lässt sich ein Theme schlecht ansehen. Was sich prüfen lässt,
+> ist, ob die Regeln überhaupt etwas treffen: die Seiten rendern, alle Klassen
+> und IDs einsammeln und die Selektoren dagegen halten. Genau so kam heraus,
+> dass Keycloak die Begrüßung der Einladung als `pf-m-warning` ausliefert —
+> mit der Alarmfarbe der App wäre das ein roter Kasten für „schön, dass du da
+> bist" geworden.

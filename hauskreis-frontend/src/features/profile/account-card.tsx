@@ -11,21 +11,27 @@
  * Das Passwort dagegen bleibt bei Keycloak. Es durch dieses Backend zu
  * schicken hieße, Passwortregeln, Wiederherstellung und Zweitfaktor
  * nachzubauen — für einen Bildschirm, den man zweimal im Jahr öffnet.
+ *
+ * Der Weg dorthin führt aber nicht mehr in die Keycloak-Account-Konsole,
+ * sondern über `kc_action=UPDATE_PASSWORD`: dieselbe Seite, die man beim
+ * Einstieg schon gesehen hat, im Theme der App, und danach wieder hier.
  */
 import { KeyRound, Mail } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from 'react-oidc-context';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { Field, TextInput } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
 import { useChangeEmail } from '@/lib/api/hooks';
-import { OIDC_AUTHORITY } from '@/lib/auth/oidc-config';
+import { accountActionArgs } from '@/lib/auth/oidc-config';
 
 export function AccountCard({ email }: { email: string }) {
   const [value, setValue] = useState(email);
   const change = useChangeEmail();
   const toast = useToast();
+  const auth = useAuth();
 
   const trimmed = value.trim();
 
@@ -67,17 +73,18 @@ export function AccountCard({ email }: { email: string }) {
           E-Mail ändern
         </Button>
 
-        <a
-          href={`${OIDC_AUTHORITY}/account/#/security/signingin`}
-          target="_blank"
-          rel="noreferrer"
-          className="block"
+        <Button
+          variant="ghost"
+          className="w-full"
+          onClick={() =>
+            void auth.signinRedirect(
+              accountActionArgs('UPDATE_PASSWORD', '/profil'),
+            )
+          }
         >
-          <Button variant="ghost" className="w-full">
-            <KeyRound size={14} />
-            Passwort bei Keycloak ändern
-          </Button>
-        </a>
+          <KeyRound size={14} />
+          Passwort ändern
+        </Button>
       </Card>
     </section>
   );

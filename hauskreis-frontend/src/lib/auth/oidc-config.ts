@@ -63,6 +63,41 @@ function buildSettings(): UserManagerSettings {
 }
 
 /**
+ * Schickt zu Keycloak, um dort etwas am Konto zu ändern, und kommt danach
+ * hierher zurück.
+ *
+ * Keycloak nennt das eine „application-initiated action": derselbe
+ * Anmeldevorgang wie sonst, nur mit einem Zwischenschritt. Das ist der Grund,
+ * warum das Passwort nicht über die Keycloak-Account-Konsole geändert wird —
+ * so bekommt man dieselbe Seite zu sehen wie beim Einstieg, im Theme der App,
+ * und landet danach wieder da, wo man losgelaufen ist.
+ */
+export function accountActionArgs(action: 'UPDATE_PASSWORD', returnTo: string) {
+  return {
+    extraQueryParams: { kc_action: action },
+    // Kommt als `user.state` zurück; die Callback-Seite liest den Pfad daraus.
+    state: { returnTo },
+  };
+}
+
+/** Wohin nach dem Rücksprung — nur eigene Pfade, kein offener Redirect. */
+export function returnPathOf(state: unknown): string {
+  if (
+    typeof state === 'object' &&
+    state !== null &&
+    'returnTo' in state &&
+    typeof state.returnTo === 'string' &&
+    state.returnTo.startsWith('/')
+  ) {
+    return state.returnTo;
+  }
+  return '/';
+}
+
+/** Der Ausgang einer `accountActionArgs`-Aktion, wie Keycloak ihn meldet. */
+export const ACTION_STATUS_PARAM = 'done';
+
+/**
  * Nimmt `code` und `state` aus der Adresszeile, sobald der Tausch durch ist.
  *
  * Solange die Parameter dort stehen, ist jede weitere Ladung dieser Seite ein
@@ -74,9 +109,21 @@ function buildSettings(): UserManagerSettings {
  * Der Pfad bleibt dabei stehen. Ein `replaceState` auf `/` würde nur die
  * Adresszeile ändern, während Next weiter die Callback-Seite rendert — die
  * Weiterleitung macht dort der Router.
+ *
+ * Einzige Ausnahme ist `kc_action_status`: die Antwort auf „hat der
+ * Passwortwechsel geklappt?". Die wandert in die neue Adresse, statt in eine
+ * Modulvariable — so übersteht sie ein zweites Ausführen des Effekts, ohne
+ * dass jemand mitzählen muss.
  */
 export function clearSigninParams(): void {
-  window.history.replaceState({}, '', REDIRECT_PATH);
+  const status = new URLSearchParams(window.location.search).get(
+    'kc_action_status',
+  );
+  const path = status
+    ? `${REDIRECT_PATH}?${ACTION_STATUS_PARAM}=${encodeURIComponent(status)}`
+    : REDIRECT_PATH;
+
+  window.history.replaceState({}, '', path);
 }
 
 let cached: UserManager | undefined;
