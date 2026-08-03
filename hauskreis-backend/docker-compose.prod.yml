@@ -123,6 +123,16 @@ services:
       KC_HEALTH_ENABLED: 'true'
     ports:
       - '127.0.0.1:8080:8080'
+    volumes:
+      # Dasselbe Theme wie in der Entwicklung. Es fehlte hier, und das fällt
+      # nicht auf: ein Realm lässt sich auf ein Theme setzen, das es nicht gibt,
+      # und Keycloak nimmt dann wortlos die Standardseite.
+      #
+      # `--optimized` ändert daran nichts — `kc.sh build` kümmert sich um
+      # Provider, Datenbank und Features, Themes liest der Server zur Laufzeit.
+      # Anders als im Entwicklungsmodus werden sie hier zwischengespeichert:
+      # eine Änderung kostet einen Neustart des Dienstes.
+      - ./keycloak/themes/hauskreis:/opt/keycloak/themes/hauskreis:ro
     depends_on:
       keycloak-db:
         condition: service_healthy

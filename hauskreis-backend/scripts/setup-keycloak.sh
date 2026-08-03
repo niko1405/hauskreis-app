@@ -258,6 +258,39 @@ create_user() {
 create_user "testadmin" "niko@example.com" "test1234" "admin"
 create_user "testmember" "toni@example.com" "test1234" "member"
 
+# Ein Realm lässt sich anstandslos auf ein Theme setzen, das es gar nicht gibt —
+# Keycloak fällt dann still auf die Vorgabe zurück. Genau das ist hier über
+# Wochen unbemerkt geblieben: der Realm zeigte auf 'hauskreis', der Server kannte
+# nur 'keycloak.v2', und die Anmeldeseite sah einfach aus wie von der Stange.
+# Deshalb wird hier nachgesehen, ob das Theme wirklich angekommen ist.
+echo "==> Prüfen, ob das Theme '${REALM}' installiert ist"
+THEME_CHECK=$(curl -sf "${auth[@]}" "${KC_URL}/admin/serverinfo" | node -pe '
+  const themes = JSON.parse(require("fs").readFileSync(0,"utf8")).themes ?? {};
+  const has = (kind) => (themes[kind] ?? []).some(t => t.name === "hauskreis");
+  ["login","email"].filter(kind => !has(kind)).join(",");
+')
+
+if [ -n "${THEME_CHECK}" ]; then
+  echo ""
+  echo "FEHLER: Keycloak kennt kein Theme 'hauskreis' für: ${THEME_CHECK}"
+  echo ""
+  echo "  Der Realm zeigt darauf, der Server hat es nicht — dann nimmt Keycloak"
+  echo "  wortlos die Standardseite. Die Dateien liegen in"
+  echo "  keycloak/themes/hauskreis und werden per Volume eingehängt."
+  echo ""
+  echo "  Nachsehen, was im Container ankommt:"
+  echo "    docker compose exec keycloak ls /opt/keycloak/themes/hauskreis"
+  echo ""
+  echo "  Ist der Ordner dort leer, kommt der Daemon nicht an das Dateisystem:"
+  echo "    - unter WSL: in Docker Desktop unter Einstellungen > Resources >"
+  echo "      WSL Integration diese Distribution einschalten. Ohne das legt"
+  echo "      Docker für den Mount einen leeren Ordner an, statt zu scheitern."
+  echo "    - sonst: docker compose up -d --force-recreate keycloak"
+  echo ""
+  exit 1
+fi
+echo "    login und email: da"
+
 echo ""
 echo "Keycloak setup complete."
 echo "  Realm:   ${REALM}"

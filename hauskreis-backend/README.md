@@ -643,6 +643,41 @@ Warum Keycloak trotzdem immer erreichbar ist: Docker Desktop veröffentlicht
 seine Ports selbst auf `0.0.0.0` der Windows-Seite und geht am WSL-Relay vorbei.
 Der Vergleich „8080 geht, 3000 nicht" spricht also nicht gegen das Relay.
 
+### Die Anmeldeseite sieht aus wie Standard-Keycloak
+
+Das Theme liegt in `keycloak/themes/hauskreis` (Login und E-Mail, beide erben
+ihre Vorlagen von Keycloak und ersetzen nur Farben und Texte) und wird per
+Volume eingehängt. Der Realm zeigt über `setup-keycloak.sh` darauf.
+
+**Ein Realm lässt sich auf ein Theme setzen, das es gar nicht gibt.** Keycloak
+protestiert nicht, es nimmt still die Standardseite. Das ist wochenlang
+unbemerkt geblieben: `loginTheme: "hauskreis"` stand im Realm, aber
+`GET /admin/serverinfo` kannte nur `keycloak.v2`. Seitdem prüft
+`setup-keycloak.sh` am Ende nach und bricht mit einer Diagnose ab.
+
+Was im Container ankommt:
+
+```bash
+docker compose exec keycloak ls /opt/keycloak/themes/hauskreis
+```
+
+Ist der Ordner dort **leer**, kommt der Docker-Daemon nicht an das Dateisystem
+heran, in dem die Dateien liegen. Unter WSL ist das fast immer die abgeschaltete
+WSL-Integration: Docker Desktop → Einstellungen → Resources → WSL Integration
+für diese Distribution einschalten. Ohne sie löst der Daemon den Bind-Mount in
+seiner eigenen VM auf, findet dort nichts — und legt einen leeren Ordner an,
+statt zu scheitern. Ein Mount, der aussieht, als hätte er geklappt.
+
+Nachprüfen lässt sich das ohne Compose:
+
+```bash
+docker run --rm --entrypoint /bin/ls \
+  -v "$PWD/keycloak/themes/hauskreis:/probe:ro" \
+  quay.io/keycloak/keycloak:26.4 -la /probe
+```
+
+Sonst reicht `docker compose up -d --force-recreate keycloak`.
+
 ## Skripte
 
 ```bash
