@@ -21,9 +21,31 @@ tests {
     expect(res.body).to.have.property("openActionstep");
     expect(res.body).to.have.property("prayerBuddies");
   });
+
+  test("der nächste Termin trägt alle drei Rollen", function () {
+    if (res.body.nextMeeting === null) return;
+    expect(res.body.nextMeeting).to.have.property("host");
+    expect(res.body.nextMeeting).to.have.property("topic");
+    expect(res.body.nextMeeting.songLeaders).to.be.an("array");
+    // Für „In Maps öffnen" ohne zweiten Aufruf.
+    if (res.body.nextMeeting.location !== null) {
+      expect(res.body.nextMeeting.location).to.have.property("address");
+      expect(res.body.nextMeeting.location).to.have.property("requiresHost");
+    }
+  });
+
+  test("Gebetsbuddys stehen nicht unter den Aufgaben", function () {
+    const roles = res.body.myRoles.map((role) => role.role);
+    expect(roles).to.not.include("PRAYER_BUDDY");
+  });
 }
 
 docs {
   Nächster Termin, eigene Rollen, offener Actionstep, aktuelle
   Gebetsbuddys — auf dem Handy sind die Round Trips der Preis.
+
+  `myRoles` enthält bewusst **keine** Gebetsbuddys: die stehen schon in
+  `prayerBuddies`, haben ihren eigenen Bildschirm, und mit jemandem zu
+  beten ist keine Aufgabe, die man abarbeitet. Wer die vollständige
+  Liste über alle vier Rollen will, nimmt `…/assignments`.
 }

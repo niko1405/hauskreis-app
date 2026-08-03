@@ -26,13 +26,28 @@ export interface HomeScreen {
       latitude: number | null;
       longitude: number | null;
       address: string | null;
+      /** Damit „kein Host nötig" nicht wie ein fehlender Host aussieht. */
+      requiresHost: boolean;
     } | null;
     host: { id: string; name: string } | null;
-    topic: { id: string; title: string | null } | null;
+    topic: {
+      id: string;
+      title: string | null;
+      responsibles: { id: string; name: string }[];
+    } | null;
+    /** Who is on for the music. Empty is valid — not every evening has songs. */
+    songLeaders: { id: string; name: string }[];
     /** What *you* answered for that evening. */
     myAttendance: string;
   } | null;
-  /** Your own jobs over the next weeks, soonest first. */
+  /**
+   * Your own jobs over the next weeks, soonest first.
+   *
+   * Without the prayer buddies: they have their own field below and their own
+   * screen, and being paired up with somebody is not a job you have to do. In
+   * `…/assignments` they are still there — that route answers "who is down for
+   * what", this one answers "what is on your plate".
+   */
   myRoles: Assignment[];
   /** From the most recent past evening that has one. */
   openActionstep: { text: string; meetingId: string; date: string } | null;
@@ -88,10 +103,22 @@ export class DashboardService {
               latitude: true,
               longitude: true,
               address: true,
+              requiresHost: true,
             },
           },
           host: { select: { id: true, name: true } },
-          topic: { select: { id: true, title: true } },
+          topic: {
+            select: {
+              id: true,
+              title: true,
+              responsibles: {
+                select: { person: { select: { id: true, name: true } } },
+              },
+            },
+          },
+          songLeaders: {
+            select: { person: { select: { id: true, name: true } } },
+          },
           attendances: {
             where: { personId },
             select: { status: true },
@@ -129,12 +156,19 @@ export class DashboardService {
             title: meeting.title,
             location: meeting.location,
             host: meeting.host,
-            topic: meeting.topic,
+            topic: meeting.topic
+              ? {
+                  id: meeting.topic.id,
+                  title: meeting.topic.title,
+                  responsibles: meeting.topic.responsibles.map((r) => r.person),
+                }
+              : null,
+            songLeaders: meeting.songLeaders.map((leader) => leader.person),
             // No row means nobody answered yet, which is exactly UNKNOWN.
             myAttendance: meeting.attendances[0]?.status ?? 'UNKNOWN',
           }
         : null,
-      myRoles,
+      myRoles: myRoles.filter((role) => role.role !== 'PRAYER_BUDDY'),
       openActionstep:
         actionstep && actionstep.actionstepText?.trim()
           ? {

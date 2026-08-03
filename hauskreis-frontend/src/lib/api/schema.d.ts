@@ -1830,6 +1830,7 @@ export interface components {
           latitude: number | null;
           longitude: number | null;
           address: string | null;
+          requiresHost: boolean;
         } | null;
         host: {
           /** Format: uuid */
@@ -1840,7 +1841,17 @@ export interface components {
           /** Format: uuid */
           id: string;
           title: string | null;
+          responsibles: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+          }[];
         } | null;
+        songLeaders: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+        }[];
         /** @enum {string} */
         myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
       } | null;

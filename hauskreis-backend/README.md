@@ -1427,21 +1427,56 @@ der nächsten acht Wochen, offener Actionstep, aktuelle Gebetsbuddys. Auf dem
 Handy sind die Round Trips der Preis. Neue Logik entsteht dabei nicht — der
 Actionstep folgt derselben Regel wie der Reminder.
 
-Der Ort kommt **mit Position** heraus, damit der Home-Screen ein „In Maps
-öffnen" anbieten kann, ohne den Ort einzeln nachzuladen:
+### Der nächste Termin trägt alle drei Rollen
+
+`nextMeeting` nennt **Host, Thema und Musik**, und beim Thema die zuständigen
+Personen, nicht nur den Titel. Der Grund für den Umweg über die Personen: ein
+Thema hat oft gar keinen Titel (CLAUDE.md §5, „nicht jeder trägt vorab einen
+Titel ein"), und dann stünde über das Thema des Abends sonst nichts da.
+
+```jsonc
+"topic":       { "id": "…", "title": null, "responsibles": [{ "id": "…", "name": "Antonia" }] },
+"songLeaders": [{ "id": "…", "name": "Lena" }]
+```
+
+`songLeaders` ist hier **flach**, anders als im Termin-DTO, wo jede Zeile in
+`{ "person": … }` steckt. Dort spiegelt die Hülle die Verknüpfungstabelle; hier
+ist es eine eigens für einen Bildschirm gebaute Ansicht, und die Hülle wäre nur
+Ballast. Eine leere Liste ist gültig — nicht jeder Abend hat Lieder.
+
+### `myRoles` sind Aufgaben, keine Zuteilungen
+
+In `myRoles` stehen nur `HOST`, `TOPIC` und `SONG`. Die Gebetsbuddys fehlen
+absichtlich: sie stehen schon in `prayerBuddies`, sie haben ihren eigenen
+Bildschirm, und mit jemandem zu beten ist nichts, was man abarbeitet. Ein
+Home-Screen, der es unter „Deine Rollen" mitzählt, macht aus einer Beziehung
+eine Aufgabe.
+
+Die vollständige Liste über alle vier Rollen gibt es weiterhin — in
+`…/assignments`. Die Route beantwortet „wer ist wann dran", diese hier „was
+liegt bei dir an".
+
+### Der Ort kommt mit Position
+
+Damit der Home-Screen ein „In Maps öffnen" anbieten kann, ohne den Ort einzeln
+nachzuladen:
 
 ```jsonc
 "location": {
   "id": "…", "name": "Bei Sofie",
   "latitude": 48.7758, "longitude": 9.1829,
-  "address": "Königstraße 1, 70173 Stuttgart"
+  "address": "Königstraße 1, 70173 Stuttgart",
+  "requiresHost": true
 }
 ```
 
-Alle drei Felder sind optional. `latitude` und `longitude` sind entweder beide
-gesetzt oder beide `null` — das erzwingt das Location-DTO, siehe unten. Die
-Adresse ist unabhängig davon: zum Navigieren ist der Punkt genauer, zum
+Die drei Ortsangaben sind optional. `latitude` und `longitude` sind entweder
+beide gesetzt oder beide `null` — das erzwingt das Location-DTO, siehe unten.
+Die Adresse ist unabhängig davon: zum Navigieren ist der Punkt genauer, zum
 Vorlesen am Telefon die Anschrift.
+
+`requiresHost` steht dabei, damit „kein Host nötig" nicht wie ein vergessener
+Host aussieht. Ein Treffen im Schlosspark hat keinen und braucht keinen.
 
 ## Paginierte Listen
 

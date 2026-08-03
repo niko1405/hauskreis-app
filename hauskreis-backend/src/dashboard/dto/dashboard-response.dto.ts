@@ -49,12 +49,24 @@ export const homeScreenSchema = z.object({
           latitude: z.number().nullable(),
           longitude: z.number().nullable(),
           address: z.string().nullable(),
+          /// Damit „kein Host nötig" nicht wie ein vergessener Host aussieht.
+          requiresHost: z.boolean(),
         })
         .nullable(),
       host: personRefSchema.nullable(),
+      /// Mit den Zuständigen, nicht nur dem Titel: ein Thema hat oft gar keinen
+      /// Titel (CLAUDE.md §5), und dann stünde hier sonst nichts über das Thema.
       topic: z
-        .object({ id: z.uuid(), title: z.string().nullable() })
+        .object({
+          id: z.uuid(),
+          title: z.string().nullable(),
+          responsibles: z.array(personRefSchema),
+        })
         .nullable(),
+      /// Wer die Musik macht. Flach, nicht `{ person }` wie im Termin-DTO —
+      /// dort spiegelt die Hülle die Verknüpfungstabelle, hier ist es eine
+      /// eigens gebaute Ansicht und die Hülle wäre nur Ballast.
+      songLeaders: z.array(personRefSchema),
       /// Was *du* für diesen Abend geantwortet hast. Ohne Antwort `UNKNOWN`.
       myAttendance: z.enum(AttendanceStatus),
     })

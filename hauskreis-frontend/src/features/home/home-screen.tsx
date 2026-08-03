@@ -13,17 +13,32 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
-import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
-import { ROLE_ICON } from '@/components/domain/role-badge';
+import { ROLE_ICON, RoleChip } from '@/components/domain/role-badge';
 import { useHome, useMe, useSetAttendance } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import { formatDay, formatDayMonth, formatRelativeDay } from '@/lib/date';
-import { ROLE_LABEL, mapsUrl, meetingHeadline } from '@/lib/meeting';
+import {
+  addDays,
+  formatDay,
+  formatDayMonth,
+  formatRelativeDay,
+  startOfWeek,
+  today,
+} from '@/lib/date';
+import {
+  ROLE_LABEL,
+  hasTopicSlot,
+  mapsUrl,
+  meetingHeadline,
+} from '@/lib/meeting';
 import { firstName } from '@/lib/person';
-import type { Assignment, HomeNextMeeting } from '@/lib/api/types';
+import type {
+  Assignment,
+  AssignmentRole,
+  HomeNextMeeting,
+} from '@/lib/api/types';
 
 export function HomeScreen() {
   const me = useMe();
@@ -133,12 +148,38 @@ export function HomeScreen() {
   );
 }
 
+/** Host, Thema, Musik — die Gebetsbuddys lässt schon der Server weg. */
+const CATEGORIES: Exclude<AssignmentRole, 'PRAYER_BUDDY'>[] = [
+  'HOST',
+  'TOPIC',
+  'SONG',
+];
+
 /**
- * Rollen der nächsten acht Wochen, je Rolle die nächste. Steht nichts an, ist
- * das eine gute Nachricht und wird auch so formuliert.
+ * Die eigenen Aufgaben, in zwei Stufen.
+ *
+ * **Diese Woche** ist die Kalenderwoche, nicht „die nächsten sieben Tage": wer
+ * am Mittwoch draufschaut, meint mit „diese Woche" nicht den Dienstag darauf.
+ * Ab Mittwoch ist der Abschnitt deshalb meistens leer — und verschwindet dann
+ * ganz, statt „nichts geplant" zu behaupten.
+ *
+ * **Weitere** ist bewusst kein vollständiger Kalender, sondern je Kategorie die
+ * *nächste* anstehende. Wer dreimal in acht Wochen hostet, muss das hier nicht
+ * dreimal lesen — die zweite und dritte Zeile ändern an nichts, was man heute
+ * tun kann. Der ganze Vorlauf steht in der Planungstabelle.
+ *
+ * Steht nichts an, ist das eine gute Nachricht und wird auch so formuliert.
  */
 function MyRoles({ roles }: { roles: Assignment[] }) {
-  if (roles.length === 0) {
+  const endOfWeek = addDays(startOfWeek(today()), 6);
+
+  const thisWeek = roles.filter((role) => role.date <= endOfWeek);
+  // `roles` kommt chronologisch — das erste Vorkommen *ist* das nächste.
+  const later = CATEGORIES.map((kind) =>
+    roles.find((role) => role.date > endOfWeek && role.role === kind),
+  ).filter((role) => role !== undefined);
+
+  if (thisWeek.length === 0 && later.length === 0) {
     return (
       <Card>
         <p className="text-sm text-stone-500">
@@ -149,50 +190,100 @@ function MyRoles({ roles }: { roles: Assignment[] }) {
   }
 
   return (
-    <ul className="space-y-2">
-      {roles.map((role) => {
-        const Icon = ROLE_ICON[role.role];
-        const content = (
-          <span className="flex items-center justify-between gap-3">
-            <span className="flex min-w-0 items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-terracotta-50 text-terracotta-600">
-                <Icon size={15} />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-bold text-stone-800">
-                  {role.label ?? ROLE_LABEL[role.role]}
-                </span>
-                <span className="block text-[11px] text-stone-500">
-                  {role.endDate
-                    ? `${formatDay(role.date)} – ${formatDay(role.endDate)}`
-                    : formatDay(role.date)}
-                </span>
-              </span>
-            </span>
-            <Badge variant="terracotta">{formatRelativeDay(role.date)}</Badge>
-          </span>
-        );
+    <div className="space-y-4">
+      {thisWeek.length > 0 && (
+        <RoleGroup title="Diese Woche" roles={thisWeek} urgent />
+      )}
+      {later.length > 0 && <RoleGroup title="Weitere" roles={later} />}
+    </div>
+  );
+}
 
-        return (
-          <li
-            key={`${role.role}-${role.date}-${role.meetingId ?? role.groupId}`}
-          >
-            {role.meetingId ? (
-              <Link
-                href={`/termine/${role.meetingId}`}
-                className="block rounded-md border border-line bg-card p-3 transition-colors hover:border-line-strong"
-              >
-                {content}
-              </Link>
-            ) : (
-              <div className="rounded-md border border-line bg-card p-3">
-                {content}
-              </div>
-            )}
+function RoleGroup({
+  title,
+  roles,
+  urgent = false,
+}: {
+  title: string;
+  roles: Assignment[];
+  urgent?: boolean;
+}) {
+  return (
+    <div>
+      <h3
+        className={cn(
+          'mb-2 px-1 text-[10px] font-bold tracking-widest uppercase',
+          urgent ? 'text-terracotta-500' : 'text-stone-400',
+        )}
+      >
+        {title}
+      </h3>
+      <ul className="space-y-2">
+        {roles.map((role) => (
+          <li key={`${role.role}-${role.date}-${role.meetingId}`}>
+            <RoleRow role={role} urgent={urgent} />
           </li>
-        );
-      })}
-    </ul>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
+  const Icon = ROLE_ICON[role.role];
+
+  const content = (
+    <span className="flex items-center justify-between gap-3">
+      <span className="flex min-w-0 items-center gap-3">
+        <span
+          className={cn(
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-md',
+            urgent
+              ? 'bg-terracotta-100 text-terracotta-700'
+              : 'bg-terracotta-50 text-terracotta-600',
+          )}
+        >
+          <Icon size={15} />
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-bold text-stone-800">
+            {/* Die Rolle zuerst: „Bei Chris" allein sagt nicht, dass *du*
+                hostest. Das Label ist der Zusatz, nicht der Ersatz. */}
+            {ROLE_LABEL[role.role]}
+            {role.label && (
+              <span className="font-medium text-stone-500">
+                {' '}
+                · {role.label}
+              </span>
+            )}
+          </span>
+          <span className="block text-[11px] text-stone-500">
+            {formatDay(role.date)}
+          </span>
+        </span>
+      </span>
+      <Badge variant={urgent ? 'terracotta' : 'neutral'}>
+        {formatRelativeDay(role.date)}
+      </Badge>
+    </span>
+  );
+
+  if (!role.meetingId) {
+    return (
+      <div className="rounded-md border border-line bg-card p-3">{content}</div>
+    );
+  }
+
+  return (
+    <Link
+      href={`/termine/${role.meetingId}`}
+      className={cn(
+        'block rounded-md border bg-card p-3 transition-colors hover:border-line-strong',
+        urgent ? 'border-terracotta-100' : 'border-line',
+      )}
+    >
+      {content}
+    </Link>
   );
 }
 
@@ -216,34 +307,47 @@ function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
         </h3>
       </Link>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-stone-500">
+      <div className="text-xs font-medium text-stone-500">
         {meeting.location ? (
           <a
             href={mapsUrl(meeting.location)}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1 hover:text-terracotta-600"
+            className="inline-flex items-center gap-1 hover:text-terracotta-600"
           >
             <MapPin size={12} className="text-stone-400" />
             {meeting.location.name}
             <ExternalLink size={11} className="text-stone-300" />
           </a>
         ) : (
-          <span className="flex items-center gap-1">
+          <span className="inline-flex items-center gap-1">
             <MapPin size={12} className="text-stone-400" />
             Ort noch offen
           </span>
         )}
-
-        {meeting.host ? (
-          <span className="flex items-center gap-1.5">
-            <Avatar person={meeting.host} size="xs" />
-            hostet
-          </span>
-        ) : (
-          <span className="text-stone-400 italic">noch kein Host</span>
-        )}
       </div>
+
+      {/* Alle drei Rollen, in derselben Form wie auf der Terminkarte — sonst
+          heißt „noch kein Host" auf zwei Bildschirmen zweierlei. Der Link führt
+          aufs Detail, weil dort das „+ … eintragen" auch einlösbar ist. */}
+      <Link
+        href={`/termine/${meeting.id}`}
+        className="flex flex-wrap items-center gap-2"
+      >
+        <RoleChip
+          kind="HOST"
+          people={meeting.host ? [meeting.host] : []}
+          emptyLabel={
+            meeting.location && !meeting.location.requiresHost
+              ? 'Kein Host nötig'
+              : undefined
+          }
+        />
+        {hasTopicSlot(meeting.type) && (
+          <RoleChip kind="TOPIC" people={meeting.topic?.responsibles ?? []} />
+        )}
+        <RoleChip kind="SONG" people={meeting.songLeaders} />
+      </Link>
 
       <div className="flex items-center gap-2 border-t border-line pt-3">
         <span className="mr-auto text-[11px] font-semibold text-stone-400">

@@ -12,9 +12,14 @@ const nextMeeting = {
   date: utc('2026-08-04'),
   type: 'STANDARD',
   title: null,
-  location: { id: 'loc-chris', name: 'Bei Chris' },
+  location: { id: 'loc-chris', name: 'Bei Chris', requiresHost: true },
   host: { id: 'chris', name: 'chris' },
-  topic: { id: 't1', title: 'Vergebung' },
+  topic: {
+    id: 't1',
+    title: 'Vergebung',
+    responsibles: [{ person: { id: 'antonia', name: 'Antonia' } }],
+  },
+  songLeaders: [{ person: { id: 'lena', name: 'Lena' } }],
   attendances: [] as { status: string }[],
 };
 
@@ -89,6 +94,14 @@ describe('DashboardService.build', () => {
       host: { name: 'chris' },
       topic: { title: 'Vergebung' },
     });
+    // Alle drei Rollen mit Personen: das Thema hat oft keinen Titel, dann ist
+    // „wer bereitet vor" das Einzige, was über den Abend etwas aussagt.
+    expect(home.nextMeeting?.topic?.responsibles).toEqual([
+      { id: 'antonia', name: 'Antonia' },
+    ]);
+    expect(home.nextMeeting?.songLeaders).toEqual([
+      { id: 'lena', name: 'Lena' },
+    ]);
     expect(home.openActionstep).toEqual({
       text: 'Jeden Tag 10 Minuten still werden',
       meetingId: 'm0',
@@ -157,6 +170,21 @@ describe('DashboardService.build', () => {
     const home = await service.build('hk-1', 'niko', { now: NOW });
 
     expect(home.prayerBuddies).toBeNull();
+  });
+
+  it('leaves the prayer buddies out of the jobs list', async () => {
+    const { service } = setup({
+      roles: [
+        { role: 'HOST', date: '2026-08-04', person: { id: 'niko' } },
+        { role: 'PRAYER_BUDDY', date: '2026-08-12', person: { id: 'niko' } },
+      ],
+    });
+
+    const home = await service.build('hk-1', 'niko', { now: NOW });
+
+    // Mit jemandem zusammen beten ist keine Aufgabe, die man abarbeitet — und
+    // es steht schon in `prayerBuddies`. In `…/assignments` bleibt es drin.
+    expect(home.myRoles.map((role) => role.role)).toEqual(['HOST']);
   });
 
   it('asks only for that person, eight weeks out', async () => {

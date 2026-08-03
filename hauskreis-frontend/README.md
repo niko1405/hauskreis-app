@@ -202,6 +202,44 @@ eines, für das noch niemand einen festgelegt hat. Ein Lobpreisabend hat gar kei
 Thema. Solche Zustände bekommen ihren eigenen Text — nicht `—` und nicht die
 Fehlerdarstellung.
 
+## Der Startbildschirm
+
+Ein Aufruf (`…/home`), vier Blöcke. Zwei Entscheidungen darin sind es wert,
+aufgeschrieben zu werden.
+
+**„Deine Rollen" zeigt zwei Stufen, nicht acht Wochen am Stück.**
+
+|                 |                                                                  |
+| --------------- | ---------------------------------------------------------------- |
+| **Diese Woche** | alles, was bis Sonntag ansteht — vollständig                     |
+| **Weitere**     | je Kategorie (Host, Thema, Musik) nur die **nächste** anstehende |
+
+„Diese Woche" ist die Kalenderwoche, nicht „die nächsten sieben Tage": wer am
+Mittwoch draufschaut, meint mit „diese Woche" nicht den Dienstag darauf. Ab
+Mittwoch ist der Abschnitt deshalb meistens leer — und verschwindet dann ganz,
+statt „nichts geplant" zu behaupten. Dasselbe gilt für Kategorien ohne
+Zuteilung: eine Zeile „Musik: nichts" hilft niemandem.
+
+Bei „Weitere" steht bewusst nur die nächste je Kategorie. Wer dreimal in acht
+Wochen hostet, muss das hier nicht dreimal lesen — die zweite und dritte Zeile
+ändern nichts an dem, was man heute tun kann. Der vollständige Vorlauf steht in
+der Planungstabelle.
+
+Die Zeile nennt erst die Rolle, dann den Zusatz: „**Host** · Bei Chris". Vorher
+stand da nur „Bei Chris", was nicht verrät, dass _du_ derjenige bist, der
+aufschließt.
+
+**Gebetsbuddys tauchen unter „Deine Rollen" nicht mehr auf.** Sie haben ihre
+eigene Karte weiter oben und ihren eigenen Bildschirm, und mit jemandem zu
+beten ist keine Aufgabe, die man abarbeitet. Weggelassen werden sie schon vom
+Server, nicht erst hier — siehe `myRoles` im Backend-README.
+
+**„Nächstes Treffen" nennt alle drei Rollen** in denselben `RoleChip`s wie die
+Terminkarte. Sonst hieße „noch kein Host" auf zwei Bildschirmen zweierlei. Die
+Chips verlinken aufs Detail, weil dort das „+ Musik eintragen" auch einlösbar
+ist. „Bist du dabei?" bleibt unverändert und gilt weiterhin nur für genau
+diesen einen Abend.
+
 ## Die Termin-Detailseite
 
 Zwei Regeln prägen den Aufbau, beide inhaltlich und nicht kosmetisch.
