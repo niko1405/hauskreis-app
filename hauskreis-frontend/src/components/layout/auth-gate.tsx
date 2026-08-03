@@ -35,7 +35,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         }
         // Hängt der Aufruf an Keycloak (kein Timeout in der Bibliothek),
         // bekommt man sonst einen Ladebildschirm ohne Ausweg.
-        slowHint="Das dauert länger als üblich. Läuft Keycloak?"
+        slowHint="Das dauert länger als üblich — vermutlich ist die Verbindung gerade schlecht."
       />
     );
   }
@@ -66,7 +66,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <FullScreenHint
         text="Lade dein Profil …"
-        slowHint="Die API antwortet nicht. Läuft das Backend auf Port 3000?"
+        slowHint="Der Server antwortet nicht. Mit Netz hilft ein neuer Versuch."
       />
     );
   }
@@ -95,7 +95,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <FullScreenHint
         text="Lade deinen Hauskreis …"
-        slowHint="Die API antwortet nicht. Läuft das Backend auf Port 3000?"
+        slowHint="Der Server antwortet nicht. Mit Netz hilft ein neuer Versuch."
       />
     );
   }

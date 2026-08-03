@@ -178,6 +178,44 @@ sich aus keine Frist:
   Anmeldung: das Laden der OIDC-Metadaten und der Tausch von Code gegen Token
   haben in `oidc-client-ts` keinen Timeout.
 
+### Wenn eine Datei der App nicht ankommt
+
+Next lädt den Code einer Seite erst beim Hingehen. Bricht die Verbindung mitten
+drin ab, wirft der Browser einen `ChunkLoadError` — auf einem Handy mit
+wackligem Netz der wahrscheinlichste Fehler überhaupt, und nach jedem Deploy
+für ein paar Minuten auch in jedem noch offenen Tab.
+
+Ohne `error.tsx` landet das in Next.js' eingebauter Fehlerseite: in der
+Entwicklung im Overlay mit Stacktrace, in Produktion auf einer weißen Seite mit
+„Application error" — und in der installierten PWA steht daneben kein
+Browser-Menü zum Neuladen. Deshalb gibt es zwei Auffangnetze:
+
+| Datei                  | fängt                                                         |
+| ---------------------- | ------------------------------------------------------------- |
+| `app/(app)/error.tsx`  | Fehler beim Rendern einer Seite; die Navigation bleibt stehen |
+| `app/global-error.tsx` | Fehler im Wurzel-Layout selbst — ersetzt das ganze Dokument   |
+
+`global-error.tsx` arbeitet mit **Inline-Styles**: wenn ausgerechnet das
+Stylesheet nicht ankam, wäre eine Fehlerseite ohne Aussehen der zweite Fehler.
+
+**`reset()` hilft gegen einen Ladefehler nicht.** Der gescheiterte Chunk bleibt
+im Modul-Cache des Browsers als gescheitert stehen, ein erneutes Rendern läuft
+in genau denselben Fehler. Nur ein vollständiges Neuladen holt die Datei
+wirklich noch einmal — deshalb erkennt `lib/chunk-error.ts` diesen Fall und
+lädt selbst neu, mit einer **Sperre von 30 Sekunden** gegen die Neulade-Schleife
+bei dauerhaft kaputtem Netz. Greift die Sperre, bleibt die Fehlerseite mit ihrem
+Knopf stehen: dann gehört die Entscheidung dem Menschen.
+
+Bei allen anderen Fehlern gibt es beides — „Nochmal versuchen" (`reset()`) und
+„Neu laden" — plus die Fehlermeldung im Klartext. Die ist meist englisch, steht
+aber trotzdem da, weil sie das Einzige ist, womit man nachfragen kann.
+
+**In Produktion tritt das seltener auf**, weil der Service Worker die Chunks
+vorab in den Cache legt und `reloadOnOnline` (in `next.config.mjs`) neu lädt,
+sobald die Verbindung zurück ist. In der Entwicklung ist der Worker aus — dort
+ist ein `ChunkLoadError` bei schlechter Verbindung normal und mit einem
+Neuladen erledigt.
+
 ### Caching
 
 `lib/api/cache.ts` legt fest, wie lange was frisch ist: Stammdaten zehn Minuten,
