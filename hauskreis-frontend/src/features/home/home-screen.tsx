@@ -19,14 +19,7 @@ import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { ROLE_ICON, RoleChip } from '@/components/domain/role-badge';
 import { useHome, useMe, useSetAttendance } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import {
-  addDays,
-  formatDay,
-  formatDayMonth,
-  formatRelativeDay,
-  startOfWeek,
-  today,
-} from '@/lib/date';
+import { formatDay, formatDayMonth, formatRelativeDay } from '@/lib/date';
 import {
   ROLE_LABEL,
   hasTopicSlot,
@@ -118,7 +111,7 @@ export function HomeScreen() {
 
       <section>
         <SectionTitle>Deine Rollen</SectionTitle>
-        <MyRoles roles={myRoles} />
+        <MyRoles roles={myRoles} nextMeetingId={nextMeeting?.id ?? null} />
       </section>
 
       <section>
@@ -158,28 +151,39 @@ const CATEGORIES: Exclude<AssignmentRole, 'PRAYER_BUDDY'>[] = [
 /**
  * Die eigenen Aufgaben, in zwei Stufen.
  *
- * **Diese Woche** ist die Kalenderwoche, nicht „die nächsten sieben Tage": wer
- * am Mittwoch draufschaut, meint mit „diese Woche" nicht den Dienstag darauf.
- * Ab Mittwoch ist der Abschnitt deshalb meistens leer — und verschwindet dann
- * ganz, statt „nichts geplant" zu behaupten.
+ * **Beim nächsten Treffen** sind die Rollen an genau dem Abend, der als
+ * Nächstes ansteht — nicht die der laufenden Kalenderwoche. Der Hauskreis ist
+ * dienstags: ab Mittwoch wäre eine Kalenderwoche fast immer leer, und der
+ * Abend, um den es tatsächlich geht, stünde unter „Weitere". Der Bezugspunkt
+ * ist deshalb der Termin, nicht der Wochenwechsel.
  *
  * **Weitere** ist bewusst kein vollständiger Kalender, sondern je Kategorie die
- * *nächste* anstehende. Wer dreimal in acht Wochen hostet, muss das hier nicht
+ * *nächste* danach. Wer dreimal in acht Wochen hostet, muss das hier nicht
  * dreimal lesen — die zweite und dritte Zeile ändern an nichts, was man heute
  * tun kann. Der ganze Vorlauf steht in der Planungstabelle.
  *
  * Steht nichts an, ist das eine gute Nachricht und wird auch so formuliert.
  */
-function MyRoles({ roles }: { roles: Assignment[] }) {
-  const endOfWeek = addDays(startOfWeek(today()), 6);
-
-  const thisWeek = roles.filter((role) => role.date <= endOfWeek);
+function MyRoles({
+  roles,
+  nextMeetingId,
+}: {
+  roles: Assignment[];
+  nextMeetingId: string | null;
+}) {
+  // Der Vergleich nur mit gesetztem `nextMeetingId`: sonst würde `null === null`
+  // eine terminlose Rolle zur Rolle „am nächsten Treffen" machen.
+  const atNextMeeting = nextMeetingId
+    ? roles.filter((role) => role.meetingId === nextMeetingId)
+    : [];
   // `roles` kommt chronologisch — das erste Vorkommen *ist* das nächste.
   const later = CATEGORIES.map((kind) =>
-    roles.find((role) => role.date > endOfWeek && role.role === kind),
+    roles.find(
+      (role) => role.meetingId !== nextMeetingId && role.role === kind,
+    ),
   ).filter((role) => role !== undefined);
 
-  if (thisWeek.length === 0 && later.length === 0) {
+  if (atNextMeeting.length === 0 && later.length === 0) {
     return (
       <Card>
         <p className="text-sm text-stone-500">
@@ -191,8 +195,8 @@ function MyRoles({ roles }: { roles: Assignment[] }) {
 
   return (
     <div className="space-y-4">
-      {thisWeek.length > 0 && (
-        <RoleGroup title="Diese Woche" roles={thisWeek} urgent />
+      {atNextMeeting.length > 0 && (
+        <RoleGroup title="Beim nächsten Treffen" roles={atNextMeeting} urgent />
       )}
       {later.length > 0 && <RoleGroup title="Weitere" roles={later} />}
     </div>

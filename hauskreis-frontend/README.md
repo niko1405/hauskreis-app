@@ -209,16 +209,21 @@ aufgeschrieben zu werden.
 
 **„Deine Rollen" zeigt zwei Stufen, nicht acht Wochen am Stück.**
 
-|                 |                                                                  |
-| --------------- | ---------------------------------------------------------------- |
-| **Diese Woche** | alles, was bis Sonntag ansteht — vollständig                     |
-| **Weitere**     | je Kategorie (Host, Thema, Musik) nur die **nächste** anstehende |
+|                           |                                                              |
+| ------------------------- | ------------------------------------------------------------ |
+| **Beim nächsten Treffen** | alle eigenen Rollen an genau diesem Abend                    |
+| **Weitere**               | je Kategorie (Host, Thema, Musik) nur die **nächste** danach |
 
-„Diese Woche" ist die Kalenderwoche, nicht „die nächsten sieben Tage": wer am
-Mittwoch draufschaut, meint mit „diese Woche" nicht den Dienstag darauf. Ab
-Mittwoch ist der Abschnitt deshalb meistens leer — und verschwindet dann ganz,
-statt „nichts geplant" zu behaupten. Dasselbe gilt für Kategorien ohne
-Zuteilung: eine Zeile „Musik: nichts" hilft niemandem.
+Der Bezugspunkt der ersten Gruppe ist der **Termin**, nicht die Kalenderwoche.
+Der Hauskreis ist dienstags: ab Mittwoch wäre eine Kalenderwoche fast immer
+leer, und ausgerechnet der Abend, um den es geht, stünde unter „Weitere".
+Gefiltert wird deshalb über `nextMeeting.id` aus derselben Antwort — der Server
+entscheidet einmal, welcher Abend der nächste ist, und beide Abschnitte des
+Bildschirms folgen ihm.
+
+Hat man an dem Abend nichts zu tun, verschwindet die Gruppe ganz, statt „nichts
+geplant" zu behaupten. Dasselbe gilt für Kategorien ohne Zuteilung: eine Zeile
+„Musik: nichts" hilft niemandem.
 
 Bei „Weitere" steht bewusst nur die nächste je Kategorie. Wer dreimal in acht
 Wochen hostet, muss das hier nicht dreimal lesen — die zweite und dritte Zeile
