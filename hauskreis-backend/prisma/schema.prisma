@@ -230,7 +230,10 @@ model Meeting {
   /// Nullable and shared: a topic can span several meetings, and a
   /// LOBPREIS_GEBET evening has none at all.
   topicId        String?       @map("topic_id") @db.Uuid
-  /// Only used by CUSTOM meetings ("Geburtstag von …").
+  /// Wie der Abend überschrieben ist — „Geburtstag von Mira", aber auch ein
+  /// eigener Name für einen ganz normalen Dienstag. Gilt für jede Terminart:
+  /// bleibt er leer, steht dort der Titel des Themas und sonst die Art des
+  /// Termins (siehe `meetingHeadline` im Frontend).
   title          String?
   /// Only used by LOBPREIS_GEBET meetings.
   testimonyText  String?       @map("testimony_text")

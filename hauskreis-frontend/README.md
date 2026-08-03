@@ -202,6 +202,42 @@ eines, für das noch niemand einen festgelegt hat. Ein Lobpreisabend hat gar kei
 Thema. Solche Zustände bekommen ihren eigenen Text — nicht `—` und nicht die
 Fehlerdarstellung.
 
+## Die Termin-Detailseite
+
+Zwei Regeln prägen den Aufbau, beide inhaltlich und nicht kosmetisch.
+
+**Ort und Gastgeber sind eine Entscheidung.** Solange ein Gastgeber eingetragen
+ist, gibt es keine Ortsauswahl — der Ort steht einfach da. Ohne Gastgeber wird
+er wählbar, aber nur unter den Treffpunkten ohne Gastgeber
+(`isSelectableWithoutHost`), plus „Treffpunkt anlegen" über das
+`LocationSheet`. Ein Zuhause taucht dort nie auf: es kommt über seine
+Bewohner:innen an den Termin, nie über eine Liste. Durchgesetzt wird das im
+Backend; die Oberfläche bildet es nur ab.
+
+**Ein vergangener Abend ist ein eigener Zustand**, kein ausgegrauter kommender:
+
+|                 |                                                                               |
+| --------------- | ----------------------------------------------------------------------------- |
+| Rolle eintragen | nur nach Rückfrage, und ohne Vorschläge (`withoutSuggestions`)                |
+| Lieder          | unveränderlich — sonst verrutschen `timesPlayed` und `lastPlayedAt` im Archiv |
+| Absage          | heißt „als abgesagt markieren" und verschickt nichts                          |
+
+Dazu drei kleinere Umbauten:
+
+- **Der Titel sitzt am Überschriftstext**, nicht in einem Feld weiter unten.
+  Angezeigt wird die fertige Überschrift (eigener Titel, sonst das Thema, sonst
+  die Terminart); bearbeitet wird aber nur `meeting.title`. Würde der Entwurf
+  mit der Überschrift starten, machte das erste Speichern aus dem geerbten
+  Themen-Titel einen eigenen — und der Termin löste sich still vom Thema ab.
+- **Der Info-Text steht oben.** Dort steht, was man _vor_ dem Abend wissen muss;
+  unten zwischen Zusammenfassung und Actionstep las es niemand rechtzeitig.
+- **„Wer kommt" ist eine Liste.** Vorher ließ sich für jede Person durchtippen,
+  was wie eine Anwesenheitskontrolle aussah und mit einem Fehlgriff wildfremd
+  absagte. Die eigene Antwort ist deshalb nicht verschwunden, sondern eine
+  eigene Zeile darunter — ohne die gäbe es für einen Abend in drei Wochen gar
+  keinen Weg zuzusagen, denn „Bist du dabei?" auf dem Home-Screen gilt nur
+  fürs nächste Treffen.
+
 ## PWA und Push
 
 Der Service Worker entsteht aus `src/app/sw.ts` (Serwist) und landet in

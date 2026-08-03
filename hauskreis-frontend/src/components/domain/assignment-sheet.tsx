@@ -38,6 +38,14 @@ export interface AssignmentSheetProps {
   selectedIds: string[];
   /** Host ist einer, Thema und Musik können mehrere sein. */
   multiple?: boolean;
+  /**
+   * Für vergangene Abende: keine Vorschläge, nur die Personenliste.
+   *
+   * Ein Vorschlag beantwortet „wer wäre als Nächstes dran" — an einem Abend,
+   * der vorbei ist, gibt es diese Frage nicht. Was hier nachgetragen wird, ist
+   * eine Erinnerung, und die weiß man oder man weiß sie nicht.
+   */
+  withoutSuggestions?: boolean;
   onSubmit: (personIds: string[]) => void;
   saving?: boolean;
 }
@@ -49,6 +57,7 @@ export function AssignmentSheet({
   meetingId,
   selectedIds,
   multiple = false,
+  withoutSuggestions = false,
   onSubmit,
   saving = false,
 }: AssignmentSheetProps) {
@@ -60,7 +69,11 @@ export function AssignmentSheet({
   }, [open, selectedIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const people = usePeople();
-  const suggestions = useSuggestions(kind, meetingId, open);
+  const suggestions = useSuggestions(
+    kind,
+    meetingId,
+    open && !withoutSuggestions,
+  );
 
   const toggle = (personId: string) => {
     if (!multiple) {
@@ -93,31 +106,39 @@ export function AssignmentSheet({
       title={ROLE_QUESTION[kind]}
       subtitle={multiple ? 'Mehrere möglich' : undefined}
     >
-      <section>
-        <h3 className="mb-3 text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
-          Vorschläge
-        </h3>
+      {withoutSuggestions ? (
+        <p className="rounded-md border border-line bg-canvas px-4 py-3 text-xs leading-relaxed text-stone-500">
+          Der Abend ist vorbei — hier wird nur nachgetragen, wer es war. Deshalb
+          steht hier kein Vorschlag: die Frage „wer wäre als Nächstes dran"
+          stellt sich rückwärts nicht.
+        </p>
+      ) : (
+        <section>
+          <h3 className="mb-3 text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
+            Vorschläge
+          </h3>
 
-        {suggestions.isLoading && <CardSkeleton />}
-        {suggestions.error && <ErrorState error={suggestions.error} />}
+          {suggestions.isLoading && <CardSkeleton />}
+          {suggestions.error && <ErrorState error={suggestions.error} />}
 
-        <div className="space-y-3">
-          {(suggestions.data ?? []).slice(0, 3).map((suggestion) => (
-            <SuggestionRow
-              key={suggestion.personId}
-              suggestion={suggestion}
-              selected={draft.includes(suggestion.personId)}
-              onSelect={() => toggle(suggestion.personId)}
-            />
-          ))}
-        </div>
+          <div className="space-y-3">
+            {(suggestions.data ?? []).slice(0, 3).map((suggestion) => (
+              <SuggestionRow
+                key={suggestion.personId}
+                suggestion={suggestion}
+                selected={draft.includes(suggestion.personId)}
+                onSelect={() => toggle(suggestion.personId)}
+              />
+            ))}
+          </div>
 
-        {suggestions.data?.length === 0 && (
-          <p className="text-xs text-stone-400 italic">
-            Gerade kein Vorschlag — such unten selbst jemanden aus.
-          </p>
-        )}
-      </section>
+          {suggestions.data?.length === 0 && (
+            <p className="text-xs text-stone-400 italic">
+              Gerade kein Vorschlag — such unten selbst jemanden aus.
+            </p>
+          )}
+        </section>
+      )}
 
       <section>
         <h3 className="mb-3 text-[10px] font-bold tracking-widest text-stone-400 uppercase">

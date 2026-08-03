@@ -23,7 +23,18 @@ import {
 import { cn } from '@/lib/cn';
 import { formatRelativeDay } from '@/lib/date';
 
-export function SongsCard({ meetingId }: { meetingId: string }) {
+export function SongsCard({
+  meetingId,
+  readOnly = false,
+}: {
+  meetingId: string;
+  /**
+   * Ein vergangener Abend. Was gesungen wurde, wurde gesungen — eine
+   * nachträgliche Änderung verfälscht die Zählung in der Song-Datenbank
+   * (`timesPlayed`, `lastPlayedAt`) und damit das Archiv.
+   */
+  readOnly?: boolean;
+}) {
   const songs = useMeetingSongs(meetingId);
   const remove = useRemoveMeetingSong(meetingId);
   const select = useSetMeetingSongSelected(meetingId);
@@ -31,14 +42,22 @@ export function SongsCard({ meetingId }: { meetingId: string }) {
 
   return (
     <section>
-      <SectionTitle>Lieder</SectionTitle>
+      <SectionTitle>{readOnly ? 'Gesungen' : 'Lieder'}</SectionTitle>
       <Card className="space-y-4">
         {songs.isLoading && <Skeleton className="h-16 w-full" />}
 
         {songs.data?.length === 0 && (
           <EmptyState
-            title="Noch keine Lieder vorgeschlagen"
-            hint="Wer Musik macht, freut sich über Vorschläge vorab."
+            title={
+              readOnly
+                ? 'Für diesen Abend ist nichts notiert'
+                : 'Noch keine Lieder vorgeschlagen'
+            }
+            hint={
+              readOnly
+                ? undefined
+                : 'Wer Musik macht, freut sich über Vorschläge vorab.'
+            }
           />
         )}
 
@@ -55,6 +74,7 @@ export function SongsCard({ meetingId }: { meetingId: string }) {
             >
               <button
                 type="button"
+                disabled={readOnly}
                 aria-pressed={entry.isSelected}
                 aria-label={
                   entry.isSelected
@@ -72,6 +92,7 @@ export function SongsCard({ meetingId }: { meetingId: string }) {
                   entry.isSelected
                     ? 'border-music bg-music text-white'
                     : 'border-line-strong text-transparent hover:border-music',
+                  readOnly && 'cursor-default hover:border-line-strong',
                 )}
               >
                 <Check size={14} strokeWidth={3} />
@@ -99,21 +120,23 @@ export function SongsCard({ meetingId }: { meetingId: string }) {
                 </a>
               )}
 
-              <IconButton
-                label="Lied entfernen"
-                onClick={() =>
-                  remove.mutate(entry.id, {
-                    onError: (error) => toast.error(errorMessage(error)),
-                  })
-                }
-              >
-                <Trash2 size={15} />
-              </IconButton>
+              {!readOnly && (
+                <IconButton
+                  label="Lied entfernen"
+                  onClick={() =>
+                    remove.mutate(entry.id, {
+                      onError: (error) => toast.error(errorMessage(error)),
+                    })
+                  }
+                >
+                  <Trash2 size={15} />
+                </IconButton>
+              )}
             </li>
           ))}
         </ul>
 
-        <AddSongForm meetingId={meetingId} />
+        {!readOnly && <AddSongForm meetingId={meetingId} />}
       </Card>
     </section>
   );
@@ -122,7 +145,9 @@ export function SongsCard({ meetingId }: { meetingId: string }) {
 function AddSongForm({ meetingId }: { meetingId: string }) {
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
+  const [lyricsUrl, setLyricsUrl] = useState('');
   const [expanded, setExpanded] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   const search = useSongSearch(title, expanded);
   const add = useAddMeetingSong(meetingId);
@@ -131,18 +156,31 @@ function AddSongForm({ meetingId }: { meetingId: string }) {
   const reset = () => {
     setTitle('');
     setArtist('');
+    setLyricsUrl('');
     setExpanded(false);
+    setConfirming(false);
   };
+
+  const trimmedTitle = title.trim();
+  const hits = search.data?.items ?? [];
+  /**
+   * Ein Lied, das genau so schon in der Datenbank steht. Dann ist „neu
+   * anlegen" fast immer ein Versehen — man hat den Treffer übersehen.
+   */
+  const exactHit = hits.find(
+    (song) => song.title.toLowerCase() === trimmedTitle.toLowerCase(),
+  );
 
   const submit = (songId?: string) => {
     const payload = songId
       ? { songId }
       : {
-          title: title.trim(),
+          title: trimmedTitle,
           artist: artist.trim() === '' ? null : artist.trim(),
+          lyricsUrl: lyricsUrl.trim() === '' ? null : lyricsUrl.trim(),
         };
 
-    if (!songId && payload.title === '') return;
+    if (!songId && trimmedTitle === '') return;
 
     add.mutate(payload, {
       onSuccess: reset,
@@ -208,20 +246,68 @@ function AddSongForm({ meetingId }: { meetingId: string }) {
         aria-label="Interpret"
       />
 
-      <div className="flex gap-2">
-        <Button variant="ghost" size="sm" className="flex-1" onClick={reset}>
-          Abbrechen
-        </Button>
-        <Button
-          size="sm"
-          className="flex-1"
-          loading={add.isPending}
-          disabled={title.trim() === ''}
-          onClick={() => submit()}
-        >
-          Hinzufügen
-        </Button>
-      </div>
+      <TextInput
+        type="url"
+        inputMode="url"
+        value={lyricsUrl}
+        onChange={(event) => setLyricsUrl(event.target.value)}
+        placeholder="Link zum Songtext (optional)"
+        aria-label="Link zum Songtext"
+      />
+
+      {/* Der Text selbst wird nicht gespeichert — wir verlinken nach draußen
+          (CLAUDE.md §6). */}
+
+      {confirming ? (
+        <div className="space-y-2 rounded-md border border-topic-line bg-topic-bg p-3">
+          <p className="text-xs leading-relaxed text-topic">
+            {exactHit ? (
+              <>
+                „{exactHit.title}" steht schon in eurer Liederliste. Willst du
+                wirklich einen zweiten Eintrag anlegen?
+              </>
+            ) : (
+              <>
+                „{trimmedTitle}" kennt die App noch nicht. Neu anlegen? Es
+                landet dann in eurer Liederliste und lässt sich beim nächsten
+                Mal einfach auswählen.
+              </>
+            )}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1"
+              onClick={() => setConfirming(false)}
+            >
+              Nochmal ansehen
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1"
+              loading={add.isPending}
+              onClick={() => submit()}
+            >
+              {exactHit ? 'Trotzdem anlegen' : 'Anlegen'}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" className="flex-1" onClick={reset}>
+            Abbrechen
+          </Button>
+          <Button
+            size="sm"
+            className="flex-1"
+            disabled={trimmedTitle === ''}
+            onClick={() => setConfirming(true)}
+          >
+            Hinzufügen
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

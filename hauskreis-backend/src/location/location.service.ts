@@ -13,8 +13,15 @@ import { homeName, normalizeAddress } from './address';
 /**
  * Wer hier wohnt. Zwei Dinge hängen daran: der Name eines Zuhauses und die
  * Frage, ob ein Ort überhaupt eins ist.
+ *
+ * Exportiert, weil `locationResponseSchema` `residents` **verlangt** und jede
+ * Stelle, die einen ganzen Ort ausliefert, ihn deshalb mitladen muss. Genau
+ * das ging einmal auseinander: der Termin lieferte seinen Ort mit `location:
+ * true`, das Feld fehlte, und jede Terminliste kam als 500 zurück. Ein
+ * gemeinsames Include statt zweier Kopien macht daraus einen Fehler, den man
+ * gar nicht erst machen kann.
  */
-const locationInclude = {
+export const locationInclude = {
   residents: {
     select: { id: true, name: true },
     orderBy: { name: 'asc' },

@@ -715,6 +715,49 @@ unverändert, `null` löscht die Zuordnung.
 Zuweisungen werden gegen die Mandantengrenze geprüft — eine Person oder Location
 aus einem anderen Hauskreis wird mit `400` abgelehnt.
 
+### Ort und Gastgeber sind eine Entscheidung
+
+`locationId` und `hostPersonId` waren zwei unabhängige Felder. Damit ließ sich
+„Abend bei Chris" mit „Ort: Bei Niko" kombinieren — zwei Angaben, die einander
+widersprechen, und niemand weiß, welche gilt. In der Praxis entstand genau das,
+sobald jemand umzog.
+
+Wer hostet, hostet bei sich. `MeetingService.resolveVenue` setzt das für
+`create` **und** `update` durch, nicht die Oberfläche: die API ist auch aus
+Bruno, aus einem Skript und aus der nächsten Ansicht erreichbar.
+
+| Was ankommt                                          | Was passiert                                      |
+| ---------------------------------------------------- | ------------------------------------------------- |
+| `hostPersonId` einer Person mit Zuhause              | `locationId` wird dieses Zuhause                  |
+| `hostPersonId` einer Person ohne Adresse             | `400` — ohne Wohnung kein Hosten                  |
+| `hostPersonId` **und** ein abweichender `locationId` | `400`, keine stille Korrektur                     |
+| `locationId` eines Zuhauses, ohne Gastgeber          | `400` — das geht nur über die Person              |
+| `hostPersonId: null`                                 | eine Wohnung fällt mit weg, ein Treffpunkt bleibt |
+
+Die letzte Zeile ist der Grund, warum `requiresHost` hier trägt: der
+Schlosspark hing nie am Gastgeber, ihn mitzulöschen wäre Datenverlust. Eine
+Wohnung ohne ihre Bewohner:innen dagegen ist kein Ort mehr, sondern ein
+Widerspruch.
+
+**Bestehende Daten**: die Migration
+`20260803140000_meeting_venue_follows_host` zieht Widersprüche nur für
+**kommende** Termine gerade. Ein vergangener Abend hat stattgefunden, und wo,
+ist eine Tatsache — die zu überschreiben, weil das Modell heute strenger ist,
+wäre das Umschreiben von Geschichte. Die Oberfläche zeigt solche Altfälle
+weiter so an, wie sie notiert wurden; erst beim Bearbeiten greift die Regel.
+
+### Ein vergangener Abend sagt niemandem mehr ab
+
+`cancel` und der Statuswechsel über `update` verschicken die
+`MEETING_CANCELLED`-Benachrichtigung nur für Termine, die noch bevorstehen.
+Rückwärts heißt „absagen" nicht „fällt aus", sondern „hat nicht
+stattgefunden" — ein Nachtrag fürs Archiv. Eine Push-Nachricht darüber wäre
+eine Warnung vor etwas, das längst vorbei ist.
+
+Der heutige Abend zählt dabei als kommend: `meeting.date` ist ein Kalendertag,
+und ohne den Zuschnitt auf UTC-Mitternacht wäre ein Termin ab 00:01 Uhr
+„vergangen" und jede Absage am Tag selbst stumm.
+
 ## Vorschläge
 
 Die App **schlägt vor, sie teilt nicht zu**. Der Endpunkt ist read-only und

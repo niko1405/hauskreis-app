@@ -10,6 +10,7 @@ import {
   MeetingStatus,
 } from '../../generated/prisma/enums';
 import { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
+import { locationInclude } from '../location/location.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
@@ -23,7 +24,9 @@ import type {
 } from './dto/meeting.dto';
 
 const meetingInclude = {
-  location: true,
+  // Nicht `true`: `locationResponseSchema` verlangt `residents`, und ohne das
+  // Include fehlt es in der Antwort — siehe `locationInclude`.
+  location: { include: locationInclude },
   host: { select: { id: true, name: true } },
   topic: {
     select: {
@@ -119,13 +122,18 @@ export class MeetingService {
       );
     }
 
+    const venue = await this.resolveVenue(hauskreisId, dto, {
+      hostPersonId: null,
+      location: null,
+    });
+
     return this.prisma.meeting.create({
       data: {
         hauskreisId,
         date,
         type: dto.type,
-        locationId: dto.locationId ?? null,
-        hostPersonId: dto.hostPersonId ?? null,
+        locationId: venue.locationId ?? null,
+        hostPersonId: venue.hostPersonId ?? null,
         topicId: dto.topicId ?? null,
         title: dto.title ?? null,
         infoText: dto.infoText ?? null,
@@ -142,6 +150,7 @@ export class MeetingService {
   ) {
     const before = await this.findOne(hauskreisId, id);
     await this.assertReferencesBelongToHauskreis(hauskreisId, dto);
+    const venue = await this.resolveVenue(hauskreisId, dto, before);
 
     const updated = await updateWithVersionCheck({
       condition,
@@ -153,8 +162,8 @@ export class MeetingService {
             status: dto.status,
             // `undefined` leaves a field alone, `null` clears it — that
             // distinction is what lets a host or location be un-assigned.
-            locationId: dto.locationId,
-            hostPersonId: dto.hostPersonId,
+            locationId: venue.locationId,
+            hostPersonId: venue.hostPersonId,
             topicId: dto.topicId,
             title: dto.title,
             testimonyText: dto.testimonyText,
@@ -175,7 +184,8 @@ export class MeetingService {
     // two paths would otherwise behave differently for no reason.
     if (
       before.status !== MeetingStatus.CANCELLED &&
-      updated.status === MeetingStatus.CANCELLED
+      updated.status === MeetingStatus.CANCELLED &&
+      !isPast(before.date)
     ) {
       await this.meetingNotifications.announceCancellation(id);
     }
@@ -199,8 +209,11 @@ export class MeetingService {
       notFoundMessage: `Meeting ${id} not found`,
     });
 
-    // Cancelling an already-cancelled meeting stays silent.
-    if (before.status !== MeetingStatus.CANCELLED) {
+    // Cancelling an already-cancelled meeting stays silent. Und ein vergangener
+    // Abend auch: dort heißt Absagen „es hat nicht stattgefunden", ein
+    // Nachtrag fürs Archiv. Eine Benachrichtigung darüber wäre eine Warnung
+    // vor etwas, das längst vorbei ist.
+    if (before.status !== MeetingStatus.CANCELLED && !isPast(before.date)) {
       await this.meetingNotifications.announceCancellation(id);
     }
 
@@ -299,6 +312,91 @@ export class MeetingService {
   }
 
   /**
+   * Ort und Gastgeber sind **eine** Entscheidung, nicht zwei.
+   *
+   * Vorher waren es zwei unabhängige Felder, und damit ließ sich „Abend bei
+   * Chris" mit „Ort: Bei Niko" kombinieren — zwei Angaben, die sich
+   * widersprechen, und niemand weiß, welche gilt. Wer hostet, hostet bei sich;
+   * ein Ort ohne Gastgeber (Schlosspark) ist die Ausnahme, für die es
+   * `requiresHost = false` gibt.
+   *
+   * Durchgesetzt wird das hier und nicht nur in der Oberfläche: die API ist
+   * auch aus Bruno, aus einem Skript oder aus der nächsten Ansicht erreichbar.
+   *
+   * Die vier Fälle:
+   *
+   * | Eingabe | Ergebnis |
+   * |---|---|
+   * | Gastgeber gesetzt | Ort = dessen Zuhause, ein abweichender Ort ist ein Fehler |
+   * | Gastgeber gesetzt, aber ohne Adresse | Fehler — ohne Wohnung kein Hosten |
+   * | Kein Gastgeber, Ort gewählt | nur Orte ohne Gastgeber |
+   * | Gastgeber herausgenommen | eine Wohnung geht mit, ein Treffpunkt bleibt |
+   */
+  private async resolveVenue(
+    hauskreisId: string,
+    dto: { locationId?: string | null; hostPersonId?: string | null },
+    before: {
+      hostPersonId: string | null;
+      location: { requiresHost: boolean } | null;
+    },
+  ): Promise<{ locationId?: string | null; hostPersonId?: string | null }> {
+    const hostChanged = dto.hostPersonId !== undefined;
+    const hostAfter = hostChanged ? dto.hostPersonId : before.hostPersonId;
+
+    if (hostAfter) {
+      const host = await this.prisma.person.findFirstOrThrow({
+        where: { id: hostAfter, hauskreisId },
+        select: { name: true, locationId: true },
+      });
+
+      if (!host.locationId) {
+        throw new BadRequestException(
+          `${host.name} hat keine Adresse hinterlegt und kann deshalb nicht Gastgeber sein.`,
+        );
+      }
+
+      // Nicht still überschreiben: wer beides schickt, hat eine Vorstellung,
+      // und die stimmt hier nicht mit der Wirklichkeit überein.
+      if (dto.locationId !== undefined && dto.locationId !== host.locationId) {
+        throw new BadRequestException(
+          'Der Ort ergibt sich aus dem Gastgeber. Nimm erst den Gastgeber heraus, dann lässt sich ein Treffpunkt wählen.',
+        );
+      }
+
+      return { hostPersonId: dto.hostPersonId, locationId: host.locationId };
+    }
+
+    if (dto.locationId) {
+      const location = await this.prisma.location.findFirstOrThrow({
+        where: { id: dto.locationId, hauskreisId },
+        select: { name: true, requiresHost: true },
+      });
+
+      if (location.requiresHost) {
+        throw new BadRequestException(
+          `${location.name} ist ein Zuhause — trag die Person als Gastgeber ein, dann stimmt der Ort von allein.`,
+        );
+      }
+
+      return { hostPersonId: dto.hostPersonId, locationId: dto.locationId };
+    }
+
+    // Gastgeber raus, ohne dass ein neuer Ort mitkommt: eine Wohnung ohne ihre
+    // Bewohner:innen ergibt keinen Sinn und fällt mit weg. Ein Treffpunkt hing
+    // nie am Gastgeber und bleibt stehen.
+    if (
+      hostChanged &&
+      dto.hostPersonId === null &&
+      dto.locationId === undefined &&
+      before.location?.requiresHost
+    ) {
+      return { hostPersonId: null, locationId: null };
+    }
+
+    return { hostPersonId: dto.hostPersonId, locationId: dto.locationId };
+  }
+
+  /**
    * Guards the multi-tenant boundary: a meeting must never point at a person or
    * location from a different Hauskreis. The foreign keys alone would allow it.
    */
@@ -353,6 +451,17 @@ export class MeetingService {
       );
     }
   }
+}
+
+/**
+ * Liegt der Abend hinter uns?
+ *
+ * Beide Seiten auf Mitternacht UTC geschnitten, weil `meeting.date` ein
+ * Kalendertag ist: der heutige Abend zählt bis zum Ende des Tages als kommend,
+ * sonst wäre ein Termin ab 00:01 „vergangen" und jede Absage stumm.
+ */
+function isPast(date: Date): boolean {
+  return toUtcDate(date) < toUtcDate(new Date());
 }
 
 /**

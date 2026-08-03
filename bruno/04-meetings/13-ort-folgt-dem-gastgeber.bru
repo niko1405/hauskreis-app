@@ -1,0 +1,65 @@
+meta {
+  name: Ort folgt dem Gastgeber
+  type: http
+  seq: 13
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{meetingEtag}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "hostPersonId": "{{personId}}"
+  }
+}
+
+docs {
+  Ort und Gastgeber sind **eine** Entscheidung, nicht zwei.
+
+  Wer hostet, hostet bei sich: mit dem Gastgeber übernimmt der Termin dessen
+  Zuhause, ohne dass `locationId` mitgeschickt wird. Wer beides schickt und
+  dabei etwas anderes meint, bekommt einen 400 statt einer stillen Korrektur.
+
+  Die vier Regeln, alle in `MeetingService.resolveVenue`:
+
+  | Was man schickt | Was passiert |
+  |---|---|
+  | `hostPersonId` | `locationId` wird dessen Zuhause |
+  | `hostPersonId` einer Person ohne Adresse | 400 — ohne Wohnung kein Hosten |
+  | `hostPersonId` **und** ein abweichender `locationId` | 400 |
+  | `locationId` eines Zuhauses ohne Gastgeber | 400 — geht nur über die Person |
+  | `hostPersonId: null` | eine Wohnung fällt mit weg, ein Treffpunkt bleibt |
+
+  Für einen Treffpunkt (Schlosspark) also: erst `hostPersonId: null`, dann
+  `locationId`. Siehe `14-treffpunkt-ohne-gastgeber.bru`.
+}
+
+script:post-response {
+  bru.setEnvVar("meetingEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("der Ort ist das Zuhause des Gastgebers", function () {
+    expect(res.getBody().locationId).to.not.equal(null);
+    expect(res.getBody().location.requiresHost).to.equal(true);
+  });
+
+  test("der Gastgeber wohnt dort", function () {
+    const wohnt = res
+      .getBody()
+      .location.residents.some((p) => p.id === res.getBody().hostPersonId);
+    expect(wohnt).to.equal(true);
+  });
+}

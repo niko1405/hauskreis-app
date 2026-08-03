@@ -1,0 +1,51 @@
+meta {
+  name: Treffpunkt ohne Gastgeber
+  type: http
+  seq: 14
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{meetingEtag}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "hostPersonId": null
+  }
+}
+
+docs {
+  Die Gegenrichtung zu `13-ort-folgt-dem-gastgeber`.
+
+  Den Gastgeber herausnehmen macht den Ort wieder frei: die Wohnung fällt mit
+  weg, weil sie ohne ihre Bewohner:innen keinen Sinn ergibt. Danach — und erst
+  danach — lässt sich ein Ort **ohne** Gastgeber setzen (`requiresHost:
+  false`, z. B. der Schlosspark), mit einem zweiten PATCH:
+
+      { "locationId": "<id eines Treffpunkts>" }
+
+  Ein Treffpunkt bleibt umgekehrt stehen, wenn ein Gastgeber herausgenommen
+  wird — er hing nie an ihm.
+}
+
+script:post-response {
+  bru.setEnvVar("meetingEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Gastgeber und Wohnung sind zusammen weg", function () {
+    expect(res.getBody().hostPersonId).to.equal(null);
+    expect(res.getBody().locationId).to.equal(null);
+  });
+}
