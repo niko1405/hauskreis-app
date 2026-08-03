@@ -126,10 +126,10 @@ export class KeycloakAdminService {
     keycloakUserId: string,
   ): Promise<boolean> {
     try {
-      await this.request(
-        `/users/${keycloakUserId}/execute-actions-email?lifespan=604800`,
-        { method: 'PUT', body: JSON.stringify(['VERIFY_EMAIL']) },
-      );
+      await this.request(this.actionsEmailPath(keycloakUserId), {
+        method: 'PUT',
+        body: JSON.stringify(['VERIFY_EMAIL']),
+      });
       return true;
     } catch (error) {
       this.logger.warn(
@@ -139,6 +139,30 @@ export class KeycloakAdminService {
       );
       return false;
     }
+  }
+
+  /**
+   * Der Aufruf, aus dem eine Aktions-Mail entsteht — samt Rückweg.
+   *
+   * `client_id` und `redirect_uri` sind der Unterschied zwischen „am Ende
+   * steht man auf einer Keycloak-Seite" und „am Ende ist man in der App".
+   * Keycloak prüft die Adresse gegen die Redirect-URIs des Clients; steht dort
+   * etwas anderes, verweigert es den Link. Ohne `APP_URL` bleiben beide weg
+   * und der alte Ablauf gilt weiter.
+   *
+   * Eine Woche Gültigkeit, weil eine Einladung auch mal einen Urlaub
+   * überdauern muss.
+   */
+  private actionsEmailPath(keycloakUserId: string): string {
+    const params = new URLSearchParams({ lifespan: '604800' });
+    const appUrl = this.config.get('APP_URL');
+
+    if (appUrl) {
+      params.set('client_id', this.config.get('KEYCLOAK_FRONTEND_CLIENT_ID'));
+      params.set('redirect_uri', appUrl);
+    }
+
+    return `/users/${keycloakUserId}/execute-actions-email?${params.toString()}`;
   }
 
   private async findUserByEmail(
@@ -179,17 +203,14 @@ export class KeycloakAdminService {
    */
   private async sendInvitationEmail(keycloakUserId: string): Promise<boolean> {
     try {
-      await this.request(
-        `/users/${keycloakUserId}/execute-actions-email?lifespan=604800`,
-        {
-          method: 'PUT',
-          body: JSON.stringify([
-            'UPDATE_PROFILE',
-            'UPDATE_PASSWORD',
-            'VERIFY_EMAIL',
-          ]),
-        },
-      );
+      await this.request(this.actionsEmailPath(keycloakUserId), {
+        method: 'PUT',
+        body: JSON.stringify([
+          'UPDATE_PROFILE',
+          'UPDATE_PASSWORD',
+          'VERIFY_EMAIL',
+        ]),
+      });
       return true;
     } catch (error) {
       this.logger.warn(

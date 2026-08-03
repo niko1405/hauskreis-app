@@ -46,6 +46,18 @@ export const envSchema = z.object({
   KEYCLOAK_REALM: z.string().min(1),
   KEYCLOAK_CLIENT_ID: z.string().min(1),
   KEYCLOAK_CLIENT_SECRET: z.string().min(1),
+  /// Der Client, unter dem sich der Browser anmeldet. Gebraucht wird er nur
+  /// für die Einladungsmail: ein `execute-actions-email` ohne Client endet auf
+  /// einer Keycloak-Seite, mit Client führt es zurück in die App.
+  KEYCLOAK_FRONTEND_CLIENT_ID: z.string().min(1).default('hauskreis-app'),
+  /// Wohin die Einladung zurückführt, wenn Nutzername und Passwort stehen.
+  /// Muss zu einer Redirect-URI des Frontend-Clients passen, sonst weist
+  /// Keycloak den Link ab. Leer heißt: kein Rücksprung, der Ablauf endet auf
+  /// Keycloaks eigener Schlussseite — unschön, aber nicht kaputt.
+  APP_URL: z
+    .union([httpUrl, z.literal('')])
+    .optional()
+    .transform((value) => value || undefined),
   /// What the token's `aud` must contain. Keycloak only sets it when an
   /// audience mapper says so — `scripts/setup-keycloak.sh` adds one to both
   /// clients. Without this check any token from the realm would be accepted,

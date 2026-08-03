@@ -37,6 +37,8 @@ services:
       KEYCLOAK_CLIENT_SECRET: local-dev-secret
       KEYCLOAK_AUDIENCE: hauskreis-backend
       KEYCLOAK_ALLOWED_AZP: hauskreis-app,hauskreis-backend
+      KEYCLOAK_FRONTEND_CLIENT_ID: hauskreis-app
+      APP_URL: http://localhost:3001
     depends_on:
       postgres:
         condition: service_healthy

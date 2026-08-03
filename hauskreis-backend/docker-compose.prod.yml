@@ -51,6 +51,10 @@ services:
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-hauskreis-backend}
       KEYCLOAK_ALLOWED_AZP: ${KEYCLOAK_ALLOWED_AZP:-hauskreis-app}
+      KEYCLOAK_FRONTEND_CLIENT_ID: ${KEYCLOAK_FRONTEND_CLIENT_ID:-hauskreis-app}
+      # Wohin die Einladungsmail zurückführt. Ohne das endet sie auf einer
+      # Keycloak-Seite statt in der App.
+      APP_URL: ${APP_URL}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
       VAPID_SUBJECT: ${VAPID_SUBJECT}

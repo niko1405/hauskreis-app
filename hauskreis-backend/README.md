@@ -1671,6 +1671,8 @@ Personen, Locations, Terminen, Themen, Songs und Abwesenheiten,
 
 > Der Invite-Endpunkt legt den Keycloak-Account an, weist die Realm-Rolle zu und
 > verschickt die Einladung. Lokal landet die Mail in Mailpit (<http://localhost:8025>).
+> Mit gesetzter `APP_URL` endet der Ablauf nicht bei Keycloak, sondern mit einem
+> Knopf zurück in die App — siehe [Der Weg zurück](#der-weg-zurück).
 > Schlägt nur der Mailversand fehl, antwortet er mit `invitationEmailSent: false` —
 > der Account existiert dann trotzdem und die Einladung kann erneut gesendet werden.
 > Scheitert dagegen ein früherer Schritt, wird der Keycloak-Account wieder gelöscht,
@@ -1718,6 +1720,27 @@ Ebenfalls am Realm: `resetPasswordAllowed`. Ohne das wäre ein vergessenes
 Passwort eine Sackgasse — die App kennt keinen Weg, eine Einladung noch einmal
 zu schicken.
 
+### Der Weg zurück
+
+Ein `execute-actions-email` ohne Client kennt kein Ziel: Keycloak weiß nicht,
+wo die App liegt, und der Ablauf endet auf einer Keycloak-Seite ohne Ausgang.
+Deshalb hängt `actionsEmailPath` `client_id` und `redirect_uri` an, sobald
+`APP_URL` gesetzt ist. Keycloak prüft die Adresse gegen die Redirect-URIs des
+Frontend-Clients; passt sie nicht, verweigert es den Link. Ohne `APP_URL`
+bleiben beide weg und der alte Ablauf gilt weiter.
+
+Was dabei **nicht** passiert, und zwar mit Absicht auf Keycloaks Seite:
+
+- **Kein automatischer Sprung.** Keycloak zeigt eine Bestätigung („Fertig. Du
+  kannst dich jetzt im Hauskreis anmelden.") mit einem Knopf. Ein
+  Auto-Redirect ließe sich nur über eine kopierte `info.ftl` erzwingen — eine
+  Vorlage, die man dann bei jedem Update nachziehen müsste, für einen
+  eingesparten Fingertipp.
+- **Keine fertige Sitzung.** Ein Aktions-Token ist keine Anmeldung; danach
+  steht kein SSO-Cookie im Browser. Wer gerade Nutzername und Passwort gesetzt
+  hat, meldet sich damit einmal an. Nachgestellt: die Autorisierungs-Anfrage
+  direkt nach dem Ablauf zeigt wieder die Anmeldeseite.
+
 ### Die Anmeldeseiten gehören uns
 
 Keycloaks Standardtexte sind englisch und klingen nach Verwaltungssoftware, und
@@ -1725,9 +1748,9 @@ seine Anmeldeseite sieht aus wie Keycloak. Das Realm-Theme `hauskreis`
 ([`keycloak/themes/hauskreis`](keycloak/themes/hauskreis)) ändert beides — in
 zwei Teilen, `email/` und `login/`, und in beiden **ohne eigene Vorlagen**:
 
-| | erbt von | ersetzt |
-|---|---|---|
-| `email/` | `base` | `messages_de.properties` |
+|          | erbt von      | ersetzt                                                   |
+| -------- | ------------- | --------------------------------------------------------- |
+| `email/` | `base`        | `messages_de.properties`                                  |
 | `login/` | `keycloak.v2` | `messages_de.properties`, ein Stylesheet, Logo, Schriften |
 
 Die `.ftl`-Dateien mitzuschleppen hieße, sie bei jedem Keycloak-Update gegen
