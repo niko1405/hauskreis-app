@@ -216,6 +216,36 @@ sobald die Verbindung zurück ist. In der Entwicklung ist der Worker aus — dor
 ist ein `ChunkLoadError` bei schlechter Verbindung normal und mit einem
 Neuladen erledigt.
 
+### Wenn die App gar nicht erst anläuft
+
+Beide Netze oben brauchen ein laufendes React. Es gibt aber einen Fall, in dem
+es das nie gibt — und der sieht harmlos aus:
+
+„Einen Moment …" kommt vom **Server**. `useSessionRestore` startet auf
+`'checking'` und `auth.isLoading` ist anfangs `true`, der Satz steht also schon
+im ausgelieferten HTML (nachprüfbar mit `curl http://localhost:3001/`). Bricht
+danach ein Chunk ab, hydratisiert React nie. Dann greift nichts: `useSlow` mit
+seinen zwölf Sekunden liegt in genau dem JavaScript, das fehlt, und eine
+Fehlergrenze hat nichts, worin sie sitzen könnte. Der Bildschirm bleibt für
+immer bei „Einen Moment …", ohne Fehler, ohne Ausweg.
+
+Dagegen steht `components/layout/boot-watchdog.tsx`, eingehängt im Root-Layout
+**außerhalb** von `Providers`. Alles daran liegt im HTML selbst: ein
+Inline-Skript, das nichts nachlädt, und ein versteckter Kasten, der nur sichtbar
+gemacht wird. Er geht auf, wenn nach zehn Sekunden niemand `data-hk-ready`
+gesetzt hat — oder schon nach 1,5 Sekunden, wenn vorher ein `<script>` oder
+`<link>` gescheitert ist (der `error`-Listener in der Capture-Phase ist die
+einzige Stelle, an der fehlgeschlagene Dateien überhaupt auftauchen). Die
+Gnadenfrist ist da, weil manchmal etwas Entbehrliches fehlt und die App trotzdem
+hochkommt; ist sie um und React lebt, bleibt der Kasten zu.
+
+Das Lebenszeichen setzt ein `useEffect` in `app/providers.tsx` — Effekte laufen
+erst nach der Hydratisierung, und genau das ist die Frage.
+
+**Kein automatisches Neuladen.** `chunk-error.ts` darf das, weil dort React
+läuft und der Fehler einen Namen hat. Hier weiß niemand, ob ein zweiter Versuch
+besser ausgeht.
+
 ### Caching
 
 `lib/api/cache.ts` legt fest, wie lange was frisch ist: Stammdaten zehn Minuten,

@@ -12,8 +12,9 @@
  *   ToastProvider    — nur Anzeige, kommt zuletzt
  */
 import { QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthProvider } from 'react-oidc-context';
+import { BOOT_READY_ATTRIBUTE } from '@/components/layout/boot-watchdog';
 import { ToastProvider } from '@/components/ui/toast';
 import { createQueryClient } from '@/lib/api/query-client';
 import { AuthBridge } from '@/lib/auth/auth-bridge';
@@ -23,6 +24,12 @@ import { HauskreisProvider } from '@/lib/hauskreis/hauskreis-context';
 export function Providers({ children }: { children: React.ReactNode }) {
   // Darf bei jedem Rendern nicht neu entstehen, sonst ist der Cache weg.
   const [queryClient] = useState(createQueryClient);
+
+  // Das Lebenszeichen für den Boot-Wachhund: dieser Effekt läuft erst, wenn
+  // React hydratisiert hat — und genau das ist die Frage, die er stellt.
+  useEffect(() => {
+    document.documentElement.setAttribute(BOOT_READY_ATTRIBUTE, '1');
+  }, []);
 
   return (
     <AuthProvider
