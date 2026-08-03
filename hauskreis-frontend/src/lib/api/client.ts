@@ -42,13 +42,16 @@ export interface Resource<T> {
 
 /**
  * Wird beim Schreiben statt eines ETags übergeben, wenn die Route bewusst
- * keine Vorbedingung verlangt. Genau vier Routen sind das — sie deklarieren
- * kein `412`/`428`, obwohl sie PUT bzw. PATCH sind:
+ * keine Vorbedingung verlangt. Diese Routen sind das — sie deklarieren kein
+ * `412`/`428`, obwohl sie PUT bzw. PATCH sind:
  *
  * - `PUT  …/meetings/{id}/attendance`
  * - `PUT  …/meetings/{id}/song-leaders`
  * - `PATCH …/meetings/{meetingId}/songs/{id}`
  * - `PUT  /api/push/settings/{type}`
+ * - `PUT  /api/me/home` und `PATCH /api/me/email` — beide beschreiben eine
+ *   Absicht („hier wohne ich", „so heiße ich jetzt"), keine Fortschreibung
+ *   einer vorher gelesenen Fassung. Es gibt nichts, wogegen zu prüfen wäre.
  *
  * Der Rest **muss** einen ETag mitgeben; das Symbol zwingt an jeder
  * Aufrufstelle zu einer bewussten Entscheidung, statt das Feld weglassen zu

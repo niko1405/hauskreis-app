@@ -127,7 +127,7 @@ curl -s -X POST http://localhost:8080/realms/hauskreis/protocol/openid-connect/t
 ## Die API beschrieben: OpenAPI
 
 ```bash
-pnpm openapi        # -> openapi.json, 70 Operationen auf 45 Pfaden
+pnpm openapi        # -> openapi.json, 73 Operationen auf 47 Pfaden
 pnpm start:dev      # -> http://localhost:3000/api/docs zum Durchklicken
 ```
 
@@ -415,7 +415,11 @@ er ist ab dem Deploy für alle an.
 Nicht jeder Typ hat einen Rhythmus. `schedule.kind` sagt, was einstellbar ist:
 
 - **`LEAD_TIME`** — `leadDays`, Grenzen stehen im Katalog (1–14).
-- **`WEEKLY`** — `weekday`, 0 = Sonntag.
+- **`WEEKLY`** — `weekdays`, eine Liste, 0 = Sonntag. Mehrere sind erlaubt: ein
+  Actionstep verträgt eine Nachfrage zur Wochenmitte _und_ eine kurz vor dem
+  nächsten Abend — das sind zwei Erinnerungen, nicht dieselbe zweimal. Doppelte
+  Tage werden entfernt und die Liste sortiert; leer oder `null` heißt „wie im
+  Katalog", nicht „nie" (dafür gibt es `enabled`).
 - **`EVENT`** — nur an/aus. „Wie oft" ist bei „du hast neue Gebetsbuddys" keine
   sinnvolle Frage.
 
@@ -425,7 +429,8 @@ Wert, den nie jemand liest.
 ```bash
 curl -X PUT .../push/settings/HOST_REMINDER -d '{"leadDays":7}'          # 200
 curl -X PUT .../push/settings/HOST_REMINDER -d '{"leadDays":30}'         # 400, max 14
-curl -X PUT .../push/settings/MEETING_CANCELLED -d '{"weekday":3}'       # 400, kein Wochentag
+curl -X PUT .../push/settings/ACTIONSTEP_REMINDER -d '{"weekdays":[2,5]}' # 200, zweimal die Woche
+curl -X PUT .../push/settings/MEETING_CANCELLED -d '{"weekdays":[3]}'    # 400, kein Wochentag
 curl -X PUT .../push/settings/HOST_REMINDER -d '{"leadDays":null}'       # zurück auf Default
 ```
 
@@ -799,6 +804,18 @@ sobald zwei Menschen denselben Vornamen haben; und nur so erkennt
 `POST …/locations/resolve-address` eine **Wohngemeinschaft**, wenn die zweite
 Person dieselbe Adresse einträgt. Ob daraus wirklich ein gemeinsamer Haushalt
 wird, entscheidet die Person — die Route antwortet, sie zieht niemanden ein.
+
+**Eine Wohnung entsteht über `PUT /api/me/home`**, nicht über `…/locations`.
+Ein Aufruf statt dreier (auflösen, anlegen, Person ändern): mitten darin
+abzubrechen hinterließe eine Wohnung ohne Bewohner:innen. Wohnt unter der
+Anschrift schon jemand, antwortet die Route mit `409` und nennt die Namen —
+weiter geht es nur mit `joinExisting: true`. Das ist Absicht: gleiche Anschrift
+ist ein starkes Indiz für eine Wohngemeinschaft, aber ein Tippfehler sieht
+genauso aus, und ein stiller Zusammenzug halbierte still das Gewicht beider.
+
+`capacity` gehört dabei der Wohnung, nicht der Person: in einer
+Wohngemeinschaft sehen und ändern alle Bewohner:innen dieselbe Zahl. Ein
+Wohnzimmer hat eine Größe, unabhängig davon, wer sie einträgt.
 
 **Orte darf jede:r anlegen und ändern**, ohne Admin-Rolle. Ein Treffpunkt
 entsteht im Vorbeigehen, und wer dafür erst jemanden mit Rechten suchen muss,
@@ -1590,6 +1607,8 @@ beide aus derselben Variable ab.
 | ----------------------- | -------------------------------------------- | ---------------------------------------- |
 | `GET`                   | `/api/health`                                | öffentlich                               |
 | `GET`                   | `/api/me`                                    | eingeloggt (verknüpft beim ersten Login) |
+| `PUT`/`DELETE`          | `/api/me/home`                               | eingeloggt (`409` ohne `joinExisting`)   |
+| `PATCH`                 | `/api/me/email`                              | eingeloggt (Keycloak **und** `person`)   |
 | `GET`/`POST`            | `/api/hauskreise`                            | eingeloggt                               |
 | `GET`                   | `/api/hauskreise/:hauskreisId/people`        | eingeloggt                               |
 | `POST`                  | `/api/hauskreise/:hauskreisId/people`        | `admin`                                  |

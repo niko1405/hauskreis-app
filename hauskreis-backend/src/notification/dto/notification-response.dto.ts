@@ -16,10 +16,12 @@ const scheduleSchema = z.discriminatedUnion('kind', [
     maxLeadDays: z.number().int(),
   }),
   z.object({
-    /// Kommt an einem Wochentag. 0 = Sonntag, 6 = Samstag, wie
-    /// `Date.getUTCDay()`.
+    /// Kommt an gewählten Wochentagen. 0 = Sonntag, 6 = Samstag, wie
+    /// `Date.getUTCDay()`. Mehrere sind erlaubt: eine Nachfrage zur
+    /// Wochenmitte und eine kurz vor dem nächsten Abend sind verschiedene
+    /// Erinnerungen, nicht dieselbe zweimal.
     kind: z.literal('WEEKLY'),
-    defaultWeekday: z.number().int().min(0).max(6),
+    defaultWeekdays: z.array(z.number().int().min(0).max(6)),
   }),
   z.object({
     /// Kommt, wenn etwas passiert. Nur an oder aus.
@@ -44,8 +46,8 @@ export const notificationSettingSchema = z.object({
   enabled: z.boolean(),
   /// Nur bei `LEAD_TIME` gesetzt.
   leadDays: z.number().int().nullable(),
-  /// Nur bei `WEEKLY` gesetzt.
-  weekday: z.number().int().min(0).max(6).nullable(),
+  /// Nur bei `WEEKLY` gefüllt, sonst leer. Mehrere Tage sind erlaubt.
+  weekdays: z.array(z.number().int().min(0).max(6)),
   customised: z.boolean(),
 });
 

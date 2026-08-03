@@ -492,9 +492,15 @@ model NotificationPreference {
   /// Days before the meeting, for the reminders tied to one. Null keeps the
   /// catalog default; meaningless for event-driven types.
   leadDays  Int?             @map("lead_days")
-  /// Day of week for the recurring reminders, 0 = Sunday. Null keeps the
-  /// catalog default; meaningless for every other kind.
-  weekday   Int?
+  /// Wochentage für die wiederkehrenden Erinnerungen, 0 = Sonntag.
+  ///
+  /// Eine Liste, weil ein Actionstep mehr als eine Nachfrage pro Woche
+  /// verträgt — einmal zur Wochenmitte und einmal kurz vor dem nächsten
+  /// Abend ist etwas anderes als zweimal dasselbe.
+  ///
+  /// Leer heißt „wie im Katalog", nicht „nie": Letzteres sagt `enabled`.
+  /// Für alle anderen Arten ohne Bedeutung.
+  weekdays  Int[]
   updatedAt DateTime         @updatedAt @map("updated_at")
 
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)

@@ -15,7 +15,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { Checkbox, Field, Select, TextInput } from '@/components/ui/field';
+import { Checkbox, Field, TextInput } from '@/components/ui/field';
 import {
   CardSkeleton,
   ConflictBanner,
@@ -23,14 +23,11 @@ import {
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
-import {
-  useLocations,
-  useMe,
-  usePerson,
-  useUpdatePerson,
-} from '@/lib/api/hooks';
+import { useMe, usePerson, useUpdatePerson } from '@/lib/api/hooks';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { AbsencesCard } from './absences-card';
+import { AccountCard } from './account-card';
+import { HomeCard } from './home-card';
 import { NotificationsCard } from './notifications-card';
 
 export function ProfileScreen() {
@@ -60,7 +57,6 @@ function Loaded({ personId }: { personId: string }) {
   const hauskreis = useHauskreis();
   const person = usePerson(personId);
   const update = useUpdatePerson(personId);
-  const locations = useLocations();
   const toast = useToast();
 
   const current = person.data?.data;
@@ -68,7 +64,6 @@ function Loaded({ personId }: { personId: string }) {
   const [name, setName] = useState('');
   const [playsInstrument, setPlaysInstrument] = useState(false);
   const [canHost, setCanHost] = useState(true);
-  const [locationId, setLocationId] = useState('');
   const [birthdate, setBirthdate] = useState('');
 
   // Den Serverstand übernehmen, sobald er da ist — und nach jedem Speichern.
@@ -77,7 +72,6 @@ function Loaded({ personId }: { personId: string }) {
     setName(current.name);
     setPlaysInstrument(current.playsInstrument);
     setCanHost(current.canHost);
-    setLocationId(current.locationId ?? '');
     setBirthdate(current.birthdate ?? '');
   }, [current]);
 
@@ -93,7 +87,6 @@ function Loaded({ personId }: { personId: string }) {
     name !== current.name ||
     playsInstrument !== current.playsInstrument ||
     canHost !== current.canHost ||
-    locationId !== (current.locationId ?? '') ||
     birthdate !== (current.birthdate ?? '');
 
   const save = () => {
@@ -103,7 +96,6 @@ function Loaded({ personId }: { personId: string }) {
         // Zod-Defaults machen diese beiden auch beim PATCH zu Pflichtfeldern.
         playsInstrument,
         canHost,
-        locationId: locationId === '' ? null : locationId,
         ...(birthdate === '' ? {} : { birthdate }),
       },
       {
@@ -170,23 +162,6 @@ function Loaded({ personId }: { personId: string }) {
               />
             </Field>
 
-            <Field
-              label="Wo du hosten würdest"
-              hint="Bestimmt, welcher Ort dir bei den Host-Vorschlägen zugeordnet wird."
-            >
-              <Select
-                value={locationId}
-                onChange={(event) => setLocationId(event.target.value)}
-              >
-                <option value="">Kein fester Ort</option>
-                {(locations.data ?? []).map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {location.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
             <Checkbox
               label="Ich kann ein Instrument spielen"
               description="Dann tauchst du bei den Musik-Vorschlägen auf."
@@ -211,6 +186,10 @@ function Loaded({ personId }: { personId: string }) {
             </Button>
           </Card>
         </section>
+
+        <HomeCard personId={personId} locationId={current.locationId} />
+
+        <AccountCard email={current.email} />
 
         <AbsencesCard personId={personId} />
 

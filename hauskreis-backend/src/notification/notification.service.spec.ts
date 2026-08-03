@@ -57,7 +57,7 @@ function setup(
     resolve: jest.fn().mockResolvedValue({
       enabled: options.switchedOff !== true,
       leadDays: null,
-      weekday: null,
+      weekdays: [],
     }),
   } as unknown as NotificationPreferenceService;
 

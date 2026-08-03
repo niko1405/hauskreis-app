@@ -1,7 +1,23 @@
 /** `/api/me`, `/api/hauskreise`, `/api/health` — alles, was nicht hauskreisgebunden ist. */
-import { apiGet, apiGetResource, apiPost, type Resource } from '../client';
+import {
+  apiDelete,
+  apiGet,
+  apiGetResource,
+  apiPatch,
+  apiPost,
+  apiPut,
+  UNCONDITIONAL,
+  type Resource,
+} from '../client';
 import { hkPath } from './paths';
-import type { CreateHauskreisInput, Hauskreis, Me } from '../types';
+import type {
+  ChangedEmail,
+  CreateHauskreisInput,
+  Hauskreis,
+  Location,
+  Me,
+  SetHomeInput,
+} from '../types';
 
 /**
  * Wer bin ich — Person **plus Rollen aus dem Token**. Antwortet `404`, wenn zur
@@ -9,6 +25,39 @@ import type { CreateHauskreisInput, Hauskreis, Me } from '../types';
  */
 export function getMe(signal?: AbortSignal): Promise<Me> {
   return apiGet<Me>('/me', { signal });
+}
+
+/**
+ * „Hier wohne ich."
+ *
+ * Ein Aufruf, nicht drei: der Server löst die Anschrift auf, legt die Wohnung
+ * an oder zieht in die vorhandene ein und hängt die Person dran. Wohnt dort
+ * schon jemand, antwortet er mit `409`, solange `joinExisting` fehlt.
+ *
+ * Ohne Vorbedingung: es gibt keine vorher gelesene Fassung, gegen die man
+ * prüfen könnte — die Anschrift *ist* die Aussage.
+ */
+export async function setHome(input: SetHomeInput): Promise<Location> {
+  const { data } = await apiPut<Location>('/me/home', input, UNCONDITIONAL);
+  return data;
+}
+
+/** „Ich bringe keine Wohnung mit." */
+export function clearHome(): Promise<void> {
+  return apiDelete('/me/home');
+}
+
+/**
+ * Ändert die eigene Adresse in Keycloak **und** hier — oder in keinem von
+ * beiden. Das Passwort bleibt außen vor, dafür gibt es Keycloaks Konto-Seite.
+ */
+export async function changeEmail(email: string): Promise<ChangedEmail> {
+  const { data } = await apiPatch<ChangedEmail>(
+    '/me/email',
+    { email },
+    UNCONDITIONAL,
+  );
+  return data;
 }
 
 /** Nicht paginiert. Liefert die `hauskreisId` für alles Weitere. */

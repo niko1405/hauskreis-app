@@ -22,6 +22,7 @@ import {
   useUpdateNotificationSetting,
 } from '@/lib/api/hooks';
 import { usePushSetup } from '@/lib/push/use-push-setup';
+import { cn } from '@/lib/cn';
 import type { NotificationSetting } from '@/lib/api/types';
 
 const WEEKDAYS = [
@@ -181,21 +182,82 @@ function SettingRow({ setting }: { setting: NotificationSetting }) {
       )}
 
       {setting.enabled && setting.schedule.kind === 'WEEKLY' && (
-        <Select
-          aria-label={`Wochentag für ${setting.label}`}
-          value={String(setting.weekday ?? setting.schedule.defaultWeekday)}
+        <WeekdayPicker
+          label={setting.label}
+          chosen={setting.weekdays}
           disabled={update.isPending}
-          onChange={(event) => change({ weekday: Number(event.target.value) })}
-          className="text-xs"
-        >
-          {WEEKDAYS.map((day, index) => (
-            <option key={day} value={index}>
-              jeden {day}
-            </option>
-          ))}
-        </Select>
+          onChange={(weekdays) => change({ weekdays })}
+        />
       )}
       {/* `kind === 'EVENT'` hat nichts einzustellen — sie kommt, wenn sie kommt. */}
+    </div>
+  );
+}
+
+/**
+ * Mehrere Tage statt einem.
+ *
+ * Ein Actionstep verträgt mehr als eine Nachfrage pro Woche — einmal zur
+ * Wochenmitte und einmal kurz vor dem nächsten Abend sind zwei verschiedene
+ * Erinnerungen, nicht dieselbe zweimal. Deshalb Schalter statt Auswahlliste:
+ * bei sieben kurzen Möglichkeiten sieht man so auf einen Blick, was gilt.
+ *
+ * Den letzten Tag abzuwählen ist erlaubt und heißt „wieder wie voreingestellt";
+ * wer gar nichts hören will, schaltet die Art selbst aus.
+ */
+function WeekdayPicker({
+  label,
+  chosen,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  chosen: number[];
+  disabled: boolean;
+  onChange: (weekdays: number[]) => void;
+}) {
+  const toggle = (day: number) => {
+    const next = chosen.includes(day)
+      ? chosen.filter((entry) => entry !== day)
+      : [...chosen, day];
+
+    onChange(next.toSorted((a, b) => a - b));
+  };
+
+  return (
+    <div>
+      <div
+        className="flex flex-wrap gap-1.5"
+        role="group"
+        aria-label={`Wochentage für ${label}`}
+      >
+        {WEEKDAYS.map((day, index) => {
+          const active = chosen.includes(index);
+
+          return (
+            <button
+              key={day}
+              type="button"
+              disabled={disabled}
+              aria-pressed={active}
+              onClick={() => toggle(index)}
+              className={cn(
+                'rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors disabled:opacity-50',
+                active
+                  ? 'border-terracotta-500 bg-terracotta-500 text-white'
+                  : 'border-line bg-card text-stone-500 hover:border-line-strong',
+              )}
+            >
+              {day.slice(0, 2)}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-1.5 text-[11px] text-stone-400">
+        {chosen.length === 0
+          ? 'Kein Tag gewählt — es gilt die Voreinstellung.'
+          : `Jeden ${chosen.map((day) => WEEKDAYS[day]).join(' und ')}`}
+      </p>
     </div>
   );
 }

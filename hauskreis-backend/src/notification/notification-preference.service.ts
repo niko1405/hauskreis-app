@@ -18,8 +18,11 @@ export interface EffectiveSetting {
   enabled: boolean;
   /** Only set for `LEAD_TIME`; the person's value or the catalog default. */
   leadDays: number | null;
-  /** Only set for `WEEKLY`; the person's value or the catalog default. */
-  weekday: number | null;
+  /**
+   * Only meaningful for `WEEKLY`: the days this person picked, or the catalog
+   * default. Empty for every other kind.
+   */
+  weekdays: number[];
   /** False while this person has never touched the setting. */
   customised: boolean;
 }
@@ -28,7 +31,7 @@ type StoredPreference = {
   type: NotificationType;
   enabled: boolean;
   leadDays: number | null;
-  weekday: number | null;
+  weekdays: number[];
 };
 
 /**
@@ -46,7 +49,7 @@ export class NotificationPreferenceService {
   async listForPerson(personId: string): Promise<EffectiveSetting[]> {
     const stored = await this.prisma.notificationPreference.findMany({
       where: { personId },
-      select: { type: true, enabled: true, leadDays: true, weekday: true },
+      select: { type: true, enabled: true, leadDays: true, weekdays: true },
     });
 
     const byType = new Map(stored.map((row) => [row.type, row]));
@@ -68,7 +71,7 @@ export class NotificationPreferenceService {
   ): Promise<EffectiveSetting> {
     const stored = await this.prisma.notificationPreference.findUnique({
       where: { personId_type: { personId, type } },
-      select: { type: true, enabled: true, leadDays: true, weekday: true },
+      select: { type: true, enabled: true, leadDays: true, weekdays: true },
     });
 
     return merge(notificationDefinition(type), stored ?? undefined);
@@ -97,7 +100,7 @@ export class NotificationPreferenceService {
         type: true,
         enabled: true,
         leadDays: true,
-        weekday: true,
+        weekdays: true,
       },
     });
 
@@ -122,7 +125,7 @@ export class NotificationPreferenceService {
     dto: UpdateNotificationSettingDto,
   ): Promise<EffectiveSetting> {
     const definition = notificationDefinition(type);
-    const { leadDays, weekday } = this.validateKnobs(definition, dto);
+    const { leadDays, weekdays } = this.validateKnobs(definition, dto);
 
     const saved = await this.prisma.notificationPreference.upsert({
       where: { personId_type: { personId, type } },
@@ -131,16 +134,19 @@ export class NotificationPreferenceService {
         type,
         enabled: dto.enabled ?? definition.defaultEnabled,
         leadDays,
-        weekday,
+        weekdays,
       },
       update: {
         enabled: dto.enabled,
         // `undefined` leaves the stored value alone, `null` returns the person
         // to the catalog default.
         leadDays: dto.leadDays,
-        weekday: dto.weekday,
+        // Die geprüfte Liste, nicht die eingegangene: sonst landeten doppelte
+        // Tage in der Datenbank, sobald die Zeile schon existiert. Bei einer
+        // Liste tut `null` dasselbe wie eine leere — „wie im Katalog".
+        weekdays: dto.weekdays === undefined ? undefined : weekdays,
       },
-      select: { type: true, enabled: true, leadDays: true, weekday: true },
+      select: { type: true, enabled: true, leadDays: true, weekdays: true },
     });
 
     return merge(definition, saved);
@@ -149,7 +155,7 @@ export class NotificationPreferenceService {
   private validateKnobs(
     definition: NotificationDefinition,
     dto: UpdateNotificationSettingDto,
-  ): { leadDays: number | null; weekday: number | null } {
+  ): { leadDays: number | null; weekdays: number[] } {
     const { schedule } = definition;
 
     if (dto.leadDays !== undefined && dto.leadDays !== null) {
@@ -172,16 +178,22 @@ export class NotificationPreferenceService {
     }
 
     if (
-      dto.weekday !== undefined &&
-      dto.weekday !== null &&
+      dto.weekdays !== undefined &&
+      dto.weekdays !== null &&
+      dto.weekdays.length > 0 &&
       schedule.kind !== 'WEEKLY'
     ) {
       throw new BadRequestException(
-        `${definition.type} is not sent on a fixed weekday`,
+        `${definition.type} is not sent on fixed weekdays`,
       );
     }
 
-    return { leadDays: dto.leadDays ?? null, weekday: dto.weekday ?? null };
+    return {
+      leadDays: dto.leadDays ?? null,
+      // Doppelte Tage wären zwei Erinnerungen am selben Tag; sortiert, damit
+      // die Oberfläche sie nicht selbst ordnen muss.
+      weekdays: [...new Set(dto.weekdays ?? [])].toSorted((a, b) => a - b),
+    };
   }
 }
 
@@ -201,10 +213,18 @@ function merge(
       schedule.kind === 'LEAD_TIME'
         ? (stored?.leadDays ?? schedule.defaultLeadDays)
         : null,
-    weekday:
+    weekdays:
       schedule.kind === 'WEEKLY'
-        ? (stored?.weekday ?? schedule.defaultWeekday)
-        : null,
+        ? whicheverIsSet(stored?.weekdays, schedule.defaultWeekdays)
+        : [],
     customised: stored !== undefined,
   };
+}
+
+/** Eine leere Liste heißt „nicht eingestellt" — dann gilt der Katalog. */
+function whicheverIsSet(
+  chosen: number[] | undefined,
+  fallback: readonly number[],
+): number[] {
+  return chosen && chosen.length > 0 ? chosen : [...fallback];
 }

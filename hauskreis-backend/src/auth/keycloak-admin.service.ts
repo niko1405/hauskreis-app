@@ -89,6 +89,54 @@ export class KeycloakAdminService {
     await this.request(`/users/${keycloakUserId}`, { method: 'DELETE' });
   }
 
+  /**
+   * Ändert die Adresse eines Kontos — E-Mail **und** Nutzername.
+   *
+   * Beides, weil der Nutzername beim Einladen auf die E-Mail gesetzt wird
+   * (siehe `inviteUser`). Bliebe er stehen, meldete man sich mit der alten
+   * Adresse an, während in der App die neue steht.
+   *
+   * `emailVerified` fällt zurück auf `false`, und die Bestätigungsmail geht
+   * neu raus: dass jemand die alte Adresse nachgewiesen hat, sagt nichts über
+   * die neue.
+   */
+  async changeEmail(keycloakUserId: string, email: string): Promise<boolean> {
+    const inUse = await this.findUserByEmail(email);
+
+    if (inUse && inUse.id !== keycloakUserId) {
+      throw new ConflictException(
+        `Ein Konto mit der Adresse ${email} gibt es schon`,
+      );
+    }
+
+    await this.request(`/users/${keycloakUserId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ email, username: email, emailVerified: false }),
+    });
+
+    return this.sendVerificationEmail(keycloakUserId);
+  }
+
+  /** Wie die Einladungsmail, aber ohne Passwort-Schritt. */
+  private async sendVerificationEmail(
+    keycloakUserId: string,
+  ): Promise<boolean> {
+    try {
+      await this.request(
+        `/users/${keycloakUserId}/execute-actions-email?lifespan=604800`,
+        { method: 'PUT', body: JSON.stringify(['VERIFY_EMAIL']) },
+      );
+      return true;
+    } catch (error) {
+      this.logger.warn(
+        `Could not send Keycloak verification email (is SMTP configured?): ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return false;
+    }
+  }
+
   private async findUserByEmail(
     email: string,
   ): Promise<{ id: string } | undefined> {

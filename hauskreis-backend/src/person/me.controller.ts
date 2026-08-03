@@ -1,8 +1,25 @@
-import { Controller, Get } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Put,
+} from '@nestjs/common';
 import { PersonService } from './person.service';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { ApiZodResponse } from '../common/http/api-response.decorator';
-import { MeResponseDto } from './dto/person-response.dto';
+import {
+  ApiZodNoContent,
+  ApiZodResponse,
+} from '../common/http/api-response.decorator';
+import {
+  ChangedEmailResponseDto,
+  MeResponseDto,
+} from './dto/person-response.dto';
+import { LocationResponseDto } from '../location/dto/location-response.dto';
+import { ChangeEmailDto, SetHomeDto } from './dto/person.dto';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
 @Controller('me')
@@ -23,5 +40,43 @@ export class MeController {
   async me(@CurrentUser() user: AuthenticatedUser) {
     const person = await this.personService.resolveForUser(user);
     return { ...person, roles: user.roles };
+  }
+
+  /**
+   * „Hier wohne ich."
+   *
+   * Ein Weg statt dreier Aufrufe (auflösen, Ort anlegen, Person ändern): mitten
+   * darin abzubrechen hinterließe eine Wohnung ohne Bewohner:innen. Ob daraus
+   * eine Wohngemeinschaft wird, entscheidet `joinExisting` — sonst `409`.
+   */
+  @Put('home')
+  @ApiZodResponse(LocationResponseDto, {
+    description: 'Die eigene Wohnung, samt Mitbewohner:innen',
+  })
+  setHome(@CurrentUser() user: AuthenticatedUser, @Body() dto: SetHomeDto) {
+    return this.personService.setHome(user, dto);
+  }
+
+  /** „Ich bringe keine Wohnung mit" — gültiger Zustand, kein Fehler. */
+  @Delete('home')
+  @ApiZodNoContent()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  clearHome(@CurrentUser() user: AuthenticatedUser) {
+    return this.personService.clearHome(user);
+  }
+
+  /**
+   * Die eigene E-Mail ändern — in Keycloak und hier, oder gar nicht.
+   *
+   * Das Passwort bleibt außen vor: dafür gibt es Keycloaks Konto-Seite, und
+   * kein Passwort sollte durch dieses Backend laufen.
+   */
+  @Patch('email')
+  @ApiZodResponse(ChangedEmailResponseDto)
+  changeEmail(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangeEmailDto,
+  ) {
+    return this.personService.changeEmail(user, dto.email);
   }
 }

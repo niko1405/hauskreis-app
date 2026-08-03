@@ -34,12 +34,12 @@ describe('notification catalog', () => {
     expect(outOfBounds.map((entry) => entry.type)).toEqual([]);
   });
 
-  it('uses a real weekday for every weekly reminder', () => {
+  it('uses real weekdays for every weekly reminder', () => {
     const invalid = NOTIFICATION_CATALOG.filter(
       (entry) =>
         entry.schedule.kind === 'WEEKLY' &&
-        (entry.schedule.defaultWeekday < 0 ||
-          entry.schedule.defaultWeekday > 6),
+        (entry.schedule.defaultWeekdays.length === 0 ||
+          entry.schedule.defaultWeekdays.some((day) => day < 0 || day > 6)),
     );
 
     expect(invalid.map((entry) => entry.type)).toEqual([]);

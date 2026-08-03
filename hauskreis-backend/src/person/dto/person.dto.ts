@@ -24,7 +24,30 @@ export const invitePersonSchema = createPersonSchema.extend({
   role: z.enum(['member', 'admin']).default('member'),
 });
 
+/**
+ * „Hier wohne ich." Kein `locationId`, sondern eine Anschrift: welche Wohnung
+ * das ist, entscheidet der Server über den normalisierten Schlüssel — und nur
+ * so kann er merken, dass dort schon jemand wohnt.
+ */
+export const setHomeSchema = z.object({
+  address: z.string().trim().min(1).max(200),
+  /// Wie viele Platz haben. Gehört der Wohnung, nicht der Person: in einer
+  /// Wohngemeinschaft sehen und ändern alle Bewohner:innen dieselbe Zahl.
+  /// `null` heißt „alle passen rein".
+  capacity: z.number().int().positive().max(200).nullish(),
+  /// Bestätigung, dass man wirklich zu den Leuten zieht, die dort schon
+  /// wohnen. Ohne sie lehnt der Server mit `409` ab — ein Tippfehler sieht
+  /// aus wie eine Wohngemeinschaft.
+  joinExisting: z.boolean().default(false),
+});
+
+export const changeEmailSchema = z.object({
+  email: z.email(),
+});
+
 export class CreatePersonDto extends createZodDto(createPersonSchema) {}
+export class SetHomeDto extends createZodDto(setHomeSchema) {}
+export class ChangeEmailDto extends createZodDto(changeEmailSchema) {}
 export class InvitePersonDto extends createZodDto(invitePersonSchema) {}
 export class UpdatePersonDto extends createZodDto(updatePersonSchema) {}
 export class PersonParamsDto extends createZodDto(personParamsSchema) {}

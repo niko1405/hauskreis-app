@@ -11,7 +11,7 @@ function setup(
   options: {
     meeting?: { id: string; actionstepText: string | null } | null;
     people?: string[];
-    weekdayByPerson?: Record<string, number>;
+    weekdaysByPerson?: Record<string, number[]>;
   } = {},
 ) {
   const findFirst = jest
@@ -37,7 +37,7 @@ function setup(
         personIds.map((personId) => [
           personId,
           // Friday by default, matching the catalog.
-          { weekday: options.weekdayByPerson?.[personId] ?? 5 },
+          { weekdays: options.weekdaysByPerson?.[personId] ?? [5] },
         ]),
       ),
     ),
@@ -82,7 +82,19 @@ describe('ActionstepReminderService.sendDueReminders', () => {
   it('leaves out whoever picked another day', async () => {
     // The job runs daily for everyone; the setting decides whose day it is.
     // That is what gives personal rhythms without a cron per person.
-    const { service, notify } = setup({ weekdayByPerson: { chris: 1 } });
+    const { service, notify } = setup({ weekdaysByPerson: { chris: [1] } });
+
+    await service.sendDueReminders('hk-1', { now: friday });
+
+    expect(notify.mock.calls.map((call) => call[0].personId)).toEqual(['anna']);
+  });
+
+  it('erinnert an jedem gewählten Tag, nicht nur am ersten', async () => {
+    // Der Sinn der Liste: einmal zur Wochenmitte nachfragen und einmal kurz
+    // vor dem nächsten Abend sind zwei Erinnerungen, keine doppelte.
+    const { service, notify } = setup({
+      weekdaysByPerson: { anna: [2, 5], chris: [2] },
+    });
 
     await service.sendDueReminders('hk-1', { now: friday });
 

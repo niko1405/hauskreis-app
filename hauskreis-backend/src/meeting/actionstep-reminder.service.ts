@@ -9,7 +9,7 @@ import { toUtcDate } from './meeting-schedule';
 export interface ActionstepRunResult {
   /** People who got a fresh nudge. */
   notified: number;
-  /** Already nudged, not their weekday, switched off, or push is off. */
+  /** Already nudged, not one of their weekdays, switched off, or push is off. */
   skipped: number;
   /** The meeting the actionstep came from, if there was one. */
   meetingId: string | null;
@@ -89,8 +89,8 @@ export class ActionstepReminderService {
     );
 
     const weekday = today.getUTCDay();
-    const due = people.filter(
-      (person) => settings.get(person.id)?.weekday === weekday,
+    const due = people.filter((person) =>
+      settings.get(person.id)?.weekdays.includes(weekday),
     );
 
     const results = await Promise.all(

@@ -52,6 +52,8 @@ export type CreateLocationInput = S['CreateLocationDto'];
 /** Ebenfalls mit Pflichtfeldern trotz PATCH: `hostWeight`, `requiresHost`. */
 export type UpdateLocationInput = S['UpdateLocationDto'];
 export type ResolvedAddress = S['ResolveAddressResponseDto'];
+export type SetHomeInput = S['SetHomeDto'];
+export type ChangedEmail = S['ChangedEmailResponseDto'];
 
 // ── Termine ─────────────────────────────────────────────────────────────────
 

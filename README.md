@@ -8,7 +8,7 @@ Ein Repo, zwei eigenständige Anwendungen:
 
 | Ordner                                       | Was                                                                     | Stand                    |
 | -------------------------------------------- | ----------------------------------------------------------------------- | ------------------------ |
-| [`hauskreis-backend/`](hauskreis-backend/)   | NestJS 11 + Prisma 7 + Postgres 17, Auth über Keycloak                  | fertig, 70 Endpunkte     |
+| [`hauskreis-backend/`](hauskreis-backend/)   | NestJS 11 + Prisma 7 + Postgres 17, Auth über Keycloak                  | fertig, 73 Endpunkte     |
 | [`hauskreis-frontend/`](hauskreis-frontend/) | Next.js 16 + React 19 + TanStack Query, PWA mit Web Push               | steht                    |
 | [`bruno/`](bruno/)                           | API-Collection für beide — 82 Requests, läuft von oben nach unten durch | fertig                   |
 | [`docs/`](docs/)                             | [API fürs Frontend](docs/api-fuer-frontend.md), Entwurfsdokumente       | —                        |
@@ -61,7 +61,7 @@ Frontends: [hauskreis-frontend/README.md](hauskreis-frontend/README.md).
 - **Schreiben**: jedes `PATCH` verlangt ein `If-Match` mit dem ETag aus dem
   vorherigen `GET`. Ohne kommt `428` — das ist Absicht, nicht kaputt.
 - **Beschreibung**: [`hauskreis-backend/openapi.json`](hauskreis-backend/openapi.json)
-  (erzeugt mit `pnpm openapi`, alle 70 Endpunkte mit Anfrage- und
+  (erzeugt mit `pnpm openapi`, alle 73 Endpunkte mit Anfrage- und
   Antwortformen) plus [`docs/api-fuer-frontend.md`](docs/api-fuer-frontend.md)
   für die Regeln, die überall gelten. Beides zusammen ist das, was ein Modell
   braucht, um gegen diese API zu bauen — das Backend-README nicht.

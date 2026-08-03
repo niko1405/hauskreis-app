@@ -51,6 +51,18 @@ export const meResponseSchema = personResponseSchema.extend({
   roles: z.array(z.string()),
 });
 
+/**
+ * `PATCH /api/me/email` — die geänderte Person plus die Frage, ob Keycloak
+ * die Bestätigungsmail losgeworden ist.
+ *
+ * Bis die Adresse bestätigt ist, gilt sie in Keycloak als unbestätigt. Die
+ * Anmeldung funktioniert weiter: gefunden wird die Person über ihre
+ * `keycloakUserId`, nicht über die Adresse.
+ */
+export const changedEmailResponseSchema = personResponseSchema.extend({
+  verificationEmailSent: z.boolean(),
+});
+
 export class PersonResponseDto extends createZodDto(personResponseSchema) {}
 export class PersonListResponseDto extends createZodDto(
   z.array(personResponseSchema),
@@ -59,3 +71,6 @@ export class InvitedPersonResponseDto extends createZodDto(
   invitedPersonResponseSchema,
 ) {}
 export class MeResponseDto extends createZodDto(meResponseSchema) {}
+export class ChangedEmailResponseDto extends createZodDto(
+  changedEmailResponseSchema,
+) {}

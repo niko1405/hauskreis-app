@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -165,6 +166,50 @@ export class LocationService {
     await this.prisma.location.update({
       where: { id },
       data: { active: false, version: { increment: 1 } },
+    });
+  }
+
+  /**
+   * Die Wohnung zu einer Anschrift — vorhandene oder neue.
+   *
+   * Der Name bleibt hier leer („Ehemaliges Zuhause"): er entsteht erst,
+   * wenn jemand einzieht, und das tut `syncHomeName` gleich danach. Ihn hier
+   * schon zu setzen hieße, ihn an zwei Stellen zu berechnen.
+   */
+  async claimHome(
+    hauskreisId: string,
+    params: { address: string; capacity?: number | null },
+  ) {
+    const { location } = await this.resolveAddress(hauskreisId, params.address);
+
+    if (location) {
+      if (!location.requiresHost) {
+        throw new BadRequestException(
+          `Unter dieser Anschrift liegt „${location.name}" — ein Treffpunkt, keine Wohnung.`,
+        );
+      }
+
+      if (params.capacity === undefined) {
+        return location;
+      }
+
+      return this.prisma.location.update({
+        where: { id: location.id },
+        data: { capacity: params.capacity, version: { increment: 1 } },
+        include: locationInclude,
+      });
+    }
+
+    return this.prisma.location.create({
+      data: {
+        hauskreisId,
+        name: homeName([]),
+        address: params.address,
+        addressKey: normalizeAddress(params.address),
+        requiresHost: true,
+        capacity: params.capacity ?? null,
+      },
+      include: locationInclude,
     });
   }
 

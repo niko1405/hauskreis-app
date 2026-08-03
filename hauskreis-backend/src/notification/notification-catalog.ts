@@ -17,10 +17,14 @@ export type NotificationSchedule =
       maxLeadDays: number;
     }
   | {
-      /** Fires on one weekday each week; the person chooses which. */
+      /**
+       * Fires on chosen weekdays. More than one is allowed: a nudge midweek
+       * and another shortly before the next evening are different reminders,
+       * not the same one sent twice.
+       */
       kind: 'WEEKLY';
       /** 0 = Sunday, 6 = Saturday — same numbering as `Date.getUTCDay()`. */
-      defaultWeekday: number;
+      defaultWeekdays: readonly number[];
     }
   | {
       /** Fires when something happens. On/off is the only choice. */
@@ -107,7 +111,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
       'Nachfrage mitten in der Woche, was aus dem Actionstep vom letzten Mal geworden ist.',
     // Friday sits between two Tuesdays and still leaves the weekend to act on
     // it — a Monday reminder would arrive when the week is already over.
-    schedule: { kind: 'WEEKLY', defaultWeekday: 5 },
+    schedule: { kind: 'WEEKLY', defaultWeekdays: [5] },
     defaultEnabled: true,
   },
   {

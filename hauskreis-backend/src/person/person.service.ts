@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -222,6 +223,140 @@ export class PersonService {
       await this.keycloakAdmin.deleteUser(keycloakUserId);
       throw error;
     }
+  }
+
+  /**
+   * „Hier wohne ich" — die eigene Adresse als Zuhause eintragen.
+   *
+   * Ein eigener Weg statt dreier Aufrufe (auflösen, anlegen, Person ändern):
+   * bricht der zweite ab, bliebe sonst eine Wohnung ohne Bewohner:innen
+   * zurück, die niemand mehr zuordnen kann.
+   *
+   * `joinExisting` ist die Bestätigung, dass man wirklich zu den Leuten zieht,
+   * die dort schon wohnen. Ohne sie wird abgelehnt: gleiche Anschrift ist ein
+   * starkes Indiz für eine Wohngemeinschaft, aber ein Tippfehler sieht genauso
+   * aus — und ein stiller Zusammenzug halbierte still das Host-Gewicht beider.
+   */
+  async setHome(
+    user: AuthenticatedUser,
+    dto: { address: string; capacity?: number | null; joinExisting?: boolean },
+  ) {
+    const person = await this.resolveForUser(user);
+
+    const { location: existing } = await this.locations.resolveAddress(
+      person.hauskreisId,
+      dto.address,
+    );
+
+    if (existing) {
+      const others = existing.residents.filter(
+        (resident) => resident.id !== person.id,
+      );
+
+      if (others.length > 0 && dto.joinExisting !== true) {
+        const who = others.map((resident) => resident.name).join(', ');
+
+        throw new ConflictException(
+          `Unter dieser Anschrift wohnt schon jemand (${who}). Bestätige, dass ihr zusammen wohnt.`,
+        );
+      }
+    }
+
+    const home = await this.locations.claimHome(person.hauskreisId, {
+      address: dto.address,
+      capacity: dto.capacity,
+    });
+
+    const previousLocationId = person.locationId;
+
+    await this.prisma.person.update({
+      where: { id: person.id },
+      data: { locationId: home.id, version: { increment: 1 } },
+    });
+
+    await this.syncHomes(previousLocationId, home.id);
+
+    return this.locations.findOne(person.hauskreisId, home.id);
+  }
+
+  /** „Ich bringe keine Wohnung mit" — ein gültiger Zustand, kein Fehler. */
+  async clearHome(user: AuthenticatedUser) {
+    const person = await this.resolveForUser(user);
+
+    if (person.locationId === null) {
+      return;
+    }
+
+    await this.prisma.person.update({
+      where: { id: person.id },
+      data: { locationId: null, version: { increment: 1 } },
+    });
+
+    await this.syncHomes(person.locationId);
+  }
+
+  /**
+   * Die eigene E-Mail ändern — in Keycloak **und** hier.
+   *
+   * Keycloak zuerst: schlägt es dort fehl, ist nichts passiert. Schlägt
+   * danach die eigene Zeile fehl, wird die Adresse dort zurückgedreht, damit
+   * nicht die Anmeldung auf die neue und die App auf die alte zeigt. Dasselbe
+   * Muster wie beim Einladen.
+   *
+   * Ausgesperrt wird dabei niemand: `resolveForUser` findet die Person über
+   * die `keycloakUserId`, nicht über die Adresse.
+   */
+  async changeEmail(user: AuthenticatedUser, email: string) {
+    const person = await this.resolveForUser(user);
+
+    if (person.email === email) {
+      return {
+        ...(await this.findOne(person.hauskreisId, person.id)),
+        verificationEmailSent: false,
+      };
+    }
+
+    const taken = await this.prisma.person.findFirst({
+      where: {
+        hauskreisId: person.hauskreisId,
+        email,
+        id: { not: person.id },
+      },
+    });
+
+    if (taken) {
+      throw new ConflictException(
+        `${email} gehört im Hauskreis schon zu ${taken.name}`,
+      );
+    }
+
+    if (!person.keycloakUserId) {
+      throw new BadRequestException(
+        'Zu diesem Konto gibt es keine Anmeldung, die sich ändern ließe',
+      );
+    }
+
+    const verificationEmailSent = await this.keycloakAdmin.changeEmail(
+      person.keycloakUserId,
+      email,
+    );
+
+    try {
+      await this.prisma.person.update({
+        where: { id: person.id },
+        data: { email, version: { increment: 1 } },
+      });
+    } catch (error) {
+      await this.keycloakAdmin
+        .changeEmail(person.keycloakUserId, person.email)
+        .catch(() => undefined);
+      throw error;
+    }
+
+    return {
+      ...(await this.findOne(person.hauskreisId, person.id)),
+      verificationEmailSent,
+    };
   }
 
   /**

@@ -814,6 +814,190 @@
         ]
       }
     },
+    "/api/me/home": {
+      "put": {
+        "operationId": "MeController_setHome",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetHomeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Die eigene Wohnung, samt Mitbewohner:innen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Me"
+        ]
+      },
+      "delete": {
+        "operationId": "MeController_clearHome",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Gelöscht, kein Inhalt"
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Me"
+        ]
+      }
+    },
+    "/api/me/email": {
+      "patch": {
+        "operationId": "MeController_changeEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangedEmailResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Me"
+        ]
+      }
+    },
     "/api/hauskreise/{hauskreisId}/locations": {
       "get": {
         "operationId": "LocationController_findAll",
@@ -6315,6 +6499,206 @@
         ],
         "additionalProperties": false
       },
+      "SetHomeDto": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "capacity": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 200,
+            "nullable": true
+          },
+          "joinExisting": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "address"
+        ]
+      },
+      "LocationResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "hauskreisId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "hostWeight": {
+            "type": "number"
+          },
+          "capacity": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991,
+            "nullable": true
+          },
+          "requiresHost": {
+            "type": "boolean"
+          },
+          "latitude": {
+            "type": "number",
+            "nullable": true
+          },
+          "longitude": {
+            "type": "number",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "residents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "hauskreisId",
+          "name",
+          "hostWeight",
+          "capacity",
+          "requiresHost",
+          "latitude",
+          "longitude",
+          "address",
+          "residents",
+          "active",
+          "createdAt",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "ChangeEmailDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ChangedEmailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "hauskreisId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "birthdate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "nullable": true
+          },
+          "playsInstrument": {
+            "type": "boolean"
+          },
+          "canHost": {
+            "type": "boolean"
+          },
+          "locationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "verificationEmailSent": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "hauskreisId",
+          "name",
+          "email",
+          "birthdate",
+          "playsInstrument",
+          "canHost",
+          "locationId",
+          "active",
+          "createdAt",
+          "version",
+          "verificationEmailSent"
+        ],
+        "additionalProperties": false
+      },
       "LocationListResponseDto": {
         "type": "array",
         "items": {
@@ -6409,98 +6793,6 @@
           ],
           "additionalProperties": false
         }
-      },
-      "LocationResponseDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "hauskreisId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "name": {
-            "type": "string"
-          },
-          "hostWeight": {
-            "type": "number"
-          },
-          "capacity": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991,
-            "nullable": true
-          },
-          "requiresHost": {
-            "type": "boolean"
-          },
-          "latitude": {
-            "type": "number",
-            "nullable": true
-          },
-          "longitude": {
-            "type": "number",
-            "nullable": true
-          },
-          "address": {
-            "type": "string",
-            "nullable": true
-          },
-          "residents": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                },
-                "name": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "name"
-              ],
-              "additionalProperties": false
-            }
-          },
-          "active": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-          },
-          "version": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          }
-        },
-        "required": [
-          "id",
-          "hauskreisId",
-          "name",
-          "hostWeight",
-          "capacity",
-          "requiresHost",
-          "latitude",
-          "longitude",
-          "address",
-          "residents",
-          "active",
-          "createdAt",
-          "version"
-        ],
-        "additionalProperties": false
       },
       "ResolveAddressDto": {
         "type": "object",
@@ -7940,15 +8232,18 @@
                         "WEEKLY"
                       ]
                     },
-                    "defaultWeekday": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 6
+                    "defaultWeekdays": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 6
+                      }
                     }
                   },
                   "required": [
                     "kind",
-                    "defaultWeekday"
+                    "defaultWeekdays"
                   ],
                   "additionalProperties": false
                 },
@@ -7978,11 +8273,13 @@
               "maximum": 9007199254740991,
               "nullable": true
             },
-            "weekday": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 6,
-              "nullable": true
+            "weekdays": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 6
+              }
             },
             "customised": {
               "type": "boolean"
@@ -7995,7 +8292,7 @@
             "schedule",
             "enabled",
             "leadDays",
-            "weekday",
+            "weekdays",
             "customised"
           ],
           "additionalProperties": false
@@ -8013,10 +8310,14 @@
             "maximum": 31,
             "nullable": true
           },
-          "weekday": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 6,
+          "weekdays": {
+            "maxItems": 7,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
             "nullable": true
           }
         }
@@ -8087,15 +8388,18 @@
                       "WEEKLY"
                     ]
                   },
-                  "defaultWeekday": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 6
+                  "defaultWeekdays": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 6
+                    }
                   }
                 },
                 "required": [
                   "kind",
-                  "defaultWeekday"
+                  "defaultWeekdays"
                 ],
                 "additionalProperties": false
               },
@@ -8125,11 +8429,13 @@
             "maximum": 9007199254740991,
             "nullable": true
           },
-          "weekday": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 6,
-            "nullable": true
+          "weekdays": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            }
           },
           "customised": {
             "type": "boolean"
@@ -8142,7 +8448,7 @@
           "schedule",
           "enabled",
           "leadDays",
-          "weekday",
+          "weekdays",
           "customised"
         ],
         "additionalProperties": false

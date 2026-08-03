@@ -7,6 +7,9 @@ import { STALE } from '../cache';
 import { coreApi } from '../endpoints';
 import { isStatus } from '../errors';
 import { qk } from '../query-keys';
+import { useApiMutation } from './use-resource';
+import { useHk } from './use-hk';
+import type { SetHomeInput } from '../types';
 
 /**
  * Wer bin ich, und was darf ich.
@@ -39,4 +42,52 @@ export function useMe() {
     /** Solange kein Token da ist, ist „noch nichts geladen" kein Fehler. */
     isLoading: !ready || query.isLoading,
   };
+}
+
+/**
+ * Was nach einem Umzug nicht mehr stimmt.
+ *
+ * Eine Wohnung zu wechseln benennt womöglich zwei Orte um, ändert die eigene
+ * Person und verschiebt die Host-Rangfolge — deshalb fällt hier großzügig
+ * alles weg, was davon abhängt, statt einzelne Einträge zu pflegen.
+ */
+function useHomeInvalidation() {
+  const { keys, derived } = useHk();
+  return [
+    qk.me,
+    keys.locations.all,
+    keys.people.all,
+    keys.meetings.all,
+    ...derived,
+  ];
+}
+
+/** „Hier wohne ich." Legt die Wohnung an oder zieht in eine vorhandene ein. */
+export function useSetHome() {
+  const invalidateKeys = useHomeInvalidation();
+
+  return useApiMutation((input: SetHomeInput) => coreApi.setHome(input), {
+    invalidateKeys,
+  });
+}
+
+/** „Ich bringe keine Wohnung mit." */
+export function useClearHome() {
+  const invalidateKeys = useHomeInvalidation();
+
+  return useApiMutation(() => coreApi.clearHome(), { invalidateKeys });
+}
+
+/**
+ * Die eigene E-Mail ändern.
+ *
+ * Danach steht in Keycloak eine unbestätigte Adresse; die Anmeldung läuft
+ * weiter über die `keycloakUserId`, niemand sperrt sich damit aus.
+ */
+export function useChangeEmail() {
+  const { keys } = useHk();
+
+  return useApiMutation((email: string) => coreApi.changeEmail(email), {
+    invalidateKeys: [qk.me, keys.people.all],
+  });
 }

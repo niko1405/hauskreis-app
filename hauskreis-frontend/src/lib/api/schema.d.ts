@@ -116,6 +116,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/me/home': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['MeController_setHome'];
+    post?: never;
+    delete: operations['MeController_clearHome'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/me/email': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: operations['MeController_changeEmail'];
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/locations': {
     parameters: {
       query?: never;
@@ -883,28 +915,12 @@ export interface components {
       version: number;
       roles: string[];
     };
-    LocationListResponseDto: {
-      /** Format: uuid */
-      id: string;
-      /** Format: uuid */
-      hauskreisId: string;
-      name: string;
-      hostWeight: number;
-      capacity: number | null;
-      requiresHost: boolean;
-      latitude: number | null;
-      longitude: number | null;
-      address: string | null;
-      residents: {
-        /** Format: uuid */
-        id: string;
-        name: string;
-      }[];
-      active: boolean;
-      /** Format: date-time */
-      createdAt: string;
-      version: number;
-    }[];
+    SetHomeDto: {
+      address: string;
+      capacity?: number | null;
+      /** @default false */
+      joinExisting: boolean;
+    };
     LocationResponseDto: {
       /** Format: uuid */
       id: string;
@@ -927,6 +943,52 @@ export interface components {
       createdAt: string;
       version: number;
     };
+    ChangeEmailDto: {
+      /** Format: email */
+      email: string;
+    };
+    ChangedEmailResponseDto: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      hauskreisId: string;
+      name: string;
+      /** Format: email */
+      email: string;
+      /** Format: date */
+      birthdate: string | null;
+      playsInstrument: boolean;
+      canHost: boolean;
+      /** Format: uuid */
+      locationId: string | null;
+      active: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      version: number;
+      verificationEmailSent: boolean;
+    };
+    LocationListResponseDto: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      hauskreisId: string;
+      name: string;
+      hostWeight: number;
+      capacity: number | null;
+      requiresHost: boolean;
+      latitude: number | null;
+      longitude: number | null;
+      address: string | null;
+      residents: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+      }[];
+      active: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      version: number;
+    }[];
     ResolveAddressDto: {
       address: string;
     };
@@ -1279,7 +1341,7 @@ export interface components {
         | {
             /** @enum {string} */
             kind: 'WEEKLY';
-            defaultWeekday: number;
+            defaultWeekdays: number[];
           }
         | {
             /** @enum {string} */
@@ -1287,13 +1349,13 @@ export interface components {
           };
       enabled: boolean;
       leadDays: number | null;
-      weekday: number | null;
+      weekdays: number[];
       customised: boolean;
     }[];
     UpdateNotificationSettingDto: {
       enabled?: boolean;
       leadDays?: number | null;
-      weekday?: number | null;
+      weekdays?: number[] | null;
     };
     NotificationSettingResponseDto: {
       /** @enum {string} */
@@ -1319,7 +1381,7 @@ export interface components {
         | {
             /** @enum {string} */
             kind: 'WEEKLY';
-            defaultWeekday: number;
+            defaultWeekdays: number[];
           }
         | {
             /** @enum {string} */
@@ -1327,7 +1389,7 @@ export interface components {
           };
       enabled: boolean;
       leadDays: number | null;
-      weekday: number | null;
+      weekdays: number[];
       customised: boolean;
     };
     PushPublicKeyResponseDto: {
@@ -2416,6 +2478,170 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['MeResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeController_setHome: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetHomeDto'];
+      };
+    };
+    responses: {
+      /** @description Die eigene Wohnung, samt Mitbewohner:innen */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LocationResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeController_clearHome: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Gelöscht, kein Inhalt */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nicht angemeldet */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeController_changeEmail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ChangeEmailDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ChangedEmailResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
