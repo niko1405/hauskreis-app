@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeycloakAdminService } from '../auth/keycloak-admin.service';
+import { LocationService } from '../location/location.service';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import type { IfMatchCondition } from '../common/http/etag';
@@ -41,7 +42,30 @@ export class PersonService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly keycloakAdmin: KeycloakAdminService,
+    private readonly locations: LocationService,
   ) {}
+
+  /**
+   * Zieht die Namen der betroffenen Wohnungen nach, nachdem jemand um- oder
+   * ausgezogen ist.
+   *
+   * Beide Seiten, nicht nur die neue: die alte Wohnung heißt sonst weiter
+   * „Bei Niko & Chris", obwohl Chris längst woanders wohnt — und bleibt mit
+   * ihrem Gewicht in der Host-Rotation, obwohl niemand mehr dort einladen kann.
+   */
+  private async syncHomes(...locationIds: (string | null | undefined)[]) {
+    const affected = new Set(
+      locationIds.filter((id): id is string => typeof id === 'string'),
+    );
+
+    // Verschiedene Wohnungen, keine gemeinsamen Zeilen — nacheinander gäbe es
+    // nichts zu gewinnen.
+    await Promise.all(
+      [...affected].map((locationId) =>
+        this.locations.syncHomeName(locationId),
+      ),
+    );
+  }
 
   findAll(hauskreisId: string) {
     return this.prisma.person.findMany({
@@ -67,7 +91,7 @@ export class PersonService {
   async create(hauskreisId: string, dto: CreatePersonDto) {
     await this.assertLocationBelongsToHauskreis(hauskreisId, dto.locationId);
 
-    return this.prisma.person.create({
+    const person = await this.prisma.person.create({
       data: {
         hauskreisId,
         name: dto.name,
@@ -78,6 +102,10 @@ export class PersonService {
         locationId: dto.locationId ?? null,
       },
     });
+
+    await this.syncHomes(person.locationId);
+
+    return person;
   }
 
   async update(
@@ -88,7 +116,17 @@ export class PersonService {
   ) {
     await this.assertLocationBelongsToHauskreis(hauskreisId, dto.locationId);
 
-    return updateWithVersionCheck({
+    // Vor dem Schreiben, sonst ist nicht mehr feststellbar, wo die Person
+    // vorher gewohnt hat — und die alte Wohnung behielte ihren Namen.
+    const before =
+      dto.locationId === undefined
+        ? null
+        : await this.prisma.person.findFirst({
+            where: { id, hauskreisId },
+            select: { locationId: true },
+          });
+
+    const updated = await updateWithVersionCheck({
       condition,
       update: (versionConstraint) =>
         this.prisma.person.updateMany({
@@ -111,11 +149,16 @@ export class PersonService {
       reload: () => this.findOne(hauskreisId, id),
       notFoundMessage: `Person ${id} not found`,
     });
+
+    await this.syncHomes(before?.locationId, updated.locationId);
+
+    return updated;
   }
 
   async remove(hauskreisId: string, id: string) {
-    await this.findOne(hauskreisId, id);
+    const person = await this.findOne(hauskreisId, id);
     await this.prisma.person.delete({ where: { id } });
+    await this.syncHomes(person.locationId);
   }
 
   /**
@@ -171,6 +214,8 @@ export class PersonService {
           locationId: dto.locationId ?? null,
         },
       });
+
+      await this.syncHomes(person.locationId);
 
       return { ...person, invitationEmailSent };
     } catch (error) {

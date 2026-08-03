@@ -148,6 +148,22 @@ export interface paths {
     patch: operations['LocationController_update'];
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/locations/resolve-address': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['LocationController_resolveAddress'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/meetings': {
     parameters: {
       query?: never;
@@ -879,6 +895,11 @@ export interface components {
       latitude: number | null;
       longitude: number | null;
       address: string | null;
+      residents: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+      }[];
       active: boolean;
       /** Format: date-time */
       createdAt: string;
@@ -896,10 +917,43 @@ export interface components {
       latitude: number | null;
       longitude: number | null;
       address: string | null;
+      residents: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+      }[];
       active: boolean;
       /** Format: date-time */
       createdAt: string;
       version: number;
+    };
+    ResolveAddressDto: {
+      address: string;
+    };
+    ResolveAddressResponseDto: {
+      addressKey: string;
+      location: {
+        /** Format: uuid */
+        id: string;
+        /** Format: uuid */
+        hauskreisId: string;
+        name: string;
+        hostWeight: number;
+        capacity: number | null;
+        requiresHost: boolean;
+        latitude: number | null;
+        longitude: number | null;
+        address: string | null;
+        residents: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+        }[];
+        active: boolean;
+        /** Format: date-time */
+        createdAt: string;
+        version: number;
+      } | null;
     };
     CreateLocationDto: {
       name: string;
@@ -964,6 +1018,11 @@ export interface components {
           latitude: number | null;
           longitude: number | null;
           address: string | null;
+          residents: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+          }[];
           active: boolean;
           /** Format: date-time */
           createdAt: string;
@@ -1039,6 +1098,11 @@ export interface components {
         latitude: number | null;
         longitude: number | null;
         address: string | null;
+        residents: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+        }[];
         active: boolean;
         /** Format: date-time */
         createdAt: string;
@@ -2688,6 +2752,68 @@ export interface operations {
       };
       /** @description Kein `If-Match` mitgeschickt. Den ETag aus dem vorangehenden GET verwenden. */
       428: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  LocationController_resolveAddress: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ResolveAddressDto'];
+      };
+    };
+    responses: {
+      /** @description Die Wohnung unter dieser Anschrift, oder null */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ResolveAddressResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
         headers: {
           [name: string]: unknown;
         };

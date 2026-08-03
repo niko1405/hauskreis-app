@@ -127,7 +127,7 @@ curl -s -X POST http://localhost:8080/realms/hauskreis/protocol/openid-connect/t
 ## Die API beschrieben: OpenAPI
 
 ```bash
-pnpm openapi        # -> openapi.json, 69 Operationen auf 44 Pfaden
+pnpm openapi        # -> openapi.json, 70 Operationen auf 45 Pfaden
 pnpm start:dev      # -> http://localhost:3000/api/docs zum Durchklicken
 ```
 
@@ -772,6 +772,40 @@ Jeder von ihnen hostet dadurch etwa halb so oft wie jemand, der allein wohnt.
 Orte **ohne** Host (Schlosspark) sind gar nicht Teil davon. Sie schulden der
 Gruppe nichts, sondern sind eine Wetterfrage — und werden schlicht aus
 `…/locations` ausgewählt.
+
+### Zuhause oder Treffpunkt
+
+Ein Ort ist eines von beidem, und der Unterschied trägt fast jede Bedienung:
+
+|                | Zuhause                        | Treffpunkt            |
+| -------------- | ------------------------------ | --------------------- |
+| `requiresHost` | `true`                         | `false`               |
+| `residents`    | mindestens eine Person         | leer                  |
+| Name           | abgeleitet: „Bei Niko & Chris" | frei gewählt          |
+| entsteht durch | eine Adresse im Profil         | `POST …/locations`    |
+| verschwindet   | wenn alle ausziehen            | `DELETE` (legt still) |
+
+Der Name eines Zuhauses wird **nirgends getippt**. `syncHomeName` zieht ihn an
+den Bewohner:innen nach, sobald jemand ein- oder auszieht — sonst hieße eine
+Wohnung „Bei Niko & Chris", obwohl Chris längst woanders wohnt, und stünde mit
+ihrem Gewicht in der Rotation, ohne dass jemand dort einladen könnte. Aus
+demselben Grund ist `active` bei Zuhausen abgeleitet: bewohnt heißt verfügbar.
+
+**Der Schlüssel ist die Anschrift, nicht der Name.** `addressKey` ist die
+normalisierte Adresse (Kleinschreibung, Umlaute ausgeschrieben, „Str."/„Straße"
+vereinheitlicht, Satzzeichen weg — siehe [`address.ts`](src/location/address.ts))
+und trägt die Eindeutigkeit. Zwei Gründe: abgeleitete Namen können kollidieren,
+sobald zwei Menschen denselben Vornamen haben; und nur so erkennt
+`POST …/locations/resolve-address` eine **Wohngemeinschaft**, wenn die zweite
+Person dieselbe Adresse einträgt. Ob daraus wirklich ein gemeinsamer Haushalt
+wird, entscheidet die Person — die Route antwortet, sie zieht niemanden ein.
+
+**Orte darf jede:r anlegen und ändern**, ohne Admin-Rolle. Ein Treffpunkt
+entsteht im Vorbeigehen, und wer dafür erst jemanden mit Rechten suchen muss,
+trägt ihn gar nicht erst ein. Geschützt ist das Zuhause: `DELETE` antwortet mit
+`409`, solange dort jemand wohnt. Und gelöscht wird nie — `active = false`
+nimmt einen Ort aus der Auswahl und lässt die Vergangenheit heil, sonst stünde
+im Archiv „irgendwo".
 
 ### Wo der Ort liegt
 
@@ -1563,7 +1597,8 @@ beide aus derselben Variable ab.
 | `PATCH`                 | `/api/hauskreise/:hauskreisId/people/:id`    | eingeloggt                               |
 | `DELETE`                | `/api/hauskreise/:hauskreisId/people/:id`    | `admin`                                  |
 | `GET`                   | `…/locations`, `…/locations/:id`             | eingeloggt                               |
-| `POST`/`PATCH`/`DELETE` | `…/locations[/:id]`                          | `admin`                                  |
+| `POST`                  | `…/locations/resolve-address`                | eingeloggt                               |
+| `POST`/`PATCH`/`DELETE` | `…/locations[/:id]`                          | eingeloggt (`409` bei bewohnter Wohnung) |
 | `GET`                   | `…/meetings?scope=…&search=&from=&to=`       | eingeloggt (paginiert)                   |
 | `GET`                   | `…/meetings/:id`                             | eingeloggt                               |
 | `GET`                   | `…/meetings/:id/host-suggestions`            | eingeloggt                               |

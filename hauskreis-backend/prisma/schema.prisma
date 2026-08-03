@@ -186,6 +186,16 @@ model Location {
   /// Optionale Anschrift. Nicht aus den Koordinaten ableitbar und umgekehrt:
   /// zum Navigieren ist der Punkt genauer, zum Vorlesen am Telefon die Adresse.
   address      String?  @map("address")
+  /// `address`, auf Vergleichbarkeit getrimmt (siehe `location/address.ts`).
+  ///
+  /// Das ist der eigentliche Schlüssel eines Zuhauses: „Marienstr. 35" und
+  /// „Marienstraße 35" sind dieselbe Wohnung, und genau daran erkennt die App
+  /// eine Wohngemeinschaft, wenn die zweite Person ihre Adresse einträgt.
+  ///
+  /// Der Name taugt dafür nicht (mehr): er wird bei Zuhausen aus den
+  /// Bewohner:innen abgeleitet, und zwei Menschen mit demselben Vornamen
+  /// ergäben zweimal „Bei Niko".
+  addressKey   String?  @map("address_key")
   active       Boolean  @default(true)
   createdAt    DateTime @default(now()) @map("created_at")
   /// Optimistic locking counter, see docs/conditional requests.
@@ -195,7 +205,9 @@ model Location {
   residents Person[]
   meetings  Meeting[]
 
-  @@unique([hauskreisId, name])
+  /// Eine Wohnung pro Adresse. `NULL` zählt in Postgres als verschieden, Orte
+  /// ohne Anschrift (ein Treffpunkt im Park) dürfen also mehrfach vorkommen.
+  @@unique([hauskreisId, addressKey])
   @@index([hauskreisId])
   @@map("location")
 }

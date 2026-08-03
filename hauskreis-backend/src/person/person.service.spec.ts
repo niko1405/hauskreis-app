@@ -3,6 +3,7 @@ import { PersonService } from './person.service';
 // Type-only: keeps Jest from loading the real PrismaClient.
 import type { PrismaService } from '../prisma/prisma.service';
 import type { KeycloakAdminService } from '../auth/keycloak-admin.service';
+import type { LocationService } from '../location/location.service';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
 type PersonDelegate = {
@@ -23,11 +24,15 @@ function setup() {
     inviteUser: jest.fn(),
     deleteUser: jest.fn(),
   };
+  // Zieht sonst den Namen einer Wohnung nach; hier interessiert nur, dass es
+  // aufgerufen werden *kann*.
+  const locations = { syncHomeName: jest.fn() };
   const service = new PersonService(
     { person } as unknown as PrismaService,
     keycloakAdmin as unknown as KeycloakAdminService,
+    locations as unknown as LocationService,
   );
-  return { service, person, keycloakAdmin };
+  return { service, person, keycloakAdmin, locations };
 }
 
 const user: AuthenticatedUser = {

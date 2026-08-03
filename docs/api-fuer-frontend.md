@@ -1,7 +1,7 @@
 # Die API aus Sicht des Frontends
 
 Begleitdokument zu [`hauskreis-backend/openapi.json`](../hauskreis-backend/openapi.json).
-Dort stehen alle 69 Endpunkte mit ihren genauen Formen; hier stehen die Regeln,
+Dort stehen alle 70 Endpunkte mit ihren genauen Formen; hier stehen die Regeln,
 die _für jeden_ Aufruf gelten und sich in OpenAPI schlecht ausdrücken lassen.
 
 Wer ein Modell mit dieser API arbeiten lässt, gibt ihm am besten beide Dateien.

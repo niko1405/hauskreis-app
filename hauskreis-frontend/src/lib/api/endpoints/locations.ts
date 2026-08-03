@@ -1,4 +1,10 @@
-/** `…/locations` — acht Einträge, nicht paginiert. Schreiben nur als Admin. */
+/**
+ * `…/locations` — eine Handvoll Einträge, nicht paginiert.
+ *
+ * Schreiben darf jede:r: ein Treffpunkt entsteht im Vorbeigehen. Geschützt ist
+ * nur das Zuhause eines Menschen, und zwar vom Server (`409`, solange dort
+ * jemand wohnt).
+ */
 import {
   apiDelete,
   apiGet,
@@ -11,10 +17,26 @@ import { hkPath } from './paths';
 import type {
   CreateLocationInput,
   Location,
+  ResolvedAddress,
   UpdateLocationInput,
 } from '../types';
 
 const base = (hauskreisId: string) => hkPath(hauskreisId, '/locations');
+
+/**
+ * Gibt es diese Anschrift schon?
+ *
+ * Antwortet mit der Wohnung samt Bewohner:innen — daran hängt die Rückfrage
+ * „Chris wohnt dort schon. Wohnt ihr zusammen?", bevor jemand einzieht.
+ */
+export function resolveAddress(
+  hauskreisId: string,
+  address: string,
+): Promise<ResolvedAddress> {
+  return apiPost<ResolvedAddress>(`${base(hauskreisId)}/resolve-address`, {
+    address,
+  });
+}
 
 export function listLocations(
   hauskreisId: string,
@@ -34,7 +56,7 @@ export function getLocation(
   );
 }
 
-/** Nur Admin. `latitude` und `longitude` gehen nur gemeinsam, sonst `400`. */
+/** `latitude` und `longitude` gehen nur gemeinsam, sonst `400`. */
 export function createLocation(
   hauskreisId: string,
   input: CreateLocationInput,
@@ -42,7 +64,6 @@ export function createLocation(
   return apiPost<Location>(base(hauskreisId), input);
 }
 
-/** Nur Admin. */
 export function updateLocation(
   hauskreisId: string,
   locationId: string,
@@ -54,7 +75,7 @@ export function updateLocation(
   });
 }
 
-/** Nur Admin. */
+/** Legt den Ort still; er bleibt an vergangenen Terminen sichtbar. */
 export function deleteLocation(
   hauskreisId: string,
   locationId: string,

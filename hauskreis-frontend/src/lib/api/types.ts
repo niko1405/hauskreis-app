@@ -51,6 +51,7 @@ export type Location = S['LocationResponseDto'];
 export type CreateLocationInput = S['CreateLocationDto'];
 /** Ebenfalls mit Pflichtfeldern trotz PATCH: `hostWeight`, `requiresHost`. */
 export type UpdateLocationInput = S['UpdateLocationDto'];
+export type ResolvedAddress = S['ResolveAddressResponseDto'];
 
 // ── Termine ─────────────────────────────────────────────────────────────────
 

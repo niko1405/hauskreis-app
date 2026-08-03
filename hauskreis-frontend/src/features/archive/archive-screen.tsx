@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TextInput } from '@/components/ui/field';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
+import { LocationsCard } from './locations-card';
 import {
   useArchiveSummary,
   useMeetingList,
@@ -26,7 +27,7 @@ import { formatDay, formatRelativeDay } from '@/lib/date';
 import { meetingHeadline } from '@/lib/meeting';
 import type { SongListParams } from '@/lib/api/params';
 
-type Tab = 'termine' | 'themen' | 'lieder';
+type Tab = 'termine' | 'themen' | 'lieder' | 'orte';
 
 export function ArchiveScreen() {
   const [tab, setTab] = useState<Tab>('termine');
@@ -38,6 +39,9 @@ export function ArchiveScreen() {
     { key: 'termine', label: 'Termine', count: summary.data?.totals.meetings },
     { key: 'themen', label: 'Themen', count: summary.data?.totals.topics },
     { key: 'lieder', label: 'Lieder', count: summary.data?.totals.songs },
+    // Orte gehören hierher und nicht in die Verwaltung: sie sind Teil dessen,
+    // was die Gruppe über sich gesammelt hat, und jede:r darf sie pflegen.
+    { key: 'orte', label: 'Orte' },
   ];
 
   return (
@@ -91,6 +95,7 @@ export function ArchiveScreen() {
         {tab === 'termine' && <PastMeetings search={deferred} />}
         {tab === 'themen' && <CompletedTopics search={deferred} />}
         {tab === 'lieder' && <SongLibrary search={deferred} />}
+        {tab === 'orte' && <LocationsCard />}
       </div>
     </div>
   );

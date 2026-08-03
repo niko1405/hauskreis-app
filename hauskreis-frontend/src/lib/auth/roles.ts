@@ -23,9 +23,10 @@ export const ADMIN_ONLY_ROUTES = [
   'POST   /hauskreise/{id}/people',
   'POST   /hauskreise/{id}/people/invite',
   'DELETE /hauskreise/{id}/people/{personId}',
-  'POST   /hauskreise/{id}/locations',
-  'PATCH  /hauskreise/{id}/locations/{locationId}',
-  'DELETE /hauskreise/{id}/locations/{locationId}',
+  // Orte stehen hier bewusst **nicht** mehr: ein Treffpunkt entsteht im
+  // Vorbeigehen, und wer dafür erst jemanden mit Admin-Rechten suchen muss,
+  // trägt ihn gar nicht erst ein. Geschützt ist stattdessen die Wohnung eines
+  // Menschen — die lässt sich nur über das eigene Profil auflösen.
   'DELETE /hauskreise/{id}/meetings/{meetingId}',
   'POST   /hauskreise/{id}/meetings/generate',
   'POST   /hauskreise/{id}/meetings/host-reminders',

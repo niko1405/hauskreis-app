@@ -15,6 +15,7 @@ import { parse } from 'csv-parse/sync';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { z } from 'zod';
 import { PrismaClient } from '../generated/prisma/client';
+import { homeName, normalizeAddress } from '../src/location/address';
 
 const SEED_DIR = join(__dirname, 'seed-data');
 
@@ -54,11 +55,6 @@ const optionalCoordinate = (limit: number) =>
       { message: `must be a number between -${limit} and ${limit}, or empty` },
     );
 
-const optionalText = z
-  .string()
-  .trim()
-  .transform((value) => (value === '' ? null : value));
-
 const locationRow = z
   .object({
     hauskreisName: z.string().trim().min(1),
@@ -71,7 +67,11 @@ const locationRow = z
     /// Both or neither, same rule the API enforces — see the refine below.
     latitude: optionalCoordinate(90),
     longitude: optionalCoordinate(180),
-    address: optionalText,
+    /// Pflicht im Seed, anders als in der API: die normalisierte Anschrift ist
+    /// der Schlüssel, über den ein wiederholter Lauf denselben Ort trifft
+    /// statt einen zweiten anzulegen. Ein Ort ohne Anschrift lässt sich
+    /// jederzeit über die App anlegen.
+    address: z.string().trim().min(1),
   })
   // Ohne das ließe sich per CSV einsäen, was ein PATCH auf denselben Ort mit
   // 400 ablehnen würde: eine Breite ohne Länge zeigt auf nichts.
@@ -175,8 +175,13 @@ async function main(): Promise<void> {
     for (const row of locations) {
       const hauskreisId = resolveHauskreis('location.csv', row.hauskreisName);
 
+      // Schlüssel ist die Anschrift, nicht der Name: der Name eines Zuhauses
+      // wird aus seinen Bewohner:innen abgeleitet und ändert sich, sobald
+      // jemand ein- oder auszieht.
+      const addressKey = normalizeAddress(row.address);
+
       const record = await prisma.location.upsert({
-        where: { hauskreisId_name: { hauskreisId, name: row.name } },
+        where: { hauskreisId_addressKey: { hauskreisId, addressKey } },
         update: {
           hostWeight: row.hostWeight,
           capacity: row.capacity,
@@ -185,6 +190,7 @@ async function main(): Promise<void> {
           latitude: row.latitude,
           longitude: row.longitude,
           address: row.address,
+          addressKey,
         },
         create: {
           hauskreisId,
@@ -196,10 +202,14 @@ async function main(): Promise<void> {
           latitude: row.latitude,
           longitude: row.longitude,
           address: row.address,
+          addressKey,
         },
       });
 
-      locationIdByName.set(`${hauskreisId}::${record.name}`, record.id);
+      // Nach dem Namen aus der CSV, nicht nach dem der Zeile: bei einem
+      // wiederholten Lauf trägt die Zeile längst den abgeleiteten Namen, und
+      // person.csv verweist auf den aus der Datei.
+      locationIdByName.set(`${hauskreisId}::${row.name}`, record.id);
     }
 
     for (const row of people) {
@@ -237,6 +247,21 @@ async function main(): Promise<void> {
           locationId,
           active: row.active,
         },
+      });
+    }
+
+    // Der Name eines Zuhauses ist abgeleitet, nicht gesetzt. Einmal nachziehen,
+    // damit die eingesäten Namen nicht doch von der Regel abweichen — sonst
+    // hieße eine Wohnung so lange anders, bis dort jemand ein- oder auszieht.
+    const homes = await prisma.location.findMany({
+      where: { requiresHost: true },
+      select: { id: true, residents: { select: { name: true } } },
+    });
+
+    for (const home of homes) {
+      await prisma.location.update({
+        where: { id: home.id },
+        data: { name: homeName(home.residents.map((person) => person.name)) },
       });
     }
 

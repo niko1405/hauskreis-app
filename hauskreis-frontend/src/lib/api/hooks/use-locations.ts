@@ -34,7 +34,21 @@ export function useLocation(locationId: string | undefined) {
   );
 }
 
-/** Nur Admin. */
+/**
+ * Fragt nach, ob es diese Anschrift schon gibt.
+ *
+ * Bewusst eine Mutation und keine Query: das ist ein Nachschlagen auf Zuruf,
+ * kein Zustand, der frisch gehalten werden müsste — und die Antwort darf auf
+ * keinen Fall aus dem Cache kommen, während jemand seine Adresse tippt.
+ */
+export function useResolveAddress() {
+  const { hauskreisId } = useHk();
+
+  return useApiMutation((address: string) =>
+    locationsApi.resolveAddress(hauskreisId, address),
+  );
+}
+
 export function useCreateLocation() {
   const { hauskreisId, keys } = useHk();
 
@@ -45,7 +59,6 @@ export function useCreateLocation() {
   );
 }
 
-/** Nur Admin. */
 export function useUpdateLocation(locationId: string) {
   const { hauskreisId, keys, derived } = useHk();
 
@@ -57,7 +70,7 @@ export function useUpdateLocation(locationId: string) {
   });
 }
 
-/** Nur Admin. */
+/** Legt den Ort still — er verschwindet aus der Auswahl, nicht aus dem Archiv. */
 export function useDeleteLocation() {
   const { hauskreisId, keys, derived } = useHk();
 

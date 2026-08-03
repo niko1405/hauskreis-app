@@ -24,12 +24,35 @@ export const locationResponseSchema = z.object({
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
   address: z.string().nullable(),
+  /// Wer hier wohnt. Leer bei Orten ohne Gastgeber (Schlosspark) und bei
+  /// Wohnungen, aus denen alle ausgezogen sind.
+  ///
+  /// Daran hängen zwei Dinge im Frontend: der Name („Bei Niko & Chris" wird
+  /// hieraus abgeleitet, nicht von Hand getippt) und der WG-Hinweis im Profil.
+  residents: z.array(z.object({ id: z.uuid(), name: z.string() })),
   active: z.boolean(),
   createdAt: isoDateTimeOut,
   version: z.number().int().nonnegative(),
 });
 
+/**
+ * Antwort auf „gibt es diese Anschrift schon?".
+ *
+ * `location: null` heißt: neue Wohnung. Steht dort eine, ist es entweder ein
+ * Umzug in eine bestehende Wohngemeinschaft oder ein Tippfehler — was davon,
+ * entscheidet die Person, nicht der Server.
+ */
+export const resolveAddressResponseSchema = z.object({
+  /// Die normalisierte Fassung, nach der gesucht wurde. Nützlich beim
+  /// Nachvollziehen, warum zwei Schreibweisen als dieselbe Wohnung gelten.
+  addressKey: z.string(),
+  location: locationResponseSchema.nullable(),
+});
+
 export class LocationResponseDto extends createZodDto(locationResponseSchema) {}
 export class LocationListResponseDto extends createZodDto(
   z.array(locationResponseSchema),
+) {}
+export class ResolveAddressResponseDto extends createZodDto(
+  resolveAddressResponseSchema,
 ) {}

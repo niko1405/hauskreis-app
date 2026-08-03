@@ -66,6 +66,12 @@ const locationParamsSchema = z.object({
   id: z.uuid(),
 });
 
+/** Anfrage an „gibt es diese Anschrift schon?" — siehe `resolveAddress`. */
+export const resolveAddressSchema = z.object({
+  address: z.string().trim().min(1).max(200),
+});
+
 export class CreateLocationDto extends createZodDto(createLocationSchema) {}
 export class UpdateLocationDto extends createZodDto(updateLocationSchema) {}
 export class LocationParamsDto extends createZodDto(locationParamsSchema) {}
+export class ResolveAddressDto extends createZodDto(resolveAddressSchema) {}
