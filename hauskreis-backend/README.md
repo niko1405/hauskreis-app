@@ -715,6 +715,11 @@ unverändert, `null` löscht die Zuordnung.
 Zuweisungen werden gegen die Mandantengrenze geprüft — eine Person oder Location
 aus einem anderen Hauskreis wird mit `400` abgelehnt.
 
+Die Musik-Zuständigen stehen **doppelt** in der API: unter
+`…/meetings/:id/song-leaders` (dort wird geschrieben) und als `songLeaders` am
+Termin selbst. Das ist Absicht — ohne das Feld bräuchte eine Terminliste pro
+Karte eine zweite Anfrage, nur um „Musik: Lena" anzuzeigen.
+
 ### Ort und Gastgeber sind eine Entscheidung
 
 `locationId` und `hostPersonId` waren zwei unabhängige Felder. Damit ließ sich

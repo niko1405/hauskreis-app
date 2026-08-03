@@ -1111,6 +1111,13 @@ export interface components {
             };
           }[];
         } | null;
+        songLeaders: {
+          person: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+          };
+        }[];
         attendances: {
           /** Format: uuid */
           personId: string;
@@ -1191,6 +1198,13 @@ export interface components {
           };
         }[];
       } | null;
+      songLeaders: {
+        person: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+        };
+      }[];
       attendances: {
         /** Format: uuid */
         personId: string;

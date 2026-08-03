@@ -60,6 +60,13 @@ export const meetingResponseSchema = z.object({
       responsibles: z.array(z.object({ person: personRefSchema })),
     })
     .nullable(),
+  /// Wer an dem Abend für die Musik zuständig ist — leer ist gültig, nicht
+  /// jeder Abend hat Lieder (CLAUDE.md §6).
+  ///
+  /// Steht hier **und** unter `…/meetings/:id/song-leaders`. Die eigene Route
+  /// bleibt, weil dort geschrieben wird; hier steht es, damit eine Terminliste
+  /// nicht pro Karte eine zweite Anfrage braucht, um „Musik: Lena" zu zeigen.
+  songLeaders: z.array(z.object({ person: personRefSchema })),
   /// Nur wer geantwortet hat, steht hier. Keine Zeile heißt `UNKNOWN`.
   attendances: z.array(
     z.object({

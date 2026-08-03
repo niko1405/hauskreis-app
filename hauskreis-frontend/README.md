@@ -238,6 +238,44 @@ Dazu drei kleinere Umbauten:
   keinen Weg zuzusagen, denn „Bist du dabei?" auf dem Home-Screen gilt nur
   fürs nächste Treffen.
 
+## Zuteilen: Sheet und Tabelle
+
+**Das Sheet zeigt das ganze Ranking, nicht nur die Spitze.** Der Endpunkt
+bewertet ohnehin jede in Frage kommende Person und liefert die Fakten mit —
+darunter noch eine alphabetische Namensliste zu stellen hieß, ab Platz vier
+die Begründung wegzuwerfen. Und wer nicht den ersten Vorschlag nimmt, ist
+genau die Person, die eine Begründung braucht (CLAUDE.md §4).
+
+Drei Abschnitte, und der dritte ist kein Beiwerk:
+
+|                      |                                                  |
+| -------------------- | ------------------------------------------------ |
+| **Vorschläge**       | die ersten drei, mit allen Fakten                |
+| **Restliche**        | Platz 4 aufwärts, dieselbe Zeile in kompakt      |
+| **Nicht im Ranking** | wen der Endpunkt gar nicht bewertet — samt Grund |
+
+Am lebenden Datenstand: Host 3 + 6 + 0, Thema 3 + 7 + 0, **Musik 3 + 1 + 6**.
+Die Musikzeile ist der Grund für den dritten Abschnitt — nur vier von zehn
+spielen ein Instrument, und ohne ihn wären die anderen sechs gar nicht
+eintragbar. Beim Host bleibt der Abschnitt leer, und das ist richtig: dort
+_ist_ das Ranking die vollständige Menge der gültigen Antworten, alles andere
+lehnt der Server ab.
+
+**Die Planungstabelle ist jetzt eine Tabelle**, auch auf dem Telefon. Vorher
+war sie dort eine Liste mit Chips, weil drei Spalten auf 390 px nicht lesbar
+sind — aber hier plant man **quer**: „wer hostet in den nächsten sechs Wochen"
+ist eine Spalte, keine sechs Zeilen. Also bleibt das Raster, scrollt waagerecht
+in seinem eigenen Kasten, und zwei Knöpfe verkleinern es in drei Stufen.
+
+Kein Pinch-Zoom: der kollidiert auf Mobilgeräten mit dem Seiten-Zoom des
+Browsers und lässt sich davon nicht zuverlässig trennen.
+
+Die Zellen sind nicht nur Anzeige — antippen öffnet dasselbe Sheet wie das
+Detail. Die Tabelle ist der Ort, an dem man merkt, dass etwas fehlt, also
+gehört das Eintragen auch dorthin. Dafür lädt sie den Termin beim Antippen
+nach: `useRoleAssignment` braucht ihn ganz (wegen `topicId`), die
+Assignments-Route liefert nur Datum, Rolle und Person.
+
 ## PWA und Push
 
 Der Service Worker entsteht aus `src/app/sw.ts` (Serwist) und landet in

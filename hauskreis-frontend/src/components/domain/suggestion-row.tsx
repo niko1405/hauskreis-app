@@ -70,28 +70,42 @@ export function SuggestionRow({
   suggestion,
   selected,
   onSelect,
+  compact = false,
 }: {
   suggestion: AnySuggestion;
   selected: boolean;
   onSelect: () => void;
+  /**
+   * Für alles unterhalb der Spitze: dieselbe Zeile, nur knapper.
+   *
+   * Die Fakten bleiben — sie sind der Grund, warum es diesen Endpunkt gibt —
+   * aber nach dem dritten Vorschlag liest niemand mehr fünf Zeilen pro Person.
+   * Die ersten beiden sind die, nach denen sortiert wurde.
+   */
+  compact?: boolean;
 }) {
   const host = isHostSuggestion(suggestion) ? suggestion : null;
   const deferred = host?.facts.deferred ?? false;
   const away = host?.facts.away ?? false;
+  const facts = suggestionFacts(suggestion);
 
   return (
     <button
       type="button"
       onClick={onSelect}
       className={cn(
-        'flex w-full items-start justify-between gap-3 rounded-lg border bg-card p-4 text-left shadow-sm transition-colors',
+        'flex w-full items-start justify-between gap-3 rounded-lg border bg-card text-left shadow-sm transition-colors',
+        compact ? 'p-3' : 'p-4',
         selected ? 'border-2 border-terracotta-500' : 'border-line',
         deferred && 'opacity-60',
         'hover:border-terracotta-400 focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
       )}
     >
       <div className="flex min-w-0 items-start gap-3">
-        <Avatar person={{ id: suggestion.personId, name: suggestion.name }} />
+        <Avatar
+          person={{ id: suggestion.personId, name: suggestion.name }}
+          size={compact ? 'sm' : 'md'}
+        />
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 font-bold text-stone-800">
             {suggestion.name}
@@ -106,7 +120,7 @@ export function SuggestionRow({
             )}
           </p>
           <ul className="mt-0.5 space-y-0.5">
-            {suggestionFacts(suggestion).map((fact) => (
+            {(compact ? facts.slice(0, 2) : facts).map((fact) => (
               <li
                 key={fact}
                 className="text-[11px] leading-snug text-stone-500"

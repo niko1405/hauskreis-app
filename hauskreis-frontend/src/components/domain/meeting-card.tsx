@@ -113,6 +113,12 @@ export function MeetingCard({
         {hasTopicSlot(meeting.type) && (
           <RoleChip kind="TOPIC" people={topicPeople} />
         )}
+        {/* Musik fehlte hier, obwohl sie eine der drei Rollen ist — auf einem
+            Lobpreisabend sogar die tragende. */}
+        <RoleChip
+          kind="SONG"
+          people={meeting.songLeaders.map((leader) => leader.person)}
+        />
       </div>
     </Link>
   );

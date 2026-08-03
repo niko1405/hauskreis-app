@@ -38,6 +38,12 @@ const meetingInclude = {
       },
     },
   },
+  // Dieselbe Verschachtelung wie bei `topic.responsibles`: so wie Prisma es
+  // zurückgibt, ohne Umformung im Service — sonst müsste jede Stelle, die
+  // einen Termin lädt, daran denken.
+  songLeaders: {
+    select: { person: { select: { id: true, name: true } } },
+  },
   attendances: {
     select: { personId: true, status: true },
   },
