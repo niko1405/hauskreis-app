@@ -10,6 +10,7 @@ import { hkPath } from './paths';
 import type { PrayerBuddyListParams } from '../params';
 import type {
   Page,
+  PlanningResult,
   PrayerBuddyConfig,
   PrayerBuddyRound,
   RotationResult,
@@ -18,7 +19,10 @@ import type {
 
 const base = (hauskreisId: string) => hkPath(hauskreisId, '/prayer-buddies');
 
-/** Vergangene und kommende Runden, absteigend. */
+/**
+ * Runden, seitenweise. `scope` entscheidet auch über die Reihenfolge:
+ * `upcoming` vorwärts (die nächste zuerst), sonst rückwärts wie ein Archiv.
+ */
 export function listPrayerBuddyRounds(
   hauskreisId: string,
   params: PrayerBuddyListParams = {},
@@ -61,10 +65,20 @@ export function updatePrayerBuddyConfig(
   });
 }
 
-/** Nur Admin. Würfelt die nächste Runde aus und benachrichtigt auf Wunsch. */
+/**
+ * Nur Admin. Beendet die laufende Runde und zieht die nächste geplante auf
+ * heute vor; benachrichtigt auf Wunsch.
+ */
 export function rotatePrayerBuddies(
   hauskreisId: string,
   notify = true,
 ): Promise<RotationResult> {
   return apiPost<RotationResult>(`${base(hauskreisId)}/rotate`, { notify });
+}
+
+/** Nur Admin. Füllt den Vorlauf wieder auf fünf Runden auf, ohne zu melden. */
+export function planPrayerBuddyRounds(
+  hauskreisId: string,
+): Promise<PlanningResult> {
+  return apiPost<PlanningResult>(`${base(hauskreisId)}/plan`, {});
 }

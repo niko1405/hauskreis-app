@@ -14,7 +14,17 @@ export const rotateSchema = z.object({
   notify: z.boolean().default(true),
 });
 
-export const listPrayerBuddiesQuerySchema = paginationSchema;
+/**
+ * Welcher Ausschnitt der Runden.
+ *
+ * Seit fünf Runden im Voraus stehen, ist „alle" für einen Bildschirm selten
+ * die richtige Antwort: wer nachschaut, will entweder wissen, was kommt, oder
+ * nachlesen, was war. Die Grenze ist das Ende des Zeitraums — die **laufende**
+ * Runde zählt zu `upcoming`, denn sie ist nicht vorbei.
+ */
+export const listPrayerBuddiesQuerySchema = paginationSchema.extend({
+  scope: z.enum(['past', 'upcoming', 'all']).default('all'),
+});
 
 export class UpdateCycleConfigDto extends createZodDto(
   updateCycleConfigSchema,

@@ -1,0 +1,52 @@
+meta {
+  name: Jetzt weiterschalten (admin)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/prayer-buddies/rotate
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "notify": false
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("die neue Runde beginnt heute", function () {
+    if (res.body.assignment === null) return;
+    const heute = new Date().toISOString().slice(0, 10);
+    expect(res.body.assignment.periodStart).to.equal(heute);
+  });
+}
+
+docs {
+  Beendet die laufende Runde und zieht die **nächste geplante** auf
+  heute vor; alles dahinter rutscht mit, und hinten wird wieder auf
+  fünf aufgefüllt.
+
+  Nicht neu ausgelost: die nächste Runde wurde aus derselben Historie
+  gegen dieselben Leute gebaut, ein frischer Wurf käme fast gleich
+  heraus — und der Sinn des Vorausplanens ist, dass der Plan etwas
+  bedeutet.
+
+  Die laufende Runde verschwindet dabei nicht: hatte sie schon Tage,
+  endet sie gestern und bleibt im Archiv. Nur wenn sie *heute* begann,
+  wird sie als verworfen markiert — erlebt hat sie niemand, aber die
+  Wiederholungsvermeidung muss sie kennen, sonst liefert der nächste
+  Wurf dieselbe Aufteilung.
+
+  `notify: false` schaltet still weiter.
+}

@@ -1,0 +1,58 @@
+meta {
+  name: Runden auflisten
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/prayer-buddies?take=10&scope=upcoming
+  body: none
+  auth: inherit
+}
+
+params:query {
+  take: 10
+  scope: upcoming
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("liefert einen Paginierungs-Umschlag", function () {
+    expect(res.body).to.have.property("items");
+    expect(res.body).to.have.property("total");
+    expect(res.body).to.have.property("hasMore");
+  });
+
+  test("kommende Runden laufen vorwärts", function () {
+    const starts = res.body.items.map((round) => round.periodStart);
+    expect(starts).to.deep.equal([...starts].sort());
+  });
+
+  test("keine Runde ist schon vorbei", function () {
+    const heute = new Date().toISOString().slice(0, 10);
+    for (const round of res.body.items) {
+      expect(round.periodEnd >= heute).to.equal(true);
+    }
+  });
+}
+
+docs {
+  `scope` grenzt ein, welcher Ausschnitt gemeint ist — und bestimmt
+  damit auch die Richtung:
+
+  | `scope`    | was                              | Reihenfolge |
+  |------------|----------------------------------|-------------|
+  | `upcoming` | laufende und kommende Runden     | vorwärts    |
+  | `past`     | abgeschlossene Runden            | rückwärts   |
+  | `all`      | beides (Vorgabe)                 | rückwärts   |
+
+  Die Grenze ist das **Ende** des Zeitraums: die laufende Runde ist
+  nicht vorbei und zählt deshalb zu `upcoming`.
+
+  Verworfene Aufteilungen (`discardedAt`) stehen nirgends drin — sie
+  haben nie stattgefunden. Für die Wiederholungsvermeidung zählen sie
+  trotzdem.
+}

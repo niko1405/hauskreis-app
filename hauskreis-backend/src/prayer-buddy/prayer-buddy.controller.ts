@@ -29,6 +29,7 @@ import {
 } from '../common/http/api-response.decorator';
 import {
   CurrentPrayerBuddyResponseDto,
+  PlanningResultResponseDto,
   PrayerBuddyConfigResponseDto,
   PrayerBuddyPageResponseDto,
   RotationResultResponseDto,
@@ -94,8 +95,9 @@ export class PrayerBuddyController {
   }
 
   /**
-   * Re-assigns immediately, even mid-period. The running assignment is closed
-   * off (or replaced, if it only started today) and a full new cycle begins.
+   * Rotates immediately, even mid-period. The running round is closed off (or
+   * discarded, if it only started today), the next planned one is pulled
+   * forward to start today, and the tail is topped back up.
    */
   @Post('rotate')
   @ApiZodResponse(RotationResultResponseDto)
@@ -105,5 +107,18 @@ export class PrayerBuddyController {
     return this.generator.rotateNow(params.hauskreisId, {
       notify: dto.notify,
     });
+  }
+
+  /**
+   * Manual trigger for the scheduled planner, handy for setup and testing —
+   * the same idea as `POST …/meetings/generate`.
+   *
+   * Announces nothing: a round is announced when it begins.
+   */
+  @Post('plan')
+  @ApiZodResponse(PlanningResultResponseDto, { status: 201 })
+  @Roles(ROLE_ADMIN)
+  plan(@Param() params: HauskreisParamsDto) {
+    return this.generator.ensureRoundsPlanned(params.hauskreisId);
   }
 }

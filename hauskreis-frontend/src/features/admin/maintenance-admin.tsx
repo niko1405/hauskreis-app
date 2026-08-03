@@ -15,6 +15,7 @@ import { errorMessage } from '@/lib/api/errors';
 import {
   useCarryOverTopics,
   useGenerateMeetings,
+  usePlanPrayerBuddyRounds,
   usePrayerBuddyConfig,
   useRotatePrayerBuddies,
   useRunActionstepReminders,
@@ -95,16 +96,23 @@ function PrayerBuddyConfigCard() {
                 onSuccess: (result) =>
                   toast.success(
                     result.created
-                      ? `Neue Runde gebildet, ${result.notified} benachrichtigt.`
-                      : 'Es gab schon eine aktuelle Runde.',
+                      ? `Nächste Runde läuft ab heute, ${result.notified} benachrichtigt.`
+                      : 'Es war nichts zu wechseln.',
                   ),
                 onError: (error) => toast.error(errorMessage(error)),
               })
             }
           >
-            Jetzt neu würfeln
+            Jetzt weiterschalten
           </Button>
         </div>
+
+        {/* Nicht mehr „neu würfeln": seit fünf Runden im Voraus stehen, wird
+            nicht neu ausgelost, sondern die nächste geplante vorgezogen. */}
+        <p className="text-[11px] leading-relaxed text-stone-400">
+          Beendet die laufende Runde und zieht die nächste geplante auf heute
+          vor. Danach steht der Vorlauf wieder voll.
+        </p>
 
         {current?.updatedBy && (
           <p className="text-[11px] text-stone-400">
@@ -129,6 +137,7 @@ function JobsCard() {
   // Die Hooks stehen einzeln da und nicht in einer Schleife — die Reihenfolge
   // von Hook-Aufrufen muss über Renderdurchläufe hinweg dieselbe sein.
   const generate = useGenerateMeetings();
+  const planRounds = usePlanPrayerBuddyRounds();
   const carryOver = useCarryOverTopics();
   const syncAbsences = useSyncAbsences();
   const hostReminders = useRunHostReminders();
@@ -147,6 +156,21 @@ function JobsCard() {
         generate.mutate(undefined, {
           onSuccess: (r) =>
             toast.success(`${r.created} angelegt, ${r.skipped} übersprungen.`),
+          onError: fail,
+        }),
+    },
+    {
+      label: 'Gebetsrunden vorausplanen',
+      hint: 'Legt Runden an, bis fünf im Voraus stehen. Meldet niemandem etwas — das passiert, wenn eine Runde beginnt.',
+      pending: planRounds.isPending,
+      run: () =>
+        planRounds.mutate(undefined, {
+          onSuccess: (r) =>
+            toast.success(
+              r.created > 0
+                ? `${r.created} Runde(n) ergänzt.`
+                : 'Der Vorlauf stand schon voll.',
+            ),
           onError: fail,
         }),
     },

@@ -1,12 +1,17 @@
 'use client';
 
 /**
- * „Gebet" — die laufende Runde und die Historie.
+ * „Gebet" — die laufende Runde, was danach kommt und was war.
  *
  * Neun Personen gehen nicht glatt in Zweiergruppen auf; die Aufteilung in
  * Zweier und Dreier macht der Server. Hier wird sie nur gezeigt.
+ *
+ * Kein „Schreiben"-Knopf mehr. Er baute eine WhatsApp-Nachricht mit einem
+ * vorformulierten Satz — nur ohne Nummer, also landete man in der
+ * Kontaktauswahl und suchte die Person, die auf dem Bildschirm daneben stand.
+ * Wer seine Gebetsbuddys anschreiben will, hat den Chat ohnehin offen.
  */
-import { MessageCircle } from 'lucide-react';
+import { useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -18,17 +23,34 @@ import {
   usePrayerBuddyRounds,
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import { formatDayRange, isPast } from '@/lib/date';
-import { firstName } from '@/lib/person';
-import type { PrayerBuddyGroup } from '@/lib/api/types';
+import { formatDayRange, formatRelativeDay } from '@/lib/date';
+import type { PrayerBuddyGroup, PrayerBuddyRound } from '@/lib/api/types';
+
+type Scope = 'upcoming' | 'past';
+
+const SCOPE_LABEL: Record<Scope, string> = {
+  upcoming: 'Kommend',
+  past: 'Vorbei',
+};
+
+const SCOPE_EMPTY: Record<Scope, string> = {
+  upcoming: 'Weiter voraus ist noch nichts geplant.',
+  past: 'Noch keine Runde vorbei — ihr fangt gerade erst an.',
+};
 
 export function PrayerScreen() {
   const me = useMe();
   const current = useCurrentPrayerBuddies();
-  const rounds = usePrayerBuddyRounds();
+  const [scope, setScope] = useState<Scope>('upcoming');
+  const rounds = usePrayerBuddyRounds({ scope });
 
   const myGroup = current.data?.groups.find((group) =>
     group.members.some((member) => member.id === me.me?.id),
+  );
+
+  // Die laufende Runde steht schon oben; unter „Kommend" wäre sie doppelt.
+  const others = rounds.items.filter(
+    (round) => round.periodStart !== current.data?.periodStart,
   );
 
   return (
@@ -73,18 +95,6 @@ export function PrayerScreen() {
                     <span className="flex-1 font-bold text-stone-800">
                       {member.name}
                     </span>
-                    <a
-                      href={`https://wa.me/?text=${encodeURIComponent(
-                        `Hey ${firstName(member.name)}, wofür darf ich diese Woche für dich beten?`,
-                      )}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Button variant="secondary" size="sm">
-                        <MessageCircle size={13} />
-                        Schreiben
-                      </Button>
-                    </a>
                   </div>
                 ))}
               {myGroup.members.length <= 1 && (
@@ -113,34 +123,46 @@ export function PrayerScreen() {
         )}
 
         <section>
-          <SectionTitle>Weitere Runden</SectionTitle>
+          <SectionTitle
+            action={
+              <div className="flex gap-1">
+                {(['upcoming', 'past'] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={scope === option}
+                    onClick={() => setScope(option)}
+                    className={cn(
+                      'rounded-full border px-3 py-1 text-[11px] font-bold transition-colors',
+                      scope === option
+                        ? 'border-terracotta-100 bg-terracotta-50 text-terracotta-700'
+                        : 'border-line text-stone-400 hover:border-line-strong',
+                    )}
+                  >
+                    {SCOPE_LABEL[option]}
+                  </button>
+                ))}
+              </div>
+            }
+          >
+            Weitere Runden
+          </SectionTitle>
 
           {rounds.isLoading && <CardSkeleton />}
+          {rounds.error && <ErrorState error={rounds.error} />}
+
+          {!rounds.isLoading && others.length === 0 && (
+            <p className="text-sm text-stone-400 italic">
+              {SCOPE_EMPTY[scope]}
+            </p>
+          )}
 
           <ul className="space-y-3">
-            {rounds.items
-              .filter(
-                (round) => round.periodStart !== current.data?.periodStart,
-              )
-              .map((round) => (
-                <li key={round.periodStart}>
-                  <Card className="space-y-2">
-                    <p className="flex items-center gap-2 text-xs font-bold text-stone-500">
-                      {formatDayRange(round.periodStart, round.periodEnd)}
-                      <span className="text-[10px] font-semibold text-stone-400">
-                        {isPast(round.periodEnd) ? 'vorbei' : 'kommt noch'}
-                      </span>
-                    </p>
-                    <ul className="space-y-1.5">
-                      {round.groups.map((group) => (
-                        <li key={group.id}>
-                          <GroupRow group={group} compact />
-                        </li>
-                      ))}
-                    </ul>
-                  </Card>
-                </li>
-              ))}
+            {others.map((round) => (
+              <li key={round.periodStart}>
+                <RoundCard round={round} />
+              </li>
+            ))}
           </ul>
 
           {rounds.hasNextPage && (
@@ -150,12 +172,34 @@ export function PrayerScreen() {
               loading={rounds.isFetchingNextPage}
               onClick={() => void rounds.fetchNextPage()}
             >
-              Ältere Runden laden
+              {scope === 'past' ? 'Ältere Runden laden' : 'Weiter voraus'}
             </Button>
           )}
         </section>
       </div>
     </div>
+  );
+}
+
+function RoundCard({ round }: { round: PrayerBuddyRound }) {
+  return (
+    <Card className="space-y-2">
+      <p className="flex items-center gap-2 text-xs font-bold text-stone-500">
+        {formatDayRange(round.periodStart, round.periodEnd)}
+        <span className="text-[10px] font-semibold text-stone-400">
+          {/* Der Anfang, nicht das Ende: „in 2 Wochen" ist die Antwort auf
+              „wann bin ich dran", „vor 6 Wochen" auf „wann war das". */}
+          ab {formatRelativeDay(round.periodStart)}
+        </span>
+      </p>
+      <ul className="space-y-1.5">
+        {round.groups.map((group) => (
+          <li key={group.id}>
+            <GroupRow group={group} compact />
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }
 

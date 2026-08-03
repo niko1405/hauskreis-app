@@ -1,0 +1,33 @@
+meta {
+  name: Runden vorausplanen (admin)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/prayer-buddies/plan
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("sagt, wie viele Runden dazukamen", function () {
+    expect(res.body.created).to.be.a("number");
+  });
+}
+
+docs {
+  Der Vorauslauf von Hand — dasselbe Muster wie
+  `04-meetings/…/generate`. Nachts läuft er ohnehin.
+
+  Idempotent: ein zweiter Aufruf antwortet mit `created: 0`, solange
+  fünf Runden stehen.
+
+  Meldet niemandem etwas. Wer im Juli erfährt, mit wem er im Oktober
+  betet, hat keine Erinnerung bekommen, sondern Lärm — angekündigt wird
+  eine Runde, wenn sie beginnt.
+}

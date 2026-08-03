@@ -39,4 +39,5 @@ export const ADMIN_ONLY_ROUTES = [
   'POST   /hauskreise/{id}/absences/sync',
   'PUT    /hauskreise/{id}/prayer-buddies/config',
   'POST   /hauskreise/{id}/prayer-buddies/rotate',
+  'POST   /hauskreise/{id}/prayer-buddies/plan',
 ] as const;

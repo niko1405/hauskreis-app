@@ -1338,20 +1338,54 @@ war am seltensten drin". Überließe man es der Paarung, wäre es, wer zufällig
 Durchgehend deterministisch: Gleichstände entscheidet der Name, dieselbe
 Historie ergibt also immer dieselbe Aufteilung.
 
-### Rotation
+### Fünf Runden im Voraus
 
-`PrayerBuddyGeneratorService` läuft **täglich** um 4 Uhr, nicht alle zwei
-Wochen: ein 14-tägiger Cron würde eine Rotation still überspringen, wenn der
-Server an dem Morgen gerade steht. Die tägliche Frage „ist heute jemand
-zugeteilt" heilt sich selbst und kostet eine Query.
+`PrayerBuddyGeneratorService` hält immer **fünf Runden** vor, die laufende
+mitgezählt — dasselbe Muster wie `MEETINGS_AHEAD` bei den Terminen. Vorher
+entstand eine Runde erst an dem Morgen, an dem die vorige auslief; „mit wem
+bete ich ab übernächster Woche" war schlicht nicht beantwortbar.
 
-| Methode | Pfad                       | Rechte                 |
-| ------- | -------------------------- | ---------------------- |
-| `GET`   | `…/prayer-buddies/current` | eingeloggt             |
-| `GET`   | `…/prayer-buddies`         | eingeloggt (paginiert) |
-| `GET`   | `…/prayer-buddies/config`  | eingeloggt             |
-| `PUT`   | `…/prayer-buddies/config`  | `admin` (`If-Match`)   |
-| `POST`  | `…/prayer-buddies/rotate`  | `admin`                |
+Der Lauf ist **täglich** um 4 Uhr, nicht alle zwei Wochen: ein 14-tägiger Cron
+würde eine Rotation still überspringen, wenn der Server an dem Morgen gerade
+steht. Die tägliche Frage „stehen fünf Runden" heilt sich selbst und kostet
+eine Query, wenn die Antwort ja ist.
+
+Gebaut wird **eine nach der anderen**, nicht in einem Rutsch. Jede Runde
+gruppiert aus der Historie _einschließlich_ der gerade geplanten; ohne das
+Nachlesen kämen alle fünf identisch heraus, denn der Algorithmus ist
+deterministisch und bekäme fünfmal dieselbe Eingabe.
+
+Angekündigt wird beim Vorausplanen **nichts**. Wer im Juli erfährt, mit wem er
+im Oktober betet, hat keine Erinnerung bekommen, sondern Lärm. Angekündigt wird
+die Runde, die _läuft_ — und zwar täglich, was nichts kostet, weil
+`NotificationService.notify` über die Gruppen-Id dedupliziert. Ein verpasster
+Morgen wird damit zu einer späten Benachrichtigung statt zu gar keiner.
+
+Nach einer **Lücke** — Server war wochenlang aus — beginnt die nächste Runde
+heute, nicht rückwirkend. Runden nachzutragen, die niemand erlebt hat, wäre
+erfundene Geschichte.
+
+| Methode | Pfad                       | Rechte                          |
+| ------- | -------------------------- | ------------------------------- |
+| `GET`   | `…/prayer-buddies/current` | eingeloggt                      |
+| `GET`   | `…/prayer-buddies`         | eingeloggt (paginiert, `scope`) |
+| `GET`   | `…/prayer-buddies/config`  | eingeloggt                      |
+| `PUT`   | `…/prayer-buddies/config`  | `admin` (`If-Match`)            |
+| `POST`  | `…/prayer-buddies/rotate`  | `admin`                         |
+| `POST`  | `…/prayer-buddies/plan`    | `admin`                         |
+
+### `scope` bestimmt Ausschnitt und Richtung
+
+| `scope`    | was                          | Reihenfolge |
+| ---------- | ---------------------------- | ----------- |
+| `upcoming` | laufende und kommende Runden | vorwärts    |
+| `past`     | abgeschlossene Runden        | rückwärts   |
+| `all`      | beides (Vorgabe)             | rückwärts   |
+
+Die Grenze ist das **Ende** des Zeitraums, nicht der Anfang: die laufende Runde
+ist nicht vorbei und gehört deshalb zu `upcoming`. Die Richtung folgt aus dem
+Ausschnitt und ist kein zweiter Parameter — kommende Runden liest man vorwärts
+(die nächste zuerst, das ist die Frage), vergangene rückwärts wie jedes Archiv.
 
 ### Was der Admin darf
 
@@ -1360,26 +1394,35 @@ Rotation — die laufende Zuteilung behält ihre Daten, damit niemandem seine
 Buddys unter den Füßen weggezogen werden, nur weil eine Einstellung sich
 bewegt hat.
 
-**Sofort neu zuteilen** (`POST …/rotate`), auch mitten in einer laufenden
-Periode. Zwei Fälle, bewusst unterschiedlich:
+**Vorausplanen von Hand** (`POST …/plan`) — derselbe Lauf wie nachts, für die
+Einrichtung und zum Nachschauen. Idempotent: ein zweiter Aufruf antwortet mit
+`created: 0`.
 
-- **Heute erst gestartet** → die laufende Zuteilung wird als _verworfen_
-  markiert. Sie war nie in Kraft, taucht also nicht im Archiv auf.
+**Jetzt weiterschalten** (`POST …/rotate`), auch mitten in einer laufenden
+Periode. Zuerst macht die laufende Runde Platz, in zwei bewusst
+unterschiedlichen Weisen:
+
+- **Heute erst gestartet** → sie wird als _verworfen_ markiert. Sie war nie in
+  Kraft, taucht also nicht im Archiv auf.
 - **Früher gestartet** → sie wird auf gestern beendet. Die Tage haben
   stattgefunden, die Paarungen bleiben im Archiv.
 
-In beiden Fällen läuft die neue Periode einen vollen Zyklus ab heute: Sinn des
-Neuzuteilens ist ja, dass die neuen Gruppen ihre richtige Zeit miteinander
-bekommen.
+Dann wird die **nächste geplante Runde auf heute vorgezogen**, und alles
+dahinter rutscht um dieselbe Zahl von Tagen mit; hinten wird wieder auf fünf
+aufgefüllt. Sie wird _nicht_ verworfen und neu gewürfelt: sie entstand aus
+derselben Historie gegen dieselben Leute, ein frischer Wurf käme fast gleich
+heraus — und der Sinn des Vorausplanens ist, dass der Plan etwas bedeutet. Nur
+wenn keine geplante Runde da ist, wird eine gebaut.
 
-Verworfene Zuteilungen werden **markiert, nicht gelöscht** — und genau das
-macht „nochmal würfeln" erst brauchbar. Ohne sie wüsste der deterministische
-Algorithmus nichts von der abgelehnten Aufteilung und gäbe dieselbe zurück.
-Verifiziert: drei Rotationen hintereinander ergeben drei verschiedene
-Aufteilungen, das Archiv zeigt trotzdem nur eine Periode.
+`created` in der Antwort heißt deshalb „es läuft jetzt eine **andere** Runde",
+nicht „es wurden Zeilen angelegt". Für die Fragende ist beides dasselbe.
 
-`notify: false` im Body würfelt still — nützlich, wenn man zweimal
-hintereinander neu zuteilt und nicht jedes Mal alle anpiepen will.
+Verworfene Zuteilungen werden **markiert, nicht gelöscht**. Ohne sie wüsste der
+deterministische Algorithmus nichts von der abgelehnten Aufteilung und gäbe
+dieselbe zurück. Verifiziert: drei Rotationen hintereinander ergeben drei
+verschiedene Aufteilungen, das Archiv zeigt trotzdem nur eine Periode.
+
+`notify: false` im Body schaltet still weiter.
 
 ### Warum das Notification-Log eine Spalte mehr hat
 
@@ -1731,10 +1774,11 @@ beide aus derselben Variable ab.
 | `GET`/`PUT`             | `…/meetings/:id/song-leaders`                | eingeloggt                                   |
 | `GET`                   | `…/meetings/:id/song-leader-suggestions`     | eingeloggt                                   |
 | `GET`                   | `…/prayer-buddies/current`                   | eingeloggt                                   |
-| `GET`                   | `…/prayer-buddies`                           | eingeloggt (paginiert)                       |
+| `GET`                   | `…/prayer-buddies?scope=past\|upcoming\|all` | eingeloggt (paginiert)                       |
 | `GET`                   | `…/prayer-buddies/config`                    | eingeloggt                                   |
 | `PUT`                   | `…/prayer-buddies/config`                    | `admin`                                      |
-| `POST`                  | `…/prayer-buddies/rotate`                    | `admin` (sofort neu zuteilen)                |
+| `POST`                  | `…/prayer-buddies/rotate`                    | `admin` (nächste Runde vorziehen)            |
+| `POST`                  | `…/prayer-buddies/plan`                      | `admin` (Vorlauf auf fünf auffüllen)         |
 | `GET`                   | `…/absences?scope=upcoming\|all`             | eingeloggt (paginiert)                       |
 | `GET`                   | `…/absences/:id`                             | eingeloggt                                   |
 | `POST`                  | `…/absences`                                 | eigene; fremde nur `admin`                   |

@@ -40,7 +40,13 @@ export interface AbsenceListParams extends PageParams {
   scope?: 'upcoming' | 'all';
 }
 
-export type PrayerBuddyListParams = PageParams;
+/**
+ * `scope` grenzt ein, welche Runden gemeint sind. Die **laufende** zählt zu
+ * `upcoming` — sie ist nicht vorbei.
+ */
+export interface PrayerBuddyListParams extends PageParams {
+  scope?: 'past' | 'upcoming' | 'all';
+}
 
 /** `from` und `to` sind Pflicht; die Spanne ist serverseitig auf ein Jahr begrenzt. */
 export interface AssignmentParams {

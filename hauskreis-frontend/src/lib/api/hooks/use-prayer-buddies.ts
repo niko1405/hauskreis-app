@@ -62,13 +62,26 @@ export function useUpdatePrayerBuddyConfig() {
   });
 }
 
-/** Nur Admin. Neun Personen ergeben Gruppen zu zwei und drei. */
+/**
+ * Nur Admin. Zieht die nächste geplante Runde auf heute vor und füllt hinten
+ * wieder auf.
+ */
 export function useRotatePrayerBuddies() {
   const { hauskreisId, keys, derived } = useHk();
 
   return useApiMutation(
     (notify: boolean = true) =>
       prayerBuddiesApi.rotatePrayerBuddies(hauskreisId, notify),
+    { invalidateKeys: [keys.prayerBuddies.all, ...derived] },
+  );
+}
+
+/** Nur Admin. Der Vorauslauf von Hand — sonst läuft er nachts. */
+export function usePlanPrayerBuddyRounds() {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useApiMutation(
+    () => prayerBuddiesApi.planPrayerBuddyRounds(hauskreisId),
     { invalidateKeys: [keys.prayerBuddies.all, ...derived] },
   );
 }

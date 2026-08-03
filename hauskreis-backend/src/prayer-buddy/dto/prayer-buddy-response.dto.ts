@@ -48,8 +48,15 @@ export const prayerBuddyConfigSchema = z.object({
 export const rotationResultSchema = z.object({
   /// `null`, wenn nichts zu tun war oder zu wenige Leute für Paare da sind.
   assignment: prayerBuddyAssignmentSchema.nullable(),
+  /// Ob jetzt eine **andere** Runde läuft als vorher — egal ob frisch gebaut
+  /// oder aus dem Vorlauf vorgezogen. Für die Fragende ist es dasselbe.
   created: z.boolean(),
   notified: z.number().int().nonnegative(),
+});
+
+/** Wie viele Runden der Vorauslauf ergänzt hat. */
+export const planningResultSchema = z.object({
+  created: z.number().int().nonnegative(),
 });
 
 export class PrayerBuddyAssignmentResponseDto extends createZodDto(
@@ -74,4 +81,7 @@ export class PrayerBuddyConfigResponseDto extends createZodDto(
 ) {}
 export class RotationResultResponseDto extends createZodDto(
   rotationResultSchema,
+) {}
+export class PlanningResultResponseDto extends createZodDto(
+  planningResultSchema,
 ) {}

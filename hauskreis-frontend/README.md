@@ -319,6 +319,26 @@ gehört das Eintragen auch dorthin. Dafür lädt sie den Termin beim Antippen
 nach: `useRoleAssignment` braucht ihn ganz (wegen `topicId`), die
 Assignments-Route liefert nur Datum, Rolle und Person.
 
+## Der Gebets-Bildschirm
+
+Oben die laufende Runde, darunter „Weitere Runden" mit einem Umschalter
+zwischen **Kommend** und **Vorbei**. Der Umschalter setzt `scope` in der
+Anfrage, filtert also nicht im Browser — der Server dreht dabei auch die
+Reihenfolge um: kommende Runden vorwärts, vergangene rückwärts. Der Knopf zum
+Nachladen heißt entsprechend „Weiter voraus" oder „Ältere Runden laden".
+
+Dass es überhaupt kommende Runden gibt, ist neu: das Backend hält jetzt fünf
+Runden vor statt nur der laufenden. „Mit wem bete ich ab übernächster Woche"
+war vorher keine beantwortbare Frage.
+
+Die laufende Runde fällt aus der Liste heraus — sie steht schon oben, unter
+„Kommend" wäre sie doppelt.
+
+**Der „Schreiben"-Knopf ist weg.** Er baute eine `wa.me`-Adresse mit einem
+vorformulierten Satz, aber ohne Nummer — man landete also in WhatsApps
+Kontaktauswahl und suchte dort die Person, die auf dem Bildschirm daneben
+stand. Wer seine Gebetsbuddys anschreiben will, hat den Chat ohnehin offen.
+
 ## PWA und Push
 
 Der Service Worker entsteht aus `src/app/sw.ts` (Serwist) und landet in

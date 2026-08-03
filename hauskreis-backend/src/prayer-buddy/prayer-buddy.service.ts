@@ -106,23 +106,38 @@ export class PrayerBuddyService {
     return groups.length > 0 ? toAssignment(groups) : null;
   }
 
-  /** Past and present assignments, newest first — the archive view. */
+  /**
+   * Rounds, one page at a time.
+   *
+   * `scope` picks the section (see the DTO); the **order follows from it**.
+   * Coming rounds read forwards — the next one first, because that is the one
+   * you are asking about. Past rounds read backwards, newest first, like every
+   * other archive. `all` keeps the archive direction.
+   */
   async findAll(hauskreisId: string, query: ListPrayerBuddiesQueryDto) {
+    const today = toUtcDate(new Date());
+    const scopeWhere =
+      query.scope === 'past'
+        ? { periodEnd: { lt: today } }
+        : query.scope === 'upcoming'
+          ? { periodEnd: { gte: today } }
+          : {};
+
+    // Re-rolled groupings never took effect and have no place in the archive,
+    // even though the avoidance still counts them.
+    const where = { hauskreisId, discardedAt: null, ...scopeWhere };
+    const direction = query.scope === 'upcoming' ? 'asc' : 'desc';
+
     const [periods, total] = await Promise.all([
       this.prisma.prayerBuddyGroup.groupBy({
         by: ['periodStart', 'periodEnd'],
-        // Re-rolled groupings never took effect and have no place in the
-        // archive, even though the avoidance still counts them.
-        where: { hauskreisId, discardedAt: null },
-        orderBy: { periodStart: 'desc' },
+        where,
+        orderBy: { periodStart: direction },
         take: query.take,
         skip: query.skip,
       }),
       this.prisma.prayerBuddyGroup
-        .groupBy({
-          by: ['periodStart'],
-          where: { hauskreisId, discardedAt: null },
-        })
+        .groupBy({ by: ['periodStart'], where })
         .then((rows) => rows.length),
     ]);
 
@@ -133,7 +148,7 @@ export class PrayerBuddyService {
         periodStart: { in: periods.map((period) => period.periodStart) },
       },
       include: groupInclude,
-      orderBy: [{ periodStart: 'desc' }, { createdAt: 'asc' }],
+      orderBy: [{ periodStart: direction }, { createdAt: 'asc' }],
     });
 
     const byPeriod = new Map<string, typeof groups>();
