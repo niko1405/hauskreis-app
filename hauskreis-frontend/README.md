@@ -85,10 +85,11 @@ längst anderen Daten hält. `useResourceUpdate` holt ihn von dort und behandelt
 `412` als das, was es ist: jemand anders war schneller. Angezeigt wird das als
 `ConflictBanner`, nie stillschweigend erneut versucht.
 
-Vier Routen wollen ausdrücklich **keine** Vorbedingung (Anwesenheit,
-Song-Leiter, Lieder eines Termins, Benachrichtigungs-Einstellungen). Sie
-übergeben das Symbol `UNCONDITIONAL` — es zwingt an jeder Schreibstelle zu einer
-bewussten Entscheidung, statt das Feld einfach weglassen zu können.
+Einige Routen wollen ausdrücklich **keine** Vorbedingung (Anwesenheit, der
+Actionstep-Haken, Song-Leiter, Lieder eines Termins,
+Benachrichtigungs-Einstellungen, eigene Wohnung und E-Mail). Sie übergeben das
+Symbol `UNCONDITIONAL` — es zwingt an jeder Schreibstelle zu einer bewussten
+Entscheidung, statt das Feld einfach weglassen zu können.
 
 **Rollen.** `@Roles('admin')` hinterlässt keine Spur in der Spec. Die Liste der
 18 Admin-Routen steht deshalb in `lib/auth/roles.ts` — sie steuert nur, welche
@@ -238,6 +239,17 @@ aufschließt.
 eigene Karte weiter oben und ihren eigenen Bildschirm, und mit jemandem zu
 beten ist keine Aufgabe, die man abarbeitet. Weggelassen werden sie schon vom
 Server, nicht erst hier — siehe `myRoles` im Backend-README.
+
+**Der Actionstep hat einen Haken — pro Person.** Ein Häkchen am Termin hätte
+geheißen „einer hakt ab, für alle"; den Vorsatz nimmt sich aber jede:r selbst.
+Daneben steht, wie es der Gruppe damit geht („5 von 9 haben's geschafft"), bei
+null Abgehakten aber keine Statistik, sondern „Noch niemand hat abgehakt" —
+„0 von 9" liest sich wie ein Vorwurf an alle, dabei hat die Woche vielleicht
+gerade erst angefangen.
+
+Die Karte verschwindet beim Abhaken **nicht**: sonst ließe sich der Haken nicht
+zurücknehmen. Still wird nur die Erinnerung — der Reminder überspringt, wer
+abgehakt hat.
 
 **„Nächstes Treffen" nennt alle drei Rollen** in denselben `RoleChip`s wie die
 Terminkarte. Sonst hieße „noch kein Host" auf zwei Bildschirmen zweierlei. Die

@@ -44,6 +44,10 @@ const meetingInclude = {
   songLeaders: {
     select: { person: { select: { id: true, name: true } } },
   },
+  actionstepDone: {
+    select: { person: { select: { id: true, name: true } }, doneAt: true },
+    orderBy: { doneAt: 'asc' },
+  },
   attendances: {
     select: { personId: true, status: true },
   },
@@ -315,6 +319,49 @@ export class MeetingService {
     }
 
     return attendance;
+  }
+
+  /**
+   * Hakt den Actionstep eines Abends für **eine** Person ab, oder nimmt den
+   * Haken zurück.
+   *
+   * Ohne `If-Match`: es ist ein Schalter, kein Wettlauf. Zwei Personen, die
+   * gleichzeitig abhaken, schreiben verschiedene Zeilen; dieselbe Person
+   * zweimal schreibt zweimal dasselbe. Es gibt nichts, was ein 412 retten
+   * könnte — und einen Haken erst nach einem `GET` setzen zu dürfen, wäre für
+   * die Erinnerung auf dem Startbildschirm ein Umweg ohne Gegenwert.
+   *
+   * Idempotent in beide Richtungen: nochmal abhaken behält den ursprünglichen
+   * Zeitpunkt (`doneAt` ist „seit wann", nicht „zuletzt angetippt"), und ein
+   * Haken, den es nicht gibt, lässt sich folgenlos entfernen.
+   */
+  async setActionstepDone(
+    hauskreisId: string,
+    id: string,
+    personId: string,
+    done: boolean,
+  ) {
+    await this.findOne(hauskreisId, id);
+    await this.assertPersonBelongsToHauskreis(hauskreisId, personId);
+
+    const key = { meetingId_personId: { meetingId: id, personId } };
+
+    if (!done) {
+      await this.prisma.meetingActionstepDone.deleteMany({
+        where: { meetingId: id, personId },
+      });
+
+      return { meetingId: id, personId, done: false, doneAt: null };
+    }
+
+    const row = await this.prisma.meetingActionstepDone.upsert({
+      where: key,
+      // Leer: ein zweites Antippen ist kein neues Abhaken.
+      update: {},
+      create: { meetingId: id, personId },
+    });
+
+    return { meetingId: id, personId, done: true, doneAt: row.doneAt };
   }
 
   /**

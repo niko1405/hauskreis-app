@@ -7,6 +7,7 @@ import {
 } from '../notification/meeting-reminder.service';
 import { hostReminderBody } from '../notification/reminder-copy';
 import { NotificationType } from '../../generated/prisma/enums';
+import { appPath } from '../notification/app-paths';
 
 /**
  * Reminds hosts before the evening happens at their place.
@@ -41,7 +42,7 @@ export class HostReminderService {
                     meeting.date,
                     meeting.location?.name ?? null,
                   ),
-                  url: `/meetings/${meeting.id}`,
+                  url: appPath.meeting(meeting.id),
                 },
               },
             ]

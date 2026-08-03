@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationService } from '../notification/notification.service';
+import { appPath } from '../notification/app-paths';
 import { PrayerBuddyService, type Assignment } from './prayer-buddy.service';
 import { buildGroups } from './grouping';
 import { NotificationType } from '../../generated/prisma/enums';
@@ -391,9 +392,7 @@ export class PrayerBuddyGeneratorService {
             payload: {
               title: 'Neue Gebetsbuddys',
               body: `Bis ${formatDate(assignment.periodEnd)} betest du mit ${formatNames(others)}.`,
-              // Der Bildschirm heißt „Gebet"; `/prayer-buddies` gibt es im
-              // Frontend nicht und führte auf eine 404-Seite.
-              url: '/gebet',
+              url: appPath.prayerBuddies(),
             },
           });
         }),

@@ -8,6 +8,7 @@
 import {
   CheckCircle2,
   ChevronRight,
+  Circle,
   ExternalLink,
   MapPin,
   Users,
@@ -17,11 +18,19 @@ import { Badge } from '@/components/ui/badge';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { ROLE_ICON, RoleChip } from '@/components/domain/role-badge';
-import { useHome, useMe, useSetAttendance } from '@/lib/api/hooks';
+import { useToast } from '@/components/ui/toast';
+import { errorMessage } from '@/lib/api/errors';
+import {
+  useHome,
+  useMe,
+  useSetActionstepDone,
+  useSetAttendance,
+} from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { formatDay, formatDayMonth, formatRelativeDay } from '@/lib/date';
 import {
   ROLE_LABEL,
+  actionstepProgress,
   hasTopicSlot,
   mapsUrl,
   meetingHeadline,
@@ -30,6 +39,7 @@ import { firstName } from '@/lib/person';
 import type {
   Assignment,
   AssignmentRole,
+  HomeActionstep,
   HomeNextMeeting,
 } from '@/lib/api/types';
 
@@ -67,26 +77,7 @@ export function HomeScreen() {
         </p>
       </header>
 
-      {openActionstep && (
-        <Card className="border-terracotta-100 bg-terracotta-50/40">
-          <div className="flex items-center gap-4">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-terracotta-50 text-terracotta-500">
-              <CheckCircle2 size={22} />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
-                Actionstep der Woche
-              </p>
-              <p className="text-sm leading-snug font-bold text-stone-800">
-                {openActionstep.text}
-              </p>
-              <p className="mt-0.5 text-[11px] text-stone-400">
-                vom {formatDay(openActionstep.date)}
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
+      {openActionstep && <ActionstepCard step={openActionstep} />}
 
       {prayerBuddies && (
         <Link href="/gebet" className="block">
@@ -138,6 +129,72 @@ export function HomeScreen() {
         )}
       </section>
     </div>
+  );
+}
+
+/**
+ * Der Actionstep der Woche, mit dem eigenen Haken.
+ *
+ * Die Karte verschwindet beim Abhaken **nicht**. Erstens ließe sich der Haken
+ * dann nicht zurücknehmen, zweitens ist „geschafft" auch eine Nachricht — und
+ * daneben steht, wie es der Gruppe damit geht. Still wird es nur bei der
+ * Erinnerung: der Reminder überspringt, wer abgehakt hat.
+ */
+function ActionstepCard({ step }: { step: HomeActionstep }) {
+  const setDone = useSetActionstepDone(step.meetingId);
+  const toast = useToast();
+
+  return (
+    <Card
+      className={cn(
+        'transition-colors',
+        step.done
+          ? 'border-music-line bg-music-bg/40'
+          : 'border-terracotta-100 bg-terracotta-50/40',
+      )}
+    >
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          aria-pressed={step.done}
+          aria-label={
+            step.done ? 'Haken wieder wegnehmen' : 'Actionstep abhaken'
+          }
+          disabled={setDone.isPending}
+          onClick={() =>
+            setDone.mutate(!step.done, {
+              onError: (error) => toast.error(errorMessage(error)),
+            })
+          }
+          className={cn(
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-50',
+            'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+            step.done
+              ? 'bg-music-bg text-music'
+              : 'bg-card text-stone-300 hover:text-terracotta-500',
+          )}
+        >
+          {step.done ? <CheckCircle2 size={22} /> : <Circle size={22} />}
+        </button>
+        <div className="min-w-0">
+          <p
+            className={cn(
+              'text-[10px] font-bold tracking-widest uppercase',
+              step.done ? 'text-music' : 'text-terracotta-500',
+            )}
+          >
+            Actionstep der Woche
+          </p>
+          <p className="text-sm leading-snug font-bold text-stone-800">
+            {step.text}
+          </p>
+          <p className="mt-0.5 text-[11px] text-stone-400">
+            vom {formatDay(step.date)} ·{' '}
+            {actionstepProgress(step.doneCount, step.peopleCount)}
+          </p>
+        </div>
+      </div>
+    </Card>
   );
 }
 

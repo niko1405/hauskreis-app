@@ -143,6 +143,7 @@ model Person {
   prayerBuddyGroups     PrayerBuddyGroupMember[] @relation("PrayerBuddy")
   cycleConfigEdits      PrayerBuddyCycleConfig[] @relation("CycleConfigEditor")
   attendances           MeetingAttendance[]
+  actionstepsDone       MeetingActionstepDone[]  @relation("ActionstepDoneBy")
   pushSubscriptions     PushSubscription[]
   notifications         NotificationLog[]
   notificationsAbout    NotificationLog[]        @relation("NotificationSubject")
@@ -245,14 +246,15 @@ model Meeting {
   /// Optimistic locking counter, see docs/conditional requests.
   version        Int           @default(0)
 
-  hauskreis     Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
-  location      Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  host          Person?             @relation("MeetingHost", fields: [hostPersonId], references: [id], onDelete: SetNull)
-  topic         Topic?              @relation(fields: [topicId], references: [id], onDelete: SetNull)
-  attendances   MeetingAttendance[]
-  songLeaders   MeetingSongLeader[]
-  songs         MeetingSong[]
-  notifications NotificationLog[]
+  hauskreis      Hauskreis               @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  location       Location?               @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  host           Person?                 @relation("MeetingHost", fields: [hostPersonId], references: [id], onDelete: SetNull)
+  topic          Topic?                  @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  attendances    MeetingAttendance[]
+  songLeaders    MeetingSongLeader[]
+  songs          MeetingSong[]
+  actionstepDone MeetingActionstepDone[]
+  notifications  NotificationLog[]
 
   /// One meeting per date per group — this is what makes the generator idempotent.
   @@unique([hauskreisId, date])
@@ -320,6 +322,29 @@ model Song {
   @@unique([hauskreisId, title, artist])
   @@index([hauskreisId])
   @@map("song")
+}
+
+/// Wer den Actionstep eines Abends für sich abgehakt hat.
+///
+/// Eine eigene Tabelle statt eines Häkchens am Termin, weil der Actionstep pro
+/// **Person** gilt: „jeden Tag zehn Minuten still werden" nimmt sich jede:r
+/// selbst vor, und dass eine Person es geschafft hat, sagt über die anderen
+/// acht nichts (CLAUDE.md §6).
+///
+/// Kein Boolean-Feld, sondern die reine Anwesenheit einer Zeile: abgehakt oder
+/// nicht abgehakt, ein dritter Zustand wäre erfunden. `doneAt` ist deshalb
+/// nicht nullable — eine Zeile ohne Zeitpunkt gibt es nicht.
+model MeetingActionstepDone {
+  meetingId String   @map("meeting_id") @db.Uuid
+  personId  String   @map("person_id") @db.Uuid
+  doneAt    DateTime @default(now()) @map("done_at")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  person  Person  @relation("ActionstepDoneBy", fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([meetingId, personId])
+  @@index([personId])
+  @@map("meeting_actionstep_done")
 }
 
 /// Who looks after the music for one evening. At least one person where there

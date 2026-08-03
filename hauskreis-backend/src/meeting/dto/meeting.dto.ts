@@ -47,6 +47,16 @@ export const setAttendanceSchema = z.object({
   status: attendanceStatus,
 });
 
+/**
+ * Der Haken am eigenen Actionstep.
+ *
+ * Ohne `personId`, anders als bei der Teilnahme: einen Vorsatz hakt man für
+ * sich ab, nicht füreinander. Wer gemeint ist, steht im Token.
+ */
+export const setActionstepDoneSchema = z.object({
+  done: z.boolean(),
+});
+
 export const listMeetingsQuerySchema = paginationSchema.extend({
   /// 'upcoming' (default) hides past meetings; 'past' powers the archive view.
   scope: z.enum(['upcoming', 'past', 'all']).default('upcoming'),
@@ -68,6 +78,9 @@ const meetingParamsSchema = z.object({
 export class CreateMeetingDto extends createZodDto(createMeetingSchema) {}
 export class UpdateMeetingDto extends createZodDto(updateMeetingSchema) {}
 export class SetAttendanceDto extends createZodDto(setAttendanceSchema) {}
+export class SetActionstepDoneDto extends createZodDto(
+  setActionstepDoneSchema,
+) {}
 export class ListMeetingsQueryDto extends createZodDto(
   listMeetingsQuerySchema,
 ) {}

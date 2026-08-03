@@ -7,6 +7,7 @@ import {
 } from '../notification/meeting-reminder.service';
 import { songReminderBody } from '../notification/reminder-copy';
 import { NotificationType } from '../../generated/prisma/enums';
+import { appPath } from '../notification/app-paths';
 
 /**
  * Reminds whoever leads the songs, a few days before the evening.
@@ -35,7 +36,7 @@ export class SongReminderService {
           payload: {
             title: 'Du machst die Musik',
             body: songReminderBody(meeting.date),
-            url: `/meetings/${meeting.id}`,
+            url: appPath.meeting(meeting.id),
           },
         })),
       options,

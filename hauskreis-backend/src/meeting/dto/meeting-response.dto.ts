@@ -67,6 +67,14 @@ export const meetingResponseSchema = z.object({
   /// bleibt, weil dort geschrieben wird; hier steht es, damit eine Terminliste
   /// nicht pro Karte eine zweite Anfrage braucht, um „Musik: Lena" zu zeigen.
   songLeaders: z.array(z.object({ person: personRefSchema })),
+  /// Wer den Actionstep für sich abgehakt hat.
+  ///
+  /// Namen statt einer Zahl: „5 von 9" beantwortet, wie es der Gruppe geht,
+  /// „Chris, Lena, …" beantwortet, wen man fragen kann, wie es lief. Wer
+  /// fehlt, hat nicht abgehakt — ein dritter Zustand ist nicht vorgesehen.
+  actionstepDone: z.array(
+    z.object({ person: personRefSchema, doneAt: isoDateTimeOut }),
+  ),
   /// Nur wer geantwortet hat, steht hier. Keine Zeile heißt `UNKNOWN`.
   attendances: z.array(
     z.object({
@@ -74,6 +82,20 @@ export const meetingResponseSchema = z.object({
       status: z.enum(AttendanceStatus),
     }),
   ),
+});
+
+/**
+ * Die Antwort auf einen gesetzten oder entfernten Haken — die Zeile selbst,
+ * nicht der ganze Abend.
+ *
+ * `doneAt` ist `null`, wenn gerade zurückgenommen wurde: es gibt dann keine
+ * Zeile mehr, und ein erfundener Zeitpunkt wäre schlechter als keiner.
+ */
+export const actionstepDoneResponseSchema = z.object({
+  meetingId: z.uuid(),
+  personId: z.uuid(),
+  done: z.boolean(),
+  doneAt: isoDateTimeOut.nullable(),
 });
 
 /**
@@ -129,6 +151,9 @@ export class MeetingPageResponseDto extends createZodDto(
 ) {}
 export class AttendanceResponseDto extends createZodDto(
   attendanceResponseSchema,
+) {}
+export class ActionstepDoneResponseDto extends createZodDto(
+  actionstepDoneResponseSchema,
 ) {}
 export class GenerationResultResponseDto extends createZodDto(
   generationResultSchema,

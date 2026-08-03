@@ -51,6 +51,21 @@ export const ROLE_QUESTION: Record<AssignmentRole, string> = {
   PRAYER_BUDDY: 'Wer betet miteinander?',
 };
 
+/**
+ * „5 von 9 haben's geschafft".
+ *
+ * Bei null Abgehakten steht keine Statistik da, sondern eine Einladung: „0 von
+ * 9" liest sich wie ein Vorwurf an alle, dabei hat die Woche vielleicht gerade
+ * erst angefangen. Und wenn alle es geschafft haben, ist die Zahl uninteressant
+ * — dann ist es eine gute Nachricht.
+ */
+export function actionstepProgress(done: number, total: number): string {
+  if (total === 0 || done === 0) return 'Noch niemand hat abgehakt';
+  if (done >= total) return 'Alle haben es geschafft';
+  if (done === 1) return `1 von ${total} hat's geschafft`;
+  return `${done} von ${total} haben's geschafft`;
+}
+
 /** Für Karten mit Ort: „In Maps öffnen" statt einer Adresse zum Abtippen. */
 export function mapsUrl(location: {
   name: string;

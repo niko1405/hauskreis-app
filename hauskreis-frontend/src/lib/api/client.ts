@@ -46,6 +46,8 @@ export interface Resource<T> {
  * `412`/`428`, obwohl sie PUT bzw. PATCH sind:
  *
  * - `PUT  …/meetings/{id}/attendance`
+ * - `PUT  …/meetings/{id}/actionstep-done` — ein Schalter, kein Wettlauf:
+ *   zwei Leute, die gleichzeitig abhaken, schreiben verschiedene Zeilen
  * - `PUT  …/meetings/{id}/song-leaders`
  * - `PATCH …/meetings/{meetingId}/songs/{id}`
  * - `PUT  /api/push/settings/{type}`

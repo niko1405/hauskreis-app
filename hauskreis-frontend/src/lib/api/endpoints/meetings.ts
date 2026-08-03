@@ -13,6 +13,7 @@ import {
 import { hkPath } from './paths';
 import type { MeetingListParams } from '../params';
 import type {
+  ActionstepDone,
   ActionstepRunResult,
   Attendance,
   CreateMeetingInput,
@@ -94,6 +95,23 @@ export function setAttendance(
   return apiPut<Attendance>(
     `${base(hauskreisId)}/${meetingId}/attendance`,
     input,
+    UNCONDITIONAL,
+  ).then((r) => r.data);
+}
+
+/**
+ * Hakt den Actionstep für **einen selbst** ab. Ohne Vorbedingung und ohne
+ * `personId`: einen Vorsatz hakt man für sich ab, wer gemeint ist, steht im
+ * Token.
+ */
+export function setActionstepDone(
+  hauskreisId: string,
+  meetingId: string,
+  done: boolean,
+): Promise<ActionstepDone> {
+  return apiPut<ActionstepDone>(
+    `${base(hauskreisId)}/${meetingId}/actionstep-done`,
+    { done },
     UNCONDITIONAL,
   ).then((r) => r.data);
 }

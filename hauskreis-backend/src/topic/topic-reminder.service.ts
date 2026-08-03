@@ -7,6 +7,7 @@ import {
 } from '../notification/meeting-reminder.service';
 import { topicReminderBody } from '../notification/reminder-copy';
 import { NotificationType } from '../../generated/prisma/enums';
+import { appPath } from '../notification/app-paths';
 
 /**
  * Reminds whoever prepares the topic, a few days before the evening.
@@ -38,7 +39,7 @@ export class TopicReminderService {
           payload: {
             title: 'Du bist dran mit dem Thema',
             body: topicReminderBody(meeting.date, meeting.topic?.title ?? null),
-            url: `/meetings/${meeting.id}`,
+            url: appPath.meeting(meeting.id),
           },
         })),
       options,

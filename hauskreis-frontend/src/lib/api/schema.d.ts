@@ -292,6 +292,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/meetings/{id}/actionstep-done': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['MeetingController_setActionstepDone'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/meetings/generate': {
     parameters: {
       query?: never;
@@ -1134,6 +1150,15 @@ export interface components {
             name: string;
           };
         }[];
+        actionstepDone: {
+          person: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+          };
+          /** Format: date-time */
+          doneAt: string;
+        }[];
         attendances: {
           /** Format: uuid */
           personId: string;
@@ -1220,6 +1245,15 @@ export interface components {
           id: string;
           name: string;
         };
+      }[];
+      actionstepDone: {
+        person: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+        };
+        /** Format: date-time */
+        doneAt: string;
       }[];
       attendances: {
         /** Format: uuid */
@@ -1334,6 +1368,18 @@ export interface components {
       source: 'SELF' | 'ABSENCE';
       /** Format: date-time */
       updatedAt: string;
+    };
+    SetActionstepDoneDto: {
+      done: boolean;
+    };
+    ActionstepDoneResponseDto: {
+      /** Format: uuid */
+      meetingId: string;
+      /** Format: uuid */
+      personId: string;
+      done: boolean;
+      /** Format: date-time */
+      doneAt: string | null;
     };
     GenerationResultResponseDto: {
       created: number;
@@ -1898,6 +1944,9 @@ export interface components {
         meetingId: string;
         /** Format: date */
         date: string;
+        done: boolean;
+        doneCount: number;
+        peopleCount: number;
       } | null;
       prayerBuddies: {
         /** Format: date */
@@ -3623,6 +3672,69 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['AttendanceResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeetingController_setActionstepDone: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetActionstepDoneDto'];
+      };
+    };
+    responses: {
+      /** @description Ohne If-Match — ein Schalter, kein Wettlauf */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ActionstepDoneResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */

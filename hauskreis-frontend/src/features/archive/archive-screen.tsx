@@ -18,13 +18,14 @@ import { LocationsCard } from './locations-card';
 import {
   useArchiveSummary,
   useMeetingList,
+  usePeople,
   usePrefetchMeeting,
   useSongList,
   useTopicList,
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { formatDay, formatRelativeDay } from '@/lib/date';
-import { meetingHeadline } from '@/lib/meeting';
+import { actionstepProgress, meetingHeadline } from '@/lib/meeting';
 import type { SongListParams } from '@/lib/api/params';
 
 type Tab = 'termine' | 'themen' | 'lieder' | 'orte';
@@ -104,6 +105,13 @@ export function ArchiveScreen() {
 function PastMeetings({ search }: { search: string }) {
   const query = useMeetingList({ scope: 'past', search: search || undefined });
   const prefetch = usePrefetchMeeting();
+  const people = usePeople();
+
+  // Der Nenner ist die heutige Gruppengröße, nicht die von damals — die
+  // Anwesenheit eines Abends steht nirgends als Mitgliederzahl fest. Für neun
+  // Leute, die selten wechseln, ist das die ehrlichere Näherung als eine
+  // erfundene Historie.
+  const activeCount = (people.data ?? []).filter((p) => p.active).length;
 
   if (query.isLoading) return <CardSkeleton />;
   if (query.error) return <ErrorState error={query.error} />;
@@ -133,9 +141,20 @@ function PastMeetings({ search }: { search: string }) {
                 </p>
               )}
               {meeting.actionstepText && (
-                <p className="mt-2 rounded-md bg-terracotta-50/60 px-2.5 py-1.5 text-[11px] font-semibold text-terracotta-700">
-                  Actionstep: {meeting.actionstepText}
-                </p>
+                <div className="mt-2 rounded-md bg-terracotta-50/60 px-2.5 py-1.5">
+                  <p className="text-[11px] font-semibold text-terracotta-700">
+                    Actionstep: {meeting.actionstepText}
+                  </p>
+                  {/* Wie es der Gruppe damit ging, gehört zum Abend dazu —
+                      sonst steht im Archiv nur, was man sich vorgenommen
+                      hatte. */}
+                  <p className="mt-0.5 text-[10px] text-terracotta-700/70">
+                    {actionstepProgress(
+                      meeting.actionstepDone.length,
+                      activeCount,
+                    )}
+                  </p>
+                </div>
               )}
             </Link>
           </li>

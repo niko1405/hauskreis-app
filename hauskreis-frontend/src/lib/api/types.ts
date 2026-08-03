@@ -71,6 +71,9 @@ export type MeetingTopic = NonNullable<Meeting['topic']>;
 export type SetAttendanceInput = S['SetAttendanceDto'];
 export type Attendance = S['AttendanceResponseDto'];
 
+/** Der Haken am Actionstep — pro Person, nicht pro Abend. */
+export type ActionstepDone = S['ActionstepDoneResponseDto'];
+
 export const MEETING_TYPES = [
   'STANDARD',
   'LOBPREIS_GEBET',

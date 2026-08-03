@@ -27,6 +27,7 @@ const pastWithActionstep = {
   id: 'm0',
   date: utc('2026-07-28'),
   actionstepText: 'Jeden Tag 10 Minuten still werden',
+  actionstepDone: [] as { personId: string }[],
 };
 
 function setup(
@@ -36,12 +37,14 @@ function setup(
       id: string;
       date: Date;
       actionstepText: string | null;
+      actionstepDone: { personId: string }[];
     } | null;
     buddies?: {
       periodEnd: string;
       groups: { members: { id: string; name: string }[] }[];
     } | null;
     roles?: unknown[];
+    peopleCount?: number;
   } = {},
 ) {
   // Two calls to meeting.findFirst: the next evening, then the last actionstep.
@@ -74,7 +77,10 @@ function setup(
   );
 
   const service = new DashboardService(
-    { meeting: { findFirst } } as unknown as PrismaService,
+    {
+      meeting: { findFirst },
+      person: { count: jest.fn().mockResolvedValue(options.peopleCount ?? 9) },
+    } as unknown as PrismaService,
     { findAssignments } as unknown as AssignmentService,
     { findCurrent } as unknown as PrayerBuddyService,
   );
@@ -106,6 +112,9 @@ describe('DashboardService.build', () => {
       text: 'Jeden Tag 10 Minuten still werden',
       meetingId: 'm0',
       date: '2026-07-28',
+      done: false,
+      doneCount: 0,
+      peopleCount: 9,
     });
     expect(home.prayerBuddies).toEqual({
       until: '2026-08-11',
@@ -141,6 +150,25 @@ describe('DashboardService.build', () => {
     expect(home.nextMeeting).toBeNull();
   });
 
+  it('counts who ticked the actionstep off, and whether you did', async () => {
+    const { service } = setup({
+      actionstep: {
+        ...pastWithActionstep,
+        actionstepDone: [{ personId: 'niko' }, { personId: 'chris' }],
+      },
+      peopleCount: 9,
+    });
+
+    const home = await service.build('hk-1', 'niko', { now: NOW });
+
+    // „2 von 9 haben's geschafft" — und du bist eine davon.
+    expect(home.openActionstep).toMatchObject({
+      done: true,
+      doneCount: 2,
+      peopleCount: 9,
+    });
+  });
+
   it('shows no actionstep when the last ones had none', async () => {
     const { service } = setup({ actionstep: null });
 
@@ -151,7 +179,12 @@ describe('DashboardService.build', () => {
 
   it('treats a blank actionstep as none', async () => {
     const { service } = setup({
-      actionstep: { id: 'm0', date: utc('2026-07-28'), actionstepText: '  ' },
+      actionstep: {
+        id: 'm0',
+        date: utc('2026-07-28'),
+        actionstepText: '  ',
+        actionstepDone: [],
+      },
     });
 
     const home = await service.build('hk-1', 'niko', { now: NOW });

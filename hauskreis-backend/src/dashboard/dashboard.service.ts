@@ -50,7 +50,16 @@ export interface HomeScreen {
    */
   myRoles: Assignment[];
   /** From the most recent past evening that has one. */
-  openActionstep: { text: string; meetingId: string; date: string } | null;
+  openActionstep: {
+    text: string;
+    meetingId: string;
+    date: string;
+    /** Whether *you* have ticked it off. */
+    done: boolean;
+    /** How many have, and how many could — „5 von 9 haben's geschafft". */
+    doneCount: number;
+    peopleCount: number;
+  } | null;
   /** Who you are praying with right now. */
   prayerBuddies: { until: string; withNames: string[] } | null;
 }
@@ -83,65 +92,74 @@ export class DashboardService {
     const now = options.now ?? new Date();
     const today = toUtcDate(now);
 
-    const [meeting, actionstep, myRoles, buddies] = await Promise.all([
-      this.prisma.meeting.findFirst({
-        where: {
-          hauskreisId,
-          date: { gte: today },
-          status: MeetingStatus.PLANNED,
-        },
-        orderBy: { date: 'asc' },
-        select: {
-          id: true,
-          date: true,
-          type: true,
-          title: true,
-          location: {
-            select: {
-              id: true,
-              name: true,
-              latitude: true,
-              longitude: true,
-              address: true,
-              requiresHost: true,
-            },
+    const [meeting, actionstep, myRoles, buddies, peopleCount] =
+      await Promise.all([
+        this.prisma.meeting.findFirst({
+          where: {
+            hauskreisId,
+            date: { gte: today },
+            status: MeetingStatus.PLANNED,
           },
-          host: { select: { id: true, name: true } },
-          topic: {
-            select: {
-              id: true,
-              title: true,
-              responsibles: {
-                select: { person: { select: { id: true, name: true } } },
+          orderBy: { date: 'asc' },
+          select: {
+            id: true,
+            date: true,
+            type: true,
+            title: true,
+            location: {
+              select: {
+                id: true,
+                name: true,
+                latitude: true,
+                longitude: true,
+                address: true,
+                requiresHost: true,
               },
             },
+            host: { select: { id: true, name: true } },
+            topic: {
+              select: {
+                id: true,
+                title: true,
+                responsibles: {
+                  select: { person: { select: { id: true, name: true } } },
+                },
+              },
+            },
+            songLeaders: {
+              select: { person: { select: { id: true, name: true } } },
+            },
+            attendances: {
+              where: { personId },
+              select: { status: true },
+            },
           },
-          songLeaders: {
-            select: { person: { select: { id: true, name: true } } },
+        }),
+        this.prisma.meeting.findFirst({
+          where: {
+            hauskreisId,
+            date: { lt: today },
+            status: { not: MeetingStatus.CANCELLED },
+            actionstepText: { not: null },
           },
-          attendances: {
-            where: { personId },
-            select: { status: true },
+          orderBy: { date: 'desc' },
+          select: {
+            id: true,
+            date: true,
+            actionstepText: true,
+            // Nur die Ids: der Startbildschirm zeigt eine Zahl und den eigenen
+            // Haken, die Namen stehen auf der Detailseite.
+            actionstepDone: { select: { personId: true } },
           },
-        },
-      }),
-      this.prisma.meeting.findFirst({
-        where: {
-          hauskreisId,
-          date: { lt: today },
-          status: { not: MeetingStatus.CANCELLED },
-          actionstepText: { not: null },
-        },
-        orderBy: { date: 'desc' },
-        select: { id: true, date: true, actionstepText: true },
-      }),
-      this.assignments.findAssignments(hauskreisId, {
-        from: today,
-        to: addDays(today, HOME_HORIZON_DAYS),
-        personId,
-      }),
-      this.buddies.findCurrent(hauskreisId, now),
-    ]);
+        }),
+        this.assignments.findAssignments(hauskreisId, {
+          from: today,
+          to: addDays(today, HOME_HORIZON_DAYS),
+          personId,
+        }),
+        this.buddies.findCurrent(hauskreisId, now),
+        this.prisma.person.count({ where: { hauskreisId, active: true } }),
+      ]);
 
     const myGroup = buddies?.groups.find((group) =>
       group.members.some((member) => member.id === personId),
@@ -175,6 +193,11 @@ export class DashboardService {
               text: actionstep.actionstepText,
               meetingId: actionstep.id,
               date: isoDate(actionstep.date),
+              done: actionstep.actionstepDone.some(
+                (row) => row.personId === personId,
+              ),
+              doneCount: actionstep.actionstepDone.length,
+              peopleCount,
             }
           : null,
       prayerBuddies:

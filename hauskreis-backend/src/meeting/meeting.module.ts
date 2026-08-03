@@ -7,12 +7,14 @@ import { ActionstepReminderService } from './actionstep-reminder.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module';
 import { NotificationModule } from '../notification/notification.module';
+import { PersonModule } from '../person/person.module';
 
 @Module({
-  // Both imports are the point of the modular split: the ranking lives in
-  // RoleSuggestionModule and the push plumbing in NotificationModule, so this
-  // module owns neither.
-  imports: [RoleSuggestionModule, NotificationModule],
+  // Die ersten beiden Importe sind der Sinn des Modul-Schnitts: das Ranking
+  // liegt in RoleSuggestionModule, die Push-Verkabelung in NotificationModule,
+  // dieses Modul besitzt beides nicht. PersonModule kam für den
+  // Actionstep-Haken dazu — wer abhakt, steht im Token und nicht im Body.
+  imports: [RoleSuggestionModule, NotificationModule, PersonModule],
   controllers: [MeetingController],
   providers: [
     MeetingService,

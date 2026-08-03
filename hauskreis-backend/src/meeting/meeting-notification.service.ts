@@ -8,6 +8,7 @@ import {
 } from '../notification/reminder-copy';
 import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
 import { toUtcDate } from './meeting-schedule';
+import { appPath } from '../notification/app-paths';
 
 /**
  * The notifications that fire because something changed, not because a date
@@ -60,7 +61,7 @@ export class MeetingNotificationService {
         payload: {
           title: 'Fällt aus',
           body: `${what} am ${formatMeetingDate(meeting.date)} fällt aus.`,
-          url: `/meetings/${meeting.id}`,
+          url: appPath.meeting(meeting.id),
         },
       })),
     );
@@ -129,7 +130,7 @@ export class MeetingNotificationService {
         payload: {
           title: 'Absage für deinen Abend',
           body: `${person.name} kann am ${formatShortDate(meeting.date)} nicht.`,
-          url: `/meetings/${meeting.id}`,
+          url: appPath.meeting(meeting.id),
         },
       },
     ]);
@@ -168,7 +169,7 @@ export class MeetingNotificationService {
           payload: {
             title: 'Bei euch wäre jetzt Platz',
             body: `Am ${formatShortDate(meeting.date)} haben genug abgesagt, dass der Hauskreis bei euch (${home.name}) stattfinden könnte.`,
-            url: `/meetings/${meeting.id}`,
+            url: appPath.meeting(meeting.id),
           },
         })),
       ),

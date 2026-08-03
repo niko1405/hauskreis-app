@@ -121,6 +121,28 @@ export function useSetAttendance(meetingId: string) {
   );
 }
 
+/**
+ * Der Haken am eigenen Actionstep. Ohne Vorbedingung — ein Schalter.
+ *
+ * Betrifft auch den Home-Screen: dort steht die Erinnerung, dort verschwindet
+ * sie, und dort steht „5 von 9 haben's geschafft".
+ */
+export function useSetActionstepDone(meetingId: string) {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useApiMutation(
+    (done: boolean) =>
+      meetingsApi.setActionstepDone(hauskreisId, meetingId, done),
+    {
+      invalidateKeys: [
+        keys.meetings.detail(meetingId),
+        keys.meetings.all,
+        ...derived,
+      ],
+    },
+  );
+}
+
 // ── Vorschläge ──────────────────────────────────────────────────────────────
 
 /**

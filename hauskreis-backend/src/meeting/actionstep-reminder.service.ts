@@ -5,11 +5,17 @@ import { NotificationService } from '../notification/notification.service';
 import { NotificationPreferenceService } from '../notification/notification-preference.service';
 import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
 import { toUtcDate } from './meeting-schedule';
+import { appPath } from '../notification/app-paths';
 
 export interface ActionstepRunResult {
   /** People who got a fresh nudge. */
   notified: number;
-  /** Already nudged, not one of their weekdays, switched off, or push is off. */
+  /**
+   * Already nudged, switched off, or push is off.
+   *
+   * People whose weekday it is not, and people who have already ticked the
+   * step off, never enter the run at all and are not counted here.
+   */
   skipped: number;
   /** The meeting the actionstep came from, if there was one. */
   meetingId: string | null;
@@ -83,14 +89,26 @@ export class ActionstepReminderService {
       select: { id: true },
     });
 
-    const settings = await this.preferences.resolveMany(
-      people.map((person) => person.id),
-      NotificationType.ACTIONSTEP_REMINDER,
-    );
+    const [settings, alreadyDone] = await Promise.all([
+      this.preferences.resolveMany(
+        people.map((person) => person.id),
+        NotificationType.ACTIONSTEP_REMINDER,
+      ),
+      this.prisma.meetingActionstepDone.findMany({
+        where: { meetingId: meeting.id },
+        select: { personId: true },
+      }),
+    ]);
+
+    // Wer abgehakt hat, wird nicht mehr gefragt, wie es läuft. Genau dafür ist
+    // der Haken da — sonst wäre er nur Statistik.
+    const done = new Set(alreadyDone.map((row) => row.personId));
 
     const weekday = today.getUTCDay();
-    const due = people.filter((person) =>
-      settings.get(person.id)?.weekdays.includes(weekday),
+    const due = people.filter(
+      (person) =>
+        !done.has(person.id) &&
+        settings.get(person.id)?.weekdays.includes(weekday),
     );
 
     const results = await Promise.all(
@@ -102,7 +120,7 @@ export class ActionstepReminderService {
           payload: {
             title: 'Dein Actionstep',
             body: `Wie läuft es damit? "${meeting.actionstepText}"`,
-            url: `/meetings/${meeting.id}`,
+            url: appPath.meeting(meeting.id),
           },
         }),
       ),

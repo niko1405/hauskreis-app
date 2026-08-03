@@ -24,6 +24,8 @@
 import {
   ArrowLeft,
   CalendarX,
+  CheckCircle2,
+  Circle,
   ExternalLink,
   MapPin,
   Pencil,
@@ -44,11 +46,15 @@ import {
   ErrorState,
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
+import { cn } from '@/lib/cn';
 import { errorMessage } from '@/lib/api/errors';
 import {
   useCancelMeeting,
   useLocations,
+  useMe,
   useMeeting,
+  usePeople,
+  useSetActionstepDone,
   useSongLeaders,
   useUpdateMeeting,
 } from '@/lib/api/hooks';
@@ -62,12 +68,13 @@ import { isSelectableWithoutHost } from '@/lib/location';
 import {
   MEETING_TYPE_LABEL,
   ROLE_LABEL,
+  actionstepProgress,
   hasTestimonySlot,
   hasTopicSlot,
   mapsUrl,
   meetingHeadline,
 } from '@/lib/meeting';
-import type { AssignmentRole, PersonRef } from '@/lib/api/types';
+import type { AssignmentRole, Meeting, PersonRef } from '@/lib/api/types';
 import { AttendanceCard } from './attendance-card';
 import { SongsCard } from './songs-card';
 import { useRoleAssignment } from './use-role-assignment';
@@ -349,7 +356,7 @@ function Loaded({
 
       <section>
         <SectionTitle>Actionstep</SectionTitle>
-        <Card>
+        <Card className="space-y-4">
           <InlineEdit
             label="Actionstep"
             value={meeting.actionstepText}
@@ -357,6 +364,7 @@ function Loaded({
             saving={update.isPending}
             onSave={(next) => patch({ actionstepText: next })}
           />
+          {meeting.actionstepText && <ActionstepDoneBlock meeting={meeting} />}
         </Card>
       </section>
 
@@ -423,6 +431,74 @@ function Loaded({
  * geerbten Themen-Titel einen eigenen — und der Termin löste sich still vom
  * Thema ab.
  */
+/**
+ * Der eigene Haken plus die Namen der anderen.
+ *
+ * Namen statt nur einer Zahl: „5 von 9" sagt, wie es der Gruppe geht, die
+ * Namen sagen, wen man fragen kann, wie es lief. Für neun Leute passt beides
+ * nebeneinander.
+ *
+ * Auch an einem vergangenen Abend abhakbar — hier ist „vorbei" gerade kein
+ * Grund zu sperren: der Actionstep gilt _nach_ dem Abend, das Nachtragen ist
+ * der Normalfall und nicht der Fehlgriff.
+ */
+function ActionstepDoneBlock({ meeting }: { meeting: Meeting }) {
+  const me = useMe();
+  const people = usePeople();
+  const setDone = useSetActionstepDone(meeting.id);
+  const toast = useToast();
+
+  const doneByMe = meeting.actionstepDone.some(
+    (row) => row.person.id === me.me?.id,
+  );
+  const activeCount = (people.data ?? []).filter((p) => p.active).length;
+  const others = meeting.actionstepDone
+    .map((row) => row.person)
+    .filter((person) => person.id !== me.me?.id);
+
+  return (
+    <div className="space-y-3 border-t border-line pt-4">
+      <button
+        type="button"
+        aria-pressed={doneByMe}
+        disabled={setDone.isPending || !me.me}
+        onClick={() =>
+          setDone.mutate(!doneByMe, {
+            onError: (error) => toast.error(errorMessage(error)),
+          })
+        }
+        className={cn(
+          'flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors disabled:opacity-50',
+          'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+          doneByMe
+            ? 'border-music-line bg-music-bg/40 text-music'
+            : 'border-line text-stone-500 hover:border-line-strong',
+        )}
+      >
+        {doneByMe ? <CheckCircle2 size={17} /> : <Circle size={17} />}
+        <span className="text-sm font-bold">
+          {doneByMe ? 'Du hast es geschafft' : 'Für mich abhaken'}
+        </span>
+      </button>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-semibold text-stone-400">
+          {actionstepProgress(meeting.actionstepDone.length, activeCount)}
+        </span>
+        {others.length > 0 && (
+          <span className="flex items-center gap-1.5">
+            {others.map((person) => (
+              <span key={person.id} title={person.name}>
+                <Avatar person={person} size="xs" />
+              </span>
+            ))}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function HeadlineEdit({
   headline,
   title,

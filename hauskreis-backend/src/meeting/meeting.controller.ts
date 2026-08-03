@@ -19,12 +19,15 @@ import {
   CreateMeetingDto,
   ListMeetingsQueryDto,
   MeetingParamsDto,
+  SetActionstepDoneDto,
   SetAttendanceDto,
   UpdateMeetingDto,
 } from './dto/meeting.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { Roles } from '../auth/roles.decorator';
-import { ROLE_ADMIN } from '../auth/auth.types';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { ROLE_ADMIN, type AuthenticatedUser } from '../auth/auth.types';
+import { PersonService } from '../person/person.service';
 import { IfMatch } from '../common/http/if-match.decorator';
 import type { IfMatchCondition } from '../common/http/etag';
 import {
@@ -33,6 +36,7 @@ import {
   ApiZodResponse,
 } from '../common/http/api-response.decorator';
 import {
+  ActionstepDoneResponseDto,
   ActionstepRunResultResponseDto,
   AttendanceResponseDto,
   GenerationResultResponseDto,
@@ -52,6 +56,7 @@ export class MeetingController {
     private readonly generator: MeetingGeneratorService,
     private readonly hostReminders: HostReminderService,
     private readonly actionstepReminders: ActionstepReminderService,
+    private readonly people: PersonService,
   ) {}
 
   @Get()
@@ -144,6 +149,31 @@ export class MeetingController {
       params.hauskreisId,
       params.id,
       dto,
+    );
+  }
+
+  /**
+   * Hakt den Actionstep dieses Abends für einen selbst ab.
+   *
+   * Kein `personId` im Body und kein `If-Match`: einen Vorsatz hakt man für
+   * sich ab, nicht füreinander, und es ist ein Schalter, kein Wettlauf.
+   */
+  @Put(':id/actionstep-done')
+  @ApiZodResponse(ActionstepDoneResponseDto, {
+    description: 'Ohne If-Match — ein Schalter, kein Wettlauf',
+  })
+  async setActionstepDone(
+    @Param() params: MeetingParamsDto,
+    @Body() dto: SetActionstepDoneDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const person = await this.people.resolveForUser(user);
+
+    return this.meetingService.setActionstepDone(
+      params.hauskreisId,
+      params.id,
+      person.id,
+      dto.done,
     );
   }
 

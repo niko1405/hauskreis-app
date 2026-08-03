@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { PushSubscriptionService } from './push-subscription.service';
 import { NotificationService } from './notification.service';
+import { appPath } from './app-paths';
 import { NotificationPreferenceService } from './notification-preference.service';
 import { PersonService } from '../person/person.service';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -127,7 +128,7 @@ export class NotificationController {
     return this.notifications.sendToPerson(person.id, {
       title: 'Hauskreis',
       body: `Hi ${person.name}, deine Benachrichtigungen funktionieren.`,
-      url: '/',
+      url: appPath.home(),
     });
   }
 }

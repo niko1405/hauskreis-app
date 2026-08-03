@@ -12,6 +12,8 @@ function setup(
     meeting?: { id: string; actionstepText: string | null } | null;
     people?: string[];
     weekdaysByPerson?: Record<string, number[]>;
+    /** Wer den Actionstep schon abgehakt hat. */
+    done?: string[];
   } = {},
 ) {
   const findFirst = jest
@@ -43,10 +45,15 @@ function setup(
     ),
   );
 
+  const findManyDone = jest
+    .fn()
+    .mockResolvedValue((options.done ?? []).map((personId) => ({ personId })));
+
   const service = new ActionstepReminderService(
     {
       meeting: { findFirst },
       person: { findMany: findManyPeople },
+      meetingActionstepDone: { findMany: findManyDone },
     } as unknown as PrismaService,
     { notify } as unknown as NotificationService,
     { resolveMany } as unknown as NotificationPreferenceService,
@@ -138,6 +145,17 @@ describe('ActionstepReminderService.sendDueReminders', () => {
     expect(where.date).toEqual({ lt: friday });
     // Newest first: an older actionstep must not overtake last week's.
     expect(findFirst.mock.calls[0][0].orderBy).toEqual({ date: 'desc' });
+  });
+
+  it('leaves out whoever already ticked it off', async () => {
+    const { service, notify } = setup({ done: ['chris'] });
+
+    const result = await service.sendDueReminders('hk-1', { now: friday });
+
+    // Genau dafür ist der Haken da: sonst wäre er nur Statistik und man würde
+    // weiter gefragt, wie es mit etwas läuft, das man erledigt hat.
+    expect(notify.mock.calls.map((call) => call[0].personId)).toEqual(['anna']);
+    expect(result.notified).toBe(1);
   });
 
   it('quotes the actionstep so the nudge is self-contained', async () => {

@@ -1,0 +1,58 @@
+meta {
+  name: Actionstep abhaken
+  type: http
+  seq: 15
+}
+
+put {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/actionstep-done
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "done": true
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("bestätigt den Haken mit Zeitpunkt", function () {
+    expect(res.body.done).to.equal(true);
+    expect(res.body.doneAt).to.be.a("string");
+    expect(res.body.meetingId).to.equal(bru.getEnvVar("meetingId"));
+  });
+
+  test("verlangt kein If-Match", function () {
+    // Anders als PATCH auf denselben Termin: kein 428, obwohl kein
+    // If-Match mitging.
+    expect(res.getStatus()).to.not.equal(428);
+  });
+}
+
+docs {
+  Ein Schalter, kein Wettlauf — deshalb **ohne** `If-Match`. Zwei
+  Personen, die gleichzeitig abhaken, schreiben verschiedene Zeilen;
+  dieselbe Person zweimal schreibt zweimal dasselbe. Es gibt nichts,
+  was ein `412` retten könnte.
+
+  Kein `personId` im Body: einen Vorsatz hakt man für sich ab, nicht
+  füreinander. Wer gemeint ist, steht im Token.
+
+  Idempotent in beide Richtungen. Nochmal abhaken behält den
+  ursprünglichen `doneAt` — das Feld heißt „seit wann", nicht „zuletzt
+  angetippt". Ein Haken, den es nicht gibt, lässt sich folgenlos mit
+  `done: false` entfernen.
+
+  Wirkung: `ActionstepReminderService` überspringt, wer abgehakt hat.
+  Und der Termin selbst führt die Namen unter `actionstepDone`, der
+  Home-Screen die Zahlen unter `openActionstep`.
+}

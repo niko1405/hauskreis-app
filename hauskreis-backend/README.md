@@ -309,6 +309,7 @@ Betroffen sind ausschließlich Änderungen an versionierten Entitäten. **Ohne**
 
 - `POST` zum Anlegen — es gibt noch keine Version, gegen die man prüfen könnte
 - `PUT …/meetings/:id/attendance` — idempotent, siehe unten
+- `PUT …/meetings/:id/actionstep-done` — ein Schalter, siehe unten
 
 Das Frontend braucht dafür keinen Extra-Request: die Entitäten enthalten ihr
 `version`-Feld auch in Listen-Antworten, der ETag lässt sich also als
@@ -331,10 +332,11 @@ Der Versionsvergleich passiert in der `WHERE`-Klausel des `UPDATE` selbst, nicht
 als vorgelagerter Read. Nur so bleibt zwischen Prüfung und Schreiben kein Fenster,
 in das sich ein zweiter Writer schieben kann.
 
-**Bewusst ohne Versionierung:** `PUT …/meetings/:id/attendance`. Der Endpunkt
-setzt den Teilnahmestatus _einer_ Person und ist idempotent — hier ist
-Last-Write-Wins die richtige Semantik, ein Konflikt zwischen zwei Schreibern
-existiert praktisch nicht.
+**Bewusst ohne Versionierung:** `PUT …/meetings/:id/attendance` und
+`PUT …/meetings/:id/actionstep-done`. Beide setzen etwas für _eine_ Person und
+sind idempotent — hier ist Last-Write-Wins die richtige Semantik. Beim
+Actionstep gibt es den Konflikt sogar begrifflich nicht: zwei Personen, die
+gleichzeitig abhaken, schreiben verschiedene Zeilen.
 
 ## Push-Benachrichtigungen
 
@@ -371,6 +373,21 @@ erneut schicken. `NotificationService.notify()` schreibt deshalb einen
 Log-Eintrag pro (Person, Typ, Termin) und überspringt alles, was dort schon
 steht. Der Eintrag entsteht **vor** dem Versand: stürzt der Prozess mitten drin
 ab, kostet das eine ausgefallene Erinnerung statt einer täglichen Wiederholung.
+
+### Wohin eine Benachrichtigung springt
+
+Die Ziel-Pfade stehen an **einer** Stelle:
+[`app-paths.ts`](src/notification/app-paths.ts).
+
+Vorher waren es Zeichenketten in sechs Erinnerungsdiensten, und alle sechs
+zeigten auf `/meetings/:id`. Diese Route gibt es im Frontend nicht — sie heißt
+`/termine/:id`. Jede Push-Benachrichtigung dieser App führte also auf eine
+404-Seite, und die Gebetsbuddy-Nachricht mit `/prayer-buddies` (statt `/gebet`)
+genauso. So etwas fällt niemandem auf, der Benachrichtigungen nur verschickt
+und nie eine antippt.
+
+Es sind Pfade der **PWA**, nicht der API. Wer im Frontend eine Route umbenennt,
+findet mit einer Suche nach dieser Datei alles, was mitzieht.
 
 ### Umgang mit toten Endpoints
 
@@ -1182,6 +1199,44 @@ Manuell über `POST …/meetings/actionstep-reminders`. Der Knopf hält sich an 
 eingestellten Wochentag und meldet an anderen Tagen `notified: 0` — er dient dazu,
 den Job zu prüfen, nicht dazu, die Einstellung zu übergehen.
 
+### Abgehakt wird pro Person
+
+`PUT …/meetings/{id}/actionstep-done` mit `{ "done": true|false }`.
+
+Eine eigene Tabelle (`meeting_actionstep_done`) statt eines Häkchens am Termin:
+der Actionstep ist ein Vorsatz, den sich jede:r einzeln nimmt. Ein Feld am
+Abend hieße „einer hakt ab, für alle" — und dass eine Person es geschafft hat,
+sagt über die anderen acht nichts.
+
+Kein Boolean in der Zeile, sondern die reine **Anwesenheit** einer Zeile:
+abgehakt oder nicht abgehakt, ein dritter Zustand wäre erfunden. `done_at` ist
+deshalb `NOT NULL`.
+
+**Ohne `If-Match`.** Es ist ein Schalter, kein Wettlauf: zwei Personen, die
+gleichzeitig abhaken, schreiben verschiedene Zeilen, und dieselbe Person
+zweimal schreibt zweimal dasselbe. Es gibt nichts, was ein `412` retten könnte
+— und einen Haken erst nach einem `GET` setzen zu dürfen, wäre für die
+Erinnerung auf dem Startbildschirm ein Umweg ohne Gegenwert. Die Route steht
+deshalb in der `UNCONDITIONAL`-Liste des Frontend-Clients.
+
+**Kein `personId` im Body**, anders als bei der Teilnahme: einen Vorsatz hakt
+man für sich ab, nicht füreinander. Wer gemeint ist, steht im Token.
+
+Idempotent in beide Richtungen. Nochmal abhaken behält den ursprünglichen
+`doneAt` (das Feld heißt „seit wann", nicht „zuletzt angetippt"), und ein
+Haken, den es nicht gibt, lässt sich folgenlos entfernen.
+
+**Wirkung auf den Reminder:** wer abgehakt hat, wird nicht mehr gefragt, wie es
+läuft. Genau dafür ist der Haken da — sonst wäre er nur Statistik.
+
+Angezeigt wird er an drei Stellen, mit verschiedener Auflösung:
+
+| Wo            | Feld                                            | warum                        |
+| ------------- | ----------------------------------------------- | ---------------------------- |
+| Termin-Detail | `actionstepDone: [{ person, doneAt }]`          | Namen — wen man fragen kann  |
+| Home-Screen   | `openActionstep.done`/`doneCount`/`peopleCount` | dein Haken und „5 von 9"     |
+| Archiv        | dasselbe wie im Termin (die Liste liefert es)   | wie es der Gruppe damit ging |
+
 ## Wenn sich etwas ändert
 
 Drei Benachrichtigungen hängen nicht am Kalender, sondern an einer Änderung.
@@ -1752,6 +1807,7 @@ beide aus derselben Variable ab.
 | `PATCH`                 | `…/meetings/:id`                             | eingeloggt                                   |
 | `POST`                  | `…/meetings/:id/cancel`                      | eingeloggt                                   |
 | `PUT`                   | `…/meetings/:id/attendance`                  | eingeloggt                                   |
+| `PUT`                   | `…/meetings/:id/actionstep-done`             | eingeloggt (ohne If-Match, für sich selbst)  |
 | `DELETE`                | `…/meetings/:id`                             | `admin`                                      |
 | `POST`                  | `…/meetings/generate`                        | `admin` (manueller Generator-Trigger)        |
 | `POST`                  | `…/meetings/host-reminders`                  | `admin` (manueller Reminder-Trigger)         |

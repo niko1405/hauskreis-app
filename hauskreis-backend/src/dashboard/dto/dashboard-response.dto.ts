@@ -79,6 +79,13 @@ export const homeScreenSchema = z.object({
       text: z.string(),
       meetingId: z.uuid(),
       date: isoDateOut,
+      /// Ob *du* ihn abgehakt hast. Der Actionstep gilt pro Person — dass
+      /// jemand anders ihn geschafft hat, nimmt ihn dir nicht ab.
+      done: z.boolean(),
+      /// „5 von 9 haben's geschafft". Nur die Zahlen: die Namen stehen auf
+      /// der Detailseite des Abends.
+      doneCount: z.number().int().nonnegative(),
+      peopleCount: z.number().int().nonnegative(),
     })
     .nullable(),
   /// Mit wem du gerade betest. `null`, wenn für heute niemand zugeteilt ist.
