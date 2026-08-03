@@ -1603,65 +1603,65 @@ beide aus derselben Variable ab.
 
 ## API (Stand: Phase 10)
 
-| Methode                 | Pfad                                         | Rechte                                   |
-| ----------------------- | -------------------------------------------- | ---------------------------------------- |
-| `GET`                   | `/api/health`                                | öffentlich                               |
-| `GET`                   | `/api/me`                                    | eingeloggt (verknüpft beim ersten Login) |
-| `PUT`/`DELETE`          | `/api/me/home`                               | eingeloggt (`409` ohne `joinExisting`)   |
-| `PATCH`                 | `/api/me/email`                              | eingeloggt (Keycloak **und** `person`)   |
-| `GET`/`POST`            | `/api/hauskreise`                            | eingeloggt                               |
-| `GET`                   | `/api/hauskreise/:hauskreisId/people`        | eingeloggt                               |
-| `POST`                  | `/api/hauskreise/:hauskreisId/people`        | `admin`                                  |
-| `POST`                  | `/api/hauskreise/:hauskreisId/people/invite` | `admin`                                  |
-| `PATCH`                 | `/api/hauskreise/:hauskreisId/people/:id`    | eingeloggt                               |
-| `DELETE`                | `/api/hauskreise/:hauskreisId/people/:id`    | `admin`                                  |
-| `GET`                   | `…/locations`, `…/locations/:id`             | eingeloggt                               |
-| `POST`                  | `…/locations/resolve-address`                | eingeloggt                               |
-| `POST`/`PATCH`/`DELETE` | `…/locations[/:id]`                          | eingeloggt (`409` bei bewohnter Wohnung) |
-| `GET`                   | `…/meetings?scope=…&search=&from=&to=`       | eingeloggt (paginiert)                   |
-| `GET`                   | `…/meetings/:id`                             | eingeloggt                               |
-| `GET`                   | `…/meetings/:id/host-suggestions`            | eingeloggt                               |
-| `GET`                   | `…/meetings/:id/topic-suggestions`           | eingeloggt                               |
-| `POST`                  | `…/meetings`                                 | eingeloggt                               |
-| `PATCH`                 | `…/meetings/:id`                             | eingeloggt                               |
-| `POST`                  | `…/meetings/:id/cancel`                      | eingeloggt                               |
-| `PUT`                   | `…/meetings/:id/attendance`                  | eingeloggt                               |
-| `DELETE`                | `…/meetings/:id`                             | `admin`                                  |
-| `POST`                  | `…/meetings/generate`                        | `admin` (manueller Generator-Trigger)    |
-| `POST`                  | `…/meetings/host-reminders`                  | `admin` (manueller Reminder-Trigger)     |
-| `POST`                  | `…/meetings/actionstep-reminders`            | `admin` (manueller Reminder-Trigger)     |
-| `GET`                   | `…/topics?status=…&search=&from=&to=`        | eingeloggt (paginiert)                   |
-| `GET`                   | `…/topics/:id`                               | eingeloggt                               |
-| `POST`                  | `…/topics`                                   | eingeloggt                               |
-| `PATCH`                 | `…/topics/:id`                               | eingeloggt                               |
-| `DELETE`                | `…/topics/:id`                               | `admin`                                  |
-| `POST`                  | `…/topics/carry-over`                        | `admin` (manuelle Themen-Übernahme)      |
-| `POST`                  | `…/topics/reminders`                         | `admin` (manueller Reminder-Trigger)     |
-| `GET`                   | `…/songs?search=&sort=&playedOnly=`          | eingeloggt (paginiert)                   |
-| `GET`                   | `…/songs/:id`                                | eingeloggt                               |
-| `POST`                  | `…/songs`                                    | eingeloggt (legt an oder gibt zurück)    |
-| `PATCH`                 | `…/songs/:id`                                | eingeloggt                               |
-| `DELETE`                | `…/songs/:id`                                | `admin` (nur wenn nirgends verwendet)    |
-| `POST`                  | `…/songs/reminders`                          | `admin` (manueller Reminder-Trigger)     |
-| `GET`/`POST`            | `…/meetings/:id/songs`                       | eingeloggt                               |
-| `PATCH`/`DELETE`        | `…/meetings/:id/songs/:entryId`              | eingeloggt                               |
-| `GET`/`PUT`             | `…/meetings/:id/song-leaders`                | eingeloggt                               |
-| `GET`                   | `…/meetings/:id/song-leader-suggestions`     | eingeloggt                               |
-| `GET`                   | `…/prayer-buddies/current`                   | eingeloggt                               |
-| `GET`                   | `…/prayer-buddies`                           | eingeloggt (paginiert)                   |
-| `GET`                   | `…/prayer-buddies/config`                    | eingeloggt                               |
-| `PUT`                   | `…/prayer-buddies/config`                    | `admin`                                  |
-| `POST`                  | `…/prayer-buddies/rotate`                    | `admin` (sofort neu zuteilen)            |
-| `GET`                   | `…/absences?scope=upcoming\|all`             | eingeloggt (paginiert)                   |
-| `GET`                   | `…/absences/:id`                             | eingeloggt                               |
-| `POST`                  | `…/absences`                                 | eigene; fremde nur `admin`               |
-| `PATCH`/`DELETE`        | `…/absences/:id`                             | eigene; fremde nur `admin`               |
-| `POST`                  | `…/absences/sync`                            | `admin` (manueller Nachlauf)             |
-| `GET`                   | `…/archive`                                  | eingeloggt (Überblick, Jahresliste)      |
-| `GET`                   | `…/assignments?from=&to=&personId=`          | eingeloggt (Rollen im Zeitraum)          |
-| `GET`                   | `…/home`                                     | eingeloggt (Home-Screen in einem Aufruf) |
-| `GET`                   | `/api/push/settings`                         | eingeloggt (eigene Einstellungen)        |
-| `PUT`                   | `/api/push/settings/:type`                   | eingeloggt (eigene Einstellungen)        |
+| Methode                 | Pfad                                         | Rechte                                       |
+| ----------------------- | -------------------------------------------- | -------------------------------------------- |
+| `GET`                   | `/api/health`                                | öffentlich                                   |
+| `GET`                   | `/api/me`                                    | eingeloggt (verknüpft beim ersten Login)     |
+| `PUT`/`DELETE`          | `/api/me/home`                               | eingeloggt (`409` ohne `joinExisting`)       |
+| `PATCH`                 | `/api/me/email`                              | eingeloggt (Keycloak **und** `person`)       |
+| `GET`/`POST`            | `/api/hauskreise`                            | eingeloggt                                   |
+| `GET`                   | `/api/hauskreise/:hauskreisId/people`        | eingeloggt                                   |
+| `POST`                  | `/api/hauskreise/:hauskreisId/people`        | `admin`                                      |
+| `POST`                  | `/api/hauskreise/:hauskreisId/people/invite` | `admin`                                      |
+| `PATCH`                 | `/api/hauskreise/:hauskreisId/people/:id`    | eingeloggt                                   |
+| `DELETE`                | `/api/hauskreise/:hauskreisId/people/:id`    | `admin` (löscht offene Einladung samt Konto) |
+| `GET`                   | `…/locations`, `…/locations/:id`             | eingeloggt                                   |
+| `POST`                  | `…/locations/resolve-address`                | eingeloggt                                   |
+| `POST`/`PATCH`/`DELETE` | `…/locations[/:id]`                          | eingeloggt (`409` bei bewohnter Wohnung)     |
+| `GET`                   | `…/meetings?scope=…&search=&from=&to=`       | eingeloggt (paginiert)                       |
+| `GET`                   | `…/meetings/:id`                             | eingeloggt                                   |
+| `GET`                   | `…/meetings/:id/host-suggestions`            | eingeloggt                                   |
+| `GET`                   | `…/meetings/:id/topic-suggestions`           | eingeloggt                                   |
+| `POST`                  | `…/meetings`                                 | eingeloggt                                   |
+| `PATCH`                 | `…/meetings/:id`                             | eingeloggt                                   |
+| `POST`                  | `…/meetings/:id/cancel`                      | eingeloggt                                   |
+| `PUT`                   | `…/meetings/:id/attendance`                  | eingeloggt                                   |
+| `DELETE`                | `…/meetings/:id`                             | `admin`                                      |
+| `POST`                  | `…/meetings/generate`                        | `admin` (manueller Generator-Trigger)        |
+| `POST`                  | `…/meetings/host-reminders`                  | `admin` (manueller Reminder-Trigger)         |
+| `POST`                  | `…/meetings/actionstep-reminders`            | `admin` (manueller Reminder-Trigger)         |
+| `GET`                   | `…/topics?status=…&search=&from=&to=`        | eingeloggt (paginiert)                       |
+| `GET`                   | `…/topics/:id`                               | eingeloggt                                   |
+| `POST`                  | `…/topics`                                   | eingeloggt                                   |
+| `PATCH`                 | `…/topics/:id`                               | eingeloggt                                   |
+| `DELETE`                | `…/topics/:id`                               | `admin`                                      |
+| `POST`                  | `…/topics/carry-over`                        | `admin` (manuelle Themen-Übernahme)          |
+| `POST`                  | `…/topics/reminders`                         | `admin` (manueller Reminder-Trigger)         |
+| `GET`                   | `…/songs?search=&sort=&playedOnly=`          | eingeloggt (paginiert)                       |
+| `GET`                   | `…/songs/:id`                                | eingeloggt                                   |
+| `POST`                  | `…/songs`                                    | eingeloggt (legt an oder gibt zurück)        |
+| `PATCH`                 | `…/songs/:id`                                | eingeloggt                                   |
+| `DELETE`                | `…/songs/:id`                                | `admin` (nur wenn nirgends verwendet)        |
+| `POST`                  | `…/songs/reminders`                          | `admin` (manueller Reminder-Trigger)         |
+| `GET`/`POST`            | `…/meetings/:id/songs`                       | eingeloggt                                   |
+| `PATCH`/`DELETE`        | `…/meetings/:id/songs/:entryId`              | eingeloggt                                   |
+| `GET`/`PUT`             | `…/meetings/:id/song-leaders`                | eingeloggt                                   |
+| `GET`                   | `…/meetings/:id/song-leader-suggestions`     | eingeloggt                                   |
+| `GET`                   | `…/prayer-buddies/current`                   | eingeloggt                                   |
+| `GET`                   | `…/prayer-buddies`                           | eingeloggt (paginiert)                       |
+| `GET`                   | `…/prayer-buddies/config`                    | eingeloggt                                   |
+| `PUT`                   | `…/prayer-buddies/config`                    | `admin`                                      |
+| `POST`                  | `…/prayer-buddies/rotate`                    | `admin` (sofort neu zuteilen)                |
+| `GET`                   | `…/absences?scope=upcoming\|all`             | eingeloggt (paginiert)                       |
+| `GET`                   | `…/absences/:id`                             | eingeloggt                                   |
+| `POST`                  | `…/absences`                                 | eigene; fremde nur `admin`                   |
+| `PATCH`/`DELETE`        | `…/absences/:id`                             | eigene; fremde nur `admin`                   |
+| `POST`                  | `…/absences/sync`                            | `admin` (manueller Nachlauf)                 |
+| `GET`                   | `…/archive`                                  | eingeloggt (Überblick, Jahresliste)          |
+| `GET`                   | `…/assignments?from=&to=&personId=`          | eingeloggt (Rollen im Zeitraum)              |
+| `GET`                   | `…/home`                                     | eingeloggt (Home-Screen in einem Aufruf)     |
+| `GET`                   | `/api/push/settings`                         | eingeloggt (eigene Einstellungen)            |
+| `PUT`                   | `/api/push/settings/:type`                   | eingeloggt (eigene Einstellungen)            |
 
 Alle `GET`s beantworten `If-None-Match` mit `304`. Die `PATCH`-Endpunkte auf
 Personen, Locations, Terminen, Themen, Songs und Abwesenheiten,
@@ -1675,3 +1675,39 @@ Personen, Locations, Terminen, Themen, Songs und Abwesenheiten,
 > der Account existiert dann trotzdem und die Einladung kann erneut gesendet werden.
 > Scheitert dagegen ein früherer Schritt, wird der Keycloak-Account wieder gelöscht,
 > damit kein verwaister Account zurückbleibt.
+
+### Eingeladen ist nicht angekommen
+
+Eine Einladung ist **Name, Adresse, Rolle** — mehr nicht. Ob jemand ein
+Instrument spielt, wo er wohnt und ob er gerade hosten möchte, weiß nur er
+selbst; das steht im Profil. Wer es im Einladungsformular ausfüllte, träfe
+Annahmen über einen Menschen, der noch gar nicht da ist.
+
+`person.acceptedAt` unterscheidet beides. `null` heißt „eingeladen, aber noch
+nicht da". Die `keycloakUserId` taugt dafür nicht: die steht schon ab dem
+Einladen drin, weil das Konto vor der Person angelegt wird. Gesetzt wird das
+Datum in `resolveForUser`, beim ersten `GET /api/me` — der einzige Moment, in
+dem feststeht, dass wirklich jemand vor dem Bildschirm saß.
+
+Daran hängt, was `DELETE …/people/:id` tut:
+
+- **Noch nicht da** — das Keycloak-Konto wird mitgelöscht. Bliebe es stehen,
+  könnte sich jemand damit anmelden und landete auf „du bist noch nicht
+  eingetragen", und ein erneutes Einladen scheiterte an der belegten Adresse.
+- **Schon da gewesen** — das Konto bleibt. Es gehört einem Menschen, nicht
+  dieser Gruppe.
+
+### Die Mailtexte gehören uns
+
+Keycloaks Standardtexte sind englisch und klingen nach Verwaltungssoftware.
+Das Realm-Theme `hauskreis` ([`keycloak/themes/hauskreis`](keycloak/themes/hauskreis))
+ersetzt sie — **nur die Texte**, nicht die Vorlagen: es erbt von `base` und
+überschreibt `messages_de.properties`. Die `.ftl`-Dateien mitzuschleppen hieße,
+sie bei jedem Keycloak-Update gegen die neuen Fassungen zu halten, für zwei
+Sätze, die sich nie ändern.
+
+Damit die deutschen Texte überhaupt gezogen werden, setzt
+`setup-keycloak.sh` am Realm `internationalizationEnabled` und
+`defaultLocale: de` — ohne das greift Keycloak zu `messages_en` und das Theme
+bliebe unbenutzt. Das Verzeichnis hängt als Volume im Container: eine
+Textänderung kostet einen Neustart, keinen Neubau.

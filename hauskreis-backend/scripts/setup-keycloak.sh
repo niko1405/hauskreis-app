@@ -53,9 +53,16 @@ curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}" "${auth[@]}" -d "{
       \"ssl\": \"false\",
       \"starttls\": \"false\",
       \"auth\": \"false\"
-    }
+    },
+    \"emailTheme\": \"hauskreis\",
+    \"internationalizationEnabled\": true,
+    \"supportedLocales\": [\"de\"],
+    \"defaultLocale\": \"de\"
   }" >/dev/null
 echo "    sender: ${SMTP_FROM} via ${SMTP_HOST}:${SMTP_PORT}"
+# Ohne internationalizationEnabled greift Keycloak zu messages_en und die
+# deutschen Texte im Theme blieben unbenutzt.
+echo "    Mailtexte: Theme 'hauskreis', Sprache de"
 
 echo "==> Ensuring realm roles: member, admin"
 for role in member admin; do

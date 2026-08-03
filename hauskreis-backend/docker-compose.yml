@@ -102,6 +102,11 @@ services:
       KC_HEALTH_ENABLED: 'true'
     ports:
       - '8080:8080'
+    volumes:
+      # Nur Texte, keine Vorlagen — siehe keycloak/themes/hauskreis/email.
+      # Als Volume statt im Image, damit eine Textänderung einen Neustart
+      # kostet und keinen Neubau.
+      - ./keycloak/themes/hauskreis:/opt/keycloak/themes/hauskreis:ro
     depends_on:
       keycloak-db:
         condition: service_healthy

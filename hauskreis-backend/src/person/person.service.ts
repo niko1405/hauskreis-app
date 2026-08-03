@@ -34,6 +34,7 @@ const personSelect = {
   canHost: true,
   locationId: true,
   active: true,
+  acceptedAt: true,
   createdAt: true,
   version: true,
 } as const;
@@ -156,10 +157,38 @@ export class PersonService {
     return updated;
   }
 
+  /**
+   * Entfernt eine Person — und bei einer offenen Einladung auch das Konto.
+   *
+   * Wer noch nie da war, ist eine zurückgezogene Einladung: bliebe das
+   * Keycloak-Konto stehen, könnte sich jemand damit anmelden und landete auf
+   * „du bist noch nicht eingetragen", ohne dass ein erneutes Einladen ginge
+   * (die Adresse wäre belegt).
+   *
+   * Bei jemandem, der schon da war, bleibt das Konto: es gehört einem Menschen
+   * und nicht dieser Gruppe.
+   */
   async remove(hauskreisId: string, id: string) {
-    const person = await this.findOne(hauskreisId, id);
+    const person = await this.prisma.person.findFirst({
+      where: { id, hauskreisId },
+      select: {
+        id: true,
+        locationId: true,
+        keycloakUserId: true,
+        acceptedAt: true,
+      },
+    });
+
+    if (!person) {
+      throw new NotFoundException(`Person ${id} not found`);
+    }
+
     await this.prisma.person.delete({ where: { id } });
     await this.syncHomes(person.locationId);
+
+    if (person.acceptedAt === null && person.keycloakUserId) {
+      await this.keycloakAdmin.deleteUser(person.keycloakUserId);
+    }
   }
 
   /**
@@ -191,10 +220,6 @@ export class PersonService {
    * never leaves an orphaned account behind.
    */
   async invite(hauskreisId: string, dto: InvitePersonDto) {
-    // Checked before the Keycloak account exists, so a bad location id cannot
-    // trigger the rollback path.
-    await this.assertLocationBelongsToHauskreis(hauskreisId, dto.locationId);
-
     const { keycloakUserId, invitationEmailSent } =
       await this.keycloakAdmin.inviteUser({
         email: dto.email,
@@ -209,14 +234,8 @@ export class PersonService {
           keycloakUserId,
           name: dto.name,
           email: dto.email,
-          birthdate: dto.birthdate ? new Date(dto.birthdate) : null,
-          playsInstrument: dto.playsInstrument,
-          canHost: dto.canHost,
-          locationId: dto.locationId ?? null,
         },
       });
-
-      await this.syncHomes(person.locationId);
 
       return { ...person, invitationEmailSent };
     } catch (error) {
@@ -369,7 +388,15 @@ export class PersonService {
     });
 
     if (linked) {
-      return linked;
+      // Hier steht fest, dass wirklich jemand vor dem Bildschirm saß — und nur
+      // hier. Das Keycloak-Konto entsteht schon beim Einladen, es sagt also
+      // nichts darüber, ob die Einladung angenommen wurde.
+      return linked.acceptedAt === null
+        ? this.prisma.person.update({
+            where: { id: linked.id },
+            data: { acceptedAt: new Date() },
+          })
+        : linked;
     }
 
     if (!user.email) {
@@ -390,7 +417,7 @@ export class PersonService {
 
     return this.prisma.person.update({
       where: { id: unlinked.id },
-      data: { keycloakUserId: user.keycloakUserId },
+      data: { keycloakUserId: user.keycloakUserId, acceptedAt: new Date() },
     });
   }
 }

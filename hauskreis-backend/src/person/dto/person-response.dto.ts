@@ -27,6 +27,10 @@ export const personResponseSchema = z.object({
   /// „bringt keines ein" — alle anderen Rollen bleiben davon unberührt.
   locationId: z.uuid().nullable(),
   active: z.boolean(),
+  /// Wann sich die Person zum ersten Mal angemeldet hat. `null` heißt
+  /// „eingeladen, aber noch nicht da" — der Zustand, in dem sich eine
+  /// Einladung noch zurückziehen lässt.
+  acceptedAt: isoDateTimeOut.nullable(),
   createdAt: isoDateTimeOut,
   /// Zähler für das Optimistic Locking. Landet als ETag im Header; von dort
   /// nimmt man ihn, nicht von hier.

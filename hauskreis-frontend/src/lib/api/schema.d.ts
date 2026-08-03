@@ -808,6 +808,8 @@ export interface components {
       locationId: string | null;
       active: boolean;
       /** Format: date-time */
+      acceptedAt: string | null;
+      /** Format: date-time */
       createdAt: string;
       version: number;
     }[];
@@ -826,6 +828,8 @@ export interface components {
       /** Format: uuid */
       locationId: string | null;
       active: boolean;
+      /** Format: date-time */
+      acceptedAt: string | null;
       /** Format: date-time */
       createdAt: string;
       version: number;
@@ -847,14 +851,6 @@ export interface components {
       name: string;
       /** Format: email */
       email: string;
-      /** Format: date */
-      birthdate?: string;
-      /** @default false */
-      playsInstrument: boolean;
-      /** @default true */
-      canHost: boolean;
-      /** Format: uuid */
-      locationId?: string | null;
       /**
        * @default member
        * @enum {string}
@@ -876,6 +872,8 @@ export interface components {
       /** Format: uuid */
       locationId: string | null;
       active: boolean;
+      /** Format: date-time */
+      acceptedAt: string | null;
       /** Format: date-time */
       createdAt: string;
       version: number;
@@ -910,6 +908,8 @@ export interface components {
       /** Format: uuid */
       locationId: string | null;
       active: boolean;
+      /** Format: date-time */
+      acceptedAt: string | null;
       /** Format: date-time */
       createdAt: string;
       version: number;
@@ -962,6 +962,8 @@ export interface components {
       /** Format: uuid */
       locationId: string | null;
       active: boolean;
+      /** Format: date-time */
+      acceptedAt: string | null;
       /** Format: date-time */
       createdAt: string;
       version: number;

@@ -20,7 +20,17 @@ const personParamsSchema = z.object({
   id: z.uuid(),
 });
 
-export const invitePersonSchema = createPersonSchema.extend({
+/**
+ * Eine Einladung ist ein Name, eine Adresse und eine Rolle — mehr nicht.
+ *
+ * Ob jemand ein Instrument spielt, ob er gerade hosten möchte und wo er wohnt,
+ * weiß nur er selbst; das steht im Profil und nicht im Einladungsformular.
+ * Wer es hier ausfüllte, träfe Annahmen über einen Menschen, der noch gar
+ * nicht da ist.
+ */
+export const invitePersonSchema = z.object({
+  name: z.string().trim().min(1),
+  email: z.email(),
   role: z.enum(['member', 'admin']).default('member'),
 });
 

@@ -44,11 +44,16 @@ const user: AuthenticatedUser = {
 describe('PersonService.resolveForUser', () => {
   it('returns the already linked person without touching the email lookup', async () => {
     const { service, person } = setup();
-    person.findUnique.mockResolvedValue({ id: 'p1', keycloakUserId: 'kc-123' });
+    person.findUnique.mockResolvedValue({
+      id: 'p1',
+      keycloakUserId: 'kc-123',
+      acceptedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
 
     await expect(service.resolveForUser(user)).resolves.toEqual({
       id: 'p1',
       keycloakUserId: 'kc-123',
+      acceptedAt: new Date('2026-01-01T00:00:00.000Z'),
     });
     expect(person.findFirst).not.toHaveBeenCalled();
     expect(person.update).not.toHaveBeenCalled();
@@ -69,8 +74,43 @@ describe('PersonService.resolveForUser', () => {
     });
     expect(person.update).toHaveBeenCalledWith({
       where: { id: 'p2' },
-      data: { keycloakUserId: 'kc-123' },
+      // Der erste Login ist der Moment, in dem die Einladung angenommen ist.
+      data: { keycloakUserId: 'kc-123', acceptedAt: expect.any(Date) },
     });
+  });
+
+  it('marks an invited person as arrived on their first login', async () => {
+    const { service, person } = setup();
+    person.findUnique.mockResolvedValue({
+      id: 'p3',
+      keycloakUserId: 'kc-123',
+      acceptedAt: null,
+    });
+    person.update.mockResolvedValue({ id: 'p3', acceptedAt: new Date() });
+
+    await service.resolveForUser(user);
+
+    expect(person.update).toHaveBeenCalledWith({
+      where: { id: 'p3' },
+      data: { acceptedAt: expect.any(Date) },
+    });
+  });
+
+  it('leaves the arrival date alone on every login after the first', async () => {
+    const { service, person } = setup();
+    const arrived = new Date('2026-01-02T03:04:05.000Z');
+    person.findUnique.mockResolvedValue({
+      id: 'p3',
+      keycloakUserId: 'kc-123',
+      acceptedAt: arrived,
+    });
+
+    await expect(service.resolveForUser(user)).resolves.toEqual({
+      id: 'p3',
+      keycloakUserId: 'kc-123',
+      acceptedAt: arrived,
+    });
+    expect(person.update).not.toHaveBeenCalled();
   });
 
   it('throws when no person matches the email', async () => {

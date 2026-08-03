@@ -2,15 +2,20 @@
 
 /**
  * Personen verwalten: einladen (legt Person **und** Keycloak-Konto an und
- * verschickt die Mail) und deaktivieren.
+ * verschickt die Mail), Einladungen zurückziehen, Leute entfernen.
+ *
+ * „Eingeladen" ist ein eigener Zustand, kein halb fertiger: `acceptedAt`
+ * bleibt `null`, bis sich jemand zum ersten Mal anmeldet. Solange lässt sich
+ * die Einladung samt Konto zurückziehen — danach nicht mehr, denn dann gehört
+ * das Konto einem Menschen und nicht mehr dieser Gruppe.
  */
-import { Mail, Trash2, UserPlus } from 'lucide-react';
+import { Clock, Mail, Trash2, UserPlus, X } from 'lucide-react';
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { Checkbox, Field, Select, TextInput } from '@/components/ui/field';
+import { Field, Select, TextInput } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { ConflictError, errorMessage } from '@/lib/api/errors';
@@ -43,19 +48,43 @@ export function PeopleAdmin() {
                   {person.email}
                 </p>
               </div>
+              {person.acceptedAt === null && (
+                <Badge variant="info">
+                  <Clock size={11} />
+                  eingeladen
+                </Badge>
+              )}
               {!person.active && <Badge>inaktiv</Badge>}
               <IconButton
-                label={`${person.name} entfernen`}
+                label={
+                  person.acceptedAt === null
+                    ? `Einladung an ${person.name} zurückziehen`
+                    : `${person.name} entfernen`
+                }
                 onClick={() => {
-                  if (!window.confirm(`${person.name} wirklich entfernen?`))
-                    return;
+                  const pending = person.acceptedAt === null;
+                  const question = pending
+                    ? `Einladung an ${person.name} zurückziehen? Das Konto wird mit gelöscht, die Adresse ist danach wieder frei.`
+                    : `${person.name} wirklich entfernen?`;
+
+                  if (!window.confirm(question)) return;
+
                   remove.mutate(person.id, {
-                    onSuccess: () => toast.success(`${person.name} entfernt.`),
+                    onSuccess: () =>
+                      toast.success(
+                        pending
+                          ? `Einladung an ${person.name} zurückgezogen.`
+                          : `${person.name} entfernt.`,
+                      ),
                     onError: (error) => toast.error(errorMessage(error)),
                   });
                 }}
               >
-                <Trash2 size={15} />
+                {person.acceptedAt === null ? (
+                  <X size={15} />
+                ) : (
+                  <Trash2 size={15} />
+                )}
               </IconButton>
             </li>
           ))}
@@ -82,20 +111,16 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'member' | 'admin'>('member');
-  const [playsInstrument, setPlaysInstrument] = useState(false);
 
   const invite = useInvitePerson();
   const toast = useToast();
 
   const submit = () => {
     invite.mutate(
-      {
-        name: name.trim(),
-        email: email.trim(),
-        role,
-        playsInstrument,
-        canHost: true,
-      },
+      // Nur Name, Adresse, Rolle. Ob jemand ein Instrument spielt, wo er wohnt
+      // und ob er gerade hosten möchte, weiß nur er selbst — das steht im
+      // Profil und nicht hier.
+      { name: name.trim(), email: email.trim(), role },
       {
         onSuccess: (person) => {
           toast.success(
@@ -125,7 +150,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
       </Field>
       <Field
         label="E-Mail"
-        hint="Darüber wird die Person beim ersten Login zugeordnet."
+        hint="Darüber wird die Person beim ersten Login zugeordnet — und dorthin geht die Einladung."
       >
         <TextInput
           type="email"
@@ -144,11 +169,6 @@ function InviteForm({ onDone }: { onDone: () => void }) {
           <option value="admin">Admin</option>
         </Select>
       </Field>
-      <Checkbox
-        label="Spielt ein Instrument"
-        checked={playsInstrument}
-        onChange={(event) => setPlaysInstrument(event.target.checked)}
-      />
       <div className="flex gap-2">
         <Button variant="ghost" size="sm" className="flex-1" onClick={onDone}>
           Abbrechen

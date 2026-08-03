@@ -122,6 +122,13 @@ model Person {
   /// `meeting.location_id`, so moving house does not rewrite history.
   locationId      String?   @map("location_id") @db.Uuid
   active          Boolean   @default(true)
+  /// Wann sich diese Person zum ersten Mal angemeldet hat.
+  ///
+  /// `null` heißt „eingeladen, aber noch nicht da". Die `keycloakUserId` taugt
+  /// dafür nicht: die steht schon ab dem Einladen drin, weil das Konto vor der
+  /// Person angelegt wird. Gesetzt wird es in `resolveForUser` — der einzige
+  /// Moment, in dem feststeht, dass wirklich jemand vor dem Bildschirm saß.
+  acceptedAt      DateTime? @map("accepted_at")
   createdAt       DateTime  @default(now()) @map("created_at")
   /// Optimistic locking counter, see docs/conditional requests.
   version         Int       @default(0)
