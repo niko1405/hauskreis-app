@@ -95,6 +95,37 @@ Entscheidung, statt das Feld einfach weglassen zu können.
 18 Admin-Routen steht deshalb in `lib/auth/roles.ts` — sie steuert nur, welche
 Bedienelemente erscheinen; durchgesetzt wird sie weiterhin vom Server.
 
+### Schalter greifen vor
+
+Ein Ja/Nein am Termin ist ein Schalter, kein Formular: er soll umspringen, wenn
+man ihn antippt, nicht wenn der Server antwortet. Vorher wartete jede Änderung
+die Runde zum Server ab — auf einem Handy im Zug mehrere Sekunden, in denen sich
+der Knopf anfühlt wie kaputt.
+
+`lib/api/hooks/use-optimistic.ts` ist dafür ein Baustein, kein Rahmenwerk:
+`patch` setzt einen Cache-Eintrag vorläufig und merkt sich den vorherigen Stand;
+geht der Aufruf schief, dreht `rollback` alles zurück. `useApiMutation` nimmt es
+über die Option `optimistic` entgegen.
+
+Vorgreifend sind die vier Tipp-Schalter: Anwesenheit (zwei Caches — Termin-Detail
+**und** Home, wo dieselbe Antwort als „Bist du dabei?" steht), der
+Actionstep-Haken, die Lied-Auswahl und die Benachrichtigungs-Einstellungen.
+**Nicht** vorgreifend sind Anlegen, Löschen und alles mit ETag: ein optimistisch
+angelegter Termin ohne Id ist mehr Buchhaltung als Nutzen, und bei
+ETag-Schreibvorgängen ist die Serverantwort die Quelle des nächsten ETags.
+
+Zwei Dinge gehören zwingend dazu:
+
+- **Fehler melden sich von selbst.** `useApiMutation` und `useResourceUpdate`
+  zeigen bei einem Fehlschlag einen Toast. Vorher hing das an jeder Aufrufstelle
+  einzeln, und zwei hatten es vergessen — dort blieb ein misslungener Tipper
+  stumm. Ein Rückfall ohne Erklärung sähe aus wie ein Geist. `silent: true` ist
+  für die Fälle, in denen der Aufrufer etwas Besseres anzuzeigen hat; ein `412`
+  bleibt dem `ConflictBanner` vorbehalten.
+- **Wer vorgreift, sperrt nicht.** `disabled={…isPending}` an einem vorgreifenden
+  Schalter ist genau verkehrt herum: die Anzeige stimmt schon, aber der Knopf
+  wäre noch eine Sekunde tot und ein Fehlgriff nicht sofort zurückzunehmen.
+
 ### Anmeldung und Sitzung
 
 Man bleibt angemeldet, bis man sich abmeldet. Das ist keine Selbstverständlichkeit

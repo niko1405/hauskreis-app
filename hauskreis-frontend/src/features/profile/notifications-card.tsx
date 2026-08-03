@@ -15,7 +15,6 @@ import { Card, SectionTitle } from '@/components/ui/card';
 import { Select } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
-import { errorMessage } from '@/lib/api/errors';
 import {
   useNotificationSettings,
   useSendTestNotification,
@@ -114,7 +113,6 @@ export function NotificationsCard() {
                       ? 'Test verschickt — sie sollte gleich da sein.'
                       : 'Nichts zugestellt. Ist das Abo noch gültig?',
                   ),
-                onError: (error) => toast.error(errorMessage(error)),
               })
             }
           >
@@ -129,13 +127,9 @@ export function NotificationsCard() {
 
 function SettingRow({ setting }: { setting: NotificationSetting }) {
   const update = useUpdateNotificationSetting();
-  const toast = useToast();
 
   const change = (input: Parameters<typeof update.mutate>[0]['input']) =>
-    update.mutate(
-      { type: setting.type, input },
-      { onError: (error) => toast.error(errorMessage(error)) },
-    );
+    update.mutate({ type: setting.type, input });
 
   return (
     <div className="space-y-2">
@@ -152,7 +146,6 @@ function SettingRow({ setting }: { setting: NotificationSetting }) {
           type="checkbox"
           aria-label={setting.label}
           checked={setting.enabled}
-          disabled={update.isPending}
           onChange={(event) => change({ enabled: event.target.checked })}
           className="mt-1 h-5 w-5 shrink-0 rounded border-line-strong text-terracotta-500 focus:ring-terracotta-500"
         />
@@ -162,7 +155,6 @@ function SettingRow({ setting }: { setting: NotificationSetting }) {
         <Select
           aria-label={`Vorlauf für ${setting.label}`}
           value={String(setting.leadDays ?? setting.schedule.defaultLeadDays)}
-          disabled={update.isPending}
           onChange={(event) => change({ leadDays: Number(event.target.value) })}
           className="text-xs"
         >
@@ -185,7 +177,6 @@ function SettingRow({ setting }: { setting: NotificationSetting }) {
         <WeekdayPicker
           label={setting.label}
           chosen={setting.weekdays}
-          disabled={update.isPending}
           onChange={(weekdays) => change({ weekdays })}
         />
       )}
@@ -208,12 +199,10 @@ function SettingRow({ setting }: { setting: NotificationSetting }) {
 function WeekdayPicker({
   label,
   chosen,
-  disabled,
   onChange,
 }: {
   label: string;
   chosen: number[];
-  disabled: boolean;
   onChange: (weekdays: number[]) => void;
 }) {
   const toggle = (day: number) => {
@@ -238,11 +227,10 @@ function WeekdayPicker({
             <button
               key={day}
               type="button"
-              disabled={disabled}
               aria-pressed={active}
               onClick={() => toggle(index)}
               className={cn(
-                'rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors disabled:opacity-50',
+                'rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors',
                 active
                   ? 'border-terracotta-500 bg-terracotta-500 text-white'
                   : 'border-line bg-card text-stone-500 hover:border-line-strong',

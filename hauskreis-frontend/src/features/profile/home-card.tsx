@@ -19,7 +19,6 @@ import { Card, SectionTitle } from '@/components/ui/card';
 import { Field, TextInput } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
-import { errorMessage } from '@/lib/api/errors';
 import {
   useClearHome,
   useLocation,
@@ -80,7 +79,6 @@ export function HomeCard({
             `Gespeichert — deine Wohnung heißt jetzt ${location.name}.`,
           );
         },
-        onError: (error) => toast.error(errorMessage(error)),
       },
     );
   };
@@ -101,7 +99,6 @@ export function HomeCard({
 
         submit(false);
       },
-      onError: (error) => toast.error(errorMessage(error)),
     });
   };
 
@@ -218,7 +215,6 @@ export function HomeCard({
               }
               clearHome.mutate(undefined, {
                 onSuccess: () => toast.success('Du hostest jetzt nicht mehr.'),
-                onError: (error) => toast.error(errorMessage(error)),
               });
             }}
           >

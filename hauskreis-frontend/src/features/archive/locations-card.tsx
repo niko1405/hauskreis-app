@@ -19,9 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState, Skeleton } from '@/components/ui/states';
-import { useToast } from '@/components/ui/toast';
 import { LocationSheet } from '@/components/domain/location-sheet';
-import { errorMessage } from '@/lib/api/errors';
 import { useDeleteLocation, useLocations } from '@/lib/api/hooks';
 import { isHome, residentNames } from '@/lib/location';
 import type { Location } from '@/lib/api/types';
@@ -87,7 +85,6 @@ export function LocationsCard() {
 
 function LocationRow({ location }: { location: Location }) {
   const remove = useDeleteLocation();
-  const toast = useToast();
   const home = isHome(location);
 
   return (
@@ -132,9 +129,7 @@ function LocationRow({ location }: { location: Location }) {
             ) {
               return;
             }
-            remove.mutate(location.id, {
-              onError: (error) => toast.error(errorMessage(error)),
-            });
+            remove.mutate(location.id);
           }}
         >
           <Trash2 size={15} />

@@ -22,7 +22,6 @@ import {
   ErrorState,
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
-import { errorMessage } from '@/lib/api/errors';
 import { useMe, usePerson, useUpdatePerson } from '@/lib/api/hooks';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { AbsencesCard } from './absences-card';
@@ -100,7 +99,6 @@ function Loaded({ personId }: { personId: string }) {
       },
       {
         onSuccess: () => toast.success('Gespeichert.'),
-        onError: (error) => toast.error(errorMessage(error)),
       },
     );
   };

@@ -12,7 +12,6 @@ import { Card, SectionTitle } from '@/components/ui/card';
 import { Field, TextInput } from '@/components/ui/field';
 import { EmptyState, Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
-import { errorMessage } from '@/lib/api/errors';
 import {
   useAbsenceList,
   useCreateAbsence,
@@ -49,7 +48,6 @@ export function AbsencesCard({ personId }: { personId: string }) {
           setReason('');
           setAdding(false);
         },
-        onError: (error) => toast.error(errorMessage(error)),
       },
     );
   };
@@ -85,11 +83,7 @@ export function AbsencesCard({ personId }: { personId: string }) {
               </div>
               <IconButton
                 label="Abwesenheit löschen"
-                onClick={() =>
-                  remove.mutate(absence.id, {
-                    onError: (error) => toast.error(errorMessage(error)),
-                  })
-                }
+                onClick={() => remove.mutate(absence.id)}
               >
                 <Trash2 size={15} />
               </IconButton>

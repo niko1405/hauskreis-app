@@ -18,8 +18,14 @@ import {
   type UseQueryOptions,
 } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
+import { useToast } from '@/components/ui/toast';
 import type { Resource } from '../client';
-import { StaleResourceError } from '../errors';
+import { errorMessage, StaleResourceError } from '../errors';
+import {
+  applyOptimistic,
+  type OptimisticContext,
+  type OptimisticUpdate,
+} from './use-optimistic';
 
 type ResourceFetcher<T> = (args: {
   previous: Resource<T> | undefined;
@@ -77,6 +83,7 @@ export function useResourceUpdate<T, TInput>({
   onSuccess,
 }: ResourceUpdateArgs<T, TInput>) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [conflict, setConflict] = useState(false);
 
   const mutation = useMutation<Resource<T>, Error, TInput>({
@@ -105,7 +112,11 @@ export function useResourceUpdate<T, TInput>({
       if (error instanceof StaleResourceError) {
         setConflict(true);
         void queryClient.invalidateQueries({ queryKey });
+        // Kein Toast: der `ConflictBanner` bleibt stehen und sagt dasselbe
+        // ausführlicher. Zwei Meldungen über dieselbe Sache sind eine zu viel.
+        return;
       }
+      toast.error(errorMessage(error));
     },
   });
 
@@ -117,27 +128,55 @@ export function useResourceUpdate<T, TInput>({
 /**
  * Für Schreibvorgänge ohne Vorbedingung (Anwesenheit, Song-Leiter, Lieder
  * eines Termins, Benachrichtigungs-Einstellungen) sowie für `POST`/`DELETE`.
+ *
+ * Fehler melden sich hier von selbst. Vorher hing das an jeder Aufrufstelle
+ * einzeln, und zwei davon hatten es schlicht vergessen — ein fehlgeschlagener
+ * Tipper blieb dort stumm. `silent` ist für die Fälle da, in denen der
+ * Aufrufer etwas Besseres anzuzeigen hat als einen Toast.
  */
 export function useApiMutation<TData, TInput>(
   mutationFn: (input: TInput) => Promise<TData>,
   options: {
     invalidateKeys?: readonly QueryKey[];
-  } & Omit<UseMutationOptions<TData, Error, TInput>, 'mutationFn'> = {},
+    /** Greift der Oberfläche vor; siehe `use-optimistic.ts`. */
+    optimistic?: OptimisticUpdate<TInput>;
+    silent?: boolean;
+  } & Omit<
+    UseMutationOptions<TData, Error, TInput, OptimisticContext>,
+    'mutationFn' | 'onMutate'
+  > = {},
 ) {
   const queryClient = useQueryClient();
-  const { invalidateKeys = [], onSuccess, ...rest } = options;
+  const toast = useToast();
+  const {
+    invalidateKeys = [],
+    optimistic,
+    silent = false,
+    onSuccess,
+    onError,
+    ...rest
+  } = options;
 
-  type SuccessArgs = Parameters<
-    NonNullable<UseMutationOptions<TData, Error, TInput>['onSuccess']>
-  >;
+  type Options = UseMutationOptions<TData, Error, TInput, OptimisticContext>;
+  type SuccessArgs = Parameters<NonNullable<Options['onSuccess']>>;
+  type ErrorArgs = Parameters<NonNullable<Options['onError']>>;
 
-  return useMutation<TData, Error, TInput>({
+  return useMutation<TData, Error, TInput, OptimisticContext>({
     mutationFn,
+    onMutate: optimistic
+      ? (input) => applyOptimistic(queryClient, input, optimistic)
+      : undefined,
     onSuccess: (...args: SuccessArgs) => {
       for (const key of invalidateKeys) {
         void queryClient.invalidateQueries({ queryKey: key });
       }
       onSuccess?.(...args);
+    },
+    onError: (...args: ErrorArgs) => {
+      const [error, , context] = args;
+      context?.rollback();
+      if (!silent) toast.error(errorMessage(error));
+      onError?.(...args);
     },
     ...rest,
   });

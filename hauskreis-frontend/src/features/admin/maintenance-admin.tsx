@@ -81,7 +81,6 @@ function PrayerBuddyConfigCard() {
                 { periodLengthWeeks: Number(value) },
                 {
                   onSuccess: () => toast.success('Rhythmus gespeichert.'),
-                  onError: (error) => toast.error(errorMessage(error)),
                 },
               )
             }
@@ -99,7 +98,6 @@ function PrayerBuddyConfigCard() {
                       ? `Nächste Runde läuft ab heute, ${result.notified} benachrichtigt.`
                       : 'Es war nichts zu wechseln.',
                   ),
-                onError: (error) => toast.error(errorMessage(error)),
               })
             }
           >

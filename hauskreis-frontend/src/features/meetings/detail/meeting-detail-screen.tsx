@@ -40,14 +40,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { InlineEdit, Select, TextInput } from '@/components/ui/field';
+import { useToast } from '@/components/ui/toast';
 import {
   CardSkeleton,
   ConflictBanner,
   ErrorState,
 } from '@/components/ui/states';
-import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
-import { errorMessage } from '@/lib/api/errors';
 import {
   useCancelMeeting,
   useLocations,
@@ -145,9 +144,7 @@ function Loaded({
   const past = isPast(meeting.date);
 
   const patch = (input: Parameters<typeof update.mutate>[0]) =>
-    update.mutate(input, {
-      onError: (error) => toast.error(errorMessage(error)),
-    });
+    update.mutate(input);
 
   const selectedFor = (role: SheetRole): string[] => {
     if (role === 'HOST')
@@ -380,7 +377,6 @@ function Loaded({
                   toast.success(
                     past ? 'Als abgesagt vermerkt.' : 'Termin abgesagt.',
                   ),
-                onError: (error) => toast.error(errorMessage(error)),
               })
             }
           >
@@ -446,7 +442,6 @@ function ActionstepDoneBlock({ meeting }: { meeting: Meeting }) {
   const me = useMe();
   const people = usePeople();
   const setDone = useSetActionstepDone(meeting.id);
-  const toast = useToast();
 
   const doneByMe = meeting.actionstepDone.some(
     (row) => row.person.id === me.me?.id,
@@ -461,12 +456,8 @@ function ActionstepDoneBlock({ meeting }: { meeting: Meeting }) {
       <button
         type="button"
         aria-pressed={doneByMe}
-        disabled={setDone.isPending || !me.me}
-        onClick={() =>
-          setDone.mutate(!doneByMe, {
-            onError: (error) => toast.error(errorMessage(error)),
-          })
-        }
+        disabled={!me.me}
+        onClick={() => setDone.mutate(!doneByMe)}
         className={cn(
           'flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors disabled:opacity-50',
           'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',

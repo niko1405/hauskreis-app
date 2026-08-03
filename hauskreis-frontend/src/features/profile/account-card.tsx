@@ -23,7 +23,6 @@ import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { Field, TextInput } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
-import { errorMessage } from '@/lib/api/errors';
 import { useChangeEmail } from '@/lib/api/hooks';
 import { accountActionArgs } from '@/lib/auth/oidc-config';
 
@@ -65,7 +64,6 @@ export function AccountCard({ email }: { email: string }) {
                     : 'Geändert. (Keine Bestätigungsmail: dieser Keycloak kennt keinen Mailserver.)',
                 );
               },
-              onError: (error) => toast.error(errorMessage(error)),
             })
           }
         >

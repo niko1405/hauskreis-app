@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { STALE } from '../cache';
 import { meetingSongsApi } from '../endpoints';
-import type { AddMeetingSongInput } from '../types';
+import type { AddMeetingSongInput, MeetingSong } from '../types';
 import { useHk } from './use-hk';
 import { useApiMutation } from './use-resource';
 
@@ -33,6 +33,7 @@ export function useAddMeetingSong(meetingId: string) {
   );
 }
 
+/** Auch ein Schalter, also auch vorgreifend. */
 export function useSetMeetingSongSelected(meetingId: string) {
   const { hauskreisId, keys } = useHk();
 
@@ -50,7 +51,17 @@ export function useSetMeetingSongSelected(meetingId: string) {
         meetingSongId,
         isSelected,
       ),
-    { invalidateKeys: [keys.meetings.songs(meetingId), keys.songs.all] },
+    {
+      invalidateKeys: [keys.meetings.songs(meetingId), keys.songs.all],
+      optimistic: (input, patch) =>
+        patch<MeetingSong[]>(keys.meetings.songs(meetingId), (songs) =>
+          songs.map((entry) =>
+            entry.id === input.meetingSongId
+              ? { ...entry, isSelected: input.isSelected }
+              : entry,
+          ),
+        ),
+    },
   );
 }
 

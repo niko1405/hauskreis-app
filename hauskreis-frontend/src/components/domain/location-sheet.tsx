@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { Field, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast';
-import { errorMessage } from '@/lib/api/errors';
 import { useCreateLocation, useResolveAddress } from '@/lib/api/hooks';
 import type { Location } from '@/lib/api/types';
 
@@ -72,7 +71,6 @@ export function LocationSheet({
             onCreated?.(location);
             close();
           },
-          onError: (error) => toast.error(errorMessage(error)),
         },
       );
     };
@@ -84,7 +82,6 @@ export function LocationSheet({
 
     resolve.mutate(trimmedAddress, {
       onSuccess: (result) => afterLookup(result.location),
-      onError: (error) => toast.error(errorMessage(error)),
     });
   };
 

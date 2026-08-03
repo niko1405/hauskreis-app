@@ -7,7 +7,6 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { pushApi } from '@/lib/api/endpoints';
-import { errorMessage } from '@/lib/api/errors';
 import {
   useApiMutation,
   usePushPublicKey,
@@ -90,7 +89,6 @@ export function usePushSetup() {
         setPermission('granted');
         toast.success('Benachrichtigungen sind an.');
       },
-      onError: (error) => toast.error(errorMessage(error)),
     },
   );
 
@@ -105,7 +103,6 @@ export function usePushSetup() {
         setSubscribedHere(false);
         toast.success('Auf diesem Gerät aus.');
       },
-      onError: (error) => toast.error(errorMessage(error)),
     },
   );
 

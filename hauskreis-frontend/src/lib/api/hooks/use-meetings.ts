@@ -3,15 +3,18 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { STALE } from '../cache';
+import type { Resource } from '../client';
 import { meetingsApi } from '../endpoints';
 import type { MeetingListParams } from '../params';
 import type {
   CreateMeetingInput,
+  HomeScreen,
   Meeting,
   SetAttendanceInput,
   UpdateMeetingInput,
 } from '../types';
 import { useHk } from './use-hk';
+import { useMe } from './use-me';
 import { useInfiniteList } from './use-paginated';
 import { useApiMutation, useResource, useResourceUpdate } from './use-resource';
 
@@ -104,7 +107,12 @@ export function useDeleteMeeting() {
   );
 }
 
-/** Ohne Vorbedingung. Betrifft auch den Home-Screen (`myAttendance`). */
+/**
+ * Ohne Vorbedingung. Betrifft auch den Home-Screen (`myAttendance`).
+ *
+ * Greift vor: „Dabei" ist ein Schalter, und ein Schalter, der erst nach der
+ * Antwort des Servers umspringt, fühlt sich kaputt an.
+ */
 export function useSetAttendance(meetingId: string) {
   const { hauskreisId, keys, derived } = useHk();
 
@@ -117,6 +125,38 @@ export function useSetAttendance(meetingId: string) {
         keys.meetings.all,
         ...derived,
       ],
+      optimistic: async (input, patch) => {
+        await patch<Resource<Meeting>>(
+          keys.meetings.detail(meetingId),
+          (resource) => ({
+            ...resource,
+            data: {
+              ...resource.data,
+              attendances: [
+                ...resource.data.attendances.filter(
+                  (entry) => entry.personId !== input.personId,
+                ),
+                { personId: input.personId, status: input.status },
+              ],
+            },
+          }),
+        );
+
+        // Der Home-Screen zeigt dieselbe Antwort als „Bist du dabei?". Ob es
+        // die eigene ist, weiß er hier nicht — aber `myAttendance` steht nur
+        // am nächsten Treffen, und dort ist es immer die eigene.
+        await patch<HomeScreen>(keys.home, (home) =>
+          home.nextMeeting?.id === meetingId
+            ? {
+                ...home,
+                nextMeeting: {
+                  ...home.nextMeeting,
+                  myAttendance: input.status,
+                },
+              }
+            : home,
+        );
+      },
     },
   );
 }
@@ -129,6 +169,7 @@ export function useSetAttendance(meetingId: string) {
  */
 export function useSetActionstepDone(meetingId: string) {
   const { hauskreisId, keys, derived } = useHk();
+  const { me } = useMe();
 
   return useApiMutation(
     (done: boolean) =>
@@ -139,6 +180,48 @@ export function useSetActionstepDone(meetingId: string) {
         keys.meetings.all,
         ...derived,
       ],
+      optimistic: async (done, patch) => {
+        if (!me) return;
+
+        await patch<Resource<Meeting>>(
+          keys.meetings.detail(meetingId),
+          (resource) => ({
+            ...resource,
+            data: {
+              ...resource.data,
+              actionstepDone: done
+                ? [
+                    ...resource.data.actionstepDone,
+                    {
+                      person: { id: me.id, name: me.name },
+                      doneAt: new Date().toISOString(),
+                    },
+                  ]
+                : resource.data.actionstepDone.filter(
+                    (entry) => entry.person.id !== me.id,
+                  ),
+            },
+          }),
+        );
+
+        await patch<HomeScreen>(keys.home, (home) =>
+          home.openActionstep?.meetingId === meetingId
+            ? {
+                ...home,
+                openActionstep: {
+                  ...home.openActionstep,
+                  done,
+                  // Nur zählen, was sich wirklich ändert: zweimal auf denselben
+                  // Haken tippen ist kein zweites Abhaken.
+                  doneCount:
+                    home.openActionstep.done === done
+                      ? home.openActionstep.doneCount
+                      : home.openActionstep.doneCount + (done ? 1 : -1),
+                },
+              }
+            : home,
+        );
+      },
     },
   );
 }

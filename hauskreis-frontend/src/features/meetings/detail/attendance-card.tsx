@@ -15,8 +15,6 @@
  */
 import { Avatar } from '@/components/ui/avatar';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/toast';
-import { errorMessage } from '@/lib/api/errors';
 import { useMe, usePeople, useSetAttendance } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import type { AttendanceStatus, Meeting } from '@/lib/api/types';
@@ -50,7 +48,6 @@ export function AttendanceCard({
   const people = usePeople();
   const me = useMe();
   const setAttendance = useSetAttendance(meeting.id);
-  const toast = useToast();
 
   const statusOf = (personId: string): AttendanceStatus =>
     meeting.attendances.find((a) => a.personId === personId)?.status ??
@@ -100,13 +97,12 @@ export function AttendanceCard({
                 <button
                   key={answer.status}
                   type="button"
-                  disabled={setAttendance.isPending}
                   aria-pressed={myStatus === answer.status}
                   onClick={() =>
-                    setAttendance.mutate(
-                      { personId: me.me!.id, status: answer.status },
-                      { onError: (error) => toast.error(errorMessage(error)) },
-                    )
+                    setAttendance.mutate({
+                      personId: me.me!.id,
+                      status: answer.status,
+                    })
                   }
                   className={cn(
                     'flex-1 rounded-full border px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-60',

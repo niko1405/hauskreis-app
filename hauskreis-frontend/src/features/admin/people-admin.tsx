@@ -76,7 +76,6 @@ export function PeopleAdmin() {
                           ? `Einladung an ${person.name} zurückgezogen.`
                           : `${person.name} entfernt.`,
                       ),
-                    onError: (error) => toast.error(errorMessage(error)),
                   });
                 }}
               >

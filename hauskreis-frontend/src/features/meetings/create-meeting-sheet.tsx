@@ -11,7 +11,6 @@ import { Field, Select, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast';
 import { useCreateMeeting, useLocations } from '@/lib/api/hooks';
-import { errorMessage } from '@/lib/api/errors';
 import { MEETING_TYPE_LABEL } from '@/lib/meeting';
 import { MEETING_TYPES } from '@/lib/api/types';
 import { addDays, today } from '@/lib/date';
@@ -47,7 +46,6 @@ export function CreateMeetingSheet({
           setTitle('');
           onClose();
         },
-        onError: (error) => toast.error(errorMessage(error)),
       },
     );
   };

@@ -5,6 +5,7 @@ import { useApiReady } from '../../auth/auth-bridge';
 import { pushApi } from '../endpoints';
 import { qk } from '../query-keys';
 import type {
+  NotificationSetting,
   NotificationType,
   UpdateNotificationSettingInput,
 } from '../types';
@@ -38,7 +39,7 @@ export function useNotificationSettings() {
   });
 }
 
-/** Ohne Vorbedingung. */
+/** Ohne Vorbedingung. Häkchen und Wochentage sollen sofort umspringen. */
 export function useUpdateNotificationSetting() {
   return useApiMutation(
     ({
@@ -48,7 +49,29 @@ export function useUpdateNotificationSetting() {
       type: NotificationType;
       input: UpdateNotificationSettingInput;
     }) => pushApi.updateNotificationSetting(type, input),
-    { invalidateKeys: [qk.push.settings] },
+    {
+      invalidateKeys: [qk.push.settings],
+      // `null` heißt „zurück auf den Katalog-Standard" — welcher das ist, weiß
+      // nur der Server. Vorgegriffen wird deshalb nur bei gesetzten Werten;
+      // das Zurücksetzen wartet die Antwort ab.
+      optimistic: ({ type, input }, patch) =>
+        patch<NotificationSetting[]>(qk.push.settings, (settings) =>
+          settings.map((setting) =>
+            setting.type === type
+              ? {
+                  ...setting,
+                  ...(input.enabled !== undefined && {
+                    enabled: input.enabled,
+                  }),
+                  ...(input.leadDays !== undefined && {
+                    leadDays: input.leadDays,
+                  }),
+                  ...(input.weekdays != null && { weekdays: input.weekdays }),
+                }
+              : setting,
+          ),
+        ),
+    },
   );
 }
 

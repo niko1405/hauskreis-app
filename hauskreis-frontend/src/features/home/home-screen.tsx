@@ -18,8 +18,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { ROLE_ICON, RoleChip } from '@/components/domain/role-badge';
-import { useToast } from '@/components/ui/toast';
-import { errorMessage } from '@/lib/api/errors';
 import {
   useHome,
   useMe,
@@ -142,7 +140,6 @@ export function HomeScreen() {
  */
 function ActionstepCard({ step }: { step: HomeActionstep }) {
   const setDone = useSetActionstepDone(step.meetingId);
-  const toast = useToast();
 
   return (
     <Card
@@ -160,12 +157,7 @@ function ActionstepCard({ step }: { step: HomeActionstep }) {
           aria-label={
             step.done ? 'Haken wieder wegnehmen' : 'Actionstep abhaken'
           }
-          disabled={setDone.isPending}
-          onClick={() =>
-            setDone.mutate(!step.done, {
-              onError: (error) => toast.error(errorMessage(error)),
-            })
-          }
+          onClick={() => setDone.mutate(!step.done)}
           className={cn(
             'flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-50',
             'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
@@ -417,7 +409,6 @@ function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
         <AttendanceButton
           active={meeting.myAttendance === 'ATTENDING'}
           onClick={() => setStatus('ATTENDING')}
-          disabled={attendance.isPending}
         >
           Ja
         </AttendanceButton>
@@ -425,7 +416,6 @@ function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
           active={meeting.myAttendance === 'ABSENT'}
           tone="alert"
           onClick={() => setStatus('ABSENT')}
-          disabled={attendance.isPending}
         >
           Nein
         </AttendanceButton>

@@ -11,8 +11,6 @@ import { Button, IconButton } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { TextInput } from '@/components/ui/field';
 import { EmptyState, Skeleton } from '@/components/ui/states';
-import { useToast } from '@/components/ui/toast';
-import { errorMessage } from '@/lib/api/errors';
 import {
   useAddMeetingSong,
   useMeetingSongs,
@@ -38,7 +36,6 @@ export function SongsCard({
   const songs = useMeetingSongs(meetingId);
   const remove = useRemoveMeetingSong(meetingId);
   const select = useSetMeetingSongSelected(meetingId);
-  const toast = useToast();
 
   return (
     <section>
@@ -123,11 +120,7 @@ export function SongsCard({
               {!readOnly && (
                 <IconButton
                   label="Lied entfernen"
-                  onClick={() =>
-                    remove.mutate(entry.id, {
-                      onError: (error) => toast.error(errorMessage(error)),
-                    })
-                  }
+                  onClick={() => remove.mutate(entry.id)}
                 >
                   <Trash2 size={15} />
                 </IconButton>
@@ -151,7 +144,6 @@ function AddSongForm({ meetingId }: { meetingId: string }) {
 
   const search = useSongSearch(title, expanded);
   const add = useAddMeetingSong(meetingId);
-  const toast = useToast();
 
   const reset = () => {
     setTitle('');
@@ -184,7 +176,6 @@ function AddSongForm({ meetingId }: { meetingId: string }) {
 
     add.mutate(payload, {
       onSuccess: reset,
-      onError: (error) => toast.error(errorMessage(error)),
     });
   };
 
