@@ -11,6 +11,8 @@ import type { RoleSuggestionService } from '../role-suggestion/role-suggestion.s
 import type { MeetingNotificationService } from './meeting-notification.service';
 import type { MeetingCancellationService } from './meeting-cancellation.service';
 import type { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
+import type { AvailabilityService } from '../role-suggestion/availability.service';
+import type { RoleReleaseService } from './role-release.service';
 import type { IfMatchCondition } from '../common/http/etag';
 
 /** Diese Endpunkte verlangen eine Vorbedingung; hier interessiert sie nicht. */
@@ -66,6 +68,10 @@ function setup(before = meeting()) {
   };
   const cancellations = { reconcile: jest.fn() };
   const roleAssignments = { announce: jest.fn() };
+  // Standardmäßig ist niemand abwesend — die Regel selbst hat ihren eigenen
+  // Spec; hier soll sie den anderen Tests nicht im Weg stehen.
+  const availability = { assertAvailable: jest.fn(), findDeclined: jest.fn() };
+  const roleRelease = { releaseFor: jest.fn() };
 
   const service = new MeetingService(
     prisma as unknown as PrismaService,
@@ -73,6 +79,8 @@ function setup(before = meeting()) {
     notifications as unknown as MeetingNotificationService,
     cancellations as unknown as MeetingCancellationService,
     roleAssignments as unknown as RoleAssignmentNotifier,
+    availability as unknown as AvailabilityService,
+    roleRelease as unknown as RoleReleaseService,
   );
 
   return {
@@ -81,6 +89,8 @@ function setup(before = meeting()) {
     notifications,
     cancellations,
     roleAssignments,
+    availability,
+    roleRelease,
     state,
   };
 }

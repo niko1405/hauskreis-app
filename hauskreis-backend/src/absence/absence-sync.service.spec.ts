@@ -3,6 +3,7 @@ import { AbsenceSyncService } from './absence-sync.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { MeetingNotificationService } from '../meeting/meeting-notification.service';
 import type { MeetingCancellationService } from '../meeting/meeting-cancellation.service';
+import type { RoleReleaseService } from '../meeting/role-release.service';
 import {
   AttendanceSource,
   AttendanceStatus,
@@ -36,6 +37,7 @@ function setup(options: {
   const deleteMany = jest.fn().mockResolvedValue({ count: 0 });
   const handleDecline = jest.fn().mockResolvedValue(undefined);
   const reconcile = jest.fn().mockResolvedValue(undefined);
+  const releaseFor = jest.fn().mockResolvedValue({ host: false, song: false });
 
   const service = new AbsenceSyncService(
     {
@@ -45,10 +47,12 @@ function setup(options: {
     } as unknown as PrismaService,
     { handleDecline } as unknown as MeetingNotificationService,
     { reconcile } as unknown as MeetingCancellationService,
+    { releaseFor } as unknown as RoleReleaseService,
   );
 
   return {
     service,
+    releaseFor,
     createMany,
     deleteMany,
     handleDecline,
@@ -180,7 +184,10 @@ describe('AbsenceSyncService.syncPerson', () => {
 
     // The whole point of writing rows: the host hears about a holiday exactly
     // as they would about a manual cancellation.
-    expect(handleDecline).toHaveBeenCalledWith('inside', 'niko');
+    expect(handleDecline).toHaveBeenCalledWith('inside', 'niko', {
+      host: false,
+      song: false,
+    });
   });
 
   it('can stay quiet when asked', async () => {

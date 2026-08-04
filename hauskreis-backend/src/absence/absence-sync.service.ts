@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { MeetingCancellationService } from '../meeting/meeting-cancellation.service';
+import { RoleReleaseService } from '../meeting/role-release.service';
 import { MeetingNotificationService } from '../meeting/meeting-notification.service';
 import {
   AttendanceSource,
@@ -42,6 +43,7 @@ export class AbsenceSyncService {
     private readonly prisma: PrismaService,
     private readonly meetingNotifications: MeetingNotificationService,
     private readonly cancellations: MeetingCancellationService,
+    private readonly roleRelease: RoleReleaseService,
   ) {}
 
   /**
@@ -127,11 +129,28 @@ export class AbsenceSyncService {
       });
     }
 
+    // Ein Urlaub macht Rollen genauso frei wie eine Absage von Hand — sonst
+    // bliebe im Plan ein Gastgeber stehen, der nachweislich verreist ist.
+    // Läuft auch ohne `notify`: freigeben ist eine Änderung an den Daten,
+    // nicht eine Nachricht darüber.
+    const released = new Map<string, { host: boolean; song: boolean }>();
+
+    for (const meetingId of toDecline) {
+      released.set(
+        meetingId,
+        await this.roleRelease.releaseFor(meetingId, personId),
+      );
+    }
+
     if (options.notify !== false) {
       // Sequential on purpose: each one may look at the same meeting's guest
       // count, and the capacity offer should see the finished picture.
       for (const meetingId of toDecline) {
-        await this.meetingNotifications.handleDecline(meetingId, personId);
+        await this.meetingNotifications.handleDecline(
+          meetingId,
+          personId,
+          released.get(meetingId),
+        );
       }
     }
 

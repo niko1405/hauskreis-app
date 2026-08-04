@@ -12,9 +12,11 @@ import {
   MeetingStatus,
 } from '../../generated/prisma/enums';
 import { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
+import { AvailabilityService } from '../role-suggestion/availability.service';
 import { locationInclude } from '../location/location.service';
 import { MeetingCancellationService } from './meeting-cancellation.service';
 import { MeetingNotificationService } from './meeting-notification.service';
+import { RoleReleaseService } from './role-release.service';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
@@ -67,6 +69,8 @@ export class MeetingService {
     private readonly meetingNotifications: MeetingNotificationService,
     private readonly cancellations: MeetingCancellationService,
     private readonly roleAssignments: RoleAssignmentNotifier,
+    private readonly availability: AvailabilityService,
+    private readonly roleRelease: RoleReleaseService,
   ) {}
 
   async findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
@@ -172,6 +176,14 @@ export class MeetingService {
     this.assertNotAheadOfTheEvening(before.date, dto);
     await this.assertReferencesBelongToHauskreis(hauskreisId, dto);
     const venue = await this.resolveVenue(hauskreisId, dto, before);
+
+    // Nur beim echten Wechsel: ein `PATCH` mit dem Info-Text darf nicht daran
+    // scheitern, dass der eingetragene Gastgeber inzwischen abgesagt hat.
+    if (venue.hostPersonId && venue.hostPersonId !== before.hostPersonId) {
+      await this.availability.assertAvailable(hauskreisId, id, [
+        venue.hostPersonId,
+      ]);
+    }
 
     const updated = await updateWithVersionCheck({
       condition,
@@ -353,7 +365,12 @@ export class MeetingService {
     return this.roleSuggestions.suggestTopicResponsibles(
       hauskreisId,
       meeting.date,
-      { excludeTopicId: meeting.topicId ?? undefined },
+      {
+        excludeTopicId: meeting.topicId ?? undefined,
+        // Nicht zum Ausschließen aus der Historie, sondern um zu wissen, wer
+        // für genau diesen Abend abgesagt hat.
+        meetingId: meeting.id,
+      },
     );
   }
 
@@ -411,7 +428,11 @@ export class MeetingService {
       dto.status === AttendanceStatus.ABSENT &&
       previous?.status !== AttendanceStatus.ABSENT
     ) {
-      await this.meetingNotifications.handleDecline(id, dto.personId);
+      // Erst freigeben, dann Bescheid sagen: sonst ginge die Nachricht „jemand
+      // hat für deinen Abend abgesagt" noch an den Gastgeber, der genau in
+      // diesem Moment aufhört, einer zu sein.
+      const released = await this.roleRelease.releaseFor(id, dto.personId);
+      await this.meetingNotifications.handleDecline(id, dto.personId, released);
     }
 
     // Diese Antwort kann die letzte gewesen sein, die den Abend noch hielt —

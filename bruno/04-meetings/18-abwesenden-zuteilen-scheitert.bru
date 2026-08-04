@@ -1,0 +1,45 @@
+meta {
+  name: Abwesenden zuteilen scheitert
+  type: http
+  seq: 18
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{meetingEtag}}
+}
+
+body:json {
+  {
+    "hostPersonId": "{{declinedPersonId}}"
+  }
+}
+
+tests {
+  test("antwortet mit 400", function () {
+    expect(res.getStatus()).to.equal(400);
+  });
+
+  test("nennt den Namen und den Grund", function () {
+    expect(res.body.message).to.match(/nicht dabei/);
+  });
+}
+
+docs {
+  Setzt voraus, dass `declinedPersonId` für `meetingId` abgesagt hat — der
+  Request „Teilnahme setzen" davor macht genau das, wenn man dort `ABSENT`
+  schickt.
+
+  Bis Phase D prüfte keine der drei Zuteilungen, ob die Person überhaupt kommt:
+  gesehen wurde nur, ob sie zum Hauskreis gehört. Man konnte also jemanden als
+  Gastgeber eintragen, der für genau diesen Dienstag abgesagt hatte, und niemand
+  merkte es bis zum Abend.
+
+  Für einen **vergangenen** Abend greift die Regel nicht — dort wird
+  nachgetragen, was war, und wer damals absagte, kann trotzdem gehostet haben.
+}

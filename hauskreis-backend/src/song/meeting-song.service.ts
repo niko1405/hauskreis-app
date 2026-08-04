@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import { AssignmentRole } from '../../generated/prisma/enums';
+import { AvailabilityService } from '../role-suggestion/availability.service';
 import { SongService } from './song.service';
 import type {
   AddMeetingSongDto,
@@ -29,6 +30,7 @@ export class MeetingSongService {
     private readonly prisma: PrismaService,
     private readonly songs: SongService,
     private readonly roleAssignments: RoleAssignmentNotifier,
+    private readonly availability: AvailabilityService,
   ) {}
 
   async findAll(hauskreisId: string, meetingId: string) {
@@ -141,6 +143,10 @@ export class MeetingSongService {
    * needed (CLAUDE.md §6). No check on `playsInstrument` here — the ranking
    * suggests only people who play, but the group stays free to enter whoever
    * they agreed on.
+   *
+   * Auf **Anwesenheit** wird dagegen geprüft, und das ist kein Widerspruch: ob
+   * jemand ein Instrument spielt, weiß die Gruppe besser als die App; ob jemand
+   * an dem Abend da ist, hat er selbst eingetragen.
    */
   async setLeaders(
     hauskreisId: string,
@@ -157,6 +163,14 @@ export class MeetingSongService {
     // Nachrücken einer zweiten Person auch die erste noch einmal davon.
     const before = await this.findLeaders(hauskreisId, meetingId);
     const known = new Set(before.map((person) => person.id));
+
+    // Nur die Neuen: wer schon eingetragen war und inzwischen abgesagt hat,
+    // darf nicht dafür sorgen, dass sich die Liste gar nicht mehr ändern lässt.
+    await this.availability.assertAvailable(
+      hauskreisId,
+      meetingId,
+      dto.personIds.filter((personId) => !known.has(personId)),
+    );
 
     await this.prisma.$transaction([
       this.prisma.meetingSongLeader.deleteMany({

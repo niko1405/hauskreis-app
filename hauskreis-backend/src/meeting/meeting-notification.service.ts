@@ -111,7 +111,17 @@ export class MeetingNotificationService {
    * suddenly fit. The second is why this runs at all for meetings that have no
    * host yet.
    */
-  async handleDecline(meetingId: string, personId: string): Promise<void> {
+  async handleDecline(
+    meetingId: string,
+    personId: string,
+    /**
+     * Was die Absage an Rollen freigemacht hat. Der Aufrufer gibt sie vorher
+     * frei und reicht das Ergebnis durch — dass ein Gastgeber-Platz offen ist,
+     * geht die ganze Gruppe an und nicht nur den Gastgeber, den es nicht mehr
+     * gibt.
+     */
+    released: { host: boolean; song: boolean } = { host: false, song: false },
+  ): Promise<void> {
     const meeting = await this.prisma.meeting.findUnique({
       where: { id: meetingId },
       select: {
@@ -134,8 +144,62 @@ export class MeetingNotificationService {
 
     await Promise.all([
       this.notifyHostAboutDecline(meeting, personId),
+      this.announceReleasedRoles(meeting, personId, released),
       this.offerUnlockedHomes(meeting),
     ]);
+  }
+
+  /**
+   * „Der Gastgeber-Platz ist wieder frei."
+   *
+   * Kein eigener Schalter dafür: wer „jemand sagt ab" abonniert hat, will
+   * gerade diese Absage erfahren — sie ist die einzige, die etwas zu tun übrig
+   * lässt. Ein zehnter Eintrag in den Einstellungen für den Sonderfall machte
+   * die Liste schlechter, nicht besser.
+   */
+  private async announceReleasedRoles(
+    meeting: { id: string; hauskreisId: string; date: Date },
+    personId: string,
+    released: { host: boolean; song: boolean },
+  ): Promise<void> {
+    if (!released.host && !released.song) return;
+
+    const [person, others] = await Promise.all([
+      this.prisma.person.findUnique({
+        where: { id: personId },
+        select: { name: true },
+      }),
+      this.prisma.person.findMany({
+        where: {
+          hauskreisId: meeting.hauskreisId,
+          active: true,
+          id: { not: personId },
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    if (!person) return;
+
+    const what = released.host
+      ? released.song
+        ? 'Gastgeber und Musik sind'
+        : 'Der Gastgeber-Platz ist'
+      : 'Die Musik ist';
+
+    await this.sendAll(
+      others.map((other) => ({
+        personId: other.id,
+        type: NotificationType.ATTENDANCE_DECLINED,
+        relatedMeetingId: meeting.id,
+        relatedPersonId: personId,
+        payload: {
+          title: 'Da ist etwas offen',
+          body: `${person.name} kann am ${formatShortDate(meeting.date)} nicht. ${what} wieder frei.`,
+          url: appPath.meeting(meeting.id),
+        },
+      })),
+    );
   }
 
   private async notifyHostAboutDecline(

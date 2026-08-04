@@ -1,6 +1,7 @@
 import { RoleSuggestionService } from './role-suggestion.service';
 // Type-only import keeps Jest from loading the real PrismaClient.
 import type { PrismaService } from '../prisma/prisma.service';
+import type { AvailabilityService } from './availability.service';
 
 /**
  * The counterpart to the capacity rule in `host-ranking.spec.ts`: that one
@@ -26,11 +27,19 @@ function setup(options: {
   const personCount = jest.fn().mockResolvedValue(options.activePeople);
   const attendanceCount = jest.fn().mockResolvedValue(options.declined);
 
-  const service = new RoleSuggestionService({
-    location: { findMany: locationFindMany },
-    person: { count: personCount },
-    meetingAttendance: { count: attendanceCount },
-  } as unknown as PrismaService);
+  const service = new RoleSuggestionService(
+    {
+      location: { findMany: locationFindMany },
+      person: { count: personCount },
+      meetingAttendance: { count: attendanceCount },
+    } as unknown as PrismaService,
+    // Wird von diesem Weg nicht gefragt — die Kapazitäts-Einladung sagt nichts
+    // darüber, wer der fairste Gastgeber wäre. Trotzdem mitgegeben, damit der
+    // Fake dem echten Konstruktor entspricht.
+    {
+      findDeclined: jest.fn().mockResolvedValue(new Set<string>()),
+    } as unknown as AvailabilityService,
+  );
 
   return service;
 }

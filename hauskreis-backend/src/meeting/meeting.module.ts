@@ -6,6 +6,7 @@ import { HostReminderService } from './host-reminder.service';
 import { ActionstepReminderService } from './actionstep-reminder.service';
 import { MeetingCancellationService } from './meeting-cancellation.service';
 import { MeetingNotificationService } from './meeting-notification.service';
+import { RoleReleaseService } from './role-release.service';
 import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module';
 import { NotificationModule } from '../notification/notification.module';
 import { PersonModule } from '../person/person.module';
@@ -24,6 +25,7 @@ import { PersonModule } from '../person/person.module';
     ActionstepReminderService,
     MeetingNotificationService,
     MeetingCancellationService,
+    RoleReleaseService,
   ],
   exports: [
     MeetingService,
@@ -37,6 +39,8 @@ import { PersonModule } from '../person/person.module';
     // dem alle abgesagt haben — dann fällt der Abend aus, ohne dass jemand ihn
     // absagt.
     MeetingCancellationService,
+    // Und ebenso: wer wegen Urlaubs ausfällt, gibt Gastgeber und Musik frei.
+    RoleReleaseService,
   ],
 })
 export class MeetingModule {}

@@ -10,6 +10,7 @@ import {
   TopicStatus,
 } from '../../generated/prisma/enums';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
+import { AvailabilityService } from '../role-suggestion/availability.service';
 import { toUtcDate } from '../meeting/meeting-schedule';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
@@ -35,6 +36,7 @@ export class TopicService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly roleAssignments: RoleAssignmentNotifier,
+    private readonly availability: AvailabilityService,
   ) {}
 
   async findAll(hauskreisId: string, query: ListTopicsQueryDto) {
@@ -135,6 +137,26 @@ export class TopicService {
         })
       : [];
 
+    const arriving = dto.responsiblePersonIds?.filter(
+      (personId) => !before.some((row) => row.personId === personId),
+    );
+
+    // Geprüft wird gegen den **nächsten kommenden** Abend des Themas — denselben,
+    // für den auch die Nachricht rausgeht. Ein Thema zieht sich über mehrere
+    // Abende; an jedem einzelnen zu prüfen hieße, eine Vorbereitung an einer
+    // Absage für irgendeinen davon scheitern zu lassen.
+    if (arriving && arriving.length > 0) {
+      const meeting = await this.nextMeetingOf(hauskreisId, id);
+
+      if (meeting) {
+        await this.availability.assertAvailable(
+          hauskreisId,
+          meeting.id,
+          arriving,
+        );
+      }
+    }
+
     const updated = await updateWithVersionCheck({
       condition,
       update: async (versionConstraint) => {
@@ -160,12 +182,11 @@ export class TopicService {
       notFoundMessage: `Topic ${id} not found`,
     });
 
-    if (dto.responsiblePersonIds) {
-      const known = new Set(before.map((row) => row.personId));
+    if (arriving) {
       await this.announceNewResponsibles(
         hauskreisId,
         id,
-        dto.responsiblePersonIds.filter((personId) => !known.has(personId)),
+        arriving,
         actorPersonId,
       );
     }
@@ -187,16 +208,7 @@ export class TopicService {
   ): Promise<void> {
     if (personIds.length === 0) return;
 
-    const meeting = await this.prisma.meeting.findFirst({
-      where: {
-        hauskreisId,
-        topicId,
-        date: { gte: toUtcDate(new Date()) },
-        status: { not: MeetingStatus.CANCELLED },
-      },
-      orderBy: { date: 'asc' },
-      select: { id: true },
-    });
+    const meeting = await this.nextMeetingOf(hauskreisId, topicId);
 
     if (!meeting) return;
 
@@ -206,6 +218,24 @@ export class TopicService {
       personIds,
       actorPersonId,
     );
+  }
+
+  /**
+   * Der nächste Abend, an dem dieses Thema dran ist. Der Bezugspunkt für alles,
+   * was ein Thema mit einem einzelnen Abend zu tun hat — Nachricht wie
+   * Anwesenheitsprüfung.
+   */
+  private nextMeetingOf(hauskreisId: string, topicId: string) {
+    return this.prisma.meeting.findFirst({
+      where: {
+        hauskreisId,
+        topicId,
+        date: { gte: toUtcDate(new Date()) },
+        status: { not: MeetingStatus.CANCELLED },
+      },
+      orderBy: { date: 'asc' },
+      select: { id: true },
+    });
   }
 
   async remove(hauskreisId: string, id: string) {
