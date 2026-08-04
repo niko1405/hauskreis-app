@@ -9,6 +9,7 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 type PersonDelegate = {
   findUnique: jest.Mock;
   findFirst: jest.Mock;
+  findMany: jest.Mock;
   update: jest.Mock;
   create: jest.Mock;
 };
@@ -17,12 +18,14 @@ function setup() {
   const person: PersonDelegate = {
     findUnique: jest.fn(),
     findFirst: jest.fn(),
+    findMany: jest.fn().mockResolvedValue([]),
     update: jest.fn(),
     create: jest.fn(),
   };
   const keycloakAdmin = {
     inviteUser: jest.fn(),
     deleteUser: jest.fn(),
+    deleteUserByEmail: jest.fn(),
   };
   // Zieht sonst den Namen einer Wohnung nach; hier interessiert nur, dass es
   // aufgerufen werden *kann*.
@@ -62,21 +65,40 @@ describe('PersonService.resolveForUser', () => {
   it('links an unlinked person by email on first login', async () => {
     const { service, person } = setup();
     person.findUnique.mockResolvedValue(null);
-    person.findFirst.mockResolvedValue({ id: 'p2', keycloakUserId: null });
+    person.findMany.mockResolvedValue([{ id: 'p2' }]);
     person.update.mockResolvedValue({ id: 'p2', keycloakUserId: 'kc-123' });
 
     await expect(service.resolveForUser(user)).resolves.toEqual({
       id: 'p2',
       keycloakUserId: 'kc-123',
     });
-    expect(person.findFirst).toHaveBeenCalledWith({
-      where: { email: 'lea@example.com', keycloakUserId: null },
+    // `active: true` schließt aus, was jemand verlassen hat — sonst holte der
+    // nächste Login ihn dorthin zurück.
+    expect(person.findMany).toHaveBeenCalledWith({
+      where: { email: 'lea@example.com', keycloakUserId: null, active: true },
+      select: { id: true },
     });
     expect(person.update).toHaveBeenCalledWith({
       where: { id: 'p2' },
       // Der erste Login ist der Moment, in dem die Einladung angenommen ist.
       data: { keycloakUserId: 'kc-123', acceptedAt: expect.any(Date) },
     });
+  });
+
+  /**
+   * Sonst entschiede die Reihenfolge, in der Postgres die Zeilen zurückgibt,
+   * in welchem Hauskreis jemand landet. Das Frontend zeigt stattdessen die
+   * offenen Einladungen zur Auswahl.
+   */
+  it('entscheidet bei mehreren offenen Einladungen nicht selbst', async () => {
+    const { service, person } = setup();
+    person.findUnique.mockResolvedValue(null);
+    person.findMany.mockResolvedValue([{ id: 'p2' }, { id: 'p3' }]);
+
+    await expect(service.resolveForUser(user)).rejects.toThrow(
+      NotFoundException,
+    );
+    expect(person.update).not.toHaveBeenCalled();
   });
 
   it('marks an invited person as arrived on their first login', async () => {
@@ -116,7 +138,7 @@ describe('PersonService.resolveForUser', () => {
   it('throws when no person matches the email', async () => {
     const { service, person } = setup();
     person.findUnique.mockResolvedValue(null);
-    person.findFirst.mockResolvedValue(null);
+    person.findMany.mockResolvedValue([]);
 
     await expect(service.resolveForUser(user)).rejects.toThrow(
       NotFoundException,
@@ -130,29 +152,71 @@ describe('PersonService.resolveForUser', () => {
     await expect(
       service.resolveForUser({ keycloakUserId: 'kc-9', roles: [] }),
     ).rejects.toThrow(NotFoundException);
-    expect(person.findFirst).not.toHaveBeenCalled();
+    expect(person.findMany).not.toHaveBeenCalled();
   });
 });
 
 describe('PersonService.invite', () => {
+  const invitation = {
+    name: 'Lea',
+    email: 'lea@example.com',
+    role: 'member' as const,
+  };
+
   it('rolls the Keycloak account back when the local insert fails', async () => {
     const { service, person, keycloakAdmin } = setup();
     keycloakAdmin.inviteUser.mockResolvedValue({
-      keycloakUserId: 'kc-new',
+      created: true,
       invitationEmailSent: true,
     });
     person.create.mockRejectedValue(new Error('duplicate email'));
 
-    await expect(
-      service.invite('hk-1', {
+    await expect(service.invite('hk-1', invitation)).rejects.toThrow(
+      'duplicate email',
+    );
+
+    expect(keycloakAdmin.deleteUserByEmail).toHaveBeenCalledWith(
+      'lea@example.com',
+    );
+  });
+
+  /**
+   * Sonst nähme ein misslungener Versuch, jemanden einzuladen, einem Menschen
+   * den Zugang zu dem Hauskreis weg, in dem er längst ist.
+   */
+  it('lässt ein Konto stehen, das es vorher schon gab', async () => {
+    const { service, person, keycloakAdmin } = setup();
+    keycloakAdmin.inviteUser.mockResolvedValue({
+      created: false,
+      invitationEmailSent: false,
+    });
+    person.create.mockRejectedValue(new Error('duplicate email'));
+
+    await expect(service.invite('hk-1', invitation)).rejects.toThrow(
+      'duplicate email',
+    );
+
+    expect(keycloakAdmin.deleteUserByEmail).not.toHaveBeenCalled();
+  });
+
+  /** Eine Einladung nimmt niemandem seine bestehende Mitgliedschaft weg. */
+  it('legt die Person ohne Keycloak-Verknüpfung an', async () => {
+    const { service, person, keycloakAdmin } = setup();
+    keycloakAdmin.inviteUser.mockResolvedValue({
+      created: true,
+      invitationEmailSent: true,
+    });
+    person.create.mockResolvedValue({ id: 'p9' });
+
+    await service.invite('hk-1', { ...invitation, role: 'admin' });
+
+    expect(person.create).toHaveBeenCalledWith({
+      data: {
+        hauskreisId: 'hk-1',
         name: 'Lea',
         email: 'lea@example.com',
-        role: 'member',
-        playsInstrument: false,
-        canHost: true,
-      }),
-    ).rejects.toThrow('duplicate email');
-
-    expect(keycloakAdmin.deleteUser).toHaveBeenCalledWith('kc-new');
+        role: 'ADMIN',
+      },
+    });
   });
 });

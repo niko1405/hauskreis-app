@@ -8,7 +8,8 @@ import { AbsenceSyncService } from './absence-sync.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
 import { toUtcDate } from '../meeting/meeting-schedule';
-import { ROLE_ADMIN, type AuthenticatedUser } from '../auth/auth.types';
+import type { HauskreisMembership } from '../auth/auth.types';
+import { PersonRole } from '../../generated/prisma/enums';
 import type { IfMatchCondition } from '../common/http/etag';
 import type {
   CreateAbsenceDto,
@@ -180,10 +181,18 @@ export class AbsenceService {
   }
 }
 
-/** The two facts every write needs about the caller. */
-export function actorFrom(
-  user: AuthenticatedUser,
-  person: { id: string },
-): { personId: string; isAdmin: boolean } {
-  return { personId: person.id, isAdmin: user.roles.includes(ROLE_ADMIN) };
+/**
+ * The two facts every write needs about the caller.
+ *
+ * Kommt jetzt aus der Mitgliedschaft statt aus einer Realm-Rolle: „Admin" gilt
+ * pro Hauskreis, nicht überall.
+ */
+export function actorFrom(membership: HauskreisMembership): {
+  personId: string;
+  isAdmin: boolean;
+} {
+  return {
+    personId: membership.id,
+    isAdmin: membership.role === PersonRole.ADMIN,
+  };
 }

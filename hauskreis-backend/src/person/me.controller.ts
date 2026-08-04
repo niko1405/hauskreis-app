@@ -27,19 +27,21 @@ export class MeController {
   constructor(private readonly personService: PersonService) {}
 
   /**
-   * Wer bin ich — die eigene Person plus die Rollen aus dem Token.
+   * Wer bin ich.
    *
    * `resolveForUser` gibt die vollständige Zeile zurück, also auch die
    * `keycloakUserId`. Das Antwort-Schema schneidet sie weg; ohne es stand sie
    * bis hierher in der Antwort, obwohl `…/people` sie längst zurückhielt.
+   *
+   * Die Rollen aus dem Token stehen nicht mehr dabei: ob jemand Admin ist,
+   * hängt am Hauskreis und steht als `role` an der Person selbst.
    */
   @Get()
   @ApiZodResponse(MeResponseDto, {
-    description: 'Die eigene Person samt Realm-Rollen',
+    description: 'Die eigene Person samt Rolle in ihrem Hauskreis',
   })
-  async me(@CurrentUser() user: AuthenticatedUser) {
-    const person = await this.personService.resolveForUser(user);
-    return { ...person, roles: user.roles };
+  me(@CurrentUser() user: AuthenticatedUser) {
+    return this.personService.resolveForUser(user);
   }
 
   /**

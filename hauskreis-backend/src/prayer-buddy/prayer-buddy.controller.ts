@@ -19,8 +19,8 @@ import {
 } from './dto/prayer-buddy.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { ROLE_ADMIN, type AuthenticatedUser } from '../auth/auth.types';
-import { Roles } from '../auth/roles.decorator';
+import type { AuthenticatedUser } from '../auth/auth.types';
+import { HauskreisAdmin } from '../auth/hauskreis-admin.decorator';
 import { IfMatch } from '../common/http/if-match.decorator';
 import type { IfMatchCondition } from '../common/http/etag';
 import {
@@ -77,7 +77,7 @@ export class PrayerBuddyController {
     description: 'Gilt ab der naechsten Rotation, nicht rueckwirkend',
   })
   @ApiConditionalWrite()
-  @Roles(ROLE_ADMIN)
+  @HauskreisAdmin()
   async updateConfig(
     @Param() params: HauskreisParamsDto,
     @Body() dto: UpdateCycleConfigDto,
@@ -101,7 +101,7 @@ export class PrayerBuddyController {
    */
   @Post('rotate')
   @ApiZodResponse(RotationResultResponseDto)
-  @Roles(ROLE_ADMIN)
+  @HauskreisAdmin()
   @HttpCode(HttpStatus.OK)
   rotate(@Param() params: HauskreisParamsDto, @Body() dto: RotateDto) {
     return this.generator.rotateNow(params.hauskreisId, {
@@ -117,7 +117,7 @@ export class PrayerBuddyController {
    */
   @Post('plan')
   @ApiZodResponse(PlanningResultResponseDto, { status: 201 })
-  @Roles(ROLE_ADMIN)
+  @HauskreisAdmin()
   plan(@Param() params: HauskreisParamsDto) {
     return this.generator.ensureRoundsPlanned(params.hauskreisId);
   }

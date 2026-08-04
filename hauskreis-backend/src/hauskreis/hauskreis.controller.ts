@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { HauskreisService } from './hauskreis.service';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/auth.types';
 import { CreateHauskreisDto, HauskreisParamsDto } from './dto/hauskreis.dto';
 import { ApiZodResponse } from '../common/http/api-response.decorator';
 import {
@@ -12,9 +14,11 @@ export class HauskreisController {
   constructor(private readonly hauskreisService: HauskreisService) {}
 
   @Get()
-  @ApiZodResponse(HauskreisListResponseDto)
-  findAll() {
-    return this.hauskreisService.findAll();
+  @ApiZodResponse(HauskreisListResponseDto, {
+    description: 'Nur die eigenen — praktisch genau einer',
+  })
+  findMine(@CurrentUser() user: AuthenticatedUser) {
+    return this.hauskreisService.findMine(user.keycloakUserId);
   }
 
   @Get(':hauskreisId')

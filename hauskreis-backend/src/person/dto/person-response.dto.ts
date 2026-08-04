@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
+import { PersonRole } from '../../../generated/prisma/enums';
 import { isoDateOut, isoDateTimeOut } from '../../common/dto/response';
 
 /**
@@ -23,6 +24,10 @@ export const personResponseSchema = z.object({
   birthdate: isoDateOut.nullable(),
   playsInstrument: z.boolean(),
   canHost: z.boolean(),
+  /// Was diese Person **in diesem Hauskreis** darf. Vorher war „Admin" eine
+  /// Realm-Rolle und galt überall; wer sich einen eigenen Hauskreis anlegt,
+  /// ist dort Admin und im alten Mitglied.
+  role: z.enum(PersonRole),
   /// Das Zuhause, das diese Person in die Host-Rotation einbringt. `null` heißt
   /// „bringt keines ein" — alle anderen Rollen bleiben davon unberührt.
   locationId: z.uuid().nullable(),
@@ -51,9 +56,11 @@ export const invitedPersonResponseSchema = personResponseSchema.extend({
  * damit das Frontend nicht selbst das JWT auseinandernehmen muss, um zu wissen,
  * ob es Admin-Bedienelemente zeigen darf.
  */
-export const meResponseSchema = personResponseSchema.extend({
-  roles: z.array(z.string()),
-});
+/**
+ * `GET /api/me`. Ohne die Realm-Rollen aus dem Token: „Admin" steht jetzt als
+ * `role` an der Person und gilt nur für ihren Hauskreis.
+ */
+export const meResponseSchema = personResponseSchema;
 
 /**
  * `PATCH /api/me/email` — die geänderte Person plus die Frage, ob Keycloak

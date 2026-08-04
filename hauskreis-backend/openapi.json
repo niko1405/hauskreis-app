@@ -64,11 +64,11 @@
     },
     "/api/hauskreise": {
       "get": {
-        "operationId": "HauskreisController_findAll",
+        "operationId": "HauskreisController_findMine",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Nur die eigenen — praktisch genau einer",
             "content": {
               "application/json": {
                 "schema": {
@@ -759,7 +759,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Die eigene Person samt Realm-Rollen",
+            "description": "Die eigene Person samt Rolle in ihrem Hauskreis",
             "content": {
               "application/json": {
                 "schema": {
@@ -6418,6 +6418,13 @@
             "canHost": {
               "type": "boolean"
             },
+            "role": {
+              "type": "string",
+              "enum": [
+                "MEMBER",
+                "ADMIN"
+              ]
+            },
             "locationId": {
               "type": "string",
               "format": "uuid",
@@ -6452,6 +6459,7 @@
             "birthdate",
             "playsInstrument",
             "canHost",
+            "role",
             "locationId",
             "active",
             "acceptedAt",
@@ -6494,6 +6502,13 @@
           "canHost": {
             "type": "boolean"
           },
+          "role": {
+            "type": "string",
+            "enum": [
+              "MEMBER",
+              "ADMIN"
+            ]
+          },
           "locationId": {
             "type": "string",
             "format": "uuid",
@@ -6528,6 +6543,7 @@
           "birthdate",
           "playsInstrument",
           "canHost",
+          "role",
           "locationId",
           "active",
           "acceptedAt",
@@ -6633,6 +6649,13 @@
           "canHost": {
             "type": "boolean"
           },
+          "role": {
+            "type": "string",
+            "enum": [
+              "MEMBER",
+              "ADMIN"
+            ]
+          },
           "locationId": {
             "type": "string",
             "format": "uuid",
@@ -6670,6 +6693,7 @@
           "birthdate",
           "playsInstrument",
           "canHost",
+          "role",
           "locationId",
           "active",
           "acceptedAt",
@@ -6749,6 +6773,13 @@
           "canHost": {
             "type": "boolean"
           },
+          "role": {
+            "type": "string",
+            "enum": [
+              "MEMBER",
+              "ADMIN"
+            ]
+          },
           "locationId": {
             "type": "string",
             "format": "uuid",
@@ -6773,12 +6804,6 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
-          },
-          "roles": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
           }
         },
         "required": [
@@ -6789,12 +6814,12 @@
           "birthdate",
           "playsInstrument",
           "canHost",
+          "role",
           "locationId",
           "active",
           "acceptedAt",
           "createdAt",
-          "version",
-          "roles"
+          "version"
         ],
         "additionalProperties": false
       },
@@ -6959,6 +6984,13 @@
           "canHost": {
             "type": "boolean"
           },
+          "role": {
+            "type": "string",
+            "enum": [
+              "MEMBER",
+              "ADMIN"
+            ]
+          },
           "locationId": {
             "type": "string",
             "format": "uuid",
@@ -6996,6 +7028,7 @@
           "birthdate",
           "playsInstrument",
           "canHost",
+          "role",
           "locationId",
           "active",
           "acceptedAt",

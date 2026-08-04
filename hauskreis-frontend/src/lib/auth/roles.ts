@@ -1,21 +1,20 @@
 /**
- * Rollen. Der Realm kennt genau zwei: `member` und `admin`.
+ * Rollen.
  *
- * Woran man erkennt, ob jemand Admin ist: an `roles` aus `GET /api/me`. Das
- * JWT selbst wird im Frontend nie auseinandergenommen.
+ * „Admin" gilt **pro Hauskreis** und steht als `role` an der eigenen Person
+ * (`GET /api/me`). Vorher war es eine Realm-Rolle im Token und galt überall —
+ * was spätestens dann falsch ist, wenn sich jemand einen eigenen Hauskreis
+ * anlegt und im alten Mitglied bleibt.
  */
 import type { Me } from '../api/types';
 
-export const ROLE_ADMIN = 'admin';
-export const ROLE_MEMBER = 'member';
-
 export function isAdmin(me: Me | undefined): boolean {
-  return me?.roles.includes(ROLE_ADMIN) ?? false;
+  return me?.role === 'ADMIN';
 }
 
 /**
  * Die Routen, die der Server nur Admins erlaubt. Sie stehen hier, weil
- * `openapi.json` sie **nicht** markiert — `@Roles(...)` hinterlässt keine
+ * `openapi.json` sie **nicht** markiert — `@HauskreisAdmin()` hinterlässt keine
  * Spur in der Spec. Die Liste dient dazu, Bedienelemente gar nicht erst
  * anzuzeigen; die Durchsetzung bleibt beim Server.
  */

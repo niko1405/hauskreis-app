@@ -35,6 +35,19 @@ enum MeetingStatus {
   @@map("meeting_status")
 }
 
+/// Was jemand **in diesem Hauskreis** darf.
+///
+/// Bis eben war „Admin" eine Realm-Rolle in Keycloak und galt damit überall.
+/// Sobald sich jemand einen eigenen Hauskreis anlegt, stimmt das nicht mehr:
+/// er ist dort Admin und im alten Mitglied. Die Rolle gehört deshalb an die
+/// Mitgliedschaft, nicht an den Menschen.
+enum PersonRole {
+  MEMBER
+  ADMIN
+
+  @@map("person_role")
+}
+
 /// Die drei Aufgaben, die an einem Abend vergeben werden.
 ///
 /// Bis eben nur ein TypeScript-Objekt in `role-assignment.types.ts`. Seit die
@@ -140,9 +153,18 @@ model Hauskreis {
 model Person {
   id              String    @id @default(uuid()) @db.Uuid
   hauskreisId     String    @map("hauskreis_id") @db.Uuid
+  /// **Global** eindeutig, und das ist die Regel, nicht ein Hindernis: ein
+  /// Mensch gehört zu genau einem Hauskreis. Ein Wechsel ist ein Umzug.
+  ///
+  /// Wer geht, gibt diesen Platz wieder frei (`null`) und wird `active = false`
+  /// — die Zeile bleibt, damit vergangene Abende weiter zeigen, wer gehostet
+  /// hat. Eine offene Einladung hat aus demselben Grund noch keine Id: sie
+  /// nimmt niemandem seine Mitgliedschaft weg, bis sie angenommen wird.
   keycloakUserId  String?   @unique @map("keycloak_user_id")
   name            String
   email           String
+  /// Gilt nur hier. Siehe `PersonRole`.
+  role            PersonRole @default(MEMBER)
   birthdate       DateTime? @db.Date
   playsInstrument Boolean   @default(false) @map("plays_instrument")
   canHost         Boolean   @default(true) @map("can_host")

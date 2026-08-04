@@ -6,8 +6,20 @@ import type { CreateHauskreisDto } from './dto/hauskreis.dto';
 export class HauskreisService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.hauskreis.findMany({ orderBy: { name: 'asc' } });
+  /**
+   * Nur die eigenen. Vorher gab diese Route **alle** Hauskreise samt Ids
+   * heraus — und weil nichts prüfte, ob man dazugehört, war das ein
+   * Inhaltsverzeichnis für fremde Gruppen.
+   *
+   * Praktisch ist es genau einer: ein Mensch gehört zu einem Hauskreis. Die
+   * Liste bleibt trotzdem eine Liste, damit der leere Fall („noch nirgends
+   * dabei") kein Sonderweg ist.
+   */
+  findMine(keycloakUserId: string) {
+    return this.prisma.hauskreis.findMany({
+      where: { people: { some: { keycloakUserId, active: true } } },
+      orderBy: { name: 'asc' },
+    });
   }
 
   async findOne(id: string) {

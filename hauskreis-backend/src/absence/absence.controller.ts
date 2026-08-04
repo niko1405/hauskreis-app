@@ -20,9 +20,9 @@ import {
   UpdateAbsenceDto,
 } from './dto/absence.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
-import { CurrentUser } from '../auth/current-user.decorator';
-import { ROLE_ADMIN, type AuthenticatedUser } from '../auth/auth.types';
-import { Roles } from '../auth/roles.decorator';
+import { CurrentMembership } from '../auth/current-membership.decorator';
+import type { HauskreisMembership } from '../auth/auth.types';
+import { HauskreisAdmin } from '../auth/hauskreis-admin.decorator';
 import { IfMatch } from '../common/http/if-match.decorator';
 import type { IfMatchCondition } from '../common/http/etag';
 import {
@@ -66,15 +66,9 @@ export class AbsenceController {
   async create(
     @Param() params: HauskreisParamsDto,
     @Body() dto: CreateAbsenceDto,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentMembership() membership: HauskreisMembership,
   ) {
-    const person = await this.people.resolveForUser(user);
-
-    return this.absences.create(
-      params.hauskreisId,
-      dto,
-      actorFrom(user, person),
-    );
+    return this.absences.create(params.hauskreisId, dto, actorFrom(membership));
   }
 
   @Patch(':id')
@@ -83,16 +77,14 @@ export class AbsenceController {
   async update(
     @Param() params: AbsenceParamsDto,
     @Body() dto: UpdateAbsenceDto,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentMembership() membership: HauskreisMembership,
     @IfMatch() ifMatch?: IfMatchCondition,
   ) {
-    const person = await this.people.resolveForUser(user);
-
     return this.absences.update(
       params.hauskreisId,
       params.id,
       dto,
-      actorFrom(user, person),
+      actorFrom(membership),
       ifMatch,
     );
   }
@@ -102,14 +94,12 @@ export class AbsenceController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param() params: AbsenceParamsDto,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentMembership() membership: HauskreisMembership,
   ) {
-    const person = await this.people.resolveForUser(user);
-
     await this.absences.remove(
       params.hauskreisId,
       params.id,
-      actorFrom(user, person),
+      actorFrom(membership),
     );
   }
 
@@ -122,7 +112,7 @@ export class AbsenceController {
   @ApiZodResponse(SyncResultResponseDto, {
     description: 'Gleicht die abgeleiteten Absagen an die Zeitraeume an',
   })
-  @Roles(ROLE_ADMIN)
+  @HauskreisAdmin()
   @HttpCode(HttpStatus.OK)
   runSync(@Param() params: HauskreisParamsDto) {
     return this.sync.syncAll(params.hauskreisId);

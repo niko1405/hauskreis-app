@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PersonRole } from '../../generated/prisma/enums';
 import { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import { LocationService } from '../location/location.service';
 import type { AuthenticatedUser } from '../auth/auth.types';
@@ -173,8 +174,8 @@ export class PersonService {
       where: { id, hauskreisId },
       select: {
         id: true,
+        email: true,
         locationId: true,
-        keycloakUserId: true,
         acceptedAt: true,
       },
     });
@@ -186,8 +187,16 @@ export class PersonService {
     await this.prisma.person.delete({ where: { id } });
     await this.syncHomes(person.locationId);
 
-    if (person.acceptedAt === null && person.keycloakUserId) {
-      await this.keycloakAdmin.deleteUser(person.keycloakUserId);
+    // Das Konto nur löschen, wenn diese Einladung die einzige Spur war. Wer
+    // die App schon in einem anderen Hauskreis benutzt, verliert sonst durch
+    // eine zurückgezogene Einladung seinen Zugang.
+    if (person.acceptedAt === null) {
+      const elsewhere = await this.prisma.person.count({
+        where: { email: person.email },
+      });
+      if (elsewhere === 0) {
+        await this.keycloakAdmin.deleteUserByEmail(person.email);
+      }
     }
   }
 
@@ -220,26 +229,31 @@ export class PersonService {
    * never leaves an orphaned account behind.
    */
   async invite(hauskreisId: string, dto: InvitePersonDto) {
-    const { keycloakUserId, invitationEmailSent } =
+    const { created, invitationEmailSent } =
       await this.keycloakAdmin.inviteUser({
         email: dto.email,
         name: dto.name,
-        role: dto.role,
       });
 
     try {
+      // **Ohne `keycloakUserId`.** Eine Einladung nimmt niemandem seine
+      // bestehende Mitgliedschaft weg — sie ist ein Angebot, bis der Mensch
+      // sie annimmt. Verknüpft wird beim ersten Anmelden (`resolveForUser`)
+      // oder ausdrücklich über `POST /api/me/invitations/{id}/accept`.
       const person = await this.prisma.person.create({
         data: {
           hauskreisId,
-          keycloakUserId,
           name: dto.name,
           email: dto.email,
+          role: dto.role === 'admin' ? PersonRole.ADMIN : PersonRole.MEMBER,
         },
       });
 
       return { ...person, invitationEmailSent };
     } catch (error) {
-      await this.keycloakAdmin.deleteUser(keycloakUserId);
+      // Nur aufräumen, was diese Einladung selbst angelegt hat: ein Konto, das
+      // vorher schon da war, gehört einem Menschen, der die App benutzt.
+      if (created) await this.keycloakAdmin.deleteUserByEmail(dto.email);
       throw error;
     }
   }
@@ -405,18 +419,32 @@ export class PersonService {
       );
     }
 
-    const unlinked = await this.prisma.person.findFirst({
-      where: { email: user.email, keycloakUserId: null },
+    // Offene Einladungen: Zeilen mit dieser Adresse, die noch niemandem
+    // gehören. `active: true` schließt aus, was jemand verlassen hat — sonst
+    // holte der nächste Login ihn in den Hauskreis zurück, aus dem er gerade
+    // gegangen ist.
+    const invitations = await this.prisma.person.findMany({
+      where: { email: user.email, keycloakUserId: null, active: true },
+      select: { id: true },
     });
 
-    if (!unlinked) {
+    if (invitations.length === 0) {
       throw new NotFoundException(
         `No person record found for ${user.email}. Ask an admin to invite you.`,
       );
     }
 
+    // Mehr als eine: dann entscheidet ein Mensch, nicht die Reihenfolge, in
+    // der Postgres die Zeilen zurückgibt. Das Frontend zeigt dafür die
+    // Einladungen aus `GET /api/me/invitations` zur Auswahl.
+    if (invitations.length > 1) {
+      throw new NotFoundException(
+        `Mehrere offene Einladungen für ${user.email}. Wähle eine aus.`,
+      );
+    }
+
     return this.prisma.person.update({
-      where: { id: unlinked.id },
+      where: { id: invitations[0]!.id },
       data: { keycloakUserId: user.keycloakUserId, acceptedAt: new Date() },
     });
   }

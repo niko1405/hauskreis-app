@@ -13,7 +13,11 @@ interface TokenResponse {
 }
 
 export interface InviteResult {
-  keycloakUserId: string;
+  /**
+   * Ob für diese Einladung ein Konto entstanden ist. `false` heißt: es gab
+   * schon eines — dann darf ein Rückzieher es auch nicht löschen.
+   */
+  created: boolean;
   /** False when Keycloak has no SMTP configured (common in local dev). */
   invitationEmailSent: boolean;
 }
@@ -36,16 +40,25 @@ export class KeycloakAdminService {
     this.realm = this.config.get('KEYCLOAK_REALM');
   }
 
+  /**
+   * Legt das Konto an — oder benutzt das, das schon da ist.
+   *
+   * Vorher warf diese Stelle einen `409`, sobald es ein Konto mit dieser
+   * Adresse gab. Damit war jede Einladung an jemanden, der die App bereits
+   * benutzt, eine Sackgasse: genau der Fall „wechsel doch in unseren
+   * Hauskreis". Ein bestehendes Konto bekommt deshalb keine Einrichtungsmail
+   * mehr (Passwort und Adresse stehen schon) und wird schlicht wiederverwendet.
+   *
+   * Eine Rolle wird hier nicht mehr vergeben. „Admin" gilt pro Hauskreis und
+   * steht an der `Person`, nicht am Konto.
+   */
   async inviteUser(params: {
     email: string;
     name: string;
-    role: string;
   }): Promise<InviteResult> {
     const existing = await this.findUserByEmail(params.email);
     if (existing) {
-      throw new ConflictException(
-        `A Keycloak user with email ${params.email} already exists`,
-      );
+      return { created: false, invitationEmailSent: false };
     }
 
     const [firstName, ...rest] = params.name.trim().split(/\s+/);
@@ -74,10 +87,9 @@ export class KeycloakAdminService {
     // Anything past this point must clean up the account it just created,
     // otherwise a partial failure leaves an orphan that blocks re-inviting.
     try {
-      await this.assignRealmRole(created.id, params.role);
       const invitationEmailSent = await this.sendInvitationEmail(created.id);
 
-      return { keycloakUserId: created.id, invitationEmailSent };
+      return { created: true, invitationEmailSent };
     } catch (error) {
       await this.deleteUser(created.id).catch(() =>
         this.logger.error(
@@ -86,6 +98,12 @@ export class KeycloakAdminService {
       );
       throw error;
     }
+  }
+
+  /** Räumt ein Konto weg, von dem nur die Adresse bekannt ist. */
+  async deleteUserByEmail(email: string): Promise<void> {
+    const user = await this.findUserByEmail(email);
+    if (user) await this.deleteUser(user.id);
   }
 
   async deleteUser(keycloakUserId: string): Promise<void> {

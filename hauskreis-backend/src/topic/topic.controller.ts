@@ -20,10 +20,10 @@ import {
   UpdateTopicDto,
 } from './dto/topic.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
-import { Roles } from '../auth/roles.decorator';
+import { HauskreisAdmin } from '../auth/hauskreis-admin.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { PersonService } from '../person/person.service';
-import { ROLE_ADMIN, type AuthenticatedUser } from '../auth/auth.types';
+import type { AuthenticatedUser } from '../auth/auth.types';
 import { IfMatch } from '../common/http/if-match.decorator';
 import type { IfMatchCondition } from '../common/http/etag';
 import {
@@ -73,7 +73,7 @@ export class TopicController {
   @ApiZodResponse(CarryOverResultResponseDto, {
     description: 'Legt das laufende Thema auf die naechsten Termine',
   })
-  @Roles(ROLE_ADMIN)
+  @HauskreisAdmin()
   @HttpCode(HttpStatus.OK)
   carryOver(@Param() params: HauskreisParamsDto) {
     return this.carryOverService.carryOverFor(params.hauskreisId);
@@ -82,7 +82,7 @@ export class TopicController {
   /** Manual trigger for the daily topic reminders, scoped to this group. */
   @Post('reminders')
   @ApiZodResponse(ReminderRunResultResponseDto)
-  @Roles(ROLE_ADMIN)
+  @HauskreisAdmin()
   @HttpCode(HttpStatus.OK)
   runReminders(@Param() params: HauskreisParamsDto) {
     return this.reminders.sendDueReminders({
@@ -113,7 +113,7 @@ export class TopicController {
 
   @Delete(':id')
   @ApiZodNoContent()
-  @Roles(ROLE_ADMIN)
+  @HauskreisAdmin()
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param() params: TopicParamsDto) {
     return this.topicService.remove(params.hauskreisId, params.id);

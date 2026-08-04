@@ -22,8 +22,7 @@ import {
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/auth.types';
-import { Roles } from '../auth/roles.decorator';
-import { ROLE_ADMIN } from '../auth/auth.types';
+import { HauskreisAdmin } from '../auth/hauskreis-admin.decorator';
 import { IfMatch } from '../common/http/if-match.decorator';
 import type { IfMatchCondition } from '../common/http/etag';
 import {
@@ -46,7 +45,7 @@ export class SongController {
   /** Manual trigger for the daily song reminders, scoped to this group. */
   @Post('reminders')
   @ApiZodResponse(ReminderRunResultResponseDto)
-  @Roles(ROLE_ADMIN)
+  @HauskreisAdmin()
   @HttpCode(HttpStatus.OK)
   runReminders(@Param() params: HauskreisParamsDto) {
     return this.reminders.sendDueReminders({
@@ -97,7 +96,7 @@ export class SongController {
 
   @Delete(':id')
   @ApiZodNoContent()
-  @Roles(ROLE_ADMIN)
+  @HauskreisAdmin()
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param() params: SongParamsDto) {
     return this.songs.remove(params.hauskreisId, params.id);

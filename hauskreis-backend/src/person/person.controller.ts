@@ -17,8 +17,7 @@ import {
   UpdatePersonDto,
 } from './dto/person.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
-import { Roles } from '../auth/roles.decorator';
-import { ROLE_ADMIN } from '../auth/auth.types';
+import { HauskreisAdmin } from '../auth/hauskreis-admin.decorator';
 import { IfMatch } from '../common/http/if-match.decorator';
 import {
   ApiConditionalWrite,
@@ -51,14 +50,14 @@ export class PersonController {
   }
 
   @Post()
-  @Roles(ROLE_ADMIN)
+  @HauskreisAdmin()
   @ApiZodResponse(PersonResponseDto, { status: 201 })
   create(@Param() params: HauskreisParamsDto, @Body() dto: CreatePersonDto) {
     return this.personService.create(params.hauskreisId, dto);
   }
 
   @Post('invite')
-  @Roles(ROLE_ADMIN)
+  @HauskreisAdmin()
   @ApiZodResponse(InvitedPersonResponseDto, {
     status: 201,
     description: 'Legt zuerst das Keycloak-Konto an, dann die Person',
@@ -85,7 +84,7 @@ export class PersonController {
 
   @Delete(':id')
   @ApiZodNoContent()
-  @Roles(ROLE_ADMIN)
+  @HauskreisAdmin()
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param() params: PersonParamsDto) {
     return this.personService.remove(params.hauskreisId, params.id);

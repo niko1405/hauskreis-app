@@ -27,7 +27,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get: operations['HauskreisController_findAll'];
+    get: operations['HauskreisController_findMine'];
     put?: never;
     post: operations['HauskreisController_create'];
     delete?: never;
@@ -852,6 +852,8 @@ export interface components {
       birthdate: string | null;
       playsInstrument: boolean;
       canHost: boolean;
+      /** @enum {string} */
+      role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
       locationId: string | null;
       active: boolean;
@@ -873,6 +875,8 @@ export interface components {
       birthdate: string | null;
       playsInstrument: boolean;
       canHost: boolean;
+      /** @enum {string} */
+      role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
       locationId: string | null;
       active: boolean;
@@ -917,6 +921,8 @@ export interface components {
       birthdate: string | null;
       playsInstrument: boolean;
       canHost: boolean;
+      /** @enum {string} */
+      role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
       locationId: string | null;
       active: boolean;
@@ -953,6 +959,8 @@ export interface components {
       birthdate: string | null;
       playsInstrument: boolean;
       canHost: boolean;
+      /** @enum {string} */
+      role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
       locationId: string | null;
       active: boolean;
@@ -961,7 +969,6 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
       version: number;
-      roles: string[];
     };
     SetHomeDto: {
       address: string;
@@ -1007,6 +1014,8 @@ export interface components {
       birthdate: string | null;
       playsInstrument: boolean;
       canHost: boolean;
+      /** @enum {string} */
+      role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
       locationId: string | null;
       active: boolean;
@@ -2058,7 +2067,7 @@ export interface operations {
       };
     };
   };
-  HauskreisController_findAll: {
+  HauskreisController_findMine: {
     parameters: {
       query?: never;
       header?: never;
@@ -2067,6 +2076,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
+      /** @description Nur die eigenen — praktisch genau einer */
       200: {
         headers: {
           [name: string]: unknown;
@@ -2605,7 +2615,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Die eigene Person samt Realm-Rollen */
+      /** @description Die eigene Person samt Rolle in ihrem Hauskreis */
       200: {
         headers: {
           [name: string]: unknown;
