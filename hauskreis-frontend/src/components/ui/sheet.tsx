@@ -16,12 +16,19 @@ export function Sheet({
   title,
   subtitle,
   children,
+  footer,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   subtitle?: string;
   children: React.ReactNode;
+  /**
+   * Die Knöpfe, die die Entscheidung tragen. Sie stehen außerhalb des
+   * scrollenden Bereichs: bei einem langen Text sonst unter dem Rand — man
+   * müsste erst scrollen, um abbrechen zu können.
+   */
+  footer?: React.ReactNode;
 }) {
   const panel = useRef<HTMLDivElement>(null);
 
@@ -92,6 +99,8 @@ export function Sheet({
             <div className="no-scrollbar flex-1 space-y-6 overflow-y-auto">
               {children}
             </div>
+
+            {footer && <div className="mt-6 shrink-0">{footer}</div>}
           </motion.div>
         </div>
       )}

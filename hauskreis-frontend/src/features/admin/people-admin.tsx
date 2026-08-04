@@ -15,6 +15,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Field, Select, TextInput } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -25,6 +26,7 @@ export function PeopleAdmin() {
   const people = usePeople();
   const remove = useDeletePerson();
   const toast = useToast();
+  const confirm = useConfirm();
   const [inviting, setInviting] = useState(false);
 
   return (
@@ -61,13 +63,25 @@ export function PeopleAdmin() {
                     ? `Einladung an ${person.name} zurückziehen`
                     : `${person.name} entfernen`
                 }
-                onClick={() => {
+                onClick={async () => {
                   const pending = person.acceptedAt === null;
-                  const question = pending
-                    ? `Einladung an ${person.name} zurückziehen? Das Konto wird mit gelöscht, die Adresse ist danach wieder frei.`
-                    : `${person.name} wirklich entfernen?`;
 
-                  if (!window.confirm(question)) return;
+                  const ok = await confirm(
+                    pending
+                      ? {
+                          title: `Einladung an ${person.name} zurückziehen?`,
+                          body: 'Das Konto wird mit gelöscht, die Adresse ist danach wieder frei.',
+                          confirmLabel: 'Zurückziehen',
+                          tone: 'danger',
+                        }
+                      : {
+                          title: `${person.name} entfernen?`,
+                          body: 'Vergangene Abende zeigen weiter, wer gehostet hat — die Person kommt aber aus allen kommenden Planungen heraus.',
+                          confirmLabel: 'Entfernen',
+                          tone: 'danger',
+                        },
+                  );
+                  if (!ok) return;
 
                   remove.mutate(person.id, {
                     onSuccess: () =>

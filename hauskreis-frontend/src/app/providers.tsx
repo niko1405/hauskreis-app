@@ -10,11 +10,14 @@
  *                      dafür den QueryClient, liegt also darunter
  *   HauskreisProvider— fragt selbst die Hauskreis-Liste ab, also darunter
  *   ToastProvider    — nur Anzeige, kommt zuletzt
+ *   ConfirmProvider  — ebenso; liegt innen, damit eine Rückfrage einen Toast
+ *                      auslösen kann und nicht umgekehrt
  */
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { AuthProvider } from 'react-oidc-context';
 import { BOOT_READY_ATTRIBUTE } from '@/components/layout/boot-watchdog';
+import { ConfirmProvider } from '@/components/ui/confirm';
 import { ToastProvider } from '@/components/ui/toast';
 import { createQueryClient } from '@/lib/api/query-client';
 import { AuthBridge } from '@/lib/auth/auth-bridge';
@@ -41,7 +44,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <AuthBridge>
           <HauskreisProvider>
-            <ToastProvider>{children}</ToastProvider>
+            <ToastProvider>
+              <ConfirmProvider>{children}</ConfirmProvider>
+            </ToastProvider>
           </HauskreisProvider>
         </AuthBridge>
       </QueryClientProvider>

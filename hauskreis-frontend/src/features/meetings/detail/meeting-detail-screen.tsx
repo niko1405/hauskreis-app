@@ -38,6 +38,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { InlineEdit, Select, TextInput } from '@/components/ui/field';
 import {
   CardSkeleton,
@@ -135,6 +136,7 @@ function Loaded({
   const locations = useLocations();
   const songLeaders = useSongLeaders(meetingId);
   const roles = useRoleAssignment(meeting);
+  const confirm = useConfirm();
 
   const cancelled = meeting.status === 'CANCELLED';
   const past = isPast(meeting.date);
@@ -167,14 +169,14 @@ function Loaded({
    * fast immer ein Fehlgriff aus dem Archiv heraus — und in den seltenen
    * Fällen, in denen es keiner ist, kostet ein Klick nichts.
    */
-  const openSheet = (role: SheetRole) => {
-    if (
-      past &&
-      !window.confirm(
-        `Dieser Abend ist vorbei. Möchtest du wirklich nachtragen, wer ${ROLE_LABEL[role].toLowerCase()} war?`,
-      )
-    ) {
-      return;
+  const openSheet = async (role: SheetRole) => {
+    if (past) {
+      const ok = await confirm({
+        title: 'Dieser Abend ist vorbei',
+        body: `Möchtest du wirklich nachtragen, wer ${ROLE_LABEL[role].toLowerCase()} war?`,
+        confirmLabel: 'Nachtragen',
+      });
+      if (!ok) return;
     }
     setSheet(role);
   };

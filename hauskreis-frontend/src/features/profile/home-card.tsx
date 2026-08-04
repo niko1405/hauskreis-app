@@ -16,6 +16,7 @@ import { Home, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Field, TextInput } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -40,6 +41,7 @@ export function HomeCard({
   const setHome = useSetHome();
   const clearHome = useClearHome();
   const toast = useToast();
+  const confirm = useConfirm();
 
   const current = home.data?.data;
 
@@ -205,14 +207,15 @@ export function HomeCard({
             size="sm"
             className="w-full"
             loading={clearHome.isPending}
-            onClick={() => {
-              if (
-                !window.confirm(
-                  'Ohne Adresse tauchst du nicht mehr in den Host-Vorschlägen auf. Sicher?',
-                )
-              ) {
-                return;
-              }
+            onClick={async () => {
+              const ok = await confirm({
+                title: 'Wohnung entfernen?',
+                body: 'Ohne Adresse tauchst du nicht mehr in den Host-Vorschlägen auf. Eintragen kannst du sie jederzeit wieder.',
+                confirmLabel: 'Entfernen',
+                tone: 'danger',
+              });
+              if (!ok) return;
+
               clearHome.mutate(undefined, {
                 onSuccess: () => toast.success('Du hostest jetzt nicht mehr.'),
               });

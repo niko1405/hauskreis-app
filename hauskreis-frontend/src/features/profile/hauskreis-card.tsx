@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { DoorOpen, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Select } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast';
@@ -92,6 +93,7 @@ function PendingInvitations({ currentName }: { currentName?: string }) {
   const invitations = useInvitations();
   const accept = useAcceptInvitation();
   const toast = useToast();
+  const confirm = useConfirm();
 
   const open = invitations.data ?? [];
   if (open.length === 0) return null;
@@ -123,14 +125,15 @@ function PendingInvitations({ currentName }: { currentName?: string }) {
             size="sm"
             className="w-full"
             loading={accept.isPending}
-            onClick={() => {
-              if (
-                !window.confirm(
-                  `Zu „${invitation.hauskreis.name}" wechseln? Du verlässt damit deinen jetzigen Hauskreis.`,
-                )
-              ) {
-                return;
-              }
+            onClick={async () => {
+              const ok = await confirm({
+                title: `Zu „${invitation.hauskreis.name}" wechseln?`,
+                body: currentName
+                  ? `Du bist danach nicht mehr bei „${currentName}" dabei. Was du dort beigetragen hast, bleibt im Archiv stehen.`
+                  : 'Du verlässt damit deinen jetzigen Hauskreis. Was du dort beigetragen hast, bleibt im Archiv stehen.',
+                confirmLabel: 'Wechseln',
+              });
+              if (!ok) return;
 
               accept.mutate(
                 { personId: invitation.personId },
@@ -206,6 +209,22 @@ function LeaveSheet({
       onClose={onClose}
       title={`„${name}" verlassen?`}
       subtitle="Deine Einträge bleiben im Archiv stehen"
+      footer={
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
+            Doch nicht
+          </Button>
+          <Button
+            variant="danger"
+            className="flex-1"
+            disabled={successorNeeded && successor === ''}
+            loading={leave.isPending}
+            onClick={submit}
+          >
+            Verlassen
+          </Button>
+        </div>
+      }
     >
       <div className="space-y-4">
         {successorNeeded && (
@@ -228,21 +247,6 @@ function LeaveSheet({
             </Select>
           </div>
         )}
-
-        <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={onClose}>
-            Doch nicht
-          </Button>
-          <Button
-            variant="danger"
-            className="flex-1"
-            disabled={successorNeeded && successor === ''}
-            loading={leave.isPending}
-            onClick={submit}
-          >
-            Verlassen
-          </Button>
-        </div>
       </div>
     </Sheet>
   );

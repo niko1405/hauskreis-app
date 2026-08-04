@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { EmptyState, Skeleton } from '@/components/ui/states';
 import { LocationSheet } from '@/components/domain/location-sheet';
 import { useDeleteLocation, useLocations } from '@/lib/api/hooks';
@@ -85,6 +86,7 @@ export function LocationsCard() {
 
 function LocationRow({ location }: { location: Location }) {
   const remove = useDeleteLocation();
+  const confirm = useConfirm();
   const home = isHome(location);
 
   return (
@@ -121,15 +123,14 @@ function LocationRow({ location }: { location: Location }) {
       {!home && location.active && (
         <IconButton
           label={`${location.name} stilllegen`}
-          onClick={() => {
-            if (
-              !window.confirm(
-                `${location.name} stilllegen? Vergangene Termine behalten ihn.`,
-              )
-            ) {
-              return;
-            }
-            remove.mutate(location.id);
+          onClick={async () => {
+            const ok = await confirm({
+              title: `${location.name} stilllegen?`,
+              body: 'Vergangene Termine behalten ihn. Für kommende Abende wird er nicht mehr vorgeschlagen.',
+              confirmLabel: 'Stilllegen',
+              tone: 'danger',
+            });
+            if (ok) remove.mutate(location.id);
           }}
         >
           <Trash2 size={15} />
