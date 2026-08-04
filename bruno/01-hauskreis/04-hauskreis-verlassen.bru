@@ -1,0 +1,34 @@
+meta {
+  name: Hauskreis verlassen
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/leave
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("verlangt eine Nachfolge von der einzigen Admin-Person", function () {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
+docs {
+  Die Person-Zeile bleibt (`active = false`), damit vergangene Abende weiter
+  zeigen, wer gehostet hat; frei wird nur die `keycloakUserId`.
+
+  Als einzige Admin-Person gibt es einen 400, bis `successorPersonId` dabei
+  steht — das zu verbieten wäre eine Sackgasse. Als letzte Person überhaupt
+  verschwindet der Hauskreis mit.
+}

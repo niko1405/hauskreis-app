@@ -1,0 +1,26 @@
+meta {
+  name: Meine Hauskreise
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/hauskreise
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Nur die eigenen. Vorher gab diese Route **alle** Hauskreise samt Ids heraus —
+  und weil nichts prüfte, ob man dazugehört, war das ein Inhaltsverzeichnis für
+  fremde Gruppen.
+
+  Praktisch ist es genau einer: ein Mensch gehört zu einem Hauskreis. Die Liste
+  bleibt trotzdem eine Liste, damit der leere Fall kein Sonderweg ist.
+}

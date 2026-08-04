@@ -1,0 +1,28 @@
+meta {
+  name: Offene Einladungen
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/me/invitations
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Zeilen mit der eigenen Adresse, die noch niemandem gehören. Sie entstehen
+  beim Einladen und nehmen der bestehenden Mitgliedschaft nichts weg.
+
+  Beantwortbar auch dann, wenn es noch gar keine Person gibt — beim ersten
+  Öffnen ist das der einzige Weg hinein.
+
+  Annehmen: `POST /me/invitations/{personId}/accept`. Das verlässt im selben
+  Zug den bisherigen Hauskreis, deshalb dort ggf. `successorPersonId`.
+}

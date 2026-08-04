@@ -52,6 +52,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/leave': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['HauskreisController_leave'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/me/invitations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['InvitationController_findMine'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/me/invitations/{personId}/accept': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['InvitationController_accept'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/people': {
     parameters: {
       query?: never;
@@ -840,6 +888,51 @@ export interface components {
     CreateHauskreisDto: {
       name: string;
     };
+    LeaveHauskreisDto: {
+      /** Format: uuid */
+      successorPersonId?: string;
+    };
+    LeaveResultResponseDto: {
+      hauskreisDeleted: boolean;
+      /** Format: uuid */
+      successorPersonId: string | null;
+    };
+    InvitationListResponseDto: {
+      /** Format: uuid */
+      personId: string;
+      /** @enum {string} */
+      role: 'MEMBER' | 'ADMIN';
+      /** Format: date-time */
+      invitedAt: string;
+      hauskreis: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+      };
+    }[];
+    MeResponseDto: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      hauskreisId: string;
+      name: string;
+      /** Format: email */
+      email: string;
+      /** Format: date */
+      birthdate: string | null;
+      playsInstrument: boolean;
+      canHost: boolean;
+      /** @enum {string} */
+      role: 'MEMBER' | 'ADMIN';
+      /** Format: uuid */
+      locationId: string | null;
+      active: boolean;
+      /** Format: date-time */
+      acceptedAt: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      version: number;
+    };
     PersonListResponseDto: {
       /** Format: uuid */
       id: string;
@@ -946,29 +1039,6 @@ export interface components {
       /** Format: uuid */
       locationId?: string | null;
       active?: boolean;
-    };
-    MeResponseDto: {
-      /** Format: uuid */
-      id: string;
-      /** Format: uuid */
-      hauskreisId: string;
-      name: string;
-      /** Format: email */
-      email: string;
-      /** Format: date */
-      birthdate: string | null;
-      playsInstrument: boolean;
-      canHost: boolean;
-      /** @enum {string} */
-      role: 'MEMBER' | 'ADMIN';
-      /** Format: uuid */
-      locationId: string | null;
-      active: boolean;
-      /** Format: date-time */
-      acceptedAt: string | null;
-      /** Format: date-time */
-      createdAt: string;
-      version: number;
     };
     SetHomeDto: {
       address: string;
@@ -2136,6 +2206,7 @@ export interface operations {
       };
     };
     responses: {
+      /** @description Legt den Hauskreis an und macht dich dort zum Admin */
       201: {
         headers: {
           [name: string]: unknown;
@@ -2199,6 +2270,186 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['HauskreisResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  HauskreisController_leave: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LeaveHauskreisDto'];
+      };
+    };
+    responses: {
+      /** @description Die Zeile bleibt fürs Archiv, die Mitgliedschaft endet */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LeaveResultResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  InvitationController_findMine: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Was andere Hauskreise dir angeboten haben */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['InvitationListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  InvitationController_accept: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        personId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LeaveHauskreisDto'];
+      };
+    };
+    responses: {
+      /** @description Die neue Mitgliedschaft; die alte ist damit beendet */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MeResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */

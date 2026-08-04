@@ -56,7 +56,12 @@ export class PersonService {
    * „Bei Niko & Chris", obwohl Chris längst woanders wohnt — und bleibt mit
    * ihrem Gewicht in der Host-Rotation, obwohl niemand mehr dort einladen kann.
    */
-  private async syncHomes(...locationIds: (string | null | undefined)[]) {
+  /**
+   * Zieht die Namen der betroffenen Wohnungen nach („Bei Niko & Chris" wird
+   * wieder „Bei Chris"). Öffentlich, weil auch das Verlassen eines Hauskreises
+   * eine Wohnung freigibt.
+   */
+  async syncHomes(...locationIds: (string | null | undefined)[]) {
     const affected = new Set(
       locationIds.filter((id): id is string => typeof id === 'string'),
     );

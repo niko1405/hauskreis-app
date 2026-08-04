@@ -1,0 +1,36 @@
+meta {
+  name: Hauskreis gründen
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/hauskreise
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Hauskreis Nord"
+  }
+}
+
+tests {
+  test("weist ab, solange man noch woanders dabei ist", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+}
+
+docs {
+  Legt Hauskreis **und** die eigene Person mit Admin-Rechten an — vorher
+  entstand hier eine leere Gruppe, die niemand betreten konnte.
+
+  Mit `testadmin` oder `testmember` kommt ein 409: ein Mensch gehört zu genau
+  einem Hauskreis, ein Wechsel ist ein Umzug. Erst `…/leave`, dann klappt es
+  mit 201.
+}
