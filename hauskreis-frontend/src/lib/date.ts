@@ -77,6 +77,15 @@ export function isPast(day: CalendarDay): boolean {
   return daysBetween(today(), day) < 0;
 }
 
+/**
+ * Streng nach heute. Nicht `!isPast(day)` — der heutige Tag ist weder vorbei
+ * noch liegt er vor uns, und genau dieser Unterschied entscheidet, ob sich die
+ * Nachbereitung eines Abends schon eintragen lässt.
+ */
+export function isFuture(day: CalendarDay): boolean {
+  return daysBetween(today(), day) > 0;
+}
+
 export function isToday(day: CalendarDay): boolean {
   return day === today();
 }

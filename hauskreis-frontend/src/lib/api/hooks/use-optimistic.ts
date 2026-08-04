@@ -33,6 +33,18 @@ export type Patch = <T>(
   updater: (previous: T) => T,
 ) => Promise<void>;
 
+/**
+ * Dasselbe für **alle** Einträge unter einem Präfix.
+ *
+ * Nötig, weil die Filter einer Liste im Schlüssel stecken: von der Terminliste
+ * liegen je nach Suchbegriff und „Kommende/Vergangene" mehrere Fassungen im
+ * Cache, und wer in einer davon zusagt, hat es auch in den anderen getan.
+ */
+export type PatchAll = <T>(
+  prefix: QueryKey,
+  updater: (previous: T) => T,
+) => Promise<void>;
+
 export interface OptimisticContext {
   rollback: () => void;
 }
@@ -41,6 +53,7 @@ export interface OptimisticContext {
 export type OptimisticUpdate<TInput> = (
   input: TInput,
   patch: Patch,
+  patchAll: PatchAll,
 ) => void | Promise<void>;
 
 export async function applyOptimistic<TInput>(
@@ -49,6 +62,11 @@ export async function applyOptimistic<TInput>(
   optimistic: OptimisticUpdate<TInput>,
 ): Promise<OptimisticContext> {
   const undo: (() => void)[] = [];
+
+  const write = (key: QueryKey, previous: unknown, next: unknown) => {
+    undo.push(() => queryClient.setQueryData(key, previous));
+    queryClient.setQueryData(key, next);
+  };
 
   const patch: Patch = async (key, updater) => {
     // Ein laufendes GET würde sonst gleich wieder den alten Stand hinschreiben
@@ -60,11 +78,21 @@ export async function applyOptimistic<TInput>(
     // es nichts vorzugreifen und erst recht nichts zurückzunehmen.
     if (previous === undefined) return;
 
-    undo.push(() => queryClient.setQueryData(key, previous));
-    queryClient.setQueryData(key, updater(previous as never));
+    write(key, previous, updater(previous as never));
   };
 
-  await optimistic(input, patch);
+  const patchAll: PatchAll = async (prefix, updater) => {
+    await queryClient.cancelQueries({ queryKey: prefix });
+
+    for (const [key, previous] of queryClient.getQueriesData({
+      queryKey: prefix,
+    })) {
+      if (previous === undefined) continue;
+      write(key, previous, updater(previous as never));
+    }
+  };
+
+  await optimistic(input, patch, patchAll);
 
   return {
     // Rückwärts, damit sich zwei Eingriffe am selben Key nicht in die Quere

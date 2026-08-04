@@ -6,8 +6,8 @@
  */
 import { MapPin, Users } from 'lucide-react';
 import Link from 'next/link';
-import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { useMe, useSetAttendance } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { formatDay, formatRelativeDay, isPast } from '@/lib/date';
 import {
@@ -16,6 +16,7 @@ import {
   meetingHeadline,
 } from '@/lib/meeting';
 import type { MeetingListItem } from '@/lib/api/types';
+import { AttendanceToggle } from './attendance-toggle';
 import { RoleChip } from './role-badge';
 
 export function MeetingCard({
@@ -25,12 +26,21 @@ export function MeetingCard({
   meeting: MeetingListItem;
   onPrefetch?: (meetingId: string) => void;
 }) {
+  const { me } = useMe();
+  const setAttendance = useSetAttendance(meeting.id);
+
   const cancelled = meeting.status === 'CANCELLED';
+  const past = isPast(meeting.date);
   const attending = meeting.attendances.filter(
     (a) => a.status === 'ATTENDING',
   ).length;
   const topicPeople = (meeting.topic?.responsibles ?? []).map((r) => r.person);
   const isWorship = meeting.type === 'LOBPREIS_GEBET';
+
+  const myStatus =
+    meeting.attendances.find((a) => a.personId === me?.id)?.status ?? 'UNKNOWN';
+  // An einem vergangenen oder abgesagten Abend gibt es nichts mehr zuzusagen.
+  const answerable = me !== undefined && !past && !cancelled;
 
   return (
     <Link
@@ -84,19 +94,16 @@ export function MeetingCard({
           </div>
         </div>
 
-        {meeting.host ? (
-          <div className="flex shrink-0 flex-col items-center gap-1">
-            <Avatar person={meeting.host} size="sm" />
-            <span className="text-[9px] font-bold tracking-wider text-stone-400 uppercase">
-              Host
-            </span>
-          </div>
-        ) : (
-          meeting.location?.requiresHost === false && (
-            <span className="shrink-0 text-[10px] text-stone-400 italic">
-              kein Host nötig
-            </span>
-          )
+        {/* Hier stand der Gastgeber-Avatar — und damit doppelt, was in der
+            Fußzeile ohnehin als Rollen-Chip steht. Der Platz gehört jetzt der
+            Frage, die man beim Durchgehen der Liste wirklich hat. */}
+        {answerable && (
+          <AttendanceToggle
+            status={myStatus}
+            onAnswer={(status) =>
+              me && setAttendance.mutate({ personId: me.id, status })
+            }
+          />
         )}
       </div>
 

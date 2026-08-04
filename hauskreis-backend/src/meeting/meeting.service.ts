@@ -169,6 +169,7 @@ export class MeetingService {
     condition?: IfMatchCondition,
   ) {
     const before = await this.findOne(hauskreisId, id);
+    this.assertNotAheadOfTheEvening(before.date, dto);
     await this.assertReferencesBelongToHauskreis(hauskreisId, dto);
     const venue = await this.resolveVenue(hauskreisId, dto, before);
 
@@ -215,6 +216,32 @@ export class MeetingService {
     }
 
     return updated;
+  }
+
+  /**
+   * Zusammenfassung und Actionstep sind **Nachbereitung**.
+   *
+   * Sie beschreiben, was an einem Abend passiert ist — vorher gibt es dazu
+   * nichts zu sagen. Wer sie an einem Termin in sechs Wochen einträgt, hat sich
+   * in der Liste vergriffen; die Oberfläche zeigt die Felder deshalb erst ab
+   * dem Termintag, und hier steht die Regel, die das trägt.
+   *
+   * Der Tag selbst zählt dazu: der Hauskreis ist abends, eingetragen wird
+   * danach — und das ist derselbe Kalendertag.
+   */
+  private assertNotAheadOfTheEvening(
+    meetingDate: Date,
+    dto: Pick<UpdateMeetingDto, 'actionstepText' | 'summaryText'>,
+  ): void {
+    if (dto.actionstepText === undefined && dto.summaryText === undefined) {
+      return;
+    }
+
+    if (toUtcDate(meetingDate) > toUtcDate(new Date())) {
+      throw new BadRequestException(
+        'Zusammenfassung und Actionstep lassen sich erst am Abend selbst eintragen',
+      );
+    }
   }
 
   /**
@@ -416,7 +443,16 @@ export class MeetingService {
     personId: string,
     done: boolean,
   ) {
-    await this.findOne(hauskreisId, id);
+    const meeting = await this.findOne(hauskreisId, id);
+
+    // Einen Actionstep abhaken, den es an einem künftigen Abend noch gar nicht
+    // geben kann, ist immer ein Versehen.
+    if (toUtcDate(meeting.date) > toUtcDate(new Date())) {
+      throw new BadRequestException(
+        'Dieser Abend liegt noch vor uns — abhaken lässt sich der Actionstep erst danach',
+      );
+    }
+
     await this.assertPersonBelongsToHauskreis(hauskreisId, personId);
 
     const key = { meetingId_personId: { meetingId: id, personId } };

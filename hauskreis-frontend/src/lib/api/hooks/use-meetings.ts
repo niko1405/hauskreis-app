@@ -1,16 +1,23 @@
 'use client';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { STALE } from '../cache';
 import type { Resource } from '../client';
 import { meetingsApi } from '../endpoints';
 import type { MeetingListParams } from '../params';
 import type {
+  AttendanceStatus,
   CancelMeetingInput,
   CreateMeetingInput,
   HomeScreen,
   Meeting,
+  MeetingListItem,
+  Page,
   SetAttendanceInput,
   UpdateMeetingInput,
 } from '../types';
@@ -138,20 +145,40 @@ export function useSetAttendance(meetingId: string) {
         keys.meetings.all,
         ...derived,
       ],
-      optimistic: async (input, patch) => {
+      optimistic: async (input, patch, patchAll) => {
+        const answered = (
+          attendances: { personId: string; status: AttendanceStatus }[],
+        ) => [
+          ...attendances.filter((entry) => entry.personId !== input.personId),
+          { personId: input.personId, status: input.status },
+        ];
+
         await patch<Resource<Meeting>>(
           keys.meetings.detail(meetingId),
           (resource) => ({
             ...resource,
             data: {
               ...resource.data,
-              attendances: [
-                ...resource.data.attendances.filter(
-                  (entry) => entry.personId !== input.personId,
-                ),
-                { personId: input.personId, status: input.status },
-              ],
+              attendances: answered(resource.data.attendances),
             },
+          }),
+        );
+
+        // Seit man aus der Liste heraus zusagen kann, muss auch sie sofort
+        // umspringen — und zwar in jeder gefilterten Fassung, die gerade im
+        // Cache liegt.
+        await patchAll<InfiniteData<Page<MeetingListItem>>>(
+          [...keys.meetings.all, 'list'],
+          (cached) => ({
+            ...cached,
+            pages: cached.pages.map((page) => ({
+              ...page,
+              items: page.items.map((item) =>
+                item.id === meetingId
+                  ? { ...item, attendances: answered(item.attendances) }
+                  : item,
+              ),
+            })),
           }),
         );
 

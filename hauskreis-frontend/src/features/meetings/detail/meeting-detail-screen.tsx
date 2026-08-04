@@ -59,6 +59,7 @@ import {
   formatDayFull,
   formatRelativeDay,
   formatWeekday,
+  isFuture,
   isPast,
 } from '@/lib/date';
 import { isSelectableWithoutHost } from '@/lib/location';
@@ -140,6 +141,8 @@ function Loaded({
 
   const cancelled = meeting.status === 'CANCELLED';
   const past = isPast(meeting.date);
+  /** Der Abend liegt noch vor uns — es gibt noch nichts nachzubereiten. */
+  const ahead = isFuture(meeting.date);
 
   /**
    * Ein abgesagter Abend ist kein Entwurf mehr. Vorher hing der Schreibschutz
@@ -351,35 +354,42 @@ function Loaded({
 
         <AttendanceCard meeting={meeting} readOnly={locked} />
 
-        <section>
-          <SectionTitle>Zusammenfassung</SectionTitle>
-          <Card>
-            <InlineEdit
-              label="Zusammenfassung"
-              multiline
-              value={meeting.summaryText}
-              emptyLabel="Noch keine Zusammenfassung — hilft allen, die nicht da waren."
-              saving={update.isPending}
-              onSave={(next) => patch({ summaryText: next })}
-            />
-          </Card>
-        </section>
+        {/* Nachbereitung. Vor dem Abend gibt es dazu nichts zu sagen — die
+            Felder erscheinen erst am Termintag, der Server lehnt es davor
+            ohnehin ab. */}
+        {!ahead && (
+          <>
+            <section>
+              <SectionTitle>Zusammenfassung</SectionTitle>
+              <Card>
+                <InlineEdit
+                  label="Zusammenfassung"
+                  multiline
+                  value={meeting.summaryText}
+                  emptyLabel="Noch keine Zusammenfassung — hilft allen, die nicht da waren."
+                  saving={update.isPending}
+                  onSave={(next) => patch({ summaryText: next })}
+                />
+              </Card>
+            </section>
 
-        <section>
-          <SectionTitle>Actionstep</SectionTitle>
-          <Card className="space-y-4">
-            <InlineEdit
-              label="Actionstep"
-              value={meeting.actionstepText}
-              emptyLabel="Noch kein Actionstep für die Woche"
-              saving={update.isPending}
-              onSave={(next) => patch({ actionstepText: next })}
-            />
-            {meeting.actionstepText && (
-              <ActionstepDoneBlock meeting={meeting} />
-            )}
-          </Card>
-        </section>
+            <section>
+              <SectionTitle>Actionstep</SectionTitle>
+              <Card className="space-y-4">
+                <InlineEdit
+                  label="Actionstep"
+                  value={meeting.actionstepText}
+                  emptyLabel="Noch kein Actionstep für die Woche"
+                  saving={update.isPending}
+                  onSave={(next) => patch({ actionstepText: next })}
+                />
+                {meeting.actionstepText && (
+                  <ActionstepDoneBlock meeting={meeting} />
+                )}
+              </Card>
+            </section>
+          </>
+        )}
       </div>
 
       {!cancelled && <CancelMeetingBlock meeting={meeting} past={past} />}
@@ -429,7 +439,8 @@ function Loaded({
  *
  * Auch an einem vergangenen Abend abhakbar — hier ist „vorbei" gerade kein
  * Grund zu sperren: der Actionstep gilt _nach_ dem Abend, das Nachtragen ist
- * der Normalfall und nicht der Fehlgriff.
+ * der Normalfall und nicht der Fehlgriff. Der Block erscheint deshalb ab dem
+ * Termintag und danach für immer; nur davor gibt es nichts abzuhaken.
  */
 function ActionstepDoneBlock({ meeting }: { meeting: Meeting }) {
   const me = useMe();

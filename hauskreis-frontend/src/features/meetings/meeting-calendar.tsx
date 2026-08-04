@@ -10,13 +10,15 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { IconButton } from '@/components/ui/button';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
-import { useMeetingList } from '@/lib/api/hooks';
+import { AttendanceToggle } from '@/components/domain/attendance-toggle';
+import { useMe, useMeetingList, useSetAttendance } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import {
   addMonths,
   endOfMonth,
   formatDay,
   formatMonth,
+  isPast,
   isToday,
   parseDay,
   startOfMonth,
@@ -25,6 +27,7 @@ import {
   today,
 } from '@/lib/date';
 import { meetingHeadline } from '@/lib/meeting';
+import type { MeetingListItem } from '@/lib/api/types';
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
@@ -126,36 +129,63 @@ export function MeetingCalendar() {
       ) : (
         <ul className="space-y-2">
           {query.items.map((meeting) => (
-            <li key={meeting.id}>
-              <Link
-                href={`/termine/${meeting.id}`}
-                className={cn(
-                  'flex items-center justify-between gap-3 rounded-md border border-line bg-card p-3 transition-colors hover:border-line-strong',
-                  // Wie auf der Terminkarte: der Punkt im Raster oben war schon
-                  // grau, hier stand ein abgesagter Abend bisher wie jeder
-                  // andere.
-                  meeting.status === 'CANCELLED' && 'opacity-60',
-                )}
-              >
-                <span className="min-w-0">
-                  <span className="block text-[11px] font-bold text-terracotta-500">
-                    {formatDay(meeting.date)}
-                  </span>
-                  <span className="block truncate text-sm font-semibold text-stone-800">
-                    {meetingHeadline(meeting)}
-                  </span>
-                </span>
-                <span className="shrink-0 text-[11px] text-stone-400">
-                  {meeting.status === 'CANCELLED'
-                    ? 'Fällt aus'
-                    : (meeting.location?.name ?? 'Ort offen')}
-                </span>
-              </Link>
-            </li>
+            <MonthRow key={meeting.id} meeting={meeting} />
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+/**
+ * Eine Zeile der Monatsliste. Dieselbe Antwort wie in der Terminliste, nur
+ * schmaler — die drei Ansichten zeigen dieselben Termine, also darf die Frage
+ * nicht davon abhängen, welche man gerade offen hat.
+ */
+function MonthRow({ meeting }: { meeting: MeetingListItem }) {
+  const { me } = useMe();
+  const setAttendance = useSetAttendance(meeting.id);
+
+  const cancelled = meeting.status === 'CANCELLED';
+  const myStatus =
+    meeting.attendances.find((a) => a.personId === me?.id)?.status ?? 'UNKNOWN';
+
+  return (
+    <li>
+      <Link
+        href={`/termine/${meeting.id}`}
+        className={cn(
+          'flex items-center justify-between gap-3 rounded-md border border-line bg-card p-3 transition-colors hover:border-line-strong',
+          // Wie auf der Terminkarte: der Punkt im Raster oben war schon
+          // grau, hier stand ein abgesagter Abend bisher wie jeder
+          // andere.
+          cancelled && 'opacity-60',
+        )}
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-[11px] font-bold text-terracotta-500">
+            {formatDay(meeting.date)}
+          </span>
+          <span className="block truncate text-sm font-semibold text-stone-800">
+            {meetingHeadline(meeting)}
+          </span>
+          <span className="block truncate text-[11px] text-stone-400">
+            {cancelled
+              ? 'Fällt aus'
+              : (meeting.location?.name ?? 'Ort noch offen')}
+          </span>
+        </span>
+
+        {me && !cancelled && !isPast(meeting.date) && (
+          <AttendanceToggle
+            status={myStatus}
+            onAnswer={(status) =>
+              setAttendance.mutate({ personId: me.id, status })
+            }
+          />
+        )}
+      </Link>
+    </li>
   );
 }
 

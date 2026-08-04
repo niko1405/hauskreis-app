@@ -390,3 +390,64 @@ describe('MeetingService — wer abgesagt hat, steht dabei', () => {
     expect(notifications.announceRevival).not.toHaveBeenCalled();
   });
 });
+
+describe('MeetingService — Nachbereitung gehört an den Abend', () => {
+  it('lehnt eine Zusammenfassung für einen künftigen Abend ab', async () => {
+    const { service } = setup();
+
+    await expect(
+      service.update('hk1', 'm1', { summaryText: 'War schön' }, 'p1', EGAL),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('lehnt auch einen Actionstep im Voraus ab', async () => {
+    const { service } = setup();
+
+    await expect(
+      service.update('hk1', 'm1', { actionstepText: 'Beten' }, 'p1', EGAL),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('lässt am Abend selbst schreiben', async () => {
+    const { service, prisma } = setup(meeting({ date: HEUTE }));
+
+    await service.update('hk1', 'm1', { summaryText: 'War schön' }, 'p1', EGAL);
+
+    expect(written(prisma).summaryText).toBe('War schön');
+  });
+
+  it('lässt einen vergangenen Abend nachtragen', async () => {
+    const { service, prisma } = setup(meeting({ date: LETZTER_DIENSTAG }));
+
+    await service.update('hk1', 'm1', { actionstepText: 'Beten' }, 'p1', EGAL);
+
+    expect(written(prisma).actionstepText).toBe('Beten');
+  });
+
+  // Sonst stünde jeder Ortswechsel an einem künftigen Termin unter demselben
+  // Verbot — die Regel gilt den beiden Feldern, nicht dem Termin.
+  it('lässt alles andere am künftigen Termin unberührt zu', async () => {
+    const { service, prisma } = setup();
+
+    await service.update(
+      'hk1',
+      'm1',
+      { infoText: 'Bringt Kuchen' },
+      'p1',
+      EGAL,
+    );
+
+    expect(written(prisma).infoText).toBe('Bringt Kuchen');
+  });
+
+  it('verweigert den Haken am Actionstep eines künftigen Abends', async () => {
+    const { service } = setup();
+
+    // Auf die Meldung geprüft, nicht nur auf den Typ: die Prüfung auf die
+    // Hauskreis-Zugehörigkeit wirft dieselbe Art Fehler, und dieser Test soll
+    // nicht aus dem falschen Grund grün sein.
+    await expect(
+      service.setActionstepDone('hk1', 'm1', 'p1', true),
+    ).rejects.toThrow(/noch vor uns/);
+  });
+});
