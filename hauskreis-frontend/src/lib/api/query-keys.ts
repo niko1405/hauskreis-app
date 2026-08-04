@@ -16,6 +16,7 @@ export const qk = {
   me: ['me'] as const,
   health: ['health'] as const,
   hauskreise: ['hauskreise'] as const,
+  invitations: ['invitations'] as const,
 
   push: {
     all: ['push'] as const,

@@ -258,10 +258,77 @@ alle Parameter optional sind.
 ## Wichtige Konventionen
 
 - **Ein Feature = ein NestJS-Modul** (`src/<feature>/`), Abhängigkeiten explizit über `imports`/`exports`.
-- **Rollen leben in Keycloak**, nicht in der Datenbank. `@Roles('admin')` + globaler `RolesGuard` erzwingen sie; `@Public()` öffnet einzelne Routen.
-- **`person.keycloakUserId`** ist bewusst nullable: Admins können Personen anlegen, bevor diese sich je eingeloggt haben. Beim ersten `GET /api/me` wird per E-Mail-Match verknüpft.
+- **Rollen gelten pro Hauskreis**, nicht realmweit: `person.role` (`MEMBER | ADMIN`), erzwungen von `@HauskreisAdmin()` im `HauskreisMemberGuard`. `@Public()` öffnet einzelne Routen. Siehe [Ein Mensch, ein Hauskreis](#ein-mensch-ein-hauskreis).
+- **`person.keycloakUserId`** ist bewusst nullable und **global eindeutig**: nullable, weil eine Einladung eine Person-Zeile anlegt, bevor sich jemand je angemeldet hat; eindeutig, weil ein Mensch zu genau einem Hauskreis gehört.
 - **Validierung ausschließlich über Zod-DTOs** (`createZodDto`). Die globale Pipe läuft mit `strictSchemaDeclaration`, meldet also Endpunkte, die versehentlich ohne Validierung arbeiten. Werte aus Custom-Decorators (`@CurrentUser()`, `@IfMatch()`) sind davon ausgenommen — siehe [`src/common/pipes/zod-validation.pipe.ts`](src/common/pipes/zod-validation.pipe.ts).
 - **Schreibende Endpunkte auf versionierten Entitäten** gehen über `updateWithVersionCheck` und akzeptieren `If-Match` — siehe [Conditional Requests](#conditional-requests-etag-304-412).
+
+## Ein Mensch, ein Hauskreis
+
+### Die Tür, die es nicht gab
+
+`hauskreisId` war ein reiner Pfadparameter. Geprüft wurde, dass es eine UUID
+ist — mehr nicht. Nichts fragte, ob die anfragende Person zu diesem Hauskreis
+gehört, und `GET /api/hauskreise` gab alle Ids heraus. Wer eine kannte, konnte
+dort lesen und schreiben. Bei einem Hauskreis fällt das nicht auf; ab dem
+zweiten ist es der eigentliche Fehler.
+
+[`HauskreisMemberGuard`](src/auth/hauskreis-member.guard.ts) löst die
+Mitgliedschaft **einmal je Anfrage** auf und legt sie an `request.membership`
+ab (`@CurrentMembership()`). Routen ohne `:hauskreisId` im Pfad gehen ihn nichts
+an — sie hängen ohnehin an der eigenen Person. Wer nicht dazugehört, bekommt
+`403` und nicht `404`: dass es diesen Hauskreis gibt, weiß man ohnehin, wenn man
+seine Id hat, und eine Notlüge stünde beim Suchen des Fehlers nur im Weg.
+
+`@HauskreisAdmin()` liest von dort. Der Unterschied zum abgelösten
+`@Roles(ROLE_ADMIN)` ist der ganze Punkt: die alte Fassung las eine Realm-Rolle
+aus dem Token und galt in **jedem** Hauskreis. `RolesGuard` und `@Roles` sind
+ersatzlos entfallen — zwei sich widersprechende Berechtigungswege nebeneinander
+sind genau das, was später versehentlich benutzt wird.
+
+### Ein Wechsel ist ein Umzug
+
+Ein Mensch gehört zu genau einem Hauskreis. Das lässt
+`keycloakUserId @unique` als Regel stehen statt als Hindernis und erspart es,
+Name, Geburtstag und Wohnung je Mitgliedschaft doppelt zu pflegen.
+
+| Vorgang                                                     | Was passiert                                                                                                        |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Gründen** (`POST /api/hauskreise`)                        | Hauskreis **und** eigene Person mit `role: ADMIN`, in einer Transaktion. `409`, solange man noch woanders dabei ist |
+| **Verlassen** (`POST …/leave`)                              | `active = false` **und** `keycloakUserId = null`                                                                    |
+| **Einladen**                                                | Person-Zeile **ohne** `keycloakUserId` — ein Angebot, keine Übernahme                                               |
+| **Annehmen** (`POST /api/me/invitations/{personId}/accept`) | verlässt den bisherigen Hauskreis im selben Zug                                                                     |
+
+Beim Verlassen bleibt die Zeile stehen, damit vergangene Abende weiter zeigen,
+wer gehostet hat; frei wird nur die `keycloakUserId`, sonst käme man nirgends
+mehr an. Deshalb prüft `resolveForUser` auf `active: true` — ohne das holte der
+nächste Login jemanden in den Hauskreis zurück, den er gerade verlassen hat.
+
+Aus demselben Grund **weckt eine Einladung eine verlassene Zeile wieder auf**,
+statt eine zweite anzulegen: `@@unique([hauskreisId, email])` ließe das gar
+nicht zu, und wer einmal gegangen ist, käme sonst nie wieder herein. Die
+Geschichte bleibt dabei an der Person, die sie gemacht hat.
+
+### Wer geht, bestimmt seine Nachfolge
+
+Die letzte Admin-Person kann nicht einfach gehen; sonst bliebe ein Hauskreis
+ohne jemanden, der einladen darf. Das zu **verbieten** wäre die bequemere
+Lösung und eine Sackgasse — dann säße man für immer in einem Hauskreis fest,
+den man verlassen will. Stattdessen nimmt `leave` ein optionales
+`successorPersonId`:
+
+- kein Admin, oder es bleiben andere Admins → geht ohne Weiteres
+- einzige Admin-Person, andere Mitglieder da → `400`, das die Auswahl anfordert;
+  mit `successorPersonId` wird die genannte Person im selben Zug `ADMIN`
+- letzte Person überhaupt → der Hauskreis wird mit gelöscht
+
+### Mehrere offene Einladungen
+
+`resolveForUser` verknüpft beim ersten Anmelden automatisch — aber nur, wenn es
+**genau eine** offene Einladung gibt. Bei mehreren entschiede sonst die
+Reihenfolge, in der Postgres die Zeilen zurückgibt, in welchem Hauskreis jemand
+landet. Dann kommt ein `404`, und das Frontend zeigt
+`GET /api/me/invitations` zur Auswahl.
 
 ## Conditional Requests (ETag, 304, 412)
 

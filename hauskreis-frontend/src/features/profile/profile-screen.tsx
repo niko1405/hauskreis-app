@@ -7,6 +7,7 @@
  * Host-Vorschlägen überhaupt auftaucht (CLAUDE.md §5).
  */
 import { LogOut, Shield } from 'lucide-react';
+import { HauskreisCard } from './hauskreis-card';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAuth } from 'react-oidc-context';
@@ -205,6 +206,11 @@ function Loaded({ personId }: { personId: string }) {
           </section>
         )}
 
+        <HauskreisCard />
+
+        {/* Abmelden beendet eine Sitzung, „Hauskreis verlassen" eine
+            Mitgliedschaft. Deshalb steht das eine unter dem anderen und nicht
+            daneben. */}
         <Button
           variant="ghost"
           className="w-full"

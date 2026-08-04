@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+} from '@nestjs/common';
 import { HauskreisService } from './hauskreis.service';
 import { MembershipService } from './membership.service';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -70,6 +78,8 @@ export class HauskreisController {
   @ApiZodResponse(LeaveResultResponseDto, {
     description: 'Die Zeile bleibt fürs Archiv, die Mitgliedschaft endet',
   })
+  // Es entsteht nichts, es endet etwas — also 200 und nicht 201.
+  @HttpCode(HttpStatus.OK)
   leave(
     @Param() params: HauskreisParamsDto,
     @Body() dto: LeaveHauskreisDto,

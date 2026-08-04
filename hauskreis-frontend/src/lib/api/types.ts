@@ -63,6 +63,10 @@ export type MeetingPage = Page<MeetingListItem>;
 export type CreateMeetingInput = S['CreateMeetingDto'];
 export type UpdateMeetingInput = S['UpdateMeetingDto'];
 export type CancelMeetingInput = S['CancelMeetingDto'];
+export type LeaveHauskreisInput = S['LeaveHauskreisDto'];
+export type LeaveResult = S['LeaveResultResponseDto'];
+/** Eine Person-Zeile, die noch niemandem gehört — das Angebot eines Hauskreises. */
+export type Invitation = S['InvitationListResponseDto'][number];
 
 export type MeetingType = Meeting['type'];
 export type MeetingStatus = Meeting['status'];

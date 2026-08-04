@@ -30,6 +30,7 @@ const personSelect = {
   hauskreisId: true,
   name: true,
   email: true,
+  role: true,
   birthdate: true,
   playsInstrument: true,
   canHost: true,
@@ -234,25 +235,49 @@ export class PersonService {
    * never leaves an orphaned account behind.
    */
   async invite(hauskreisId: string, dto: InvitePersonDto) {
+    // Wer schon einmal hier war, hat eine Zeile: sie bleibt beim Verlassen
+    // stehen, damit vergangene Abende weiter zeigen, wer gehostet hat. Ohne
+    // diesen Blick wäre eine zweite Einladung an dieselbe Adresse ein Verstoß
+    // gegen `@@unique([hauskreisId, email])` — wer einmal gegangen ist, käme
+    // nie wieder herein.
+    const previous = await this.prisma.person.findFirst({
+      where: { hauskreisId, email: dto.email },
+      select: { id: true, active: true, name: true },
+    });
+
+    if (previous?.active) {
+      throw new ConflictException(`${previous.name} ist schon dabei`);
+    }
+
     const { created, invitationEmailSent } =
       await this.keycloakAdmin.inviteUser({
         email: dto.email,
         name: dto.name,
       });
 
+    const role = dto.role === 'admin' ? PersonRole.ADMIN : PersonRole.MEMBER;
+
     try {
       // **Ohne `keycloakUserId`.** Eine Einladung nimmt niemandem seine
       // bestehende Mitgliedschaft weg — sie ist ein Angebot, bis der Mensch
       // sie annimmt. Verknüpft wird beim ersten Anmelden (`resolveForUser`)
       // oder ausdrücklich über `POST /api/me/invitations/{id}/accept`.
-      const person = await this.prisma.person.create({
-        data: {
-          hauskreisId,
-          name: dto.name,
-          email: dto.email,
-          role: dto.role === 'admin' ? PersonRole.ADMIN : PersonRole.MEMBER,
-        },
-      });
+      const person = previous
+        ? await this.prisma.person.update({
+            where: { id: previous.id },
+            // Dieselbe Zeile wieder aufwecken statt einer zweiten: so bleibt
+            // die Geschichte an der Person, die sie gemacht hat.
+            data: {
+              name: dto.name,
+              role,
+              active: true,
+              acceptedAt: null,
+              keycloakUserId: null,
+            },
+          })
+        : await this.prisma.person.create({
+            data: { hauskreisId, name: dto.name, email: dto.email, role },
+          });
 
       return { ...person, invitationEmailSent };
     } catch (error) {

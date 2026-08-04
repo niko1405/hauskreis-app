@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { PersonService } from './person.service';
 // Type-only: keeps Jest from loading the real PrismaClient.
 import type { PrismaService } from '../prisma/prisma.service';
@@ -197,6 +197,54 @@ describe('PersonService.invite', () => {
     );
 
     expect(keycloakAdmin.deleteUserByEmail).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Die Zeile bleibt beim Verlassen stehen, damit vergangene Abende weiter
+   * zeigen, wer gehostet hat. Ohne diesen Blick wäre eine zweite Einladung an
+   * dieselbe Adresse ein Verstoß gegen `@@unique([hauskreisId, email])` — wer
+   * einmal gegangen ist, käme nie wieder herein.
+   */
+  it('weckt eine verlassene Zeile wieder auf, statt eine zweite anzulegen', async () => {
+    const { service, person, keycloakAdmin } = setup();
+    person.findFirst.mockResolvedValue({
+      id: 'p-alt',
+      active: false,
+      name: 'Lea',
+    });
+    keycloakAdmin.inviteUser.mockResolvedValue({
+      created: false,
+      invitationEmailSent: false,
+    });
+    person.update.mockResolvedValue({ id: 'p-alt' });
+
+    await service.invite('hk-1', invitation);
+
+    expect(person.create).not.toHaveBeenCalled();
+    expect(person.update).toHaveBeenCalledWith({
+      where: { id: 'p-alt' },
+      data: {
+        name: 'Lea',
+        role: 'MEMBER',
+        active: true,
+        acceptedAt: null,
+        keycloakUserId: null,
+      },
+    });
+  });
+
+  it('weist ab, wer schon dabei ist', async () => {
+    const { service, person, keycloakAdmin } = setup();
+    person.findFirst.mockResolvedValue({
+      id: 'p-alt',
+      active: true,
+      name: 'Lea',
+    });
+
+    await expect(service.invite('hk-1', invitation)).rejects.toThrow(
+      ConflictException,
+    );
+    expect(keycloakAdmin.inviteUser).not.toHaveBeenCalled();
   });
 
   /** Eine Einladung nimmt niemandem seine bestehende Mitgliedschaft weg. */

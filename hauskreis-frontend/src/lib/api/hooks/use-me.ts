@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApiReady } from '../../auth/auth-bridge';
 import { isAdmin } from '../../auth/roles';
 import { STALE } from '../cache';
@@ -9,7 +9,11 @@ import { isStatus } from '../errors';
 import { qk } from '../query-keys';
 import { useApiMutation } from './use-resource';
 import { useHk } from './use-hk';
-import type { SetHomeInput } from '../types';
+import type {
+  CreateHauskreisInput,
+  LeaveHauskreisInput,
+  SetHomeInput,
+} from '../types';
 
 /**
  * Wer bin ich, und was darf ich.
@@ -90,4 +94,56 @@ export function useChangeEmail() {
   return useApiMutation((email: string) => coreApi.changeEmail(email), {
     invalidateKeys: [qk.me, keys.people.all],
   });
+}
+
+// ── Der Hauskreis, in dem man steckt ────────────────────────────────────────
+
+/**
+ * Offene Einladungen in andere Hauskreise.
+ *
+ * Auch dann beantwortbar, wenn es noch gar keine Person gibt — beim allerersten
+ * Öffnen ist das der einzige Weg hinein. Deshalb hängt die Abfrage am Token und
+ * nicht an `me`.
+ */
+export function useInvitations() {
+  const ready = useApiReady();
+
+  return useQuery({
+    queryKey: qk.invitations,
+    queryFn: ({ signal }) => coreApi.listInvitations(signal),
+    enabled: ready,
+    staleTime: STALE.reference,
+  });
+}
+
+/** Gründen: man wird dort Admin. Geht nur, wenn man nirgends mehr dabei ist. */
+export function useCreateHauskreis() {
+  return useApiMutation(
+    (input: CreateHauskreisInput) => coreApi.createHauskreis(input),
+    { invalidateKeys: [qk.me, qk.hauskreise, qk.invitations] },
+  );
+}
+
+/**
+ * Verlassen. Danach ist der ganze Cache wertlos — er gehört zu einem
+ * Hauskreis, in dem man nicht mehr ist.
+ */
+export function useLeaveHauskreis(hauskreisId: string) {
+  const queryClient = useQueryClient();
+
+  return useApiMutation(
+    (input: LeaveHauskreisInput) => coreApi.leaveHauskreis(hauskreisId, input),
+    { onSuccess: () => queryClient.clear() },
+  );
+}
+
+/** Annehmen heißt: den bisherigen Hauskreis im selben Zug verlassen. */
+export function useAcceptInvitation() {
+  const queryClient = useQueryClient();
+
+  return useApiMutation(
+    ({ personId, ...input }: LeaveHauskreisInput & { personId: string }) =>
+      coreApi.acceptInvitation(personId, input),
+    { onSuccess: () => queryClient.clear() },
+  );
 }

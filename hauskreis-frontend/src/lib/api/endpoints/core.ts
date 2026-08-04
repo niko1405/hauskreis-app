@@ -14,6 +14,9 @@ import type {
   ChangedEmail,
   CreateHauskreisInput,
   Hauskreis,
+  Invitation,
+  LeaveHauskreisInput,
+  LeaveResult,
   Location,
   Me,
   SetHomeInput,
@@ -72,8 +75,33 @@ export function getHauskreis(
   return apiGetResource<Hauskreis>(hkPath(hauskreisId), options);
 }
 
+/** Legt den Hauskreis an **und** macht die gründende Person dort zum Admin. */
 export function createHauskreis(
   input: CreateHauskreisInput,
 ): Promise<Hauskreis> {
   return apiPost<Hauskreis>('/hauskreise', input);
+}
+
+/**
+ * Verlässt den Hauskreis. `successorPersonId` ist nur nötig, wenn man die
+ * einzige Admin-Person ist — sonst kommt ein `400`, das die Auswahl anfordert.
+ */
+export function leaveHauskreis(
+  hauskreisId: string,
+  input: LeaveHauskreisInput,
+): Promise<LeaveResult> {
+  return apiPost<LeaveResult>(hkPath(hauskreisId, '/leave'), input);
+}
+
+/** Offene Einladungen in andere Hauskreise — auch ohne eigene Person. */
+export function listInvitations(signal?: AbortSignal): Promise<Invitation[]> {
+  return apiGet<Invitation[]>('/me/invitations', { signal });
+}
+
+/** Annehmen heißt: den bisherigen Hauskreis im selben Zug verlassen. */
+export function acceptInvitation(
+  personId: string,
+  input: LeaveHauskreisInput,
+): Promise<Me> {
+  return apiPost<Me>(`/me/invitations/${personId}/accept`, input);
 }

@@ -126,6 +126,36 @@ Zwei Dinge gehören zwingend dazu:
   Schalter ist genau verkehrt herum: die Anzeige stimmt schon, aber der Knopf
   wäre noch eine Sekunde tot und ein Fehlgriff nicht sofort zurückzunehmen.
 
+### Dein Hauskreis
+
+Ein Mensch gehört zu genau einem Hauskreis; ein Wechsel ist ein Umzug. Damit ist
+`hauskreis-context.tsx` fast leer geworden: die Id kommt aus `me.hauskreisId`,
+und mehr braucht es nicht. Vorher stand dort eine Auswahl aus
+`GET /api/hauskreise` mit `available[0]` als Vorgabe — die Route gab damals
+_alle_ Gruppen heraus, und die Wahl merkte sich der `localStorage` bis in die
+nächste Sitzung und damit ins nächste Konto. Beides ist weg.
+
+**„Kein Hauskreis" ist kein Fehler, sondern der Anfang.** Der Fall endete
+bisher in einer roten Meldung („Zu deinem Konto gehört noch kein Hauskreis.") —
+zutreffend und nutzlos. `features/onboarding/no-hauskreis-screen.tsx` bietet
+stattdessen die zwei Wege an, die es gibt: einen eigenen gründen (man wird dort
+Admin) oder sich einladen lassen, mit der eigenen Adresse zum Weitergeben.
+Erreicht wird er beim allerersten Öffnen, nach dem Verlassen, und wenn mehrere
+Einladungen offen sind.
+
+Im Profil steht `hauskreis-card.tsx`: Name, eigene Rolle, „Hauskreis
+verlassen". Das ist nicht „Abmelden" — das eine beendet eine Sitzung, das andere
+eine Mitgliedschaft — und steht deshalb darüber, nicht daneben.
+
+Die **Nachfolge-Auswahl** geht erst nach dem ersten Versuch auf. Ob eine nötig
+ist, weiß nur der Server (`400`, wenn man die einzige Admin-Person ist); vorab
+gefragt stünde meistens eine überflüssige Auswahl im Weg.
+
+Eine **Einladung, die eintrifft, während man schon dabei ist**, erscheint als
+Karte im Profil — mit Rückfrage, weil sie die bestehende Mitgliedschaft beendet.
+Auf dem Einstiegsbildschirm gibt es die Rückfrage nicht: dort hat man nichts zu
+verlieren.
+
 ### Anmeldung und Sitzung
 
 Man bleibt angemeldet, bis man sich abmeldet. Das ist keine Selbstverständlichkeit

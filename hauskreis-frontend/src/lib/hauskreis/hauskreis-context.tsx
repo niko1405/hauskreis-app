@@ -6,29 +6,25 @@
  * Die Id steckt in fast jedem Pfad, aber nicht in der Adresszeile: in der
  * Praxis gibt es eine Gruppe, und URLs mit einer UUID darin sind für die
  * Leute, die sie sich schicken, unlesbar. Sie kommt deshalb aus dem Kontext.
+ *
+ * **Es gibt nichts auszuwählen.** Ein Mensch gehört zu genau einem Hauskreis;
+ * ein Wechsel ist ein Umzug. Vorher stand hier eine Auswahl aus
+ * `GET /api/hauskreise` mit `available[0]` als Vorgabe — die Route gab damals
+ * *alle* Gruppen heraus, und die Wahl merkte sich der `localStorage` bis in die
+ * nächste Sitzung und damit ins nächste Konto. Beides ist weg: die Id steht in
+ * `me.hauskreisId`, und mehr braucht es nicht.
  */
+import { createContext, useContext, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
 import { STALE } from '../api/cache';
 import { coreApi } from '../api/endpoints';
 import { qk } from '../api/query-keys';
+import { useMe } from '../api/hooks/use-me';
 import type { Hauskreis } from '../api/types';
-import { useApiReady } from '../auth/auth-bridge';
-
-const STORAGE_KEY = 'hauskreis:selected-id';
 
 interface HauskreisContextValue {
   hauskreisId: string | undefined;
   hauskreis: Hauskreis | undefined;
-  available: Hauskreis[];
-  select: (id: string) => void;
   isLoading: boolean;
   error: Error | null;
 }
@@ -36,50 +32,28 @@ interface HauskreisContextValue {
 const HauskreisContext = createContext<HauskreisContextValue | null>(null);
 
 export function HauskreisProvider({ children }: { children: React.ReactNode }) {
-  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
-  const ready = useApiReady();
+  const me = useMe();
+  const hauskreisId = me.me?.hauskreisId;
 
-  // Dieser Provider liegt über dem AuthGate und würde sonst schon beim ersten
-  // Rendern abfragen — also bevor die OIDC-Sitzung wiederhergestellt ist.
+  // Nur für den Namen — die Id steht schon fest. `enabled` hält die Abfrage
+  // zurück, bis es überhaupt einen Hauskreis gibt.
   const query = useQuery({
     queryKey: qk.hauskreise,
     queryFn: ({ signal }) => coreApi.listHauskreise(signal),
-    enabled: ready,
+    enabled: Boolean(hauskreisId),
     staleTime: STALE.reference,
   });
 
-  const available = useMemo(() => query.data ?? [], [query.data]);
-
-  // Erst nach dem Laden entscheiden: gemerkte Wahl, sonst der einzige
-  // vorhandene Hauskreis.
-  useEffect(() => {
-    if (available.length === 0) return;
-    setSelectedId((current) => {
-      if (current && available.some((h) => h.id === current)) return current;
-      const remembered = window.localStorage.getItem(STORAGE_KEY);
-      if (remembered && available.some((h) => h.id === remembered)) {
-        return remembered;
-      }
-      return available[0]?.id;
-    });
-  }, [available]);
-
-  const select = useCallback((id: string) => {
-    window.localStorage.setItem(STORAGE_KEY, id);
-    setSelectedId(id);
-  }, []);
-
   const value = useMemo<HauskreisContextValue>(
     () => ({
-      hauskreisId: selectedId,
-      hauskreis: available.find((h) => h.id === selectedId),
-      available,
-      select,
-      // Vor dem Token ist „noch nichts geladen" kein Fehler, sondern warten.
-      isLoading: !ready || query.isLoading,
+      hauskreisId,
+      hauskreis: (query.data ?? []).find((h) => h.id === hauskreisId),
+      // `me` ist die Quelle der Id; solange es lädt, ist „noch keine Id" kein
+      // Fehler, sondern warten.
+      isLoading: me.isLoading,
       error: query.error,
     }),
-    [selectedId, available, select, ready, query.isLoading, query.error],
+    [hauskreisId, query.data, query.error, me.isLoading],
   );
 
   return (
