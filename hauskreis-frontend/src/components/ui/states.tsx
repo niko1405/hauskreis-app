@@ -115,3 +115,36 @@ export function ConflictBanner({
     </div>
   );
 }
+
+/**
+ * „Mehr laden" unter einer Liste, die seitenweise nachlädt.
+ *
+ * Lag als lokale Hilfsfunktion im Archiv und wird seit dem Song-Auswahl-Sheet
+ * an zwei Stellen gebraucht. Kein Endlos-Scrollen: auf einem Telefon mit
+ * schlechter Verbindung ist ein Knopf ehrlicher als eine Liste, die von selbst
+ * weiterlädt und dabei hängt.
+ */
+export function LoadMore({
+  query,
+  label,
+}: {
+  query: {
+    hasNextPage: boolean;
+    isFetchingNextPage: boolean;
+    fetchNextPage: () => unknown;
+  };
+  label: string;
+}) {
+  if (!query.hasNextPage) return null;
+
+  return (
+    <Button
+      variant="secondary"
+      className="mt-3 w-full"
+      loading={query.isFetchingNextPage}
+      onClick={() => void query.fetchNextPage()}
+    >
+      {label}
+    </Button>
+  );
+}

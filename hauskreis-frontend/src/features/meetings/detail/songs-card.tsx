@@ -5,8 +5,8 @@
  * gibt es das Lied noch nicht, legt der Server es mit an — so wächst die
  * Datenbank mit jedem Vorschlag (CLAUDE.md §6).
  */
-import { Check, ExternalLink, Music, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Library, Music, Plus, Trash2 } from 'lucide-react';
+import { useDeferredValue, useState } from 'react';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { TextInput } from '@/components/ui/field';
@@ -18,6 +18,8 @@ import {
   useSetMeetingSongSelected,
   useSongSearch,
 } from '@/lib/api/hooks';
+import { LyricsLink } from '@/components/domain/lyrics-link';
+import { SongPickerSheet } from '@/components/domain/song-picker-sheet';
 import { cn } from '@/lib/cn';
 import { formatRelativeDay } from '@/lib/date';
 
@@ -36,6 +38,7 @@ export function SongsCard({
   const songs = useMeetingSongs(meetingId);
   const remove = useRemoveMeetingSong(meetingId);
   const select = useSetMeetingSongSelected(meetingId);
+  const [picking, setPicking] = useState(false);
 
   return (
     <section>
@@ -105,17 +108,7 @@ export function SongsCard({
                 </p>
               </div>
 
-              {entry.song.lyricsUrl && (
-                <a
-                  href={entry.song.lyricsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Songtext öffnen"
-                  className="shrink-0 text-stone-400 hover:text-terracotta-600"
-                >
-                  <ExternalLink size={15} />
-                </a>
-              )}
+              <LyricsLink url={entry.song.lyricsUrl} title={entry.song.title} />
 
               {!readOnly && (
                 <IconButton
@@ -129,8 +122,33 @@ export function SongsCard({
           ))}
         </ul>
 
-        {!readOnly && <AddSongForm meetingId={meetingId} />}
+        {!readOnly && (
+          <div className="space-y-3 border-t border-line pt-4">
+            {/* Zwei Wege, und der zweite fehlte: das Archiv war vom Termin aus
+                nicht erreichbar. Er steht zuerst, weil er meistens der
+                richtige ist — die Gruppe singt vieles wieder. */}
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => setPicking(true)}
+            >
+              <Library size={15} />
+              Aus dem Archiv
+            </Button>
+
+            <AddSongForm meetingId={meetingId} />
+          </div>
+        )}
       </Card>
+
+      {picking && (
+        <SongPickerSheet
+          open
+          onClose={() => setPicking(false)}
+          meetingId={meetingId}
+          alreadyPicked={(songs.data ?? []).map((entry) => entry.song.id)}
+        />
+      )}
     </section>
   );
 }
@@ -142,7 +160,8 @@ function AddSongForm({ meetingId }: { meetingId: string }) {
   const [expanded, setExpanded] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
-  const search = useSongSearch(title, expanded);
+  // Wie im Archiv: die Eingabe bleibt flüssig, die Abfrage hinkt nach.
+  const search = useSongSearch(useDeferredValue(title), expanded);
   const add = useAddMeetingSong(meetingId);
 
   const reset = () => {

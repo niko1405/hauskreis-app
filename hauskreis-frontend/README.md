@@ -423,6 +423,27 @@ Die Planungstabelle bekommt davon nichts zu sehen, und das ist richtig: der
 Assignments-Endpunkt lässt abgesagte Abende schon serverseitig weg
 (`status: { not: CANCELLED }`). Ein abgesagter Abend ist keine Planungszeile.
 
+### Lieder: zwei Wege, und der zweite fehlte
+
+Am Termin gab es nur das Eintragen: tippen, warten, aus höchstens acht Treffern
+wählen. Wer wissen wollte, was die Gruppe eigentlich singt, musste ins Archiv —
+und von dort führte kein Weg zurück an den Abend.
+
+`components/domain/song-picker-sheet.tsx` ist dieselbe Datenbank mit demselben
+Suchfeld und denselben drei Sortierungen wie im Archiv, nur mit dem Knopf
+daneben. Was schon am Abend hängt, steht mit Haken da und lässt sich nicht
+doppeln. Der Knopf steht **vor** dem Eintrag-Formular, weil er meistens der
+richtige ist — die Gruppe singt vieles wieder.
+
+Nebenbei: die Suche im Eintrag-Formular feuerte pro Tastendruck ab zwei Zeichen.
+Ein `useDeferredValue` bringt sie auf dieselbe Hausregel wie Archiv und
+Terminliste.
+
+**Der Songtext-Link gab es schon**, an beiden Stellen — aber als schmales graues
+Symbol ohne Beschriftung, das niemand als Link gelesen hat. Jetzt einmal in
+`components/domain/lyrics-link.tsx`: mit Wort, in Terracotta wie alles andere
+Anklickbare, und mit einer Trefferfläche, die auf einem Telefon getroffen wird.
+
 ## Zuteilen: Sheet und Tabelle
 
 **Das Sheet zeigt das ganze Ranking, nicht nur die Spitze.** Der Endpunkt

@@ -5,15 +5,20 @@
  * Song-Datenbank. Gesucht wird serverseitig (`search`), sonst müsste die App
  * mit der Zeit alles laden, nur um clientseitig zu filtern.
  */
-import { ExternalLink, Music, Search } from 'lucide-react';
+import { Music, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useDeferredValue, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Avatar, AvatarStack } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TextInput } from '@/components/ui/field';
-import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
+import {
+  CardSkeleton,
+  EmptyState,
+  ErrorState,
+  LoadMore,
+} from '@/components/ui/states';
+import { LyricsLink } from '@/components/domain/lyrics-link';
 import { LocationsCard } from './locations-card';
 import {
   useArchiveSummary,
@@ -277,46 +282,12 @@ function SongLibrary({ search }: { search: string }) {
               </p>
             </div>
             {song.createdBy && <Avatar person={song.createdBy} size="xs" />}
-            {song.lyricsUrl && (
-              <a
-                href={song.lyricsUrl}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`Songtext zu ${song.title}`}
-                className="shrink-0 text-stone-400 hover:text-terracotta-600"
-              >
-                <ExternalLink size={15} />
-              </a>
-            )}
+            <LyricsLink url={song.lyricsUrl} title={song.title} />
           </li>
         ))}
       </ul>
 
       <LoadMore query={query} label="Mehr Lieder" />
     </div>
-  );
-}
-
-function LoadMore({
-  query,
-  label,
-}: {
-  query: {
-    hasNextPage: boolean;
-    isFetchingNextPage: boolean;
-    fetchNextPage: () => unknown;
-  };
-  label: string;
-}) {
-  if (!query.hasNextPage) return null;
-  return (
-    <Button
-      variant="secondary"
-      className="mt-3 w-full"
-      loading={query.isFetchingNextPage}
-      onClick={() => void query.fetchNextPage()}
-    >
-      {label}
-    </Button>
   );
 }
