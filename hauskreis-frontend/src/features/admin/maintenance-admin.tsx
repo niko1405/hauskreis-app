@@ -17,6 +17,7 @@ import {
   useGenerateMeetings,
   usePlanPrayerBuddyRounds,
   usePrayerBuddyConfig,
+  usePurgeAbandonedLocations,
   useRotatePrayerBuddies,
   useRunActionstepReminders,
   useRunHostReminders,
@@ -138,6 +139,7 @@ function JobsCard() {
   const planRounds = usePlanPrayerBuddyRounds();
   const carryOver = useCarryOverTopics();
   const syncAbsences = useSyncAbsences();
+  const purgeLocations = usePurgeAbandonedLocations();
   const hostReminders = useRunHostReminders();
   const topicReminders = useRunTopicReminders();
   const songReminders = useRunSongReminders();
@@ -191,6 +193,21 @@ function JobsCard() {
           onSuccess: (r) =>
             toast.success(
               `${r.declined} abgesagt, ${r.withdrawn} zurückgenommen.`,
+            ),
+          onError: fail,
+        }),
+    },
+    {
+      label: 'Verwaiste Orte wegräumen',
+      hint: 'Löscht stillgelegte Orte, an denen kein Termin und niemand mehr hängt.',
+      pending: purgeLocations.isPending,
+      run: () =>
+        purgeLocations.mutate(undefined, {
+          onSuccess: (r) =>
+            toast.success(
+              r.deleted > 0
+                ? `${r.deleted} Ort(e) gelöscht.`
+                : 'Es gab nichts wegzuräumen.',
             ),
           onError: fail,
         }),

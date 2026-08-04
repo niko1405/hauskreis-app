@@ -5,12 +5,14 @@
  * Song-Datenbank. Gesucht wird serverseitig (`search`), sonst müsste die App
  * mit der Zeit alles laden, nur um clientseitig zu filtern.
  */
-import { Music, Search } from 'lucide-react';
+import { Music, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useDeferredValue, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Avatar, AvatarStack } from '@/components/ui/avatar';
+import { IconButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { TextInput } from '@/components/ui/field';
 import {
   CardSkeleton,
@@ -18,10 +20,13 @@ import {
   ErrorState,
   LoadMore,
 } from '@/components/ui/states';
+import { useToast } from '@/components/ui/toast';
 import { LyricsLink } from '@/components/domain/lyrics-link';
+import { SongSheet } from '@/components/domain/song-sheet';
 import { LocationsCard } from './locations-card';
 import {
   useArchiveSummary,
+  useDeleteSong,
   useMeetingList,
   usePeople,
   usePrefetchMeeting,
@@ -32,6 +37,7 @@ import { cn } from '@/lib/cn';
 import { formatDay, formatRelativeDay } from '@/lib/date';
 import { actionstepProgress, meetingHeadline } from '@/lib/meeting';
 import type { SongListParams } from '@/lib/api/params';
+import type { SongListItem } from '@/lib/api/types';
 
 type Tab = 'termine' | 'themen' | 'lieder' | 'orte';
 
@@ -220,6 +226,7 @@ function CompletedTopics({ search }: { search: string }) {
 function SongLibrary({ search }: { search: string }) {
   const [sort, setSort] =
     useState<NonNullable<SongListParams['sort']>>('popular');
+  const [adding, setAdding] = useState(false);
 
   const query = useSongList({ search: search || undefined, sort });
 
@@ -231,24 +238,35 @@ function SongLibrary({ search }: { search: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        {sorts.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setSort(key)}
-            aria-pressed={sort === key}
-            className={cn(
-              'rounded-full px-3 py-1 text-[11px] font-semibold transition-colors',
-              sort === key
-                ? 'bg-stone-800 text-white'
-                : 'bg-stone-100 text-stone-500 hover:bg-stone-200',
-            )}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="flex items-center gap-2">
+        <div className="flex flex-1 gap-2">
+          {sorts.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSort(key)}
+              aria-pressed={sort === key}
+              className={cn(
+                'rounded-full px-3 py-1 text-[11px] font-semibold transition-colors',
+                sort === key
+                  ? 'bg-stone-800 text-white'
+                  : 'bg-stone-100 text-stone-500 hover:bg-stone-200',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Bisher wuchs die Liederliste nur über die Vorschläge an einem Abend.
+            Ein Lied, das man kennt und erst nächsten Monat singen will, hatte
+            keinen Weg hinein. */}
+        <IconButton label="Lied hinzufügen" onClick={() => setAdding(true)}>
+          <Plus size={16} />
+        </IconButton>
       </div>
+
+      <SongSheet open={adding} onClose={() => setAdding(false)} />
 
       {query.isLoading && <CardSkeleton />}
       {query.error && <ErrorState error={query.error} />}
@@ -261,33 +279,81 @@ function SongLibrary({ search }: { search: string }) {
 
       <ul className="space-y-2">
         {query.items.map((song, index) => (
-          <li
+          <SongRow
             key={song.id}
-            className="flex items-center gap-3 rounded-md border border-line bg-card p-3"
-          >
-            {sort === 'popular' && (
-              <span className="w-6 shrink-0 text-center text-xs font-bold text-stone-300">
-                {index + 1}
-              </span>
-            )}
-            <Music size={15} className="shrink-0 text-stone-300" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-stone-800">
-                {song.title}
-              </p>
-              <p className="truncate text-[11px] text-stone-400">
-                {song.artist ?? 'Unbekannt'} · {song.timesPlayed}×
-                {song.lastPlayedAt &&
-                  `, zuletzt ${formatRelativeDay(song.lastPlayedAt)}`}
-              </p>
-            </div>
-            {song.createdBy && <Avatar person={song.createdBy} size="xs" />}
-            <LyricsLink url={song.lyricsUrl} title={song.title} />
-          </li>
+            song={song}
+            rank={sort === 'popular' ? index + 1 : undefined}
+          />
         ))}
       </ul>
 
       <LoadMore query={query} label="Mehr Lieder" />
     </div>
+  );
+}
+
+function SongRow({ song, rank }: { song: SongListItem; rank?: number }) {
+  const remove = useDeleteSong();
+  const confirm = useConfirm();
+  const toast = useToast();
+  const [editing, setEditing] = useState(false);
+
+  return (
+    <li className="flex items-center gap-3 rounded-md border border-line bg-card p-3">
+      {rank !== undefined && (
+        <span className="w-6 shrink-0 text-center text-xs font-bold text-stone-300">
+          {rank}
+        </span>
+      )}
+      <Music size={15} className="shrink-0 text-stone-300" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-stone-800">
+          {song.title}
+        </p>
+        <p className="truncate text-[11px] text-stone-400">
+          {song.artist ?? 'Unbekannt'} · {song.timesPlayed}×
+          {song.lastPlayedAt &&
+            `, zuletzt ${formatRelativeDay(song.lastPlayedAt)}`}
+        </p>
+      </div>
+      {song.createdBy && <Avatar person={song.createdBy} size="xs" />}
+      <LyricsLink url={song.lyricsUrl} title={song.title} />
+
+      <IconButton
+        label={`${song.title} bearbeiten`}
+        onClick={() => setEditing(true)}
+      >
+        <Pencil size={14} />
+      </IconButton>
+
+      <IconButton
+        label={`${song.title} löschen`}
+        onClick={async () => {
+          const ok = await confirm({
+            title: `„${song.title}" löschen?`,
+            // Die Zahl gehört in die Rückfrage: ein Tippfehler von gestern und
+            // ein Lied, das an acht Abenden lief, sind nicht dieselbe
+            // Entscheidung.
+            body:
+              song.timesPlayed > 0
+                ? `Das Lied lief an ${song.timesPlayed} Abend${song.timesPlayed === 1 ? '' : 'en'}. Es verschwindet auch dort aus der Liste.`
+                : 'Das Lied wurde noch nie gesungen — es geht nichts verloren.',
+            confirmLabel: 'Löschen',
+            tone: 'danger',
+          });
+          if (!ok) return;
+
+          remove.mutate(song.id, {
+            onSuccess: () => toast.success(`„${song.title}" ist weg.`),
+          });
+        }}
+      >
+        <Trash2 size={14} />
+      </IconButton>
+
+      {editing && (
+        <SongSheet open onClose={() => setEditing(false)} song={song} />
+      )}
+    </li>
   );
 }

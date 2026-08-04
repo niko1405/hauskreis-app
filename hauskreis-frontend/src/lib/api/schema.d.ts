@@ -244,6 +244,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/locations/purge-abandoned': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['LocationController_purgeAbandoned'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/meetings': {
     parameters: {
       query?: never;
@@ -1168,6 +1184,12 @@ export interface components {
       longitude?: number | null;
       address?: string | null;
       active?: boolean;
+    };
+    RemovalResultDto: {
+      deleted: boolean;
+    };
+    PurgeResultDto: {
+      deleted: number;
     };
     MeetingPageResponseDto: {
       items: {
@@ -3266,14 +3288,25 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Gelöscht, kein Inhalt */
-      204: {
+      /** @description Gelöscht, oder nur stillgelegt, weil Termine daran hängen */
+      200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['RemovalResultDto'];
+        };
       };
-      /** @description Nicht angemeldet */
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
       401: {
         headers: {
           [name: string]: unknown;
@@ -3291,7 +3324,7 @@ export interface operations {
           'application/json': components['schemas']['ErrorDto'];
         };
       };
-      /** @description Nicht vorhanden */
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
       404: {
         headers: {
           [name: string]: unknown;
@@ -3404,6 +3437,64 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ResolveAddressResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  LocationController_purgeAbandoned: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Löscht stillgelegte Orte ohne Bewohner:innen und Termine */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PurgeResultDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */

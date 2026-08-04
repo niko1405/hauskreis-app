@@ -13,13 +13,14 @@
  * - **Treffpunkt** — gehört niemandem, ist frei bearbeitbar und lässt sich
  *   stilllegen.
  */
-import { Home, MapPin, Plus, Trash2 } from 'lucide-react';
+import { Home, MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
 import { EmptyState, Skeleton } from '@/components/ui/states';
+import { useToast } from '@/components/ui/toast';
 import { LocationSheet } from '@/components/domain/location-sheet';
 import { useDeleteLocation, useLocations } from '@/lib/api/hooks';
 import { isHome, residentNames } from '@/lib/location';
@@ -28,17 +29,36 @@ import type { Location } from '@/lib/api/types';
 export function LocationsCard() {
   const locations = useLocations();
   const [adding, setAdding] = useState(false);
+  const [showRetired, setShowRetired] = useState(false);
 
   if (locations.isLoading) {
     return <Skeleton className="h-40 w-full" />;
   }
 
   const all = locations.data ?? [];
-  const homes = all.filter((location) => isHome(location));
-  const spots = all.filter((location) => !isHome(location));
+  const retired = all.filter((location) => !location.active).length;
+  // Stillgelegte standen bisher immer mit in der Liste, nur gedämpft. Bei einem
+  // ehemaligen Zuhause pro Umzug wächst das mit den Jahren zu — und es ist
+  // gerade das, was man beim Nachsehen *nicht* meint.
+  const shown = showRetired ? all : all.filter((location) => location.active);
+
+  const homes = shown.filter((location) => isHome(location));
+  const spots = shown.filter((location) => !isHome(location));
 
   return (
     <div className="space-y-4">
+      {retired > 0 && (
+        <label className="flex items-center gap-2 px-1 text-[11px] font-semibold text-stone-500">
+          <input
+            type="checkbox"
+            checked={showRetired}
+            onChange={(event) => setShowRetired(event.target.checked)}
+            className="h-3.5 w-3.5 accent-terracotta-500"
+          />
+          {retired} stillgelegte{retired === 1 ? 'n' : ''} anzeigen
+        </label>
+      )}
+
       <Card className="space-y-3">
         <h3 className="text-xs font-bold tracking-wide text-stone-400 uppercase">
           Zuhause
@@ -87,6 +107,8 @@ export function LocationsCard() {
 function LocationRow({ location }: { location: Location }) {
   const remove = useDeleteLocation();
   const confirm = useConfirm();
+  const toast = useToast();
+  const [editing, setEditing] = useState(false);
   const home = isHome(location);
 
   return (
@@ -117,24 +139,51 @@ function LocationRow({ location }: { location: Location }) {
 
       {!location.active && <Badge variant="neutral">stillgelegt</Badge>}
 
+      <IconButton
+        label={`${location.name} bearbeiten`}
+        onClick={() => setEditing(true)}
+      >
+        <Pencil size={15} />
+      </IconButton>
+
       {/* Eine Wohnung löst sich auf, indem ihre Bewohner:innen umziehen — der
           Server lehnt es sonst mit 409 ab, und ein Knopf, der immer scheitert,
           ist schlimmer als keiner. */}
       {!home && location.active && (
         <IconButton
-          label={`${location.name} stilllegen`}
+          label={`${location.name} entfernen`}
           onClick={async () => {
             const ok = await confirm({
-              title: `${location.name} stilllegen?`,
-              body: 'Vergangene Termine behalten ihn. Für kommende Abende wird er nicht mehr vorgeschlagen.',
-              confirmLabel: 'Stilllegen',
+              title: `${location.name} entfernen?`,
+              // Was passiert, weiß erst der Server: hängt ein Abend daran,
+              // wird der Ort nur stillgelegt. Deshalb hier beide Fälle nennen,
+              // statt einen zu versprechen.
+              body: 'War die Gruppe hier schon zu Gast, bleibt der Ort im Archiv stehen und verschwindet nur aus der Auswahl. Sonst wird er ganz gelöscht.',
+              confirmLabel: 'Entfernen',
               tone: 'danger',
             });
-            if (ok) remove.mutate(location.id);
+            if (!ok) return;
+
+            remove.mutate(location.id, {
+              onSuccess: (result) =>
+                toast.success(
+                  result.deleted
+                    ? `${location.name} ist gelöscht.`
+                    : `${location.name} ist stillgelegt — vergangene Abende behalten ihn.`,
+                ),
+            });
           }}
         >
           <Trash2 size={15} />
         </IconButton>
+      )}
+
+      {editing && (
+        <LocationSheet
+          open
+          onClose={() => setEditing(false)}
+          location={location}
+        />
       )}
     </li>
   );

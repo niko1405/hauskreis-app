@@ -305,7 +305,17 @@ export async function apiPut<T>(
   return { data: expectBody(raw, path), etag: raw.etag };
 }
 
-/** `DELETE` braucht kein `If-Match`; einzelne Routen erwarten einen Körper. */
-export async function apiDelete(path: string, body?: unknown): Promise<void> {
-  await request<never>({ method: 'DELETE', path, body });
+/**
+ * `DELETE` braucht kein `If-Match`; einzelne Routen erwarten einen Körper.
+ *
+ * Die meisten antworten mit `204` und damit ohne Rumpf — deshalb `T = void`.
+ * Wo eine Route etwas zu sagen hat („gelöscht oder nur stillgelegt?"), gibt
+ * der Aufrufer den Typ an und bekommt ihn zurück.
+ */
+export async function apiDelete<T = void>(
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  const raw = await request<T>({ method: 'DELETE', path, body });
+  return raw.data as T;
 }

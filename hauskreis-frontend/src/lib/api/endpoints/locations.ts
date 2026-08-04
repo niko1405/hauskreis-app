@@ -17,6 +17,8 @@ import { hkPath } from './paths';
 import type {
   CreateLocationInput,
   Location,
+  PurgeResult,
+  RemovalResult,
   ResolvedAddress,
   UpdateLocationInput,
 } from '../types';
@@ -75,10 +77,20 @@ export function updateLocation(
   });
 }
 
-/** Legt den Ort still; er bleibt an vergangenen Terminen sichtbar. */
+/**
+ * Löscht den Ort, wenn kein Termin mehr auf ihn zeigt — sonst legt er ihn still
+ * und bleibt an den vergangenen Abenden sichtbar. `deleted` sagt, was es war.
+ */
 export function deleteLocation(
   hauskreisId: string,
   locationId: string,
-): Promise<void> {
-  return apiDelete(`${base(hauskreisId)}/${locationId}`);
+): Promise<RemovalResult> {
+  return apiDelete<RemovalResult>(`${base(hauskreisId)}/${locationId}`);
+}
+
+/** Nur Admin. Räumt stillgelegte Orte weg, an denen nichts mehr hängt. */
+export function purgeAbandonedLocations(
+  hauskreisId: string,
+): Promise<PurgeResult> {
+  return apiPost<PurgeResult>(`${base(hauskreisId)}/purge-abandoned`);
 }

@@ -17,15 +17,17 @@ import {
   UpdateLocationDto,
 } from './dto/location.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
+import { HauskreisAdmin } from '../auth/hauskreis-admin.decorator';
 import { IfMatch } from '../common/http/if-match.decorator';
 import {
   ApiConditionalWrite,
-  ApiZodNoContent,
   ApiZodResponse,
 } from '../common/http/api-response.decorator';
 import {
   LocationListResponseDto,
   LocationResponseDto,
+  PurgeResultDto,
+  RemovalResultDto,
   ResolveAddressResponseDto,
 } from './dto/location-response.dto';
 import type { IfMatchCondition } from '../common/http/etag';
@@ -97,11 +99,33 @@ export class LocationController {
     );
   }
 
-  /** Legt den Ort still; er bleibt an vergangenen Terminen sichtbar. */
+  /**
+   * Löscht den Ort, wenn kein Termin mehr auf ihn zeigt — sonst legt er ihn
+   * still und bleibt an den vergangenen Abenden sichtbar. Welches von beidem
+   * es war, steht in der Antwort.
+   */
   @Delete(':id')
-  @ApiZodNoContent()
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiZodResponse(RemovalResultDto, {
+    description: 'Gelöscht, oder nur stillgelegt, weil Termine daran hängen',
+  })
+  @HttpCode(HttpStatus.OK)
   remove(@Param() params: LocationParamsDto) {
     return this.locationService.remove(params.hauskreisId, params.id);
+  }
+
+  /**
+   * Räumt stillgelegte Orte weg, an denen inzwischen kein Termin mehr hängt.
+   *
+   * Anders als die übrigen Wege hier eine Admin-Sache: es ist ein Aufräumlauf
+   * über den ganzen Hauskreis, kein Eintrag im Vorbeigehen.
+   */
+  @Post('purge-abandoned')
+  @ApiZodResponse(PurgeResultDto, {
+    description: 'Löscht stillgelegte Orte ohne Bewohner:innen und Termine',
+  })
+  @HauskreisAdmin()
+  @HttpCode(HttpStatus.OK)
+  purgeAbandoned(@Param() params: HauskreisParamsDto) {
+    return this.locationService.purgeAbandoned(params.hauskreisId);
   }
 }

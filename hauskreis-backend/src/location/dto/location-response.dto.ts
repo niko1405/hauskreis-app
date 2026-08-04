@@ -49,7 +49,25 @@ export const resolveAddressResponseSchema = z.object({
   location: locationResponseSchema.nullable(),
 });
 
+/**
+ * Was aus dem Stilllegen wurde.
+ *
+ * `deleted: false` heißt: an dem Ort hing noch ein Termin, also blieb es beim
+ * `active = false`. Die Oberfläche sagt danach das Richtige, statt „gelöscht"
+ * zu behaupten und den Ort weiter anzuzeigen.
+ */
+export const removalResultSchema = z.object({
+  deleted: z.boolean(),
+});
+
+/** Wie viele Karteileichen der Wartungslauf weggeräumt hat. */
+export const purgeResultSchema = z.object({
+  deleted: z.number().int().nonnegative(),
+});
+
 export class LocationResponseDto extends createZodDto(locationResponseSchema) {}
+export class RemovalResultDto extends createZodDto(removalResultSchema) {}
+export class PurgeResultDto extends createZodDto(purgeResultSchema) {}
 export class LocationListResponseDto extends createZodDto(
   z.array(locationResponseSchema),
 ) {}

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -44,6 +45,8 @@ function nextAddressKey(
 
 @Injectable()
 export class LocationService {
+  private readonly logger = new Logger(LocationService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   findAll(hauskreisId: string) {
@@ -153,13 +156,18 @@ export class LocationService {
   }
 
   /**
-   * Stilllegen statt löschen.
+   * Stilllegen — oder wirklich löschen, wenn nichts mehr daran hängt.
    *
    * An einem Ort haben Abende stattgefunden; wäre er weg, stünde im Archiv
-   * „irgendwo". `active = false` nimmt ihn aus der Auswahl und lässt die
-   * Vergangenheit heil.
+   * „irgendwo" (`Meeting.location` ist `onDelete: SetNull`). Solange also ein
+   * Termin auf ihn zeigt, bleibt es beim `active = false`.
+   *
+   * Zeigt keiner mehr auf ihn, gibt es nichts zu bewahren, und ein stillgelegter
+   * Ort ohne Geschichte ist bloß eine Karteileiche: dann verschwindet er ganz.
+   * Das ist der Normalfall beim Vertippen — Treffpunkt angelegt, Name falsch,
+   * nie benutzt.
    */
-  async remove(hauskreisId: string, id: string) {
+  async remove(hauskreisId: string, id: string): Promise<RemovalResult> {
     const location = await this.findOne(hauskreisId, id);
 
     if (location.residents.length > 0) {
@@ -170,10 +178,62 @@ export class LocationService {
       );
     }
 
+    return this.forget(id);
+  }
+
+  /**
+   * Löschen, falls kein Termin daran hängt, sonst stilllegen.
+   *
+   * Ohne Bewohner:innen-Prüfung — die Aufrufer wissen bereits, dass niemand
+   * mehr dort wohnt: `remove` hat es geprüft, `syncHomeName` hat gerade selbst
+   * ausgezogen.
+   */
+  private async forget(id: string): Promise<RemovalResult> {
+    const meetings = await this.prisma.meeting.count({
+      where: { locationId: id },
+    });
+
+    if (meetings === 0) {
+      await this.prisma.location.delete({ where: { id } });
+      return { deleted: true };
+    }
+
     await this.prisma.location.update({
       where: { id },
       data: { active: false, version: { increment: 1 } },
     });
+
+    return { deleted: false };
+  }
+
+  /**
+   * Räumt stillgelegte Orte weg, an denen inzwischen kein Termin mehr hängt.
+   *
+   * Solche Zeilen entstehen von selbst: ein Ort wird stillgelegt, während noch
+   * ein kommender Termin auf ihn zeigt, und der Termin wird später umgelegt
+   * oder abgesagt. Danach merkt es niemand mehr — deshalb ein Wartungslauf und
+   * kein Aufräumen an zwanzig Stellen.
+   */
+  async purgeAbandoned(hauskreisId: string): Promise<{ deleted: number }> {
+    const abandoned = await this.prisma.location.findMany({
+      where: {
+        hauskreisId,
+        active: false,
+        residents: { none: {} },
+        meetings: { none: {} },
+      },
+      select: { id: true },
+    });
+
+    if (abandoned.length === 0) return { deleted: 0 };
+
+    const { count } = await this.prisma.location.deleteMany({
+      where: { id: { in: abandoned.map((location) => location.id) } },
+    });
+
+    this.logger.log(`Purged ${count} abandoned location(s)`);
+
+    return { deleted: count };
   }
 
   /**
@@ -227,8 +287,9 @@ export class LocationService {
    * Name ist abgeleitet und darf nirgends von Hand gesetzt werden, sonst
    * steht irgendwann „Bei Niko" an einer Wohnung, in der Chris lebt.
    *
-   * Zieht die letzte Person aus, wird die Wohnung stillgelegt: sie hat keine
-   * Bewohner:innen mehr, die sie anbieten könnten.
+   * Zieht die letzte Person aus, wird die Wohnung stillgelegt — oder gelöscht,
+   * wenn dort nie ein Abend war. Eine Wohnung, in der niemand mehr wohnt und
+   * die Gruppe nie zu Gast war, hat weder Zukunft noch Geschichte.
    */
   async syncHomeName(locationId: string): Promise<void> {
     const location = await this.prisma.location.findUnique({
@@ -242,17 +303,27 @@ export class LocationService {
 
     const names = location.residents.map((person) => person.name);
 
+    if (names.length === 0) {
+      await this.forget(locationId);
+      return;
+    }
+
     await this.prisma.location.update({
       where: { id: locationId },
       data: {
         name: homeName(names),
         // Wie der Name abgeleitet: eine Wohnung mit Bewohner:innen steht zur
-        // Verfügung, eine ohne nicht. Wer eine Weile nicht hosten möchte,
-        // sagt das über `canHost` im eigenen Profil — das ist die Aussage
-        // einer Person, nicht die einer Wohnung.
-        active: names.length > 0,
+        // Verfügung. Wer eine Weile nicht hosten möchte, sagt das über
+        // `canHost` im eigenen Profil — das ist die Aussage einer Person, nicht
+        // die einer Wohnung.
+        active: true,
         version: { increment: 1 },
       },
     });
   }
+}
+
+/** Ob wirklich gelöscht wurde oder nur stillgelegt. */
+export interface RemovalResult {
+  deleted: boolean;
 }

@@ -70,7 +70,10 @@ export function useUpdateLocation(locationId: string) {
   });
 }
 
-/** Legt den Ort still — er verschwindet aus der Auswahl, nicht aus dem Archiv. */
+/**
+ * Löscht den Ort — oder legt ihn still, wenn dort Abende stattgefunden haben.
+ * Was von beidem, steht in der Antwort (`deleted`).
+ */
 export function useDeleteLocation() {
   const { hauskreisId, keys, derived } = useHk();
 
@@ -78,5 +81,15 @@ export function useDeleteLocation() {
     (locationId: string) =>
       locationsApi.deleteLocation(hauskreisId, locationId),
     { invalidateKeys: [keys.locations.all, keys.meetings.all, ...derived] },
+  );
+}
+
+/** Nur Admin. */
+export function usePurgeAbandonedLocations() {
+  const { hauskreisId, keys } = useHk();
+
+  return useApiMutation(
+    () => locationsApi.purgeAbandonedLocations(hauskreisId),
+    { invalidateKeys: [keys.locations.all] },
   );
 }

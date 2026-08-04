@@ -1,0 +1,33 @@
+meta {
+  name: Verwaiste Orte wegräumen (Admin)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/locations/purge-abandoned
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("sagt, wie viele weg sind", function () {
+    expect(res.body.deleted).to.be.a("number");
+    expect(res.body.deleted).to.be.at.least(0);
+  });
+}
+
+docs {
+  Löscht stillgelegte Orte, an denen weder jemand wohnt noch ein Termin hängt.
+
+  Solche Zeilen entstehen von selbst: ein Ort wird stillgelegt, während noch ein
+  kommender Termin auf ihn zeigt, und der Termin wird später umgelegt oder
+  abgesagt. Danach merkt es niemand mehr.
+
+  Das normale DELETE räumt bereits selbst auf, wenn es kann — dieser Lauf ist
+  für die Altlasten da und antwortet in einem gepflegten Hauskreis mit 0.
+}

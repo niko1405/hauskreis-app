@@ -52,6 +52,9 @@ export type CreateLocationInput = S['CreateLocationDto'];
 /** Ebenfalls mit Pflichtfeldern trotz PATCH: `hostWeight`, `requiresHost`. */
 export type UpdateLocationInput = S['UpdateLocationDto'];
 export type ResolvedAddress = S['ResolveAddressResponseDto'];
+/** Ob ein Ort wirklich gelöscht wurde oder nur stillgelegt. */
+export type RemovalResult = S['RemovalResultDto'];
+export type PurgeResult = S['PurgeResultDto'];
 export type SetHomeInput = S['SetHomeDto'];
 export type ChangedEmail = S['ChangedEmailResponseDto'];
 
