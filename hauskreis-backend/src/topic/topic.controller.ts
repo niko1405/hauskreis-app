@@ -21,7 +21,9 @@ import {
 } from './dto/topic.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { Roles } from '../auth/roles.decorator';
-import { ROLE_ADMIN } from '../auth/auth.types';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { PersonService } from '../person/person.service';
+import { ROLE_ADMIN, type AuthenticatedUser } from '../auth/auth.types';
 import { IfMatch } from '../common/http/if-match.decorator';
 import type { IfMatchCondition } from '../common/http/etag';
 import {
@@ -42,6 +44,7 @@ export class TopicController {
     private readonly topicService: TopicService,
     private readonly carryOverService: TopicCarryOverService,
     private readonly reminders: TopicReminderService,
+    private readonly people: PersonService,
   ) {}
 
   @Get()
@@ -91,15 +94,19 @@ export class TopicController {
   @Patch(':id')
   @ApiZodResponse(TopicResponseDto)
   @ApiConditionalWrite()
-  update(
+  async update(
     @Param() params: TopicParamsDto,
     @Body() dto: UpdateTopicDto,
+    @CurrentUser() user: AuthenticatedUser,
     @IfMatch() ifMatch?: IfMatchCondition,
   ) {
+    const person = await this.people.resolveForUser(user);
+
     return this.topicService.update(
       params.hauskreisId,
       params.id,
       dto,
+      person.id,
       ifMatch,
     );
   }

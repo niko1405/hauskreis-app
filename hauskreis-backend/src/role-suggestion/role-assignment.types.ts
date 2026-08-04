@@ -10,17 +10,15 @@ import type { DeferralReason, HomeFacts } from './host-ranking';
  */
 
 /**
- * Extended in later phases (TOPIC, SONG). Adding a value means writing one
- * adapter, not touching the ranking.
+ * Kommt aus der Datenbank, seit sich die Benachrichtigungs-Historie merken
+ * muss, *welche* Rolle jemand bekommen hat. Vorher stand die Liste hier als
+ * eigenes Objekt — zwei Aufschriebe derselben drei Werte, die auseinanderlaufen
+ * können. Eine Rolle zu ergänzen heißt weiterhin: einen Adapter schreiben, das
+ * Ranking bleibt unberührt.
  */
-export const AssignmentRole = {
-  HOST: 'HOST',
-  TOPIC: 'TOPIC',
-  SONG: 'SONG',
-} as const;
+import { AssignmentRole } from '../../generated/prisma/enums';
 
-export type AssignmentRole =
-  (typeof AssignmentRole)[keyof typeof AssignmentRole];
+export { AssignmentRole };
 
 /** One person did (or will do) one job on one date. */
 export interface RoleAssignmentEvent {

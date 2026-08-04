@@ -10,6 +10,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
 import type { MeetingNotificationService } from './meeting-notification.service';
 import type { MeetingCancellationService } from './meeting-cancellation.service';
+import type { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import type { IfMatchCondition } from '../common/http/etag';
 
 /** Diese Endpunkte verlangen eine Vorbedingung; hier interessiert sie nicht. */
@@ -39,7 +40,20 @@ function setup(before = meeting()) {
   const prisma = {
     meeting: {
       findFirst: jest.fn(() => Promise.resolve(state.current)),
-      updateMany: jest.fn(() => Promise.resolve({ count: 1 })),
+      // Der Schreibvorgang wirkt auf den Stand zurück, den `reload` gleich
+      // wieder liest. Ohne das sähe der Dienst nach dem Speichern immer noch
+      // den Zustand von vorher — und dann könnte kein Test prüfen, was aus
+      // einer Änderung *folgt*, etwa die Nachricht an den neuen Gastgeber.
+      updateMany: jest.fn((args: { data: Record<string, unknown> }) => {
+        for (const [key, value] of Object.entries(args.data)) {
+          // `undefined` heißt „unverändert", `{ increment: 1 }` ist der
+          // Versionszähler und keine Eigenschaft des Termins.
+          if (value !== undefined && key !== 'version') {
+            state.current = { ...state.current, [key]: value };
+          }
+        }
+        return Promise.resolve({ count: 1 });
+      }),
     },
     person: { findFirst: jest.fn(), findFirstOrThrow: jest.fn() },
     location: { findFirst: jest.fn(), findFirstOrThrow: jest.fn() },
@@ -51,15 +65,24 @@ function setup(before = meeting()) {
     announceRevival: jest.fn(),
   };
   const cancellations = { reconcile: jest.fn() };
+  const roleAssignments = { announce: jest.fn() };
 
   const service = new MeetingService(
     prisma as unknown as PrismaService,
     {} as unknown as RoleSuggestionService,
     notifications as unknown as MeetingNotificationService,
     cancellations as unknown as MeetingCancellationService,
+    roleAssignments as unknown as RoleAssignmentNotifier,
   );
 
-  return { service, prisma, notifications, cancellations, state };
+  return {
+    service,
+    prisma,
+    notifications,
+    cancellations,
+    roleAssignments,
+    state,
+  };
 }
 
 /** Was `updateMany` schreiben wollte. */
@@ -87,7 +110,7 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
       locationId: 'l-niko',
     });
 
-    await service.update('hk1', 'm1', { hostPersonId: 'p1' }, EGAL);
+    await service.update('hk1', 'm1', { hostPersonId: 'p1' }, undefined, EGAL);
 
     expect(written(prisma)).toMatchObject({
       hostPersonId: 'p1',
@@ -104,7 +127,7 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
     });
 
     await expect(
-      service.update('hk1', 'm1', { hostPersonId: 'p2' }, EGAL),
+      service.update('hk1', 'm1', { hostPersonId: 'p2' }, undefined, EGAL),
     ).rejects.toThrow(/Mira hat keine Adresse/);
     expect(prisma.meeting.updateMany).not.toHaveBeenCalled();
   });
@@ -126,6 +149,7 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
           hostPersonId: 'p1',
           locationId: 'l-park',
         },
+        undefined,
         EGAL,
       ),
     ).rejects.toThrow(BadRequestException);
@@ -139,7 +163,13 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
       requiresHost: false,
     });
 
-    await service.update('hk1', 'm1', { locationId: 'l-park' }, EGAL);
+    await service.update(
+      'hk1',
+      'm1',
+      { locationId: 'l-park' },
+      undefined,
+      EGAL,
+    );
 
     expect(written(prisma)).toMatchObject({ locationId: 'l-park' });
   });
@@ -153,7 +183,7 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
     });
 
     await expect(
-      service.update('hk1', 'm1', { locationId: 'l-chris' }, EGAL),
+      service.update('hk1', 'm1', { locationId: 'l-chris' }, undefined, EGAL),
     ).rejects.toThrow(/trag die Person als Gastgeber ein/);
   });
 
@@ -166,7 +196,7 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
       }),
     );
 
-    await service.update('hk1', 'm1', { hostPersonId: null }, EGAL);
+    await service.update('hk1', 'm1', { hostPersonId: null }, undefined, EGAL);
 
     expect(written(prisma)).toMatchObject({
       hostPersonId: null,
@@ -184,7 +214,7 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
       }),
     );
 
-    await service.update('hk1', 'm1', { hostPersonId: null }, EGAL);
+    await service.update('hk1', 'm1', { hostPersonId: null }, undefined, EGAL);
 
     expect(written(prisma)).toMatchObject({
       hostPersonId: null,
@@ -207,8 +237,69 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
     prisma.location.findFirst.mockResolvedValue({ id: 'l-park' });
 
     await expect(
-      service.update('hk1', 'm1', { locationId: 'l-park' }, EGAL),
+      service.update('hk1', 'm1', { locationId: 'l-park' }, undefined, EGAL),
     ).rejects.toThrow(/Nimm erst den Gastgeber heraus/);
+  });
+});
+
+/** Niko wohnt in `l-niko` und ist damit als Gastgeber wählbar. */
+function withHost(prisma: ReturnType<typeof setup>['prisma']) {
+  prisma.person.findFirst.mockResolvedValue({ id: 'p1' });
+  prisma.person.findFirstOrThrow.mockResolvedValue({
+    name: 'Niko',
+    locationId: 'l-niko',
+  });
+}
+
+describe('MeetingService.update — wer eingeteilt wird, hört davon', () => {
+  it('meldet einen neuen Gastgeber', async () => {
+    const { service, prisma, roleAssignments } = setup();
+    withHost(prisma);
+
+    await service.update('hk1', 'm1', { hostPersonId: 'p1' }, 'admin', EGAL);
+
+    expect(roleAssignments.announce).toHaveBeenCalledWith(
+      'm1',
+      'HOST',
+      ['p1'],
+      'admin',
+    );
+  });
+
+  /** Ein `PATCH` mit dem Info-Text darf niemanden anschreiben. */
+  it('schweigt, wenn der Gastgeber derselbe bleibt', async () => {
+    const { service, prisma, roleAssignments } = setup(
+      meeting({
+        hostPersonId: 'p1',
+        locationId: 'l-niko',
+        location: { requiresHost: true },
+      }),
+    );
+    withHost(prisma);
+
+    await service.update(
+      'hk1',
+      'm1',
+      { infoText: 'Bitte pünktlich' },
+      'admin',
+      EGAL,
+    );
+
+    expect(roleAssignments.announce).not.toHaveBeenCalled();
+  });
+
+  it('schweigt, wenn der Gastgeber herausgenommen wird', async () => {
+    const { service, roleAssignments } = setup(
+      meeting({
+        hostPersonId: 'p1',
+        locationId: 'l-niko',
+        location: { requiresHost: true },
+      }),
+    );
+
+    await service.update('hk1', 'm1', { hostPersonId: null }, 'admin', EGAL);
+
+    expect(roleAssignments.announce).not.toHaveBeenCalled();
   });
 });
 

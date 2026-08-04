@@ -4,6 +4,7 @@ import { NotificationService } from './notification.service';
 import { PushSubscriptionService } from './push-subscription.service';
 import { NotificationPreferenceService } from './notification-preference.service';
 import { MeetingReminderService } from './meeting-reminder.service';
+import { RoleAssignmentNotifier } from './role-assignment-notifier.service';
 import { PersonModule } from '../person/person.module';
 
 /**
@@ -19,6 +20,7 @@ import { PersonModule } from '../person/person.module';
     PushSubscriptionService,
     NotificationPreferenceService,
     MeetingReminderService,
+    RoleAssignmentNotifier,
   ],
   // The preference service is exported too: the reminder jobs need the lead
   // time or weekday before they can work out whether today is the day. The
@@ -27,6 +29,9 @@ import { PersonModule } from '../person/person.module';
     NotificationService,
     NotificationPreferenceService,
     MeetingReminderService,
+    // Termin, Thema und Lieder liegen in drei Modulen, die Zuteilung passiert
+    // also an drei Stellen — die Regeln dafür stehen trotzdem nur einmal.
+    RoleAssignmentNotifier,
   ],
 })
 export class NotificationModule {}

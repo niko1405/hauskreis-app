@@ -115,6 +115,18 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     defaultEnabled: true,
   },
   {
+    type: NotificationType.ROLE_ASSIGNED,
+    label: 'Du wurdest eingeteilt',
+    // Ein Eintrag für Gastgeber, Thema und Musik zusammen, nicht drei. Die
+    // Erinnerungen darüber sind einzeln einstellbar, weil man sie
+    // unterschiedlich früh braucht; hier gibt es nichts einzustellen, und drei
+    // Schalter für dieselbe Frage machen die Liste schlechter.
+    description:
+      'Sobald dich jemand für einen kommenden Abend einträgt — als Gastgeber, fürs Thema oder für die Musik.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
     type: NotificationType.PRAYER_BUDDY_ASSIGNED,
     label: 'Neue Gebetsbuddys',
     description: 'Wer in der neuen Runde mit dir betet.',

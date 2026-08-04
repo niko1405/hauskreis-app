@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  AssignmentRole,
   AttendanceSource,
   AttendanceStatus,
   MeetingCancelSource,
@@ -14,6 +15,7 @@ import { RoleSuggestionService } from '../role-suggestion/role-suggestion.servic
 import { locationInclude } from '../location/location.service';
 import { MeetingCancellationService } from './meeting-cancellation.service';
 import { MeetingNotificationService } from './meeting-notification.service';
+import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
 import type { IfMatchCondition } from '../common/http/etag';
@@ -64,6 +66,7 @@ export class MeetingService {
     private readonly roleSuggestions: RoleSuggestionService,
     private readonly meetingNotifications: MeetingNotificationService,
     private readonly cancellations: MeetingCancellationService,
+    private readonly roleAssignments: RoleAssignmentNotifier,
   ) {}
 
   async findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
@@ -161,6 +164,8 @@ export class MeetingService {
     hauskreisId: string,
     id: string,
     dto: UpdateMeetingDto,
+    /** Wer gerade einträgt — bekommt keine Nachricht über sich selbst. */
+    actorPersonId?: string,
     condition?: IfMatchCondition,
   ) {
     const before = await this.findOne(hauskreisId, id);
@@ -192,6 +197,22 @@ export class MeetingService {
       reload: () => this.findOne(hauskreisId, id),
       notFoundMessage: `Meeting ${id} not found`,
     });
+
+    // Wer eingeteilt wird, soll es sofort erfahren und nicht erst durch die
+    // Erinnerung drei Tage vorher. Nur bei echtem Wechsel: ein `PATCH` mit dem
+    // Info-Text darf niemanden anschreiben.
+    if (
+      updated.hostPersonId &&
+      updated.hostPersonId !== before.hostPersonId &&
+      updated.status !== MeetingStatus.CANCELLED
+    ) {
+      await this.roleAssignments.announce(
+        id,
+        AssignmentRole.HOST,
+        [updated.hostPersonId],
+        actorPersonId,
+      );
+    }
 
     return updated;
   }

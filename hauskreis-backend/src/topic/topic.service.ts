@@ -4,7 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { TopicStatus } from '../../generated/prisma/enums';
+import {
+  AssignmentRole,
+  MeetingStatus,
+  TopicStatus,
+} from '../../generated/prisma/enums';
+import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
+import { toUtcDate } from '../meeting/meeting-schedule';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
 import type { IfMatchCondition } from '../common/http/etag';
@@ -26,7 +32,10 @@ const topicInclude = {
 
 @Injectable()
 export class TopicService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly roleAssignments: RoleAssignmentNotifier,
+  ) {}
 
   async findAll(hauskreisId: string, query: ListTopicsQueryDto) {
     const createdAt: { gte?: Date; lte?: Date } = {};
@@ -103,6 +112,8 @@ export class TopicService {
     hauskreisId: string,
     id: string,
     dto: UpdateTopicDto,
+    /** Wer gerade einträgt — bekommt keine Nachricht über sich selbst. */
+    actorPersonId?: string,
     condition?: IfMatchCondition,
   ) {
     await this.findOne(hauskreisId, id);
@@ -114,7 +125,17 @@ export class TopicService {
       );
     }
 
-    return updateWithVersionCheck({
+    // Vor dem Schreiben lesen: benachrichtigt werden soll, wer **dazukommt**.
+    // Die ganze Liste zu nehmen hieße, beim Nachrücken einer zweiten Person
+    // auch die erste noch einmal anzuschreiben.
+    const before = dto.responsiblePersonIds
+      ? await this.prisma.topicResponsible.findMany({
+          where: { topicId: id },
+          select: { personId: true },
+        })
+      : [];
+
+    const updated = await updateWithVersionCheck({
       condition,
       update: async (versionConstraint) => {
         const result = await this.prisma.topic.updateMany({
@@ -138,6 +159,53 @@ export class TopicService {
       reload: () => this.findOne(hauskreisId, id),
       notFoundMessage: `Topic ${id} not found`,
     });
+
+    if (dto.responsiblePersonIds) {
+      const known = new Set(before.map((row) => row.personId));
+      await this.announceNewResponsibles(
+        hauskreisId,
+        id,
+        dto.responsiblePersonIds.filter((personId) => !known.has(personId)),
+        actorPersonId,
+      );
+    }
+
+    return updated;
+  }
+
+  /**
+   * Ein Thema hängt an mehreren Abenden — die Nachricht geht deshalb an den
+   * **nächsten kommenden**, sonst gäbe es eine je Abend. Hängt es an gar
+   * keinem, bleibt es still: ohne Termin gibt es weder ein Datum zu nennen noch
+   * einen Ort, zu dem die Nachricht springen könnte.
+   */
+  private async announceNewResponsibles(
+    hauskreisId: string,
+    topicId: string,
+    personIds: string[],
+    actorPersonId?: string,
+  ): Promise<void> {
+    if (personIds.length === 0) return;
+
+    const meeting = await this.prisma.meeting.findFirst({
+      where: {
+        hauskreisId,
+        topicId,
+        date: { gte: toUtcDate(new Date()) },
+        status: { not: MeetingStatus.CANCELLED },
+      },
+      orderBy: { date: 'asc' },
+      select: { id: true },
+    });
+
+    if (!meeting) return;
+
+    await this.roleAssignments.announce(
+      meeting.id,
+      AssignmentRole.TOPIC,
+      personIds,
+      actorPersonId,
+    );
   }
 
   async remove(hauskreisId: string, id: string) {

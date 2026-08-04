@@ -4,6 +4,7 @@ import { TopicService } from './topic.service';
 import { TopicCarryOverService } from './topic-carry-over.service';
 import { TopicReminderService } from './topic-reminder.service';
 import { NotificationModule } from '../notification/notification.module';
+import { PersonModule } from '../person/person.module';
 
 /**
  * Owns topics and the carry-over that keeps a running one on the next meeting.
@@ -13,7 +14,9 @@ import { NotificationModule } from '../notification/notification.module';
  * hosts — only the event adapter and the eligibility filter differ.
  */
 @Module({
-  imports: [NotificationModule],
+  // PersonModule: wer einträgt, steht im Token — und bekommt keine Nachricht
+  // darüber, dass er selbst eingetragen hat.
+  imports: [NotificationModule, PersonModule],
   controllers: [TopicController],
   providers: [TopicService, TopicCarryOverService, TopicReminderService],
   exports: [TopicService, TopicReminderService],

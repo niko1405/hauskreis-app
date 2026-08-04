@@ -412,8 +412,9 @@ jeder mit Label, Begründung und Default-Rhythmus.
 | `TOPIC_REMINDER`         | Abend rückt näher                             | Themen-Verantwortliche        | 5 Tage vorher |
 | `SONG_REMINDER`          | Abend rückt näher                             | Musik-Verantwortliche         | 5 Tage vorher |
 | `ACTIONSTEP_REMINDER`    | Actionstep vom letzten Mal                    | alle                          | freitags      |
+| `ROLE_ASSIGNED`          | jemand trägt dich für einen Abend ein         | die eingeteilte Person        | sofort        |
 | `PRAYER_BUDDY_ASSIGNED`  | neue Rotation                                 | alle                          | sofort        |
-| `MEETING_CANCELLED`      | ganzer Abend fällt aus                        | alle                          | sofort        |
+| `MEETING_CANCELLED`      | Abend fällt aus — oder findet doch statt      | alle                          | sofort        |
 | `ATTENDANCE_DECLINED`    | jemand sagt ab                                | der Host dieses Abends        | sofort        |
 | `HOST_CAPACITY_UNLOCKED` | genug Absagen, dass eine kleine Wohnung passt | Bewohner:innen dieser Wohnung | sofort        |
 
@@ -421,6 +422,46 @@ Die Vorlauf-Werte sind bewusst verschieden: Inhalte vorbereiten braucht mehr
 Vorlauf als aufräumen. Der Freitag beim Actionstep liegt mittig zwischen zwei
 Dienstagen und lässt das Wochenende noch übrig — montags käme die Nachfrage, wenn
 die Woche schon vorbei ist.
+
+### `ROLE_ASSIGNED`: ein Schalter für drei Rollen
+
+Man erfuhr von einer Zuteilung bisher erst durch die Erinnerung drei bis fünf
+Tage vorher. Bis dahin stand sie nur in der App — und wer nicht hineinsieht,
+erfährt sie nicht. Genau das ist das Problem aus CLAUDE.md §2 („geht unter,
+niemand hat den Überblick").
+
+Ein Eintrag für Gastgeber, Thema und Musik zusammen, nicht drei. Die
+_Erinnerungen_ sind einzeln einstellbar, weil man sie unterschiedlich früh
+braucht; hier gibt es nichts einzustellen, und drei Schalter für dieselbe Frage
+machen die Liste schlechter.
+
+Damit das trotzdem funktioniert, hat `notification_log` eine Spalte
+`related_role` bekommen. Ohne sie hielte `hasBeenSent` die Musik-Einteilung für
+eine Dublette der Gastgeber-Einteilung am selben Abend — wer beides macht,
+bekäme nur eine Nachricht. Der Termin allein ist nicht unterscheidbar genug,
+dasselbe Muster wie schon bei `related_person_id` (zwei Absagen für denselben
+Abend).
+
+Der Enum dazu, `AssignmentRole`, ist bei der Gelegenheit aus
+`role-assignment.types.ts` in die Datenbank gewandert. Er stand dort als
+TypeScript-Objekt — zwei Aufschriebe derselben drei Werte, die auseinanderlaufen
+können; die Vorschlagslogik leitet ihre Fassung jetzt davon ab.
+
+Drei Regeln teilen sich alle Aufrufer, deshalb liegen sie in
+[`role-assignment-notifier.service.ts`](src/notification/role-assignment-notifier.service.ts)
+und nicht in den drei Diensten:
+
+- **Nur kommende Abende.** Wer nachträgt, wer im Mai das Thema hatte, soll
+  niemanden aufschrecken. Abgesagte Abende ebenso wenig.
+- **Nur wirklich neue Namen.** Die Aufrufer lesen den Stand vorher und schicken
+  die Differenz — sonst hörte beim Nachrücken einer zweiten Person auch die
+  erste noch einmal davon.
+- **Nicht an sich selbst.** Wer sich einträgt, weiß es bereits.
+
+Ein Thema hängt an mehreren Abenden. Benachrichtigt wird für den **nächsten
+kommenden**, sonst gäbe es eine Nachricht je Abend. Hängt das Thema an gar
+keinem Termin, bleibt es still: ohne Termin gibt es weder ein Datum zu nennen
+noch ein Ziel, zu dem die Nachricht springen könnte.
 
 ### Einstellungen: nur Abweichungen werden gespeichert
 

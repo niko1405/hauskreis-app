@@ -3,7 +3,10 @@ import webpush, { WebPushError } from 'web-push';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppConfigService } from '../config/config.service';
 import { NotificationPreferenceService } from './notification-preference.service';
-import type { NotificationType } from '../../generated/prisma/enums';
+import type {
+  AssignmentRole,
+  NotificationType,
+} from '../../generated/prisma/enums';
 
 type DeliveryOutcome = 'delivered' | 'pruned' | 'failed';
 
@@ -102,6 +105,10 @@ export class NotificationService implements OnModuleInit {
     relatedGroupId?: string | null;
     /// Who the message is *about*, when that differs from the recipient.
     relatedPersonId?: string | null;
+    /// Welche Rolle gemeint war. Nur für `ROLE_ASSIGNED`: wer an einem Abend
+    /// Gastgeber **und** für die Musik eingeteilt wird, soll zweimal hören,
+    /// dass er dran ist.
+    relatedRole?: AssignmentRole | null;
     payload: NotificationPayload;
   }): Promise<SendResult> {
     const setting = await this.preferences.resolve(
@@ -141,6 +148,7 @@ export class NotificationService implements OnModuleInit {
         relatedMeetingId: params.relatedMeetingId ?? null,
         relatedGroupId: params.relatedGroupId ?? null,
         relatedPersonId: params.relatedPersonId ?? null,
+        relatedRole: params.relatedRole ?? null,
       },
     });
 
@@ -240,6 +248,7 @@ export class NotificationService implements OnModuleInit {
     relatedMeetingId?: string | null;
     relatedGroupId?: string | null;
     relatedPersonId?: string | null;
+    relatedRole?: AssignmentRole | null;
   }): Promise<boolean> {
     const existing = await this.prisma.notificationLog.findFirst({
       where: {
@@ -248,6 +257,7 @@ export class NotificationService implements OnModuleInit {
         relatedMeetingId: params.relatedMeetingId ?? null,
         relatedGroupId: params.relatedGroupId ?? null,
         relatedPersonId: params.relatedPersonId ?? null,
+        relatedRole: params.relatedRole ?? null,
       },
     });
 

@@ -2815,6 +2815,7 @@
                 "SONG_REMINDER",
                 "ACTIONSTEP_REMINDER",
                 "PRAYER_BUDDY_ASSIGNED",
+                "ROLE_ASSIGNED",
                 "MEETING_CANCELLED",
                 "ATTENDANCE_DECLINED",
                 "HOST_CAPACITY_UNLOCKED"
@@ -8747,6 +8748,7 @@
                 "SONG_REMINDER",
                 "ACTIONSTEP_REMINDER",
                 "PRAYER_BUDDY_ASSIGNED",
+                "ROLE_ASSIGNED",
                 "MEETING_CANCELLED",
                 "ATTENDANCE_DECLINED",
                 "HOST_CAPACITY_UNLOCKED"
@@ -8903,6 +8905,7 @@
               "SONG_REMINDER",
               "ACTIONSTEP_REMINDER",
               "PRAYER_BUDDY_ASSIGNED",
+              "ROLE_ASSIGNED",
               "MEETING_CANCELLED",
               "ATTENDANCE_DECLINED",
               "HOST_CAPACITY_UNLOCKED"

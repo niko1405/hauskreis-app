@@ -112,15 +112,20 @@ export class MeetingController {
   @Patch(':id')
   @ApiZodResponse(MeetingResponseDto)
   @ApiConditionalWrite()
-  update(
+  async update(
     @Param() params: MeetingParamsDto,
     @Body() dto: UpdateMeetingDto,
+    @CurrentUser() user: AuthenticatedUser,
     @IfMatch() ifMatch?: IfMatchCondition,
   ) {
+    // Wer einträgt, braucht keine Nachricht darüber, dass er eingetragen hat.
+    const person = await this.people.resolveForUser(user);
+
     return this.meetingService.update(
       params.hauskreisId,
       params.id,
       dto,
+      person.id,
       ifMatch,
     );
   }

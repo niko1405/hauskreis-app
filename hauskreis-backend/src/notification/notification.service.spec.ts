@@ -151,6 +151,7 @@ describe('NotificationService.notify', () => {
         relatedMeetingId: 'm1',
         relatedGroupId: null,
         relatedPersonId: 'antonia',
+        relatedRole: null,
       },
     });
     expect(notificationLog.create).toHaveBeenCalledWith({

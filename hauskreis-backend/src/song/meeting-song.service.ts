@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
+import { AssignmentRole } from '../../generated/prisma/enums';
 import { SongService } from './song.service';
 import type {
   AddMeetingSongDto,
@@ -26,6 +28,7 @@ export class MeetingSongService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly songs: SongService,
+    private readonly roleAssignments: RoleAssignmentNotifier,
   ) {}
 
   async findAll(hauskreisId: string, meetingId: string) {
@@ -143,9 +146,17 @@ export class MeetingSongService {
     hauskreisId: string,
     meetingId: string,
     dto: SetSongLeadersDto,
+    /** Wer gerade einträgt — bekommt keine Nachricht über sich selbst. */
+    actorPersonId?: string,
   ) {
     await this.assertMeetingBelongsToHauskreis(hauskreisId, meetingId);
     await this.assertPeopleBelongToHauskreis(hauskreisId, dto.personIds);
+
+    // Vor dem Schreiben: benachrichtigt wird, wer **dazukommt**. Die Liste
+    // ersetzt hier den ganzen Stand, ohne diesen Vergleich hörte beim
+    // Nachrücken einer zweiten Person auch die erste noch einmal davon.
+    const before = await this.findLeaders(hauskreisId, meetingId);
+    const known = new Set(before.map((person) => person.id));
 
     await this.prisma.$transaction([
       this.prisma.meetingSongLeader.deleteMany({
@@ -156,6 +167,13 @@ export class MeetingSongService {
         skipDuplicates: true,
       }),
     ]);
+
+    await this.roleAssignments.announce(
+      meetingId,
+      AssignmentRole.SONG,
+      dto.personIds.filter((personId) => !known.has(personId)),
+      actorPersonId,
+    );
 
     return this.findLeaders(hauskreisId, meetingId);
   }

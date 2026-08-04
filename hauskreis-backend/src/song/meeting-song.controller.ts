@@ -111,14 +111,18 @@ export class MeetingSongController {
   @ApiZodResponse(SongLeadersResponseDto, {
     description: 'Ersetzt die Liste; eine leere ist gueltig',
   })
-  setLeaders(
+  async setLeaders(
     @Param() params: MeetingSongListParamsDto,
     @Body() dto: SetSongLeadersDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
+    const person = await this.people.resolveForUser(user);
+
     return this.meetingSongs.setLeaders(
       params.hauskreisId,
       params.meetingId,
       dto,
+      person.id,
     );
   }
 

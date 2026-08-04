@@ -1,0 +1,45 @@
+meta {
+  name: Rolle zuteilen benachrichtigt
+  type: http
+  seq: 18
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{meetingEtag}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "hostPersonId": "{{otherPersonId}}"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("meetingEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("trägt den Gastgeber ein", function () {
+    expect(res.body.hostPersonId).to.equal(bru.getEnvVar("otherPersonId"));
+  });
+}
+
+docs {
+  Ein Wechsel des Gastgebers löst `ROLE_ASSIGNED` aus — sichtbar im Server-Log
+  bzw. als Push, wenn ein Abo besteht.
+
+  Bewusst eine **andere** Person als die angemeldete: wer sich selbst einträgt,
+  bekommt keine Nachricht darüber. Dasselbe gilt für vergangene und abgesagte
+  Abende und für einen `PATCH`, der den Gastgeber gar nicht ändert.
+}

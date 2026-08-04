@@ -1440,6 +1440,7 @@ export interface components {
         | 'SONG_REMINDER'
         | 'ACTIONSTEP_REMINDER'
         | 'PRAYER_BUDDY_ASSIGNED'
+        | 'ROLE_ASSIGNED'
         | 'MEETING_CANCELLED'
         | 'ATTENDANCE_DECLINED'
         | 'HOST_CAPACITY_UNLOCKED';
@@ -1480,6 +1481,7 @@ export interface components {
         | 'SONG_REMINDER'
         | 'ACTIONSTEP_REMINDER'
         | 'PRAYER_BUDDY_ASSIGNED'
+        | 'ROLE_ASSIGNED'
         | 'MEETING_CANCELLED'
         | 'ATTENDANCE_DECLINED'
         | 'HOST_CAPACITY_UNLOCKED';
@@ -4131,6 +4133,7 @@ export interface operations {
           | 'SONG_REMINDER'
           | 'ACTIONSTEP_REMINDER'
           | 'PRAYER_BUDDY_ASSIGNED'
+          | 'ROLE_ASSIGNED'
           | 'MEETING_CANCELLED'
           | 'ATTENDANCE_DECLINED'
           | 'HOST_CAPACITY_UNLOCKED';

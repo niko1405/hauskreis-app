@@ -35,6 +35,23 @@ enum MeetingStatus {
   @@map("meeting_status")
 }
 
+/// Die drei Aufgaben, die an einem Abend vergeben werden.
+///
+/// Bis eben nur ein TypeScript-Objekt in `role-assignment.types.ts`. Seit die
+/// Benachrichtigungs-Historie sich merken muss, *welche* Rolle jemand bekommen
+/// hat, steht sie in der Datenbank — und die Vorschlagslogik leitet ihre
+/// Fassung davon ab, statt sie ein zweites Mal aufzuschreiben.
+///
+/// Gebetsbuddys fehlen hier bewusst: sie hängen an keinem Termin und werden
+/// nicht zugeteilt, sondern gewürfelt.
+enum AssignmentRole {
+  HOST
+  TOPIC
+  SONG
+
+  @@map("assignment_role")
+}
+
 /// Wer den Abend abgesagt hat — ein Mensch oder der Umstand.
 enum MeetingCancelSource {
   /// Ein Admin hat abgesagt. Bleibt abgesagt, bis ein Admin es zurücknimmt.
@@ -63,6 +80,8 @@ enum NotificationType {
   ACTIONSTEP_REMINDER
   /// A new prayer buddy rotation started.
   PRAYER_BUDDY_ASSIGNED
+  /// Someone put you down for hosting, the topic or the music.
+  ROLE_ASSIGNED
   /// A whole meeting was called off.
   MEETING_CANCELLED
   /// Someone dropped out of a meeting you are hosting.
@@ -522,6 +541,11 @@ model NotificationLog {
   /// about the first drop-out only: the meeting alone is not specific enough
   /// to tell two cancellations for the same evening apart.
   relatedPersonId  String?          @map("related_person_id") @db.Uuid
+  /// Welche Rolle gemeint war. Nur `ROLE_ASSIGNED` benutzt das — und braucht es:
+  /// wer an einem Abend Gastgeber **und** für die Musik eingeteilt wird, soll
+  /// zweimal hören, dass er dran ist. Der Termin allein ist dafür nicht
+  /// unterscheidbar genug.
+  relatedRole      AssignmentRole?  @map("related_role")
   sentAt           DateTime         @default(now()) @map("sent_at")
 
   person         Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
@@ -534,7 +558,9 @@ model NotificationLog {
   /// notifications without a meeting — the real check is the query in
   /// `NotificationService.hasBeenSent`. The index still earns its keep by
   /// making that query an index lookup.
-  @@unique([personId, type, relatedMeetingId, relatedGroupId, relatedPersonId])
+  /// Der Name ist gesetzt, weil der abgeleitete abgeschnitten würde und sich
+  /// mit jeder weiteren Spalte änderte.
+  @@unique([personId, type, relatedMeetingId, relatedGroupId, relatedPersonId, relatedRole], map: "notification_log_dedup_key")
   @@index([personId, sentAt])
   @@map("notification_log")
 }
