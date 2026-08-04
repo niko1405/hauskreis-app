@@ -276,6 +276,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/meetings/{id}/uncancel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['MeetingController_uncancel'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/meetings/{id}/attendance': {
     parameters: {
       query?: never;
@@ -1102,6 +1118,16 @@ export interface components {
         /** Format: date-time */
         updatedAt: string;
         version: number;
+        /** Format: date-time */
+        cancelledAt: string | null;
+        /** @enum {string|null} */
+        cancelSource: 'MANUAL' | 'ALL_DECLINED' | null;
+        cancelReason: string | null;
+        cancelledBy: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+        } | null;
         location: {
           /** Format: uuid */
           id: string;
@@ -1198,6 +1224,16 @@ export interface components {
       /** Format: date-time */
       updatedAt: string;
       version: number;
+      /** Format: date-time */
+      cancelledAt: string | null;
+      /** @enum {string|null} */
+      cancelSource: 'MANUAL' | 'ALL_DECLINED' | null;
+      cancelReason: string | null;
+      cancelledBy: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+      } | null;
       location: {
         /** Format: uuid */
         id: string;
@@ -1337,8 +1373,6 @@ export interface components {
     UpdateMeetingDto: {
       /** @enum {string} */
       type?: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
-      /** @enum {string} */
-      status?: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
       /** Format: uuid */
       locationId?: string | null;
       /** Format: uuid */
@@ -1350,6 +1384,9 @@ export interface components {
       actionstepText?: string | null;
       summaryText?: string | null;
       infoText?: string | null;
+    };
+    CancelMeetingDto: {
+      reason?: string | null;
     };
     SetAttendanceDto: {
       /** Format: uuid */
@@ -3583,9 +3620,90 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CancelMeetingDto'];
+      };
+    };
     responses: {
       /** @description Sagt den Abend ab und benachrichtigt die Gruppe */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MeetingResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Das `If-Match` ist veraltet — jemand anders hat inzwischen gespeichert. Neu laden und erneut versuchen. */
+      412: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Kein `If-Match` mitgeschickt. Den ETag aus dem vorangehenden GET verwenden. */
+      428: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeetingController_uncancel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Der Abend findet doch statt; die Gruppe erfährt es */
       200: {
         headers: {
           [name: string]: unknown;

@@ -58,16 +58,22 @@ function setup(
     .fn()
     .mockResolvedValue(options.unlocked ?? []);
 
+  // Beide Richtungen der Absage laufen über dieselbe Art; der Merkposten wird
+  // deshalb vor jedem Wechsel weggeräumt, sonst verschluckt `hasBeenSent` die
+  // zweite Nachricht als Dublette der ersten.
+  const logDeleteMany = jest.fn().mockResolvedValue({ count: 0 });
+
   const service = new MeetingNotificationService(
     {
       meeting: { findUnique: meetingFindUnique },
       person: { findMany: personFindMany, findUnique: personFindUnique },
+      notificationLog: { deleteMany: logDeleteMany },
     } as unknown as PrismaService,
     { notify } as unknown as NotificationService,
     { findHomesUnlockedByAbsences } as unknown as RoleSuggestionService,
   );
 
-  return { service, notify, findHomesUnlockedByAbsences };
+  return { service, notify, findHomesUnlockedByAbsences, logDeleteMany };
 }
 
 describe('announceCancellation', () => {

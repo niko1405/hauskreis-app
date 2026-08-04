@@ -62,6 +62,7 @@ export type MeetingListItem = S['MeetingPageResponseDto']['items'][number];
 export type MeetingPage = Page<MeetingListItem>;
 export type CreateMeetingInput = S['CreateMeetingDto'];
 export type UpdateMeetingInput = S['UpdateMeetingDto'];
+export type CancelMeetingInput = S['CancelMeetingDto'];
 
 export type MeetingType = Meeting['type'];
 export type MeetingStatus = Meeting['status'];

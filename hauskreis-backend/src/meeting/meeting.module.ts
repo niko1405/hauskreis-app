@@ -4,6 +4,7 @@ import { MeetingService } from './meeting.service';
 import { MeetingGeneratorService } from './meeting-generator.service';
 import { HostReminderService } from './host-reminder.service';
 import { ActionstepReminderService } from './actionstep-reminder.service';
+import { MeetingCancellationService } from './meeting-cancellation.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module';
 import { NotificationModule } from '../notification/notification.module';
@@ -22,6 +23,7 @@ import { PersonModule } from '../person/person.module';
     HostReminderService,
     ActionstepReminderService,
     MeetingNotificationService,
+    MeetingCancellationService,
   ],
   exports: [
     MeetingService,
@@ -31,6 +33,10 @@ import { PersonModule } from '../person/person.module';
     // For AbsenceModule: a holiday produces ordinary drop-outs, and the host
     // should hear about them exactly as about a manual cancellation.
     MeetingNotificationService,
+    // Ebenfalls fürs AbsenceModule: ein Urlaub kann derjenige Ausfall sein, mit
+    // dem alle abgesagt haben — dann fällt der Abend aus, ohne dass jemand ihn
+    // absagt.
+    MeetingCancellationService,
   ],
 })
 export class MeetingModule {}

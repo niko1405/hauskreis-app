@@ -7,6 +7,7 @@ import type { Resource } from '../client';
 import { meetingsApi } from '../endpoints';
 import type { MeetingListParams } from '../params';
 import type {
+  CancelMeetingInput,
   CreateMeetingInput,
   HomeScreen,
   Meeting,
@@ -85,14 +86,26 @@ export function useUpdateMeeting(meetingId: string) {
   });
 }
 
-/** Braucht `If-Match`, aber keinen Körper — deshalb `void` als Eingabe. */
+/** Sagt den ganzen Abend ab. Nur Admin. */
 export function useCancelMeeting(meetingId: string) {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useResourceUpdate<Meeting, CancelMeetingInput>({
+    queryKey: keys.meetings.detail(meetingId),
+    update: (input, etag) =>
+      meetingsApi.cancelMeeting(hauskreisId, meetingId, input, etag),
+    invalidateKeys: [keys.meetings.all, ...derived],
+  });
+}
+
+/** Braucht `If-Match`, aber keinen Körper — deshalb `void` als Eingabe. */
+export function useUncancelMeeting(meetingId: string) {
   const { hauskreisId, keys, derived } = useHk();
 
   return useResourceUpdate<Meeting, void>({
     queryKey: keys.meetings.detail(meetingId),
     update: (_input, etag) =>
-      meetingsApi.cancelMeeting(hauskreisId, meetingId, etag),
+      meetingsApi.uncancelMeeting(hauskreisId, meetingId, etag),
     invalidateKeys: [keys.meetings.all, ...derived],
   });
 }

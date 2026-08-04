@@ -9,6 +9,7 @@ import { MeetingService } from './meeting.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
 import type { MeetingNotificationService } from './meeting-notification.service';
+import type { MeetingCancellationService } from './meeting-cancellation.service';
 import type { IfMatchCondition } from '../common/http/etag';
 
 /** Diese Endpunkte verlangen eine Vorbedingung; hier interessiert sie nicht. */
@@ -45,15 +46,20 @@ function setup(before = meeting()) {
     topic: { findFirst: jest.fn() },
   };
 
-  const notifications = { announceCancellation: jest.fn() };
+  const notifications = {
+    announceCancellation: jest.fn(),
+    announceRevival: jest.fn(),
+  };
+  const cancellations = { reconcile: jest.fn() };
 
   const service = new MeetingService(
     prisma as unknown as PrismaService,
     {} as unknown as RoleSuggestionService,
     notifications as unknown as MeetingNotificationService,
+    cancellations as unknown as MeetingCancellationService,
   );
 
-  return { service, prisma, notifications, state };
+  return { service, prisma, notifications, cancellations, state };
 }
 
 /** Was `updateMany` schreiben wollte. */
@@ -210,7 +216,7 @@ describe('MeetingService — Absage vergangener Abende', () => {
   it('benachrichtigt bei einem kommenden Termin', async () => {
     const { service, notifications } = setup();
 
-    await service.cancel('hk1', 'm1', EGAL);
+    await service.cancel('hk1', 'm1', {}, 'p1', EGAL);
 
     expect(notifications.announceCancellation).toHaveBeenCalledWith('m1');
   });
@@ -220,7 +226,7 @@ describe('MeetingService — Absage vergangener Abende', () => {
       meeting({ date: LETZTER_DIENSTAG }),
     );
 
-    await service.cancel('hk1', 'm1', EGAL);
+    await service.cancel('hk1', 'm1', {}, 'p1', EGAL);
 
     expect(notifications.announceCancellation).not.toHaveBeenCalled();
   });
@@ -228,18 +234,68 @@ describe('MeetingService — Absage vergangener Abende', () => {
   it('zählt den heutigen Abend noch als kommend', async () => {
     const { service, notifications } = setup(meeting({ date: HEUTE }));
 
-    await service.cancel('hk1', 'm1', EGAL);
+    await service.cancel('hk1', 'm1', {}, 'p1', EGAL);
 
     expect(notifications.announceCancellation).toHaveBeenCalled();
   });
+});
 
-  it('bleibt auch beim Statuswechsel über update still', async () => {
-    const { service, notifications } = setup(
-      meeting({ date: LETZTER_DIENSTAG }),
+describe('MeetingService — wer abgesagt hat, steht dabei', () => {
+  it('schreibt Zeitpunkt, Person, Herkunft und Grund', async () => {
+    const { service, prisma } = setup();
+
+    await service.cancel(
+      'hk1',
+      'm1',
+      { reason: 'Halbe Gruppe krank' },
+      'p1',
+      EGAL,
     );
 
-    await service.update('hk1', 'm1', { status: 'CANCELLED' }, EGAL);
+    expect(written(prisma)).toMatchObject({
+      status: 'CANCELLED',
+      cancelledByPersonId: 'p1',
+      cancelSource: 'MANUAL',
+      cancelReason: 'Halbe Gruppe krank',
+    });
+  });
 
-    expect(notifications.announceCancellation).not.toHaveBeenCalled();
+  it('lässt den Grund weg, wenn keiner genannt wurde', async () => {
+    const { service, prisma } = setup();
+
+    await service.cancel('hk1', 'm1', {}, 'p1', EGAL);
+
+    expect(written(prisma).cancelReason).toBeNull();
+  });
+
+  /**
+   * Sonst bliebe auf der Terminseite ein „abgesagt von …" stehen, das keiner
+   * mehr gesagt hat.
+   */
+  it('räumt beim Zurücknehmen alles wieder weg', async () => {
+    const { service, prisma, notifications } = setup(
+      meeting({ status: 'CANCELLED' }),
+    );
+
+    await service.uncancel('hk1', 'm1', EGAL);
+
+    expect(written(prisma)).toMatchObject({
+      status: 'PLANNED',
+      cancelledAt: null,
+      cancelledByPersonId: null,
+      cancelSource: null,
+      cancelReason: null,
+    });
+    expect(notifications.announceRevival).toHaveBeenCalledWith('m1');
+  });
+
+  it('sagt bei einem vergangenen Abend niemandem Bescheid', async () => {
+    const { service, notifications } = setup(
+      meeting({ status: 'CANCELLED', date: LETZTER_DIENSTAG }),
+    );
+
+    await service.uncancel('hk1', 'm1', EGAL);
+
+    expect(notifications.announceRevival).not.toHaveBeenCalled();
   });
 });

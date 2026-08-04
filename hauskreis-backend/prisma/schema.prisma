@@ -35,6 +35,18 @@ enum MeetingStatus {
   @@map("meeting_status")
 }
 
+/// Wer den Abend abgesagt hat — ein Mensch oder der Umstand.
+enum MeetingCancelSource {
+  /// Ein Admin hat abgesagt. Bleibt abgesagt, bis ein Admin es zurücknimmt.
+  MANUAL
+  /// Jede aktive Person hatte abgesagt. Sagt wieder jemand zu, lebt der Abend
+  /// von selbst auf — sonst müsste jemand eine Absage zurücknehmen, die nie
+  /// jemand ausgesprochen hat.
+  ALL_DECLINED
+
+  @@map("meeting_cancel_source")
+}
+
 /// What a notification was about. Together with the person and the related
 /// meeting this is what stops the same reminder going out twice.
 /// Every value needs a matching entry in `notification-catalog.ts` — that is
@@ -136,6 +148,7 @@ model Person {
   hauskreis             Hauskreis                @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
   location              Location?                @relation(fields: [locationId], references: [id], onDelete: SetNull)
   hostedMeetings        Meeting[]                @relation("MeetingHost")
+  cancelledMeetings     Meeting[]                @relation("MeetingCanceller")
   songsCreated          Song[]                   @relation("SongCreator")
   songLeaderships       MeetingSongLeader[]      @relation("SongLeader")
   songsSuggested        MeetingSong[]            @relation("SongSuggester")
@@ -241,6 +254,17 @@ model Meeting {
   actionstepText String?       @map("actionstep_text")
   summaryText    String?       @map("summary_text")
   infoText       String?       @map("info_text")
+  /// Wann der Abend abgesagt wurde. `status` allein sagt nur *dass*, und ein
+  /// abgesagter Termin, an dem nichts weiter steht, wirft genau die Fragen auf,
+  /// die er beantworten sollte.
+  cancelledAt    DateTime?     @map("cancelled_at")
+  /// Wer abgesagt hat. `null` bei `ALL_DECLINED` — dann war es niemand.
+  cancelledByPersonId String?  @map("cancelled_by_person_id") @db.Uuid
+  /// Nicht bloß Buchhaltung: **nur eine automatische Absage wird auch
+  /// automatisch zurückgenommen**, sobald wieder jemand zusagt. Eine von Hand
+  /// abgesagte bleibt abgesagt, bis ein Mensch etwas anderes sagt.
+  cancelSource   MeetingCancelSource? @map("cancel_source")
+  cancelReason   String?       @map("cancel_reason")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
   /// Optimistic locking counter, see docs/conditional requests.
@@ -249,6 +273,7 @@ model Meeting {
   hauskreis      Hauskreis               @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
   location       Location?               @relation(fields: [locationId], references: [id], onDelete: SetNull)
   host           Person?                 @relation("MeetingHost", fields: [hostPersonId], references: [id], onDelete: SetNull)
+  cancelledBy    Person?                 @relation("MeetingCanceller", fields: [cancelledByPersonId], references: [id], onDelete: SetNull)
   topic          Topic?                  @relation(fields: [topicId], references: [id], onDelete: SetNull)
   attendances    MeetingAttendance[]
   songLeaders    MeetingSongLeader[]

@@ -129,7 +129,13 @@ export function MeetingCalendar() {
             <li key={meeting.id}>
               <Link
                 href={`/termine/${meeting.id}`}
-                className="flex items-center justify-between gap-3 rounded-md border border-line bg-card p-3 transition-colors hover:border-line-strong"
+                className={cn(
+                  'flex items-center justify-between gap-3 rounded-md border border-line bg-card p-3 transition-colors hover:border-line-strong',
+                  // Wie auf der Terminkarte: der Punkt im Raster oben war schon
+                  // grau, hier stand ein abgesagter Abend bisher wie jeder
+                  // andere.
+                  meeting.status === 'CANCELLED' && 'opacity-60',
+                )}
               >
                 <span className="min-w-0">
                   <span className="block text-[11px] font-bold text-terracotta-500">
@@ -140,7 +146,9 @@ export function MeetingCalendar() {
                   </span>
                 </span>
                 <span className="shrink-0 text-[11px] text-stone-400">
-                  {meeting.location?.name ?? 'Ort offen'}
+                  {meeting.status === 'CANCELLED'
+                    ? 'Fällt aus'
+                    : (meeting.location?.name ?? 'Ort offen')}
                 </span>
               </Link>
             </li>

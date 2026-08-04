@@ -36,7 +36,36 @@ export class MeetingNotificationService {
    * correction, and nobody needs to hear that Tuesday three weeks ago did not
    * happen.
    */
-  async announceCancellation(meetingId: string): Promise<number> {
+  announceCancellation(meetingId: string): Promise<number> {
+    return this.announceStatusChange(meetingId, (what, date) => ({
+      title: 'Fällt aus',
+      body: `${what} am ${formatMeetingDate(date)} fällt aus.`,
+    }));
+  }
+
+  /**
+   * Die Gegenrichtung: der Abend findet doch statt.
+   *
+   * Passiert, wenn nach lauter Absagen wieder jemand zusagt. Ohne diese
+   * Nachricht wüssten das nur die, die zufällig noch einmal in die App sehen —
+   * alle anderen haben „fällt aus" gelesen und planen anders.
+   *
+   * Bewusst **dieselbe** Art wie die Absage und kein eigener Schalter: wer
+   * „Hauskreis fällt aus" abonniert hat, meint dieses Thema, und ein neunter
+   * Eintrag in den Einstellungen für einen Sonderfall macht die Liste
+   * schlechter.
+   */
+  announceRevival(meetingId: string): Promise<number> {
+    return this.announceStatusChange(meetingId, (what, date) => ({
+      title: 'Findet doch statt',
+      body: `${what} am ${formatMeetingDate(date)} ist wieder dabei — jemand hat doch zugesagt.`,
+    }));
+  }
+
+  private async announceStatusChange(
+    meetingId: string,
+    copy: (what: string, date: Date) => { title: string; body: string },
+  ): Promise<number> {
     const meeting = await this.prisma.meeting.findUnique({
       where: { id: meetingId },
       select: { id: true, hauskreisId: true, date: true, title: true },
@@ -46,23 +75,30 @@ export class MeetingNotificationService {
       return 0;
     }
 
+    // Beide Richtungen laufen über dieselbe Art, und `hasBeenSent` würde die
+    // zweite Nachricht deshalb als Dublette der ersten verschlucken. Der
+    // Merkposten wird also weggeräumt: einmal je Richtungswechsel, nicht einmal
+    // je Termin.
+    await this.prisma.notificationLog.deleteMany({
+      where: {
+        type: NotificationType.MEETING_CANCELLED,
+        relatedMeetingId: meeting.id,
+      },
+    });
+
     const people = await this.prisma.person.findMany({
       where: { hauskreisId: meeting.hauskreisId, active: true },
       select: { id: true },
     });
 
-    const what = meeting.title ?? 'Der Hauskreis';
+    const text = copy(meeting.title ?? 'Der Hauskreis', meeting.date);
 
     return this.sendAll(
       people.map((person) => ({
         personId: person.id,
         type: NotificationType.MEETING_CANCELLED,
         relatedMeetingId: meeting.id,
-        payload: {
-          title: 'Fällt aus',
-          body: `${what} am ${formatMeetingDate(meeting.date)} fällt aus.`,
-          url: appPath.meeting(meeting.id),
-        },
+        payload: { ...text, url: appPath.meeting(meeting.id) },
       })),
     );
   }

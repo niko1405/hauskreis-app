@@ -3,6 +3,7 @@ import { MeetingService } from './meeting.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
 import type { MeetingNotificationService } from './meeting-notification.service';
+import type { MeetingCancellationService } from './meeting-cancellation.service';
 import {
   AttendanceSource,
   AttendanceStatus,
@@ -34,13 +35,16 @@ function setup() {
     },
   } as unknown as PrismaService;
 
+  const reconcile = jest.fn();
+
   const service = new MeetingService(
     prisma,
     {} as unknown as RoleSuggestionService,
     { handleDecline: jest.fn() } as unknown as MeetingNotificationService,
+    { reconcile } as unknown as MeetingCancellationService,
   );
 
-  return { service, upsert };
+  return { service, upsert, reconcile };
 }
 
 describe('MeetingService.setAttendance', () => {

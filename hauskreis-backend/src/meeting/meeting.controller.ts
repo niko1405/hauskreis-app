@@ -16,6 +16,7 @@ import { MeetingGeneratorService } from './meeting-generator.service';
 import { HostReminderService } from './host-reminder.service';
 import { ActionstepReminderService } from './actionstep-reminder.service';
 import {
+  CancelMeetingDto,
   CreateMeetingDto,
   ListMeetingsQueryDto,
   MeetingParamsDto,
@@ -124,19 +125,52 @@ export class MeetingController {
     );
   }
 
-  /** Cancelling keeps the meeting visible; use DELETE to remove it entirely. */
+  /**
+   * Sagt den **ganzen** Abend ab; der Termin bleibt sichtbar, `DELETE` löscht
+   * ihn wirklich.
+   *
+   * Nur Admins. Die eigene Teilnahme abzusagen ist etwas anderes und geht über
+   * `PUT :id/attendance` — vorher stand hier für jedes Mitglied ein roter Knopf,
+   * der den Abend für alle absagte.
+   */
   @Post(':id/cancel')
+  @Roles(ROLE_ADMIN)
   @ApiZodResponse(MeetingResponseDto, {
     description: 'Sagt den Abend ab und benachrichtigt die Gruppe',
   })
   @ApiConditionalWrite()
   // Returns the updated meeting rather than creating anything, so 200 not 201.
   @HttpCode(HttpStatus.OK)
-  cancel(
+  async cancel(
+    @Param() params: MeetingParamsDto,
+    @Body() dto: CancelMeetingDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @IfMatch() ifMatch?: IfMatchCondition,
+  ) {
+    const person = await this.people.resolveForUser(user);
+
+    return this.meetingService.cancel(
+      params.hauskreisId,
+      params.id,
+      dto,
+      person.id,
+      ifMatch,
+    );
+  }
+
+  /** Nimmt eine Absage zurück — auch eine, die von selbst zustande kam. */
+  @Post(':id/uncancel')
+  @Roles(ROLE_ADMIN)
+  @ApiZodResponse(MeetingResponseDto, {
+    description: 'Der Abend findet doch statt; die Gruppe erfährt es',
+  })
+  @ApiConditionalWrite()
+  @HttpCode(HttpStatus.OK)
+  uncancel(
     @Param() params: MeetingParamsDto,
     @IfMatch() ifMatch?: IfMatchCondition,
   ) {
-    return this.meetingService.cancel(params.hauskreisId, params.id, ifMatch);
+    return this.meetingService.uncancel(params.hauskreisId, params.id, ifMatch);
   }
 
   @Put(':id/attendance')

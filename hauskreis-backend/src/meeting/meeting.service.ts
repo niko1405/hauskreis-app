@@ -7,16 +7,19 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   AttendanceSource,
   AttendanceStatus,
+  MeetingCancelSource,
   MeetingStatus,
 } from '../../generated/prisma/enums';
 import { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
 import { locationInclude } from '../location/location.service';
+import { MeetingCancellationService } from './meeting-cancellation.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
 import type { IfMatchCondition } from '../common/http/etag';
 import { toUtcDate } from './meeting-schedule';
 import type {
+  CancelMeetingDto,
   CreateMeetingDto,
   ListMeetingsQueryDto,
   SetAttendanceDto,
@@ -51,6 +54,7 @@ const meetingInclude = {
   attendances: {
     select: { personId: true, status: true },
   },
+  cancelledBy: { select: { id: true, name: true } },
 } as const;
 
 @Injectable()
@@ -59,6 +63,7 @@ export class MeetingService {
     private readonly prisma: PrismaService,
     private readonly roleSuggestions: RoleSuggestionService,
     private readonly meetingNotifications: MeetingNotificationService,
+    private readonly cancellations: MeetingCancellationService,
   ) {}
 
   async findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
@@ -169,7 +174,6 @@ export class MeetingService {
           where: { id, hauskreisId, ...versionConstraint },
           data: {
             type: dto.type,
-            status: dto.status,
             // `undefined` leaves a field alone, `null` clears it — that
             // distinction is what lets a host or location be un-assigned.
             locationId: venue.locationId,
@@ -189,21 +193,20 @@ export class MeetingService {
       notFoundMessage: `Meeting ${id} not found`,
     });
 
-    // A meeting can also be called off through a plain status change, so the
-    // announcement hangs off the transition rather than off `cancel()` — the
-    // two paths would otherwise behave differently for no reason.
-    if (
-      before.status !== MeetingStatus.CANCELLED &&
-      updated.status === MeetingStatus.CANCELLED &&
-      !isPast(before.date)
-    ) {
-      await this.meetingNotifications.announceCancellation(id);
-    }
-
     return updated;
   }
 
-  async cancel(hauskreisId: string, id: string, condition?: IfMatchCondition) {
+  /**
+   * Sagt den ganzen Abend ab. Nur Admins — die eigene Teilnahme abzusagen ist
+   * etwas anderes und geht über `setAttendance`.
+   */
+  async cancel(
+    hauskreisId: string,
+    id: string,
+    dto: CancelMeetingDto,
+    byPersonId: string,
+    condition?: IfMatchCondition,
+  ) {
     const before = await this.findOne(hauskreisId, id);
 
     const cancelled = await updateWithVersionCheck({
@@ -211,7 +214,14 @@ export class MeetingService {
       update: (versionConstraint) =>
         this.prisma.meeting.updateMany({
           where: { id, hauskreisId, ...versionConstraint },
-          data: { status: MeetingStatus.CANCELLED, version: { increment: 1 } },
+          data: {
+            status: MeetingStatus.CANCELLED,
+            cancelledAt: new Date(),
+            cancelledByPersonId: byPersonId,
+            cancelSource: MeetingCancelSource.MANUAL,
+            cancelReason: dto.reason ?? null,
+            version: { increment: 1 },
+          },
         }),
       exists: () =>
         this.prisma.meeting.findFirst({ where: { id, hauskreisId } }),
@@ -228,6 +238,44 @@ export class MeetingService {
     }
 
     return cancelled;
+  }
+
+  /**
+   * Nimmt eine Absage zurück — auch eine automatische, falls jemand den Abend
+   * trotz lauter Absagen stattfinden lassen will.
+   */
+  async uncancel(
+    hauskreisId: string,
+    id: string,
+    condition?: IfMatchCondition,
+  ) {
+    const before = await this.findOne(hauskreisId, id);
+
+    const revived = await updateWithVersionCheck({
+      condition,
+      update: (versionConstraint) =>
+        this.prisma.meeting.updateMany({
+          where: { id, hauskreisId, ...versionConstraint },
+          data: {
+            status: MeetingStatus.PLANNED,
+            cancelledAt: null,
+            cancelledByPersonId: null,
+            cancelSource: null,
+            cancelReason: null,
+            version: { increment: 1 },
+          },
+        }),
+      exists: () =>
+        this.prisma.meeting.findFirst({ where: { id, hauskreisId } }),
+      reload: () => this.findOne(hauskreisId, id),
+      notFoundMessage: `Meeting ${id} not found`,
+    });
+
+    if (before.status === MeetingStatus.CANCELLED && !isPast(before.date)) {
+      await this.meetingNotifications.announceRevival(id);
+    }
+
+    return revived;
   }
 
   /**
@@ -316,6 +364,12 @@ export class MeetingService {
       previous?.status !== AttendanceStatus.ABSENT
     ) {
       await this.meetingNotifications.handleDecline(id, dto.personId);
+    }
+
+    // Diese Antwort kann die letzte gewesen sein, die den Abend noch hielt —
+    // oder die erste, die ihn wieder aufleben lässt.
+    if (previous?.status !== dto.status) {
+      await this.cancellations.reconcile(id);
     }
 
     return attendance;

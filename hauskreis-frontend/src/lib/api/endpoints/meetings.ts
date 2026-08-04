@@ -23,6 +23,7 @@ import type {
   MeetingPage,
   ReminderRunResult,
   RoleSuggestion,
+  CancelMeetingInput,
   SetAttendanceInput,
   UpdateMeetingInput,
 } from '../types';
@@ -74,14 +75,28 @@ export function deleteMeeting(
   return apiDelete(`${base(hauskreisId)}/${meetingId}`);
 }
 
-/** Braucht `If-Match`, aber keinen Körper. */
+/** Sagt den ganzen Abend ab. Nur Admin; der Grund ist freiwillig. */
 export function cancelMeeting(
+  hauskreisId: string,
+  meetingId: string,
+  input: CancelMeetingInput,
+  etag: string | undefined,
+): Promise<Resource<Meeting>> {
+  return apiPostWithPrecondition<Meeting>(
+    `${base(hauskreisId)}/${meetingId}/cancel`,
+    { etag },
+    input,
+  );
+}
+
+/** Nimmt die Absage zurück — auch eine, die von selbst zustande kam. */
+export function uncancelMeeting(
   hauskreisId: string,
   meetingId: string,
   etag: string | undefined,
 ): Promise<Resource<Meeting>> {
   return apiPostWithPrecondition<Meeting>(
-    `${base(hauskreisId)}/${meetingId}/cancel`,
+    `${base(hauskreisId)}/${meetingId}/uncancel`,
     { etag },
   );
 }

@@ -124,7 +124,11 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   {
     type: NotificationType.MEETING_CANCELLED,
     label: 'Hauskreis fällt aus',
-    description: 'Wenn ein ganzer Abend abgesagt wird.',
+    // Beide Richtungen, ein Abo: wer wissen will, dass der Abend ausfällt, will
+    // auch wissen, dass er doch stattfindet. Ein zweiter Schalter dafür wäre
+    // eine Einstellung für einen Sonderfall.
+    description:
+      'Wenn ein ganzer Abend abgesagt wird — oder doch wieder stattfindet.',
     schedule: { kind: 'EVENT' },
     defaultEnabled: true,
   },

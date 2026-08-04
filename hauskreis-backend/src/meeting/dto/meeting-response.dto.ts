@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   AttendanceSource,
   AttendanceStatus,
+  MeetingCancelSource,
   MeetingStatus,
   MeetingType,
   TopicStatus,
@@ -48,6 +49,17 @@ export const meetingResponseSchema = z.object({
   createdAt: isoDateTimeOut,
   updatedAt: isoDateTimeOut,
   version: z.number().int().nonnegative(),
+
+  /// Alles drei nur bei `status = CANCELLED` gefüllt. Ein abgesagter Abend,
+  /// an dem nur „abgesagt" steht, wirft genau die Fragen auf, die er
+  /// beantworten sollte.
+  cancelledAt: isoDateTimeOut.nullable(),
+  /// `MANUAL` heißt: ein Admin hat abgesagt, und nur ein Admin nimmt das
+  /// zurück. `ALL_DECLINED` heißt: es hatten alle abgesagt — sagt wieder
+  /// jemand zu, lebt der Abend von selbst auf.
+  cancelSource: z.enum(MeetingCancelSource).nullable(),
+  cancelReason: z.string().nullable(),
+  cancelledBy: personRefSchema.nullable(),
 
   /// Voll ausgelesen, inklusive Koordinaten für „In Maps öffnen".
   location: locationResponseSchema.nullable(),

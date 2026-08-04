@@ -385,12 +385,43 @@ Dazu drei kleinere Umbauten:
   Themen-Titel einen eigenen — und der Termin löste sich still vom Thema ab.
 - **Der Info-Text steht oben.** Dort steht, was man _vor_ dem Abend wissen muss;
   unten zwischen Zusammenfassung und Actionstep las es niemand rechtzeitig.
-- **„Wer kommt" ist eine Liste.** Vorher ließ sich für jede Person durchtippen,
-  was wie eine Anwesenheitskontrolle aussah und mit einem Fehlgriff wildfremd
-  absagte. Die eigene Antwort ist deshalb nicht verschwunden, sondern eine
-  eigene Zeile darunter — ohne die gäbe es für einen Abend in drei Wochen gar
-  keinen Weg zuzusagen, denn „Bist du dabei?" auf dem Home-Screen gilt nur
-  fürs nächste Treffen.
+- **„Wer kommt" zeigt, wer kommt.** Vorher ließ sich für jede Person
+  durchtippen, was wie eine Anwesenheitskontrolle aussah und mit einem Fehlgriff
+  wildfremd absagte; danach standen alle neun Kacheln gleich groß nebeneinander,
+  Zusagen, Absagen und Schweigen. Das beantwortet die Frage nicht, die man an
+  die Karte hat — „mit wie vielen rechne ich?". Jetzt zeigt das Raster die
+  Zusagen, Absagen und Unbeantwortete stehen als aufklappbare Zeile darunter.
+  Der Nenner zählt nur noch **aktive** Personen.
+  Die eigene Antwort ist eine eigene Zeile ganz unten und der einzige Weg, für
+  einen einzelnen Abend abzusagen: „Bist du dabei?" auf dem Startbildschirm gilt
+  nur fürs nächste Treffen, und Abwesenheiten im Profil decken Zeiträume ab.
+
+### Absagen: die eigene und die des ganzen Abends
+
+Das waren bis eben zwei Dinge an einer Stelle. Unter „Wer kommt" sagte man für
+sich ab — und direkt darunter stand ein roter Knopf, der **für alle** absagte,
+sichtbar für jedes Mitglied und ohne Rückfrage.
+
+Jetzt ist der Knopf Admin-Sache (`ADMIN_ONLY_ROUTES` in `lib/auth/roles.ts`,
+durchgesetzt vom Server) und fragt nach einem Grund. Der ist freiwillig, aber
+der eigentliche Zweck des Zwischenschritts: ein „fällt aus" ohne Erklärung
+erzeugt genau die Rückfragen in WhatsApp, die die App abschaffen soll.
+
+Ein abgesagter Abend sieht dann auch danach aus (`detail/cancellation-card.tsx`):
+oben eine `alert`-Karte mit Grund, Person und Zeitpunkt, darunter alles gedämpft
+und schreibgeschützt (`locked = past || cancelled`). Vorher blieb davon ein
+kleines Abzeichen in der Ecke übrig, während man dem Termin weiter Lieder und
+Rollen zuweisen konnte. Für Admins steht in der Karte „Absage zurücknehmen".
+
+**Der Abend, den niemand absagt und der trotzdem ausfällt.** Haben alle aktiven
+Personen abgesagt, setzt das Backend den Termin von selbst auf `CANCELLED`;
+sagt danach jemand doch zu, lebt er wieder auf. Beides schickt eine
+Benachrichtigung. Wer noch nicht geantwortet hat, verhindert die Absage — die
+Einzelheiten stehen im Backend-README.
+
+Die Planungstabelle bekommt davon nichts zu sehen, und das ist richtig: der
+Assignments-Endpunkt lässt abgesagte Abende schon serverseitig weg
+(`status: { not: CANCELLED }`). Ein abgesagter Abend ist keine Planungszeile.
 
 ## Zuteilen: Sheet und Tabelle
 

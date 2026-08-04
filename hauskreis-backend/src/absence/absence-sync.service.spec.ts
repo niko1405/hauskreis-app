@@ -2,6 +2,7 @@ import { AbsenceSyncService } from './absence-sync.service';
 // Type-only imports keep Jest from loading the real PrismaClient and web-push.
 import type { PrismaService } from '../prisma/prisma.service';
 import type { MeetingNotificationService } from '../meeting/meeting-notification.service';
+import type { MeetingCancellationService } from '../meeting/meeting-cancellation.service';
 import {
   AttendanceSource,
   AttendanceStatus,
@@ -34,6 +35,7 @@ function setup(options: {
   const createMany = jest.fn().mockResolvedValue({ count: 0 });
   const deleteMany = jest.fn().mockResolvedValue({ count: 0 });
   const handleDecline = jest.fn().mockResolvedValue(undefined);
+  const reconcile = jest.fn().mockResolvedValue(undefined);
 
   const service = new AbsenceSyncService(
     {
@@ -42,9 +44,17 @@ function setup(options: {
       meetingAttendance: { createMany, deleteMany },
     } as unknown as PrismaService,
     { handleDecline } as unknown as MeetingNotificationService,
+    { reconcile } as unknown as MeetingCancellationService,
   );
 
-  return { service, createMany, deleteMany, handleDecline, meetingFindMany };
+  return {
+    service,
+    createMany,
+    deleteMany,
+    handleDecline,
+    reconcile,
+    meetingFindMany,
+  };
 }
 
 const holiday = { startDate: utc('2026-08-10'), endDate: utc('2026-08-24') };

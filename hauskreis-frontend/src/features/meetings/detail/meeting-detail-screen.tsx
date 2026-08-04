@@ -23,7 +23,6 @@
  */
 import {
   ArrowLeft,
-  CalendarX,
   CheckCircle2,
   Circle,
   ExternalLink,
@@ -40,7 +39,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { InlineEdit, Select, TextInput } from '@/components/ui/field';
-import { useToast } from '@/components/ui/toast';
 import {
   CardSkeleton,
   ConflictBanner,
@@ -48,7 +46,6 @@ import {
 } from '@/components/ui/states';
 import { cn } from '@/lib/cn';
 import {
-  useCancelMeeting,
   useLocations,
   useMe,
   useMeeting,
@@ -75,6 +72,7 @@ import {
 } from '@/lib/meeting';
 import type { AssignmentRole, Meeting, PersonRef } from '@/lib/api/types';
 import { AttendanceCard } from './attendance-card';
+import { CancelledNotice, CancelMeetingBlock } from './cancellation-card';
 import { SongsCard } from './songs-card';
 import { useRoleAssignment } from './use-role-assignment';
 
@@ -134,14 +132,19 @@ function Loaded({
   const [creatingLocation, setCreatingLocation] = useState(false);
 
   const update = useUpdateMeeting(meetingId);
-  const cancel = useCancelMeeting(meetingId);
   const locations = useLocations();
   const songLeaders = useSongLeaders(meetingId);
   const roles = useRoleAssignment(meeting);
-  const toast = useToast();
 
   const cancelled = meeting.status === 'CANCELLED';
   const past = isPast(meeting.date);
+
+  /**
+   * Ein abgesagter Abend ist kein Entwurf mehr. Vorher hing der Schreibschutz
+   * allein an `past` — man konnte einem Termin, den es nicht mehr gibt, noch
+   * Lieder und Rollen zuweisen.
+   */
+  const locked = past || cancelled;
 
   const patch = (input: Parameters<typeof update.mutate>[0]) =>
     update.mutate(input);
@@ -218,178 +221,166 @@ function Loaded({
         </p>
       </header>
 
-      {/* Ganz oben, weil hier steht, was man vor dem Abend wissen muss —
+      {/* Direkt unter dem Kopf und außerhalb des gedämpften Teils: das ist die
+          Nachricht der Seite, nicht eine Randnotiz. */}
+      {cancelled && <CancelledNotice meeting={meeting} />}
+
+      {/* Gedämpft, aber nicht versteckt: was an dem Abend geplant war, bleibt
+          lesbar — es ist bloß nichts mehr, worauf man hinarbeitet. */}
+      <div className={cn('space-y-6', cancelled && 'opacity-55')}>
+        {/* Ganz oben, weil hier steht, was man vor dem Abend wissen muss —
           „bringt Kuchen mit", „wir fangen später an". Unten zwischen
           Zusammenfassung und Actionstep las es niemand rechtzeitig. */}
-      <section>
-        <SectionTitle>Infos</SectionTitle>
-        <Card>
-          <InlineEdit
-            label="Infos"
-            multiline
-            value={meeting.infoText}
-            emptyLabel="Nichts Besonderes zu beachten"
-            saving={update.isPending}
-            onSave={(next) => patch({ infoText: next })}
-          />
-        </Card>
-      </section>
-
-      <Card className="divide-y divide-line">
-        <div className="pb-4">
-          <p className="mb-1.5 text-[11px] font-semibold text-stone-500">Ort</p>
-
-          {meeting.host ? (
-            <>
-              <p className="text-sm font-bold text-stone-800">
-                {meeting.location?.name ?? 'Noch offen'}
-              </p>
-              <p className="mt-0.5 text-[11px] text-stone-400">
-                Ergibt sich aus dem Gastgeber. Für einen anderen Ort nimm unten
-                den Gastgeber heraus.
-              </p>
-            </>
-          ) : (
-            <>
-              <Select
-                value={meeting.locationId ?? ''}
-                disabled={update.isPending}
-                onChange={(event) =>
-                  patch({
-                    locationId:
-                      event.target.value === '' ? null : event.target.value,
-                  })
-                }
-              >
-                <option value="">Noch offen</option>
-                {treffpunkte.map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {location.name}
-                  </option>
-                ))}
-              </Select>
-              <button
-                type="button"
-                onClick={() => setCreatingLocation(true)}
-                className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-terracotta-600 hover:underline"
-              >
-                <Plus size={12} />
-                Treffpunkt anlegen
-              </button>
-            </>
-          )}
-
-          {meeting.location && (
-            <a
-              href={mapsUrl(meeting.location)}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 flex items-center gap-1 text-xs font-semibold text-terracotta-600 hover:underline"
-            >
-              <MapPin size={12} />
-              In Maps öffnen
-              <ExternalLink size={11} />
-            </a>
-          )}
-        </div>
-
-        <RoleRow
-          label={ROLE_LABEL.HOST}
-          people={meeting.host ? [meeting.host] : []}
-          emptyLabel="Noch niemand — dann wird ein Treffpunkt gebraucht"
-          onEdit={() => openSheet('HOST')}
-        />
-
-        {hasTopicSlot(meeting.type) && (
-          <RoleRow
-            label={ROLE_LABEL.TOPIC}
-            people={roles.topicPeople}
-            emptyLabel="Noch niemand"
-            onEdit={() => openSheet('TOPIC')}
-          />
-        )}
-
-        <RoleRow
-          label={ROLE_LABEL.SONG}
-          people={songLeaders.data ?? []}
-          emptyLabel="Noch niemand — oder ein Abend ohne Lieder"
-          onEdit={() => openSheet('SONG')}
-        />
-      </Card>
-
-      {hasTestimonySlot(meeting.type) && (
         <section>
-          <SectionTitle>Testimony</SectionTitle>
+          <SectionTitle>Infos</SectionTitle>
           <Card>
             <InlineEdit
-              label="Testimony"
+              label="Infos"
               multiline
-              value={meeting.testimonyText}
-              emptyLabel="Noch kein Testimony — an dem Abend geht es vielleicht nur um Lobpreis."
+              value={meeting.infoText}
+              emptyLabel="Nichts Besonderes zu beachten"
               saving={update.isPending}
-              onSave={(next) => patch({ testimonyText: next })}
+              onSave={(next) => patch({ infoText: next })}
             />
           </Card>
         </section>
-      )}
 
-      <SongsCard meetingId={meetingId} readOnly={past} />
+        <Card className="divide-y divide-line">
+          <div className="pb-4">
+            <p className="mb-1.5 text-[11px] font-semibold text-stone-500">
+              Ort
+            </p>
 
-      <AttendanceCard meeting={meeting} readOnly={past} />
+            {meeting.host ? (
+              <>
+                <p className="text-sm font-bold text-stone-800">
+                  {meeting.location?.name ?? 'Noch offen'}
+                </p>
+                <p className="mt-0.5 text-[11px] text-stone-400">
+                  Ergibt sich aus dem Gastgeber. Für einen anderen Ort nimm
+                  unten den Gastgeber heraus.
+                </p>
+              </>
+            ) : (
+              <>
+                <Select
+                  value={meeting.locationId ?? ''}
+                  disabled={update.isPending}
+                  onChange={(event) =>
+                    patch({
+                      locationId:
+                        event.target.value === '' ? null : event.target.value,
+                    })
+                  }
+                >
+                  <option value="">Noch offen</option>
+                  {treffpunkte.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
+                    </option>
+                  ))}
+                </Select>
+                <button
+                  type="button"
+                  onClick={() => setCreatingLocation(true)}
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-terracotta-600 hover:underline"
+                >
+                  <Plus size={12} />
+                  Treffpunkt anlegen
+                </button>
+              </>
+            )}
 
-      <section>
-        <SectionTitle>Zusammenfassung</SectionTitle>
-        <Card>
-          <InlineEdit
-            label="Zusammenfassung"
-            multiline
-            value={meeting.summaryText}
-            emptyLabel="Noch keine Zusammenfassung — hilft allen, die nicht da waren."
-            saving={update.isPending}
-            onSave={(next) => patch({ summaryText: next })}
+            {meeting.location && (
+              <a
+                href={mapsUrl(meeting.location)}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 flex items-center gap-1 text-xs font-semibold text-terracotta-600 hover:underline"
+              >
+                <MapPin size={12} />
+                In Maps öffnen
+                <ExternalLink size={11} />
+              </a>
+            )}
+          </div>
+
+          <RoleRow
+            label={ROLE_LABEL.HOST}
+            people={meeting.host ? [meeting.host] : []}
+            emptyLabel="Noch niemand — dann wird ein Treffpunkt gebraucht"
+            onEdit={cancelled ? undefined : () => openSheet('HOST')}
+          />
+
+          {hasTopicSlot(meeting.type) && (
+            <RoleRow
+              label={ROLE_LABEL.TOPIC}
+              people={roles.topicPeople}
+              emptyLabel="Noch niemand"
+              onEdit={cancelled ? undefined : () => openSheet('TOPIC')}
+            />
+          )}
+
+          <RoleRow
+            label={ROLE_LABEL.SONG}
+            people={songLeaders.data ?? []}
+            emptyLabel="Noch niemand — oder ein Abend ohne Lieder"
+            onEdit={cancelled ? undefined : () => openSheet('SONG')}
           />
         </Card>
-      </section>
 
-      <section>
-        <SectionTitle>Actionstep</SectionTitle>
-        <Card className="space-y-4">
-          <InlineEdit
-            label="Actionstep"
-            value={meeting.actionstepText}
-            emptyLabel="Noch kein Actionstep für die Woche"
-            saving={update.isPending}
-            onSave={(next) => patch({ actionstepText: next })}
-          />
-          {meeting.actionstepText && <ActionstepDoneBlock meeting={meeting} />}
-        </Card>
-      </section>
+        {hasTestimonySlot(meeting.type) && (
+          <section>
+            <SectionTitle>Testimony</SectionTitle>
+            <Card>
+              <InlineEdit
+                label="Testimony"
+                multiline
+                value={meeting.testimonyText}
+                emptyLabel="Noch kein Testimony — an dem Abend geht es vielleicht nur um Lobpreis."
+                saving={update.isPending}
+                onSave={(next) => patch({ testimonyText: next })}
+              />
+            </Card>
+          </section>
+        )}
 
-      {!cancelled && (
-        <div>
-          <Button
-            variant="danger"
-            className="w-full"
-            loading={cancel.isPending}
-            onClick={() =>
-              cancel.mutate(undefined, {
-                onSuccess: () =>
-                  toast.success(
-                    past ? 'Als abgesagt vermerkt.' : 'Termin abgesagt.',
-                  ),
-              })
-            }
-          >
-            <CalendarX size={15} />
-            {past ? 'Als abgesagt markieren' : 'Termin absagen'}
-          </Button>
-          <p className="mt-2 text-center text-[11px] text-stone-400">
-            {past
-              ? 'Nur ein Vermerk fürs Archiv — es geht keine Benachrichtigung raus.'
-              : 'Alle bekommen eine Benachrichtigung.'}
-          </p>
-        </div>
-      )}
+        <SongsCard meetingId={meetingId} readOnly={locked} />
+
+        <AttendanceCard meeting={meeting} readOnly={locked} />
+
+        <section>
+          <SectionTitle>Zusammenfassung</SectionTitle>
+          <Card>
+            <InlineEdit
+              label="Zusammenfassung"
+              multiline
+              value={meeting.summaryText}
+              emptyLabel="Noch keine Zusammenfassung — hilft allen, die nicht da waren."
+              saving={update.isPending}
+              onSave={(next) => patch({ summaryText: next })}
+            />
+          </Card>
+        </section>
+
+        <section>
+          <SectionTitle>Actionstep</SectionTitle>
+          <Card className="space-y-4">
+            <InlineEdit
+              label="Actionstep"
+              value={meeting.actionstepText}
+              emptyLabel="Noch kein Actionstep für die Woche"
+              saving={update.isPending}
+              onSave={(next) => patch({ actionstepText: next })}
+            />
+            {meeting.actionstepText && (
+              <ActionstepDoneBlock meeting={meeting} />
+            )}
+          </Card>
+        </section>
+      </div>
+
+      {!cancelled && <CancelMeetingBlock meeting={meeting} past={past} />}
 
       {sheet && (
         <AssignmentSheet
@@ -589,7 +580,8 @@ function RoleRow({
   label: string;
   people: PersonRef[];
   emptyLabel: string;
-  onEdit: () => void;
+  /** Fehlt an einem abgesagten Abend: dort gibt es nichts mehr einzuteilen. */
+  onEdit?: () => void;
 }) {
   return (
     <div className="flex items-center gap-3 py-3.5">
@@ -614,9 +606,11 @@ function RoleRow({
         )}
       </span>
 
-      <IconButton label={`${label} eintragen`} onClick={onEdit}>
-        <Pencil size={14} />
-      </IconButton>
+      {onEdit && (
+        <IconButton label={`${label} eintragen`} onClick={onEdit}>
+          <Pencil size={14} />
+        </IconButton>
+      )}
     </div>
   );
 }

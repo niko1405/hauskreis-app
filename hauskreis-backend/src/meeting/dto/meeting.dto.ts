@@ -1,17 +1,12 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import {
-  AttendanceStatus,
-  MeetingStatus,
-  MeetingType,
-} from '../../../generated/prisma/enums';
+import { AttendanceStatus, MeetingType } from '../../../generated/prisma/enums';
 import { paginationSchema } from '../../common/http/pagination';
 import { isoDay } from '../../common/dto/iso-day';
 
 // Deriving the schemas from Prisma's generated enums keeps the API and the
 // database in sync — adding a value in schema.prisma is enough.
 const meetingType = z.enum(MeetingType);
-const meetingStatus = z.enum(MeetingStatus);
 const attendanceStatus = z.enum(AttendanceStatus);
 
 /**
@@ -29,9 +24,14 @@ export const createMeetingSchema = z.object({
   infoText: z.string().trim().max(2000).nullish(),
 });
 
+/**
+ * Ohne `status`. Absagen ist Admin-Sache und hat einen eigenen Weg
+ * (`POST …/cancel`, `POST …/uncancel`) — bliebe es hier stehen, ginge die
+ * Admin-Pflicht eine Tür weiter wieder auf. Dazu kommt, dass eine Absage mehr
+ * schreibt als ein Feld: wann, von wem, warum.
+ */
 export const updateMeetingSchema = z.object({
   type: meetingType.optional(),
-  status: meetingStatus.optional(),
   locationId: z.uuid().nullish(),
   hostPersonId: z.uuid().nullish(),
   topicId: z.uuid().nullish(),
@@ -45,6 +45,17 @@ export const updateMeetingSchema = z.object({
 export const setAttendanceSchema = z.object({
   personId: z.uuid(),
   status: attendanceStatus,
+});
+
+/**
+ * Warum der Abend ausfällt.
+ *
+ * Optional, weil es Absagen ohne Erklärung gibt und ein Pflichtfeld dann nur
+ * mit „—" gefüllt würde. Steht etwas da, steht es auf der Terminseite groß
+ * daneben — das ist der eigentliche Zweck.
+ */
+export const cancelMeetingSchema = z.object({
+  reason: z.string().trim().min(1).max(500).nullish(),
 });
 
 /**
@@ -77,6 +88,7 @@ const meetingParamsSchema = z.object({
 
 export class CreateMeetingDto extends createZodDto(createMeetingSchema) {}
 export class UpdateMeetingDto extends createZodDto(updateMeetingSchema) {}
+export class CancelMeetingDto extends createZodDto(cancelMeetingSchema) {}
 export class SetAttendanceDto extends createZodDto(setAttendanceSchema) {}
 export class SetActionstepDoneDto extends createZodDto(
   setActionstepDoneSchema,

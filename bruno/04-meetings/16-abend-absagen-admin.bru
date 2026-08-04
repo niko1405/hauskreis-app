@@ -1,0 +1,48 @@
+meta {
+  name: Abend absagen (Admin)
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/cancel
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{meetingEtag}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "reason": "Halbe Gruppe krank"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("meetingEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("hält fest, wer abgesagt hat und warum", function () {
+    expect(res.body.status).to.equal("CANCELLED");
+    expect(res.body.cancelSource).to.equal("MANUAL");
+    expect(res.body.cancelReason).to.equal("Halbe Gruppe krank");
+    expect(res.body.cancelledBy).to.not.equal(null);
+  });
+}
+
+docs {
+  Nur Admin. Als testmember kommt hier ein 403 — den ganzen Abend abzusagen
+  ist etwas anderes, als selbst nicht zu kommen (das geht über
+  `PUT …/attendance`).
+
+  `status` lässt sich bewusst **nicht** mehr über `PATCH …/meetings/{id}`
+  setzen; sonst ginge die Admin-Pflicht eine Tür weiter wieder auf.
+}

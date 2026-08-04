@@ -803,13 +803,63 @@ ist eine Tatsache — die zu überschreiben, weil das Modell heute strenger ist,
 wäre das Umschreiben von Geschichte. Die Oberfläche zeigt solche Altfälle
 weiter so an, wie sie notiert wurden; erst beim Bearbeiten greift die Regel.
 
+### Absagen ist Admin-Sache, und es steht dabei, warum
+
+Den ganzen Abend abzusagen ist etwas anderes, als selbst nicht zu kommen.
+`POST …/meetings/{id}/cancel` trägt deshalb `@Roles(ROLE_ADMIN)` und nimmt einen
+optionalen `reason`; die eigene Teilnahme geht weiter über
+`PUT …/meetings/{id}/attendance`, ohne Rolle und ohne Vorbedingung.
+
+`status` ist aus `updateMeetingSchema` **entfernt**. Es stand dort und tat
+dasselbe — die Admin-Pflicht wäre eine Tür weiter wieder offen gewesen. Für den
+Rückweg gibt es `POST …/uncancel`, ebenfalls Admin.
+
+Vier Spalten halten fest, was passiert ist: `cancelled_at`,
+`cancelled_by_person_id`, `cancel_reason` und `cancel_source`
+(`MANUAL | ALL_DECLINED`). Die letzte ist keine Buchhaltung, sondern eine Regel —
+siehe unten.
+
+### Der Abend, den niemand absagt und der trotzdem ausfällt
+
+Wenn alle abgesagt haben, ist der Termin faktisch weg; im Kalender steht er
+weiter, und niemand denkt daran, ihn abzusagen. `MeetingCancellationService`
+zieht den Schluss selbst, aufgerufen nach jeder Änderung an der Anwesenheit —
+von Hand wie aus einem Abwesenheitszeitraum heraus.
+
+**Alle heißt alle.** Wer noch nicht geantwortet hat, verhindert die Absage. Das
+ist die vorsichtige Lesart und die richtige: „vier von neun haben abgesagt" ist
+ein dünner Abend, kein ausgefallener, und ein Termin, den die App aus Schweigen
+heraus absagt, wäre schlimmer als einer, der zu dritt stattfindet.
+
+Die Gegenrichtung gehört zwingend dazu. Sagt danach jemand doch zu, lebt der
+Abend wieder auf — sonst müsste ein Mensch eine Absage zurücknehmen, die nie
+jemand ausgesprochen hat. Zurückgenommen wird aber **nur `ALL_DECLINED`**; eine
+Absage von Hand bleibt stehen. Genau dafür gibt es die Spalte: der Rückschluss
+aus `cancelled_by_person_id IS NULL` wäre für den Altbestand aus der Migration
+falsch gewesen und hätte längst abgesagte Abende wieder aufleben lassen.
+
+Beide Richtungen laufen über **dieselbe** Benachrichtigungsart. Wer „Hauskreis
+fällt aus" abonniert hat, will auch „findet doch statt" wissen; ein neunter
+Schalter für die Rücknahme wäre eine Einstellung für einen Sonderfall. Damit
+`hasBeenSent` die zweite Nachricht nicht als Dublette der ersten verschluckt,
+räumt `announceStatusChange` die `NotificationLog`-Zeilen zu
+`(MEETING_CANCELLED, meetingId)` vor jedem Wechsel weg — einmal je
+Richtungswechsel, nicht einmal je Termin.
+
+Ein Nebeneffekt, der leicht zu übersehen ist: `AbsenceSyncService` filtert nicht
+mehr auf `status: PLANNED`. Seit die Absage eine **Folge** dieser Zeilen ist und
+keine Vorbedingung mehr, muss ein gelöschter Urlaub auch aus einem abgesagten
+Abend wieder herauskommen — sonst bliebe er abgesagt mit einer Absage, die es
+nicht mehr gibt.
+
 ### Ein vergangener Abend sagt niemandem mehr ab
 
-`cancel` und der Statuswechsel über `update` verschicken die
-`MEETING_CANCELLED`-Benachrichtigung nur für Termine, die noch bevorstehen.
-Rückwärts heißt „absagen" nicht „fällt aus", sondern „hat nicht
-stattgefunden" — ein Nachtrag fürs Archiv. Eine Push-Nachricht darüber wäre
-eine Warnung vor etwas, das längst vorbei ist.
+`cancel` und `uncancel` verschicken ihre Benachrichtigung nur für Termine, die
+noch bevorstehen. Rückwärts heißt „absagen" nicht „fällt aus", sondern „hat
+nicht stattgefunden" — ein Nachtrag fürs Archiv. Eine Push-Nachricht darüber
+wäre eine Warnung vor etwas, das längst vorbei ist. Aus demselben Grund rührt
+`reconcile` vergangene Abende gar nicht erst an: dort ist „abgesagt" ein Vermerk,
+keine Vorhersage.
 
 Der heutige Abend zählt dabei als kommend: `meeting.date` ist ein Kalendertag,
 und ohne den Zuschnitt auf UTC-Mitternacht wäre ein Termin ab 00:01 Uhr

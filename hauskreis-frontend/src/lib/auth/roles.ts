@@ -28,6 +28,11 @@ export const ADMIN_ONLY_ROUTES = [
   // trägt ihn gar nicht erst ein. Geschützt ist stattdessen die Wohnung eines
   // Menschen — die lässt sich nur über das eigene Profil auflösen.
   'DELETE /hauskreise/{id}/meetings/{meetingId}',
+  // Den ganzen Abend absagen ist etwas anderes, als selbst nicht zu kommen.
+  // Vorher stand der rote Knopf für jedes Mitglied da, und daneben nichts, was
+  // den Unterschied erklärt hätte.
+  'POST   /hauskreise/{id}/meetings/{meetingId}/cancel',
+  'POST   /hauskreise/{id}/meetings/{meetingId}/uncancel',
   'POST   /hauskreise/{id}/meetings/generate',
   'POST   /hauskreise/{id}/meetings/host-reminders',
   'POST   /hauskreise/{id}/meetings/actionstep-reminders',

@@ -1,0 +1,39 @@
+meta {
+  name: Absage zurücknehmen (Admin)
+  type: http
+  seq: 17
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/uncancel
+  body: none
+  auth: inherit
+}
+
+headers {
+  If-Match: {{meetingEtag}}
+}
+
+script:post-response {
+  bru.setEnvVar("meetingEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("räumt die Absage vollständig weg", function () {
+    expect(res.body.status).to.equal("PLANNED");
+    expect(res.body.cancelledAt).to.equal(null);
+    expect(res.body.cancelSource).to.equal(null);
+    expect(res.body.cancelReason).to.equal(null);
+    expect(res.body.cancelledBy).to.equal(null);
+  });
+}
+
+docs {
+  Gilt für beide Arten von Absage — auch für die, die von selbst zustande kam,
+  weil alle abgesagt hatten. Die Gruppe bekommt eine Benachrichtigung, dass der
+  Abend doch stattfindet.
+}

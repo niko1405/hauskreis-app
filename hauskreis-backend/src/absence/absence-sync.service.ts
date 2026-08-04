@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
+import { MeetingCancellationService } from '../meeting/meeting-cancellation.service';
 import { MeetingNotificationService } from '../meeting/meeting-notification.service';
 import {
   AttendanceSource,
   AttendanceStatus,
-  MeetingStatus,
 } from '../../generated/prisma/enums';
 import { AbsenceCalendar } from './absence-window';
 import { toUtcDate } from '../meeting/meeting-schedule';
@@ -41,6 +41,7 @@ export class AbsenceSyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly meetingNotifications: MeetingNotificationService,
+    private readonly cancellations: MeetingCancellationService,
   ) {}
 
   /**
@@ -63,12 +64,13 @@ export class AbsenceSyncService {
         where: { hauskreisId, personId, endDate: { gte: today } },
         select: { personId: true, startDate: true, endDate: true },
       }),
+      // Ohne Filter auf `status`, und das ist neu: seit ein Abend ausfallen
+      // kann, *weil* alle abgesagt haben, ist die Absage eine Folge dieser
+      // Zeilen und keine Vorbedingung mehr. Wer einen Urlaub wieder löscht,
+      // muss auch aus einem abgesagten Abend wieder herauskommen — sonst bliebe
+      // er abgesagt mit einer Absage, die es nicht mehr gibt.
       this.prisma.meeting.findMany({
-        where: {
-          hauskreisId,
-          date: { gte: today },
-          status: MeetingStatus.PLANNED,
-        },
+        where: { hauskreisId, date: { gte: today } },
         select: {
           id: true,
           date: true,
@@ -131,6 +133,12 @@ export class AbsenceSyncService {
       for (const meetingId of toDecline) {
         await this.meetingNotifications.handleDecline(meetingId, personId);
       }
+    }
+
+    // Ein Urlaub kann derjenige Ausfall sein, mit dem alle abgesagt haben — und
+    // ein gelöschter Urlaub derjenige, der den Abend wieder aufleben lässt.
+    for (const meetingId of [...toDecline, ...toWithdraw]) {
+      await this.cancellations.reconcile(meetingId);
     }
 
     if (toDecline.length > 0 || toWithdraw.length > 0) {
