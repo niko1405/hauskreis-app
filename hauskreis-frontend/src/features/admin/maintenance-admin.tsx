@@ -20,6 +20,7 @@ import {
   usePurgeAbandonedLocations,
   useRotatePrayerBuddies,
   useRunActionstepReminders,
+  useRunCustomMeetingReminders,
   useRunHostReminders,
   useRunSongReminders,
   useRunTopicReminders,
@@ -143,6 +144,7 @@ function JobsCard() {
   const hostReminders = useRunHostReminders();
   const topicReminders = useRunTopicReminders();
   const songReminders = useRunSongReminders();
+  const customMeetingReminders = useRunCustomMeetingReminders();
   const actionstepReminders = useRunActionstepReminders();
 
   const fail = (error: unknown) => toast.error(errorMessage(error));
@@ -238,6 +240,16 @@ function JobsCard() {
       pending: songReminders.isPending,
       run: () =>
         songReminders.mutate(undefined, {
+          onSuccess: (r) => toast.success(`${r.notified} benachrichtigt.`),
+          onError: fail,
+        }),
+    },
+    {
+      label: 'Erinnerungen an besondere Termine',
+      hint: 'Geht an alle, nicht nur an Zuständige — einen Geburtstag hat man nicht im Kopf wie den Dienstag.',
+      pending: customMeetingReminders.isPending,
+      run: () =>
+        customMeetingReminders.mutate(undefined, {
           onSuccess: (r) => toast.success(`${r.notified} benachrichtigt.`),
           onError: fail,
         }),

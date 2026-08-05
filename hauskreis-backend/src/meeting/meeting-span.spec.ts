@@ -17,6 +17,7 @@ import type { RoleAssignmentNotifier } from '../notification/role-assignment-not
 import type { AvailabilityService } from '../role-suggestion/availability.service';
 import type { RoleReleaseService } from './role-release.service';
 import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
+import type { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import { MeetingType } from '../../generated/prisma/enums';
 
 /** Was `findFirst` auf die Überschneidungsfrage antwortet. */
@@ -24,6 +25,7 @@ function setup(clash: { date: Date } | null = null) {
   const create = jest.fn((args: { data: Record<string, unknown> }) =>
     Promise.resolve({ id: 'm-neu', ...args.data }),
   );
+  const announceCreation = jest.fn().mockResolvedValue(0);
 
   const prisma = {
     meeting: {
@@ -50,9 +52,14 @@ function setup(clash: { date: Date } | null = null) {
     { assertAvailable: jest.fn() } as unknown as AvailabilityService,
     {} as unknown as RoleReleaseService,
     { apply: jest.fn() } as unknown as AutoAttendanceService,
+    // Ein neuer besonderer Termin kündigt sich der Gruppe an. Hier zählt nur,
+    // dass es passiert; was drinsteht, prüft `custom-meeting-notification`.
+    {
+      announceCreation,
+    } as unknown as CustomMeetingNotificationService,
   );
 
-  return { service, prisma, create };
+  return { service, prisma, create, announceCreation };
 }
 
 const FREIZEIT = {

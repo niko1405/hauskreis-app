@@ -244,6 +244,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/meetings/custom-meeting-reminders': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['MeetingController_runCustomMeetingReminders'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/meetings/generate': {
     parameters: {
       query?: never;
@@ -1341,7 +1357,9 @@ export interface components {
         | 'MEETING_CANCELLED'
         | 'ATTENDANCE_DECLINED'
         | 'HOST_CAPACITY_UNLOCKED'
-        | 'MEMBER_LEFT';
+        | 'MEMBER_LEFT'
+        | 'CUSTOM_MEETING_CREATED'
+        | 'CUSTOM_MEETING_REMINDER';
       label: string;
       description: string;
       schedule:
@@ -1383,7 +1401,9 @@ export interface components {
         | 'MEETING_CANCELLED'
         | 'ATTENDANCE_DECLINED'
         | 'HOST_CAPACITY_UNLOCKED'
-        | 'MEMBER_LEFT';
+        | 'MEMBER_LEFT'
+        | 'CUSTOM_MEETING_CREATED'
+        | 'CUSTOM_MEETING_REMINDER';
       label: string;
       description: string;
       schedule:
@@ -3547,6 +3567,63 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ActionstepRunResultResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeetingController_runCustomMeetingReminders: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ReminderRunResultResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -6868,7 +6945,9 @@ export interface operations {
           | 'MEETING_CANCELLED'
           | 'ATTENDANCE_DECLINED'
           | 'HOST_CAPACITY_UNLOCKED'
-          | 'MEMBER_LEFT';
+          | 'MEMBER_LEFT'
+          | 'CUSTOM_MEETING_CREATED'
+          | 'CUSTOM_MEETING_REMINDER';
       };
       cookie?: never;
     };

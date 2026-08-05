@@ -15,6 +15,7 @@ import { MeetingService } from './meeting.service';
 import { MeetingGeneratorService } from './meeting-generator.service';
 import { HostReminderService } from './host-reminder.service';
 import { ActionstepReminderService } from './actionstep-reminder.service';
+import { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import {
   CancelMeetingDto,
   CreateMeetingDto,
@@ -57,6 +58,7 @@ export class MeetingController {
     private readonly generator: MeetingGeneratorService,
     private readonly hostReminders: HostReminderService,
     private readonly actionstepReminders: ActionstepReminderService,
+    private readonly customMeetingNotifications: CustomMeetingNotificationService,
     private readonly people: PersonService,
   ) {}
 
@@ -105,8 +107,15 @@ export class MeetingController {
 
   @Post()
   @ApiZodResponse(MeetingResponseDto, { status: 201 })
-  create(@Param() params: HauskreisParamsDto, @Body() dto: CreateMeetingDto) {
-    return this.meetingService.create(params.hauskreisId, dto);
+  async create(
+    @Param() params: HauskreisParamsDto,
+    @Body() dto: CreateMeetingDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    // Wer anlegt, braucht keine Nachricht darüber, dass er angelegt hat.
+    const person = await this.people.resolveForUser(user);
+
+    return this.meetingService.create(params.hauskreisId, dto, person.id);
   }
 
   @Patch(':id')
@@ -239,6 +248,17 @@ export class MeetingController {
   @HttpCode(HttpStatus.OK)
   runHostReminders(@Param() params: HauskreisParamsDto) {
     return this.hostReminders.sendDueReminders({
+      hauskreisId: params.hauskreisId,
+    });
+  }
+
+  /** Dasselbe für die Erinnerung an besondere Termine. */
+  @Post('custom-meeting-reminders')
+  @ApiZodResponse(ReminderRunResultResponseDto)
+  @HauskreisAdmin()
+  @HttpCode(HttpStatus.OK)
+  runCustomMeetingReminders(@Param() params: HauskreisParamsDto) {
+    return this.customMeetingNotifications.sendDueReminders({
       hauskreisId: params.hauskreisId,
     });
   }

@@ -7,6 +7,7 @@ import { ActionstepReminderService } from './actionstep-reminder.service';
 import { MeetingCancellationService } from './meeting-cancellation.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { RoleReleaseService } from './role-release.service';
+import { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module';
 import { NotificationModule } from '../notification/notification.module';
 import { PersonModule } from '../person/person.module';
@@ -34,6 +35,7 @@ import { AttendanceModule } from '../attendance/attendance.module';
     MeetingNotificationService,
     MeetingCancellationService,
     RoleReleaseService,
+    CustomMeetingNotificationService,
   ],
   exports: [
     MeetingService,
@@ -49,6 +51,9 @@ import { AttendanceModule } from '../attendance/attendance.module';
     MeetingCancellationService,
     // Und ebenso: wer wegen Urlaubs ausfällt, gibt Gastgeber und Musik frei.
     RoleReleaseService,
+    // Für den Wartungs-Bildschirm: die Erinnerung an besondere Termine lässt
+    // sich wie die anderen von Hand anstoßen.
+    CustomMeetingNotificationService,
   ],
 })
 export class MeetingModule {}

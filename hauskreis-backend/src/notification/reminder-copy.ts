@@ -52,3 +52,29 @@ export function topicReminderBody(
 export function songReminderBody(date: Date): string {
   return `Am ${formatMeetingDate(date)} machst du die Musik.`;
 }
+
+/**
+ * Wann ein besonderer Termin ist — ein Tag oder ein Zeitraum.
+ *
+ * „Vom 14. bis 16. Mai" statt zweimal derselbe Satz mit zwei Daten: die Frage
+ * bei einer Freizeit ist nicht *wann sie anfängt*, sondern *wie lange sie
+ * dauert*.
+ */
+function when(date: Date, endDate: Date | null): string {
+  return endDate
+    ? `Vom ${formatShortDate(date)} bis ${formatShortDate(endDate)}`
+    : `Am ${formatMeetingDate(date)}`;
+}
+
+/** Die Ankündigung, wenn jemand einen besonderen Termin einträgt. */
+export function customMeetingBody(date: Date, endDate: Date | null): string {
+  return `${when(date, endDate)} steht etwas Besonderes an.`;
+}
+
+/** Und die Erinnerung kurz davor — den hat man nicht im Kopf wie den Dienstag. */
+export function customMeetingReminderBody(
+  date: Date,
+  endDate: Date | null,
+): string {
+  return `${when(date, endDate)} ist es so weit.`;
+}

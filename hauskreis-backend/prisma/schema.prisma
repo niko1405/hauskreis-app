@@ -103,6 +103,10 @@ enum NotificationType {
   HOST_CAPACITY_UNLOCKED
   /// Jemand hat den Hauskreis verlassen.
   MEMBER_LEFT
+  /// Ein besonderer Termin wurde von Hand angelegt.
+  CUSTOM_MEETING_CREATED
+  /// Ein besonderer Termin steht bevor — an alle, nicht nur an Zuständige.
+  CUSTOM_MEETING_REMINDER
 
   @@map("notification_type")
 }

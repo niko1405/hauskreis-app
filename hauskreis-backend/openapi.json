@@ -1923,6 +1923,78 @@
         ]
       }
     },
+    "/api/hauskreise/{hauskreisId}/meetings/custom-meeting-reminders": {
+      "post": {
+        "operationId": "MeetingController_runCustomMeetingReminders",
+        "parameters": [
+          {
+            "name": "hauskreisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderRunResultResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Meeting"
+        ]
+      }
+    },
     "/api/hauskreise/{hauskreisId}/meetings/generate": {
       "post": {
         "operationId": "MeetingController_generate",
@@ -6367,7 +6439,9 @@
                 "MEETING_CANCELLED",
                 "ATTENDANCE_DECLINED",
                 "HOST_CAPACITY_UNLOCKED",
-                "MEMBER_LEFT"
+                "MEMBER_LEFT",
+                "CUSTOM_MEETING_CREATED",
+                "CUSTOM_MEETING_REMINDER"
               ]
             }
           }
@@ -8352,7 +8426,9 @@
                 "MEETING_CANCELLED",
                 "ATTENDANCE_DECLINED",
                 "HOST_CAPACITY_UNLOCKED",
-                "MEMBER_LEFT"
+                "MEMBER_LEFT",
+                "CUSTOM_MEETING_CREATED",
+                "CUSTOM_MEETING_REMINDER"
               ]
             },
             "label": {
@@ -8510,7 +8586,9 @@
               "MEETING_CANCELLED",
               "ATTENDANCE_DECLINED",
               "HOST_CAPACITY_UNLOCKED",
-              "MEMBER_LEFT"
+              "MEMBER_LEFT",
+              "CUSTOM_MEETING_CREATED",
+              "CUSTOM_MEETING_REMINDER"
             ]
           },
           "label": {

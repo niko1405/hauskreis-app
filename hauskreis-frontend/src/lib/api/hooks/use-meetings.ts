@@ -318,6 +318,13 @@ export function useRunHostReminders() {
   return useApiMutation(() => meetingsApi.runHostReminders(hauskreisId));
 }
 
+export function useRunCustomMeetingReminders() {
+  const { hauskreisId } = useHk();
+  return useApiMutation(() =>
+    meetingsApi.runCustomMeetingReminders(hauskreisId),
+  );
+}
+
 export function useRunActionstepReminders() {
   const { hauskreisId } = useHk();
   return useApiMutation(() => meetingsApi.runActionstepReminders(hauskreisId));

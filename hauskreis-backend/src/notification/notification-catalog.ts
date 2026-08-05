@@ -204,6 +204,32 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     schedule: { kind: 'EVENT' },
     defaultEnabled: true,
   },
+  {
+    type: NotificationType.CUSTOM_MEETING_CREATED,
+    label: 'Ein besonderer Termin kommt dazu',
+    description:
+      'Sobald jemand einen Geburtstag, eine Freizeit oder Ähnliches einträgt.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
+    type: NotificationType.CUSTOM_MEETING_REMINDER,
+    label: 'Ein besonderer Termin steht an',
+    // Getrennt von der Ankündigung, weil es zwei verschiedene Fragen sind: „gibt
+    // es etwas Neues" beantwortet man einmal, „ich muss daran denken" braucht
+    // eine Vorlaufzeit. In einem Schalter ließe sich das nicht ausdrücken.
+    description:
+      'Kurz vorher nochmal — anders als beim Dienstagabend hat man den nicht im Kopf.',
+    schedule: {
+      kind: 'LEAD_TIME',
+      // Zwei Tage statt der drei beim Hosten: hier muss niemand aufräumen,
+      // sondern nur daran denken.
+      defaultLeadDays: 2,
+      minLeadDays: 1,
+      maxLeadDays: 14,
+    },
+    defaultEnabled: true,
+  },
 ];
 
 const byType = new Map(

@@ -18,6 +18,7 @@ import { locationInclude } from '../location/location.service';
 import { MeetingCancellationService } from './meeting-cancellation.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { RoleReleaseService } from './role-release.service';
+import { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
@@ -80,6 +81,7 @@ export class MeetingService {
     private readonly availability: AvailabilityService,
     private readonly roleRelease: RoleReleaseService,
     private readonly autoAttendance: AutoAttendanceService,
+    private readonly customMeetingNotifications: CustomMeetingNotificationService,
   ) {}
 
   async findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
@@ -139,7 +141,12 @@ export class MeetingService {
     return meeting;
   }
 
-  async create(hauskreisId: string, dto: CreateMeetingDto) {
+  async create(
+    hauskreisId: string,
+    dto: CreateMeetingDto,
+    /** Wer anlegt — bekommt keine Nachricht über den eigenen Termin. */
+    actorPersonId?: string,
+  ) {
     const date = new Date(dto.date);
     const endDate = this.resolveEndDate(dto.type, date, dto.endDate);
     await this.assertReferencesBelongToHauskreis(hauskreisId, dto);
@@ -179,6 +186,14 @@ export class MeetingService {
     // Auch ein von Hand angelegter Abend ist ein Abend: wer grundsätzlich dabei
     // ist, hat auch für ihn zugesagt.
     await this.autoAttendance.apply(hauskreisId);
+
+    // Der Dienstagabend steht jede Woche und braucht keine Ankündigung. Ein
+    // Geburtstag oder eine Freizeit fallen aus dem Rhythmus — genau die gingen
+    // bisher unter, wenn niemand ausdrücklich Bescheid sagte.
+    await this.customMeetingNotifications.announceCreation(
+      meeting.id,
+      actorPersonId,
+    );
 
     return this.findOne(hauskreisId, meeting.id);
   }

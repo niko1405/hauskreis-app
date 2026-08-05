@@ -6,7 +6,11 @@ import {
 } from './notification.service';
 import { NotificationPreferenceService } from './notification-preference.service';
 import { notificationDefinition } from './notification-catalog';
-import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
+import {
+  MeetingStatus,
+  MeetingType,
+  NotificationType,
+} from '../../generated/prisma/enums';
 // Pure date helpers, no Nest provider involved — importing them across module
 // folders costs nothing and beats a second implementation of "same day in UTC".
 import { addDays, toUtcDate } from '../meeting/meeting-schedule';
@@ -14,7 +18,11 @@ import { addDays, toUtcDate } from '../meeting/meeting-schedule';
 /** What every lead-time reminder gets to look at when picking recipients. */
 export interface ReminderMeeting {
   id: string;
+  hauskreisId: string;
   date: Date;
+  endDate: Date | null;
+  type: MeetingType;
+  title: string | null;
   hostPersonId: string | null;
   topicId: string | null;
   location: { name: string } | null;
@@ -70,7 +78,9 @@ export class MeetingReminderService {
 
   async run(
     type: NotificationType,
-    recipients: (meeting: ReminderMeeting) => ReminderRecipient[],
+    recipients: (
+      meeting: ReminderMeeting,
+    ) => ReminderRecipient[] | Promise<ReminderRecipient[]>,
     options: ReminderRunOptions = {},
   ): Promise<ReminderRunResult> {
     const { schedule } = notificationDefinition(type);
@@ -91,7 +101,15 @@ export class MeetingReminderService {
       },
       select: {
         id: true,
+        hauskreisId: true,
         date: true,
+        endDate: true,
+        // Terminart und Titel braucht die Erinnerung an besondere Termine:
+        // sie filtert danach und sagt im Text, worum es geht. Die drei
+        // Rollen-Erinnerungen lesen sie nicht — ein Feld mehr im `select`
+        // kostet weniger als eine zweite Abfrage für einen Sonderfall.
+        type: true,
+        title: true,
         hostPersonId: true,
         topicId: true,
         location: { select: { name: true } },
@@ -105,9 +123,20 @@ export class MeetingReminderService {
       },
     });
 
-    const due = meetings.flatMap((meeting) =>
-      recipients(meeting).map((recipient) => ({ meeting, recipient })),
-    );
+    // `recipients` darf nachschlagen. Die drei Rollen-Erinnerungen lesen die
+    // Empfänger direkt vom Termin ab, aber „alle aktiven Mitglieder" steht
+    // nirgends daran — und diese eine Zeile ist billiger, als die
+    // Mitgliederlisten aller Hauskreise auf Vorrat zu laden.
+    const due = (
+      await Promise.all(
+        meetings.map(async (meeting) =>
+          (await recipients(meeting)).map((recipient) => ({
+            meeting,
+            recipient,
+          })),
+        ),
+      )
+    ).flat();
 
     const settings = await this.preferences.resolveMany(
       [...new Set(due.map((entry) => entry.recipient.personId))],

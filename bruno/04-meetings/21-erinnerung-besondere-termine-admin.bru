@@ -1,0 +1,40 @@
+meta {
+  name: Erinnerungen an besondere Termine (Admin)
+  type: http
+  seq: 21
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/custom-meeting-reminders
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("berichtet, was rausging", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.notified).to.be.a("number");
+    expect(res.body.skipped).to.be.a("number");
+  });
+}
+
+docs {
+  Braucht ein Admin-Token.
+
+  Die einzige Erinnerung, deren Empfänger **nicht** am Termin stehen. Bei Host,
+  Thema und Musik liest die `recipients`-Funktion sie vom Termin ab; hier sind
+  es alle aktiven Mitglieder, und dafür darf sie seit dieser Änderung
+  nachschlagen (`recipients` gibt wahlweise ein Promise zurück).
+
+  Gefiltert wird auf `type: CUSTOM`. Der Läufer scannt alle Termine im Fenster —
+  ohne den Filter bekäme jeder Dienstagabend eine zweite Erinnerung obendrauf,
+  zusätzlich zu den Rollen-Erinnerungen.
+
+  Vorlaufzeit: 2 Tage als Vorgabe, pro Person zwischen 1 und 14 einstellbar.
+  Kürzer als beim Hosten (3), weil hier niemand aufräumen muss, sondern nur
+  daran denken.
+
+  Die zweite Nachricht dieser Art, `CUSTOM_MEETING_CREATED`, hat keinen eigenen
+  Endpunkt: sie geht raus, wenn `POST …/meetings` einen `CUSTOM`-Termin anlegt.
+  Die anlegende Person bekommt sie nicht — sie weiß es.
+}

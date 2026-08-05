@@ -631,6 +631,31 @@ Das Suchfenster reicht entsprechend so weit wie die **geduldigste** erlaubte
 Einstellung (14 Tage), nicht so weit wie der Default. Ein Fenster auf Default-Basis
 würde den Termin von jemandem mit längerem Vorlauf nie zu sehen bekommen.
 
+### Wenn die Empfänger nicht am Termin stehen
+
+Host, Thema und Musik liest die `recipients`-Funktion vom Termin ab. „Alle
+aktiven Mitglieder" steht dort nicht — deshalb darf sie ein Promise
+zurückgeben. Eine Zeile mehr im Läufer, und billiger, als die Mitgliederlisten
+aller Hauskreise auf Vorrat zu laden.
+
+Genutzt wird das von den **zwei Nachrichten für besondere Termine**:
+
+| Typ                       | Wann                             | An                               |
+| ------------------------- | -------------------------------- | -------------------------------- |
+| `CUSTOM_MEETING_CREATED`  | beim Anlegen, ereignisbasiert    | alle außer der anlegenden Person |
+| `CUSTOM_MEETING_REMINDER` | 2 Tage vorher (1–14 einstellbar) | alle aktiven Mitglieder          |
+
+Zwei und nicht eine, weil es zwei Fragen sind: „gibt es etwas Neues"
+beantwortet man einmal, „ich muss daran denken" braucht eine Vorlaufzeit. Wer
+das eine will und das andere nicht, kann das einstellen.
+
+Beide gelten **nur für `CUSTOM`**. Der Dienstagabend steht jede Woche, alle
+wissen es, und wer eine Rolle hat, bekommt seine eigene Erinnerung. Sieben
+generierte Termine pro Nacht, jeder mit einer Ankündigung an alle neun, wäre
+die schnellste Art, Benachrichtigungen abzuschalten — der Filter steht deshalb
+in beiden Wegen und ist in `custom-meeting-notification.service.spec.ts`
+festgehalten.
+
 ### Für kommende Reminder
 
 `NotificationModule` importieren und `NotificationService` injizieren — **nicht**

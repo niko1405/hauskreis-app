@@ -173,6 +173,15 @@ export function runHostReminders(
   return apiPost<ReminderRunResult>(`${base(hauskreisId)}/host-reminders`);
 }
 
+/** An alle, nicht nur an Zuständige — ein besonderer Termin betrifft die Gruppe. */
+export function runCustomMeetingReminders(
+  hauskreisId: string,
+): Promise<ReminderRunResult> {
+  return apiPost<ReminderRunResult>(
+    `${base(hauskreisId)}/custom-meeting-reminders`,
+  );
+}
+
 export function runActionstepReminders(
   hauskreisId: string,
 ): Promise<ActionstepRunResult> {
