@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PersonService } from '../person/person.service';
+import { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
 import { PersonRole } from '../../generated/prisma/enums';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import type {
@@ -31,6 +32,7 @@ export class MembershipService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly people: PersonService,
+    private readonly prayerBuddies: PrayerBuddyGeneratorService,
   ) {}
 
   /**
@@ -136,6 +138,10 @@ export class MembershipService {
 
     await this.people.syncHomes(me.locationId);
 
+    // Ohne das stünde die gegangene Person in bis zu fünf geplanten Runden —
+    // und wer mit ihr gepaart war, bliebe für zwei Wochen allein.
+    await this.prayerBuddies.replanAfterMembershipChange(hauskreisId);
+
     return { hauskreisDeleted: false, successorPersonId };
   }
 
@@ -208,6 +214,11 @@ export class MembershipService {
    * Ausdrücklich ein eigener Schritt und kein Nebeneffekt des Anmeldens: dass
    * eine Einladung die bestehende Mitgliedschaft beendet, ist genau die
    * Überraschung, vor der man gefragt werden will.
+   *
+   * Die Gebetsbuddys werden hier **nicht** neu geplant, und das ist kein
+   * Versehen: die Zeile ist seit der Einladung `active`, in der Rotation steht
+   * die Person also längst. Was sich ändert, ist der *alte* Hauskreis — darum
+   * kümmert sich `leave`.
    */
   async acceptInvitation(
     user: AuthenticatedUser,

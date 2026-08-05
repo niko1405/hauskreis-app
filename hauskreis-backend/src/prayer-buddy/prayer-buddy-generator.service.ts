@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationService } from '../notification/notification.service';
 import { appPath } from '../notification/app-paths';
 import { PrayerBuddyService, type Assignment } from './prayer-buddy.service';
-import { buildGroups } from './grouping';
+import { buildGroups, repairGroups } from './grouping';
 import { NotificationType } from '../../generated/prisma/enums';
 import { addDays, toUtcDate } from '../meeting/meeting-schedule';
 
@@ -36,6 +36,16 @@ export interface RotationResult {
 export interface PlanningResult {
   /** Rounds newly built by this run. */
   created: number;
+}
+
+export interface ReplanResult {
+  /** Gruppen der laufenden Runde, deren Besetzung sich geändert hat. */
+  repaired: number;
+  /** Verworfene künftige Gruppen. */
+  discarded: number;
+  /** Runden, die danach neu geplant wurden. */
+  planned: number;
+  notified: number;
 }
 
 @Injectable()
@@ -135,6 +145,193 @@ export class PrayerBuddyGeneratorService {
     const current = await this.buddies.findCurrent(hauskreisId, now);
 
     return current ? this.announce(current) : 0;
+  }
+
+  /**
+   * Zieht die Rotation nach, wenn sich die Gruppe geändert hat.
+   *
+   * Bis hierher war die Teilnehmerliste eine Momentaufnahme: gelesen wurde sie
+   * nur beim Bauen einer Runde, und der tägliche Lauf füllt bloß auf. Wer ging,
+   * stand danach in bis zu fünf geplanten Runden; wer kam, wartete auf seine
+   * ersten Buddys, bis alle fünf abgelaufen waren.
+   *
+   * Zwei Zeiträume, zwei Antworten:
+   *
+   * - **Die laufende Runde wird repariert, nicht neu gewürfelt** (siehe
+   *   `repairGroups`). Sie läuft schon.
+   * - **Künftige Runden werden verworfen und neu geplant.** Sie sind gegen eine
+   *   Gruppe gebaut, die es nicht mehr gibt.
+   *
+   * Verworfen heißt hier **gelöscht**, anders als beim Neuwürfeln von Hand: dort
+   * ist die verworfene Aufteilung die eigentliche Information („diese nicht"),
+   * hier wäre sie eine Falschaussage. Diese Paarungen haben nie stattgefunden
+   * und dürfen die Wiederholungs-Vermeidung nicht belasten — sonst mieden sich
+   * zwei Menschen wegen einer Runde, die keiner von beiden erlebt hat.
+   */
+  async replanAfterMembershipChange(
+    hauskreisId: string,
+    options: { now?: Date; notify?: boolean } = {},
+  ): Promise<ReplanResult> {
+    const now = options.now ?? new Date();
+    const today = toUtcDate(now);
+
+    const repair = await this.repairRunningRound(hauskreisId, today, {
+      notify: options.notify ?? true,
+    });
+
+    const discarded = await this.prisma.prayerBuddyGroup.deleteMany({
+      where: { hauskreisId, periodStart: { gt: today } },
+    });
+
+    const { created } = await this.ensureRoundsPlanned(hauskreisId, now);
+
+    if (repair.repaired > 0 || discarded.count > 0) {
+      this.logger.log(
+        `Replanned prayer buddies for Hauskreis ${hauskreisId}: ` +
+          `${repair.repaired} group(s) repaired, ${discarded.count} discarded, ${created} planned`,
+      );
+    }
+
+    return {
+      repaired: repair.repaired,
+      discarded: discarded.count,
+      planned: created,
+      notified: repair.notified,
+    };
+  }
+
+  /** Bringt die Runde, die heute läuft, auf die aktuelle Besetzung. */
+  private async repairRunningRound(
+    hauskreisId: string,
+    today: Date,
+    options: { notify: boolean },
+  ): Promise<{ repaired: number; notified: number }> {
+    const [groups, people] = await Promise.all([
+      this.prisma.prayerBuddyGroup.findMany({
+        where: {
+          hauskreisId,
+          discardedAt: null,
+          periodStart: { lte: today },
+          periodEnd: { gte: today },
+        },
+        select: { id: true, members: { select: { personId: true } } },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.person.findMany({
+        where: { hauskreisId, active: true },
+        select: { id: true },
+      }),
+    ]);
+
+    if (groups.length === 0) {
+      return { repaired: 0, notified: 0 };
+    }
+
+    const before = new Map(
+      groups.map((group) => [
+        group.id,
+        new Set(group.members.map((member) => member.personId)),
+      ]),
+    );
+
+    const after = repairGroups(
+      groups.map((group) => ({
+        id: group.id,
+        memberIds: group.members.map((member) => member.personId),
+      })),
+      new Set(people.map((person) => person.id)),
+    );
+
+    const departures: { groupId: string; personIds: string[] }[] = [];
+    const arrivals: { groupId: string; personId: string }[] = [];
+    const emptied: string[] = [];
+    const touched: string[] = [];
+
+    for (const group of after) {
+      const was = before.get(group.id) as Set<string>;
+      const now = new Set(group.memberIds);
+
+      const gone = [...was].filter((personId) => !now.has(personId));
+      const came = [...now].filter((personId) => !was.has(personId));
+
+      if (gone.length === 0 && came.length === 0) {
+        continue;
+      }
+
+      touched.push(group.id);
+
+      if (gone.length > 0) {
+        departures.push({ groupId: group.id, personIds: gone });
+      }
+
+      for (const personId of came) {
+        arrivals.push({ groupId: group.id, personId });
+      }
+
+      if (now.size === 0) {
+        emptied.push(group.id);
+      }
+    }
+
+    if (touched.length === 0) {
+      return { repaired: 0, notified: 0 };
+    }
+
+    await this.prisma.$transaction([
+      ...departures.map((departure) =>
+        this.prisma.prayerBuddyGroupMember.deleteMany({
+          where: {
+            groupId: departure.groupId,
+            personId: { in: departure.personIds },
+          },
+        }),
+      ),
+      ...arrivals.map((arrival) =>
+        this.prisma.prayerBuddyGroupMember.create({ data: arrival }),
+      ),
+      // Eine Gruppe ohne Mitglieder ist keine mehr. Bliebe sie stehen, stünde
+      // sie leer im Archiv und zählte als Zeitraum mit.
+      ...(emptied.length > 0
+        ? [
+            this.prisma.prayerBuddyGroup.deleteMany({
+              where: { id: { in: emptied } },
+            }),
+          ]
+        : []),
+    ]);
+
+    const announce = touched.filter((id) => !emptied.includes(id));
+
+    if (!options.notify || announce.length === 0) {
+      return { repaired: touched.length, notified: 0 };
+    }
+
+    // `hasBeenSent` prüft auf `(Person, Art, Gruppe)`, und alle drei sind
+    // dieselben geblieben — die zweite Nachricht würde als Dublette der ersten
+    // verschluckt. Der Merkposten wird deshalb weggeräumt: einmal je Änderung,
+    // nicht einmal je Gruppe. Dasselbe Muster wie bei `announceStatusChange`.
+    await this.prisma.notificationLog.deleteMany({
+      where: {
+        type: NotificationType.PRAYER_BUDDY_ASSIGNED,
+        relatedGroupId: { in: announce },
+      },
+    });
+
+    const current = await this.buddies.findCurrent(hauskreisId, today);
+
+    if (!current) {
+      return { repaired: touched.length, notified: 0 };
+    }
+
+    // Nur die berührten Gruppen. Für wen sich nichts geändert hat, ist das
+    // keine Neuigkeit — und eine Nachricht, die nichts sagt, kostet Vertrauen
+    // in alle anderen.
+    const notified = await this.announce({
+      ...current,
+      groups: current.groups.filter((group) => announce.includes(group.id)),
+    });
+
+    return { repaired: touched.length, notified };
   }
 
   /**

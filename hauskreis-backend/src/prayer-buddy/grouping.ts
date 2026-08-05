@@ -108,6 +108,90 @@ export function buildGroups(params: {
   }));
 }
 
+/** Eine Gruppe, wie sie in der Datenbank steht — Zeile plus Besetzung. */
+export interface StandingGroup {
+  id: string;
+  memberIds: string[];
+}
+
+/**
+ * Zieht eine **laufende** Runde auf die aktuelle Besetzung nach.
+ *
+ * Ausdrücklich nicht `buildGroups`: die Runde läuft schon. Wer miteinander
+ * betet, soll das weiter tun — mitten im Zeitraum neu zu würfeln nähme allen
+ * etwas weg, um das Problem von zweien zu lösen. Es geht hier nur darum, dass
+ * niemand draußen steht und niemand allein zurückbleibt.
+ *
+ * Drei Regeln, und die Reihenfolge trägt:
+ *
+ * 1. Wer nicht mehr dabei ist, fällt heraus.
+ * 2. Wer neu dabei ist, kommt in die **kleinste** Gruppe. Sie zuerst zu füllen
+ *    fängt genau den Fall auf, in dem gerade jemand allein zurückblieb — aus
+ *    zwei halben Problemen wird eine ganze Zweiergruppe.
+ * 3. Wer danach noch allein dasteht, zieht in die kleinste andere Gruppe. Zu
+ *    zweit beten ist das Format; allein ist keines.
+ *
+ * Bleibt am Ende eine einzige Person übrig, bleibt sie ohne Gruppe. Eine Gruppe
+ * aus einem Menschen wäre eine Behauptung, keine Zuteilung.
+ *
+ * Gibt jede Gruppe zurück, auch die leer gewordenen — wer sie schreibt,
+ * entscheidet, was mit ihnen geschieht.
+ */
+export function repairGroups(
+  groups: readonly StandingGroup[],
+  active: ReadonlySet<string>,
+): StandingGroup[] {
+  const repaired = groups.map((group) => ({
+    id: group.id,
+    memberIds: group.memberIds.filter((personId) => active.has(personId)),
+  }));
+
+  const assigned = new Set(repaired.flatMap((group) => group.memberIds));
+  // Sortiert, damit zwei gleichzeitige Neuzugänge immer gleich landen.
+  const arriving = [...active]
+    .filter((personId) => !assigned.has(personId))
+    .toSorted();
+
+  for (const personId of arriving) {
+    smallestOf(repaired)?.memberIds.push(personId);
+  }
+
+  for (const group of repaired) {
+    if (group.memberIds.length !== 1) {
+      continue;
+    }
+
+    // Kein Ziel heißt: außer dieser Person ist niemand mehr übrig. Dann endet
+    // die Runde still, statt eine Einer-Gruppe zu behaupten.
+    smallestOf(repaired.filter((other) => other !== group))?.memberIds.push(
+      ...group.memberIds,
+    );
+    group.memberIds = [];
+  }
+
+  return repaired;
+}
+
+/**
+ * Die kleinste **besetzte** Gruppe. Leere zählen nicht mit: sie sind aufgelöst,
+ * und jemanden dort einzusortieren hieße, ihn allein zurückzulassen.
+ */
+function smallestOf(groups: StandingGroup[]): StandingGroup | null {
+  let best: StandingGroup | null = null;
+
+  for (const group of groups) {
+    if (group.memberIds.length === 0) {
+      continue;
+    }
+
+    if (best === null || group.memberIds.length < best.memberIds.length) {
+      best = group;
+    }
+  }
+
+  return best;
+}
+
 /**
  * Splits an even-sized list into pairs with the lowest total penalty.
  *

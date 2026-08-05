@@ -46,7 +46,28 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     )
     .build();
 
-  return cleanupOpenApiDoc(SwaggerModule.createDocument(app, config));
+  const document = cleanupOpenApiDoc(SwaggerModule.createDocument(app, config));
+
+  return { ...document, paths: sortByKey(document.paths) };
+}
+
+/**
+ * Pfade in fester Reihenfolge, damit die eingecheckte `openapi.json` stabil
+ * bleibt.
+ *
+ * Ohne das folgt die Reihenfolge derjenigen, in der Nest die Module einliest —
+ * und die hängt an den `imports`-Arrays. Eine Modul-Kante zu verschieben
+ * erzeugte dann einen Diff über tausende Zeilen, in dem sich eine echte
+ * Änderung an der API nicht mehr finden ließe.
+ *
+ * Zeichenweise verglichen und ausdrücklich nicht mit `localeCompare`: das
+ * richtete sich nach der Locale der Maschine, und dieselbe Datei sähe auf einem
+ * anderen Rechner anders aus.
+ */
+function sortByKey<T>(paths: Record<string, T>): Record<string, T> {
+  return Object.fromEntries(
+    Object.entries(paths).toSorted(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+  );
 }
 
 /**

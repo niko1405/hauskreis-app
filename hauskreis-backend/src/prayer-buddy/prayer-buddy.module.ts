@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { PrayerBuddyController } from './prayer-buddy.controller';
 import { PrayerBuddyService } from './prayer-buddy.service';
 import { PrayerBuddyGeneratorService } from './prayer-buddy-generator.service';
-import { PersonModule } from '../person/person.module';
 import { NotificationModule } from '../notification/notification.module';
 
 /**
@@ -11,9 +10,9 @@ import { NotificationModule } from '../notification/notification.module';
  * shape (Architektur-Prinzip 4).
  */
 @Module({
-  imports: [PersonModule, NotificationModule],
+  imports: [NotificationModule],
   controllers: [PrayerBuddyController],
   providers: [PrayerBuddyService, PrayerBuddyGeneratorService],
-  exports: [PrayerBuddyService],
+  exports: [PrayerBuddyService, PrayerBuddyGeneratorService],
 })
 export class PrayerBuddyModule {}

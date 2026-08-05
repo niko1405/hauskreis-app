@@ -18,7 +18,14 @@ import { buildOpenApiDocument } from '../src/common/bootstrap/openapi';
 const OUTPUT = join(__dirname, '..', 'openapi.json');
 
 async function main(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { logger: false });
+  // `abortOnError: false`, sonst verschluckt Nest einen Fehler im Modulgraphen:
+  // es meldet ihn über den Logger — den `logger: false` gerade abgeschaltet hat
+  // — und beendet den Prozess mit 1, ohne eine Zeile auszugeben. Ein Zirkel
+  // zwischen zwei Modulen sähe damit aus wie „läuft einfach nicht".
+  const app = await NestFactory.create(AppModule, {
+    logger: false,
+    abortOnError: false,
+  });
   // Muss zum echten Start passen, sonst fehlt das /api vor jedem Pfad.
   app.setGlobalPrefix('api');
   await app.init();

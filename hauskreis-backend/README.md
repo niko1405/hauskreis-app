@@ -1672,6 +1672,55 @@ verschiedene Aufteilungen, das Archiv zeigt trotzdem nur eine Periode.
 
 `notify: false` im Body schaltet still weiter.
 
+### Wenn sich die Gruppe ändert
+
+Die Teilnehmerliste war eine **Momentaufnahme**: gelesen wurde sie beim Bauen
+einer Runde und danach nie wieder. Wer den Hauskreis verließ, stand noch in bis
+zu fünf geplanten Runden; wer dazukam, wartete auf seine ersten Buddys, bis alle
+fünf abgelaufen waren. `replanAfterMembershipChange` zieht beides nach, und
+zwar für die zwei Zeiträume unterschiedlich.
+
+**Die laufende Runde wird repariert, nicht neu gewürfelt** (`repairGroups` in
+[`grouping.ts`](src/prayer-buddy/grouping.ts)). Sie läuft schon; alle neu zu
+verteilen nähme jedem etwas weg, um das Problem von zweien zu lösen. Drei
+Regeln, und die Reihenfolge trägt:
+
+1. Wer nicht mehr dabei ist, fällt heraus.
+2. Wer neu dabei ist, kommt in die **kleinste** Gruppe.
+3. Wer danach noch allein dasteht, zieht in die kleinste andere.
+
+Zuzug **vor** Auflösung, weil das genau den häufigsten Fall auffängt: geht einer
+und kommt einer, wird aus zwei halben Problemen eine ganze Zweiergruppe, statt
+dass erst jemand umzieht und der Neuzugang danach eine Dreier erzwingt. Bleibt
+am Ende nur eine Person übrig, endet die Runde still — eine Gruppe aus einem
+Menschen wäre eine Behauptung, keine Zuteilung.
+
+**Künftige Runden werden verworfen und neu geplant.** Sie sind gegen eine Gruppe
+gebaut, die es nicht mehr gibt. Verworfen heißt hier **gelöscht** — anders als
+beim Weiterschalten von Hand, wo die abgelehnte Aufteilung ja gerade die
+Information ist. Diese Paarungen haben nie stattgefunden; blieben sie als
+Historie stehen, mieden sich zwei Menschen wegen einer Runde, die keiner von
+beiden erlebt hat.
+
+Benachrichtigt wird **nur die berührte Gruppe**. Dafür muss die
+`notification_log`-Zeile zu `(PRAYER_BUDDY_ASSIGNED, related_group_id)` weg,
+sonst verschluckt `hasBeenSent` die zweite Nachricht als Dublette der ersten —
+dasselbe Muster wie bei `announceStatusChange`.
+
+Aufgerufen wird das überall, wo sich die Menge der aktiven Menschen ändert:
+`MembershipService.leave` sowie `PersonService.create`, `invite`, `remove` und
+`update`, wenn `active` umspringt. Beim Annehmen einer Einladung ausdrücklich
+**nicht**: die Zeile ist seit dem Einladen `active`, in der Rotation steht die
+Person also längst.
+
+> `PersonService` schlägt den Generator über `ModuleRef` nach, statt ihn sich
+> hineinreichen zu lassen. `NotificationModule` braucht `PersonModule`,
+> `PrayerBuddyModule` braucht `NotificationModule` — importierte `PersonModule`
+> seinerseits `PrayerBuddyModule`, stünde der Kreis und Nest käme beim
+> Hochfahren nicht mehr durch. `forwardRef` an beiden Kanten wäre die andere
+> Antwort; sie verteilte die Erklärung aber auf drei Dateien, von denen eine mit
+> Gebetsbuddys nichts zu tun hat.
+
 ### Warum das Notification-Log eine Spalte mehr hat
 
 `notification_log` deduplizierte über `(person, typ, termin)`. Gebetsbuddy-

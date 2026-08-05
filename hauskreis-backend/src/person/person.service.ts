@@ -4,10 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { PersonRole } from '../../generated/prisma/enums';
 import { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import { LocationService } from '../location/location.service';
+import { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import type { IfMatchCondition } from '../common/http/etag';
@@ -47,7 +49,34 @@ export class PersonService {
     private readonly prisma: PrismaService,
     private readonly keycloakAdmin: KeycloakAdminService,
     private readonly locations: LocationService,
+    private readonly moduleRef: ModuleRef,
   ) {}
+
+  /**
+   * Zieht die Gebetsrotation nach, nachdem sich die Menge der aktiven Menschen
+   * geändert hat.
+   *
+   * Nachgeschlagen statt hineingereicht, und dafür gibt es einen Grund:
+   * `NotificationModule` braucht `PersonModule`, `PrayerBuddyModule` braucht
+   * `NotificationModule`. Importierte `PersonModule` seinerseits
+   * `PrayerBuddyModule`, stünde der Kreis, und Nest käme beim Hochfahren nicht
+   * mehr durch (`UndefinedModuleException`).
+   *
+   * `forwardRef` an beiden Kanten wäre die andere Antwort. Sie verteilt die
+   * Erklärung aber auf drei Dateien, von denen eine — Benachrichtigungen — mit
+   * Gebetsbuddys nichts zu tun hat und den nächsten Leser ratlos zurückließe.
+   * Hier steht die Begründung an der Stelle, an der auch das Verhalten steht.
+   *
+   * Es ist ohnehin keine Zusammenarbeit, sondern eine Folge: hier ändert sich
+   * die Gruppe, und wen das angeht, der zieht nach.
+   */
+  private async replanPrayerBuddies(hauskreisId: string): Promise<void> {
+    const generator = this.moduleRef.get(PrayerBuddyGeneratorService, {
+      strict: false,
+    });
+
+    await generator.replanAfterMembershipChange(hauskreisId);
+  }
 
   /**
    * Zieht die Namen der betroffenen Wohnungen nach, nachdem jemand um- oder
@@ -113,6 +142,7 @@ export class PersonService {
     });
 
     await this.syncHomes(person.locationId);
+    await this.replanPrayerBuddies(hauskreisId);
 
     return person;
   }
@@ -126,13 +156,14 @@ export class PersonService {
     await this.assertLocationBelongsToHauskreis(hauskreisId, dto.locationId);
 
     // Vor dem Schreiben, sonst ist nicht mehr feststellbar, wo die Person
-    // vorher gewohnt hat — und die alte Wohnung behielte ihren Namen.
+    // vorher gewohnt hat — und die alte Wohnung behielte ihren Namen. Dasselbe
+    // gilt für `active`: ob es ein Wechsel war, sieht man nur im Vorher.
     const before =
-      dto.locationId === undefined
+      dto.locationId === undefined && dto.active === undefined
         ? null
         : await this.prisma.person.findFirst({
             where: { id, hauskreisId },
-            select: { locationId: true },
+            select: { locationId: true, active: true },
           });
 
     const updated = await updateWithVersionCheck({
@@ -160,6 +191,12 @@ export class PersonService {
     });
 
     await this.syncHomes(before?.locationId, updated.locationId);
+
+    // Die Gebetsbuddys hängen an der Menge der aktiven Menschen — nur daran.
+    // Ein neuer Name oder eine neue Wohnung ändert die Paarungen nicht.
+    if (before && dto.active !== undefined && dto.active !== before.active) {
+      await this.replanPrayerBuddies(hauskreisId);
+    }
 
     return updated;
   }
@@ -192,6 +229,7 @@ export class PersonService {
 
     await this.prisma.person.delete({ where: { id } });
     await this.syncHomes(person.locationId);
+    await this.replanPrayerBuddies(hauskreisId);
 
     // Das Konto nur löschen, wenn diese Einladung die einzige Spur war. Wer
     // die App schon in einem anderen Hauskreis benutzt, verliert sonst durch
@@ -257,12 +295,14 @@ export class PersonService {
 
     const role = dto.role === 'admin' ? PersonRole.ADMIN : PersonRole.MEMBER;
 
+    let person;
+
     try {
       // **Ohne `keycloakUserId`.** Eine Einladung nimmt niemandem seine
       // bestehende Mitgliedschaft weg — sie ist ein Angebot, bis der Mensch
       // sie annimmt. Verknüpft wird beim ersten Anmelden (`resolveForUser`)
       // oder ausdrücklich über `POST /api/me/invitations/{id}/accept`.
-      const person = previous
+      person = previous
         ? await this.prisma.person.update({
             where: { id: previous.id },
             // Dieselbe Zeile wieder aufwecken statt einer zweiten: so bleibt
@@ -278,14 +318,19 @@ export class PersonService {
         : await this.prisma.person.create({
             data: { hauskreisId, name: dto.name, email: dto.email, role },
           });
-
-      return { ...person, invitationEmailSent };
     } catch (error) {
       // Nur aufräumen, was diese Einladung selbst angelegt hat: ein Konto, das
       // vorher schon da war, gehört einem Menschen, der die App benutzt.
       if (created) await this.keycloakAdmin.deleteUserByEmail(dto.email);
       throw error;
     }
+
+    // Wer eingeladen ist, gehört zur Rotation — er wartet sonst bis zu zehn
+    // Wochen auf seine ersten Buddys. Außerhalb des `try`, weil ein Haken hier
+    // kein Grund ist, ein richtig angelegtes Konto wieder wegzuräumen.
+    await this.replanPrayerBuddies(hauskreisId);
+
+    return { ...person, invitationEmailSent };
   }
 
   /**

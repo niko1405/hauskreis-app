@@ -4,6 +4,7 @@ import { PersonService } from './person.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import type { LocationService } from '../location/location.service';
+import type { ModuleRef } from '@nestjs/core';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
 type PersonDelegate = {
@@ -30,12 +31,28 @@ function setup() {
   // Zieht sonst den Namen einer Wohnung nach; hier interessiert nur, dass es
   // aufgerufen werden *kann*.
   const locations = { syncHomeName: jest.fn() };
+  // Wer dazukommt oder geht, ändert die Gebetsrotation. Was dabei herauskommt,
+  // prüft `prayer-buddy-replan.spec.ts`; hier zählt nur, dass gefragt wird.
+  const replanAfterMembershipChange = jest.fn().mockResolvedValue({
+    repaired: 0,
+    discarded: 0,
+    planned: 0,
+    notified: 0,
+  });
+  const moduleRef = { get: jest.fn(() => ({ replanAfterMembershipChange })) };
   const service = new PersonService(
     { person } as unknown as PrismaService,
     keycloakAdmin as unknown as KeycloakAdminService,
     locations as unknown as LocationService,
+    moduleRef as unknown as ModuleRef,
   );
-  return { service, person, keycloakAdmin, locations };
+  return {
+    service,
+    person,
+    keycloakAdmin,
+    locations,
+    replanAfterMembershipChange,
+  };
 }
 
 const user: AuthenticatedUser = {
@@ -162,6 +179,24 @@ describe('PersonService.invite', () => {
     email: 'lea@example.com',
     role: 'member' as const,
   };
+
+  /**
+   * Wer eingeladen ist, gehört zur Rotation — sonst wartet er, bis alle fünf
+   * geplanten Runden abgelaufen sind.
+   */
+  it('holt die eingeladene Person in die Gebetsrotation', async () => {
+    const { service, person, keycloakAdmin, replanAfterMembershipChange } =
+      setup();
+    keycloakAdmin.inviteUser.mockResolvedValue({
+      created: true,
+      invitationEmailSent: true,
+    });
+    person.create.mockResolvedValue({ id: 'p9' });
+
+    await service.invite('hk-1', invitation);
+
+    expect(replanAfterMembershipChange).toHaveBeenCalledWith('hk-1');
+  });
 
   it('rolls the Keycloak account back when the local insert fails', async () => {
     const { service, person, keycloakAdmin } = setup();

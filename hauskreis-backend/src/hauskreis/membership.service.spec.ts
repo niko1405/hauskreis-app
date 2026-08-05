@@ -8,6 +8,7 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import { MembershipService } from './membership.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { PersonService } from '../person/person.service';
+import type { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
 import { PersonRole } from '../../generated/prisma/enums';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
@@ -52,9 +53,20 @@ function setup(
     ),
   } as unknown as PrismaService;
 
-  const service = new MembershipService(prisma, {
-    syncHomes: jest.fn(),
-  } as unknown as PersonService);
+  const replanAfterMembershipChange = jest.fn().mockResolvedValue({
+    repaired: 0,
+    discarded: 0,
+    planned: 0,
+    notified: 0,
+  });
+
+  const service = new MembershipService(
+    prisma,
+    { syncHomes: jest.fn() } as unknown as PersonService,
+    {
+      replanAfterMembershipChange,
+    } as unknown as PrayerBuddyGeneratorService,
+  );
 
   return {
     service,
@@ -62,6 +74,7 @@ function setup(
     personCreate,
     hauskreisDelete,
     hauskreisCreate,
+    replanAfterMembershipChange,
   };
 }
 
@@ -174,6 +187,21 @@ describe('MembershipService.leave', () => {
 
     expect(result.successorPersonId).toBeNull();
     expect(personUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Ohne das stünde die gegangene Person in bis zu fünf geplanten Runden — und
+   * wer mit ihr gepaart war, bliebe zwei Wochen lang allein.
+   */
+  it('zieht die Gebetsrotation nach', async () => {
+    const { service, replanAfterMembershipChange } = setup({
+      me: member,
+      others: [other(PersonRole.ADMIN)],
+    });
+
+    await service.leave('hk-1', 'p1', {});
+
+    expect(replanAfterMembershipChange).toHaveBeenCalledWith('hk-1');
   });
 
   /** Eine leere Gruppe, die niemand betreten kann, ist kein Zustand. */

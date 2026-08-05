@@ -1,5 +1,6 @@
 import {
   buildGroups,
+  repairGroups,
   type GroupablePerson,
   type PastGrouping,
 } from './grouping';
@@ -197,5 +198,99 @@ describe('buildGroups', () => {
     });
 
     expect(groups[0].lastTogetherPeriodsAgo).toBeNull();
+  });
+});
+
+/** Besetzung je Gruppe, sortiert — die einzige Frage, die hier zählt. */
+const shape = (groups: { id: string; memberIds: string[] }[]) =>
+  Object.fromEntries(
+    groups.map((group) => [group.id, group.memberIds.toSorted()]),
+  );
+
+/**
+ * Die laufende Runde nachziehen ist eine andere Aufgabe als eine neue würfeln:
+ * hier darf möglichst wenig passieren.
+ */
+describe('repairGroups', () => {
+  it('nimmt heraus, wer nicht mehr dabei ist', () => {
+    const repaired = repairGroups(
+      [
+        { id: 'g1', memberIds: ['a', 'b', 'c'] },
+        { id: 'g2', memberIds: ['d', 'e'] },
+      ],
+      new Set(['a', 'c', 'd', 'e']),
+    );
+
+    expect(shape(repaired)).toEqual({ g1: ['a', 'c'], g2: ['d', 'e'] });
+  });
+
+  it('lässt niemanden allein zurück', () => {
+    const repaired = repairGroups(
+      [
+        { id: 'g1', memberIds: ['a', 'b'] },
+        { id: 'g2', memberIds: ['c', 'd'] },
+        { id: 'g3', memberIds: ['e', 'f', 'g'] },
+      ],
+      new Set(['a', 'c', 'd', 'e', 'f', 'g']),
+    );
+
+    // `a` bleibt allein und zieht in die kleinste andere — nicht in die
+    // Dreiergruppe, die ohnehin schon die größte ist.
+    expect(shape(repaired)).toEqual({
+      g1: [],
+      g2: ['a', 'c', 'd'],
+      g3: ['e', 'f', 'g'],
+    });
+  });
+
+  it('setzt einen Neuzugang in die kleinste Gruppe', () => {
+    const repaired = repairGroups(
+      [
+        { id: 'g1', memberIds: ['a', 'b'] },
+        { id: 'g2', memberIds: ['c', 'd', 'e'] },
+      ],
+      new Set(['a', 'b', 'c', 'd', 'e', 'neu']),
+    );
+
+    expect(shape(repaired)).toEqual({
+      g1: ['a', 'b', 'neu'],
+      g2: ['c', 'd', 'e'],
+    });
+  });
+
+  /** Der Grund, warum Zuzug vor Auflösung kommt. */
+  it('füllt mit einem Neuzugang genau die Lücke, die ein Abgang riss', () => {
+    const repaired = repairGroups(
+      [
+        { id: 'g1', memberIds: ['a', 'b'] },
+        { id: 'g2', memberIds: ['c', 'd'] },
+      ],
+      new Set(['a', 'c', 'd', 'neu']),
+    );
+
+    // Aus zwei halben Problemen wird eine ganze Zweiergruppe, statt dass `a`
+    // umzieht und der Neuzugang wieder eine Dreiergruppe erzwingt.
+    expect(shape(repaired)).toEqual({ g1: ['a', 'neu'], g2: ['c', 'd'] });
+  });
+
+  it('lässt die Runde still enden, wenn nur eine Person übrig ist', () => {
+    const repaired = repairGroups(
+      [{ id: 'g1', memberIds: ['a', 'b'] }],
+      new Set(['a']),
+    );
+
+    // Eine Gruppe aus einem Menschen wäre eine Behauptung, keine Zuteilung.
+    expect(shape(repaired)).toEqual({ g1: [] });
+  });
+
+  it('rührt eine unveränderte Runde nicht an', () => {
+    const groups = [
+      { id: 'g1', memberIds: ['a', 'b'] },
+      { id: 'g2', memberIds: ['c', 'd'] },
+    ];
+
+    expect(shape(repairGroups(groups, new Set(['a', 'b', 'c', 'd'])))).toEqual(
+      shape(groups),
+    );
   });
 });
