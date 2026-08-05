@@ -121,6 +121,13 @@ services:
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: 'true'
       KC_HEALTH_ENABLED: 'true'
+      # **Der Mailversand steht hier bewusst nicht.** Keycloak liest ihn nicht
+      # aus der Umgebung, sondern aus der Realm-Konfiguration; Variablen an
+      # dieser Stelle sähen nach Einrichtung aus und wären wirkungslos.
+      #
+      # Eingerichtet wird er mit `scripts/setup-keycloak.sh` (siehe README,
+      # „Produktion"). Ohne ihn kommt **niemand** herein: der Realm verlangt eine
+      # bestätigte Adresse, und ohne Mail gibt es keine Bestätigung.
     ports:
       - '127.0.0.1:8080:8080'
     volumes:

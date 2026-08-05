@@ -1,5 +1,7 @@
 import {
   ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -52,26 +54,24 @@ export class KeycloakAdminService {
    * Eine Rolle wird hier nicht mehr vergeben. „Admin" gilt pro Hauskreis und
    * steht an der `Person`, nicht am Konto.
    */
-  async inviteUser(params: {
-    email: string;
-    name: string;
-  }): Promise<InviteResult> {
+  async inviteUser(params: { email: string }): Promise<InviteResult> {
     const existing = await this.findUserByEmail(params.email);
     if (existing) {
       return { created: false, invitationEmailSent: false };
     }
 
-    const [firstName, ...rest] = params.name.trim().split(/\s+/);
     // Ein Konto braucht beim Anlegen einen Nutzernamen, und der einzige, den
     // wir hier kennen, ist die Adresse. Bleiben muss er nicht: die Einladung
     // schickt `UPDATE_PROFILE` mit, und dort trägt sich jede:r selbst ein.
+    //
+    // Vor- und Nachname werden nicht mehr geraten. Sie wurden aus dem
+    // eingetippten Namen zerlegt („Anna Maria" → Vorname „Anna", Nachname
+    // „Maria"), gebraucht wurden sie nie, und falsch waren sie oft.
     await this.request('/users', {
       method: 'POST',
       body: JSON.stringify({
         username: params.email,
         email: params.email,
-        firstName,
-        lastName: rest.join(' ') || firstName,
         enabled: true,
         emailVerified: false,
       }),
@@ -98,6 +98,25 @@ export class KeycloakAdminService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Schickt die Einrichtungsmail noch einmal — an ein Konto, das schon steht.
+   *
+   * Dieselben drei Schritte wie beim Einladen. Sie sind idempotent: wer sein
+   * Passwort inzwischen gesetzt hat, wird nur noch einmal danach gefragt, und
+   * das ist harmlos gegenüber der Alternative, gar nicht hereinzukommen.
+   */
+  async resendInvitation(email: string): Promise<boolean> {
+    const user = await this.findUserByEmail(email);
+
+    if (!user) {
+      throw new InternalServerErrorException(
+        `Zu ${email} gibt es kein Keycloak-Konto mehr`,
+      );
+    }
+
+    return this.sendInvitationEmail(user.id);
   }
 
   /** Räumt ein Konto weg, von dem nur die Adresse bekannt ist. */
@@ -137,6 +156,41 @@ export class KeycloakAdminService {
     });
 
     return this.sendVerificationEmail(keycloakUserId);
+  }
+
+  /**
+   * Schreibt einen geänderten Nutzernamen nach Keycloak zurück.
+   *
+   * Sonst hießen dieselben Menschen an zwei Stellen verschieden: wer sich in
+   * der App umbenennt, könnte sich mit dem neuen Namen nicht anmelden. Damit
+   * wäre das Feld eine Anzeige und keine Einstellung.
+   *
+   * Keycloaks `409` wird hier zu derselben Meldung, die auch die lokale
+   * `@unique`-Verletzung erzeugt — für die Person ist es dasselbe Ereignis, und
+   * zwei Formulierungen für einen Sachverhalt sind eine zu viel.
+   *
+   * Setzt `editUsernameAllowed` am Realm voraus (siehe
+   * `scripts/setup-keycloak.sh`); ohne das lehnt Keycloak den Schreibvorgang ab.
+   */
+  async changeUsername(
+    keycloakUserId: string,
+    username: string,
+  ): Promise<void> {
+    try {
+      await this.request(`/users/${keycloakUserId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ username }),
+      });
+    } catch (error) {
+      if (
+        error instanceof HttpException &&
+        error.getStatus() === HttpStatus.CONFLICT
+      ) {
+        throw new ConflictException('Dieser Nutzername ist schon vergeben');
+      }
+
+      throw error;
+    }
   }
 
   /** Wie die Einladungsmail, aber ohne Passwort-Schritt. */
@@ -293,8 +347,14 @@ export class KeycloakAdminService {
 
     if (!response.ok) {
       const detail = await response.text();
-      throw new InternalServerErrorException(
+      // Den Status **durchreichen** statt alles auf 500 abzubilden. Vorher sah
+      // ein belegter Nutzername (409) genauso aus wie ein Serverfehler, und der
+      // echte Grund eines Mailfehlers — etwa eine ungültige `redirect_uri`
+      // (400) — verschwand in der SMTP-Warnung. Wer den Aufruf macht, kann so
+      // unterscheiden, ob es an ihm lag.
+      throw new HttpException(
         `Keycloak admin request failed (HTTP ${response.status}): ${detail}`,
+        response.status,
       );
     }
 

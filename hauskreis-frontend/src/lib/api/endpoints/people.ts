@@ -13,6 +13,7 @@ import type {
   InvitedPerson,
   InvitePersonInput,
   Person,
+  PersonListEntry,
   UpdatePersonInput,
 } from '../types';
 
@@ -21,8 +22,8 @@ const base = (hauskreisId: string) => hkPath(hauskreisId, '/people');
 export function listPeople(
   hauskreisId: string,
   signal?: AbortSignal,
-): Promise<Person[]> {
-  return apiGet<Person[]>(base(hauskreisId), { signal });
+): Promise<PersonListEntry[]> {
+  return apiGet<PersonListEntry[]>(base(hauskreisId), { signal });
 }
 
 export function getPerson(
@@ -59,6 +60,22 @@ export function updatePerson(
   etag: string | undefined,
 ): Promise<Resource<Person>> {
   return apiPatch<Person>(`${base(hauskreisId)}/${personId}`, input, { etag });
+}
+
+/**
+ * Nur Admin. Schickt die Einladungsmail noch einmal.
+ *
+ * Für den Fall, dass beim Einladen der Mailserver nicht erreichbar war: das
+ * Konto steht dann und die Person ist angelegt, es fehlt nur die Mail.
+ */
+export function resendInvitation(
+  hauskreisId: string,
+  personId: string,
+): Promise<{ invitationEmailSent: boolean }> {
+  return apiPost<{ invitationEmailSent: boolean }>(
+    `${base(hauskreisId)}/${personId}/resend-invitation`,
+    {},
+  );
 }
 
 /** Nur Admin. */

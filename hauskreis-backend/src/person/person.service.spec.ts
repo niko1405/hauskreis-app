@@ -14,6 +14,7 @@ type PersonDelegate = {
   findMany: jest.Mock;
   update: jest.Mock;
   create: jest.Mock;
+  count: jest.Mock;
 };
 
 function setup() {
@@ -23,6 +24,7 @@ function setup() {
     findMany: jest.fn().mockResolvedValue([]),
     update: jest.fn(),
     create: jest.fn(),
+    count: jest.fn().mockResolvedValue(2),
   };
   const keycloakAdmin = {
     inviteUser: jest.fn(),
@@ -63,6 +65,7 @@ function setup() {
 const user: AuthenticatedUser = {
   keycloakUserId: 'kc-123',
   email: 'lea@example.com',
+  emailVerified: true,
   roles: ['member'],
 };
 
@@ -172,15 +175,19 @@ describe('PersonService.resolveForUser', () => {
     person.findUnique.mockResolvedValue(null);
 
     await expect(
-      service.resolveForUser({ keycloakUserId: 'kc-9', roles: [] }),
+      service.resolveForUser({
+        keycloakUserId: 'kc-9',
+        emailVerified: true,
+        roles: [],
+      }),
     ).rejects.toThrow(NotFoundException);
     expect(person.findMany).not.toHaveBeenCalled();
   });
 });
 
 describe('PersonService.invite', () => {
+  // Kein Name mehr: den wählt die Person beim Aktivieren ihres Kontos selbst.
   const invitation = {
-    name: 'Lea',
     email: 'lea@example.com',
     role: 'member' as const,
   };
@@ -264,11 +271,11 @@ describe('PersonService.invite', () => {
     expect(person.update).toHaveBeenCalledWith({
       where: { id: 'p-alt' },
       data: {
-        name: 'Lea',
         role: 'MEMBER',
         active: true,
         acceptedAt: null,
         keycloakUserId: null,
+        username: null,
       },
     });
   });
@@ -301,10 +308,202 @@ describe('PersonService.invite', () => {
     expect(person.create).toHaveBeenCalledWith({
       data: {
         hauskreisId: 'hk-1',
-        name: 'Lea',
+        // Ein Platzhalter bis zur ersten Anmeldung — dann übernimmt
+        // `resolveForUser` den selbst gewählten Nutzernamen.
+        name: 'lea',
         email: 'lea@example.com',
         role: 'ADMIN',
       },
     });
+  });
+});
+
+/**
+ * Der Nutzername gehört an zwei Stellen gleichzeitig — sonst kann man sich mit
+ * dem, den man in der App sieht, nicht anmelden.
+ */
+describe('PersonService und der Nutzername', () => {
+  const membership = {
+    id: 'p1',
+    hauskreisId: 'hk-1',
+    role: 'ADMIN' as const,
+  };
+
+  function setupUpdate(before: Record<string, unknown>) {
+    const fixture = setup();
+    fixture.person.findFirst.mockResolvedValue(before);
+    fixture.person.update.mockResolvedValue({ id: 'p1' });
+    fixture.person.findMany.mockResolvedValue([]);
+    return fixture;
+  }
+
+  it('schreibt einen geänderten Namen nach Keycloak', async () => {
+    const { service, keycloakAdmin } = setupUpdate({
+      locationId: null,
+      active: true,
+      username: 'niko',
+      keycloakUserId: 'kc-1',
+    });
+    keycloakAdmin.changeUsername = jest.fn().mockResolvedValue(undefined);
+
+    await service
+      .update('hk-1', 'p1', { username: 'niko.v' }, membership)
+      .catch(() => undefined);
+
+    expect(keycloakAdmin.changeUsername).toHaveBeenCalledWith('kc-1', 'niko.v');
+  });
+
+  it('fasst Keycloak nicht an, wenn der Name gleich bleibt', async () => {
+    const { service, keycloakAdmin } = setupUpdate({
+      locationId: null,
+      active: true,
+      username: 'niko',
+      keycloakUserId: 'kc-1',
+    });
+    keycloakAdmin.changeUsername = jest.fn();
+
+    await service
+      .update('hk-1', 'p1', { username: 'niko' }, membership)
+      .catch(() => undefined);
+
+    expect(keycloakAdmin.changeUsername).not.toHaveBeenCalled();
+  });
+
+  /** Eine offene Einladung hat noch kein Konto — da gibt es nichts abzugleichen. */
+  it('fasst Keycloak nicht an, solange kein Konto verknüpft ist', async () => {
+    const { service, keycloakAdmin } = setupUpdate({
+      locationId: null,
+      active: true,
+      username: null,
+      keycloakUserId: null,
+    });
+    keycloakAdmin.changeUsername = jest.fn();
+
+    await service
+      .update('hk-1', 'p1', { username: 'lea' }, membership)
+      .catch(() => undefined);
+
+    expect(keycloakAdmin.changeUsername).not.toHaveBeenCalled();
+  });
+
+  it('übernimmt den Namen aus dem Token beim ersten Anmelden', async () => {
+    const { service, person } = setup();
+    person.findUnique.mockResolvedValue({
+      id: 'p3',
+      keycloakUserId: 'kc-1',
+      username: null,
+      acceptedAt: null,
+    });
+    person.update.mockResolvedValue({ id: 'p3' });
+
+    await service.resolveForUser({
+      keycloakUserId: 'kc-1',
+      email: 'lea@example.com',
+      username: 'lea.m',
+      emailVerified: true,
+      roles: [],
+    });
+
+    // Anzeigename mit vorbelegt: bis hierher stand dort, was jemand anders beim
+    // Einladen eingetippt hat.
+    expect(person.update).toHaveBeenCalledWith({
+      where: { id: 'p3' },
+      data: {
+        acceptedAt: expect.any(Date),
+        username: 'lea.m',
+        name: 'lea.m',
+      },
+    });
+  });
+
+  it('überschreibt einen selbst gesetzten Anzeigenamen nicht', async () => {
+    const { service, person } = setup();
+    person.findUnique.mockResolvedValue({
+      id: 'p3',
+      keycloakUserId: 'kc-1',
+      username: 'alt',
+      acceptedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    person.update.mockResolvedValue({ id: 'p3' });
+
+    await service.resolveForUser({
+      keycloakUserId: 'kc-1',
+      email: 'lea@example.com',
+      username: 'neu',
+      emailVerified: true,
+      roles: [],
+    });
+
+    // Der Nutzername zieht nach, der Anzeigename bleibt: ihn bei jeder
+    // Anmeldung neu zu setzen nähme eine Entscheidung aus dem Profil zurück.
+    expect(person.update).toHaveBeenCalledWith({
+      where: { id: 'p3' },
+      data: { acceptedAt: undefined, username: 'neu' },
+    });
+  });
+});
+
+describe('PersonService und die Admin-Rechte', () => {
+  const asAdmin = { id: 'p9', hauskreisId: 'hk-1', role: 'ADMIN' as const };
+  const asMember = { id: 'p9', hauskreisId: 'hk-1', role: 'MEMBER' as const };
+
+  it('lässt niemanden ohne Admin-Rechte Rollen vergeben', async () => {
+    const { service } = setup();
+
+    await expect(
+      service.update('hk-1', 'p1', { role: 'ADMIN' }, asMember),
+    ).rejects.toThrow(/Nur Admins/);
+  });
+
+  /**
+   * Sonst stünde eine Gruppe da, in der niemand mehr einladen darf — und
+   * anders als beim Verlassen gibt es hier keine Tür, durch die man wieder
+   * hinauskommt.
+   */
+  it('lässt die letzte Admin-Person sich nicht selbst degradieren', async () => {
+    const { service, person } = setup();
+    person.count = jest.fn().mockResolvedValue(1);
+
+    await expect(
+      service.update('hk-1', 'p9', { role: 'MEMBER' }, asAdmin),
+    ).rejects.toThrow(/einzige Person mit Admin-Rechten/);
+  });
+
+  it('lässt sie gehen, sobald jemand anders auch Admin ist', async () => {
+    const { service, person } = setup();
+    person.count = jest.fn().mockResolvedValue(2);
+    person.findFirst.mockResolvedValue({
+      locationId: null,
+      active: true,
+      username: null,
+      keycloakUserId: null,
+    });
+    person.update.mockResolvedValue({ id: 'p9' });
+    person.findMany.mockResolvedValue([]);
+
+    await expect(
+      service
+        .update('hk-1', 'p9', { role: 'MEMBER' }, asAdmin)
+        .catch(() => 'ok'),
+    ).resolves.toBeDefined();
+  });
+
+  it('lässt einen Admin jemand anderen befördern', async () => {
+    const { service, person } = setup();
+    person.count = jest.fn().mockResolvedValue(1);
+    person.findFirst.mockResolvedValue({
+      locationId: null,
+      active: true,
+      username: null,
+      keycloakUserId: null,
+    });
+    person.update.mockResolvedValue({ id: 'p1' });
+    person.findMany.mockResolvedValue([]);
+
+    await expect(
+      service
+        .update('hk-1', 'p1', { role: 'ADMIN' }, asAdmin)
+        .catch(() => 'ok'),
+    ).resolves.toBeDefined();
   });
 });

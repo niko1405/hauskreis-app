@@ -9,7 +9,16 @@
  * die Einladung samt Konto zurückziehen — danach nicht mehr, denn dann gehört
  * das Konto einem Menschen und nicht mehr dieser Gruppe.
  */
-import { Clock, Mail, Trash2, UserPlus, X } from 'lucide-react';
+import {
+  Clock,
+  Mail,
+  Send,
+  Shield,
+  ShieldOff,
+  Trash2,
+  UserPlus,
+  X,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -20,11 +29,19 @@ import { Field, Select, TextInput } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { ConflictError, errorMessage } from '@/lib/api/errors';
-import { useDeletePerson, useInvitePerson, usePeople } from '@/lib/api/hooks';
+import {
+  useDeletePerson,
+  useInvitePerson,
+  usePeople,
+  useResendInvitation,
+  useSetPersonRole,
+} from '@/lib/api/hooks';
+import type { PersonListEntry } from '@/lib/api/types';
 
 export function PeopleAdmin() {
   const people = usePeople();
   const remove = useDeletePerson();
+  const resend = useResendInvitation();
   const toast = useToast();
   const confirm = useConfirm();
   const [inviting, setInviting] = useState(false);
@@ -57,6 +74,35 @@ export function PeopleAdmin() {
                 </Badge>
               )}
               {!person.active && <Badge>inaktiv</Badge>}
+              {person.role === 'ADMIN' && (
+                <Badge variant="info">
+                  <Shield size={11} />
+                  Admin
+                </Badge>
+              )}
+
+              {person.acceptedAt === null && (
+                <IconButton
+                  label={`Einladung an ${person.email} erneut senden`}
+                  onClick={() =>
+                    resend.mutate(person.id, {
+                      onSuccess: (result) =>
+                        result.invitationEmailSent
+                          ? toast.success(
+                              `Einladung an ${person.email} unterwegs.`,
+                            )
+                          : toast.error(
+                              'Die Mail ging wieder nicht raus — läuft der Mailserver?',
+                            ),
+                    })
+                  }
+                >
+                  <Send size={15} />
+                </IconButton>
+              )}
+
+              {person.active && <RoleToggle person={person} />}
+
               <IconButton
                 label={
                   person.acceptedAt === null
@@ -120,8 +166,64 @@ export function PeopleAdmin() {
   );
 }
 
+/**
+ * Rechte geben und nehmen, eine Zeile weit.
+ *
+ * Die letzte Admin-Person kann sich die Rechte nicht selbst nehmen. Die Regel
+ * steht im Server, nicht hier: sie hängt daran, wie viele Admins es *gerade*
+ * gibt, und eine zweite Fassung im Frontend wäre eine zweite Wahrheit, die
+ * gelegentlich falsch liegt. Der Knopf bleibt deshalb bedienbar und die
+ * Ablehnung kommt als Meldung — mit demselben Satz, den auch das Verlassen
+ * benutzt.
+ */
+function RoleToggle({ person }: { person: PersonListEntry }) {
+  const setRole = useSetPersonRole();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const isAdmin = person.role === 'ADMIN';
+
+  const submit = async () => {
+    const ok = await confirm({
+      title: isAdmin
+        ? `${person.name} die Admin-Rechte nehmen?`
+        : `${person.name} zum Admin machen?`,
+      body: isAdmin
+        ? 'Einladen, entfernen und die Wartungsläufe sind danach nicht mehr möglich.'
+        : 'Damit darf die Person einladen, entfernen und die Wartungsläufe starten.',
+      confirmLabel: isAdmin ? 'Rechte nehmen' : 'Zum Admin machen',
+      tone: isAdmin ? 'danger' : 'neutral',
+    });
+    if (!ok) return;
+
+    setRole.mutate(
+      { personId: person.id, role: isAdmin ? 'MEMBER' : 'ADMIN' },
+      {
+        onSuccess: () =>
+          toast.success(
+            isAdmin
+              ? `${person.name} ist wieder Mitglied.`
+              : `${person.name} ist jetzt Admin.`,
+          ),
+        onError: (error) => toast.error(errorMessage(error)),
+      },
+    );
+  };
+
+  return (
+    <IconButton
+      label={
+        isAdmin
+          ? `${person.name} die Admin-Rechte nehmen`
+          : `${person.name} zum Admin machen`
+      }
+      onClick={() => void submit()}
+    >
+      {isAdmin ? <ShieldOff size={15} /> : <Shield size={15} />}
+    </IconButton>
+  );
+}
+
 function InviteForm({ onDone }: { onDone: () => void }) {
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'member' | 'admin'>('member');
 
@@ -130,17 +232,21 @@ function InviteForm({ onDone }: { onDone: () => void }) {
 
   const submit = () => {
     invite.mutate(
-      // Nur Name, Adresse, Rolle. Ob jemand ein Instrument spielt, wo er wohnt
-      // und ob er gerade hosten möchte, weiß nur er selbst — das steht im
-      // Profil und nicht hier.
-      { name: name.trim(), email: email.trim(), role },
+      // Nur Adresse und Rolle. Wie die Person heißt, entscheidet sie beim
+      // Aktivieren ihres Kontos selbst; alles Weitere steht im Profil.
+      { email: email.trim(), role },
       {
         onSuccess: (person) => {
-          toast.success(
-            person.invitationEmailSent
-              ? `Einladung an ${person.email} verschickt.`
-              : `${person.name} angelegt — die Mail konnte nicht raus.`,
-          );
+          if (person.invitationEmailSent) {
+            toast.success(`Einladung an ${person.email} verschickt.`);
+          } else {
+            // Kein grüner Haken für etwas, das nicht passiert ist. Das Konto
+            // steht, die Person ist angelegt — nur die Mail ging nicht raus,
+            // und ohne sie kommt niemand herein.
+            toast.error(
+              `${person.email} angelegt, aber die Einladungsmail ging nicht raus. Schick sie über den Knopf in der Zeile erneut.`,
+            );
+          }
           onDone();
         },
         onError: (error) =>
@@ -155,15 +261,9 @@ function InviteForm({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="space-y-3 border-t border-line pt-4">
-      <Field label="Name">
-        <TextInput
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-      </Field>
       <Field
         label="E-Mail"
-        hint="Darüber wird die Person beim ersten Login zugeordnet — und dorthin geht die Einladung."
+        hint="Mehr braucht es nicht: Name und Nutzername wählt die Person beim Aktivieren ihres Kontos selbst."
       >
         <TextInput
           type="email"
@@ -190,7 +290,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
           size="sm"
           className="flex-1"
           loading={invite.isPending}
-          disabled={name.trim() === '' || email.trim() === ''}
+          disabled={email.trim() === ''}
           onClick={submit}
         >
           <Mail size={13} />

@@ -500,6 +500,22 @@ export interface paths {
     patch: operations['PersonController_update'];
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/people/{id}/resend-invitation': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['PersonController_resendInvitation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/prayer-buddies': {
     parameters: {
       query?: never;
@@ -932,6 +948,7 @@ export interface components {
       /** Format: uuid */
       hauskreisId: string;
       name: string;
+      username: string | null;
       /** Format: email */
       email: string;
       /** Format: date */
@@ -956,6 +973,7 @@ export interface components {
       /** Format: uuid */
       hauskreisId: string;
       name: string;
+      username: string | null;
       /** Format: email */
       email: string;
       /** Format: date */
@@ -973,6 +991,7 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
       version: number;
+      awayToday: boolean;
     }[];
     PersonResponseDto: {
       /** Format: uuid */
@@ -980,6 +999,7 @@ export interface components {
       /** Format: uuid */
       hauskreisId: string;
       name: string;
+      username: string | null;
       /** Format: email */
       email: string;
       /** Format: date */
@@ -1014,7 +1034,6 @@ export interface components {
       locationId?: string | null;
     };
     InvitePersonDto: {
-      name: string;
       /** Format: email */
       email: string;
       /**
@@ -1029,6 +1048,7 @@ export interface components {
       /** Format: uuid */
       hauskreisId: string;
       name: string;
+      username: string | null;
       /** Format: email */
       email: string;
       /** Format: date */
@@ -1063,6 +1083,12 @@ export interface components {
       /** Format: uuid */
       locationId?: string | null;
       active?: boolean;
+      username?: string;
+      /** @enum {string} */
+      role?: 'MEMBER' | 'ADMIN';
+    };
+    ResendInvitationResponseDto: {
+      invitationEmailSent: boolean;
     };
     SetHomeDto: {
       address: string;
@@ -1102,6 +1128,7 @@ export interface components {
       /** Format: uuid */
       hauskreisId: string;
       name: string;
+      username: string | null;
       /** Format: email */
       email: string;
       /** Format: date */
@@ -4982,6 +5009,64 @@ export interface operations {
       };
       /** @description Kein `If-Match` mitgeschickt. Den ETag aus dem vorangehenden GET verwenden. */
       428: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  PersonController_resendInvitation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ResendInvitationResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
         headers: {
           [name: string]: unknown;
         };

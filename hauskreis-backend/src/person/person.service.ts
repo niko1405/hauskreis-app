@@ -1,17 +1,22 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { PersonRole } from '../../generated/prisma/enums';
+import { toUtcDate } from '../meeting/meeting-schedule';
 import { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import { LocationService } from '../location/location.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
-import type { AuthenticatedUser } from '../auth/auth.types';
+import type {
+  AuthenticatedUser,
+  HauskreisMembership,
+} from '../auth/auth.types';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import type { IfMatchCondition } from '../common/http/etag';
 import type {
@@ -32,6 +37,7 @@ const personSelect = {
   id: true,
   hauskreisId: true,
   name: true,
+  username: true,
   email: true,
   role: true,
   birthdate: true,
@@ -108,12 +114,40 @@ export class PersonService {
     );
   }
 
-  findAll(hauskreisId: string) {
-    return this.prisma.person.findMany({
-      where: { hauskreisId },
-      select: personSelect,
-      orderBy: { name: 'asc' },
-    });
+  /**
+   * Alle Personen des Hauskreises, mit `awayToday` dazu.
+   *
+   * Abgeleitet und nicht gespeichert: „ist gerade weg" ist eine Frage an den
+   * Kalender, keine Eigenschaft eines Menschen. Serverseitig, weil das Frontend
+   * sonst eine zweite Liste holen und beide verschneiden müsste — eine Abfrage
+   * hier ist billiger als eine Runde mehr über die Leitung, und die Antwort
+   * wäre dieselbe.
+   */
+  async findAll(hauskreisId: string) {
+    const today = toUtcDate(new Date());
+
+    const [people, away] = await Promise.all([
+      this.prisma.person.findMany({
+        where: { hauskreisId },
+        select: personSelect,
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.absencePeriod.findMany({
+        where: {
+          hauskreisId,
+          startDate: { lte: today },
+          endDate: { gte: today },
+        },
+        select: { personId: true },
+      }),
+    ]);
+
+    const awayIds = new Set(away.map((period) => period.personId));
+
+    return people.map((person) => ({
+      ...person,
+      awayToday: awayIds.has(person.id),
+    }));
   }
 
   async findOne(hauskreisId: string, id: string) {
@@ -159,20 +193,31 @@ export class PersonService {
     hauskreisId: string,
     id: string,
     dto: UpdatePersonDto,
+    /** Wer gerade ändert. Entscheidet, ob `role` gesetzt werden darf. */
+    actor?: HauskreisMembership,
     condition?: IfMatchCondition,
   ) {
     await this.assertLocationBelongsToHauskreis(hauskreisId, dto.locationId);
+    await this.assertMayChangeRole(hauskreisId, id, dto.role, actor);
 
     // Vor dem Schreiben, sonst ist nicht mehr feststellbar, wo die Person
     // vorher gewohnt hat — und die alte Wohnung behielte ihren Namen. Dasselbe
-    // gilt für `active`: ob es ein Wechsel war, sieht man nur im Vorher.
-    const before =
-      dto.locationId === undefined && dto.active === undefined
-        ? null
-        : await this.prisma.person.findFirst({
-            where: { id, hauskreisId },
-            select: { locationId: true, active: true },
-          });
+    // gilt für `active` und `username`: ob es ein Wechsel war, sieht man nur im
+    // Vorher.
+    const before = await this.prisma.person.findFirst({
+      where: { id, hauskreisId },
+      select: {
+        locationId: true,
+        active: true,
+        username: true,
+        keycloakUserId: true,
+      },
+    });
+
+    // Erst dort, dann hier. Keycloak ist die Instanz, die den Namen realmweit
+    // vergibt; schriebe die App zuerst und Keycloak lehnte danach ab, hießen
+    // die beiden verschieden — genau der Zustand, den dieses Feld beendet.
+    await this.syncUsername(before, dto.username);
 
     const updated = await updateWithVersionCheck({
       condition,
@@ -183,6 +228,8 @@ export class PersonService {
             name: dto.name,
             email: dto.email,
             birthdate: dto.birthdate ? new Date(dto.birthdate) : undefined,
+            username: dto.username,
+            role: dto.role,
             playsInstrument: dto.playsInstrument,
             canHost: dto.canHost,
             autoAttend: dto.autoAttend,
@@ -218,6 +265,69 @@ export class PersonService {
     }
 
     return updated;
+  }
+
+  /**
+   * Wer wen zum Admin machen darf — und wer sich nicht selbst degradieren kann.
+   *
+   * Zwei Regeln, und die zweite ist die wichtigere: **die letzte Admin-Person
+   * kann sich die Rechte nicht selbst nehmen.** Sonst stünde eine Gruppe da, in
+   * der niemand mehr einladen darf und die sich auch nicht mehr selbst helfen
+   * kann — derselbe Sackgassen-Fall, den `leave` mit der Nachfolge löst, nur
+   * ohne die Tür, durch die man dort noch hinauskommt.
+   */
+  private async assertMayChangeRole(
+    hauskreisId: string,
+    id: string,
+    role: PersonRole | undefined,
+    actor: HauskreisMembership | undefined,
+  ): Promise<void> {
+    if (role === undefined) {
+      return;
+    }
+
+    if (actor?.role !== PersonRole.ADMIN) {
+      throw new ForbiddenException(
+        'Nur Admins können Rechte vergeben oder entziehen',
+      );
+    }
+
+    if (role === PersonRole.ADMIN || actor.id !== id) {
+      return;
+    }
+
+    const admins = await this.prisma.person.count({
+      where: { hauskreisId, active: true, role: PersonRole.ADMIN },
+    });
+
+    if (admins <= 1) {
+      throw new BadRequestException(
+        'Du bist die einzige Person mit Admin-Rechten. Ernenne zuerst jemand anderen.',
+      );
+    }
+  }
+
+  /**
+   * Schreibt einen geänderten Nutzernamen nach Keycloak — bevor er hier landet.
+   *
+   * Ohne das hießen dieselben Menschen an zwei Stellen verschieden, und die
+   * Anmeldung mit dem neuen Namen schlüge fehl. Das Feld wäre dann eine
+   * Anzeige und keine Einstellung.
+   *
+   * Wer noch kein Konto verknüpft hat (offene Einladung), bekommt seinen Namen
+   * ohnehin beim Aktivieren; hier gibt es nichts abzugleichen.
+   */
+  private async syncUsername(
+    before: { username: string | null; keycloakUserId: string | null } | null,
+    username: string | undefined,
+  ): Promise<void> {
+    if (!username || !before || username === before.username) {
+      return;
+    }
+
+    if (before.keycloakUserId) {
+      await this.keycloakAdmin.changeUsername(before.keycloakUserId, username);
+    }
   }
 
   /**
@@ -307,10 +417,7 @@ export class PersonService {
     }
 
     const { created, invitationEmailSent } =
-      await this.keycloakAdmin.inviteUser({
-        email: dto.email,
-        name: dto.name,
-      });
+      await this.keycloakAdmin.inviteUser({ email: dto.email });
 
     const role = dto.role === 'admin' ? PersonRole.ADMIN : PersonRole.MEMBER;
 
@@ -327,15 +434,25 @@ export class PersonService {
             // Dieselbe Zeile wieder aufwecken statt einer zweiten: so bleibt
             // die Geschichte an der Person, die sie gemacht hat.
             data: {
-              name: dto.name,
               role,
               active: true,
               acceptedAt: null,
               keycloakUserId: null,
+              // Auch den Nutzernamen: die Person wählt ihn beim Aktivieren neu,
+              // und bis dahin darf er niemanden blockieren.
+              username: null,
             },
           })
         : await this.prisma.person.create({
-            data: { hauskreisId, name: dto.name, email: dto.email, role },
+            data: {
+              hauskreisId,
+              // Ein Platzhalter, bis die Person sich zum ersten Mal anmeldet —
+              // dann übernimmt `resolveForUser` den selbst gewählten Namen. Die
+              // Adresse ganz anzuzeigen wäre in einer Mitgliederliste zu viel.
+              name: localPartOf(dto.email),
+              email: dto.email,
+              role,
+            },
           });
     } catch (error) {
       // Nur aufräumen, was diese Einladung selbst angelegt hat: ein Konto, das
@@ -350,6 +467,40 @@ export class PersonService {
     await this.replanPrayerBuddies(hauskreisId);
 
     return { ...person, invitationEmailSent };
+  }
+
+  /**
+   * Schickt die Einladungsmail noch einmal.
+   *
+   * Der Fall, für den es das gibt: beim Einladen war der Mailserver nicht
+   * erreichbar. Das Konto steht dann und die Person ist angelegt — es fehlt nur
+   * die Mail. Die Einladung deshalb scheitern zu lassen wäre falsch: es würde
+   * beides wieder abräumen, obwohl nur der Versand klemmte.
+   */
+  async resendInvitation(
+    hauskreisId: string,
+    id: string,
+  ): Promise<{ invitationEmailSent: boolean }> {
+    const person = await this.prisma.person.findFirst({
+      where: { id, hauskreisId },
+      select: { email: true, acceptedAt: true, name: true },
+    });
+
+    if (!person) {
+      throw new NotFoundException(`Person ${id} not found`);
+    }
+
+    if (person.acceptedAt !== null) {
+      throw new BadRequestException(
+        `${person.name} ist schon da — eine zweite Einladung würde nichts ändern`,
+      );
+    }
+
+    const invitationEmailSent = await this.keycloakAdmin.resendInvitation(
+      person.email,
+    );
+
+    return { invitationEmailSent };
   }
 
   /**
@@ -499,10 +650,14 @@ export class PersonService {
       // Hier steht fest, dass wirklich jemand vor dem Bildschirm saß — und nur
       // hier. Das Keycloak-Konto entsteht schon beim Einladen, es sagt also
       // nichts darüber, ob die Einladung angenommen wurde.
-      return linked.acceptedAt === null
+      const firstLogin = linked.acceptedAt === null;
+      const arrival = firstLogin ? new Date() : undefined;
+      const naming = namingFromToken(user, linked, firstLogin);
+
+      return arrival || naming
         ? this.prisma.person.update({
             where: { id: linked.id },
-            data: { acceptedAt: new Date() },
+            data: { acceptedAt: arrival, ...naming },
           })
         : linked;
     }
@@ -539,7 +694,53 @@ export class PersonService {
 
     return this.prisma.person.update({
       where: { id: invitations[0]!.id },
-      data: { keycloakUserId: user.keycloakUserId, acceptedAt: new Date() },
+      data: {
+        keycloakUserId: user.keycloakUserId,
+        acceptedAt: new Date(),
+        // Erste Anmeldung per Definition: die Zeile gehörte bis eben niemandem.
+        ...namingFromToken(user, { username: null }, true),
+      },
     });
   }
+}
+
+/**
+ * Der Teil vor dem `@`. Ein Platzhalter-Anzeigename für die Zeit zwischen
+ * Einladung und erster Anmeldung — besser als eine leere Zeile und weniger als
+ * die ganze Adresse.
+ */
+function localPartOf(email: string): string {
+  return email.split('@')[0] ?? email;
+}
+
+/**
+ * Übernimmt den Nutzernamen aus dem Token — und beim allerersten Mal auch den
+ * Anzeigenamen.
+ *
+ * Den Nutzernamen hat der Mensch gerade in Keycloak **selbst gewählt**; genau
+ * der soll in der App stehen, sonst hießen dieselben Leute an zwei Stellen
+ * verschieden.
+ *
+ * Der **Anzeigename** wird nur bei der ersten Anmeldung vorbelegt, und das ist
+ * das richtige Signal: bis dahin steht dort, was jemand anders beim Einladen
+ * eingetippt hat — nach der Einladungsreform der lokale Teil der Adresse. Danach
+ * ist er entweder selbst gewählt oder von hier, und ihn bei jeder Anmeldung neu
+ * zu überschreiben nähme eine Entscheidung zurück, die jemand im Profil
+ * getroffen hat.
+ *
+ * `undefined`, wenn nichts zu tun ist — dann spart der Aufrufer den Schreibweg.
+ */
+function namingFromToken(
+  user: AuthenticatedUser,
+  current: { username: string | null },
+  firstLogin: boolean,
+): { username: string; name?: string } | undefined {
+  if (!user.username || user.username === current.username) {
+    return undefined;
+  }
+
+  return {
+    username: user.username,
+    ...(firstLogin ? { name: user.username } : {}),
+  };
 }

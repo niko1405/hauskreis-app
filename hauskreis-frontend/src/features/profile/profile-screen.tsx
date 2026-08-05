@@ -28,6 +28,7 @@ import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { AbsencesCard } from './absences-card';
 import { AccountCard } from './account-card';
 import { HomeCard } from './home-card';
+import { MembersCard } from './members-card';
 import { NotificationsCard } from './notifications-card';
 
 export function ProfileScreen() {
@@ -62,6 +63,7 @@ function Loaded({ personId }: { personId: string }) {
   const current = person.data?.data;
 
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [playsInstrument, setPlaysInstrument] = useState(false);
   const [canHost, setCanHost] = useState(true);
   const [autoAttend, setAutoAttend] = useState(false);
@@ -71,6 +73,7 @@ function Loaded({ personId }: { personId: string }) {
   useEffect(() => {
     if (!current) return;
     setName(current.name);
+    setUsername(current.username ?? '');
     setPlaysInstrument(current.playsInstrument);
     setCanHost(current.canHost);
     setAutoAttend(current.autoAttend);
@@ -87,6 +90,7 @@ function Loaded({ personId }: { personId: string }) {
 
   const dirty =
     name !== current.name ||
+    username !== (current.username ?? '') ||
     playsInstrument !== current.playsInstrument ||
     canHost !== current.canHost ||
     autoAttend !== current.autoAttend ||
@@ -101,6 +105,11 @@ function Loaded({ personId }: { personId: string }) {
         canHost,
         autoAttend,
         ...(birthdate === '' ? {} : { birthdate }),
+        // Leer heißt „unverändert": wer noch nie angemeldet war, hat keinen —
+        // und ein leerer String wäre für den Server ein ungültiger Name.
+        ...(username === '' || username === current.username
+          ? {}
+          : { username }),
       },
       {
         onSuccess: () => toast.success('Gespeichert.'),
@@ -155,6 +164,21 @@ function Loaded({ personId }: { personId: string }) {
             </Field>
 
             <Field
+              label="Nutzername"
+              hint="Damit meldest du dich an — die Änderung gilt sofort auch dort. Kleinbuchstaben, Ziffern, Punkt, Strich oder Unterstrich."
+            >
+              <TextInput
+                value={username}
+                placeholder={
+                  current.username === null
+                    ? 'Wird bei der ersten Anmeldung gesetzt'
+                    : undefined
+                }
+                onChange={(event) => setUsername(event.target.value)}
+              />
+            </Field>
+
+            <Field
               label="Geburtstag"
               hint="Optional — nützlich für die Geschenke-Planung."
             >
@@ -200,6 +224,8 @@ function Loaded({ personId }: { personId: string }) {
             </Button>
           </Card>
         </section>
+
+        <MembersCard />
 
         <HomeCard personId={personId} locationId={current.locationId} />
 

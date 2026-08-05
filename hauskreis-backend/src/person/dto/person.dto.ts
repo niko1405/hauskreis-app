@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
+import { PersonRole } from '../../../generated/prisma/enums';
 
 export const createPersonSchema = z.object({
   name: z.string().min(1).max(100),
@@ -13,8 +14,30 @@ export const createPersonSchema = z.object({
   locationId: z.uuid().nullish(),
 });
 
+/**
+ * Wie ein Nutzername aussehen darf.
+ *
+ * Kleingeschrieben beim Schreiben, weil Keycloak ohnehin normalisiert — und
+ * zwei Wahrheiten über denselben Namen sind genau das Problem, das dieses Feld
+ * schließt. Punkt, Strich und Unterstrich sind erlaubt, sonst nichts: ein
+ * Leerzeichen im Anmeldenamen ist eine Fehlerquelle ohne Gegenwert.
+ */
+export const usernameSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(
+    /^[a-z0-9._-]{3,30}$/,
+    'Nutzernamen bestehen aus 3–30 Zeichen: Buchstaben, Ziffern, Punkt, Strich oder Unterstrich',
+  );
+
 export const updatePersonSchema = createPersonSchema.partial().extend({
   active: z.boolean().optional(),
+  /// Wandert bei Änderung nach Keycloak zurück, damit die Anmeldung mit dem
+  /// neuen Namen funktioniert.
+  username: usernameSchema.optional(),
+  /// Nur mit `@HauskreisAdmin()` — der Controller weist es sonst ab.
+  role: z.enum(PersonRole).optional(),
 });
 
 const personParamsSchema = z.object({
@@ -23,15 +46,20 @@ const personParamsSchema = z.object({
 });
 
 /**
- * Eine Einladung ist ein Name, eine Adresse und eine Rolle — mehr nicht.
+ * Eine Einladung ist eine Adresse und eine Rolle — mehr nicht.
+ *
+ * **Auch kein Name.** Bis eben tippte der Admin einen ein, und der stand
+ * danach als Anzeigename in der App — auch dann, wenn die Person sich beim
+ * Aktivieren ihres Kontos ganz anders genannt hat. Zwei Leute benannten
+ * denselben Menschen, und der Betroffene gewann nicht. Der Anzeigename entsteht
+ * jetzt beim ersten Anmelden aus dem selbst gewählten Nutzernamen; bis dahin
+ * steht der lokale Teil der Adresse da, damit die Zeile überhaupt etwas anzeigt.
  *
  * Ob jemand ein Instrument spielt, ob er gerade hosten möchte und wo er wohnt,
- * weiß nur er selbst; das steht im Profil und nicht im Einladungsformular.
- * Wer es hier ausfüllte, träfe Annahmen über einen Menschen, der noch gar
- * nicht da ist.
+ * weiß ohnehin nur er selbst; das steht im Profil und nicht im
+ * Einladungsformular.
  */
 export const invitePersonSchema = z.object({
-  name: z.string().trim().min(1),
   email: z.email(),
   role: z.enum(['member', 'admin']).default('member'),
 });

@@ -7,6 +7,7 @@ import type {
   CreatePersonInput,
   InvitePersonInput,
   Person,
+  PersonRole,
   UpdatePersonInput,
 } from '../types';
 import { useHk } from './use-hk';
@@ -68,6 +69,50 @@ export function useCreatePerson() {
 
   return useApiMutation(
     (input: CreatePersonInput) => peopleApi.createPerson(hauskreisId, input),
+    { invalidateKeys: [keys.people.all] },
+  );
+}
+
+/**
+ * Nur Admin. Macht jemanden zum Admin oder nimmt die Rechte wieder.
+ *
+ * Liest den Stand **selbst**, statt ihn wie `useUpdatePerson` im Cache zu
+ * erwarten: die Verwaltungsliste hält nur die Übersicht, und neun Detail-Stände
+ * auf Vorrat zu laden wäre teurer als einer, wenn wirklich jemand etwas ändert.
+ *
+ * Der frische Stand liefert nebenbei die Felder, die das PATCH trotz seines
+ * Namens verlangt (Zod-Defaults) — aus der Liste genommen wären sie einen
+ * Wimpernschlag alt.
+ */
+export function useSetPersonRole() {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useApiMutation(
+    async ({ personId, role }: { personId: string; role: PersonRole }) => {
+      const current = await peopleApi.getPerson(hauskreisId, personId);
+
+      return peopleApi.updatePerson(
+        hauskreisId,
+        personId,
+        {
+          role,
+          playsInstrument: current.data.playsInstrument,
+          canHost: current.data.canHost,
+          autoAttend: current.data.autoAttend,
+        },
+        current.etag,
+      );
+    },
+    { invalidateKeys: [keys.people.all, ...derived] },
+  );
+}
+
+/** Nur Admin. Schickt die Einladungsmail noch einmal. */
+export function useResendInvitation() {
+  const { hauskreisId, keys } = useHk();
+
+  return useApiMutation(
+    (personId: string) => peopleApi.resendInvitation(hauskreisId, personId),
     { invalidateKeys: [keys.people.all] },
   );
 }

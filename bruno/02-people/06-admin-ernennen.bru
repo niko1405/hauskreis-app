@@ -1,0 +1,49 @@
+meta {
+  name: Jemanden zum Admin machen
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/people/{{otherPersonId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{otherPersonEtag}}
+}
+
+body:json {
+  {
+    "role": "ADMIN",
+    "playsInstrument": false,
+    "canHost": true,
+    "autoAttend": false
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("die Person ist jetzt Admin", function () {
+    expect(res.body.role).to.equal("ADMIN");
+  });
+}
+
+docs {
+  `role` steht im gewöhnlichen PATCH und hat trotzdem eine eigene Regel: setzen
+  darf es nur, wer selbst Admin ist. Ein eigener Endpunkt wäre die Alternative
+  — dann stünde die Regel im Routing statt in der Logik, und „Rolle ändern"
+  wäre etwas anderes als „Person ändern", obwohl es dasselbe ist.
+
+  Zwei Ablehnungen:
+
+  - **403**, wenn die anfragende Person kein Admin ist.
+  - **400**, wenn die letzte Admin-Person sich selbst die Rechte nehmen will.
+    Sonst stünde eine Gruppe da, in der niemand mehr einladen darf — und anders
+    als beim Verlassen gibt es hier keine Nachfolge-Frage, durch die man wieder
+    herauskommt.
+}

@@ -221,10 +221,21 @@ body#keycloak-bg {
 .pf-v5-c-login__main-footer-band,
 .instruction,
 #kc-form-options,
+#kc-registration,
+#kc-registration-container,
 .pf-v5-c-login__main-footer-band-item {
   font-size: 0.8125rem;
   line-height: 1.6;
   color: var(--hk-ink-soft);
+}
+
+/* „Noch kein Konto? Konto anlegen" unter dem Anmelden-Knopf. Keycloak setzt
+   das als kleinen Fließtext; ohne Abstand klebt es am Knopf und liest sich wie
+   eine Fußnote statt wie ein zweiter Weg. */
+#kc-registration,
+#kc-registration-container {
+  margin-top: 1.25rem;
+  text-align: center;
 }
 
 /* -------------------------------------------------------------------------

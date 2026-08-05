@@ -176,6 +176,17 @@ function LoginScreen() {
           <LogIn size={16} />
           Anmelden
         </Button>
+
+        <p className="mt-5 text-sm text-stone-500">
+          Kein Account?{' '}
+          <button
+            type="button"
+            className="font-medium text-stone-900 underline underline-offset-2"
+            onClick={() => void auth.signinRedirect({ prompt: 'create' })}
+          >
+            Registrieren
+          </button>
+        </p>
       </div>
     </FullScreen>
   );

@@ -35,6 +35,13 @@ export type CreateHauskreisInput = S['CreateHauskreisDto'];
 // ── Personen ────────────────────────────────────────────────────────────────
 
 export type Person = S['PersonResponseDto'];
+/**
+ * Wie `Person`, plus `awayToday`. Das Feld ist abgeleitet und gibt es nur in
+ * der Liste — eine einzelne Person abzurufen beantwortet die Frage „wer ist
+ * gerade weg" nicht.
+ */
+export type PersonListEntry = S['PersonListResponseDto'][number];
+export type PersonRole = Person['role'];
 export type CreatePersonInput = S['CreatePersonDto'];
 export type InvitePersonInput = S['InvitePersonDto'];
 export type InvitedPerson = S['InvitedPersonResponseDto'];

@@ -295,7 +295,7 @@ Name, Geburtstag und Wohnung je Mitgliedschaft doppelt zu pflegen.
 | Vorgang                                                     | Was passiert                                                                                                        |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | **Gründen** (`POST /api/hauskreise`)                        | Hauskreis **und** eigene Person mit `role: ADMIN`, in einer Transaktion. `409`, solange man noch woanders dabei ist |
-| **Verlassen** (`POST …/leave`)                              | `active = false` **und** `keycloakUserId = null`                                                                    |
+| **Verlassen** (`POST …/leave`)                              | `active = false`, `keycloakUserId = null` **und** `username = null`                                                 |
 | **Einladen**                                                | Person-Zeile **ohne** `keycloakUserId` — ein Angebot, keine Übernahme                                               |
 | **Annehmen** (`POST /api/me/invitations/{personId}/accept`) | verlässt den bisherigen Hauskreis im selben Zug                                                                     |
 
@@ -2119,6 +2119,7 @@ beide aus derselben Variable ab.
 | `GET`                   | `/api/hauskreise/:hauskreisId/people`        | eingeloggt                                   |
 | `POST`                  | `/api/hauskreise/:hauskreisId/people`        | `admin`                                      |
 | `POST`                  | `/api/hauskreise/:hauskreisId/people/invite` | `admin`                                      |
+| `POST`                  | `…/people/:id/resend-invitation`             | `admin`                                      |
 | `PATCH`                 | `/api/hauskreise/:hauskreisId/people/:id`    | eingeloggt                                   |
 | `DELETE`                | `/api/hauskreise/:hauskreisId/people/:id`    | `admin` (löscht offene Einladung samt Konto) |
 | `GET`                   | `…/locations`, `…/locations/:id`             | eingeloggt                                   |
@@ -2188,10 +2189,17 @@ Personen, Locations, Terminen, Themen, Songs und Abwesenheiten,
 
 ### Eingeladen ist nicht angekommen
 
-Eine Einladung ist **Name, Adresse, Rolle** — mehr nicht. Ob jemand ein
-Instrument spielt, wo er wohnt und ob er gerade hosten möchte, weiß nur er
-selbst; das steht im Profil. Wer es im Einladungsformular ausfüllte, träfe
-Annahmen über einen Menschen, der noch gar nicht da ist.
+Eine Einladung ist **Adresse und Rolle** — mehr nicht. Ob jemand ein Instrument
+spielt, wo er wohnt und ob er gerade hosten möchte, weiß nur er selbst; das
+steht im Profil. Wer es im Einladungsformular ausfüllte, träfe Annahmen über
+einen Menschen, der noch gar nicht da ist.
+
+**Auch keinen Namen.** Bis Phase H tippte der Admin einen ein, und der stand
+danach als Anzeigename in der App — auch dann, wenn die Person sich beim
+Aktivieren ihres Kontos ganz anders genannt hat. Zwei Leute benannten denselben
+Menschen, und der Betroffene gewann nicht. Bis zur ersten Anmeldung steht jetzt
+der lokale Teil der Adresse da, damit die Zeile überhaupt etwas anzeigt; danach
+übernimmt `resolveForUser` den selbst gewählten Namen.
 
 `person.acceptedAt` unterscheidet beides. `null` heißt „eingeladen, aber noch
 nicht da". Die `keycloakUserId` taugt dafür nicht: die steht schon ab dem
@@ -2207,22 +2215,92 @@ Daran hängt, was `DELETE …/people/:id` tut:
 - **Schon da gewesen** — das Konto bleibt. Es gehört einem Menschen, nicht
   dieser Gruppe.
 
-### Der Nutzername gehört den Menschen
+### Wenn die Mail nicht rausgeht
 
-Beim Anlegen setzt `inviteUser` den Nutzernamen auf die E-Mail-Adresse — ein
-Konto braucht einen, und mehr wissen wir zu dem Zeitpunkt nicht. Bleiben muss
-er nicht: die Einladungsmail schickt `UPDATE_PROFILE` mit, und dort trägt sich
-jede:r selbst ein. Damit das Feld nicht gesperrt ist, setzt `setup-keycloak.sh`
-am Realm `editUsernameAllowed`.
+`sendInvitationEmail` fängt jeden Fehler ab und antwortet mit
+`invitationEmailSent: false`. Das ist Absicht: Konto und Person stehen, es fehlt
+nur die Mail — ein Fehlschlag würde beides wieder abräumen, obwohl bloß der
+Mailserver klemmte.
 
-Daraus folgt eine Regel für `changeEmail`: der Nutzername wird **nicht**
-mitgeschrieben. Er ist seit der Einladung eine eigene Wahl, und ihn beim
-Adresswechsel zu überschreiben hieße, sie still zu verwerfen. Das PUT an die
-Admin-API schickt deshalb nur `email` und `emailVerified` — was dort nicht
-steht, lässt Keycloak in Ruhe.
+Sichtbar machen und **erneut senden** können ist die Antwort darauf:
+`POST …/people/:id/resend-invitation` schickt dieselben drei Schritte noch
+einmal. Sie sind wiederholbar; wer sein Passwort inzwischen gesetzt hat, wird
+nur ein zweites Mal danach gefragt, und das ist harmlos gegenüber „kommt gar
+nicht herein".
+
+> Das Frontend zeigte hier bis Phase H einen **grünen Haken für etwas, das nicht
+> passiert war**: `invitationEmailSent` wurde gelesen, aber beide Fälle liefen
+> durch `toast.success`. Das Backend war richtig, gelesen hat es nur niemand
+> richtig.
+
+### Nutzername und Anzeigename
+
+Zwei Felder, eine klare Richtung — und der Grund ist nicht Ordnungsliebe:
+Keycloak normalisiert Nutzernamen auf **Kleinschreibung**. Ein einziges Feld
+hieße, dass „niko" auf jeder Karte, jedem Avatar und in jeder Benachrichtigung
+steht.
+
+| Feld       | Was es ist                         | Wer es setzt                            |
+| ---------- | ---------------------------------- | --------------------------------------- |
+| `username` | womit man sich anmeldet            | die Person, in Keycloak — und im Profil |
+| `name`     | was auf Karten und in Texten steht | die Person, im Profil                   |
+
+`username` ist **global** eindeutig, nicht je Hauskreis: Keycloak erzwingt es
+realmweit, und ein Datenmodell mit der schwächeren Regel kann sie nur verletzen.
+Wer geht, gibt ihn wie die `keycloakUserId` wieder frei.
+
+**Beim ersten Anmelden** übernimmt `resolveForUser` den Namen aus
+`preferred_username` und belegt den Anzeigenamen damit vor. Nur beim ersten Mal:
+danach ist der Anzeigename entweder selbst gewählt oder von dort, und ihn bei
+jeder Anmeldung neu zu setzen nähme eine Entscheidung aus dem Profil zurück.
+
+**Bei einer Änderung im Profil** geht sie zuerst nach Keycloak und erst dann in
+die Datenbank (`KeycloakAdminService.changeUsername`). Andersherum hießen die
+beiden verschieden, sobald Keycloak ablehnt — genau der Zustand, den das Feld
+beendet. Erlaubt sind `^[a-z0-9._-]{3,30}$`.
+
+> Dafür musste `request()` den **Statuscode durchreichen**, statt alles auf 500
+> abzubilden. Vorher sah ein belegter Nutzername (409) genauso aus wie ein
+> Serverfehler, und der echte Grund eines Mailfehlers — etwa eine ungültige
+> `redirect_uri` (400) — verschwand in der SMTP-Warnung.
+
+Damit das Feld in Keycloak überhaupt beschreibbar ist, setzt
+`setup-keycloak.sh` am Realm `editUsernameAllowed`. Daraus folgt eine Regel für
+`changeEmail`: der Nutzername wird dort **nicht** mitgeschrieben — das PUT
+schickt nur `email` und `emailVerified`, und was nicht darin steht, lässt
+Keycloak in Ruhe.
 
 Verknüpft bleibt trotzdem die Adresse: `resolveForUser` findet die Person über
 `person.email`, nicht über den Nutzernamen.
+
+### Selbst registrieren — und warum die Bestätigung Pflicht ist
+
+`registrationAllowed` am Realm, plus „Kein Account? Registrieren" im
+Anmeldebildschirm (`auth.signinRedirect({ prompt: 'create' })`). Wer so
+hereinkommt, gehört zu keinem Hauskreis — ein gültiger Zustand, den der
+vorhandene Bildschirm „Hauskreis gründen / eingeladen werden" auffängt.
+
+**`verifyEmail` ist dabei kein Komfort, sondern die Absicherung.**
+`resolveForUser` verknüpft ein frisches Konto über die **E-Mail-Adresse** mit
+einer offenen Einladung. Ohne Bestätigung könnte sich jemand mit der Adresse
+einer eingeladenen Person registrieren und deren Platz übernehmen. Der Realm
+verlangt sie deshalb, und `AuthGuard` weist zusätzlich jedes Token ohne
+`email_verified` ab — die Tür, die uns gehört, unabhängig von einer
+Realm-Einstellung, die jemand versehentlich zurückdreht.
+
+`loginWithEmailAllowed` lässt beides zur Anmeldung zu, Nutzername oder Adresse.
+`registrationEmailAsUsername` bleibt **aus**: sonst gäbe es das Feld
+„Nutzername" gar nicht, und genau der soll in der App stehen.
+
+> **Produktiv braucht das einen echten Mailserver.** Ohne Mailversand kommt mit
+> `verifyEmail` niemand mehr herein, und auch die Einladung besteht aus einer
+> Mail. `setup-keycloak.sh` nimmt dafür `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`
+> sowie `SMTP_AUTH`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_SSL` und
+> `SMTP_STARTTLS` aus der Umgebung; die Vorgaben passen zu Mailpit, ein echter
+> Server braucht Anmeldung und Verschlüsselung. In `docker-compose.prod.yml`
+> stehen sie bewusst **nicht** beim Keycloak-Dienst: Keycloak liest den
+> Mailversand aus der Realm-Konfiguration, nicht aus der Umgebung, und
+> Variablen dort sähen nach Einrichtung aus und wären wirkungslos.
 
 Ebenfalls am Realm: `resetPasswordAllowed`. Ohne das wäre ein vergessenes
 Passwort eine Sackgasse — die App kennt keinen Weg, eine Einladung noch einmal

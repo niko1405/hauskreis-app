@@ -140,6 +140,11 @@ export class MembershipService {
         data: {
           active: false,
           keycloakUserId: null,
+          // Wie die Keycloak-Id: das Konto behält seinen Namen, die Zeile hält
+          // ihn nicht länger besetzt. `username` ist global eindeutig — bliebe
+          // er stehen, könnte derselbe Mensch in einem anderen Hauskreis nicht
+          // mehr unter seinem Namen ankommen.
+          username: null,
           // Die Wohnung gehört nicht mehr in die Rotation dieser Gruppe.
           locationId: null,
         },

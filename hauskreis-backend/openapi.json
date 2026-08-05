@@ -3974,6 +3974,88 @@
         ]
       }
     },
+    "/api/hauskreise/{hauskreisId}/people/{id}/resend-invitation": {
+      "post": {
+        "operationId": "PersonController_resendInvitation",
+        "parameters": [
+          {
+            "name": "hauskreisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResendInvitationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Person"
+        ]
+      }
+    },
     "/api/hauskreise/{hauskreisId}/prayer-buddies": {
       "get": {
         "operationId": "PrayerBuddyController_findAll",
@@ -6793,6 +6875,10 @@
           "name": {
             "type": "string"
           },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
           "email": {
             "type": "string",
             "format": "email",
@@ -6850,6 +6936,7 @@
           "id",
           "hauskreisId",
           "name",
+          "username",
           "email",
           "birthdate",
           "playsInstrument",
@@ -6881,6 +6968,10 @@
             },
             "name": {
               "type": "string"
+            },
+            "username": {
+              "type": "string",
+              "nullable": true
             },
             "email": {
               "type": "string",
@@ -6933,12 +7024,16 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 9007199254740991
+            },
+            "awayToday": {
+              "type": "boolean"
             }
           },
           "required": [
             "id",
             "hauskreisId",
             "name",
+            "username",
             "email",
             "birthdate",
             "playsInstrument",
@@ -6949,7 +7044,8 @@
             "active",
             "acceptedAt",
             "createdAt",
-            "version"
+            "version",
+            "awayToday"
           ],
           "additionalProperties": false
         }
@@ -6969,6 +7065,10 @@
           },
           "name": {
             "type": "string"
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
           },
           "email": {
             "type": "string",
@@ -7027,6 +7127,7 @@
           "id",
           "hauskreisId",
           "name",
+          "username",
           "email",
           "birthdate",
           "playsInstrument",
@@ -7086,10 +7187,6 @@
       "InvitePersonDto": {
         "type": "object",
         "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
           "email": {
             "type": "string",
             "format": "email",
@@ -7105,7 +7202,6 @@
           }
         },
         "required": [
-          "name",
           "email"
         ]
       },
@@ -7124,6 +7220,10 @@
           },
           "name": {
             "type": "string"
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
           },
           "email": {
             "type": "string",
@@ -7185,6 +7285,7 @@
           "id",
           "hauskreisId",
           "name",
+          "username",
           "email",
           "birthdate",
           "playsInstrument",
@@ -7238,8 +7339,31 @@
           },
           "active": {
             "type": "boolean"
+          },
+          "username": {
+            "type": "string",
+            "pattern": "^[a-z0-9._-]{3,30}$"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "MEMBER",
+              "ADMIN"
+            ]
           }
         }
+      },
+      "ResendInvitationResponseDto": {
+        "type": "object",
+        "properties": {
+          "invitationEmailSent": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "invitationEmailSent"
+        ],
+        "additionalProperties": false
       },
       "SetHomeDto": {
         "type": "object",
@@ -7385,6 +7509,10 @@
           "name": {
             "type": "string"
           },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
           "email": {
             "type": "string",
             "format": "email",
@@ -7445,6 +7573,7 @@
           "id",
           "hauskreisId",
           "name",
+          "username",
           "email",
           "birthdate",
           "playsInstrument",

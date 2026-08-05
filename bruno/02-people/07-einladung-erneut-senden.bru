@@ -1,0 +1,40 @@
+meta {
+  name: Einladung erneut senden
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/people/{{invitedPersonId}}/resend-invitation
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("sagt, ob die Mail rausging", function () {
+    expect(res.body).to.have.property("invitationEmailSent");
+  });
+}
+
+docs {
+  Für den Fall, dass beim Einladen der Mailserver nicht erreichbar war. Das
+  Konto steht dann und die Person ist angelegt — es fehlt nur die Mail.
+
+  Die Einladung deshalb scheitern zu lassen wäre falsch: es würde beides wieder
+  abräumen, obwohl nur der Versand klemmte. Sichtbar machen und erneut senden
+  können ist das Richtige.
+
+  `400`, wenn die Person schon da war (`acceptedAt` gesetzt) — eine zweite
+  Einladung änderte dort nichts.
+
+  Zum Ausprobieren: Mailpit anhalten, jemanden einladen (die Antwort trägt
+  `invitationEmailSent: false`), Mailpit starten, diesen Request schicken.
+}

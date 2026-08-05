@@ -168,7 +168,14 @@ describe('MembershipService.leave', () => {
 
     expect(personUpdate).toHaveBeenCalledWith({
       where: { id: 'p1' },
-      data: { active: false, keycloakUserId: null, locationId: null },
+      // `username` fällt mit: er ist global eindeutig, und wer geht, soll in
+      // einem anderen Hauskreis wieder unter seinem Namen ankommen können.
+      data: {
+        active: false,
+        keycloakUserId: null,
+        username: null,
+        locationId: null,
+      },
     });
   });
 

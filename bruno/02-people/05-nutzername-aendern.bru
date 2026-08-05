@@ -1,0 +1,51 @@
+meta {
+  name: Nutzername ändern
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/people/{{personId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{personEtag}}
+}
+
+body:json {
+  {
+    "username": "niko.v",
+    "playsInstrument": false,
+    "canHost": true,
+    "autoAttend": false
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("gibt den neuen Namen zurück", function () {
+    expect(res.body.username).to.equal("niko.v");
+  });
+}
+
+docs {
+  Der Nutzername wandert **zuerst** nach Keycloak und erst dann hierher. Sonst
+  hießen dieselben Menschen an zwei Stellen verschieden, und die Anmeldung mit
+  dem neuen Namen schlüge fehl — das Feld wäre eine Anzeige und keine
+  Einstellung.
+
+  Ist er dort schon vergeben, kommt ein `409` mit „Dieser Nutzername ist schon
+  vergeben". Bis Phase H bildete `KeycloakAdminService.request()` **jeden**
+  Fehler auf 500 ab; ein Namenskonflikt sah damit aus wie ein Serverfehler.
+
+  Erlaubt sind 3–30 Zeichen aus `a-z0-9._-`; großgeschriebene Eingaben werden
+  kleingeschrieben gespeichert, weil Keycloak ohnehin normalisiert.
+
+  `name` bleibt davon unberührt — das ist der **Anzeigename**, und der darf
+  Großbuchstaben und Leerzeichen haben.
+}

@@ -168,6 +168,17 @@ model Person {
   /// hat. Eine offene Einladung hat aus demselben Grund noch keine Id: sie
   /// nimmt niemandem seine Mitgliedschaft weg, bis sie angenommen wird.
   keycloakUserId  String?   @unique @map("keycloak_user_id")
+  /// Der Name, mit dem man sich anmeldet — derselbe wie in Keycloak.
+  ///
+  /// **Global** eindeutig, weil Keycloak es realmweit erzwingt: zwei Wahrheiten
+  /// über denselben Namen wären genau das Problem, das dieses Feld schließt.
+  /// Gesetzt beim ersten Anmelden aus `preferred_username`; wird er hier
+  /// geändert, wandert die Änderung nach Keycloak zurück.
+  ///
+  /// Getrennt von `name`, weil Keycloak auf Kleinschreibung normalisiert —
+  /// „niko" stünde sonst auf jeder Karte und in jeder Benachrichtigung.
+  username        String?   @unique
+  /// Der **Anzeigename**: was auf Karten, Avataren und in „Du bist dran" steht.
   name            String
   email           String
   /// Gilt nur hier. Siehe `PersonRole`.

@@ -19,6 +19,14 @@ KC_ADMIN_PASSWORD="${KEYCLOAK_ADMIN_PASSWORD:-admin}"
 SMTP_HOST="${SMTP_HOST:-mailpit}"
 SMTP_PORT="${SMTP_PORT:-1025}"
 SMTP_FROM="${SMTP_FROM:-noreply@hauskreis.local}"
+# Mailpit braucht weder Verschlüsselung noch Anmeldung; ein echter Mailserver
+# beides. Die Vorgaben passen zur Entwicklung, produktiv setzt man sie in der
+# Umgebung — siehe README, „Produktion".
+SMTP_AUTH="${SMTP_AUTH:-false}"
+SMTP_USER="${SMTP_USER:-}"
+SMTP_PASSWORD="${SMTP_PASSWORD:-}"
+SMTP_SSL="${SMTP_SSL:-false}"
+SMTP_STARTTLS="${SMTP_STARTTLS:-false}"
 
 echo "==> Requesting admin token from ${KC_URL}"
 TOKEN=$(curl -sf -X POST "${KC_URL}/realms/master/protocol/openid-connect/token" \
@@ -50,14 +58,20 @@ curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}" "${auth[@]}" -d "{
       \"port\": \"${SMTP_PORT}\",
       \"from\": \"${SMTP_FROM}\",
       \"fromDisplayName\": \"Hauskreis App\",
-      \"ssl\": \"false\",
-      \"starttls\": \"false\",
-      \"auth\": \"false\"
+      \"ssl\": \"${SMTP_SSL}\",
+      \"starttls\": \"${SMTP_STARTTLS}\",
+      \"auth\": \"${SMTP_AUTH}\",
+      \"user\": \"${SMTP_USER}\",
+      \"password\": \"${SMTP_PASSWORD}\"
     },
     \"emailTheme\": \"hauskreis\",
     \"loginTheme\": \"hauskreis\",
     \"editUsernameAllowed\": true,
     \"resetPasswordAllowed\": true,
+    \"registrationAllowed\": true,
+    \"registrationEmailAsUsername\": false,
+    \"loginWithEmailAllowed\": true,
+    \"verifyEmail\": true,
     \"internationalizationEnabled\": true,
     \"supportedLocales\": [\"de\"],
     \"defaultLocale\": \"de\"
@@ -70,9 +84,23 @@ echo "    Themes: 'hauskreis' für Login und Mail, Sprache de"
 # das zeigt die Einladung zwar UPDATE_PROFILE, aber nur Vor- und Nachname —
 # der Nutzername bliebe die E-Mail-Adresse aus dem Anlegen.
 echo "    Nutzername: selbst wählbar"
-# Ohne resetPasswordAllowed ist ein vergessenes Passwort eine Sackgasse: die
-# App kennt keinen Weg, eine Einladung erneut zu schicken.
+# Ohne resetPasswordAllowed ist ein vergessenes Passwort eine Sackgasse.
 echo "    Passwort vergessen: möglich"
+# registrationAllowed: man kann sich selbst ein Konto anlegen und landet danach
+# auf „Hauskreis gründen / eingeladen werden" — ohne dass jemand einen kennen
+# muss, der schon drin ist.
+#
+# verifyEmail ist dabei **kein Komfort, sondern die Absicherung**:
+# `PersonService.resolveForUser` verknüpft ein frisches Konto über die
+# E-Mail-Adresse mit einer offenen Einladung. Ohne Bestätigung könnte sich
+# jemand mit der Adresse einer eingeladenen Person registrieren und deren Platz
+# übernehmen. Das Backend weist zusätzlich Token ohne `email_verified` ab — die
+# Tür, die uns gehört.
+#
+# registrationEmailAsUsername bleibt aus, sonst gäbe es das Feld „Nutzername"
+# gar nicht, und genau der soll in der App stehen.
+echo "    Registrierung: offen, E-Mail-Bestätigung Pflicht"
+echo "    Anmeldung: mit Nutzername oder E-Mail"
 
 echo "==> Ensuring realm roles: member, admin"
 for role in member admin; do

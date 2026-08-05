@@ -18,7 +18,11 @@ import { isoDateOut, isoDateTimeOut } from '../../common/dto/response';
 export const personResponseSchema = z.object({
   id: z.uuid(),
   hauskreisId: z.uuid(),
+  /// Der **Anzeigename** — was auf Karten und in „Du bist dran" steht.
   name: z.string(),
+  /// Der Name, mit dem man sich anmeldet. `null`, solange sich die Person noch
+  /// nie angemeldet hat: gewählt wird er beim Aktivieren des Kontos.
+  username: z.string().nullable(),
   email: z.email(),
   /// Nur der Tag, ohne Uhrzeit — ein Geburtstag hat keine.
   birthdate: isoDateOut.nullable(),
@@ -77,9 +81,31 @@ export const changedEmailResponseSchema = personResponseSchema.extend({
   verificationEmailSent: z.boolean(),
 });
 
+/**
+ * Eine Person in der Mitgliederliste — mit dem, was nur die Liste weiß.
+ *
+ * `awayToday` ist abgeleitet und steht deshalb nur hier: eine einzelne Person
+ * abzurufen beantwortet die Frage „wer ist gerade weg" nicht, und ein Feld, das
+ * je nach Route etwas anderes bedeutet, wäre schlimmer als zwei Schemas.
+ */
+export const personListEntrySchema = personResponseSchema.extend({
+  /// Ob ein Abwesenheitszeitraum den heutigen Tag abdeckt.
+  awayToday: z.boolean(),
+});
+
+/** Was `POST …/people/:id/resend-invitation` mitteilt. */
+export const resendInvitationResponseSchema = z.object({
+  /// Falsch, wenn Keycloak die Mail nicht losgeworden ist — dann klemmt der
+  /// Mailserver, nicht die Einladung.
+  invitationEmailSent: z.boolean(),
+});
+
 export class PersonResponseDto extends createZodDto(personResponseSchema) {}
+export class ResendInvitationResponseDto extends createZodDto(
+  resendInvitationResponseSchema,
+) {}
 export class PersonListResponseDto extends createZodDto(
-  z.array(personResponseSchema),
+  z.array(personListEntrySchema),
 ) {}
 export class InvitedPersonResponseDto extends createZodDto(
   invitedPersonResponseSchema,

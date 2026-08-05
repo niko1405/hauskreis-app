@@ -14,6 +14,8 @@ import type { AuthenticatedUser } from './auth.types';
 
 interface KeycloakClaims extends JWTPayload {
   email?: string;
+  /// Ob Keycloak die Adresse als bestätigt führt. Siehe `AuthenticatedUser`.
+  email_verified?: boolean;
   name?: string;
   preferred_username?: string;
   /// The "authorized party" — the client the token was issued to.
@@ -97,10 +99,24 @@ export class AuthGuard implements CanActivate {
       );
     }
 
+    // Die Tür, die uns gehört. Seit man sich selbst registrieren kann, ist eine
+    // unbestätigte Adresse eine Behauptung — und `resolveForUser` verknüpft
+    // Konten über genau diese Adresse mit offenen Einladungen. Der Realm
+    // verlangt die Bestätigung ohnehin (`verifyEmail`); dass wir sie hier noch
+    // einmal prüfen, macht die Regel unabhängig von einer Realm-Einstellung,
+    // die jemand versehentlich zurückdreht.
+    if (claims.email && claims.email_verified !== true) {
+      throw new UnauthorizedException(
+        'Bitte bestätige zuerst deine E-Mail-Adresse',
+      );
+    }
+
     const user: AuthenticatedUser = {
       keycloakUserId: claims.sub,
       email: claims.email,
+      username: claims.preferred_username,
       name: claims.name ?? claims.preferred_username,
+      emailVerified: claims.email_verified === true,
       roles: claims.realm_access?.roles ?? [],
     };
 

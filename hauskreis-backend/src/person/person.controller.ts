@@ -18,6 +18,8 @@ import {
 } from './dto/person.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { HauskreisAdmin } from '../auth/hauskreis-admin.decorator';
+import { CurrentMembership } from '../auth/current-membership.decorator';
+import type { HauskreisMembership } from '../auth/auth.types';
 import { IfMatch } from '../common/http/if-match.decorator';
 import {
   ApiConditionalWrite,
@@ -28,6 +30,7 @@ import {
   InvitedPersonResponseDto,
   PersonListResponseDto,
   PersonResponseDto,
+  ResendInvitationResponseDto,
 } from './dto/person-response.dto';
 import type { IfMatchCondition } from '../common/http/etag';
 
@@ -72,14 +75,37 @@ export class PersonController {
   update(
     @Param() params: PersonParamsDto,
     @Body() dto: UpdatePersonDto,
+    @CurrentMembership() membership: HauskreisMembership,
     @IfMatch() ifMatch?: IfMatchCondition,
   ) {
+    // Die Mitgliedschaft geht mit, weil ein Feld dieses DTOs mehr verlangt als
+    // die Route: `role` darf nur ein Admin setzen. Ein eigener Endpunkt dafür
+    // wäre die andere Möglichkeit — dann stünde die Regel im Routing statt in
+    // der Logik, und „Rolle ändern" wäre etwas anderes als „Person ändern",
+    // obwohl es dasselbe ist.
     return this.personService.update(
       params.hauskreisId,
       params.id,
       dto,
+      membership,
       ifMatch,
     );
+  }
+
+  /**
+   * Schickt die Einladungsmail noch einmal.
+   *
+   * Der Fall dahinter: beim Einladen war der Mailserver nicht erreichbar. Das
+   * Konto steht, die Person ist angelegt — es fehlt nur die Mail. Die Einladung
+   * deshalb scheitern zu lassen würde beides wieder abräumen, obwohl nur der
+   * Versand klemmte.
+   */
+  @Post(':id/resend-invitation')
+  @HauskreisAdmin()
+  @HttpCode(HttpStatus.OK)
+  @ApiZodResponse(ResendInvitationResponseDto)
+  resendInvitation(@Param() params: PersonParamsDto) {
+    return this.personService.resendInvitation(params.hauskreisId, params.id);
   }
 
   @Delete(':id')
