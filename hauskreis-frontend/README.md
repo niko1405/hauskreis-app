@@ -562,6 +562,27 @@ gehört das Eintragen auch dorthin. Dafür lädt sie den Termin beim Antippen
 nach: `useRoleAssignment` braucht ihn ganz (wegen `topicId`), die
 Assignments-Route liefert nur Datum, Rolle und Person.
 
+## Das Archiv zeigt Themen
+
+Vier Tabs waren es einmal — Termine, Themen, Lieder, Orte. Die ersten beiden
+sahen nebeneinander aus wie zwei Sichten auf dasselbe, und das waren sie fast
+auch: was man nachschlägt, ist nicht „der 12. Mai", sondern „wann ging es
+nochmal um Vergebung". Der Termine-Tab ist deshalb weg.
+
+Vergangene Termine bleiben in der Datenbank und tragen weiter die
+Vorschlagslogik — sie haben nur keine eigene Liste mehr. Erreichbar sind sie
+über die Terminliste („Vergangene") und den Kalender.
+
+Ein Themen-Eintrag zeigt jetzt **pro Abend** eine Zeile mit Datum,
+Zusammenfassung und Actionstep. Ein Thema kann sich über mehrere Dienstage
+ziehen, und jeder davon hat seine eigenen; ein zusammengefasster Block würde
+genau die Frage nicht beantworten, die man an ein altes Thema hat. Abende ohne
+Notiz stehen nicht da — eine leere Zeile mit Datum sagt nur, dass niemand etwas
+aufgeschrieben hat.
+
+Die Daten kamen schon fast richtig: `topicResponseSchema` liefert `meetings`
+chronologisch mit, es fehlten nur `summaryText` und `actionstepText` je Termin.
+
 ## Orte: wer was sieht, und wer was ändert
 
 Ein Ort hat vier Zahlen und Wörter, und jedes gehört woandershin — nicht aus

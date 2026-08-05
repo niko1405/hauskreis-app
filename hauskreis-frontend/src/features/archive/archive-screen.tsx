@@ -6,7 +6,6 @@
  * mit der Zeit alles laden, nur um clientseitig zu filtern.
  */
 import { Music, Pencil, Plus, Search, Trash2 } from 'lucide-react';
-import Link from 'next/link';
 import { useDeferredValue, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Avatar, AvatarStack } from '@/components/ui/avatar';
@@ -27,28 +26,29 @@ import { LocationsCard } from './locations-card';
 import {
   useArchiveSummary,
   useDeleteSong,
-  useMeetingList,
-  usePeople,
-  usePrefetchMeeting,
   useSongList,
   useTopicList,
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { formatDay, formatRelativeDay } from '@/lib/date';
-import { actionstepProgress, meetingHeadline } from '@/lib/meeting';
+import { topicTitle } from '@/lib/meeting';
 import type { SongListParams } from '@/lib/api/params';
-import type { SongListItem } from '@/lib/api/types';
+import type { SongListItem, TopicListItem } from '@/lib/api/types';
 
-type Tab = 'termine' | 'themen' | 'lieder' | 'orte';
+type Tab = 'themen' | 'lieder' | 'orte';
 
 export function ArchiveScreen() {
-  const [tab, setTab] = useState<Tab>('termine');
+  const [tab, setTab] = useState<Tab>('themen');
   const [search, setSearch] = useState('');
   const deferred = useDeferredValue(search).trim();
   const summary = useArchiveSummary();
 
+  // Kein „Termine"-Tab mehr: nebeneinander gestellt sahen Termine und Themen
+  // aus wie zwei Sichten auf dasselbe, und das waren sie fast auch — was man
+  // an einem Abend nachschlägt, ist das Thema. Vergangene Termine bleiben in
+  // der Datenbank und tragen weiter die Vorschlagslogik, sie haben nur keine
+  // eigene Liste mehr; erreichbar sind sie über Kalender und Planungstabelle.
   const tabs: { key: Tab; label: string; count?: number }[] = [
-    { key: 'termine', label: 'Termine', count: summary.data?.totals.meetings },
     { key: 'themen', label: 'Themen', count: summary.data?.totals.topics },
     { key: 'lieder', label: 'Lieder', count: summary.data?.totals.songs },
     // Orte gehören hierher und nicht in die Verwaltung: sie sind Teil dessen,
@@ -104,75 +104,11 @@ export function ArchiveScreen() {
           ))}
         </div>
 
-        {tab === 'termine' && <PastMeetings search={deferred} />}
         {tab === 'themen' && <CompletedTopics search={deferred} />}
         {tab === 'lieder' && <SongLibrary search={deferred} />}
         {tab === 'orte' && <LocationsCard />}
       </div>
     </div>
-  );
-}
-
-function PastMeetings({ search }: { search: string }) {
-  const query = useMeetingList({ scope: 'past', search: search || undefined });
-  const prefetch = usePrefetchMeeting();
-  const people = usePeople();
-
-  // Der Nenner ist die heutige Gruppengröße, nicht die von damals — die
-  // Anwesenheit eines Abends steht nirgends als Mitgliederzahl fest. Für neun
-  // Leute, die selten wechseln, ist das die ehrlichere Näherung als eine
-  // erfundene Historie.
-  const activeCount = (people.data ?? []).filter((p) => p.active).length;
-
-  if (query.isLoading) return <CardSkeleton />;
-  if (query.error) return <ErrorState error={query.error} />;
-  if (query.items.length === 0) {
-    return <EmptyState title="Noch nichts im Archiv" />;
-  }
-
-  return (
-    <>
-      <ul className="space-y-3">
-        {query.items.map((meeting) => (
-          <li key={meeting.id}>
-            <Link
-              href={`/termine/${meeting.id}`}
-              onMouseEnter={() => prefetch(meeting.id)}
-              className="block rounded-card border border-line bg-card p-4 transition-colors hover:border-line-strong"
-            >
-              <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">
-                {formatDay(meeting.date)}
-              </p>
-              <p className="mt-0.5 font-serif text-base font-bold text-stone-900">
-                {meetingHeadline(meeting)}
-              </p>
-              {meeting.summaryText && (
-                <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-stone-500">
-                  {meeting.summaryText}
-                </p>
-              )}
-              {meeting.actionstepText && (
-                <div className="mt-2 rounded-md bg-terracotta-50/60 px-2.5 py-1.5">
-                  <p className="text-[11px] font-semibold text-terracotta-700">
-                    Actionstep: {meeting.actionstepText}
-                  </p>
-                  {/* Wie es der Gruppe damit ging, gehört zum Abend dazu —
-                      sonst steht im Archiv nur, was man sich vorgenommen
-                      hatte. */}
-                  <p className="mt-0.5 text-[10px] text-terracotta-700/70">
-                    {actionstepProgress(
-                      meeting.actionstepDone.length,
-                      activeCount,
-                    )}
-                  </p>
-                </div>
-              )}
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <LoadMore query={query} label="Ältere Termine" />
-    </>
   );
 }
 
@@ -193,33 +129,73 @@ function CompletedTopics({ search }: { search: string }) {
       <ul className="space-y-3">
         {query.items.map((topic) => (
           <li key={topic.id}>
-            <Card>
-              <p className="font-serif text-base font-bold text-stone-900">
-                {/* Ein Thema ohne Titel ist eines, für das niemand einen
-                    festgelegt hat — kein fehlender Wert. */}
-                {topic.title ?? (
-                  <span className="text-stone-400 italic">Ohne Titel</span>
-                )}
-              </p>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <AvatarStack
-                  people={topic.responsibles.map((r) => r.person)}
-                  size="xs"
-                />
-                <span className="text-[11px] text-stone-400">
-                  {topic.meetings.length === 1
-                    ? '1 Abend'
-                    : `${topic.meetings.length} Abende`}
-                  {topic.meetings[0] &&
-                    ` · ab ${formatDay(topic.meetings[0].date)}`}
-                </span>
-              </div>
-            </Card>
+            <TopicEntry topic={topic} />
           </li>
         ))}
       </ul>
       <LoadMore query={query} label="Ältere Themen" />
     </>
+  );
+}
+
+/**
+ * Ein Thema mit dem, was an seinen Abenden herauskam.
+ *
+ * Ein Thema kann sich über mehrere Dienstage ziehen, und jeder davon hat seine
+ * eigene Zusammenfassung und seinen eigenen Actionstep — deshalb **pro Abend**
+ * eine Zeile und nicht ein zusammengefasster Block. „Was hatten wir uns damals
+ * vorgenommen" ist eine Frage an einen Abend, nicht an ein Thema.
+ */
+function TopicEntry({ topic }: { topic: TopicListItem }) {
+  // Abende ohne Notiz stehen nicht da: eine leere Zeile mit Datum sagt nur,
+  // dass niemand etwas aufgeschrieben hat, und das weiß man auch so.
+  const written = topic.meetings.filter(
+    (meeting) => meeting.summaryText || meeting.actionstepText,
+  );
+
+  return (
+    <Card>
+      <p className="font-serif text-base font-bold text-stone-900">
+        {topicTitle(topic)}
+      </p>
+
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <AvatarStack
+          people={topic.responsibles.map((r) => r.person)}
+          size="xs"
+        />
+        <span className="text-[11px] text-stone-400">
+          {topic.meetings.length === 1
+            ? '1 Abend'
+            : `${topic.meetings.length} Abende`}
+          {topic.meetings[0] && ` · ab ${formatDay(topic.meetings[0].date)}`}
+        </span>
+      </div>
+
+      {written.length > 0 && (
+        <ul className="mt-3 space-y-3 border-t border-line pt-3">
+          {written.map((meeting) => (
+            <li key={meeting.id}>
+              <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">
+                {formatDay(meeting.date)}
+              </p>
+              {meeting.summaryText && (
+                <p className="mt-1 text-xs leading-relaxed text-stone-500">
+                  {meeting.summaryText}
+                </p>
+              )}
+              {meeting.actionstepText && (
+                <div className="mt-1.5 rounded-md bg-terracotta-50/60 px-2.5 py-1.5">
+                  <p className="text-[11px] font-semibold text-terracotta-700">
+                    Actionstep: {meeting.actionstepText}
+                  </p>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }
 

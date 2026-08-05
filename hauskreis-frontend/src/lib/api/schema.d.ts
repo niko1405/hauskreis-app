@@ -1859,6 +1859,8 @@ export interface components {
           id: string;
           /** Format: date */
           date: string;
+          summaryText: string | null;
+          actionstepText: string | null;
         }[];
       }[];
       total: number;
@@ -1891,6 +1893,8 @@ export interface components {
         id: string;
         /** Format: date */
         date: string;
+        summaryText: string | null;
+        actionstepText: string | null;
       }[];
     };
     CreateTopicDto: {

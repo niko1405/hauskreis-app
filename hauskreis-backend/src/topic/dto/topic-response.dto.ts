@@ -28,8 +28,17 @@ export const topicResponseSchema = z.object({
   version: z.number().int().nonnegative(),
   /// Eine oder zwei Personen bereiten vor.
   responsibles: z.array(z.object({ person: personRefSchema })),
-  /// Chronologisch, damit „seit wann läuft das" ablesbar ist.
-  meetings: z.array(z.object({ id: z.uuid(), date: isoDateOut })),
+  /// Chronologisch, damit „seit wann läuft das" ablesbar ist — und mit dem,
+  /// was an jedem Abend herauskam. Das Archiv listet nur noch Themen; die
+  /// Zusammenfassung eines einzelnen Abends ist sonst nirgends mehr zu finden.
+  meetings: z.array(
+    z.object({
+      id: z.uuid(),
+      date: isoDateOut,
+      summaryText: z.string().nullable(),
+      actionstepText: z.string().nullable(),
+    }),
+  ),
 });
 
 /** Wie viele Termine das laufende Thema uebernommen haben. */

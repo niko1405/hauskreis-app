@@ -27,7 +27,16 @@ const topicInclude = {
     select: { person: { select: { id: true, name: true } } },
   },
   meetings: {
-    select: { id: true, date: true },
+    // Zusammenfassung und Actionstep gehören zum Thema, nur eben pro Abend:
+    // ein Thema über drei Dienstage hat drei davon. Das Archiv listet sie
+    // untereinander — deshalb kommen sie hier mit und nicht über eine zweite
+    // Abfrage je Thema.
+    select: {
+      id: true,
+      date: true,
+      summaryText: true,
+      actionstepText: true,
+    },
     orderBy: { date: 'asc' },
   },
 } as const;
