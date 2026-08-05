@@ -1,0 +1,52 @@
+meta {
+  name: Baustein dazubuchen
+  type: http
+  seq: 20
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{freizeitId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{meetingEtag}}
+}
+
+body:json {
+  {
+    "hasHostSlot": true
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("meetingEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("schaltet den Baustein an", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.hasHostSlot).to.equal(true);
+  });
+
+  test("lässt die anderen in Ruhe", function () {
+    expect(res.body.hasTopicSlot).to.equal(false);
+  });
+}
+
+docs {
+  Braucht {{freizeitId}} aus dem Aufruf davor und einen ETag aus
+  "Termin einzeln".
+
+  Ein einzelner Schalter ändert nur sich selbst. Kommt dagegen ein anderer
+  `type` mit, werden **alle vier** auf dessen Voreinstellung zurückgesetzt —
+  wer aus einem Geburtstag wieder einen Hauskreis-Abend macht, meint einen
+  ganzen Abend und nicht ein leeres Gerüst mit neuem Namen. Ausdrücklich
+  mitgeschickte Schalter gewinnen auch dann.
+
+  Zum Ausprobieren des Gegenwegs: `"hasHostSlot": false` schicken, während ein
+  Gastgeber eingetragen ist. Der Gastgeber (und eine Wohnung als Ort) fällt
+  dann in derselben Antwort weg. Im UI steht davor eine Rückfrage, die benennt,
+  was verlorengeht.
+}

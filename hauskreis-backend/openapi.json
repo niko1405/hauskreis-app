@@ -8799,6 +8799,12 @@
                   "format": "date",
                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                 },
+                "endDate": {
+                  "type": "string",
+                  "format": "date",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                  "nullable": true
+                },
                 "type": {
                   "type": "string",
                   "enum": [
@@ -8814,6 +8820,18 @@
                     "CANCELLED",
                     "COMPLETED"
                   ]
+                },
+                "hasHostSlot": {
+                  "type": "boolean"
+                },
+                "hasTopicSlot": {
+                  "type": "boolean"
+                },
+                "hasSongSlot": {
+                  "type": "boolean"
+                },
+                "hasTestimonySlot": {
+                  "type": "boolean"
                 },
                 "locationId": {
                   "type": "string",
@@ -9174,8 +9192,13 @@
                 "id",
                 "hauskreisId",
                 "date",
+                "endDate",
                 "type",
                 "status",
+                "hasHostSlot",
+                "hasTopicSlot",
+                "hasSongSlot",
+                "hasTestimonySlot",
                 "locationId",
                 "hostPersonId",
                 "topicId",
@@ -9248,6 +9271,12 @@
             "format": "date",
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "nullable": true
+          },
           "type": {
             "type": "string",
             "enum": [
@@ -9263,6 +9292,18 @@
               "CANCELLED",
               "COMPLETED"
             ]
+          },
+          "hasHostSlot": {
+            "type": "boolean"
+          },
+          "hasTopicSlot": {
+            "type": "boolean"
+          },
+          "hasSongSlot": {
+            "type": "boolean"
+          },
+          "hasTestimonySlot": {
+            "type": "boolean"
           },
           "locationId": {
             "type": "string",
@@ -9623,8 +9664,13 @@
           "id",
           "hauskreisId",
           "date",
+          "endDate",
           "type",
           "status",
+          "hasHostSlot",
+          "hasTopicSlot",
+          "hasSongSlot",
+          "hasTestimonySlot",
           "locationId",
           "hostPersonId",
           "topicId",
@@ -9913,6 +9959,12 @@
             "format": "date",
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "nullable": true
+          },
           "type": {
             "default": "CUSTOM",
             "type": "string",
@@ -9950,6 +10002,18 @@
             "type": "string",
             "maxLength": 2000,
             "nullable": true
+          },
+          "hasHostSlot": {
+            "type": "boolean"
+          },
+          "hasTopicSlot": {
+            "type": "boolean"
+          },
+          "hasSongSlot": {
+            "type": "boolean"
+          },
+          "hasTestimonySlot": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -9966,6 +10030,12 @@
               "LOBPREIS_GEBET",
               "CUSTOM"
             ]
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "nullable": true
           },
           "locationId": {
             "type": "string",
@@ -10010,6 +10080,18 @@
             "type": "string",
             "maxLength": 2000,
             "nullable": true
+          },
+          "hasHostSlot": {
+            "type": "boolean"
+          },
+          "hasTopicSlot": {
+            "type": "boolean"
+          },
+          "hasSongSlot": {
+            "type": "boolean"
+          },
+          "hasTestimonySlot": {
+            "type": "boolean"
           }
         }
       },
@@ -11377,6 +11459,12 @@
                 "format": "date",
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               },
+              "endDate": {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                "nullable": true
+              },
               "type": {
                 "type": "string",
                 "enum": [
@@ -11384,6 +11472,12 @@
                   "LOBPREIS_GEBET",
                   "CUSTOM"
                 ]
+              },
+              "hasTopicSlot": {
+                "type": "boolean"
+              },
+              "hasSongSlot": {
+                "type": "boolean"
               },
               "title": {
                 "type": "string",
@@ -11521,7 +11615,10 @@
             "required": [
               "id",
               "date",
+              "endDate",
               "type",
+              "hasTopicSlot",
+              "hasSongSlot",
               "title",
               "location",
               "host",

@@ -29,7 +29,6 @@ import { formatDay, formatDayMonth, formatRelativeDay } from '@/lib/date';
 import {
   ROLE_LABEL,
   actionstepProgress,
-  hasTopicSlot,
   mapsUrl,
   meetingHeadline,
 } from '@/lib/meeting';
@@ -396,10 +395,12 @@ function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
               : undefined
           }
         />
-        {hasTopicSlot(meeting.type) && (
+        {meeting.hasTopicSlot && (
           <RoleChip kind="TOPIC" people={meeting.topic?.responsibles ?? []} />
         )}
-        <RoleChip kind="SONG" people={meeting.songLeaders} />
+        {meeting.hasSongSlot && (
+          <RoleChip kind="SONG" people={meeting.songLeaders} />
+        )}
       </Link>
 
       <div className="flex items-center gap-2 border-t border-line pt-3">

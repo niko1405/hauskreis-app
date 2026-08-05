@@ -13,7 +13,11 @@ export interface HomeScreen {
   nextMeeting: {
     id: string;
     date: string;
+    endDate: string | null;
     type: string;
+    /** Ob der Abend überhaupt ein Thema bzw. Lieder vorsieht. */
+    hasTopicSlot: boolean;
+    hasSongSlot: boolean;
     title: string | null;
     /**
      * Mit Position, damit der Home-Screen ein „In Maps öffnen" anbieten kann,
@@ -104,7 +108,10 @@ export class DashboardService {
           select: {
             id: true,
             date: true,
+            endDate: true,
             type: true,
+            hasTopicSlot: true,
+            hasSongSlot: true,
             title: true,
             location: {
               select: {
@@ -170,7 +177,10 @@ export class DashboardService {
         ? {
             id: meeting.id,
             date: isoDate(meeting.date),
+            endDate: meeting.endDate ? isoDate(meeting.endDate) : null,
             type: meeting.type,
+            hasTopicSlot: meeting.hasTopicSlot,
+            hasSongSlot: meeting.hasSongSlot,
             title: meeting.title,
             location: meeting.location,
             host: meeting.host,

@@ -10,18 +10,39 @@ const meetingType = z.enum(MeetingType);
 const attendanceStatus = z.enum(AttendanceStatus);
 
 /**
+ * Woraus der Abend besteht — vier Schalter, überall optional.
+ *
+ * Weggelassen heißt beim Anlegen „nimm die Voreinstellung der Terminart" und
+ * beim Ändern „lass es, wie es ist". Deshalb hier **kein** `.default()`: das
+ * würde die Felder auch im PATCH zu Pflichtangaben machen (Zod-Vorgaben
+ * überleben `.partial()`, siehe `types.ts` im Frontend), und dann müsste jeder,
+ * der nur den Titel ändert, vier Schalter mitschicken.
+ */
+const slotFields = {
+  hasHostSlot: z.boolean().optional(),
+  hasTopicSlot: z.boolean().optional(),
+  hasSongSlot: z.boolean().optional(),
+  hasTestimonySlot: z.boolean().optional(),
+};
+
+/**
  * Everything is optional except the date: a meeting starts out empty and gets
  * filled in as the group decides. A meeting with no host, location or topic is
  * a valid state, not incomplete data.
  */
 export const createMeetingSchema = z.object({
   date: z.iso.date(),
+  /// Letzter Tag eines mehrtägigen Termins. Nur bei `CUSTOM` erlaubt und muss
+  /// hinter `date` liegen — beides prüft der Service, weil beides den Blick auf
+  /// ein zweites Feld braucht.
+  endDate: z.iso.date().nullish(),
   type: meetingType.default(MeetingType.CUSTOM),
   locationId: z.uuid().nullish(),
   hostPersonId: z.uuid().nullish(),
   topicId: z.uuid().nullish(),
   title: z.string().trim().min(1).max(200).nullish(),
   infoText: z.string().trim().max(2000).nullish(),
+  ...slotFields,
 });
 
 /**
@@ -32,6 +53,7 @@ export const createMeetingSchema = z.object({
  */
 export const updateMeetingSchema = z.object({
   type: meetingType.optional(),
+  endDate: z.iso.date().nullish(),
   locationId: z.uuid().nullish(),
   hostPersonId: z.uuid().nullish(),
   topicId: z.uuid().nullish(),
@@ -40,6 +62,7 @@ export const updateMeetingSchema = z.object({
   actionstepText: z.string().trim().max(2000).nullish(),
   summaryText: z.string().trim().max(5000).nullish(),
   infoText: z.string().trim().max(2000).nullish(),
+  ...slotFields,
 });
 
 export const setAttendanceSchema = z.object({

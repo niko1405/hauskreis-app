@@ -9,12 +9,13 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { useMe, useSetAttendance } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import { formatDay, formatRelativeDay, isPast } from '@/lib/date';
 import {
-  MEETING_TYPE_LABEL,
-  hasTopicSlot,
-  meetingHeadline,
-} from '@/lib/meeting';
+  formatDay,
+  formatDayRange,
+  formatRelativeDay,
+  isPast,
+} from '@/lib/date';
+import { MEETING_TYPE_LABEL, meetingHeadline } from '@/lib/meeting';
 import type { MeetingListItem } from '@/lib/api/types';
 import { AttendanceToggle } from './attendance-toggle';
 import { RoleChip } from './role-badge';
@@ -60,7 +61,11 @@ export function MeetingCard({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
-              {formatDay(meeting.date)}
+              {/* Ein Zeitraum steht als einer da: „14. – 16. August" ist ein
+                  Termin, keine Reihe aus dreien. */}
+              {meeting.endDate
+                ? formatDayRange(meeting.date, meeting.endDate)
+                : formatDay(meeting.date)}
             </span>
             {!isPast(meeting.date) && (
               <span className="text-[10px] font-semibold text-stone-400">
@@ -117,15 +122,15 @@ export function MeetingCard({
               : undefined
           }
         />
-        {hasTopicSlot(meeting.type) && (
-          <RoleChip kind="TOPIC" people={topicPeople} />
-        )}
+        {meeting.hasTopicSlot && <RoleChip kind="TOPIC" people={topicPeople} />}
         {/* Musik fehlte hier, obwohl sie eine der drei Rollen ist — auf einem
             Lobpreisabend sogar die tragende. */}
-        <RoleChip
-          kind="SONG"
-          people={meeting.songLeaders.map((leader) => leader.person)}
-        />
+        {meeting.hasSongSlot && (
+          <RoleChip
+            kind="SONG"
+            people={meeting.songLeaders.map((leader) => leader.person)}
+          />
+        )}
       </div>
     </Link>
   );

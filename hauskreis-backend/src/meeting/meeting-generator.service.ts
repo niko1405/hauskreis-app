@@ -8,6 +8,7 @@ import {
   toUtcDate,
   upcomingTuesdays,
 } from './meeting-schedule';
+import { slotDefaults } from './meeting-slots';
 
 /** How many future meetings should always be available for planning. */
 export const MEETINGS_AHEAD = 7;
@@ -89,20 +90,34 @@ export class MeetingGeneratorService {
    * untouched, whatever its type. That is what protects a CUSTOM meeting the
    * group created themselves (a birthday, say) from being replaced by a
    * generated standard one.
+   *
+   * Seit ein besonderer Termin mehrere Tage dauern kann, reicht der Vergleich
+   * auf das Startdatum nicht mehr: liegt der Dienstag **mitten** in einer
+   * Freizeit, stünde sonst ein Hauskreis-Abend im Zeltlager.
    */
   async generateFor(
     hauskreisId: string,
     now = new Date(),
   ): Promise<GenerationResult> {
     const dates = upcomingTuesdays(now, MEETINGS_AHEAD);
+    const last = dates.at(-1) as Date;
 
     const existing = await this.prisma.meeting.findMany({
-      where: { hauskreisId, date: { in: dates } },
-      select: { date: true },
+      where: {
+        hauskreisId,
+        date: { lte: last },
+        OR: [{ date: { in: dates } }, { endDate: { gte: dates[0] as Date } }],
+      },
+      select: { date: true, endDate: true },
     });
 
-    const taken = new Set(existing.map((meeting) => meeting.date.getTime()));
-    const missing = dates.filter((date) => !taken.has(date.getTime()));
+    const missing = dates.filter(
+      (date) =>
+        !existing.some(
+          (meeting) =>
+            meeting.date <= date && (meeting.endDate ?? meeting.date) >= date,
+        ),
+    );
 
     if (missing.length === 0) {
       // Trotzdem auffüllen: der Schalter kann angegangen sein, während die
@@ -112,13 +127,17 @@ export class MeetingGeneratorService {
     }
 
     const result = await this.prisma.meeting.createMany({
-      data: missing.map((date) => ({
-        hauskreisId,
-        date,
-        type: isLastTuesdayOfMonth(date)
+      data: missing.map((date) => {
+        const type = isLastTuesdayOfMonth(date)
           ? MeetingType.LOBPREIS_GEBET
-          : MeetingType.STANDARD,
-      })),
+          : MeetingType.STANDARD;
+
+        // Die Bausteine kommen aus der Terminart und werden hier ausdrücklich
+        // gesetzt statt den Spalten-Defaults überlassen: die stimmen nur für
+        // STANDARD, und ein Lobpreisabend mit Themen-Slot wäre genau der
+        // Zustand, den die Slots abschaffen sollten.
+        return { hauskreisId, date, type, ...slotDefaults(type) };
+      }),
       // Belt and braces against a concurrent run: the unique index on
       // (hauskreis_id, date) is the real guarantee.
       skipDuplicates: true,

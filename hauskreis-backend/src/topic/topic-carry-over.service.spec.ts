@@ -30,7 +30,7 @@ function setup(options: { topicId?: string | null } = {}) {
 }
 
 describe('TopicCarryOverService.carryOverFor', () => {
-  it('puts the running topic on the next open standard meeting', async () => {
+  it('puts the running topic on the next meeting that has a topic slot', async () => {
     const { service, findFirst, updateMany } = setup();
 
     const result = await service.carryOverFor('hk-1', NOW);
@@ -38,7 +38,10 @@ describe('TopicCarryOverService.carryOverFor', () => {
     expect(result).toEqual({ filled: 1 });
 
     const where = findFirst.mock.calls[0][0].where;
-    expect(where.type).toBe(MeetingType.STANDARD);
+    // Am Baustein, nicht an der Terminart: ein besonderer Termin, für den
+    // jemand „Thema" dazugebucht hat, bekommt das laufende Thema auch.
+    expect(where.hasTopicSlot).toBe(true);
+    expect(where.type).toBeUndefined();
     expect(where.status).toBe(MeetingStatus.PLANNED);
     expect(where.date.gte).toEqual(NOW);
     expect(findFirst.mock.calls[0][0].orderBy).toEqual({ date: 'asc' });

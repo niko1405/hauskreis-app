@@ -10,6 +10,7 @@ import {
   AttendanceStatus,
   MeetingCancelSource,
   MeetingStatus,
+  MeetingType,
 } from '../../generated/prisma/enums';
 import { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
 import { AvailabilityService } from '../role-suggestion/availability.service';
@@ -23,6 +24,12 @@ import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
 import type { IfMatchCondition } from '../common/http/etag';
 import { toUtcDate } from './meeting-schedule';
+import {
+  assertSlotsAllow,
+  clearedByTurningOff,
+  resolveSlots,
+  slotDefaults,
+} from './meeting-slots';
 import type {
   CancelMeetingDto,
   CreateMeetingDto,
@@ -134,17 +141,19 @@ export class MeetingService {
 
   async create(hauskreisId: string, dto: CreateMeetingDto) {
     const date = new Date(dto.date);
+    const endDate = this.resolveEndDate(dto.type, date, dto.endDate);
     await this.assertReferencesBelongToHauskreis(hauskreisId, dto);
+    await this.assertNoOverlap(hauskreisId, date, endDate);
 
-    const clash = await this.prisma.meeting.findFirst({
-      where: { hauskreisId, date },
-    });
-
-    if (clash) {
-      throw new BadRequestException(
-        `A meeting already exists on ${dto.date}. Edit that one instead.`,
-      );
-    }
+    // Weggelassene Schalter heißen beim Anlegen „nimm, was zu dieser Terminart
+    // gehört". Ein `CUSTOM` kommt damit leer auf die Welt — genau das ist der
+    // Punkt: ein Geburtstagsabend soll nicht als unvollständig dastehen, weil
+    // ihm ein Thema fehlt, das er nie brauchte.
+    const slots = resolveSlots(
+      { ...slotDefaults(dto.type), type: dto.type },
+      dto,
+    );
+    assertSlotsAllow(slots, dto);
 
     const venue = await this.resolveVenue(hauskreisId, dto, {
       hostPersonId: null,
@@ -155,7 +164,9 @@ export class MeetingService {
       data: {
         hauskreisId,
         date,
+        endDate,
         type: dto.type,
+        ...slots,
         locationId: venue.locationId ?? null,
         hostPersonId: venue.hostPersonId ?? null,
         topicId: dto.topicId ?? null,
@@ -183,6 +194,25 @@ export class MeetingService {
     const before = await this.findOne(hauskreisId, id);
     this.assertNotAheadOfTheEvening(before.date, dto);
     await this.assertReferencesBelongToHauskreis(hauskreisId, dto);
+
+    // Erst die Bausteine, dann alles andere: was ein Termin überhaupt haben
+    // darf, entscheidet, ob die übrigen Felder zulässig sind.
+    const slots = resolveSlots(before, dto);
+    assertSlotsAllow(slots, dto);
+    const cleared = clearedByTurningOff(before, slots);
+
+    const type = dto.type ?? before.type;
+    const endDate =
+      dto.endDate === undefined
+        ? // Ein Wechsel weg von CUSTOM lässt keinen Zeitraum zurück: nur
+          // besondere Termine dauern länger als einen Abend.
+          this.resolveEndDate(type, before.date, before.endDate?.toISOString())
+        : this.resolveEndDate(type, before.date, dto.endDate);
+
+    if (endDate?.getTime() !== before.endDate?.getTime()) {
+      await this.assertNoOverlap(hauskreisId, before.date, endDate, id);
+    }
+
     const venue = await this.resolveVenue(hauskreisId, dto, before);
 
     // Nur beim echten Wechsel: ein `PATCH` mit dem Info-Text darf nicht daran
@@ -200,6 +230,8 @@ export class MeetingService {
           where: { id, hauskreisId, ...versionConstraint },
           data: {
             type: dto.type,
+            endDate,
+            ...slots,
             // `undefined` leaves a field alone, `null` clears it — that
             // distinction is what lets a host or location be un-assigned.
             locationId: venue.locationId,
@@ -210,6 +242,9 @@ export class MeetingService {
             actionstepText: dto.actionstepText,
             summaryText: dto.summaryText,
             infoText: dto.infoText,
+            // Zuletzt, damit es gewinnt: ein abgeschalteter Baustein räumt
+            // seine Felder weg, auch wenn oben noch alte Werte stünden.
+            ...cleared,
             version: { increment: 1 },
           },
         }),
@@ -218,6 +253,16 @@ export class MeetingService {
       reload: () => this.findOne(hauskreisId, id),
       notFoundMessage: `Meeting ${id} not found`,
     });
+
+    // Lieder hängen nicht am Termin, sondern in zwei eigenen Tabellen — der
+    // `data`-Block oben kann sie nicht mitleeren. Nach dem Schreiben, damit ein
+    // gescheiterter Versionsvergleich nichts wegräumt.
+    if (before.hasSongSlot && !slots.hasSongSlot) {
+      await this.prisma.$transaction([
+        this.prisma.meetingSong.deleteMany({ where: { meetingId: id } }),
+        this.prisma.meetingSongLeader.deleteMany({ where: { meetingId: id } }),
+      ]);
+    }
 
     // Wer eingeteilt wird, soll es sofort erfahren und nicht erst durch die
     // Erinnerung drei Tage vorher. Nur bei echtem Wechsel: ein `PATCH` mit dem
@@ -236,6 +281,83 @@ export class MeetingService {
     }
 
     return updated;
+  }
+
+  /**
+   * Wann ein Termin endet — und ob er überhaupt enden darf.
+   *
+   * Nur `CUSTOM` zieht sich über mehrere Tage. Ein Hauskreis-Abend ist ein
+   * Abend; ein Enddatum daran wäre keine Freizeit, sondern ein Tippfehler mit
+   * Folgen, denn der Zeitraum sperrt die Tage dazwischen für den Generator.
+   *
+   * Ein Enddatum gleich dem Startdatum wird zu `null`. Das ist derselbe
+   * Sachverhalt in zwei Schreibweisen, und zwei Darstellungen für einen Zustand
+   * sind die Sorte Unterschied, an der später Vergleiche scheitern.
+   */
+  private resolveEndDate(
+    type: MeetingType,
+    date: Date,
+    raw: string | Date | null | undefined,
+  ): Date | null {
+    if (raw === null || raw === undefined) return null;
+
+    const endDate = new Date(raw);
+
+    if (type !== MeetingType.CUSTOM) {
+      throw new BadRequestException(
+        'Nur ein besonderer Termin kann über mehrere Tage gehen',
+      );
+    }
+
+    if (endDate.getTime() === date.getTime()) return null;
+
+    if (endDate < date) {
+      throw new BadRequestException(
+        'Das Ende liegt vor dem Anfang — dreh die beiden Daten um',
+      );
+    }
+
+    return endDate;
+  }
+
+  /**
+   * Kein zweiter Termin mitten in einem mehrtägigen.
+   *
+   * Die Datenbank prüft nur `@@unique([hauskreisId, date])` und damit allein
+   * das Startdatum — ein Ausschluss über Bereiche bräuchte eine Exclusion
+   * Constraint, die Prisma nicht ausdrücken kann. Die Regel steht deshalb hier,
+   * und zwar in beide Richtungen: der neue Termin darf keinen bestehenden
+   * überdecken, und er darf auch nicht in einen bestehenden hineinfallen.
+   */
+  private async assertNoOverlap(
+    hauskreisId: string,
+    date: Date,
+    endDate: Date | null,
+    excludeId?: string,
+  ): Promise<void> {
+    const last = endDate ?? date;
+
+    const clash = await this.prisma.meeting.findFirst({
+      where: {
+        hauskreisId,
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+        // Zwei Zeiträume überschneiden sich, wenn jeder vor dem Ende des
+        // anderen beginnt. Für einen eintägigen Termin ist `endDate` null,
+        // dann zählt sein Startdatum als Ende — deshalb die beiden Zweige.
+        date: { lte: last },
+        OR: [
+          { endDate: null, date: { gte: date } },
+          { endDate: { gte: date } },
+        ],
+      },
+      select: { date: true, title: true },
+    });
+
+    if (clash) {
+      throw new BadRequestException(
+        `Am ${clash.date.toISOString().slice(0, 10)} steht schon ein Termin. Bearbeite den statt einen zweiten anzulegen.`,
+      );
+    }
   }
 
   /**

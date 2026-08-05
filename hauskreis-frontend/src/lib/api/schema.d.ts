@@ -1455,10 +1455,16 @@ export interface components {
         hauskreisId: string;
         /** Format: date */
         date: string;
+        /** Format: date */
+        endDate: string | null;
         /** @enum {string} */
         type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
         /** @enum {string} */
         status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
+        hasHostSlot: boolean;
+        hasTopicSlot: boolean;
+        hasSongSlot: boolean;
+        hasTestimonySlot: boolean;
         /** Format: uuid */
         locationId: string | null;
         /** Format: uuid */
@@ -1561,10 +1567,16 @@ export interface components {
       hauskreisId: string;
       /** Format: date */
       date: string;
+      /** Format: date */
+      endDate: string | null;
       /** @enum {string} */
       type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
       /** @enum {string} */
       status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
+      hasHostSlot: boolean;
+      hasTopicSlot: boolean;
+      hasSongSlot: boolean;
+      hasTestimonySlot: boolean;
       /** Format: uuid */
       locationId: string | null;
       /** Format: uuid */
@@ -1713,6 +1725,8 @@ export interface components {
     CreateMeetingDto: {
       /** Format: date */
       date: string;
+      /** Format: date */
+      endDate?: string | null;
       /**
        * @default CUSTOM
        * @enum {string}
@@ -1726,10 +1740,16 @@ export interface components {
       topicId?: string | null;
       title?: string | null;
       infoText?: string | null;
+      hasHostSlot?: boolean;
+      hasTopicSlot?: boolean;
+      hasSongSlot?: boolean;
+      hasTestimonySlot?: boolean;
     };
     UpdateMeetingDto: {
       /** @enum {string} */
       type?: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
+      /** Format: date */
+      endDate?: string | null;
       /** Format: uuid */
       locationId?: string | null;
       /** Format: uuid */
@@ -1741,6 +1761,10 @@ export interface components {
       actionstepText?: string | null;
       summaryText?: string | null;
       infoText?: string | null;
+      hasHostSlot?: boolean;
+      hasTopicSlot?: boolean;
+      hasSongSlot?: boolean;
+      hasTestimonySlot?: boolean;
     };
     CancelMeetingDto: {
       reason?: string | null;
@@ -2083,8 +2107,12 @@ export interface components {
         id: string;
         /** Format: date */
         date: string;
+        /** Format: date */
+        endDate: string | null;
         /** @enum {string} */
         type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
+        hasTopicSlot: boolean;
+        hasSongSlot: boolean;
         title: string | null;
         location: {
           /** Format: uuid */

@@ -928,6 +928,58 @@ Ein Termin **ohne** Host, Location oder Thema ist ein gültiger Zustand, kein
 unvollständiger Datensatz. Beim Bearbeiten gilt: ein weggelassenes Feld bleibt
 unverändert, `null` löscht die Zuordnung.
 
+### Woraus ein Abend besteht
+
+Vier Schalter am Termin — `hasHostSlot`, `hasTopicSlot`, `hasSongSlot`,
+`hasTestimonySlot` — und die Terminart ist nur noch ihre **Voreinstellung**:
+
+| Typ              | Gastgeber | Thema | Lieder | Testimony |
+| ---------------- | --------- | ----- | ------ | --------- |
+| `STANDARD`       | ✓         | ✓     | ✓      | –         |
+| `LOBPREIS_GEBET` | ✓         | –     | ✓      | ✓         |
+| `CUSTOM`         | –         | –     | –      | –         |
+
+Vorher war der Typ eine **Behauptung**: er stand in der Antwort, geprüft wurde
+nichts. Man konnte einem Lobpreisabend ein Thema geben und einem Geburtstag ein
+Testimony, und „Geburtstag von Mira" zählte in der Host-Fairness wie ein ganz
+normaler Dienstag — obwohl dort niemand im Sinne der Rotation gehostet hat.
+Außerhalb der DTOs gab es genau drei Stellen mit Typ-Logik.
+
+Die Regeln stehen als reine Funktionen in
+[`meeting-slots.ts`](src/meeting/meeting-slots.ts) und gelten überall gleich:
+
+- Ein Feld schreiben, dessen Baustein aus ist → `400`. `undefined` ist immer in
+  Ordnung (ein PATCH mit dem Info-Text darf nicht an einem fremden Feld
+  scheitern), ein ausdrückliches `null` auch — aufräumen darf man immer.
+- Einen Baustein abschalten **räumt auf**: Gastgeber und Ort, `topicId` samt
+  Zusammenfassung und Actionstep, Liedvorschläge samt Musik-Zuteilung,
+  Testimony. Ein Feld, das niemand mehr setzen kann und trotzdem einen Wert
+  trägt, ist die Sorte Fehler, die man erst Wochen später bemerkt.
+- Ein Wechsel der **Terminart** setzt alle vier auf deren Voreinstellung
+  zurück; ausdrücklich mitgeschickte Schalter gewinnen trotzdem.
+
+Die Fairness-Rechnung braucht dafür keine eigene Bedingung: sie zählt Termine
+mit Gastgeber, mit Thema, mit Musik-Zuteilung — und ohne den Baustein kann
+keines davon gesetzt sein. Die Migration
+[`…_meeting_slots_backfill`](prisma/migrations) stellt genau das für den
+Bestand her: ein Baustein ist an, wenn die Terminart ihn vorsieht **oder** an
+ihm etwas hängt.
+
+### Ein Termin, mehrere Tage
+
+`endDate` — nur bei `CUSTOM`, für eine Freizeit von Freitag bis Sonntag. Das ist
+**ein** Termin und kein Stapel aus dreien, deshalb bleibt der Unique-Index auf
+`(hauskreis_id, date)`: eine Zeile, das Startdatum als Schlüssel.
+
+Dass kein zweiter Termin in den Zeitraum fällt, prüft `assertNoOverlap` im
+Service und nicht die Datenbank — ein Ausschluss über Bereiche bräuchte eine
+Exclusion Constraint, die Prisma nicht ausdrücken kann. Der Generator prüft
+seit dem ebenfalls den Zeitraum und nicht mehr nur das Datum; sonst stünde ein
+Hauskreis-Abend mitten im Zeltlager.
+
+Ein `endDate` gleich dem `date` wird zu `null`: derselbe Sachverhalt in zwei
+Schreibweisen ist die Sorte Unterschied, an der später Vergleiche scheitern.
+
 Zuweisungen werden gegen die Mandantengrenze geprüft — eine Person oder Location
 aus einem anderen Hauskreis wird mit `400` abgelehnt.
 

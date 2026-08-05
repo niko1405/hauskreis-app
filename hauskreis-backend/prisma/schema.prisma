@@ -301,8 +301,30 @@ model Meeting {
   id             String        @id @default(uuid()) @db.Uuid
   hauskreisId    String        @map("hauskreis_id") @db.Uuid
   date           DateTime      @db.Date
+  /// Letzter Tag eines mehrtägigen Termins — eine Freizeit von Freitag bis
+  /// Sonntag ist **ein** Abend im Plan, kein Stapel aus dreien. `null` heißt:
+  /// ein Tag, der Normalfall.
+  ///
+  /// Deshalb bleibt auch `@@unique([hauskreisId, date])` auf dem Startdatum:
+  /// eine Zeile je Termin. Dass in den Zeitraum kein zweiter fällt, prüft
+  /// `MeetingService`, nicht die Datenbank — ein Ausschluss über Bereiche
+  /// bräuchte eine Exclusion Constraint, die Prisma nicht ausdrücken kann.
+  endDate        DateTime?     @map("end_date") @db.Date
   type           MeetingType   @default(STANDARD)
   status         MeetingStatus @default(PLANNED)
+  /// Woraus der Abend besteht. Die vier Schalter sind das, was der **Typ**
+  /// vorher nur behauptet hat: geprüft wurde nie etwas, man konnte einem
+  /// Lobpreisabend ein Thema geben und einem Geburtstag ein Testimony.
+  ///
+  /// Jetzt ist der Typ eine Voreinstellung und die Schalter sind die Regel —
+  /// STANDARD bringt Host, Thema und Lieder mit, LOBPREIS_GEBET Host, Lieder
+  /// und Testimony, CUSTOM gar nichts und alles einzeln zubuchbar. Ein
+  /// Geburtstagsabend braucht keine Themenzuteilung, und er soll in der
+  /// Host-Fairness auch nicht als Hosting-Runde zählen.
+  hasHostSlot      Boolean @default(true) @map("has_host_slot")
+  hasTopicSlot     Boolean @default(true) @map("has_topic_slot")
+  hasSongSlot      Boolean @default(true) @map("has_song_slot")
+  hasTestimonySlot Boolean @default(false) @map("has_testimony_slot")
   locationId     String?       @map("location_id") @db.Uuid
   hostPersonId   String?       @map("host_person_id") @db.Uuid
   /// Nullable and shared: a topic can span several meetings, and a

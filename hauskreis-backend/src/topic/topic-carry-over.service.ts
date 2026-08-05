@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { TopicService } from './topic.service';
-import { MeetingStatus, MeetingType } from '../../generated/prisma/enums';
+import { MeetingStatus } from '../../generated/prisma/enums';
 import { toUtcDate } from '../meeting/meeting-schedule';
 
 export interface CarryOverResult {
@@ -59,8 +59,10 @@ export class TopicCarryOverService {
       return { filled: 0 };
     }
 
-    // Only STANDARD evenings carry a topic: LOBPREIS_GEBET has a testimony
-    // instead, and CUSTOM is whatever the group made it.
+    // Gefiltert auf den **Baustein**, nicht mehr auf die Terminart. Der Typ war
+    // dafür immer nur ein Näherungswert: ein Lobpreisabend hat kein Thema, ein
+    // besonderer Termin vielleicht doch eins, und wer beim Anlegen „Thema"
+    // dazugebucht hat, meint genau das.
     //
     // Deliberately *not* filtered on `topicId: null`. Looking for the next
     // topic-less meeting would fill one more evening on every nightly run, and
@@ -72,7 +74,7 @@ export class TopicCarryOverService {
       where: {
         hauskreisId,
         date: { gte: toUtcDate(now) },
-        type: MeetingType.STANDARD,
+        hasTopicSlot: true,
         status: MeetingStatus.PLANNED,
       },
       orderBy: { date: 'asc' },

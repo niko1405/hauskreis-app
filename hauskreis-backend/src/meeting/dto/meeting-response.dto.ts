@@ -30,16 +30,28 @@ export const meetingResponseSchema = z.object({
   /// Der Abend selbst — nur der Tag, `2026-08-11`, ohne Uhrzeit und ohne
   /// Zeitzone. Der Hauskreis ist dienstags, eine Uhrzeit gibt es nicht.
   date: isoDateOut,
-  /// `STANDARD` hat ein Thema, `LOBPREIS_GEBET` stattdessen ein Testimony oder
-  /// nur Lieder, `CUSTOM` muss gar nichts erfüllen („Geburtstag von …").
+  /// Letzter Tag, wenn sich der Termin über mehrere zieht (eine Freizeit von
+  /// Freitag bis Sonntag). `null` heißt: ein Tag, der Normalfall.
+  endDate: isoDateOut.nullable(),
+  /// Die Art des Abends — fürs Auge. **Was** dazugehört, sagen die vier Slots
+  /// darunter; der Typ ist nur noch ihre Voreinstellung beim Anlegen.
   type: z.enum(MeetingType),
   status: z.enum(MeetingStatus),
+  /// Woraus der Abend besteht. Ein abgeschalteter Baustein heißt: das Feld
+  /// dazu lässt sich nicht schreiben, die Rolle wird nicht vorgeschlagen, es
+  /// gibt keine Erinnerung dafür, und der Abend zählt in der Fairness-Rechnung
+  /// dieser Rolle nicht mit.
+  hasHostSlot: z.boolean(),
+  hasTopicSlot: z.boolean(),
+  hasSongSlot: z.boolean(),
+  hasTestimonySlot: z.boolean(),
   locationId: z.uuid().nullable(),
   hostPersonId: z.uuid().nullable(),
   topicId: z.uuid().nullable(),
-  /// Nur bei `CUSTOM` gefüllt.
+  /// Wie der Abend überschrieben ist. Gilt für jede Terminart; bleibt er leer,
+  /// steht dort der Titel des Themas und sonst die Art des Termins.
   title: z.string().nullable(),
-  /// Nur bei `LOBPREIS_GEBET` gefüllt.
+  /// Nur bei `hasTestimonySlot`.
   testimonyText: z.string().nullable(),
   /// Der Vorsatz für die Woche danach, samt Zusammenfassung für alle, die
   /// nicht da waren.

@@ -38,7 +38,14 @@ export const homeScreenSchema = z.object({
       /// Hier nur der Tag: der Dienst schneidet ihn selbst zu, anders als bei
       /// `…/meetings`.
       date: isoDateOut,
+      /// Gesetzt, wenn sich der Termin über mehrere Tage zieht.
+      endDate: isoDateOut.nullable(),
       type: z.enum(MeetingType),
+      /// Nur die zwei, die der Startbildschirm braucht: er zeigt Rollen-Chips
+      /// für Thema und Musik, und ohne sie stünde an einem Geburtstagsabend
+      /// „Thema: noch niemand".
+      hasTopicSlot: z.boolean(),
+      hasSongSlot: z.boolean(),
       title: z.string().nullable(),
       /// Mit Position, damit „In Maps öffnen" ohne zweiten Aufruf geht.
       /// `latitude`/`longitude` sind entweder beide gesetzt oder beide `null`.

@@ -57,6 +57,7 @@ import {
 } from '@/lib/api/hooks';
 import {
   formatDayFull,
+  formatDayRange,
   formatRelativeDay,
   formatWeekday,
   isFuture,
@@ -64,19 +65,51 @@ import {
 } from '@/lib/date';
 import { isSelectableWithoutHost } from '@/lib/location';
 import {
+  MEETING_SLOTS,
   MEETING_TYPE_LABEL,
   ROLE_LABEL,
   actionstepProgress,
-  hasTestimonySlot,
-  hasTopicSlot,
   mapsUrl,
   meetingHeadline,
 } from '@/lib/meeting';
+import { SlotCard } from '@/components/domain/slot-toggles';
+import type { MeetingSlotKey } from '@/lib/meeting';
 import type { AssignmentRole, Meeting, PersonRef } from '@/lib/api/types';
 import { AttendanceCard } from './attendance-card';
 import { CancelledNotice, CancelMeetingBlock } from './cancellation-card';
 import { SongsCard } from './songs-card';
 import { useRoleAssignment } from './use-role-assignment';
+
+const SLOT_LABEL = Object.fromEntries(
+  MEETING_SLOTS.map((slot) => [slot.key, slot.label]),
+) as Record<MeetingSlotKey, string>;
+
+/**
+ * Was beim Wegnehmen eines Bausteins verlorengeht — als Satz, oder `null`,
+ * wenn nichts dranhängt.
+ *
+ * Die Rückfrage soll benennen, was sie kostet. „Bist du sicher?" ohne Inhalt
+ * ist eine Frage, die man wegklickt, ohne sie gelesen zu haben.
+ */
+const SLOT_LOSSES: Record<MeetingSlotKey, (meeting: Meeting) => string | null> =
+  {
+    hasHostSlot: (meeting) =>
+      meeting.host || meeting.location
+        ? `${meeting.host?.name ?? 'Der Ort'} steht dann nicht mehr als Gastgeber am Abend.`
+        : null,
+    hasTopicSlot: (meeting) =>
+      meeting.topic || meeting.summaryText || meeting.actionstepText
+        ? 'Thema, Zusammenfassung und Actionstep dieses Abends fallen weg. Das Thema selbst bleibt und läuft weiter.'
+        : null,
+    // Als einziger immer: die Liedvorschläge liegen in einer eigenen Abfrage,
+    // dieser Bildschirm sieht von hier aus nicht, ob welche da sind. Und etwas
+    // zu löschen, das jemand getippt hat, ohne zu fragen, ist der schlechtere
+    // Fehler als eine Rückfrage zu viel.
+    hasSongSlot: () =>
+      'Alle Liedvorschläge dieses Abends und die Musik-Zuteilung werden gelöscht.',
+    hasTestimonySlot: (meeting) =>
+      meeting.testimonyText ? 'Das eingetragene Testimony fällt weg.' : null,
+  };
 
 const AssignmentSheet = dynamic(() =>
   import('@/components/domain/assignment-sheet').then((m) => m.AssignmentSheet),
@@ -186,6 +219,31 @@ function Loaded({
 
   const treffpunkte = (locations.data ?? []).filter(isSelectableWithoutHost);
 
+  /**
+   * Einen Baustein dazu- oder wegnehmen.
+   *
+   * Wegnehmen räumt auf dem Server auf — Gastgeber, Thema, Lieder, Testimony
+   * fallen mit. Das ist richtig so (ein Feld, das niemand mehr setzen kann und
+   * trotzdem einen Wert trägt, ist eine Falle), aber es darf niemanden
+   * überraschen. Deshalb die Rückfrage, und nur dann, wenn wirklich etwas
+   * verlorengeht: bei einem leeren Baustein wäre sie eine Frage ohne Inhalt.
+   */
+  const toggleSlot = async (key: MeetingSlotKey, value: boolean) => {
+    const loses = !value && SLOT_LOSSES[key](meeting);
+
+    if (loses) {
+      const ok = await confirm({
+        title: `${SLOT_LABEL[key]} wegnehmen?`,
+        body: loses,
+        confirmLabel: 'Wegnehmen',
+        tone: 'danger',
+      });
+      if (!ok) return;
+    }
+
+    patch({ [key]: value });
+  };
+
   return (
     <div className="space-y-6 px-5 pt-4 pb-10">
       <div className="flex items-center justify-between">
@@ -222,7 +280,12 @@ function Loaded({
           onSave={(next) => patch({ title: next })}
         />
         <p className="mt-1 text-sm text-stone-400">
-          {formatDayFull(meeting.date)} · {MEETING_TYPE_LABEL[meeting.type]}
+          {/* Bei einem Zeitraum ist das volle Datum die falsche Auskunft: was
+              man wissen will, ist von wann bis wann. */}
+          {meeting.endDate
+            ? formatDayRange(meeting.date, meeting.endDate)
+            : formatDayFull(meeting.date)}{' '}
+          · {MEETING_TYPE_LABEL[meeting.type]}
         </p>
       </header>
 
@@ -250,91 +313,98 @@ function Loaded({
           </Card>
         </section>
 
-        <Card className="divide-y divide-line">
-          <div className="pb-4">
-            <p className="mb-1.5 text-[11px] font-semibold text-stone-500">
-              Ort
-            </p>
+        {/* Die ganze Karte hängt am Gastgeber-Baustein: ein Geburtstagsabend
+            ohne ihn braucht weder eine Ortswahl noch eine leere Host-Zeile,
+            die aussieht, als hätte jemand etwas vergessen. */}
+        {meeting.hasHostSlot && (
+          <Card className="divide-y divide-line">
+            <div className="pb-4">
+              <p className="mb-1.5 text-[11px] font-semibold text-stone-500">
+                Ort
+              </p>
 
-            {meeting.host ? (
-              <>
-                <p className="text-sm font-bold text-stone-800">
-                  {meeting.location?.name ?? 'Noch offen'}
-                </p>
-                <p className="mt-0.5 text-[11px] text-stone-400">
-                  Ergibt sich aus dem Gastgeber. Für einen anderen Ort nimm
-                  unten den Gastgeber heraus.
-                </p>
-              </>
-            ) : (
-              <>
-                <Select
-                  value={meeting.locationId ?? ''}
-                  disabled={update.isPending}
-                  onChange={(event) =>
-                    patch({
-                      locationId:
-                        event.target.value === '' ? null : event.target.value,
-                    })
-                  }
+              {meeting.host ? (
+                <>
+                  <p className="text-sm font-bold text-stone-800">
+                    {meeting.location?.name ?? 'Noch offen'}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-stone-400">
+                    Ergibt sich aus dem Gastgeber. Für einen anderen Ort nimm
+                    unten den Gastgeber heraus.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Select
+                    value={meeting.locationId ?? ''}
+                    disabled={update.isPending}
+                    onChange={(event) =>
+                      patch({
+                        locationId:
+                          event.target.value === '' ? null : event.target.value,
+                      })
+                    }
+                  >
+                    <option value="">Noch offen</option>
+                    {treffpunkte.map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {location.name}
+                      </option>
+                    ))}
+                  </Select>
+                  <button
+                    type="button"
+                    onClick={() => setCreatingLocation(true)}
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-terracotta-600 hover:underline"
+                  >
+                    <Plus size={12} />
+                    Treffpunkt anlegen
+                  </button>
+                </>
+              )}
+
+              {meeting.location && (
+                <a
+                  href={mapsUrl(meeting.location)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 flex items-center gap-1 text-xs font-semibold text-terracotta-600 hover:underline"
                 >
-                  <option value="">Noch offen</option>
-                  {treffpunkte.map((location) => (
-                    <option key={location.id} value={location.id}>
-                      {location.name}
-                    </option>
-                  ))}
-                </Select>
-                <button
-                  type="button"
-                  onClick={() => setCreatingLocation(true)}
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-terracotta-600 hover:underline"
-                >
-                  <Plus size={12} />
-                  Treffpunkt anlegen
-                </button>
-              </>
-            )}
+                  <MapPin size={12} />
+                  In Maps öffnen
+                  <ExternalLink size={11} />
+                </a>
+              )}
+            </div>
 
-            {meeting.location && (
-              <a
-                href={mapsUrl(meeting.location)}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 flex items-center gap-1 text-xs font-semibold text-terracotta-600 hover:underline"
-              >
-                <MapPin size={12} />
-                In Maps öffnen
-                <ExternalLink size={11} />
-              </a>
-            )}
-          </div>
-
-          <RoleRow
-            label={ROLE_LABEL.HOST}
-            people={meeting.host ? [meeting.host] : []}
-            emptyLabel="Noch niemand — dann wird ein Treffpunkt gebraucht"
-            onEdit={cancelled ? undefined : () => openSheet('HOST')}
-          />
-
-          {hasTopicSlot(meeting.type) && (
             <RoleRow
-              label={ROLE_LABEL.TOPIC}
-              people={roles.topicPeople}
-              emptyLabel="Noch niemand"
-              onEdit={cancelled ? undefined : () => openSheet('TOPIC')}
+              label={ROLE_LABEL.HOST}
+              people={meeting.host ? [meeting.host] : []}
+              emptyLabel="Noch niemand — dann wird ein Treffpunkt gebraucht"
+              onEdit={cancelled ? undefined : () => openSheet('HOST')}
             />
-          )}
 
-          <RoleRow
-            label={ROLE_LABEL.SONG}
-            people={songLeaders.data ?? []}
-            emptyLabel="Noch niemand — oder ein Abend ohne Lieder"
-            onEdit={cancelled ? undefined : () => openSheet('SONG')}
-          />
-        </Card>
+            {meeting.hasTopicSlot && (
+              <RoleRow
+                label={ROLE_LABEL.TOPIC}
+                people={roles.topicPeople}
+                emptyLabel="Noch niemand"
+                onEdit={cancelled ? undefined : () => openSheet('TOPIC')}
+              />
+            )}
 
-        {hasTestimonySlot(meeting.type) && (
+            {meeting.hasSongSlot && (
+              <RoleRow
+                label={ROLE_LABEL.SONG}
+                people={songLeaders.data ?? []}
+                emptyLabel="Noch niemand — oder ein Abend ohne Lieder"
+                onEdit={cancelled ? undefined : () => openSheet('SONG')}
+              />
+            )}
+          </Card>
+        )}
+
+        {meeting.hasTestimonySlot && (
           <section>
             <SectionTitle>Testimony</SectionTitle>
             <Card>
@@ -350,14 +420,17 @@ function Loaded({
           </section>
         )}
 
-        <SongsCard meetingId={meetingId} readOnly={locked} />
+        {meeting.hasSongSlot && (
+          <SongsCard meetingId={meetingId} readOnly={locked} />
+        )}
 
         <AttendanceCard meeting={meeting} readOnly={locked} />
 
         {/* Nachbereitung. Vor dem Abend gibt es dazu nichts zu sagen — die
             Felder erscheinen erst am Termintag, der Server lehnt es davor
-            ohnehin ab. */}
-        {!ahead && (
+            ohnehin ab. Und ohne Thema gar nicht: was an einem Abend besprochen
+            wurde, ist die Zusammenfassung eines Themas. */}
+        {!ahead && meeting.hasTopicSlot && (
           <>
             <section>
               <SectionTitle>Zusammenfassung</SectionTitle>
@@ -389,6 +462,17 @@ function Loaded({
               </Card>
             </section>
           </>
+        )}
+
+        {/* Ganz unten, weil man das einmal beim Anlegen entscheidet und danach
+            selten. Aber erreichbar, denn „ach, Lieder hätten wir doch gern"
+            fällt einem erst auf der Terminseite ein. */}
+        {!locked && (
+          <SlotCard
+            slots={meeting}
+            disabled={update.isPending}
+            onToggle={toggleSlot}
+          />
         )}
       </div>
 

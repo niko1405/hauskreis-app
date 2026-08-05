@@ -28,7 +28,16 @@ function meeting(overrides: Record<string, unknown> = {}) {
     id: 'm1',
     hauskreisId: 'hk1',
     date: KOMMENDER_DIENSTAG,
+    endDate: null,
+    type: 'STANDARD',
     status: 'PLANNED',
+    // Ein Hauskreis-Abend hat einen Gastgeber-Slot. Ohne die vier Schalter
+    // liest `resolveSlots` `undefined` und hielte jeden Baustein für
+    // abgeschaltet — dann scheiterte hier alles an der falschen Stelle.
+    hasHostSlot: true,
+    hasTopicSlot: true,
+    hasSongSlot: true,
+    hasTestimonySlot: false,
     hostPersonId: null,
     locationId: null,
     location: null,

@@ -1,9 +1,14 @@
 /**
- * Wie ein Termin heißt und was er braucht.
+ * Wie ein Termin heißt und woraus er besteht.
  *
- * Die Regel dahinter (CLAUDE.md §5): ein „Standard"-Termin hat ein Thema, ein
- * „Lobpreis/Gebetsabend" stattdessen ein Testimony oder gar nichts, und ein
- * „Custom"-Termin muss überhaupt nichts erfüllen.
+ * Was dazugehört, sagt seit den Bausteinen der Termin selbst und nicht mehr
+ * seine Art: `hasHostSlot`, `hasTopicSlot`, `hasSongSlot`, `hasTestimonySlot`
+ * stehen als Felder in der Antwort. Die Art ist nur noch die Voreinstellung
+ * beim Anlegen — ein besonderer Termin startet leer und bekommt einzeln
+ * dazugebucht, was er braucht.
+ *
+ * Deshalb gibt es hier keine `hasTopicSlot(type)`-Funktion mehr: sie war eine
+ * Ableitung aus etwas, das die Frage gar nicht beantwortet.
  */
 import type { AssignmentRole, MeetingType } from './api/types';
 
@@ -13,13 +18,72 @@ export const MEETING_TYPE_LABEL: Record<MeetingType, string> = {
   CUSTOM: 'Besonderer Termin',
 };
 
-/** Der Lobpreisabend hat kein Thema — das ist kein fehlender Wert. */
-export function hasTopicSlot(type: MeetingType): boolean {
-  return type !== 'LOBPREIS_GEBET';
-}
+/** Die vier Bausteine, in der Reihenfolge, in der sie auf der Seite stehen. */
+export const MEETING_SLOTS = [
+  {
+    key: 'hasHostSlot',
+    label: 'Gastgeber & Ort',
+    hint: 'Wer einlädt — und damit auch, wo es stattfindet.',
+  },
+  {
+    key: 'hasTopicSlot',
+    label: 'Thema',
+    hint: 'Mit Zusammenfassung und Actionstep danach.',
+  },
+  {
+    key: 'hasSongSlot',
+    label: 'Lieder',
+    hint: 'Vorschläge und wer sie macht.',
+  },
+  {
+    key: 'hasTestimonySlot',
+    label: 'Testimony',
+    hint: 'Statt eines Themas — jemand erzählt.',
+  },
+] as const satisfies readonly {
+  key: MeetingSlotKey;
+  label: string;
+  hint: string;
+}[];
 
-export function hasTestimonySlot(type: MeetingType): boolean {
-  return type === 'LOBPREIS_GEBET';
+export type MeetingSlotKey =
+  'hasHostSlot' | 'hasTopicSlot' | 'hasSongSlot' | 'hasTestimonySlot';
+
+export type MeetingSlots = Record<MeetingSlotKey, boolean>;
+
+/**
+ * Was eine Terminart mitbringt — dieselbe Tabelle wie im Backend
+ * (`meeting-slots.ts`), nur fürs Formular beim Anlegen.
+ *
+ * Zwei Wahrheiten wären hier ungefährlich, aber verwirrend: der Server setzt
+ * ohnehin seine eigenen, wenn nichts mitkommt. Sichtbar zu machen, **was** er
+ * setzen wird, ist der ganze Zweck.
+ */
+export function slotDefaults(type: MeetingType): MeetingSlots {
+  if (type === 'STANDARD') {
+    return {
+      hasHostSlot: true,
+      hasTopicSlot: true,
+      hasSongSlot: true,
+      hasTestimonySlot: false,
+    };
+  }
+
+  if (type === 'LOBPREIS_GEBET') {
+    return {
+      hasHostSlot: true,
+      hasTopicSlot: false,
+      hasSongSlot: true,
+      hasTestimonySlot: true,
+    };
+  }
+
+  return {
+    hasHostSlot: false,
+    hasTopicSlot: false,
+    hasSongSlot: false,
+    hasTestimonySlot: false,
+  };
 }
 
 /**
