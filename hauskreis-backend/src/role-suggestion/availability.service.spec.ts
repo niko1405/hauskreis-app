@@ -256,3 +256,147 @@ describe('RoleReleaseService.releaseFor', () => {
     expect(prisma.meeting.update).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Verlassen ist etwas anderes als absagen — und deshalb greift hier auch mehr
+ * zu als bei einer einzelnen Absage.
+ */
+function setupLeaving(
+  meetings: {
+    id: string;
+    hostPersonId: string | null;
+    requiresHost?: boolean;
+  }[],
+) {
+  const meetingUpdate = jest.fn().mockResolvedValue({});
+  const deletes: Record<string, unknown> = {};
+
+  const batch = (name: string, count: number) =>
+    jest.fn((args: { where: unknown }) => {
+      deletes[name] = args.where;
+      return Promise.resolve({ count });
+    });
+
+  const prisma = {
+    meeting: {
+      findMany: jest.fn().mockResolvedValue(
+        meetings.map((meeting) => ({
+          id: meeting.id,
+          hostPersonId: meeting.hostPersonId,
+          location:
+            meeting.requiresHost === undefined
+              ? null
+              : { requiresHost: meeting.requiresHost },
+        })),
+      ),
+      update: meetingUpdate,
+    },
+    meetingSongLeader: { deleteMany: batch('song', 1) },
+    topicResponsible: { deleteMany: batch('topic', 1) },
+    meetingAttendance: { deleteMany: batch('attendance', 2) },
+    $transaction: jest.fn((operations: Promise<unknown>[]) =>
+      Promise.all(operations),
+    ),
+  };
+
+  return {
+    service: new RoleReleaseService(prisma as unknown as PrismaService),
+    meetingUpdate,
+    deletes,
+  };
+}
+
+describe('RoleReleaseService.releaseEverythingUpcoming', () => {
+  it('nimmt die Person aus jedem kommenden Gastgeber-Platz', async () => {
+    const { service, meetingUpdate } = setupLeaving([
+      { id: 'm1', hostPersonId: 'p1', requiresHost: true },
+      { id: 'm2', hostPersonId: 'p2', requiresHost: true },
+      { id: 'm3', hostPersonId: 'p1', requiresHost: true },
+    ]);
+
+    const result = await service.releaseEverythingUpcoming('hk', 'p1');
+
+    expect(result.host).toBe(2);
+    expect(meetingUpdate).toHaveBeenCalledTimes(2);
+    expect(meetingUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'm1' },
+        data: expect.objectContaining({
+          hostPersonId: null,
+          locationId: null,
+        }),
+      }),
+    );
+  });
+
+  it('lässt einen Treffpunkt stehen — der hing nie am Gastgeber', async () => {
+    const { service, meetingUpdate } = setupLeaving([
+      { id: 'm1', hostPersonId: 'p1', requiresHost: false },
+    ]);
+
+    await service.releaseEverythingUpcoming('hk', 'p1');
+
+    expect(meetingUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ locationId: undefined }),
+      }),
+    );
+  });
+
+  /**
+   * Der Unterschied zur einzelnen Absage: dort bleibt das Thema stehen, weil
+   * die Person am nächsten Abend wieder da ist. Wer geht, ist an keinem Abend
+   * mehr da.
+   */
+  it('nimmt auch laufende Themen mit — abgeschlossene nicht', async () => {
+    const { service, deletes } = setupLeaving([
+      { id: 'm1', hostPersonId: null },
+    ]);
+
+    const result = await service.releaseEverythingUpcoming('hk', 'p1');
+
+    expect(result.topic).toBe(1);
+    expect(deletes.topic).toEqual({
+      personId: 'p1',
+      topic: { hauskreisId: 'hk', status: 'RUNNING' },
+    });
+  });
+
+  it('räumt die eigenen Antworten weg', async () => {
+    const { service, deletes } = setupLeaving([
+      { id: 'm1', hostPersonId: null },
+      { id: 'm2', hostPersonId: null },
+    ]);
+
+    await service.releaseEverythingUpcoming('hk', 'p1');
+
+    // „Kommt nicht" von jemandem, der gar nicht mehr dabei ist, verzerrt jede
+    // Zählung.
+    expect(deletes.attendance).toEqual({
+      personId: 'p1',
+      meetingId: { in: ['m1', 'm2'] },
+    });
+  });
+
+  it('meldet alle kommenden Abende zurück, nicht nur die berührten', async () => {
+    const { service } = setupLeaving([
+      { id: 'm1', hostPersonId: null },
+      { id: 'm2', hostPersonId: null },
+    ]);
+
+    // Mit der Person ändert sich die Zahl der aktiven Menschen — und damit die
+    // Schwelle, ab der ein Abend „alle haben abgesagt" ist.
+    const result = await service.releaseEverythingUpcoming('hk', 'p1');
+
+    expect(result.meetingIds).toEqual(['m1', 'm2']);
+  });
+
+  it('fasst gar nichts an, wenn nichts mehr kommt', async () => {
+    const { service, deletes } = setupLeaving([]);
+
+    await expect(
+      service.releaseEverythingUpcoming('hk', 'p1'),
+    ).resolves.toEqual({ meetingIds: [], host: 0, song: 0, topic: 0 });
+    expect(deletes).toEqual({});
+  });
+});

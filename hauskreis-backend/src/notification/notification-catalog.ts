@@ -160,6 +160,18 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     schedule: { kind: 'EVENT' },
     defaultEnabled: true,
   },
+  {
+    type: NotificationType.MEMBER_LEFT,
+    label: 'Jemand verlässt den Hauskreis',
+    // Auch die Nachfolge hängt hier mit drin: „du bist jetzt Admin" ist ein
+    // Satz mehr in derselben Nachricht und kein zehnter Eintrag in dieser
+    // Liste — den bräuchte es für einen Fall, den man ein- oder zweimal im Jahr
+    // erlebt.
+    description:
+      'Wenn jemand geht — und was dadurch offen bleibt, etwa ein Abend ohne Gastgeber.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
 ];
 
 const byType = new Map(

@@ -9,6 +9,9 @@ import { MembershipService } from './membership.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { PersonService } from '../person/person.service';
 import type { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
+import type { RoleReleaseService } from '../meeting/role-release.service';
+import type { MeetingCancellationService } from '../meeting/meeting-cancellation.service';
+import type { NotificationService } from '../notification/notification.service';
 import { PersonRole } from '../../generated/prisma/enums';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
@@ -24,6 +27,13 @@ function setup(
     me?: Record<string, unknown> | null;
     others?: { id: string; name: string; role: PersonRole }[];
     linked?: Record<string, unknown> | null;
+    /** Was beim Verlassen an kommenden Abenden frei wurde. */
+    leftover?: Partial<{
+      meetingIds: string[];
+      host: number;
+      song: number;
+      topic: number;
+    }>;
   } = {},
 ) {
   const personUpdate = jest.fn().mockResolvedValue({});
@@ -60,12 +70,27 @@ function setup(
     notified: 0,
   });
 
+  const releaseEverythingUpcoming = jest.fn().mockResolvedValue({
+    meetingIds: [],
+    host: 0,
+    song: 0,
+    topic: 0,
+    ...options.leftover,
+  });
+  const reconcile = jest.fn().mockResolvedValue(undefined);
+  const notify = jest
+    .fn()
+    .mockResolvedValue({ delivered: 1, pruned: 0, failed: 0, skipped: 0 });
+
   const service = new MembershipService(
     prisma,
     { syncHomes: jest.fn() } as unknown as PersonService,
     {
       replanAfterMembershipChange,
     } as unknown as PrayerBuddyGeneratorService,
+    { releaseEverythingUpcoming } as unknown as RoleReleaseService,
+    { reconcile } as unknown as MeetingCancellationService,
+    { notify } as unknown as NotificationService,
   );
 
   return {
@@ -75,11 +100,24 @@ function setup(
     hauskreisDelete,
     hauskreisCreate,
     replanAfterMembershipChange,
+    releaseEverythingUpcoming,
+    reconcile,
+    notify,
   };
 }
 
-const member = { id: 'p1', role: PersonRole.MEMBER, locationId: null };
-const admin = { id: 'p1', role: PersonRole.ADMIN, locationId: null };
+const member = {
+  id: 'p1',
+  name: 'Niko',
+  role: PersonRole.MEMBER,
+  locationId: null,
+};
+const admin = {
+  id: 'p1',
+  name: 'Niko',
+  role: PersonRole.ADMIN,
+  locationId: null,
+};
 const other = (role: PersonRole) => ({ id: 'p2', name: 'Mira', role });
 
 describe('MembershipService.create', () => {
@@ -202,6 +240,105 @@ describe('MembershipService.leave', () => {
     await service.leave('hk-1', 'p1', {});
 
     expect(replanAfterMembershipChange).toHaveBeenCalledWith('hk-1');
+  });
+
+  /**
+   * Bis hierher blieb alles stehen: die Person hostete weiter am 26. August
+   * und stand in der Planungstabelle.
+   */
+  it('räumt die künftigen Rollen weg und bewertet die Abende neu', async () => {
+    const { service, releaseEverythingUpcoming, reconcile } = setup({
+      me: member,
+      others: [other(PersonRole.ADMIN)],
+      leftover: { meetingIds: ['m1', 'm2'], host: 1 },
+    });
+
+    await service.leave('hk-1', 'p1', {});
+
+    expect(releaseEverythingUpcoming).toHaveBeenCalledWith('hk-1', 'p1');
+    // Alle kommenden Abende, nicht nur die berührten: mit der Person ändert
+    // sich die Schwelle, ab der „alle haben abgesagt" gilt.
+    expect(reconcile.mock.calls.map((call) => call[0])).toEqual(['m1', 'm2']);
+  });
+
+  it('sagt den Verbleibenden Bescheid', async () => {
+    const { service, notify } = setup({
+      me: member,
+      others: [other(PersonRole.ADMIN)],
+    });
+
+    await service.leave('hk-1', 'p1', {});
+
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        personId: 'p2',
+        type: 'MEMBER_LEFT',
+        // Die Person, um die es geht — sonst hielte `hasBeenSent` den zweiten
+        // Austritt für eine Dublette des ersten.
+        relatedPersonId: 'p1',
+      }),
+    );
+    expect(notify.mock.calls[0][0].payload.title).toBe(
+      'Niko ist nicht mehr dabei',
+    );
+  });
+
+  it('nennt, was dadurch offen bleibt', async () => {
+    const { service, notify } = setup({
+      me: member,
+      others: [other(PersonRole.ADMIN)],
+      leftover: { meetingIds: ['m1'], host: 2, topic: 1 },
+    });
+
+    await service.leave('hk-1', 'p1', {});
+
+    // Was offen ist, nicht wie viel: für die Zahl gibt es die Planungstabelle.
+    expect(notify.mock.calls[0][0].payload.body).toContain(
+      'Der Plan braucht jetzt einen Gastgeber und jemanden fürs Thema.',
+    );
+  });
+
+  it('schweigt über offene Rollen, wenn keine offen ist', async () => {
+    const { service, notify } = setup({
+      me: member,
+      others: [other(PersonRole.ADMIN)],
+    });
+
+    await service.leave('hk-1', 'p1', {});
+
+    expect(notify.mock.calls[0][0].payload.body).not.toContain('Der Plan');
+  });
+
+  /** Ein zehnter Schalter für einen Fall, den man einmal im Jahr erlebt, wäre
+   * eine schlechtere Einstellungsliste. */
+  it('sagt der Nachfolge im selben Zug, dass sie übernimmt', async () => {
+    const { service, notify } = setup({
+      me: admin,
+      others: [other(PersonRole.MEMBER)],
+    });
+
+    await service.leave('hk-1', 'p1', { successorPersonId: 'p2' });
+
+    expect(notify.mock.calls[0][0].payload.body).toContain(
+      'Du übernimmst ab jetzt die Verwaltung',
+    );
+  });
+
+  it('erzählt das den anderen nicht', async () => {
+    const { service, notify } = setup({
+      me: admin,
+      others: [
+        other(PersonRole.MEMBER),
+        { id: 'p3', name: 'Chris', role: PersonRole.MEMBER },
+      ],
+    });
+
+    await service.leave('hk-1', 'p1', { successorPersonId: 'p2' });
+
+    const toChris = notify.mock.calls.find(
+      (call) => call[0].personId === 'p3',
+    ) as [{ payload: { body: string } }];
+    expect(toChris[0].payload.body).not.toContain('Du übernimmst');
   });
 
   /** Eine leere Gruppe, die niemand betreten kann, ist kein Zustand. */

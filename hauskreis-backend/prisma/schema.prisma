@@ -101,6 +101,8 @@ enum NotificationType {
   ATTENDANCE_DECLINED
   /// Enough people dropped out that a home too small to host now fits.
   HOST_CAPACITY_UNLOCKED
+  /// Jemand hat den Hauskreis verlassen.
+  MEMBER_LEFT
 
   @@map("notification_type")
 }

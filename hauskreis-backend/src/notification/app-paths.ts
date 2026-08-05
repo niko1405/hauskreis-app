@@ -11,6 +11,7 @@
  */
 export const appPath = {
   meeting: (meetingId: string) => `/termine/${meetingId}`,
+  meetings: () => '/termine',
   prayerBuddies: () => '/gebet',
   home: () => '/',
 } as const;

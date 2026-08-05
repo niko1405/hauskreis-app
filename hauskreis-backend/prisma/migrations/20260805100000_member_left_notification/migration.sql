@@ -1,0 +1,15 @@
+-- „Jemand verlässt den Hauskreis."
+--
+-- Bisher passierte das lautlos: `active` fiel auf `false`, die Zeile blieb
+-- fürs Archiv stehen, und die anderen acht merkten es daran, dass jemand nicht
+-- mehr auftauchte. In einer Gruppe von neun Leuten ist das genau die Nachricht,
+-- die man nicht aus einer Tabelle ablesen will.
+--
+-- Die Nachfolge erfährt es im selben Zug — dieselbe Nachricht mit einem Satz
+-- mehr, kein zehnter Schalter in den Einstellungen für einen Fall, den man ein-
+-- oder zweimal im Jahr erlebt.
+--
+-- Entdoppelt wird über `related_person_id`: gemeint ist die Person, um die es
+-- geht, nicht die Empfängerin. Ohne das hielte `hasBeenSent` den zweiten
+-- Austritt für eine Dublette des ersten, und ab dann bliebe es wieder still.
+ALTER TYPE "notification_type" ADD VALUE 'MEMBER_LEFT';

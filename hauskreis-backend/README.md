@@ -322,6 +322,46 @@ den man verlassen will. Stattdessen nimmt `leave` ein optionales
   mit `successorPersonId` wird die genannte Person im selben Zug `ADMIN`
 - letzte Person überhaupt → der Hauskreis wird mit gelöscht
 
+### Was ein Austritt aufräumt
+
+Bis hierher setzte `leave` nur drei Spalten. **Alles andere blieb stehen**: die
+Person hostete weiter am 26. August, stand in der Planungstabelle, war für ein
+laufendes Thema eingetragen und hatte für kommende Abende zugesagt.
+
+Geräumt wird jetzt, für alle Termine ab heute:
+
+| Was                          | Warum                                                                       |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| Gastgeber-Platz (samt Ort)   | Host und Ort sind eine Entscheidung, sobald der Ort seine Wohnung war       |
+| Musik-Zuteilungen            | gilt je Abend                                                               |
+| eigene Zu-/Absagen           | „kommt nicht" von jemandem, der nicht mehr dabei ist, verzerrt jede Zählung |
+| Themen mit `status: RUNNING` | ein Thema, das auf sie wartet, wäre eine Zusage, die niemand einlösen kann  |
+
+Drei Unterschiede zur einzelnen Absage (`RoleReleaseService.releaseFor`), und
+alle drei folgen aus demselben Satz — **wer geht, ist an keinem Abend mehr da**:
+
+- Beim Absagen bleibt das **Thema** stehen, weil die Person am nächsten Abend
+  wieder da ist. Hier fällt es mit. Abgeschlossene Themen behalten ihre Leute,
+  das ist Archiv und keine Planung.
+- Beim Absagen bleiben **abgesagte Abende** in Ruhe, damit ein Wiederaufleben
+  die Rollen zurückbringt. Hier wäre das Zurückgebrachte ein Mensch, der nicht
+  mehr da ist.
+- Die eigenen **Antworten** verschwinden, statt als Absage stehen zu bleiben.
+
+Danach läuft `MeetingCancellationService.reconcile` über **jeden** kommenden
+Abend, nicht nur die berührten: mit der Person ändert sich die Zahl der aktiven
+Menschen und damit die Schwelle, ab der „alle haben abgesagt" gilt. Ein Abend
+mit acht Absagen und einer offenen Antwort fällt aus, sobald genau diese Person
+geht.
+
+Die Verbleibenden bekommen `MEMBER_LEFT`, und darin steht auch, **was dadurch
+offen bleibt** („Der Plan braucht jetzt einen Gastgeber."). Genannt wird das
+_Was_, nicht das _Wie viel_ — für die Zahl gibt es die Planungstabelle, und
+„drei Abende brauchen einen Gastgeber" liest sich wie eine Rechnung. Die
+Nachfolge erfährt im selben Text, dass sie übernimmt; ein eigener Schalter dafür
+wäre ein Eintrag mehr in den Einstellungen für einen Fall, den man ein- oder
+zweimal im Jahr erlebt.
+
 ### Mehrere offene Einladungen
 
 `resolveForUser` verknüpft beim ersten Anmelden automatisch — aber nur, wenn es
@@ -484,6 +524,7 @@ jeder mit Label, Begründung und Default-Rhythmus.
 | `MEETING_CANCELLED`      | Abend fällt aus — oder findet doch statt      | alle                          | sofort        |
 | `ATTENDANCE_DECLINED`    | jemand sagt ab                                | der Host dieses Abends        | sofort        |
 | `HOST_CAPACITY_UNLOCKED` | genug Absagen, dass eine kleine Wohnung passt | Bewohner:innen dieser Wohnung | sofort        |
+| `MEMBER_LEFT`            | jemand verlässt den Hauskreis                 | alle Verbleibenden            | sofort        |
 
 Die Vorlauf-Werte sind bewusst verschieden: Inhalte vorbereiten braucht mehr
 Vorlauf als aufräumen. Der Freitag beim Actionstep liegt mittig zwischen zwei

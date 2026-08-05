@@ -6223,7 +6223,8 @@
                 "ROLE_ASSIGNED",
                 "MEETING_CANCELLED",
                 "ATTENDANCE_DECLINED",
-                "HOST_CAPACITY_UNLOCKED"
+                "HOST_CAPACITY_UNLOCKED",
+                "MEMBER_LEFT"
               ]
             }
           }
@@ -8117,7 +8118,8 @@
                 "ROLE_ASSIGNED",
                 "MEETING_CANCELLED",
                 "ATTENDANCE_DECLINED",
-                "HOST_CAPACITY_UNLOCKED"
+                "HOST_CAPACITY_UNLOCKED",
+                "MEMBER_LEFT"
               ]
             },
             "label": {
@@ -8274,7 +8276,8 @@
               "ROLE_ASSIGNED",
               "MEETING_CANCELLED",
               "ATTENDANCE_DECLINED",
-              "HOST_CAPACITY_UNLOCKED"
+              "HOST_CAPACITY_UNLOCKED",
+              "MEMBER_LEFT"
             ]
           },
           "label": {

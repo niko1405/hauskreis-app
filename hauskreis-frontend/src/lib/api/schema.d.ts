@@ -1284,7 +1284,8 @@ export interface components {
         | 'ROLE_ASSIGNED'
         | 'MEETING_CANCELLED'
         | 'ATTENDANCE_DECLINED'
-        | 'HOST_CAPACITY_UNLOCKED';
+        | 'HOST_CAPACITY_UNLOCKED'
+        | 'MEMBER_LEFT';
       label: string;
       description: string;
       schedule:
@@ -1325,7 +1326,8 @@ export interface components {
         | 'ROLE_ASSIGNED'
         | 'MEETING_CANCELLED'
         | 'ATTENDANCE_DECLINED'
-        | 'HOST_CAPACITY_UNLOCKED';
+        | 'HOST_CAPACITY_UNLOCKED'
+        | 'MEMBER_LEFT';
       label: string;
       description: string;
       schedule:
@@ -6667,7 +6669,8 @@ export interface operations {
           | 'ROLE_ASSIGNED'
           | 'MEETING_CANCELLED'
           | 'ATTENDANCE_DECLINED'
-          | 'HOST_CAPACITY_UNLOCKED';
+          | 'HOST_CAPACITY_UNLOCKED'
+          | 'MEMBER_LEFT';
       };
       cookie?: never;
     };

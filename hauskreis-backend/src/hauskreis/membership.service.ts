@@ -8,7 +8,14 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { PersonService } from '../person/person.service';
 import { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
-import { PersonRole } from '../../generated/prisma/enums';
+import {
+  RoleReleaseService,
+  type LeftoverRoles,
+} from '../meeting/role-release.service';
+import { MeetingCancellationService } from '../meeting/meeting-cancellation.service';
+import { NotificationService } from '../notification/notification.service';
+import { appPath } from '../notification/app-paths';
+import { NotificationType, PersonRole } from '../../generated/prisma/enums';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import type {
   CreateHauskreisDto,
@@ -33,6 +40,9 @@ export class MembershipService {
     private readonly prisma: PrismaService,
     private readonly people: PersonService,
     private readonly prayerBuddies: PrayerBuddyGeneratorService,
+    private readonly roleRelease: RoleReleaseService,
+    private readonly cancellations: MeetingCancellationService,
+    private readonly notifications: NotificationService,
   ) {}
 
   /**
@@ -97,7 +107,7 @@ export class MembershipService {
   ): Promise<{ hauskreisDeleted: boolean; successorPersonId: string | null }> {
     const me = await this.prisma.person.findFirst({
       where: { id: personId, hauskreisId, active: true },
-      select: { id: true, role: true, locationId: true },
+      select: { id: true, name: true, role: true, locationId: true },
     });
 
     if (!me) {
@@ -138,11 +148,74 @@ export class MembershipService {
 
     await this.people.syncHomes(me.locationId);
 
+    // Erst freiräumen, dann neu bewerten: `reconcile` zählt Absagen gegen die
+    // Zahl der aktiven Menschen, und beides hat sich gerade geändert.
+    const leftover = await this.roleRelease.releaseEverythingUpcoming(
+      hauskreisId,
+      personId,
+    );
+
+    for (const meetingId of leftover.meetingIds) {
+      await this.cancellations.reconcile(meetingId);
+    }
+
     // Ohne das stünde die gegangene Person in bis zu fünf geplanten Runden —
     // und wer mit ihr gepaart war, bliebe für zwei Wochen allein.
     await this.prayerBuddies.replanAfterMembershipChange(hauskreisId);
 
+    await this.announceDeparture(me, others, successorPersonId, leftover);
+
     return { hauskreisDeleted: false, successorPersonId };
+  }
+
+  /**
+   * Sagt den Verbleibenden Bescheid.
+   *
+   * Bis hierher passierte ein Austritt lautlos: `active` fiel auf `false`, und
+   * die anderen acht merkten es daran, dass jemand nicht mehr auftauchte. In
+   * einer Gruppe von neun Leuten ist das genau die Nachricht, die man nicht aus
+   * einer Tabelle ablesen will.
+   *
+   * Was dadurch **offen** bleibt, steht mit drin. Ein Abend ohne Gastgeber ist
+   * die eigentliche Folge des Austritts, und wer sie erst beim Durchblättern des
+   * Plans entdeckt, entdeckt sie zu spät.
+   *
+   * Die Nachfolge bekommt denselben Text mit einem Satz mehr. Ein eigener
+   * Schalter dafür wäre ein zehnter Eintrag in den Einstellungen für einen Fall,
+   * den man ein- oder zweimal im Jahr erlebt.
+   */
+  private async announceDeparture(
+    leaver: { id: string; name: string },
+    others: { id: string }[],
+    successorPersonId: string | null,
+    leftover: LeftoverRoles,
+  ): Promise<void> {
+    const open = describeOpenRoles(leftover);
+
+    await Promise.all(
+      others.map((person) =>
+        this.notifications.notify({
+          personId: person.id,
+          type: NotificationType.MEMBER_LEFT,
+          // Die Person, um die es geht — nicht die Empfängerin. Ohne das hielte
+          // `hasBeenSent` den zweiten Austritt für eine Dublette des ersten.
+          relatedPersonId: leaver.id,
+          payload: {
+            title: `${leaver.name} ist nicht mehr dabei`,
+            body: [
+              `${leaver.name} hat den Hauskreis verlassen.`,
+              open,
+              person.id === successorPersonId
+                ? 'Du übernimmst ab jetzt die Verwaltung.'
+                : undefined,
+            ]
+              .filter(Boolean)
+              .join(' '),
+            url: appPath.meetings(),
+          },
+        }),
+      ),
+    );
   }
 
   /**
@@ -255,4 +328,31 @@ export class MembershipService {
       data: { keycloakUserId: user.keycloakUserId, acceptedAt: new Date() },
     });
   }
+}
+
+/**
+ * „Ein Abend braucht jetzt einen neuen Gastgeber." — oder gar nichts, wenn
+ * nichts offen blieb.
+ *
+ * Genannt wird, **was** offen ist, nicht wie viel. „Drei Abende brauchen einen
+ * Gastgeber" liest sich wie eine Rechnung; für die Zahl gibt es die
+ * Planungstabelle, und die ist einen Tipp entfernt.
+ */
+function describeOpenRoles(leftover: LeftoverRoles): string | undefined {
+  const open = [
+    leftover.host > 0 && 'einen Gastgeber',
+    leftover.song > 0 && 'jemanden für die Musik',
+    leftover.topic > 0 && 'jemanden fürs Thema',
+  ].filter((entry): entry is string => typeof entry === 'string');
+
+  if (open.length === 0) {
+    return undefined;
+  }
+
+  const list =
+    open.length === 1
+      ? open[0]
+      : `${open.slice(0, -1).join(', ')} und ${open[open.length - 1]}`;
+
+  return `Der Plan braucht jetzt ${list}.`;
 }
