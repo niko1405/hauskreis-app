@@ -1,0 +1,56 @@
+meta {
+  name: Gewicht setzen
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/locations/{{locationId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{locationEtag}}
+}
+
+body:json {
+  {
+    "hostWeight": 1.5,
+    "requiresHost": true
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("locationEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("übernimmt das Gewicht", function () {
+    expect(res.body.hostWeight).to.equal(1.5);
+  });
+}
+
+docs {
+  Braucht {{locationEtag}} aus "Location einzeln" davor.
+
+  `requiresHost` steht mit im Rumpf, obwohl es sich nicht ändert: trotz PATCH
+  ist es ein Pflichtfeld, weil `.partial()` in Zod Felder mit Default nicht
+  optional macht. Dasselbe gilt umgekehrt für `hostWeight`, wenn man nur den
+  Namen ändern will.
+
+  **Wo das im UI passiert:** in der Verwaltung, nicht im Archiv. Das Gewicht
+  ist eine Aussage der Gruppe über ihre Gastgeber:innen — „bei dir sind wir
+  gern öfter" liest sich neben dem eigenen Namen anders als in einer
+  Verwaltungsliste. Der Server erzwingt das **nicht**: die Route steht jedem
+  Mitglied offen, weil Orte zu pflegen niemandes Vorrecht ist. Das Ausblenden
+  ist eine Frage der Oberfläche, keine Sicherheitsgrenze.
+
+  Wirkung: höher heißt öfter dort. 0 hält eine Wohnung in der Liste, ohne sie
+  je vorzuschlagen. Bei `requiresHost: false` bedeutungslos — ein Treffpunkt
+  steht außerhalb der Fairness-Rechnung.
+}

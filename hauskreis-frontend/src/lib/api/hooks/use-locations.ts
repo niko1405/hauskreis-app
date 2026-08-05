@@ -71,6 +71,41 @@ export function useUpdateLocation(locationId: string) {
 }
 
 /**
+ * Wie oft die Gruppe bei jemandem sein möchte — nur in der Verwaltung.
+ *
+ * Liest den Stand **selbst**, statt ihn wie `useUpdateLocation` im Cache zu
+ * erwarten: die Verwaltung zeigt alle Wohnungen nebeneinander, und für jede
+ * vorsorglich einen Detail-Stand zu holen wäre teurer als einer, wenn wirklich
+ * jemand eine Zahl ändert. Dasselbe Muster wie `useSetPersonRole`.
+ *
+ * Der frische Stand liefert nebenbei `requiresHost`, das dieses PATCH trotz
+ * seines Namens verlangt (Zod-Vorgabe).
+ */
+export function useSetHostWeight() {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useApiMutation(
+    async ({
+      locationId,
+      hostWeight,
+    }: {
+      locationId: string;
+      hostWeight: number;
+    }) => {
+      const current = await locationsApi.getLocation(hauskreisId, locationId);
+
+      return locationsApi.updateLocation(
+        hauskreisId,
+        locationId,
+        { hostWeight, requiresHost: current.data.requiresHost },
+        current.etag,
+      );
+    },
+    { invalidateKeys: [keys.locations.all, ...derived] },
+  );
+}
+
+/**
  * Löscht den Ort — oder legt ihn still, wenn dort Abende stattgefunden haben.
  * Was von beidem, steht in der Antwort (`deleted`).
  */

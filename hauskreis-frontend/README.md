@@ -512,6 +512,28 @@ gehört das Eintragen auch dorthin. Dafür lädt sie den Termin beim Antippen
 nach: `useRoleAssignment` braucht ihn ganz (wegen `topicId`), die
 Assignments-Route liefert nur Datum, Rolle und Person.
 
+## Orte: wer was sieht, und wer was ändert
+
+Ein Ort hat vier Zahlen und Wörter, und jedes gehört woandershin — nicht aus
+Ordnungsliebe, sondern weil jede eine andere Frage an eine andere Person ist.
+
+| Feld      | Wo                              | Weil                                                                        |
+| --------- | ------------------------------- | --------------------------------------------------------------------------- |
+| Anschrift | Profil (eigene Wohnung)         | „wo wohnst du" beantwortet nur, wer dort wohnt                              |
+| Kapazität | Profil (eigene Wohnung)         | „wie viele passen bei dir rein" ebenso                                      |
+| Name      | abgeleitet bzw. Treffpunkt-Form | eine Wohnung heißt nach ihren Bewohner:innen, ein Park nach sich selbst     |
+| Gewicht   | **Verwaltung**                  | „wie oft wollen wir bei dir sein" ist eine Aussage der Gruppe, keine Angabe |
+
+Im Archiv steht eine Wohnung deshalb nur noch da: Name, Anschrift, Link zur
+Karte. Kein Stift, weil es dort nichts zu ändern gäbe, und kein Gewicht, weil
+eine 0,5 neben dem eigenen Namen, die man nicht ändern kann und deren Herkunft
+man nicht kennt, nur Fragen aufwirft. Treffpunkte bleiben frei bearbeitbar —
+Name und Anschrift, mehr hat ein Park nicht.
+
+Das Ausblenden ist **keine Sicherheitsgrenze**: `PATCH …/locations/:id` steht
+weiterhin jedem Mitglied offen, weil Orte zu pflegen ausdrücklich niemandes
+Vorrecht ist. Es so zu behandeln wäre eine Sicherheit, die keine ist.
+
 ## Der Gebets-Bildschirm
 
 Oben die laufende Runde, darunter „Weitere Runden" mit einem Umschalter

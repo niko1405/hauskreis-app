@@ -5,15 +5,15 @@
  *
  * Zwei Sorten, die verschieden behandelt werden:
  *
- * - **Zuhause** — gehört Menschen, heißt nach ihnen. Der Name lässt sich hier
- *   nicht ändern (er wird abgeleitet) und die Wohnung nicht auflösen; beides
- *   geht über das Profil der Bewohner:innen. Was hier hingehört, ist das
- *   Gewicht: wie oft die Gruppe dort sein möchte, ist eine Frage an die
- *   Gruppe, nicht an die Gastgeber:innen.
+ * - **Zuhause** — gehört Menschen, heißt nach ihnen. Hier steht es nur: Name,
+ *   Anschrift, Weg dorthin. Ändern lässt sich nichts davon an dieser Stelle,
+ *   und das ist keine Lücke — der Name folgt den Bewohner:innen, die Anschrift
+ *   steht in ihrem Profil, und das Gewicht ist eine Frage an die Gruppe, die
+ *   in der Verwaltung beantwortet wird.
  * - **Treffpunkt** — gehört niemandem, ist frei bearbeitbar und lässt sich
- *   stilllegen.
+ *   stilllegen. Zu ändern gibt es Name und Anschrift.
  */
-import { Home, MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Home, MapPin, Navigation, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
@@ -24,6 +24,7 @@ import { useToast } from '@/components/ui/toast';
 import { LocationSheet } from '@/components/domain/location-sheet';
 import { useDeleteLocation, useLocations } from '@/lib/api/hooks';
 import { isHome, residentNames } from '@/lib/location';
+import { mapsUrl } from '@/lib/meeting';
 import type { Location } from '@/lib/api/types';
 
 export function LocationsCard() {
@@ -71,7 +72,7 @@ export function LocationsCard() {
         ) : (
           <ul className="space-y-2">
             {homes.map((location) => (
-              <LocationRow key={location.id} location={location} />
+              <HomeRow key={location.id} location={location} />
             ))}
           </ul>
         )}
@@ -84,7 +85,7 @@ export function LocationsCard() {
         {spots.length > 0 && (
           <ul className="space-y-2">
             {spots.map((location) => (
-              <LocationRow key={location.id} location={location} />
+              <SpotRow key={location.id} location={location} />
             ))}
           </ul>
         )}
@@ -104,12 +105,65 @@ export function LocationsCard() {
   );
 }
 
-function LocationRow({ location }: { location: Location }) {
+/**
+ * Eine Wohnung: Name, Anschrift, Weg dorthin. Sonst nichts.
+ *
+ * Kein Stift, denn es gäbe nichts zu ändern — der Name folgt den
+ * Bewohner:innen, die Anschrift steht im Profil. Kein Gewicht, weil das eine
+ * Frage an die Gruppe ist und in die Verwaltung gehört, nicht in eine Liste,
+ * die alle sehen. Und keine Kapazität: „wie viele passen bei mir rein"
+ * beantwortet, wer dort wohnt.
+ */
+function HomeRow({ location }: { location: Location }) {
+  return (
+    <li
+      className={
+        'flex items-center gap-3 rounded-md border border-line p-3' +
+        (location.active ? '' : ' opacity-60')
+      }
+    >
+      <Home size={15} className="shrink-0 text-stone-300" />
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-stone-800">
+          {location.name}
+          {location.address && (
+            <span className="font-normal text-stone-400">
+              {' '}
+              — {location.address}
+            </span>
+          )}
+        </p>
+        <p className="truncate text-[11px] text-stone-400">
+          {residentNames(location) || 'Niemand wohnt mehr hier'}
+        </p>
+      </div>
+
+      {!location.active && <Badge variant="neutral">stillgelegt</Badge>}
+
+      {/* Der Grund, warum die Anschrift überhaupt gespeichert wird: damit man
+          am Dienstagabend nicht abtippen muss, wo es hingeht. */}
+      {(location.address || location.latitude !== null) && (
+        <a
+          href={mapsUrl(location)}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`${location.name} in Maps öffnen`}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-stone-400 hover:bg-shell hover:text-stone-600"
+        >
+          <Navigation size={15} />
+        </a>
+      )}
+    </li>
+  );
+}
+
+/** Ein Treffpunkt: gehört niemandem, also frei bearbeitbar und stilllegbar. */
+function SpotRow({ location }: { location: Location }) {
   const remove = useDeleteLocation();
   const confirm = useConfirm();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
-  const home = isHome(location);
 
   return (
     <li
@@ -118,22 +172,14 @@ function LocationRow({ location }: { location: Location }) {
         (location.active ? '' : ' opacity-60')
       }
     >
-      {home ? (
-        <Home size={15} className="shrink-0 text-stone-300" />
-      ) : (
-        <MapPin size={15} className="shrink-0 text-stone-300" />
-      )}
+      <MapPin size={15} className="shrink-0 text-stone-300" />
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-stone-800">
           {location.name}
         </p>
         <p className="truncate text-[11px] text-stone-400">
-          {home
-            ? residentNames(location) || 'Niemand wohnt mehr hier'
-            : (location.address ?? 'Ohne Anschrift')}
-          {home && ` · Gewicht ${location.hostWeight}`}
-          {location.capacity !== null && ` · Platz für ${location.capacity}`}
+          {location.address ?? 'Ohne Anschrift'}
         </p>
       </div>
 
@@ -146,10 +192,7 @@ function LocationRow({ location }: { location: Location }) {
         <Pencil size={15} />
       </IconButton>
 
-      {/* Eine Wohnung löst sich auf, indem ihre Bewohner:innen umziehen — der
-          Server lehnt es sonst mit 409 ab, und ein Knopf, der immer scheitert,
-          ist schlimmer als keiner. */}
-      {!home && location.active && (
+      {location.active && (
         <IconButton
           label={`${location.name} entfernen`}
           onClick={async () => {

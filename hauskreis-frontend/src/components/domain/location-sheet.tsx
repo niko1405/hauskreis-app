@@ -5,16 +5,15 @@
  * falsch steht: aus dem Archiv, beim Eintragen eines Termins, beim Anlegen
  * eines neuen.
  *
- * Bewusst nur **Orte ohne Gastgeber**. Ein Zuhause entsteht nicht hier, sondern
- * wenn jemand im Profil seine Adresse einträgt; es heißt nach seinen
- * Bewohner:innen und gehört ihnen. Ein Feld „braucht einen Gastgeber" gäbe es
- * hier also nur, um eine Wohnung ohne Bewohner:innen zu erzeugen — genau den
- * Zustand, den die App gerade loswerden wollte.
+ * Bewusst nur **Orte ohne Gastgeber**, und das inzwischen auch beim Ändern. Ein
+ * Zuhause entsteht nicht hier, sondern wenn jemand im Profil seine Adresse
+ * einträgt; es heißt nach seinen Bewohner:innen und gehört ihnen. Ein Feld
+ * „braucht einen Gastgeber" gäbe es hier also nur, um eine Wohnung ohne
+ * Bewohner:innen zu erzeugen — genau den Zustand, den die App gerade loswerden
+ * wollte.
  *
- * Beim Ändern liegt der Fall anders: die **Kapazität** und das **Gewicht**
- * gehören der Gruppe, nicht einem Menschen. Wie oft man sich im Park treffen
- * möchte, entscheidet niemand allein im Profil — deshalb stehen die beiden
- * Zahlen hier, und nur hier.
+ * Übrig bleiben zwei Felder: Name und Anschrift. Kapazität und Gewicht sind
+ * hier weg — warum, steht bei `EditSheet`.
  */
 import { MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -193,10 +192,18 @@ function CreateSheet({
 }
 
 /**
- * Der Zuhause-Fall ist hier nicht ausgeschlossen, sondern eingeschränkt: der
- * **Name** einer Wohnung wird aus ihren Bewohner:innen abgeleitet und ist
- * deshalb gesperrt. Kapazität und Gewicht darf man auch dort ändern — die
- * gehören der Gruppe.
+ * Nur Treffpunkte, und nur Name und Anschrift.
+ *
+ * Eine **Wohnung** wird hier gar nicht mehr bearbeitet. Ihr Name folgt ohnehin
+ * den Bewohner:innen, ihre Anschrift steht im Profil, und das Gewicht ist eine
+ * Frage an die Gruppe — es lebt jetzt in der Verwaltung, wo Nicht-Admins es
+ * nicht einmal sehen. Übrig bliebe ein Formular, in dem alle Felder gesperrt
+ * sind.
+ *
+ * **Kapazität** steht nicht mehr hier, sondern dort, wo man sie beantworten
+ * kann: „wie viele passen bei mir rein" ist eine Frage an die Gastgeber:innen,
+ * und deren eigene Wohnung liegt im Profil. Bei einem Treffpunkt gab es nie
+ * eine sinnvolle Antwort — in einen Park passen alle.
  */
 function EditSheet({
   open,
@@ -212,15 +219,10 @@ function EditSheet({
   const resource = useLocation(location.id);
   const update = useUpdateLocation(location.id);
 
-  const home = location.requiresHost;
   const current = resource.data?.data ?? location;
 
   const [name, setName] = useState(current.name);
   const [address, setAddress] = useState(current.address ?? '');
-  const [capacity, setCapacity] = useState(
-    current.capacity === null ? '' : String(current.capacity),
-  );
-  const [weight, setWeight] = useState(String(current.hostWeight));
 
   // Kommt der frische Stand nach (oder ein fremder nach einem Konflikt),
   // übernehmen die Felder ihn — sonst schriebe man über das hinweg, was man
@@ -231,8 +233,6 @@ function EditSheet({
 
     setName(loaded.name);
     setAddress(loaded.address ?? '');
-    setCapacity(loaded.capacity === null ? '' : String(loaded.capacity));
-    setWeight(String(loaded.hostWeight));
   }, [resource.data]);
 
   const trimmed = name.trim();
@@ -242,11 +242,6 @@ function EditSheet({
       open={open}
       onClose={onClose}
       title={`${location.name} bearbeiten`}
-      subtitle={
-        home
-          ? 'Der Name folgt den Bewohner:innen und lässt sich hier nicht ändern.'
-          : undefined
-      }
       footer={
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1" onClick={onClose}>
@@ -261,11 +256,10 @@ function EditSheet({
                 {
                   name: trimmed,
                   address: address.trim() === '' ? null : address.trim(),
-                  capacity: capacity === '' ? null : Number(capacity),
-                  hostWeight: Number(weight),
-                  // Trotz PATCH ein Pflichtfeld (Zod-Vorgabe, siehe
-                  // `types.ts`). Mitgeschickt wird, was ohnehin gilt — ob ein
-                  // Ort einen Gastgeber braucht, ändert sich hier nicht.
+                  // Beide trotz PATCH Pflichtfelder (Zod-Vorgabe, siehe
+                  // `types.ts`). Mitgeschickt wird, was ohnehin gilt — hier
+                  // ändert sich weder das eine noch das andere.
+                  hostWeight: current.hostWeight,
                   requiresHost: current.requiresHost,
                 },
                 { onSuccess: () => onClose() },
@@ -285,55 +279,21 @@ function EditSheet({
           />
         )}
 
-        {!home && (
-          <>
-            <Field label="Name">
-              <TextInput
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </Field>
-
-            <Field
-              label="Adresse"
-              hint="Optional — daraus entsteht der Link zur Karte."
-            >
-              <TextInput
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                placeholder="Schlossbezirk 10, 76131 Karlsruhe"
-              />
-            </Field>
-          </>
-        )}
-
-        <Field
-          label="Wie viele passen rein"
-          hint="Leer heißt: alle passen rein. Passen an einem Abend mehr Leute als angegeben, wird der Ort für diesen einen Abend übersprungen."
-        >
+        <Field label="Name">
           <TextInput
-            type="number"
-            min="1"
-            value={capacity}
-            placeholder="Keine Grenze"
-            onChange={(event) => setCapacity(event.target.value)}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
           />
         </Field>
 
         <Field
-          label="Gewicht"
-          hint={
-            home
-              ? 'Wie oft die Gruppe hier sein möchte, im Verhältnis zu den anderen Wohnungen.'
-              : 'Ein Treffpunkt steht meist außerhalb der Rotation — dann bleibt hier 0.'
-          }
+          label="Adresse"
+          hint="Optional — daraus entsteht der Link zur Karte."
         >
           <TextInput
-            type="number"
-            min="0"
-            step="0.5"
-            value={weight}
-            onChange={(event) => setWeight(event.target.value)}
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            placeholder="Schlossbezirk 10, 76131 Karlsruhe"
           />
         </Field>
       </div>
