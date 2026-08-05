@@ -1,0 +1,55 @@
+meta {
+  name: Thema umbenennen
+  type: http
+  seq: 9
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/topics/{{topicId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{topicEtag}}
+}
+
+body:json {
+  {
+    "title": "Vergebung"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("topicEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("übernimmt den Namen", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.title).to.equal("Vergebung");
+  });
+}
+
+docs {
+  Braucht {{topicEtag}} aus "Thema einzeln".
+
+  **Wer darf.** Der Name gehört denen, die das Thema vorbereiten:
+
+  ```
+  darf = ist Admin ∨ ist zugeteilt ∨ es ist niemand zugeteilt
+  ```
+
+  Der dritte Fall ist der wichtige — ohne ihn wäre ein Thema ohne Zuteilung
+  gesperrt, und die Zuteilung damit die Voraussetzung fürs Benennen. Mit einem
+  fremden Token antwortet die Route sonst **403**.
+
+  Geprüft wird nur `title`. `responsiblePersonIds` und `status` bleiben offen:
+  wer vorbereitet, ist eine Frage an die Gruppe und läuft über die Zuteilung mit
+  ihren Vorschlägen; „abgeschlossen" stößt den Vorschlag fürs nächste Thema an
+  und ist damit Planung.
+
+  Bleibt `title` leer, zeigt das Frontend „Thema von {Zuständige}" — abgeleitet
+  und **nicht** gespeichert, sonst stünde der Vorschlag beim nächsten
+  Rollentausch falsch da.
+}

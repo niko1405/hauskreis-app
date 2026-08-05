@@ -77,6 +77,22 @@ export function useRoleAssignment(meeting: Meeting) {
     [setSongLeaders, fail],
   );
 
+  /**
+   * Den Namen des Themas ändern.
+   *
+   * Geht über `useUpdateTopic` und damit über den ETag des Themas — der liegt
+   * im Cache, weil `useTopic` oben das Thema ohnehin lädt. Ohne verknüpftes
+   * Thema passiert nichts: dann gibt es keinen Namen zu ändern, und die Karte
+   * bietet ihn auch nicht an.
+   */
+  const renameTopic = useCallback(
+    (title: string | null) => {
+      if (!meeting.topicId) return;
+      updateTopic.mutate({ title }, { onError: fail });
+    },
+    [meeting.topicId, updateTopic, fail],
+  );
+
   const topicPeople: PersonRef[] = (
     topic.data?.data.responsibles ??
     meeting.topic?.responsibles ??
@@ -87,6 +103,7 @@ export function useRoleAssignment(meeting: Meeting) {
     assignHost,
     assignTopicResponsibles,
     assignSongLeaders,
+    renameTopic,
     topicPeople,
     /** Der Konflikt aus `useResourceUpdate` — anzuzeigen, nicht zu verschlucken. */
     conflict: updateMeeting.conflict || updateTopic.conflict,

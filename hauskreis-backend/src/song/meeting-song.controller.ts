@@ -77,15 +77,22 @@ export class MeetingSongController {
 
   @Patch('songs/:id')
   @ApiZodResponse(MeetingSongResponseDto)
-  setSelected(
+  async setSelected(
     @Param() params: MeetingSongParamsDto,
     @Body() dto: UpdateMeetingSongDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
+    // Wer abhakt, entscheidet mit — vor dem Abend jedenfalls. Bis hierher war
+    // diese Route die einzige Schreibroute an einem Termin, die gar nicht
+    // wissen wollte, wer sie aufruft.
+    const person = await this.people.resolveForUser(user);
+
     return this.meetingSongs.setSelected(
       params.hauskreisId,
       params.meetingId,
       params.id,
       dto,
+      person.id,
     );
   }
 

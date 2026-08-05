@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import { AssignmentRole } from '../../generated/prisma/enums';
 import { AvailabilityService } from '../role-suggestion/availability.service';
+import { EditRightsService } from '../meeting/edit-rights.service';
 import { SongService } from './song.service';
 import type {
   AddMeetingSongDto,
@@ -31,6 +32,7 @@ export class MeetingSongService {
     private readonly songs: SongService,
     private readonly roleAssignments: RoleAssignmentNotifier,
     private readonly availability: AvailabilityService,
+    private readonly editRights: EditRightsService,
   ) {}
 
   async findAll(hauskreisId: string, meetingId: string) {
@@ -89,14 +91,27 @@ export class MeetingSongService {
     });
   }
 
-  /** Moves a suggestion on or off the evening's actual set list. */
+  /**
+   * Moves a suggestion on or off the evening's actual set list.
+   *
+   * Vor dem Abend dürfen das nur die Musik-Zuständigen: das Abhaken ist dann
+   * eine Entscheidung („das singen wir"), und die trifft, wer die Musik macht.
+   * Danach darf jede:r — dann ist es ein Protokoll („das haben wir gesungen"),
+   * und daran erinnert sich jede:r gleich gut. Ist niemand zugeteilt, darf
+   * ebenfalls jede:r; die Regel steht in `edit-rights.ts`.
+   *
+   * Bis hierher prüfte diese Methode **nur** die Zugehörigkeit zum Hauskreis
+   * und löste die aufrufende Person nicht einmal auf.
+   */
   async setSelected(
     hauskreisId: string,
     meetingId: string,
     id: string,
     dto: UpdateMeetingSongDto,
+    actorPersonId: string,
   ) {
     await this.assertMeetingBelongsToHauskreis(hauskreisId, meetingId);
+    await this.editRights.assertMayPickSongs(meetingId, actorPersonId);
 
     const { count } = await this.prisma.meetingSong.updateMany({
       where: { id, meetingId },

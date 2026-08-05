@@ -21,7 +21,33 @@ body:json {
 }
 
 tests {
-  test("antwortet mit 200", function () {
+  test("nimmt das Lied in die Auswahl", function () {
     expect(res.getStatus()).to.equal(200);
+    expect(res.body.isSelected).to.equal(true);
   });
+}
+
+docs {
+  Ohne If-Match — ein Schalter, kein Wettlauf.
+
+  **Wer darf**, hängt am Datum:
+
+  | Wann | Wer |
+  |---|---|
+  | vor dem Abend (Termintag zählt dazu) | die Musik-Zuständigen, oder alle solange niemand eingeteilt ist |
+  | nach dem Abend | alle |
+
+  Der Grund ist die Bedeutung: vorher ist das Abhaken eine **Entscheidung**
+  („das singen wir"), und die trifft, wer die Musik macht. Hinterher ist es ein
+  **Protokoll** („das haben wir gesungen"), und daran erinnert sich jede:r
+  gleich gut — wer am nächsten Tag nachträgt, was tatsächlich dran war, tut der
+  Liederdatenbank einen Gefallen.
+
+  Bis zu dieser Änderung prüfte die Route **nur** die Zugehörigkeit zum
+  Hauskreis und löste die aufrufende Person nicht einmal auf; jedes Mitglied
+  konnte jedes Lied jedes Abends an- und abhaken. Mit einem fremden Token
+  antwortet sie jetzt **403**.
+
+  `isSelected` steuert `timesPlayed` und `lastPlayedAt` im Archiv: „gespielt"
+  ist abgeleitet aus `isSelected` **und** einem Datum in der Vergangenheit.
 }

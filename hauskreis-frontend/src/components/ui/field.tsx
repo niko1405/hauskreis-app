@@ -115,7 +115,13 @@ export function InlineEdit({
   className,
 }: {
   value: string | null;
-  onSave: (next: string | null) => void;
+  /**
+   * Fehlt sie, ist das Feld nur Anzeige — kein Stift, kein Bearbeitungsmodus.
+   * Gebraucht, seit manche Felder nur den Zuständigen gehören: den anderen den
+   * Stift zu zeigen und dann mit 403 zu antworten wäre eine Einladung ins
+   * Leere.
+   */
+  onSave?: (next: string | null) => void;
   label: string;
   emptyLabel?: string;
   multiline?: boolean;
@@ -139,7 +145,7 @@ export function InlineEdit({
     const trimmed = draft.trim();
     setEditing(false);
     const next = trimmed === '' ? null : trimmed;
-    if (next !== value) onSave(next);
+    if (next !== value) onSave?.(next);
   };
 
   if (editing) {
@@ -204,14 +210,16 @@ export function InlineEdit({
       >
         {value ?? emptyLabel}
       </p>
-      <IconButton
-        label={`${label} bearbeiten`}
-        onClick={() => setEditing(true)}
-        disabled={saving}
-        className="shrink-0"
-      >
-        <Pencil size={14} />
-      </IconButton>
+      {onSave && (
+        <IconButton
+          label={`${label} bearbeiten`}
+          onClick={() => setEditing(true)}
+          disabled={saving}
+          className="shrink-0"
+        >
+          <Pencil size={14} />
+        </IconButton>
+      )}
     </div>
   );
 }

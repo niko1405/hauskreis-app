@@ -4,7 +4,7 @@
  * Geprüft wird über `update`, nicht über die private Methode: was zählt, ist
  * was am Ende in der Datenbank landet, und genau da ging es vorher auseinander.
  */
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { MeetingService } from './meeting.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
@@ -13,6 +13,9 @@ import type { MeetingCancellationService } from './meeting-cancellation.service'
 import type { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import type { AvailabilityService } from '../role-suggestion/availability.service';
 import type { RoleReleaseService } from './role-release.service';
+import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
+import type { CustomMeetingNotificationService } from './custom-meeting-notification.service';
+import type { EditRightsService } from './edit-rights.service';
 import type { IfMatchCondition } from '../common/http/etag';
 
 /** Diese Endpunkte verlangen eine Vorbedingung; hier interessiert sie nicht. */
@@ -81,6 +84,11 @@ function setup(before = meeting()) {
   // Spec; hier soll sie den anderen Tests nicht im Weg stehen.
   const availability = { assertAvailable: jest.fn(), findDeclined: jest.fn() };
   const roleRelease = { releaseFor: jest.fn() };
+  // Standardmäßig darf man: die Regel selbst hat ihren eigenen Spec, hier soll
+  // sie den anderen Tests nicht im Weg stehen.
+  const editRights = {
+    assertMayWriteSummary: jest.fn().mockResolvedValue(undefined),
+  };
 
   const service = new MeetingService(
     prisma as unknown as PrismaService,
@@ -90,6 +98,9 @@ function setup(before = meeting()) {
     roleAssignments as unknown as RoleAssignmentNotifier,
     availability as unknown as AvailabilityService,
     roleRelease as unknown as RoleReleaseService,
+    {} as unknown as AutoAttendanceService,
+    {} as unknown as CustomMeetingNotificationService,
+    editRights as unknown as EditRightsService,
   );
 
   return {
@@ -100,6 +111,7 @@ function setup(before = meeting()) {
     roleAssignments,
     availability,
     roleRelease,
+    editRights,
     state,
   };
 }
@@ -410,43 +422,44 @@ describe('MeetingService — wer abgesagt hat, steht dabei', () => {
   });
 });
 
-describe('MeetingService — Nachbereitung gehört an den Abend', () => {
-  it('lehnt eine Zusammenfassung für einen künftigen Abend ab', async () => {
-    const { service } = setup();
-
-    await expect(
-      service.update('hk1', 'm1', { summaryText: 'War schön' }, 'p1', EGAL),
-    ).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('lehnt auch einen Actionstep im Voraus ab', async () => {
-    const { service } = setup();
-
-    await expect(
-      service.update('hk1', 'm1', { actionstepText: 'Beten' }, 'p1', EGAL),
-    ).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('lässt am Abend selbst schreiben', async () => {
-    const { service, prisma } = setup(meeting({ date: HEUTE }));
+describe('MeetingService — Nachbereitung gehört den Zuständigen', () => {
+  /**
+   * Hier stand einmal eine Datumsprüfung: vor dem Abend ließ sich weder
+   * Zusammenfassung noch Actionstep schreiben. Die ist bewusst weg — wer das
+   * Thema vorbereitet, hat den Actionstep oft vorher im Kopf und soll ihn
+   * hinlegen dürfen, wo er am Abend gebraucht wird.
+   */
+  it('lässt eine Zuständige im Voraus schreiben', async () => {
+    const { service, prisma } = setup();
 
     await service.update('hk1', 'm1', { summaryText: 'War schön' }, 'p1', EGAL);
 
     expect(written(prisma).summaryText).toBe('War schön');
   });
 
-  it('lässt einen vergangenen Abend nachtragen', async () => {
-    const { service, prisma } = setup(meeting({ date: LETZTER_DIENSTAG }));
+  it('fragt für beide Felder nach dem Recht', async () => {
+    const { service, editRights } = setup();
 
     await service.update('hk1', 'm1', { actionstepText: 'Beten' }, 'p1', EGAL);
 
-    expect(written(prisma).actionstepText).toBe('Beten');
+    expect(editRights.assertMayWriteSummary).toHaveBeenCalledWith('m1', 'p1');
   });
 
-  // Sonst stünde jeder Ortswechsel an einem künftigen Termin unter demselben
-  // Verbot — die Regel gilt den beiden Feldern, nicht dem Termin.
-  it('lässt alles andere am künftigen Termin unberührt zu', async () => {
-    const { service, prisma } = setup();
+  it('reicht ein Nein des Rechte-Dienstes durch', async () => {
+    const { service, editRights } = setup();
+    editRights.assertMayWriteSummary.mockRejectedValue(
+      new ForbiddenException('nope'),
+    );
+
+    await expect(
+      service.update('hk1', 'm1', { summaryText: 'War schön' }, 'p1', EGAL),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  // Sonst stünde jeder Ortswechsel unter derselben Prüfung — die Regel gilt
+  // den beiden Feldern, nicht dem Termin.
+  it('lässt alles andere ungeprüft durch', async () => {
+    const { service, prisma, editRights } = setup();
 
     await service.update(
       'hk1',
@@ -456,17 +469,7 @@ describe('MeetingService — Nachbereitung gehört an den Abend', () => {
       EGAL,
     );
 
+    expect(editRights.assertMayWriteSummary).not.toHaveBeenCalled();
     expect(written(prisma).infoText).toBe('Bringt Kuchen');
-  });
-
-  it('verweigert den Haken am Actionstep eines künftigen Abends', async () => {
-    const { service } = setup();
-
-    // Auf die Meldung geprüft, nicht nur auf den Typ: die Prüfung auf die
-    // Hauskreis-Zugehörigkeit wirft dieselbe Art Fehler, und dieser Test soll
-    // nicht aus dem falschen Grund grün sein.
-    await expect(
-      service.setActionstepDone('hk1', 'm1', 'p1', true),
-    ).rejects.toThrow(/noch vor uns/);
   });
 });

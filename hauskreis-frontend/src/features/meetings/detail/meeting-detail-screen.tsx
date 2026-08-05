@@ -78,6 +78,7 @@ import type { AssignmentRole, Meeting, PersonRef } from '@/lib/api/types';
 import { AttendanceCard } from './attendance-card';
 import { CancelledNotice, CancelMeetingBlock } from './cancellation-card';
 import { SongsCard } from './songs-card';
+import { TopicCard } from './topic-card';
 import { useRoleAssignment } from './use-role-assignment';
 
 const SLOT_LABEL = Object.fromEntries(
@@ -218,6 +219,30 @@ function Loaded({
   };
 
   const treffpunkte = (locations.data ?? []).filter(isSelectableWithoutHost);
+
+  const me = useMe();
+
+  /**
+   * Ob die eigene Person am Thema dieses Abends schreiben darf.
+   *
+   * Dieselbe Regel wie im Backend (`edit-rights.ts`), hier nur, um den Stift
+   * gar nicht erst anzubieten. Durchgesetzt wird sie dort — eine
+   * Bedienoberfläche ist keine Sicherheitsgrenze.
+   */
+  const mayDo = (responsibles: readonly string[]) =>
+    me.isAdmin ||
+    responsibles.length === 0 ||
+    (me.me ? responsibles.includes(me.me.id) : false);
+
+  const mayEditTopic = mayDo(roles.topicPeople.map((person) => person.id));
+
+  /**
+   * Abhaken darf vor dem Abend, wer die Musik macht — danach jede:r. Nur an
+   * einem **abgesagten** Abend gar niemand: dort gibt es nichts zu protokollieren.
+   */
+  const mayPickSongs =
+    !cancelled &&
+    (past || mayDo((songLeaders.data ?? []).map((person) => person.id)));
 
   /**
    * Einen Baustein dazu- oder wegnehmen.
@@ -421,7 +446,11 @@ function Loaded({
         )}
 
         {meeting.hasSongSlot && (
-          <SongsCard meetingId={meetingId} readOnly={locked} />
+          <SongsCard
+            meetingId={meetingId}
+            readOnly={locked}
+            mayPick={mayPickSongs}
+          />
         )}
 
         <AttendanceCard meeting={meeting} readOnly={locked} />
@@ -430,38 +459,24 @@ function Loaded({
             Felder erscheinen erst am Termintag, der Server lehnt es davor
             ohnehin ab. Und ohne Thema gar nicht: was an einem Abend besprochen
             wurde, ist die Zusammenfassung eines Themas. */}
-        {!ahead && meeting.hasTopicSlot && (
-          <>
-            <section>
-              <SectionTitle>Zusammenfassung</SectionTitle>
-              <Card>
-                <InlineEdit
-                  label="Zusammenfassung"
-                  multiline
-                  value={meeting.summaryText}
-                  emptyLabel="Noch keine Zusammenfassung — hilft allen, die nicht da waren."
-                  saving={update.isPending}
-                  onSave={(next) => patch({ summaryText: next })}
-                />
-              </Card>
-            </section>
-
-            <section>
-              <SectionTitle>Actionstep</SectionTitle>
-              <Card className="space-y-4">
-                <InlineEdit
-                  label="Actionstep"
-                  value={meeting.actionstepText}
-                  emptyLabel="Noch kein Actionstep für die Woche"
-                  saving={update.isPending}
-                  onSave={(next) => patch({ actionstepText: next })}
-                />
-                {meeting.actionstepText && (
-                  <ActionstepDoneBlock meeting={meeting} />
-                )}
-              </Card>
-            </section>
-          </>
+        {/* Vor dem Abend sieht die Sektion nur, wer hier schreiben darf: der
+            Actionstep der nächsten Woche eine Woche zu früh für alle wäre genau
+            das Gegenteil von dem, wozu ein Actionstep da ist. Ab dem Termintag
+            sehen ihn alle — da ist er ja gesagt worden. */}
+        {meeting.hasTopicSlot && (!ahead || mayEditTopic) && (
+          <TopicCard
+            meeting={meeting}
+            editable={mayEditTopic}
+            saving={update.isPending || roles.saving}
+            onTitle={roles.renameTopic}
+            onSummary={(next) => patch({ summaryText: next })}
+            onActionstep={(next) => patch({ actionstepText: next })}
+          >
+            {/* Abhaken darf jede:r für sich, auch wer den Text nicht ändern
+                darf — es ist der eigene Vorsatz. Erst ab dem Abend: einen
+                Vorsatz für nächste Woche hakt man heute nicht ab. */}
+            {!ahead && <ActionstepDoneBlock meeting={meeting} />}
+          </TopicCard>
         )}
 
         {/* Ganz unten, weil man das einmal beim Anlegen entscheidet und danach

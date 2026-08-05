@@ -6,6 +6,7 @@ import { TopicReminderService } from './topic-reminder.service';
 import { NotificationModule } from '../notification/notification.module';
 import { PersonModule } from '../person/person.module';
 import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module';
+import { EditRightsModule } from '../meeting/edit-rights.module';
 
 /**
  * Owns topics and the carry-over that keeps a running one on the next meeting.
@@ -19,7 +20,14 @@ import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module'
 @Module({
   // PersonModule: wer einträgt, steht im Token — und bekommt keine Nachricht
   // darüber, dass er selbst eingetragen hat.
-  imports: [NotificationModule, PersonModule, RoleSuggestionModule],
+  // EditRightsModule: den Namen eines Themas ändert, wer es vorbereitet. Ein
+  // eigenes Modul ohne Importe, damit daraus keine Kante zu MeetingModule wird.
+  imports: [
+    NotificationModule,
+    PersonModule,
+    RoleSuggestionModule,
+    EditRightsModule,
+  ],
   controllers: [TopicController],
   providers: [TopicService, TopicCarryOverService, TopicReminderService],
   exports: [TopicService, TopicReminderService],

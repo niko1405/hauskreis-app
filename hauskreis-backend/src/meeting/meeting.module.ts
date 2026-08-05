@@ -12,6 +12,7 @@ import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module'
 import { NotificationModule } from '../notification/notification.module';
 import { PersonModule } from '../person/person.module';
 import { AttendanceModule } from '../attendance/attendance.module';
+import { EditRightsModule } from './edit-rights.module';
 
 @Module({
   // Die ersten beiden Importe sind der Sinn des Modul-Schnitts: das Ranking
@@ -20,11 +21,14 @@ import { AttendanceModule } from '../attendance/attendance.module';
   // Actionstep-Haken dazu — wer abhakt, steht im Token und nicht im Body.
   // AttendanceModule: ein neuer Abend braucht die Zusagen derer, die
   // grundsätzlich dabei sind.
+  // EditRightsModule: Zusammenfassung und Actionstep trägt ein, wer das Thema
+  // vorbereitet — dieselbe Regel wie bei Themenname und Liedauswahl.
   imports: [
     RoleSuggestionModule,
     NotificationModule,
     PersonModule,
     AttendanceModule,
+    EditRightsModule,
   ],
   controllers: [MeetingController],
   providers: [

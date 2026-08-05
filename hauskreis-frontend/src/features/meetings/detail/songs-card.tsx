@@ -26,14 +26,24 @@ import { formatRelativeDay } from '@/lib/date';
 export function SongsCard({
   meetingId,
   readOnly = false,
+  mayPick = true,
 }: {
   meetingId: string;
   /**
-   * Ein vergangener Abend. Was gesungen wurde, wurde gesungen — eine
-   * nachträgliche Änderung verfälscht die Zählung in der Song-Datenbank
-   * (`timesPlayed`, `lastPlayedAt`) und damit das Archiv.
+   * Ein vergangener oder abgesagter Abend: Vorschlagen und Löschen sind vorbei.
+   * **Abhaken nicht** — das hat seine eigene Regel, siehe `mayPick`.
    */
   readOnly?: boolean;
+  /**
+   * Ob die eigene Person die Auswahl treffen darf.
+   *
+   * Vor dem Abend nur die Musik-Zuständigen (oder alle, solange niemand
+   * eingeteilt ist): das Abhaken ist dann eine Entscheidung, „das singen wir".
+   * Danach darf jede:r — dann ist es ein Protokoll, „das haben wir gesungen",
+   * und daran erinnert sich jede:r gleich gut. Genau deshalb hängt es **nicht**
+   * an `readOnly`: an einem vergangenen Abend ist das Abhaken erwünscht.
+   */
+  mayPick?: boolean;
 }) {
   const songs = useMeetingSongs(meetingId);
   const remove = useRemoveMeetingSong(meetingId);
@@ -74,7 +84,7 @@ export function SongsCard({
             >
               <button
                 type="button"
-                disabled={readOnly}
+                disabled={!mayPick}
                 aria-pressed={entry.isSelected}
                 aria-label={
                   entry.isSelected
@@ -92,7 +102,7 @@ export function SongsCard({
                   entry.isSelected
                     ? 'border-music bg-music text-white'
                     : 'border-line-strong text-transparent hover:border-music',
-                  readOnly && 'cursor-default hover:border-line-strong',
+                  !mayPick && 'cursor-default hover:border-line-strong',
                 )}
               >
                 <Check size={14} strokeWidth={3} />

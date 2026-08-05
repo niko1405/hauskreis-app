@@ -426,6 +426,56 @@ Dazu drei kleinere Umbauten:
   einen einzelnen Abend abzusagen: „Bist du dabei?" auf dem Startbildschirm gilt
   nur fürs nächste Treffen, und Abwesenheiten im Profil decken Zeiträume ab.
 
+### Das Thema an einer Stelle
+
+Titel, Zusammenfassung und Actionstep lagen über die ganze Seite verteilt: der
+Titel oben in der Überschrift, die Zusammenfassung ganz unten, der Actionstep
+darunter, das Thema selbst als Rollen-Zeile dazwischen. Vier Orte für eine
+Sache, und keiner sagte, dass sie zusammengehören. `topic-card.tsx` fasst sie
+zusammen.
+
+**Der Titel hat jetzt einen Vorschlag.** Ohne eigenen Titel steht dort „Thema
+von Niko" — abgeleitet über `topicTitle()` und **nicht** gespeichert. Ein beim
+Anlegen hineingeschriebener Name stünde beim nächsten Rollentausch falsch da,
+und niemand korrigiert einen Titel, den er nie getippt hat. In der
+Kartenüberschrift (`meetingHeadline`) taucht der Vorschlag bewusst _nicht_ auf:
+„Thema von Niko" sagt dort weniger als „Hauskreis-Abend".
+
+**Sichtbarkeit und Bearbeitbarkeit sind zwei Fragen:**
+
+|              | vor dem Abend       | ab dem Termintag       |
+| ------------ | ------------------- | ---------------------- |
+| Zuständige   | sehen und schreiben | sehen und schreiben    |
+| alle anderen | sehen **nichts**    | sehen, schreiben nicht |
+
+Das Verstecken davor ist kein Datenschutz, sondern der Sinn der Sache: ein
+Actionstep, den alle eine Woche vorher lesen, ist keiner mehr. Umgekehrt sollen
+die Zuständigen vorbereiten dürfen — vorher verbot der Server das Schreiben bis
+zum Termintag, und zwar genau der Person, die es am ehesten brauchte.
+
+`InlineEdit` hat dafür ein optionales `onSave` bekommen: fehlt es, gibt es
+keinen Stift. Ihn zu zeigen und dann mit `403` zu antworten wäre eine Einladung
+ins Leere.
+
+**Abhaken bleibt für alle**, auch für die, die den Text nicht ändern dürfen —
+es ist der eigene Vorsatz.
+
+### Lieder abhaken: vorher Entscheidung, hinterher Protokoll
+
+`readOnly` und `mayPick` sind an der `SongsCard` bewusst getrennt. `readOnly`
+gilt dem Vorschlagen und Löschen an einem vergangenen oder abgesagten Abend;
+`mayPick` dem Haken:
+
+- **vor dem Abend** nur die Musik-Zuständigen (oder alle, solange niemand
+  eingeteilt ist) — das Abhaken ist dann eine Entscheidung;
+- **danach** jede:r — dann ist es ein Protokoll, und daran erinnert sich jede:r
+  gleich gut;
+- **an einem abgesagten Abend** niemand, da gibt es nichts zu protokollieren.
+
+Vergangene Abende sind fürs Abhaken damit wieder bedienbar, obwohl sie sonst
+gesperrt bleiben. Das ist Absicht: wer am nächsten Tag nachträgt, was
+tatsächlich dran war, tut der Liederdatenbank einen Gefallen.
+
 ### Absagen: die eigene und die des ganzen Abends
 
 Das waren bis eben zwei Dinge an einer Stelle. Unter „Wer kommt" sagte man für

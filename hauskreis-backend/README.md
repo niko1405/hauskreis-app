@@ -990,6 +990,53 @@ keines davon gesetzt sein. Die Migration
 Bestand her: ein Baustein ist an, wenn die Terminart ihn vorsieht **oder** an
 ihm etwas hängt.
 
+### Wer eintragen darf
+
+Bis hierher durfte jedes Mitglied alles: Zusammenfassung, Actionstep, welche
+Lieder gesungen wurden. Nicht falsch gedacht — die Gruppe ist neun Leute,
+niemand sabotiert da etwas —, aber es half auch niemandem. Ein Feld, das alle
+bearbeiten können, bearbeitet am Ende keiner, und wer für den Abend zuständig
+ist, findet seine eigene Vorbereitung unter fremden Händen.
+
+Die Regel steht als drei Zeilen in [`edit-rights.ts`](src/meeting/edit-rights.ts):
+
+```
+darf = ist Admin ∨ ist der Rolle an diesem Abend zugeteilt ∨ es ist niemand zugeteilt
+```
+
+**Der dritte Fall ist der wichtige.** Ohne ihn wäre ein Abend, für den noch
+niemand eingeteilt ist, gesperrt — und die Zuteilung damit die Voraussetzung
+fürs Nachbereiten. Im echten Leben läuft es umgekehrt: erst passiert der Abend,
+dann schreibt jemand auf, was war.
+
+| Was                         | Zuständigkeit                                | Ausnahme                   |
+| --------------------------- | -------------------------------------------- | -------------------------- |
+| Themenname                  | die Zuständigen des **Themas**               | –                          |
+| Zusammenfassung, Actionstep | die Zuständigen des Themas **dieses Abends** | –                          |
+| Lieder abhaken              | die Musik-Zuständigen des Abends             | nach dem Abend darf jede:r |
+
+Die Ausnahme bei den Liedern kommt von der Bedeutung: vorher ist das Abhaken
+eine **Entscheidung** („das singen wir"), hinterher ein **Protokoll** („das
+haben wir gesungen"). An das zweite erinnert sich jede:r gleich gut.
+
+Nicht geprüft wird die **Zuteilung** selbst — wer vorbereitet, wer hostet, wer
+Musik macht, bleibt eine Frage an die Gruppe und läuft weiter über das
+Vorschlagssystem. Ebenso `status` am Thema: „abgeschlossen" stößt den Vorschlag
+fürs nächste Thema an und ist damit Planung.
+
+`EditRightsModule` importiert **nichts**. Es wird von `MeetingModule`,
+`TopicModule` und `SongModule` gebraucht; läge es in einem davon, hätten die
+anderen beiden eine Kante dorthin — und der Modulgraph hat schon einmal genau
+so einen Zyklus bekommen, der weder in `pnpm check` noch in den Tests auffällt,
+sondern erst beim Hochfahren. Möglich ist das, weil `PrismaModule` `@Global` ist.
+
+> **Was dabei weggefallen ist:** die Datumsprüfung, die Zusammenfassung und
+> Actionstep vor dem Termintag ganz verbot. Sie stimmte für alle außer für die
+> Zuständigen — und die haben den Actionstep oft vorher im Kopf und wollen ihn
+> hinlegen, wo er am Abend gebraucht wird. Die Zuständigkeit trifft dasselbe
+> Ziel besser: am falschen Termin in der Liste ist man in aller Regel nicht
+> zuständig.
+
 ### Ein Termin, mehrere Tage
 
 `endDate` — nur bei `CUSTOM`, für eine Freizeit von Freitag bis Sonntag. Das ist

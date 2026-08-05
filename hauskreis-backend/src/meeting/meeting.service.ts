@@ -19,12 +19,13 @@ import { MeetingCancellationService } from './meeting-cancellation.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { RoleReleaseService } from './role-release.service';
 import { CustomMeetingNotificationService } from './custom-meeting-notification.service';
+import { EditRightsService } from './edit-rights.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
 import type { IfMatchCondition } from '../common/http/etag';
-import { toUtcDate } from './meeting-schedule';
+import { isPast, toUtcDate } from './meeting-schedule';
 import {
   assertSlotsAllow,
   clearedByTurningOff,
@@ -82,6 +83,7 @@ export class MeetingService {
     private readonly roleRelease: RoleReleaseService,
     private readonly autoAttendance: AutoAttendanceService,
     private readonly customMeetingNotifications: CustomMeetingNotificationService,
+    private readonly editRights: EditRightsService,
   ) {}
 
   async findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
@@ -207,7 +209,7 @@ export class MeetingService {
     condition?: IfMatchCondition,
   ) {
     const before = await this.findOne(hauskreisId, id);
-    this.assertNotAheadOfTheEvening(before.date, dto);
+    await this.assertMayWriteSummary(id, dto, actorPersonId);
     await this.assertReferencesBelongToHauskreis(hauskreisId, dto);
 
     // Erst die Bausteine, dann alles andere: was ein Termin überhaupt haben
@@ -376,29 +378,35 @@ export class MeetingService {
   }
 
   /**
-   * Zusammenfassung und Actionstep sind **Nachbereitung**.
+   * Zusammenfassung und Actionstep trägt ein, wer das Thema vorbereitet.
    *
-   * Sie beschreiben, was an einem Abend passiert ist — vorher gibt es dazu
-   * nichts zu sagen. Wer sie an einem Termin in sechs Wochen einträgt, hat sich
-   * in der Liste vergriffen; die Oberfläche zeigt die Felder deshalb erst ab
-   * dem Termintag, und hier steht die Regel, die das trägt.
+   * Hier stand einmal eine **Datumsprüfung**: vor dem Abend ließ sich beides
+   * gar nicht schreiben, weil es dazu ja noch nichts zu sagen gab. Das stimmt
+   * für alle anderen — aber nicht für die Zuständigen. Wer das Thema
+   * vorbereitet, hat den Actionstep oft vorher im Kopf und will ihn hinlegen,
+   * wo er am Abend gebraucht wird. Ihn erst ab 0 Uhr des Termintags tippen zu
+   * dürfen, war eine Sperre gegen genau die Person, die sie am wenigsten
+   * brauchte.
    *
-   * Der Tag selbst zählt dazu: der Hauskreis ist abends, eingetragen wird
-   * danach — und das ist derselbe Kalendertag.
+   * Ersetzt durch die Zuständigkeit (`EditRightsService`), die dasselbe Ziel
+   * besser trifft: der falsche Termin in der Liste ist damit weiterhin
+   * geschützt, denn dort ist man in aller Regel nicht zuständig.
+   *
+   * Ohne `actorPersonId` — etwa aus einem Skript — bleibt es ungeprüft; die
+   * Route liefert sie immer.
    */
-  private assertNotAheadOfTheEvening(
-    meetingDate: Date,
+  private async assertMayWriteSummary(
+    meetingId: string,
     dto: Pick<UpdateMeetingDto, 'actionstepText' | 'summaryText'>,
-  ): void {
+    actorPersonId?: string,
+  ): Promise<void> {
     if (dto.actionstepText === undefined && dto.summaryText === undefined) {
       return;
     }
 
-    if (toUtcDate(meetingDate) > toUtcDate(new Date())) {
-      throw new BadRequestException(
-        'Zusammenfassung und Actionstep lassen sich erst am Abend selbst eintragen',
-      );
-    }
+    if (!actorPersonId) return;
+
+    await this.editRights.assertMayWriteSummary(meetingId, actorPersonId);
   }
 
   /**
@@ -781,17 +789,6 @@ export class MeetingService {
       );
     }
   }
-}
-
-/**
- * Liegt der Abend hinter uns?
- *
- * Beide Seiten auf Mitternacht UTC geschnitten, weil `meeting.date` ein
- * Kalendertag ist: der heutige Abend zählt bis zum Ende des Tages als kommend,
- * sonst wäre ein Termin ab 00:01 „vergangen" und jede Absage stumm.
- */
-function isPast(date: Date): boolean {
-  return toUtcDate(date) < toUtcDate(new Date());
 }
 
 /**

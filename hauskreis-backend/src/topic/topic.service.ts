@@ -11,6 +11,7 @@ import {
 } from '../../generated/prisma/enums';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import { AvailabilityService } from '../role-suggestion/availability.service';
+import { EditRightsService } from '../meeting/edit-rights.service';
 import { toUtcDate } from '../meeting/meeting-schedule';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
@@ -37,6 +38,7 @@ export class TopicService {
     private readonly prisma: PrismaService,
     private readonly roleAssignments: RoleAssignmentNotifier,
     private readonly availability: AvailabilityService,
+    private readonly editRights: EditRightsService,
   ) {}
 
   async findAll(hauskreisId: string, query: ListTopicsQueryDto) {
@@ -119,6 +121,14 @@ export class TopicService {
     condition?: IfMatchCondition,
   ) {
     await this.findOne(hauskreisId, id);
+
+    // Nur der **Name**. Wer ein Thema vorbereitet, benennt es — aber wer
+    // vorbereitet, bleibt eine Frage an die Gruppe und läuft weiter über die
+    // Zuteilung mit ihren Vorschlägen. Und `status` ebenso: „abgeschlossen"
+    // stößt den Vorschlag fürs nächste Thema an, das ist Planung.
+    if (dto.title !== undefined && actorPersonId) {
+      await this.editRights.assertMayEditTopic(id, actorPersonId);
+    }
 
     if (dto.responsiblePersonIds) {
       await this.assertPeopleBelongToHauskreis(

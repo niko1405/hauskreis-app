@@ -53,3 +53,17 @@ export function isLastTuesdayOfMonth(date: Date): boolean {
   const base = toUtcDate(date);
   return addDays(base, 7).getUTCMonth() !== base.getUTCMonth();
 }
+
+/**
+ * Liegt der Abend hinter uns?
+ *
+ * Beide Seiten auf Mitternacht UTC geschnitten, weil `meeting.date` ein
+ * Kalendertag ist: der heutige Abend zählt bis zum Ende des Tages als kommend,
+ * sonst wäre ein Termin ab 00:01 „vergangen" und jede Absage stumm.
+ *
+ * Stand als Modulfunktion in `meeting.service.ts`, bis die Rechteprüfung sie
+ * ebenfalls brauchte — sie ist reine Datumslogik und gehört zum Rest davon.
+ */
+export function isPast(date: Date): boolean {
+  return toUtcDate(date) < toUtcDate(new Date());
+}
