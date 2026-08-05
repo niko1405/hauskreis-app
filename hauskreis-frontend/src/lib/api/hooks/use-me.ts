@@ -85,8 +85,10 @@ export function useClearHome() {
 /**
  * Die eigene E-Mail ändern.
  *
- * Danach steht in Keycloak eine unbestätigte Adresse; die Anmeldung läuft
- * weiter über die `keycloakUserId`, niemand sperrt sich damit aus.
+ * Danach steht in Keycloak eine unbestätigte Adresse — und damit steht man
+ * **vor** der App, nicht mehr darin: `AuthGuard` weist jedes Token mit
+ * unbestätigter Adresse ab. Der Weg zurück führt über die Mail; findet man sie
+ * nicht, hilft `useResendVerification`.
  */
 export function useChangeEmail() {
   const { keys } = useHk();
@@ -94,6 +96,17 @@ export function useChangeEmail() {
   return useApiMutation((email: string) => coreApi.changeEmail(email), {
     invalidateKeys: [qk.me, keys.people.all],
   });
+}
+
+/**
+ * Die Bestätigungsmail noch einmal anfordern.
+ *
+ * Ohne `invalidateKeys`: Der Aufruf ändert nichts, was im Cache liegt, und
+ * ausgerechnet hier wäre ein Neuladen sinnlos — wer diesen Knopf sieht,
+ * bekommt auf alles andere gerade `403`.
+ */
+export function useResendVerification() {
+  return useApiMutation(() => coreApi.resendVerification());
 }
 
 // ── Der Hauskreis, in dem man steckt ────────────────────────────────────────

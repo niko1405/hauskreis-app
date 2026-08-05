@@ -77,11 +77,17 @@ export function pageSchema<T extends z.ZodType>(item: T) {
  *
  * `errors` steht nur bei `400` aus einer fehlgeschlagenen Validierung und nennt
  * dann Feld für Feld, was nicht gepasst hat.
+ *
+ * `code` steht nur dort, wo die App auf **genau diesen** Fall reagieren muss und
+ * der Statuscode dafür nicht reicht. Bisher gibt es einen einzigen:
+ * `EMAIL_NOT_VERIFIED`. Die Meldung daneben ist für Menschen und darf sich
+ * jederzeit ändern; auf sie zu vergleichen wäre eine Kopplung an einen Satz.
  */
 export const errorSchema = z.object({
   statusCode: z.number().int(),
   message: z.string(),
   path: z.string(),
+  code: z.string().optional(),
   errors: z
     .array(z.object({ field: z.string(), message: z.string() }))
     .optional(),

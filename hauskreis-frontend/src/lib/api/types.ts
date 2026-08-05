@@ -64,6 +64,8 @@ export type RemovalResult = S['RemovalResultDto'];
 export type PurgeResult = S['PurgeResultDto'];
 export type SetHomeInput = S['SetHomeDto'];
 export type ChangedEmail = S['ChangedEmailResponseDto'];
+/** Ob Keycloak die Bestätigungsmail losgeworden ist — mehr sagt die Route nicht. */
+export type VerificationSent = S['VerificationSentResponseDto'];
 
 // ── Termine ─────────────────────────────────────────────────────────────────
 

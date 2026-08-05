@@ -43,6 +43,23 @@ export class ForbiddenError extends ApiError {
 }
 
 /**
+ * Der eine Fall, für den der Statuscode nicht reicht: das Token ist echt, die
+ * E-Mail-Adresse dahinter aber unbestätigt. Der Server schickt dafür
+ * `code: 'EMAIL_NOT_VERIFIED'` (siehe `errorSchema` im Backend) — auf die
+ * Meldung zu vergleichen wäre eine Kopplung an einen deutschen Satz.
+ *
+ * Wichtig ist, dass es ein **403** ist und kein 401: ein 401 heißt „hol dir ein
+ * neues Token", und genau das half hier nie. Keycloaks Erneuerung führt keine
+ * Required Actions aus, das neue Token trug dieselbe unbestätigte Adresse, und
+ * aus Abweisung und Erneuerung wurde eine Schleife.
+ */
+export function isEmailUnverified(e: unknown): boolean {
+  return (
+    e instanceof ForbiddenError && e.payload?.code === 'EMAIL_NOT_VERIFIED'
+  );
+}
+
+/**
  * 404 — nicht vorhanden **oder** zu einem anderen Hauskreis gehörend. Der
  * Server unterscheidet das absichtlich nicht.
  */

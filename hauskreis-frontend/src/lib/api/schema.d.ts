@@ -804,6 +804,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/me/resend-verification': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['MeController_resendVerification'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/push/public-key': {
     parameters: {
       query?: never;
@@ -896,6 +912,7 @@ export interface components {
       statusCode: number;
       message: string;
       path: string;
+      code?: string;
       errors?: {
         field: string;
         message: string;
@@ -1146,6 +1163,9 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
       version: number;
+      verificationEmailSent: boolean;
+    };
+    VerificationSentResponseDto: {
       verificationEmailSent: boolean;
     };
     LocationListResponseDto: {
@@ -6598,6 +6618,62 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['MeResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeController_resendVerification: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ob Keycloak die Bestätigungsmail losgeworden ist */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['VerificationSentResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */

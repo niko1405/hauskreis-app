@@ -1,7 +1,22 @@
 #!/usr/bin/env bash
 # Idempotent local Keycloak setup: realm, roles, both clients, test users.
-# Usage: ./scripts/setup-keycloak.sh
+# Usage: ./scripts/setup-keycloak.sh [--reset-users]
+#
+# Das Skript ist dazu da, wiederholt zu laufen — jede neue Realm-Einstellung
+# wird erst durch einen erneuten Lauf scharf. Damit das gefahrlos bleibt, fasst
+# es **bestehende** Konten nicht mehr an: Nutzername, Passwort und Profil
+# gehören ab dem Anlegen den Menschen davor, und ein Setup-Lauf, der sie
+# zurücksetzt, macht jede Änderung an einem Testkonto zur Falle. Wer genau das
+# will — weil ein Konto verkonfiguriert ist —, ruft `--reset-users` auf.
 set -euo pipefail
+
+RESET_USERS=0
+for arg in "$@"; do
+  case "${arg}" in
+    --reset-users) RESET_USERS=1 ;;
+    *) echo "Unbekannte Option: ${arg}" >&2; exit 2 ;;
+  esac
+done
 
 KC_URL="${KEYCLOAK_URL:-http://localhost:8080}"
 REALM="${KEYCLOAK_REALM:-hauskreis}"
@@ -252,22 +267,23 @@ create_user() {
       "${KC_URL}/admin/realms/${REALM}/users?username=${username}&exact=true" \
       | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8"))[0].id')
     echo "    created"
+  elif [ "${RESET_USERS}" = "1" ]; then
+    # Keycloak's default user profile requires firstName/lastName; without them
+    # the token endpoint rejects logins with "Account is not fully set up".
+    curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}/users/${uid}" "${auth[@]}" -d "{
+        \"email\": \"${email}\",
+        \"firstName\": \"${username}\",
+        \"lastName\": \"Test\",
+        \"emailVerified\": true,
+        \"enabled\": true,
+        \"requiredActions\": []
+      }" >/dev/null
+    curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}/users/${uid}/reset-password" "${auth[@]}" \
+      -d "{\"type\":\"password\",\"value\":\"${password}\",\"temporary\":false}" >/dev/null
+    echo "    already exists — profile and password reset (--reset-users)"
   else
-    echo "    already exists"
+    echo "    already exists — left untouched"
   fi
-
-  # Keycloak's default user profile requires firstName/lastName; without them
-  # the token endpoint rejects logins with "Account is not fully set up".
-  curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}/users/${uid}" "${auth[@]}" -d "{
-      \"email\": \"${email}\",
-      \"firstName\": \"${username}\",
-      \"lastName\": \"Test\",
-      \"emailVerified\": true,
-      \"enabled\": true,
-      \"requiredActions\": []
-    }" >/dev/null
-  curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}/users/${uid}/reset-password" "${auth[@]}" \
-    -d "{\"type\":\"password\",\"value\":\"${password}\",\"temporary\":false}" >/dev/null
 
   local role_json
   role_json=$(curl -sf "${auth[@]}" "${KC_URL}/admin/realms/${REALM}/roles/${role}" \
@@ -323,4 +339,9 @@ echo ""
 echo "Keycloak setup complete."
 echo "  Realm:   ${REALM}"
 echo "  Client:  ${CLIENT_ID} (secret: ${CLIENT_SECRET})"
-echo "  Users:   testadmin / testmember  (password: test1234)"
+if [ "${RESET_USERS}" = "1" ]; then
+  echo "  Users:   testadmin / testmember  (password: test1234)"
+else
+  echo "  Users:   testadmin / testmember  (Passwörter unverändert;"
+  echo "           zurücksetzen mit --reset-users)"
+fi

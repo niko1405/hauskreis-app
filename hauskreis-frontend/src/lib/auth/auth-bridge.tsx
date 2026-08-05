@@ -10,7 +10,16 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useAuth } from 'react-oidc-context';
-import { setAccessTokenGetter, setUnauthorizedHandler } from '../api/client';
+import {
+  setAccessTokenGetter,
+  setAuthorizedHandler,
+  setUnauthorizedHandler,
+} from '../api/client';
+
+/** Wie oft eine stille Erneuerung es versuchen darf, bevor wir es lassen. */
+const MAX_RECOVERIES = 3;
+/** Und wie viel Zeit dazwischen liegen muss. */
+const RECOVERY_COOLDOWN_MS = 10_000;
 
 export function AuthBridge({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
@@ -32,11 +41,25 @@ export function AuthBridge({ children }: { children: React.ReactNode }) {
   // Ein 401 kann mehrere parallele Aufrufe gleichzeitig treffen. Ohne diese
   // Sperre liefen daraus mehrere Anmeldeversuche nebeneinander.
   const recovering = useRef(false);
+  // Und eine zweite Bremse für den Fall, dass die Erneuerung zwar gelingt, das
+  // Ergebnis aber nichts ändert. Genau so entstand einmal eine Schleife ohne
+  // Ende: der Server wies das Token wegen einer unbestätigten Adresse ab, die
+  // Erneuerung lieferte brav ein neues, und das trug denselben Mangel. Ein
+  // neues Token kann nur helfen, wenn das alte zu alt war — hilft es dreimal
+  // hintereinander nicht, liegt es an etwas anderem, und dann gehört der Fehler
+  // sichtbar gemacht statt in Anfragen übersetzt.
+  const attempts = useRef(0);
+  const lastAttemptAt = useRef(0);
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
       if (recovering.current) return;
+      if (attempts.current >= MAX_RECOVERIES) return;
+      if (Date.now() - lastAttemptAt.current < RECOVERY_COOLDOWN_MS) return;
+
       recovering.current = true;
+      attempts.current += 1;
+      lastAttemptAt.current = Date.now();
 
       void authRef.current
         .signinSilent()
@@ -60,10 +83,16 @@ export function AuthBridge({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const previous = lastToken.current;
     lastToken.current = token;
-    if (token && previous && token !== previous) {
-      void queryClient.invalidateQueries();
-    }
+    if (!token || !previous || token === previous) return;
+    // Nur solange wir noch daran glauben. Ohne diese Bedingung wäre die Bremse
+    // oben wirkungslos: `automaticSilentRenew` erneuert alle fünf Minuten von
+    // selbst, und jede Erneuerung stieße wieder den ganzen Cache an.
+    if (attempts.current >= MAX_RECOVERIES) return;
+    void queryClient.invalidateQueries();
   }, [token, queryClient]);
+
+  // Sobald wieder etwas durchkommt, ist der Zähler seine Sache los.
+  useEffect(() => setAuthorizedHandler(() => (attempts.current = 0)), []);
 
   return <>{children}</>;
 }

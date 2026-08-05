@@ -1,0 +1,37 @@
+meta {
+  name: POST /me/resend-verification
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/me/resend-verification
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet, ob die Mail rausging", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.body.verificationEmailSent).to.be.a("boolean");
+  });
+}
+
+docs {
+  Die einzige Route, die ein Token mit **unbestätigter** Adresse durchlässt
+  (`@AllowUnverifiedEmail`). Ohne sie wäre der Zustand eine Sackgasse: der
+  Guard weist alles ab, bis die Adresse bestätigt ist, und ohne Mail gibt es
+  nichts zu bestätigen.
+
+  Zum Nachstellen des eigentlichen Falls: in Keycloak am Testkonto
+  `emailVerified` auf false setzen, ein frisches Token holen und irgendeine
+  andere Route aufrufen. Die Antwort ist dann **403** mit
+  `code: "EMAIL_NOT_VERIFIED"` — bewusst kein 401. Ein 401 hieße für jeden
+  Client „hol ein neues Token", und genau das führte in eine Endlosschleife:
+  Keycloaks Refresh führt keine Required Actions aus, das neue Token trug
+  dieselbe unbestätigte Adresse.
+
+  `verificationEmailSent: false` heißt, dass Keycloak die Mail nicht losgeworden
+  ist — dann klemmt SMTP. In der Entwicklung liegt die Mail danach in Mailpit
+  (http://localhost:8025), Betreff „Bestätige deine Adresse für den Hauskreis".
+}

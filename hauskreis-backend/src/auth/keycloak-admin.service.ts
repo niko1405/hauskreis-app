@@ -193,15 +193,38 @@ export class KeycloakAdminService {
     }
   }
 
-  /** Wie die Einladungsmail, aber ohne Passwort-Schritt. */
+  /**
+   * Schickt die Bestätigungsmail noch einmal — für jemanden, der schon da ist.
+   *
+   * Der einzige Weg heraus, wenn die erste Mail nicht ankam: ohne Bestätigung
+   * lehnt der Guard alles ab, und ohne Mail gibt es nichts zu bestätigen.
+   */
+  async resendVerification(keycloakUserId: string): Promise<boolean> {
+    return this.sendVerificationEmail(keycloakUserId);
+  }
+
+  /**
+   * Die Bestätigungsmail — über den eigenen Weg, nicht über `execute-actions`.
+   *
+   * Vorher stand hier `execute-actions-email` mit `['VERIFY_EMAIL']`. Das
+   * funktionierte, verschickte aber den falschen Text: Keycloak wählt die
+   * Vorlage nach dem **Endpunkt**, nicht nach der Liste der Aktionen, und für
+   * `execute-actions-email` ist das immer `executeActions` — bei uns die
+   * Einladung („Du bist im Hauskreis dabei"). Wer seine Adresse änderte, wurde
+   * also in einen Hauskreis eingeladen, in dem er längst war.
+   *
+   * `send-verify-email` rendert `emailVerification`, und dieser Text steht seit
+   * jeher richtig im Theme (`email/messages/messages_de.properties`). Die
+   * Query-Parameter sind dieselben, deshalb bleibt `actionsEmailQuery` geteilt.
+   */
   private async sendVerificationEmail(
     keycloakUserId: string,
   ): Promise<boolean> {
     try {
-      await this.request(this.actionsEmailPath(keycloakUserId), {
-        method: 'PUT',
-        body: JSON.stringify(['VERIFY_EMAIL']),
-      });
+      await this.request(
+        `/users/${keycloakUserId}/send-verify-email?${this.actionsEmailQuery()}`,
+        { method: 'PUT' },
+      );
       return true;
     } catch (error) {
       this.logger.warn(
@@ -226,6 +249,11 @@ export class KeycloakAdminService {
    * überdauern muss.
    */
   private actionsEmailPath(keycloakUserId: string): string {
+    return `/users/${keycloakUserId}/execute-actions-email?${this.actionsEmailQuery()}`;
+  }
+
+  /** Dieselben Parameter für beide Mail-Endpunkte — siehe oben. */
+  private actionsEmailQuery(): string {
     const params = new URLSearchParams({ lifespan: '604800' });
     const appUrl = this.config.get('APP_URL');
 
@@ -234,7 +262,7 @@ export class KeycloakAdminService {
       params.set('redirect_uri', appUrl);
     }
 
-    return `/users/${keycloakUserId}/execute-actions-email?${params.toString()}`;
+    return params.toString();
   }
 
   private async findUserByEmail(

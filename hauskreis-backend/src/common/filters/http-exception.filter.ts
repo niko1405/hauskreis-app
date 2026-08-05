@@ -14,6 +14,8 @@ interface ErrorBody {
   statusCode: number;
   message: string;
   path: string;
+  /// Nur gesetzt, wenn die Ausnahme selbst einen mitgibt — siehe `errorSchema`.
+  code?: string;
   errors?: { field: string; message: string }[];
 }
 
@@ -51,16 +53,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const payload = exception.getResponse();
-      const message =
+      const detail =
         typeof payload === 'string'
-          ? payload
-          : ((payload as { message?: string | string[] }).message ??
-            exception.message);
+          ? { message: payload }
+          : (payload as { message?: string | string[]; code?: string });
+      const message = detail.message ?? exception.message;
 
       return {
         statusCode: status,
         message: Array.isArray(message) ? message.join(', ') : message,
         path,
+        // `HttpException` reicht ein Objekt unverändert durch; ein `code` darin
+        // ist die einzige Möglichkeit, einen Fall maschinenlesbar zu machen,
+        // ohne für ihn einen eigenen Statuscode zu erfinden.
+        ...(detail.code ? { code: detail.code } : {}),
       };
     }
 

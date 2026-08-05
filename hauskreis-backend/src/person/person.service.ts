@@ -638,6 +638,25 @@ export class PersonService {
   }
 
   /**
+   * Die Bestätigungsmail noch einmal.
+   *
+   * Bewusst ohne `resolveForUser`: Wer hier landet, ist im `AuthGuard` gerade
+   * abgewiesen worden, und der Weg über die Person würde eine Zeile verlangen,
+   * die es womöglich noch gar nicht gibt — bei jemandem, der sich eben erst
+   * registriert hat, ist das der Normalfall. Das Token reicht: `sub` benennt
+   * das Konto, und mehr braucht Keycloak nicht.
+   */
+  async resendVerification(
+    user: AuthenticatedUser,
+  ): Promise<{ verificationEmailSent: boolean }> {
+    return {
+      verificationEmailSent: await this.keycloakAdmin.resendVerification(
+        user.keycloakUserId,
+      ),
+    };
+  }
+
+  /**
    * Resolves the person row for a logged-in Keycloak user. On first login the
    * row is still unlinked, so we match it by email and attach the subject id.
    */

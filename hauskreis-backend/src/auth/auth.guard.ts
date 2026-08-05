@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -9,8 +10,18 @@ import type { Request } from 'express';
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 import { AppConfigService } from '../config/config.service';
 import { IS_PUBLIC_KEY } from './public.decorator';
+import { ALLOW_UNVERIFIED_EMAIL_KEY } from './allow-unverified-email.decorator';
 import { internalKeycloakUrl, trimSlashes } from './keycloak-url';
 import type { AuthenticatedUser } from './auth.types';
+
+/**
+ * Der Fall, auf den die App eigens reagiert — siehe `errorSchema`.
+ *
+ * Er steht hier und nicht im Frontend, weil beide Seiten dieselbe Zeichenkette
+ * meinen müssen; die deutsche Meldung daneben darf sich ändern, dieser Wert
+ * nicht.
+ */
+export const EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED';
 
 interface KeycloakClaims extends JWTPayload {
   email?: string;
@@ -105,10 +116,26 @@ export class AuthGuard implements CanActivate {
     // verlangt die Bestätigung ohnehin (`verifyEmail`); dass wir sie hier noch
     // einmal prüfen, macht die Regel unabhängig von einer Realm-Einstellung,
     // die jemand versehentlich zurückdreht.
-    if (claims.email && claims.email_verified !== true) {
-      throw new UnauthorizedException(
-        'Bitte bestätige zuerst deine E-Mail-Adresse',
-      );
+    //
+    // **403 und nicht 401**, und das ist der Kern: ein 401 heißt für jeden
+    // Client „dein Token ist alt, hol ein neues". Genau das tat die App auch —
+    // nur führt Keycloaks Refresh keine Required Actions aus, das neue Token
+    // trug dieselbe unbestätigte Adresse, und aus Antwort und Erneuerung wurde
+    // eine Schleife ohne Ende. 403 sagt, was gemeint ist: das Token ist in
+    // Ordnung, dieser Mensch darf trotzdem nicht herein. Ein neues zu holen
+    // ändert daran nichts.
+    if (
+      claims.email &&
+      claims.email_verified !== true &&
+      !this.reflector.getAllAndOverride<boolean>(ALLOW_UNVERIFIED_EMAIL_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ])
+    ) {
+      throw new ForbiddenException({
+        message: 'Bitte bestätige zuerst deine E-Mail-Adresse',
+        code: EMAIL_NOT_VERIFIED,
+      });
     }
 
     const user: AuthenticatedUser = {

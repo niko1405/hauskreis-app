@@ -69,6 +69,7 @@ type TokenGetter = () => string | undefined;
 
 let readAccessToken: TokenGetter = () => undefined;
 let handleUnauthorized: (() => void) | undefined;
+let handleAuthorized: (() => void) | undefined;
 
 /** Vom Auth-Provider gesetzt. Getter statt Wert, damit ein Refresh durchschlägt. */
 export function setAccessTokenGetter(getter: TokenGetter): void {
@@ -78,6 +79,17 @@ export function setAccessTokenGetter(getter: TokenGetter): void {
 /** Wird bei einem 401 gerufen, das auch nach einem Refresh bestehen bleibt. */
 export function setUnauthorizedHandler(handler: () => void): void {
   handleUnauthorized = handler;
+}
+
+/**
+ * Wird bei der ersten geglückten Antwort nach einem 401 gerufen.
+ *
+ * Nur dafür da, den Versuchszähler der Erneuerung zurückzusetzen — sonst
+ * bliebe eine Sitzung, die sich einmal gefangen hat, für immer als „gibt es
+ * nicht mehr auf" vermerkt.
+ */
+export function setAuthorizedHandler(handler: () => void): void {
+  handleAuthorized = handler;
 }
 
 // ── Anfragen ────────────────────────────────────────────────────────────────
@@ -162,6 +174,8 @@ async function request<T>(options: RequestOptions): Promise<RawResponse<T>> {
     if (error instanceof UnauthorizedError) handleUnauthorized?.();
     throw error;
   }
+
+  handleAuthorized?.();
 
   if (response.status === 204) {
     return { status: 204, data: undefined, etag };

@@ -7,14 +7,16 @@
  * angemeldet aber unbekannt (`/api/me` → 404: der Mensch hat ein
  * Keycloak-Konto, aber keine Person im Hauskreis) und angemeldet und bekannt.
  */
-import { LogIn } from 'lucide-react';
+import { LogIn, MailCheck } from 'lucide-react';
 import { useAuth } from 'react-oidc-context';
-import { useMe } from '@/lib/api/hooks';
+import { useMe, useResendVerification } from '@/lib/api/hooks';
+import { isEmailUnverified } from '@/lib/api/errors';
 import { useSessionRestore } from '@/lib/auth/use-session-restore';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { useSlow } from '@/lib/use-slow';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/states';
+import { useToast } from '@/components/ui/toast';
 import { NoHauskreisScreen } from '@/features/onboarding/no-hauskreis-screen';
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
@@ -75,6 +77,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   // Kein Fehler, sondern der normale Anfang: gründen oder einladen lassen.
   if (me.notInvited)
     return <NoHauskreisScreen email={auth.user?.profile.email} />;
+
+  // Angemeldet, aber die Adresse ist unbestätigt. Ein eigener Zustand und kein
+  // Fehler: es ist nichts kaputt, es fehlt ein Klick in einer Mail.
+  if (isEmailUnverified(me.error))
+    return <VerifyEmailScreen email={auth.user?.profile.email} />;
 
   if (me.error) {
     return (
@@ -147,6 +154,83 @@ function FullScreenHint({
           </Button>
         </div>
       )}
+    </FullScreen>
+  );
+}
+
+/**
+ * „Bestätige deine Adresse."
+ *
+ * Der Zustand entsteht auf zwei Wegen: nach einer Selbstregistrierung und nach
+ * einem Adresswechsel im Profil. Beide Male ist das Konto in Ordnung und nur
+ * die Adresse noch nicht nachgewiesen — `AuthGuard` lässt deshalb niemanden
+ * durch, und das ist Absicht: Konten werden über die Adresse mit offenen
+ * Einladungen verknüpft.
+ *
+ * „Ich habe bestätigt" führt bewusst über `signinRedirect` und nicht über ein
+ * Neuladen. Das Token im Speicher trägt weiterhin `email_verified: false`, und
+ * eine stille Erneuerung ändert daran nichts — Keycloak führt beim
+ * Refresh-Grant keine Required Actions aus. Nur eine echte Anmeldung stellt ein
+ * Token mit dem neuen Stand aus.
+ */
+function VerifyEmailScreen({ email }: { email?: string }) {
+  const auth = useAuth();
+  const resend = useResendVerification();
+  const toast = useToast();
+
+  return (
+    <FullScreen>
+      <div className="rounded-card border border-line bg-card p-8 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-stone-100 text-stone-500">
+          <MailCheck size={22} />
+        </div>
+        <h1 className="mt-4 font-serif text-2xl font-bold text-stone-900">
+          Bestätige deine Adresse
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-stone-500">
+          Wir haben dir eine Mail geschickt
+          {email ? ` an ${email}` : ''}. Klick den Link darin — danach geht es
+          hier weiter.
+        </p>
+
+        <Button
+          size="lg"
+          className="mt-6 w-full"
+          onClick={() => void auth.signinRedirect()}
+        >
+          Ich habe bestätigt
+        </Button>
+
+        <Button
+          variant="secondary"
+          size="sm"
+          className="mt-2 w-full"
+          loading={resend.isPending}
+          // Kein `onError`: `useApiMutation` meldet einen Fehlschlag selbst.
+          // Was es nicht wissen kann, ist der geglückte Aufruf, der trotzdem
+          // keine Mail hinterlässt — das sagt erst `verificationEmailSent`.
+          onClick={() =>
+            resend.mutate(undefined, {
+              onSuccess: (result) =>
+                result.verificationEmailSent
+                  ? toast.success('Mail ist unterwegs.')
+                  : toast.error(
+                      'Die Mail ging nicht raus — der Mailserver klemmt.',
+                    ),
+            })
+          }
+        >
+          Mail erneut senden
+        </Button>
+
+        <button
+          type="button"
+          className="mt-5 text-xs text-stone-400 underline underline-offset-2"
+          onClick={() => void auth.signoutRedirect()}
+        >
+          Abmelden
+        </button>
+      </div>
     </FullScreen>
   );
 }

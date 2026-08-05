@@ -6,10 +6,12 @@ import {
   HttpCode,
   HttpStatus,
   Patch,
+  Post,
   Put,
 } from '@nestjs/common';
 import { PersonService } from './person.service';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { AllowUnverifiedEmail } from '../auth/allow-unverified-email.decorator';
 import {
   ApiZodNoContent,
   ApiZodResponse,
@@ -17,6 +19,7 @@ import {
 import {
   ChangedEmailResponseDto,
   MeResponseDto,
+  VerificationSentResponseDto,
 } from './dto/person-response.dto';
 import { LocationResponseDto } from '../location/dto/location-response.dto';
 import { ChangeEmailDto, SetHomeDto } from './dto/person.dto';
@@ -80,5 +83,23 @@ export class MeController {
     @Body() dto: ChangeEmailDto,
   ) {
     return this.personService.changeEmail(user, dto.email);
+  }
+
+  /**
+   * „Schick mir die Bestätigungsmail nochmal."
+   *
+   * Die einzige Route, die eine unbestätigte Adresse durchlässt — und sie muss
+   * es, sonst wäre der Zustand eine Sackgasse: ohne Bestätigung kommt niemand
+   * herein, und ohne Mail gibt es nichts zu bestätigen. Sie tut deshalb auch
+   * nichts weiter, als Keycloak zu bitten, noch einmal zu schreiben; die Person
+   * wird nicht aufgelöst, es wird nichts geschrieben.
+   */
+  @Post('resend-verification')
+  @AllowUnverifiedEmail()
+  @ApiZodResponse(VerificationSentResponseDto, {
+    description: 'Ob Keycloak die Bestätigungsmail losgeworden ist',
+  })
+  resendVerification(@CurrentUser() user: AuthenticatedUser) {
+    return this.personService.resendVerification(user);
   }
 }

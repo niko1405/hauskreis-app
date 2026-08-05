@@ -20,6 +20,7 @@ import type {
   Location,
   Me,
   SetHomeInput,
+  VerificationSent,
 } from '../types';
 
 /**
@@ -61,6 +62,17 @@ export async function changeEmail(email: string): Promise<ChangedEmail> {
     UNCONDITIONAL,
   );
   return data;
+}
+
+/**
+ * „Schick mir die Bestätigungsmail nochmal."
+ *
+ * Die einzige Route, die auch mit unbestätigter Adresse antwortet — ohne sie
+ * wäre der Zustand eine Sackgasse. Deshalb ist sie auch die einzige, die aus
+ * dem Bildschirm dahinter überhaupt aufgerufen wird.
+ */
+export function resendVerification(): Promise<VerificationSent> {
+  return apiPost<VerificationSent>('/me/resend-verification');
 }
 
 /** Nicht paginiert. Liefert die `hauskreisId` für alles Weitere. */

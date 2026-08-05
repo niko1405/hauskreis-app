@@ -116,6 +116,10 @@ Die E-Mails entsprechen bewusst Zeilen aus `prisma/seed-data/person.csv`:
 `GET /api/me` verknüpft Keycloak-Account und Person über die E-Mail, dadurch
 landet man nach `pnpm db:seed` direkt auf einem echten Mitglied.
 
+Beides gilt nur beim **Anlegen**. Ein erneuter Lauf des Skripts lässt
+bestehende Konten unangetastet — wer beim Ausprobieren einen Nutzernamen oder
+ein Passwort ändert, behält es. Zurücksetzen mit `--reset-users`.
+
 Access-Token holen:
 
 ```bash
@@ -2305,6 +2309,62 @@ Realm-Einstellung, die jemand versehentlich zurückdreht.
 Ebenfalls am Realm: `resetPasswordAllowed`. Ohne das wäre ein vergessenes
 Passwort eine Sackgasse — die App kennt keinen Weg, eine Einladung noch einmal
 zu schicken.
+
+> **Jede Realm-Einstellung wird erst durch einen erneuten Lauf von
+> `setup-keycloak.sh` scharf.** Steht die Zeile im Skript und ist der Realm
+> älter, gilt weiterhin der Keycloak-Standard — bei `registrationAllowed`
+> äußert sich das als **400 „Registrierung nicht erlaubt"** auf der
+> Registrierungsseite, ohne eine Spur im Backend. Das Skript ist deshalb dazu
+> gedacht, wiederholt zu laufen, und fasst bestehende Konten nicht mehr an:
+> Nutzername, Passwort und Profil gehören ab dem Anlegen den Menschen davor.
+> Wer ein verkonfiguriertes Testkonto zurücksetzen will, ruft
+> `./scripts/setup-keycloak.sh --reset-users` auf.
+
+### Unbestätigt heißt draußen — und darf keine Schleife werden
+
+`AuthGuard` weist ein Token mit unbestätigter Adresse ab. Das ist richtig, hat
+aber eine Falle, in die diese App einmal getappt ist: mit **401** beantwortet,
+heißt die Abweisung für jeden Client „dein Token ist alt, hol ein neues". Genau
+das tat das Frontend — und Keycloaks Refresh-Grant führt keine Required Actions
+aus, das neue Token trug dieselbe unbestätigte Adresse, und aus Abweisung und
+Erneuerung wurde eine Schleife, die den ganzen Cache mitriss.
+
+Deshalb ist es ein **403 mit `code: "EMAIL_NOT_VERIFIED"`** im Fehlerkörper
+(`errorSchema`). Der Statuscode sagt, was gemeint ist: das Token ist in
+Ordnung, dieser Mensch darf trotzdem nicht herein. Ein `code` und keine
+Meldung, weil der deutsche Satz daneben sich ändern darf.
+
+Ausgelöst wird der Zustand auf zwei Wegen — nach einer Selbstregistrierung und
+nach `PATCH /api/me/email`, denn ein Adresswechsel setzt `emailVerified` in
+Keycloak zurück. Die App zeigt dann einen eigenen Bildschirm mit „Mail erneut
+senden" und „Ich habe bestätigt". Das zweite führt über eine echte Anmeldung
+und nicht über ein Neuladen: nur sie stellt ein Token mit dem neuen Stand aus.
+
+`POST /api/me/resend-verification` ist die **einzige** Route, die eine
+unbestätigte Adresse durchlässt (`@AllowUnverifiedEmail`). Ohne sie wäre der
+Zustand eine Sackgasse. Sie löst deshalb auch keine Person auf und schreibt
+nichts — bei jemandem, der sich eben erst registriert hat, gibt es noch gar
+keine Zeile.
+
+### Zwei Mails, zwei Endpunkte
+
+Keycloak wählt die Vorlage nach dem **Endpunkt**, nicht nach den Aktionen im
+Rumpf. `execute-actions-email` rendert immer `executeActions` — bei uns die
+Einladung („Du bist im Hauskreis dabei"). Ein Adresswechsel verschickte damit
+lange eine Einladung an jemanden, der längst dabei war; der Link stimmte, der
+Text nicht.
+
+| Anlass                         | Endpunkt                | Vorlage             |
+| ------------------------------ | ----------------------- | ------------------- |
+| Einladung, Einladung erneut    | `execute-actions-email` | `executeActions`    |
+| Adresswechsel, Bestätigung neu | `send-verify-email`     | `emailVerification` |
+
+Die Einladung bleibt bei `execute-actions-email`, weil sie drei Schritte
+braucht (`UPDATE_PROFILE`, `UPDATE_PASSWORD`, `VERIFY_EMAIL`) und es dafür
+keinen anderen Weg gibt. Beide Endpunkte bekommen dieselben Query-Parameter
+(`actionsEmailQuery`), sonst endet der Ablauf auf einer Keycloak-Seite ohne
+Ausgang. Festgehalten in `keycloak-admin.service.spec.ts` — an einer Signatur
+ist der Unterschied nicht zu erkennen, beide Aufrufe liefern eine Mail ab.
 
 ### Der Weg zurück
 

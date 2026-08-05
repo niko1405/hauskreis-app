@@ -6164,6 +6164,67 @@
         ]
       }
     },
+    "/api/me/resend-verification": {
+      "post": {
+        "operationId": "MeController_resendVerification",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Ob Keycloak die Bestätigungsmail losgeworden ist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationSentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Me"
+        ]
+      }
+    },
     "/api/push/public-key": {
       "get": {
         "operationId": "NotificationController_publicKey",
@@ -6677,6 +6738,9 @@
             "type": "string"
           },
           "path": {
+            "type": "string"
+          },
+          "code": {
             "type": "string"
           },
           "errors": {
@@ -7585,6 +7649,18 @@
           "acceptedAt",
           "createdAt",
           "version",
+          "verificationEmailSent"
+        ],
+        "additionalProperties": false
+      },
+      "VerificationSentResponseDto": {
+        "type": "object",
+        "properties": {
+          "verificationEmailSent": {
+            "type": "boolean"
+          }
+        },
+        "required": [
           "verificationEmailSent"
         ],
         "additionalProperties": false

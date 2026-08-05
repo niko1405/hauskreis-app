@@ -73,11 +73,20 @@ export const meResponseSchema = personResponseSchema;
  * `PATCH /api/me/email` — die geänderte Person plus die Frage, ob Keycloak
  * die Bestätigungsmail losgeworden ist.
  *
- * Bis die Adresse bestätigt ist, gilt sie in Keycloak als unbestätigt. Die
- * Anmeldung funktioniert weiter: gefunden wird die Person über ihre
- * `keycloakUserId`, nicht über die Adresse.
+ * **Bis die neue Adresse bestätigt ist, kommt niemand herein.** Hier stand
+ * einmal das Gegenteil („die Anmeldung funktioniert weiter"), und es stimmte
+ * für Keycloak auch: angemeldet wird man weiterhin. Nur weist `AuthGuard`
+ * jedes Token mit unbestätigter Adresse ab, und ein Adresswechsel setzt genau
+ * die Bestätigung zurück. Die App zeigt deshalb ab da einen eigenen
+ * Bildschirm — deswegen ist `verificationEmailSent` keine Nebensache: ist es
+ * `false`, sitzt jemand fest, bis die Mail nachkommt.
  */
 export const changedEmailResponseSchema = personResponseSchema.extend({
+  verificationEmailSent: z.boolean(),
+});
+
+/** Was `POST /api/me/resend-verification` mitteilt. */
+export const verificationSentResponseSchema = z.object({
   verificationEmailSent: z.boolean(),
 });
 
@@ -113,4 +122,7 @@ export class InvitedPersonResponseDto extends createZodDto(
 export class MeResponseDto extends createZodDto(meResponseSchema) {}
 export class ChangedEmailResponseDto extends createZodDto(
   changedEmailResponseSchema,
+) {}
+export class VerificationSentResponseDto extends createZodDto(
+  verificationSentResponseSchema,
 ) {}
