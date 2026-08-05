@@ -31,6 +31,21 @@ export type NotificationSchedule =
       kind: 'EVENT';
     };
 
+/**
+ * Was über die Person bekannt sein muss, um zu entscheiden, ob ein Schalter für
+ * sie überhaupt etwas bedeutet.
+ *
+ * Bewusst schmal: nur, was `appliesTo` tatsächlich liest. Ein Kontext, in dem
+ * vorsorglich alles steht, wird bei jedem Aufruf teuer und bei der nächsten
+ * Frage trotzdem unvollständig.
+ */
+export interface NotificationContext {
+  /** Kapazität der eigenen Wohnung. `null` heißt „alle passen rein". */
+  homeCapacity: number | null;
+  /** Wie viele Menschen der Hauskreis gerade hat. */
+  activeMembers: number;
+}
+
 export interface NotificationDefinition {
   type: NotificationType;
   /** Heading in the settings list. */
@@ -43,6 +58,16 @@ export interface NotificationDefinition {
    * where the notification is genuinely optional noise for most people.
    */
   defaultEnabled: boolean;
+  /**
+   * Ob dieser Schalter für diese Person überhaupt etwas bewirken kann. Fehlt er,
+   * gilt der Eintrag für alle — der Normalfall.
+   *
+   * Wirkt **nur auf die Anzeige** (`listForPerson`), nie auf `resolve()`. Sonst
+   * verschwände mit dem Schalter auch die Nachricht: wer heute keine Kapazität
+   * gesetzt hat, bekäme morgen mit gesetzter Kapazität keine Einladung mehr,
+   * weil beim Versand niemand mehr nachfragt.
+   */
+  appliesTo?: (context: NotificationContext) => boolean;
 }
 
 /**
@@ -159,6 +184,13 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
       'Wenn genug Leute abgesagt haben, dass der Hauskreis auch in eure Wohnung passt.',
     schedule: { kind: 'EVENT' },
     defaultEnabled: true,
+    // Diese Nachricht kann nur jemanden erreichen, dessen Wohnung für die volle
+    // Gruppe **zu klein** ist — sonst gibt es nichts freizuschalten. Bei allen
+    // anderen stand bisher ein Schalter, der nie etwas tat: eine Einstellung
+    // ohne Wirkung ist schlimmer als keine, weil man ihr glaubt.
+    appliesTo: (context) =>
+      context.homeCapacity !== null &&
+      context.homeCapacity < context.activeMembers,
   },
   {
     type: NotificationType.MEMBER_LEFT,

@@ -938,6 +938,7 @@ export interface components {
       birthdate: string | null;
       playsInstrument: boolean;
       canHost: boolean;
+      autoAttend: boolean;
       /** @enum {string} */
       role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
@@ -961,6 +962,7 @@ export interface components {
       birthdate: string | null;
       playsInstrument: boolean;
       canHost: boolean;
+      autoAttend: boolean;
       /** @enum {string} */
       role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
@@ -984,6 +986,7 @@ export interface components {
       birthdate: string | null;
       playsInstrument: boolean;
       canHost: boolean;
+      autoAttend: boolean;
       /** @enum {string} */
       role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
@@ -1005,6 +1008,8 @@ export interface components {
       playsInstrument: boolean;
       /** @default true */
       canHost: boolean;
+      /** @default false */
+      autoAttend: boolean;
       /** Format: uuid */
       locationId?: string | null;
     };
@@ -1030,6 +1035,7 @@ export interface components {
       birthdate: string | null;
       playsInstrument: boolean;
       canHost: boolean;
+      autoAttend: boolean;
       /** @enum {string} */
       role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
@@ -1052,6 +1058,8 @@ export interface components {
       playsInstrument: boolean;
       /** @default true */
       canHost: boolean;
+      /** @default false */
+      autoAttend: boolean;
       /** Format: uuid */
       locationId?: string | null;
       active?: boolean;
@@ -1100,6 +1108,7 @@ export interface components {
       birthdate: string | null;
       playsInstrument: boolean;
       canHost: boolean;
+      autoAttend: boolean;
       /** @enum {string} */
       role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
@@ -1703,7 +1712,7 @@ export interface components {
       /** @enum {string} */
       status: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
       /** @enum {string} */
-      source: 'SELF' | 'ABSENCE';
+      source: 'SELF' | 'ABSENCE' | 'AUTO';
       /** Format: date-time */
       updatedAt: string;
     };

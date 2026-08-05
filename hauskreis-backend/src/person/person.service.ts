@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PersonRole } from '../../generated/prisma/enums';
 import { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import { LocationService } from '../location/location.service';
+import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
@@ -36,6 +37,7 @@ const personSelect = {
   birthdate: true,
   playsInstrument: true,
   canHost: true,
+  autoAttend: true,
   locationId: true,
   active: true,
   acceptedAt: true,
@@ -49,6 +51,7 @@ export class PersonService {
     private readonly prisma: PrismaService,
     private readonly keycloakAdmin: KeycloakAdminService,
     private readonly locations: LocationService,
+    private readonly autoAttendance: AutoAttendanceService,
     private readonly moduleRef: ModuleRef,
   ) {}
 
@@ -137,12 +140,17 @@ export class PersonService {
         birthdate: dto.birthdate ? new Date(dto.birthdate) : null,
         playsInstrument: dto.playsInstrument,
         canHost: dto.canHost,
+        autoAttend: dto.autoAttend,
         locationId: dto.locationId ?? null,
       },
     });
 
     await this.syncHomes(person.locationId);
     await this.replanPrayerBuddies(hauskreisId);
+
+    if (person.autoAttend) {
+      await this.autoAttendance.apply(hauskreisId, { personId: person.id });
+    }
 
     return person;
   }
@@ -177,6 +185,7 @@ export class PersonService {
             birthdate: dto.birthdate ? new Date(dto.birthdate) : undefined,
             playsInstrument: dto.playsInstrument,
             canHost: dto.canHost,
+            autoAttend: dto.autoAttend,
             // `undefined` leaves it alone, `null` moves the person out of the
             // hosting rotation without touching anything else.
             locationId: dto.locationId,
@@ -196,6 +205,16 @@ export class PersonService {
     // Ein neuer Name oder eine neue Wohnung ändert die Paarungen nicht.
     if (before && dto.active !== undefined && dto.active !== before.active) {
       await this.replanPrayerBuddies(hauskreisId);
+    }
+
+    // Rückwirkend, und das ist der Sinn: wer den Schalter umlegt, meint die
+    // sieben Dienstage, die er gerade vor sich sieht — nicht erst den achten.
+    //
+    // Beim Ausschalten passiert nichts. Was zugesagt ist, bleibt zugesagt: eine
+    // Zusage stillschweigend zurückzunehmen wäre eine Absage, die niemand
+    // ausgesprochen hat.
+    if (dto.autoAttend === true) {
+      await this.autoAttendance.apply(hauskreisId, { personId: id });
     }
 
     return updated;

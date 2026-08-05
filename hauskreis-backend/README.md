@@ -526,6 +526,17 @@ jeder mit Label, Begründung und Default-Rhythmus.
 | `HOST_CAPACITY_UNLOCKED` | genug Absagen, dass eine kleine Wohnung passt | Bewohner:innen dieser Wohnung | sofort        |
 | `MEMBER_LEFT`            | jemand verlässt den Hauskreis                 | alle Verbleibenden            | sofort        |
 
+Ein Eintrag kann ein optionales `appliesTo(context)` tragen und erscheint dann
+nur bei den Leuten, für die er überhaupt etwas bewirken kann. Bisher genau einer:
+`HOST_CAPACITY_UNLOCKED` kann niemanden erreichen, dessen Wohnung für die volle
+Gruppe reicht — bei allen anderen stand ein Schalter, der nie etwas tat, und ein
+Schalter ohne Wirkung ist schlimmer als keiner, weil man ihm glaubt.
+
+Gefiltert wird **nur die Anzeige** (`listForPerson`), nie `resolve()`. Andernfalls
+verschwände mit dem Schalter auch die Nachricht: wer heute keine Kapazität gesetzt
+hat, bekäme morgen mit gesetzter Kapazität keine Einladung mehr, weil beim Versand
+niemand mehr nachfragt.
+
 Die Vorlauf-Werte sind bewusst verschieden: Inhalte vorbereiten braucht mehr
 Vorlauf als aufräumen. Der Freitag beim Actionstep liegt mittig zwischen zwei
 Dienstagen und lässt das Wochenende noch übrig — montags käme die Nachfrage, wenn
@@ -1537,10 +1548,41 @@ Die Zeilen tragen deshalb `source`:
   Zeitraum überschrieben oder zurückgenommen.
 - **`ABSENCE`** — aus einem Zeitraum abgeleitet. Wird beim nächsten Abgleich neu
   aufgebaut.
+- **`AUTO`** — aus „ich bin grundsätzlich dabei" vorab zugesagt. Weicht einem
+  Zeitraum, siehe unten.
 
 Ohne diese Spalte ginge ein „doch, ich komme an dem Abend" verloren, sobald der
 Urlaub später bearbeitet wird. Eine Antwort von Hand beansprucht die Zeile
 deshalb auch dann, wenn ein Zeitraum sie angelegt hat.
+
+### „Ich bin grundsätzlich dabei"
+
+Wer jeden Dienstag kommt, tippte bisher jeden Dienstag dasselbe — und wer es
+vergaß, stand als „weiß noch nicht" da, was für den Gastgeber beim Einkaufen
+dasselbe ist wie ein Nein. `Person.autoAttend` sagt kommende Abende im Voraus zu.
+
+**`AUTO` ist eine eigene Quelle, und darin steckt der ganze Punkt.** Als `SELF`
+gespeichert wäre die Zusage unantastbar — und ein eingetragener Urlaub bliebe
+still wirkungslos, weil der Abend weiter auf „dabei" stünde. Die Rangfolge ist
+deshalb: `SELF` schlägt `ABSENCE` schlägt `AUTO`.
+
+Gebaut als **Auffüllen, nicht als Ereignis** (`AutoAttendanceService.apply`):
+statt an jeder Stelle, an der ein Termin entsteht, an die Zusagen zu denken, gibt
+es einen wiederholbaren Lauf, der die Lücken schließt. `skipDuplicates` gegen den
+Schlüssel `(meeting, person)` ist die ganze Regel — eine vorhandene Antwort wird
+nie überschrieben, egal woher sie kam. Angestoßen vom Termin-Generator, vom
+Anlegen eines Termins von Hand, vom Umlegen des Schalters und vom
+Abwesenheits-Abgleich; ein verpasster Aufruf heilt beim nächsten.
+
+Der Schalter wirkt **rückwirkend**: wer ihn umlegt, meint die sieben Dienstage,
+die er gerade vor sich sieht, nicht erst den achten. Beim **Ausschalten**
+passiert dagegen nichts — was zugesagt ist, bleibt zugesagt. Eine Zusage
+stillschweigend zurückzunehmen wäre eine Absage, die niemand ausgesprochen hat.
+
+> `AutoAttendanceService` liegt in einem eigenen Modul mit genau einem Dienst.
+> Läge er im `MeetingModule`, müsste `PersonModule` dieses importieren —
+> `MeetingModule` importiert aber seinerseits `PersonModule`, und der Kreis wäre
+> da. Ein Modul, das außer Prisma nichts braucht, kann jeder importieren.
 
 Der Abgleich läuft **nur vorwärts**. Ein nachträglich eingetragener Urlaub soll
 nicht umschreiben, wer letzte Woche da war.

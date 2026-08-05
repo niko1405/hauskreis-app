@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationType } from '../../generated/prisma/enums';
 import {
   NOTIFICATION_CATALOG,
+  type NotificationContext,
   type NotificationDefinition,
   type NotificationSchedule,
   notificationDefinition,
@@ -45,18 +46,59 @@ type StoredPreference = {
 export class NotificationPreferenceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** The whole settings screen for one person, in catalog order. */
+  /**
+   * The whole settings screen for one person, in catalog order.
+   *
+   * Gefiltert um die Einträge, die für diese Person nichts bewirken können
+   * (`appliesTo`). Ein Schalter, der nie etwas tut, ist schlimmer als keiner —
+   * man glaubt ihm.
+   */
   async listForPerson(personId: string): Promise<EffectiveSetting[]> {
-    const stored = await this.prisma.notificationPreference.findMany({
-      where: { personId },
-      select: { type: true, enabled: true, leadDays: true, weekdays: true },
-    });
+    const [stored, context] = await Promise.all([
+      this.prisma.notificationPreference.findMany({
+        where: { personId },
+        select: { type: true, enabled: true, leadDays: true, weekdays: true },
+      }),
+      this.contextFor(personId),
+    ]);
 
     const byType = new Map(stored.map((row) => [row.type, row]));
 
-    return NOTIFICATION_CATALOG.map((definition) =>
-      merge(definition, byType.get(definition.type)),
-    );
+    return NOTIFICATION_CATALOG.filter(
+      (definition) => definition.appliesTo?.(context) ?? true,
+    ).map((definition) => merge(definition, byType.get(definition.type)));
+  }
+
+  /**
+   * Was `appliesTo` über diese Person wissen muss — in einer Abfrage.
+   *
+   * Bewusst nur für die Anzeige gebaut. Der Versand fragt nicht danach: dort
+   * entscheidet der Anlass selbst, ob er eintritt, und ein zweiter Filter wäre
+   * eine zweite Wahrheit über dieselbe Frage.
+   */
+  private async contextFor(personId: string): Promise<NotificationContext> {
+    const person = await this.prisma.person.findUnique({
+      where: { id: personId },
+      select: {
+        hauskreisId: true,
+        location: { select: { capacity: true } },
+      },
+    });
+
+    if (!person) {
+      // Kein Kontext heißt „nichts trifft zu"; der Aufrufer hat die Person
+      // ohnehin gerade aufgelöst.
+      return { homeCapacity: null, activeMembers: 0 };
+    }
+
+    const activeMembers = await this.prisma.person.count({
+      where: { hauskreisId: person.hauskreisId, active: true },
+    });
+
+    return {
+      homeCapacity: person.location?.capacity ?? null,
+      activeMembers,
+    };
   }
 
   /**

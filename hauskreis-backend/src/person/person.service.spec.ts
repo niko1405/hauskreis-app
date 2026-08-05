@@ -5,6 +5,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import type { LocationService } from '../location/location.service';
 import type { ModuleRef } from '@nestjs/core';
+import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
 type PersonDelegate = {
@@ -31,6 +32,8 @@ function setup() {
   // Zieht sonst den Namen einer Wohnung nach; hier interessiert nur, dass es
   // aufgerufen werden *kann*.
   const locations = { syncHomeName: jest.fn() };
+  // Füllt sonst die Zusagen derer nach, die grundsätzlich dabei sind.
+  const autoAttendance = { apply: jest.fn().mockResolvedValue(0) };
   // Wer dazukommt oder geht, ändert die Gebetsrotation. Was dabei herauskommt,
   // prüft `prayer-buddy-replan.spec.ts`; hier zählt nur, dass gefragt wird.
   const replanAfterMembershipChange = jest.fn().mockResolvedValue({
@@ -44,6 +47,7 @@ function setup() {
     { person } as unknown as PrismaService,
     keycloakAdmin as unknown as KeycloakAdminService,
     locations as unknown as LocationService,
+    autoAttendance as unknown as AutoAttendanceService,
     moduleRef as unknown as ModuleRef,
   );
   return {
@@ -52,6 +56,7 @@ function setup() {
     keycloakAdmin,
     locations,
     replanAfterMembershipChange,
+    autoAttendance,
   };
 }
 

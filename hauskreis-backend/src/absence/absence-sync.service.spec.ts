@@ -4,6 +4,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { MeetingNotificationService } from '../meeting/meeting-notification.service';
 import type { MeetingCancellationService } from '../meeting/meeting-cancellation.service';
 import type { RoleReleaseService } from '../meeting/role-release.service';
+import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import {
   AttendanceSource,
   AttendanceStatus,
@@ -37,6 +38,7 @@ function setup(options: {
   const deleteMany = jest.fn().mockResolvedValue({ count: 0 });
   const handleDecline = jest.fn().mockResolvedValue(undefined);
   const reconcile = jest.fn().mockResolvedValue(undefined);
+  const autoAttendanceApply = jest.fn().mockResolvedValue(0);
   const releaseFor = jest.fn().mockResolvedValue({ host: false, song: false });
 
   const service = new AbsenceSyncService(
@@ -48,6 +50,7 @@ function setup(options: {
     { handleDecline } as unknown as MeetingNotificationService,
     { reconcile } as unknown as MeetingCancellationService,
     { releaseFor } as unknown as RoleReleaseService,
+    { apply: autoAttendanceApply } as unknown as AutoAttendanceService,
   );
 
   return {
@@ -58,6 +61,7 @@ function setup(options: {
     handleDecline,
     reconcile,
     meetingFindMany,
+    autoAttendanceApply,
   };
 }
 
@@ -223,5 +227,94 @@ describe('AbsenceSyncService.syncPerson', () => {
 
     expect(createMany).not.toHaveBeenCalled();
     expect(deleteMany).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Der Grund, warum die automatische Zusage eine eigene Quelle hat.
+ *
+ * Als `SELF` gespeichert wäre sie unantastbar — und ein eingetragener Urlaub
+ * bliebe still wirkungslos, weil der Abend weiter auf „dabei" stünde.
+ */
+describe('AbsenceSyncService und die automatische Zusage', () => {
+  it('überschreibt eine automatische Zusage im Urlaub', async () => {
+    const { service, createMany, deleteMany } = setup({
+      periods: [holiday],
+      meetings: [
+        {
+          id: 'inside',
+          date: utc('2026-08-11'),
+          attendance: {
+            status: AttendanceStatus.ATTENDING,
+            source: AttendanceSource.AUTO,
+          },
+        },
+      ],
+    });
+
+    await service.syncPerson('hk', 'niko', { now: NOW, notify: false });
+
+    // Erst weg, dann neu: `skipDuplicates` ließe die Zeile sonst stehen.
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: {
+        personId: 'niko',
+        meetingId: { in: ['inside'] },
+        source: AttendanceSource.AUTO,
+      },
+    });
+    expect(createMany.mock.calls[0][0].data).toEqual([
+      {
+        meetingId: 'inside',
+        personId: 'niko',
+        status: AttendanceStatus.ABSENT,
+        source: AttendanceSource.ABSENCE,
+      },
+    ]);
+  });
+
+  it('lässt eine Antwort von Hand auch dann in Ruhe', async () => {
+    const { service, createMany } = setup({
+      periods: [holiday],
+      meetings: [
+        {
+          id: 'inside',
+          date: utc('2026-08-11'),
+          attendance: {
+            status: AttendanceStatus.ATTENDING,
+            source: AttendanceSource.SELF,
+          },
+        },
+      ],
+    });
+
+    await service.syncPerson('hk', 'niko', { now: NOW, notify: false });
+
+    // „Doch, ich komme" schlägt den pauschalen Zeitraum. Unverändert.
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it('sagt nach einem zurückgenommenen Urlaub wieder zu', async () => {
+    const { service, autoAttendanceApply } = setup({
+      periods: [],
+      meetings: [
+        {
+          id: 'inside',
+          date: utc('2026-08-11'),
+          attendance: {
+            status: AttendanceStatus.ABSENT,
+            source: AttendanceSource.ABSENCE,
+          },
+        },
+      ],
+    });
+
+    await service.syncPerson('hk', 'niko', { now: NOW, notify: false });
+
+    // Ohne das bliebe „weiß noch nicht" stehen, obwohl der Schalter etwas
+    // anderes sagt.
+    expect(autoAttendanceApply).toHaveBeenCalledWith('hk', {
+      personId: 'niko',
+      now: NOW,
+    });
   });
 });

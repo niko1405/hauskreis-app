@@ -6810,6 +6810,9 @@
           "canHost": {
             "type": "boolean"
           },
+          "autoAttend": {
+            "type": "boolean"
+          },
           "role": {
             "type": "string",
             "enum": [
@@ -6851,6 +6854,7 @@
           "birthdate",
           "playsInstrument",
           "canHost",
+          "autoAttend",
           "role",
           "locationId",
           "active",
@@ -6895,6 +6899,9 @@
             "canHost": {
               "type": "boolean"
             },
+            "autoAttend": {
+              "type": "boolean"
+            },
             "role": {
               "type": "string",
               "enum": [
@@ -6936,6 +6943,7 @@
             "birthdate",
             "playsInstrument",
             "canHost",
+            "autoAttend",
             "role",
             "locationId",
             "active",
@@ -6979,6 +6987,9 @@
           "canHost": {
             "type": "boolean"
           },
+          "autoAttend": {
+            "type": "boolean"
+          },
           "role": {
             "type": "string",
             "enum": [
@@ -7020,6 +7031,7 @@
           "birthdate",
           "playsInstrument",
           "canHost",
+          "autoAttend",
           "role",
           "locationId",
           "active",
@@ -7053,6 +7065,10 @@
           },
           "canHost": {
             "default": true,
+            "type": "boolean"
+          },
+          "autoAttend": {
+            "default": false,
             "type": "boolean"
           },
           "locationId": {
@@ -7126,6 +7142,9 @@
           "canHost": {
             "type": "boolean"
           },
+          "autoAttend": {
+            "type": "boolean"
+          },
           "role": {
             "type": "string",
             "enum": [
@@ -7170,6 +7189,7 @@
           "birthdate",
           "playsInstrument",
           "canHost",
+          "autoAttend",
           "role",
           "locationId",
           "active",
@@ -7204,6 +7224,10 @@
           },
           "canHost": {
             "default": true,
+            "type": "boolean"
+          },
+          "autoAttend": {
+            "default": false,
             "type": "boolean"
           },
           "locationId": {
@@ -7378,6 +7402,9 @@
           "canHost": {
             "type": "boolean"
           },
+          "autoAttend": {
+            "type": "boolean"
+          },
           "role": {
             "type": "string",
             "enum": [
@@ -7422,6 +7449,7 @@
           "birthdate",
           "playsInstrument",
           "canHost",
+          "autoAttend",
           "role",
           "locationId",
           "active",
@@ -9838,7 +9866,8 @@
             "type": "string",
             "enum": [
               "SELF",
-              "ABSENCE"
+              "ABSENCE",
+              "AUTO"
             ]
           },
           "updatedAt": {

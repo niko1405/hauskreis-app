@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
+import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { MeetingStatus, MeetingType } from '../../generated/prisma/enums';
 import {
   isLastTuesdayOfMonth,
@@ -20,7 +21,10 @@ export interface GenerationResult {
 export class MeetingGeneratorService {
   private readonly logger = new Logger(MeetingGeneratorService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly autoAttendance: AutoAttendanceService,
+  ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM, { name: 'generate-meetings' })
   async handleCron(): Promise<void> {
@@ -101,6 +105,9 @@ export class MeetingGeneratorService {
     const missing = dates.filter((date) => !taken.has(date.getTime()));
 
     if (missing.length === 0) {
+      // Trotzdem auffüllen: der Schalter kann angegangen sein, während die
+      // Termine schon standen.
+      await this.autoAttendance.apply(hauskreisId, { now });
       return { created: 0, skipped: dates.length };
     }
 
@@ -116,6 +123,10 @@ export class MeetingGeneratorService {
       // (hauskreis_id, date) is the real guarantee.
       skipDuplicates: true,
     });
+
+    // Wer „ich bin grundsätzlich dabei" eingestellt hat, hat auch für die
+    // gerade entstandenen Abende zugesagt.
+    await this.autoAttendance.apply(hauskreisId, { now });
 
     return { created: result.count, skipped: dates.length - result.count };
   }

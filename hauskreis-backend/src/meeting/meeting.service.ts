@@ -17,6 +17,7 @@ import { locationInclude } from '../location/location.service';
 import { MeetingCancellationService } from './meeting-cancellation.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { RoleReleaseService } from './role-release.service';
+import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
@@ -71,6 +72,7 @@ export class MeetingService {
     private readonly roleAssignments: RoleAssignmentNotifier,
     private readonly availability: AvailabilityService,
     private readonly roleRelease: RoleReleaseService,
+    private readonly autoAttendance: AutoAttendanceService,
   ) {}
 
   async findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
@@ -149,7 +151,7 @@ export class MeetingService {
       location: null,
     });
 
-    return this.prisma.meeting.create({
+    const meeting = await this.prisma.meeting.create({
       data: {
         hauskreisId,
         date,
@@ -162,6 +164,12 @@ export class MeetingService {
       },
       include: meetingInclude,
     });
+
+    // Auch ein von Hand angelegter Abend ist ein Abend: wer grundsätzlich dabei
+    // ist, hat auch für ihn zugesagt.
+    await this.autoAttendance.apply(hauskreisId);
+
+    return this.findOne(hauskreisId, meeting.id);
   }
 
   async update(

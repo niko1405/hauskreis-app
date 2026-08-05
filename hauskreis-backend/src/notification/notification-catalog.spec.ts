@@ -59,3 +59,46 @@ describe('notification catalog', () => {
     );
   });
 });
+
+/**
+ * `appliesTo` blendet Schalter aus, die für diese Person nichts bewirken
+ * können. Ein Schalter ohne Wirkung ist schlimmer als keiner — man glaubt ihm.
+ */
+describe('appliesTo', () => {
+  const capacityRule = NOTIFICATION_CATALOG.find(
+    (entry) => entry.type === NotificationType.HOST_CAPACITY_UNLOCKED,
+  )?.appliesTo as (context: {
+    homeCapacity: number | null;
+    activeMembers: number;
+  }) => boolean;
+
+  it('zeigt „Bei euch wäre jetzt Platz" bei begrenzter Wohnung', () => {
+    expect(capacityRule({ homeCapacity: 5, activeMembers: 9 })).toBe(true);
+  });
+
+  it('verschweigt ihn ohne gesetzte Kapazität', () => {
+    // „Alle passen rein" — dann gibt es nichts freizuschalten.
+    expect(capacityRule({ homeCapacity: null, activeMembers: 9 })).toBe(false);
+  });
+
+  it('verschweigt ihn, wenn die Wohnung ohnehin für alle reicht', () => {
+    expect(capacityRule({ homeCapacity: 12, activeMembers: 9 })).toBe(false);
+  });
+
+  it('behandelt „passt genau" als nie gesperrt', () => {
+    expect(capacityRule({ homeCapacity: 9, activeMembers: 9 })).toBe(false);
+  });
+
+  /**
+   * Der Rest des Katalogs bleibt ungefiltert. `appliesTo` ist die Ausnahme für
+   * einen Schalter, dessen Anlass an einer Bedingung hängt — nicht der neue
+   * Normalfall.
+   */
+  it('lässt alle anderen Einträge für jeden gelten', () => {
+    const conditional = NOTIFICATION_CATALOG.filter(
+      (entry) => entry.appliesTo !== undefined,
+    ).map((entry) => entry.type);
+
+    expect(conditional).toEqual([NotificationType.HOST_CAPACITY_UNLOCKED]);
+  });
+});

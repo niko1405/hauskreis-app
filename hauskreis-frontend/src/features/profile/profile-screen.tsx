@@ -64,6 +64,7 @@ function Loaded({ personId }: { personId: string }) {
   const [name, setName] = useState('');
   const [playsInstrument, setPlaysInstrument] = useState(false);
   const [canHost, setCanHost] = useState(true);
+  const [autoAttend, setAutoAttend] = useState(false);
   const [birthdate, setBirthdate] = useState('');
 
   // Den Serverstand übernehmen, sobald er da ist — und nach jedem Speichern.
@@ -72,6 +73,7 @@ function Loaded({ personId }: { personId: string }) {
     setName(current.name);
     setPlaysInstrument(current.playsInstrument);
     setCanHost(current.canHost);
+    setAutoAttend(current.autoAttend);
     setBirthdate(current.birthdate ?? '');
   }, [current]);
 
@@ -87,15 +89,17 @@ function Loaded({ personId }: { personId: string }) {
     name !== current.name ||
     playsInstrument !== current.playsInstrument ||
     canHost !== current.canHost ||
+    autoAttend !== current.autoAttend ||
     birthdate !== (current.birthdate ?? '');
 
   const save = () => {
     update.mutate(
       {
         name,
-        // Zod-Defaults machen diese beiden auch beim PATCH zu Pflichtfeldern.
+        // Zod-Defaults machen diese drei auch beim PATCH zu Pflichtfeldern.
         playsInstrument,
         canHost,
+        autoAttend,
         ...(birthdate === '' ? {} : { birthdate }),
       },
       {
@@ -173,6 +177,17 @@ function Loaded({ personId }: { personId: string }) {
               description="Nimm den Haken raus, wenn du für eine Weile nicht dran sein möchtest — dann schlägt dich die App nicht als Host vor."
               checked={canHost}
               onChange={(event) => setCanHost(event.target.checked)}
+            />
+
+            <Checkbox
+              label="Ich bin grundsätzlich dabei"
+              description={
+                'Sagt kommende Abende gleich für dich zu, statt sie auf „weiß noch nicht“ ' +
+                'zu lassen. Ein Abwesenheitszeitraum sticht weiterhin, und absagen ' +
+                'kannst du jederzeit einzeln.'
+              }
+              checked={autoAttend}
+              onChange={(event) => setAutoAttend(event.target.checked)}
             />
 
             <Button

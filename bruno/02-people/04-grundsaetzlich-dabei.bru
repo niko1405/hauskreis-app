@@ -1,0 +1,51 @@
+meta {
+  name: Grundsätzlich dabei einschalten
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/people/{{personId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{personEtag}}
+}
+
+body:json {
+  {
+    "playsInstrument": false,
+    "canHost": true,
+    "autoAttend": true
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("merkt sich den Schalter", function () {
+    expect(res.body.autoAttend).to.equal(true);
+  });
+}
+
+docs {
+  Der Schalter wirkt **rückwirkend**: alle kommenden Termine ohne eigene
+  Antwort bekommen ein `ATTENDING` mit `source: AUTO`. Wer ihn umlegt, meint
+  die sieben Dienstage, die er gerade vor sich sieht — nicht erst den achten.
+
+  `AUTO` ist eine eigene Quelle und nicht `SELF`, und darin steckt der ganze
+  Punkt: eine `SELF`-Zeile weicht keinem Abwesenheitszeitraum. Als `SELF`
+  gespeichert bliebe ein eingetragener Urlaub still wirkungslos — der Abend
+  stünde weiter auf „dabei". `AUTO` darf der Zeitraum überschreiben.
+
+  **Beim Ausschalten passiert nichts.** Was zugesagt ist, bleibt zugesagt: eine
+  Zusage stillschweigend zurückzunehmen wäre eine Absage, die niemand
+  ausgesprochen hat.
+
+  `playsInstrument` und `canHost` müssen mit — die Zod-Defaults machen sie auch
+  im PATCH zu Pflichtfeldern.
+}

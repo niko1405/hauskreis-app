@@ -10,13 +10,21 @@ import { RoleReleaseService } from './role-release.service';
 import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module';
 import { NotificationModule } from '../notification/notification.module';
 import { PersonModule } from '../person/person.module';
+import { AttendanceModule } from '../attendance/attendance.module';
 
 @Module({
   // Die ersten beiden Importe sind der Sinn des Modul-Schnitts: das Ranking
   // liegt in RoleSuggestionModule, die Push-Verkabelung in NotificationModule,
   // dieses Modul besitzt beides nicht. PersonModule kam für den
   // Actionstep-Haken dazu — wer abhakt, steht im Token und nicht im Body.
-  imports: [RoleSuggestionModule, NotificationModule, PersonModule],
+  // AttendanceModule: ein neuer Abend braucht die Zusagen derer, die
+  // grundsätzlich dabei sind.
+  imports: [
+    RoleSuggestionModule,
+    NotificationModule,
+    PersonModule,
+    AttendanceModule,
+  ],
   controllers: [MeetingController],
   providers: [
     MeetingService,

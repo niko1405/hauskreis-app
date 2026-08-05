@@ -39,9 +39,9 @@ export type CreatePersonInput = S['CreatePersonDto'];
 export type InvitePersonInput = S['InvitePersonDto'];
 export type InvitedPerson = S['InvitedPersonResponseDto'];
 /**
- * Achtung: `playsInstrument` und `canHost` sind **Pflicht**, obwohl es ein
- * PATCH ist — die Zod-Defaults machen sie im Schema nicht-optional. Wer nur
- * den Namen ändert, muss beide trotzdem mitschicken.
+ * Achtung: `playsInstrument`, `canHost` und `autoAttend` sind **Pflicht**,
+ * obwohl es ein PATCH ist — die Zod-Defaults machen sie im Schema
+ * nicht-optional. Wer nur den Namen ändert, muss alle drei mitschicken.
  */
 export type UpdatePersonInput = S['UpdatePersonDto'];
 

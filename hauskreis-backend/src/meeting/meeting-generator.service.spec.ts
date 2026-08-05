@@ -5,6 +5,7 @@ import {
 // Type-only: keeps Jest from loading the real PrismaClient, which otherwise
 // leaves handles open and drags the suite out.
 import type { PrismaService } from '../prisma/prisma.service';
+import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { MeetingType } from '../../generated/prisma/enums';
 
 type CreateManyArgs = {
@@ -26,11 +27,14 @@ function setup(existingDates: Date[] = []) {
   const hauskreis = {
     findMany: jest.fn().mockResolvedValue([{ id: 'hk-1' }]),
   };
+  const autoAttendance = { apply: jest.fn().mockResolvedValue(0) };
 
-  const service = new MeetingGeneratorService({
-    meeting,
-    hauskreis,
-  } as unknown as PrismaService);
+  const service = new MeetingGeneratorService(
+    { meeting, hauskreis } as unknown as PrismaService,
+    // Füllt sonst die Zusagen derer nach, die grundsätzlich dabei sind. Was
+    // dabei herauskommt, prüft `auto-attendance.service.spec.ts`.
+    autoAttendance as unknown as AutoAttendanceService,
+  );
 
   return { service, meeting, hauskreis, createMany };
 }
@@ -130,9 +134,10 @@ describe('MeetingGeneratorService.generateForAllHauskreise', () => {
 describe('MeetingGeneratorService.closePastMeetings', () => {
   it('marks evenings that have been and gone as completed', async () => {
     const updateMany = jest.fn().mockResolvedValue({ count: 3 });
-    const service = new MeetingGeneratorService({
-      meeting: { updateMany },
-    } as unknown as PrismaService);
+    const service = new MeetingGeneratorService(
+      { meeting: { updateMany } } as unknown as PrismaService,
+      { apply: jest.fn() } as unknown as AutoAttendanceService,
+    );
 
     await expect(
       service.closePastMeetings(new Date('2026-07-29T10:00:00.000Z')),

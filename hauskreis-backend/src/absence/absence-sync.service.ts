@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MeetingCancellationService } from '../meeting/meeting-cancellation.service';
 import { RoleReleaseService } from '../meeting/role-release.service';
 import { MeetingNotificationService } from '../meeting/meeting-notification.service';
+import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import {
   AttendanceSource,
   AttendanceStatus,
@@ -44,6 +45,7 @@ export class AbsenceSyncService {
     private readonly meetingNotifications: MeetingNotificationService,
     private readonly cancellations: MeetingCancellationService,
     private readonly roleRelease: RoleReleaseService,
+    private readonly autoAttendance: AutoAttendanceService,
   ) {}
 
   /**
@@ -96,13 +98,20 @@ export class AbsenceSyncService {
       // A deliberate answer outranks a blanket date range in both directions:
       // somebody who said "doch, ich komme" keeps that, and a manual decline is
       // not ours to withdraw.
+      //
+      // Eine **automatische** Zusage ist keine ausdrückliche. Sie weicht dem
+      // Zeitraum — sonst stünde ein eingetragener Urlaub gegen ein „dabei", das
+      // niemand je getippt hat, und der Schalter machte jeden Urlaub still
+      // wirkungslos.
       if (existing && existing.source === AttendanceSource.SELF) {
         continue;
       }
 
-      if (away && !existing) {
+      const derived = existing?.source === AttendanceSource.ABSENCE;
+
+      if (away && !derived) {
         toDecline.push(meeting.id);
-      } else if (!away && existing) {
+      } else if (!away && derived) {
         toWithdraw.push(meeting.id);
       }
     }
@@ -115,9 +124,26 @@ export class AbsenceSyncService {
           source: AttendanceSource.ABSENCE,
         },
       });
+
+      // Ein gelöschter Urlaub gibt den Abend wieder frei — und wer
+      // grundsätzlich dabei ist, ist es dann auch wieder. Ohne das bliebe nach
+      // einem zurückgenommenen Urlaub „weiß noch nicht" stehen, obwohl der
+      // Schalter etwas anderes sagt.
+      await this.autoAttendance.apply(hauskreisId, { personId, now: today });
     }
 
     if (toDecline.length > 0) {
+      // Erst die automatische Zusage wegräumen: `skipDuplicates` unten ließe
+      // sie sonst stehen, und der Abend bliebe auf „dabei", obwohl die Person
+      // verreist ist.
+      await this.prisma.meetingAttendance.deleteMany({
+        where: {
+          personId,
+          meetingId: { in: toDecline },
+          source: AttendanceSource.AUTO,
+        },
+      });
+
       await this.prisma.meetingAttendance.createMany({
         data: toDecline.map((meetingId) => ({
           meetingId,

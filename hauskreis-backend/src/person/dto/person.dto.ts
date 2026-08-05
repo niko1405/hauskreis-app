@@ -7,6 +7,8 @@ export const createPersonSchema = z.object({
   birthdate: z.iso.date().optional(),
   playsInstrument: z.boolean().default(false),
   canHost: z.boolean().default(true),
+  /// „Ich bin grundsätzlich dabei." Sagt kommende Abende im Voraus zu.
+  autoAttend: z.boolean().default(false),
   /// The home this person brings into the hosting rotation, if any.
   locationId: z.uuid().nullish(),
 });

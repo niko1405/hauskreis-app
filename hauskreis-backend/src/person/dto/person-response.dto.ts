@@ -24,6 +24,9 @@ export const personResponseSchema = z.object({
   birthdate: isoDateOut.nullable(),
   playsInstrument: z.boolean(),
   canHost: z.boolean(),
+  /// „Ich bin grundsätzlich dabei." Kommende Abende werden im Voraus zugesagt,
+  /// solange nichts anderes dasteht.
+  autoAttend: z.boolean(),
   /// Was diese Person **in diesem Hauskreis** darf. Vorher war „Admin" eine
   /// Realm-Rolle und galt überall; wer sich einen eigenen Hauskreis anlegt,
   /// ist dort Admin und im alten Mitglied.
