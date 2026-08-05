@@ -8,6 +8,7 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import { MembershipService } from './membership.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { PersonService } from '../person/person.service';
+import type { PhotoService } from '../person/photo.service';
 import type { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
 import type { RoleReleaseService } from '../meeting/role-release.service';
 import type { MeetingCancellationService } from '../meeting/meeting-cancellation.service';
@@ -81,6 +82,8 @@ function setup(
   const notify = jest
     .fn()
     .mockResolvedValue({ delivered: 1, pruned: 0, failed: 0, skipped: 0 });
+  // Wer geht, nimmt sein Gesicht mit; die Zeile bleibt fürs Archiv.
+  const removePhoto = jest.fn().mockResolvedValue(undefined);
 
   const service = new MembershipService(
     prisma,
@@ -91,6 +94,7 @@ function setup(
     { releaseEverythingUpcoming } as unknown as RoleReleaseService,
     { reconcile } as unknown as MeetingCancellationService,
     { notify } as unknown as NotificationService,
+    { remove: removePhoto } as unknown as PhotoService,
   );
 
   return {
@@ -103,6 +107,7 @@ function setup(
     releaseEverythingUpcoming,
     reconcile,
     notify,
+    removePhoto,
   };
 }
 

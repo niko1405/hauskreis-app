@@ -32,7 +32,7 @@ import { useAssignments, useMeeting, useSongLeaders } from '@/lib/api/hooks';
 import { addDays, formatDay, formatRelativeDay, today } from '@/lib/date';
 import { ROLE_LABEL } from '@/lib/meeting';
 import { cn } from '@/lib/cn';
-import type { Assignment, AssignmentRole } from '@/lib/api/types';
+import type { Assignment, AssignmentRole, PersonRef } from '@/lib/api/types';
 import { useRoleAssignment } from './detail/use-role-assignment';
 
 const AssignmentSheet = dynamic(() =>
@@ -219,7 +219,7 @@ function Cell({
   onEdit,
   label,
 }: {
-  people: { id: string; name: string }[];
+  people: PersonRef[];
   onEdit?: () => void;
   label: string;
 }) {

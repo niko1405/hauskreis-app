@@ -32,7 +32,13 @@ async function bootstrap(): Promise<void> {
   // the proxy, and the rate limiter would count the whole group as one caller.
   app.set('trust proxy', 1);
 
-  app.use(helmet());
+  // `crossOriginResourcePolicy` aus: Profilbilder liefert diese API aus, und
+  // die App läuft unter einer anderen Herkunft. Helmets Vorgabe `same-origin`
+  // lässt den Browser das Bild verwerfen, **nachdem** es geladen wurde — im
+  // Netz-Tab steht 200, im `<img>` steht nichts. Der Zugriff selbst hängt
+  // weiter am Bearer-Token; diese Kopfzeile schützt nichts, was CORS nicht
+  // ohnehin regelt.
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(compression());
   // Pinned rather than left to the Express default, so the limit is a decision
   // on the record. Nothing this API accepts comes close to it. Nest's own

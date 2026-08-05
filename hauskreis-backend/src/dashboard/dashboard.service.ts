@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { PrayerBuddyService } from '../prayer-buddy/prayer-buddy.service';
 import { AssignmentService, type Assignment } from './assignment.service';
@@ -123,18 +124,18 @@ export class DashboardService {
                 requiresHost: true,
               },
             },
-            host: { select: { id: true, name: true } },
+            host: { select: personRefSelect },
             topic: {
               select: {
                 id: true,
                 title: true,
                 responsibles: {
-                  select: { person: { select: { id: true, name: true } } },
+                  select: { person: { select: personRefSelect } },
                 },
               },
             },
             songLeaders: {
-              select: { person: { select: { id: true, name: true } } },
+              select: { person: { select: personRefSelect } },
             },
             attendances: {
               where: { personId },

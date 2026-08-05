@@ -129,6 +129,7 @@ export class RoleSuggestionService {
         ].map((suggestion) => ({
           personId: suggestion.personId,
           name: suggestion.name,
+          photoUpdatedAt: suggestion.photoUpdatedAt,
           facts: {
             ...suggestion.facts,
             away: away.has(suggestion.personId),
@@ -163,7 +164,7 @@ export class RoleSuggestionService {
       await Promise.all([
         this.prisma.person.findMany({
           where: { hauskreisId, active: true },
-          select: { id: true, name: true },
+          select: { id: true, name: true, photoUpdatedAt: true },
         }),
         this.collectEvents(hauskreisId),
         this.collectTopicEvents(hauskreisId, options.excludeTopicId),
@@ -204,7 +205,7 @@ export class RoleSuggestionService {
       await Promise.all([
         this.prisma.person.findMany({
           where: { hauskreisId, active: true, playsInstrument: true },
-          select: { id: true, name: true },
+          select: { id: true, name: true, photoUpdatedAt: true },
         }),
         this.collectEvents(hauskreisId),
         this.collectTopicEvents(hauskreisId),
@@ -293,7 +294,7 @@ export class RoleSuggestionService {
         capacity: true,
         residents: {
           where: { active: true, canHost: true },
-          select: { id: true, name: true },
+          select: { id: true, name: true, photoUpdatedAt: true },
         },
       },
     });

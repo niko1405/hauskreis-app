@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { PersonController } from './person.controller';
 import { MeController } from './me.controller';
 import { PersonService } from './person.service';
+import { PhotoController } from './photo.controller';
+import { PhotoService } from './photo.service';
 import { LocationModule } from '../location/location.module';
 import { AttendanceModule } from '../attendance/attendance.module';
 
@@ -16,8 +18,9 @@ import { AttendanceModule } from '../attendance/attendance.module';
   // AttendanceModule geht dagegen ohne Umweg: es braucht außer Prisma nichts
   // und schließt deshalb keinen Kreis.
   imports: [LocationModule, AttendanceModule],
-  controllers: [PersonController, MeController],
-  providers: [PersonService],
-  exports: [PersonService],
+  controllers: [PersonController, MeController, PhotoController],
+  providers: [PersonService, PhotoService],
+  // PhotoService nach außen, damit ein Austritt auch die Datei wegräumt.
+  exports: [PersonService, PhotoService],
 })
 export class PersonModule {}

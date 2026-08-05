@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
 import { toUtcDate } from '../meeting/meeting-schedule';
@@ -68,18 +69,18 @@ export class AssignmentService {
         select: {
           id: true,
           date: true,
-          host: { select: { id: true, name: true } },
+          host: { select: personRefSelect },
           location: { select: { name: true } },
           topic: {
             select: {
               title: true,
               responsibles: {
-                select: { person: { select: { id: true, name: true } } },
+                select: { person: { select: personRefSelect } },
               },
             },
           },
           songLeaders: {
-            select: { person: { select: { id: true, name: true } } },
+            select: { person: { select: personRefSelect } },
           },
         },
         orderBy: { date: 'asc' },
@@ -98,7 +99,7 @@ export class AssignmentService {
           id: true,
           periodStart: true,
           periodEnd: true,
-          members: { select: { person: { select: { id: true, name: true } } } },
+          members: { select: { person: { select: personRefSelect } } },
         },
         orderBy: { periodStart: 'asc' },
       }),

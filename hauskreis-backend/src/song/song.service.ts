@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
@@ -20,7 +21,7 @@ const songSelect = {
   lyricsUrl: true,
   createdAt: true,
   version: true,
-  createdBy: { select: { id: true, name: true } },
+  createdBy: { select: personRefSelect },
 } as const;
 
 @Injectable()

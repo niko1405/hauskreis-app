@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/cn';
+import { usePersonPhoto } from '@/lib/api/hooks';
 import { avatarScheme, initials } from '@/lib/person';
 import type { PersonRef } from '@/lib/api/types';
 
@@ -41,7 +42,50 @@ export function Avatar({
     );
   }
 
+  return <WithPerson person={person} size={size} className={className} />;
+}
+
+/**
+ * Eigene Komponente, weil hier ein Hook läuft und der Platzhalter-Zweig oben
+ * früh zurückkehrt.
+ *
+ * Das Bild kommt als Data-URL aus dem Cache und nicht als `src`-Verweis: die
+ * API kennt nur das Bearer-Token, ein `<img src="…/photo">` käme mit 401
+ * zurück. Solange es lädt — oder wenn es keins gibt —, stehen die Initialen
+ * da. Kein Ladebalken: ein springender Avatar in einer Liste ist unruhiger als
+ * zwei Buchstaben, die kurz stehen bleiben.
+ */
+function WithPerson({
+  person,
+  size,
+  className,
+}: {
+  person: PersonRef;
+  size: AvatarSize;
+  className?: string;
+}) {
+  const photo = usePersonPhoto(person);
   const scheme = avatarScheme(person.id);
+
+  if (photo.data) {
+    return (
+      // `next/image` ist hier falsch: es optimiert Bilder, die es abrufen
+      // kann. Diese sind Data-URLs aus dem Cache, schon auf 512 Pixel
+      // gerechnet und hinter einem Bearer-Token — es gäbe nichts zu
+      // optimieren und keinen Weg dorthin.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photo.data}
+        alt={person.name}
+        title={person.name}
+        className={cn(
+          'shrink-0 rounded-full object-cover',
+          SIZES[size],
+          className,
+        )}
+      />
+    );
+  }
 
   return (
     <div

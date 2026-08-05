@@ -39,6 +39,8 @@ export interface RoleAssignmentEvent {
 export interface EligiblePerson {
   id: string;
   name: string;
+  /** Nur zum Durchreichen: die Vorschlagsliste zeigt Gesichter. */
+  photoUpdatedAt: Date | null;
 }
 
 /** A job the person has already agreed to, still ahead of the target date. */
@@ -67,6 +69,7 @@ export interface SuggestionFacts {
 export interface RoleSuggestion {
   personId: string;
   name: string;
+  photoUpdatedAt: Date | null;
   /** 1-based; equal facts still produce distinct ranks, ordered by name. */
   rank: number;
   facts: SuggestionFacts;

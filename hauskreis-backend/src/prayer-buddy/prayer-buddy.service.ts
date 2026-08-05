@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { toPage } from '../common/http/pagination';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
@@ -11,7 +12,7 @@ import type {
 
 const groupInclude = {
   members: {
-    select: { person: { select: { id: true, name: true } } },
+    select: { person: { select: personRefSelect } },
   },
 } as const;
 
@@ -39,7 +40,7 @@ export class PrayerBuddyService {
   async getConfig(hauskreisId: string) {
     const existing = await this.prisma.prayerBuddyCycleConfig.findUnique({
       where: { hauskreisId },
-      include: { updatedBy: { select: { id: true, name: true } } },
+      include: { updatedBy: { select: personRefSelect } },
     });
 
     if (existing) {
@@ -48,7 +49,7 @@ export class PrayerBuddyService {
 
     return this.prisma.prayerBuddyCycleConfig.create({
       data: { hauskreisId },
-      include: { updatedBy: { select: { id: true, name: true } } },
+      include: { updatedBy: { select: personRefSelect } },
     });
   }
 

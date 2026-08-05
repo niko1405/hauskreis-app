@@ -140,6 +140,7 @@ export function rankForRole(params: {
     .map((entry, index) => ({
       personId: entry.person.id,
       name: entry.person.name,
+      photoUpdatedAt: entry.person.photoUpdatedAt,
       rank: index + 1,
       facts: entry.facts,
     }));

@@ -109,6 +109,52 @@ export function useResendVerification() {
   return useApiMutation(() => coreApi.resendVerification());
 }
 
+/**
+ * Das Bild einer Person, als Data-URL.
+ *
+ * Der Schlüssel enthält `photoUpdatedAt`: ein neues Bild ist ein neuer
+ * Schlüssel, und der alte Eintrag verfällt von selbst. Ohne ihn müsste nach
+ * jedem Wechsel von Hand invalidiert werden — an einer Stelle, die davon
+ * nichts weiß.
+ *
+ * `staleTime: Infinity`, weil sich unter demselben Schlüssel nichts mehr
+ * ändern **kann**.
+ */
+export function usePersonPhoto(person: {
+  id: string;
+  photoUpdatedAt: string | null;
+}) {
+  const { hauskreisId } = useHk();
+
+  return useQuery({
+    queryKey: ['photo', person.id, person.photoUpdatedAt],
+    queryFn: ({ signal }) => coreApi.getPhoto(hauskreisId, person.id, signal),
+    enabled: Boolean(hauskreisId) && person.photoUpdatedAt !== null,
+    staleTime: Infinity,
+    // Ein fehlendes Bild ist kein Netzproblem — es noch dreimal zu versuchen
+    // hilft niemandem.
+    retry: false,
+  });
+}
+
+/** Das eigene Bild setzen. */
+export function useUploadPhoto() {
+  const { keys, derived } = useHk();
+
+  return useApiMutation((file: File) => coreApi.uploadPhoto(file), {
+    invalidateKeys: [qk.me, keys.people.all, keys.meetings.all, ...derived],
+  });
+}
+
+/** Und wieder entfernen. */
+export function useDeletePhoto() {
+  const { keys, derived } = useHk();
+
+  return useApiMutation(() => coreApi.deletePhoto(), {
+    invalidateKeys: [qk.me, keys.people.all, keys.meetings.all, ...derived],
+  });
+}
+
 // ── Der Hauskreis, in dem man steckt ────────────────────────────────────────
 
 /**

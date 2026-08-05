@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { AbsenceSyncService } from './absence-sync.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
@@ -18,7 +19,7 @@ import type {
 } from './dto/absence.dto';
 
 const absenceInclude = {
-  person: { select: { id: true, name: true } },
+  person: { select: personRefSelect },
 } as const;
 
 /**

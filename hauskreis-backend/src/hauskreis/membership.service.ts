@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PersonService } from '../person/person.service';
+import { PhotoService } from '../person/photo.service';
 import { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
 import {
   RoleReleaseService,
@@ -43,6 +44,7 @@ export class MembershipService {
     private readonly roleRelease: RoleReleaseService,
     private readonly cancellations: MeetingCancellationService,
     private readonly notifications: NotificationService,
+    private readonly photos: PhotoService,
   ) {}
 
   /**
@@ -150,6 +152,12 @@ export class MembershipService {
         },
       });
     });
+
+    // Das Bild danach und außerhalb der Transaktion: eine Datei lässt sich
+    // nicht zurückrollen, und ein Austritt darf nicht daran scheitern, dass
+    // ein Verzeichnis klemmt. Die Zeile bleibt fürs Archiv stehen, das Gesicht
+    // nicht — sie zeigt, wer damals gehostet hat, und dafür reicht der Name.
+    await this.photos.remove(personId);
 
     await this.people.syncHomes(me.locationId);
 

@@ -2,7 +2,7 @@ import { TopicCarryOverService } from './topic-carry-over.service';
 // Type-only: keeps Jest from loading the real PrismaClient.
 import type { PrismaService } from '../prisma/prisma.service';
 import type { TopicService } from './topic.service';
-import { MeetingStatus, MeetingType } from '../../generated/prisma/enums';
+import { MeetingStatus } from '../../generated/prisma/enums';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const NOW = utc('2026-07-27');

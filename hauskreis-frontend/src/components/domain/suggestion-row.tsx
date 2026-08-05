@@ -103,7 +103,11 @@ export function SuggestionRow({
     >
       <div className="flex min-w-0 items-start gap-3">
         <Avatar
-          person={{ id: suggestion.personId, name: suggestion.name }}
+          person={{
+            id: suggestion.personId,
+            name: suggestion.name,
+            photoUpdatedAt: suggestion.photoUpdatedAt,
+          }}
           size={compact ? 'sm' : 'md'}
         />
         <div className="min-w-0">

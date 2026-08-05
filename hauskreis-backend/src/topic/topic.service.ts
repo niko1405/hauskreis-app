@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AssignmentRole,
@@ -24,7 +25,7 @@ import type {
 
 const topicInclude = {
   responsibles: {
-    select: { person: { select: { id: true, name: true } } },
+    select: { person: { select: personRefSelect } },
   },
   meetings: {
     // Zusammenfassung und Actionstep gehören zum Thema, nur eben pro Abend:

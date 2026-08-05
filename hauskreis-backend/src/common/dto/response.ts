@@ -51,7 +51,32 @@ export const isoDateTimeOut = z.iso.datetime();
 export const personRefSchema = z.object({
   id: z.uuid(),
   name: z.string(),
+  /// Wann das Profilbild zuletzt gesetzt wurde; `null` heißt „keins, zeig
+  /// Initialen".
+  ///
+  /// Steht hier und nicht nur an der vollen Person, weil ein Avatar überall
+  /// dort auftaucht, wo jemand *benannt* wird — als Gastgeber, als
+  /// Themen-Zuständige, als Gebetsbuddy. Eine Änderung an dieser Stelle macht
+  /// Bilder in allen diesen Ansichten möglich; die Alternative wäre, an einem
+  /// Dutzend Stellen die Personenliste dazuzuladen, nur um an ein Bild zu
+  /// kommen.
+  photoUpdatedAt: isoDateTimeOut.nullable(),
 });
+
+/**
+ * Das Prisma-Gegenstück zu `personRefSchema` — direkt daneben, weil die beiden
+ * übereinstimmen **müssen**.
+ *
+ * Das Schema filtert: was hier fehlt, fehlt in der Antwort, und dann scheitert
+ * die Antwort an ihrem eigenen Schema — mit 500, nicht mit einem Typfehler.
+ * Zwölfmal `{ id: true, name: true }` von Hand zu tippen hieß, zwölfmal an ein
+ * neues Feld denken zu müssen; einmal ist genug.
+ */
+export const personRefSelect = {
+  id: true,
+  name: true,
+  photoUpdatedAt: true,
+} as const;
 
 /**
  * Eine Seite einer Liste.

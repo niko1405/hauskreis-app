@@ -2,9 +2,11 @@
 import {
   apiDelete,
   apiGet,
+  apiGetDataUrl,
   apiGetResource,
   apiPatch,
   apiPost,
+  apiPostForm,
   apiPut,
   UNCONDITIONAL,
   type Resource,
@@ -19,6 +21,7 @@ import type {
   LeaveResult,
   Location,
   Me,
+  PhotoUploaded,
   SetHomeInput,
   VerificationSent,
 } from '../types';
@@ -73,6 +76,34 @@ export async function changeEmail(email: string): Promise<ChangedEmail> {
  */
 export function resendVerification(): Promise<VerificationSent> {
   return apiPost<VerificationSent>('/me/resend-verification');
+}
+
+/** Das eigene Profilbild setzen. Zurück kommt der Zeitstempel für die URL. */
+export function uploadPhoto(file: File): Promise<PhotoUploaded> {
+  const form = new FormData();
+  form.append('file', file);
+  return apiPostForm<PhotoUploaded>('/me/photo', form);
+}
+
+/** „Doch lieber Initialen." */
+export function deletePhoto(): Promise<void> {
+  return apiDelete('/me/photo');
+}
+
+/**
+ * Das Bild einer Person als Data-URL.
+ *
+ * Über den Client und nicht als `<img src>`: die API kennt nur das
+ * Bearer-Token, ein direkter Verweis käme mit 401 zurück.
+ */
+export function getPhoto(
+  hauskreisId: string,
+  personId: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  return apiGetDataUrl(hkPath(hauskreisId, `/people/${personId}/photo`), {
+    signal,
+  });
 }
 
 /** Nicht paginiert. Liefert die `hauskreisId` für alles Weitere. */

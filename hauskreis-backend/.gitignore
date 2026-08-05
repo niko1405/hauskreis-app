@@ -1,5 +1,8 @@
 # compiled output
 /dist
+
+# Profilbilder aus der Entwicklung — Nutzdaten, kein Quelltext.
+/uploads
 /node_modules
 /build
 

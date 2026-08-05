@@ -184,6 +184,14 @@ model Person {
   username        String?   @unique
   /// Der **Anzeigename**: was auf Karten, Avataren und in „Du bist dran" steht.
   name            String
+  /// Wann das Profilbild zuletzt geschrieben wurde — `null` heißt: keins, dann
+  /// zeigt die App Initialen mit einer aus der Id abgeleiteten Farbe.
+  ///
+  /// Der Zeitstempel und nicht der Dateiname steht in der Antwort: die Datei
+  /// heißt immer `{id}.webp`, und ein Name, der sich nie ändert, wäre für den
+  /// Browser für immer dasselbe Bild. So hängt er als Query-Parameter an der
+  /// URL und das Zwischenspeichern erledigt sich von selbst.
+  photoUpdatedAt  DateTime? @map("photo_updated_at")
   email           String
   /// Gilt nur hier. Siehe `PersonRole`.
   role            PersonRole @default(MEMBER)

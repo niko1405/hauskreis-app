@@ -1,6 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import { isoDateOut } from '../../common/dto/response';
+import { isoDateOut, isoDateTimeOut } from '../../common/dto/response';
 
 /**
  * Die Fakten hinter einem Vorschlag.
@@ -29,6 +29,12 @@ const suggestionFactsSchema = z.object({
 export const roleSuggestionSchema = z.object({
   personId: z.uuid(),
   name: z.string(),
+  /// Fürs Gesicht in der Vorschlagsliste. Nicht `personRefSchema`, obwohl es
+  /// dieselben drei Felder sind: hier heißt das Feld `personId`, weil ein
+  /// Vorschlag *über* eine Person spricht und nicht *eine Person ist* — und ein
+  /// eingebettetes `person: { … }` machte aus `suggestion.name` ein
+  /// `suggestion.person.name` an jeder Aufrufstelle.
+  photoUpdatedAt: isoDateTimeOut.nullable(),
   /// Ab 1. Gleiche Fakten ergeben trotzdem verschiedene Ränge, entschieden
   /// über den Namen — damit dieselbe Historie immer dieselbe Reihenfolge gibt.
   rank: z.number().int().positive(),

@@ -18,8 +18,19 @@ export interface Page<T> {
   hasMore: boolean;
 }
 
-/** Eine Person, wie sie überall eingebettet auftaucht: nur Id und Name. */
-export type PersonRef = { id: string; name: string };
+/**
+ * Eine Person, wie sie überall eingebettet auftaucht.
+ *
+ * `photoUpdatedAt` ist dabei, weil ein Avatar überall dort steht, wo jemand
+ * *benannt* wird — als Gastgeber, als Themen-Zuständige, als Gebetsbuddy. Ohne
+ * das Feld hier müsste jede dieser Ansichten die Personenliste dazuladen, nur
+ * um an ein Bild zu kommen.
+ */
+export type PersonRef = {
+  id: string;
+  name: string;
+  photoUpdatedAt: string | null;
+};
 
 // ── Fehler ──────────────────────────────────────────────────────────────────
 
@@ -66,6 +77,8 @@ export type SetHomeInput = S['SetHomeDto'];
 export type ChangedEmail = S['ChangedEmailResponseDto'];
 /** Ob Keycloak die Bestätigungsmail losgeworden ist — mehr sagt die Route nicht. */
 export type VerificationSent = S['VerificationSentResponseDto'];
+/** Der neue Zeitstempel des Profilbilds — er **ist** die Bild-URL. */
+export type PhotoUploaded = S['PhotoResponseDto'];
 
 // ── Termine ─────────────────────────────────────────────────────────────────
 

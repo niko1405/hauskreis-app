@@ -39,6 +39,11 @@ export const personResponseSchema = z.object({
   /// „bringt keines ein" — alle anderen Rollen bleiben davon unberührt.
   locationId: z.uuid().nullable(),
   active: z.boolean(),
+  /// Wann das Profilbild zuletzt gesetzt wurde; `null` heißt „keins". Der
+  /// Zeitstempel **ist** die Bild-URL: die App hängt ihn an
+  /// `…/people/:id/photo`, und damit lädt der Browser nach einem Wechsel
+  /// sofort das neue Bild statt des zwischengespeicherten alten.
+  photoUpdatedAt: isoDateTimeOut.nullable(),
   /// Wann sich die Person zum ersten Mal angemeldet hat. `null` heißt
   /// „eingeladen, aber noch nicht da" — der Zustand, in dem sich eine
   /// Einladung noch zurückziehen lässt.
@@ -85,6 +90,17 @@ export const changedEmailResponseSchema = personResponseSchema.extend({
   verificationEmailSent: z.boolean(),
 });
 
+/**
+ * Was nach einem Bild-Upload zurückkommt.
+ *
+ * Nur der Zeitstempel — er ist alles, was die App braucht: sie hängt ihn an
+ * die Bild-URL, und damit lädt der Browser sofort das neue Bild statt des
+ * zwischengespeicherten alten.
+ */
+export const photoResponseSchema = z.object({
+  photoUpdatedAt: isoDateTimeOut,
+});
+
 /** Was `POST /api/me/resend-verification` mitteilt. */
 export const verificationSentResponseSchema = z.object({
   verificationEmailSent: z.boolean(),
@@ -126,3 +142,4 @@ export class ChangedEmailResponseDto extends createZodDto(
 export class VerificationSentResponseDto extends createZodDto(
   verificationSentResponseSchema,
 ) {}
+export class PhotoResponseDto extends createZodDto(photoResponseSchema) {}

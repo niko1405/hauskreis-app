@@ -233,7 +233,11 @@ export function useSetActionstepDone(meetingId: string) {
                 ? [
                     ...resource.data.actionstepDone,
                     {
-                      person: { id: me.id, name: me.name },
+                      person: {
+                        id: me.id,
+                        name: me.name,
+                        photoUpdatedAt: me.photoUpdatedAt,
+                      },
                       doneAt: new Date().toISOString(),
                     },
                   ]

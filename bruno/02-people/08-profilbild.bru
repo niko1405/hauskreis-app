@@ -1,0 +1,47 @@
+meta {
+  name: Profilbild abrufen
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/people/{{myPersonId}}/photo
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("liefert ein WebP", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getHeader("content-type")).to.include("image/webp");
+  });
+
+  test("bringt einen ETag mit", function () {
+    expect(res.getHeader("etag")).to.be.a("string");
+  });
+}
+
+docs {
+  **404**, solange kein Bild gesetzt ist — das ist der Normalfall, kein Fehler.
+  Ob eines existiert, steht als `photoUpdatedAt` an jeder Person und an jedem
+  eingebetteten `personRef`; die App fragt das Bild nur an, wenn der Zeitstempel
+  es verspricht.
+
+  Hochladen geht über `POST /api/me/photo` als **Multipart** mit dem Feld
+  `file` — in Bruno über den Body-Typ „Multipart Form". Nur für einen selbst;
+  wer gemeint ist, steht im Token. Der Server schneidet mittig zu, skaliert auf
+  512 Pixel und schreibt WebP. Zurück kommt der neue Zeitstempel: er **ist** die
+  Bild-URL, denn die App hängt ihn als Query-Parameter an und erledigt damit das
+  Zwischenspeichern im Browser.
+
+  `DELETE /api/me/photo` räumt Datei und Zeitstempel weg. Ein Austritt tut
+  dasselbe — die Zeile bleibt fürs Archiv stehen, das Gesicht nicht.
+
+  Die Datei liegt unter `UPLOAD_DIR/people/{id}.webp`, nicht in der Datenbank:
+  ein Bild ist kein Datensatz, den man abfragt, sondern ein Blob, den man
+  ausliefert. Der Dateiname folgt der Id statt in einer Spalte zu stehen — eine
+  zweite Wahrheit über etwas, das ohnehin feststeht, könnte auseinanderlaufen.
+
+  Der `ETag` kommt aus `photoUpdatedAt` und nicht aus dem Inhalt: dieselbe
+  Antwort, billiger als ein Hash über 30 kB.
+}

@@ -516,6 +516,22 @@ export interface paths {
     patch: operations['PersonController_update'];
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/people/{id}/photo': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PhotoController_find'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/people/{id}/resend-invitation': {
     parameters: {
       query?: never;
@@ -820,6 +836,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/me/photo': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['PhotoController_upload'];
+    delete: operations['PhotoController_remove'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/me/resend-verification': {
     parameters: {
       query?: never;
@@ -995,6 +1027,8 @@ export interface components {
       locationId: string | null;
       active: boolean;
       /** Format: date-time */
+      photoUpdatedAt: string | null;
+      /** Format: date-time */
       acceptedAt: string | null;
       /** Format: date-time */
       createdAt: string;
@@ -1019,6 +1053,8 @@ export interface components {
       /** Format: uuid */
       locationId: string | null;
       active: boolean;
+      /** Format: date-time */
+      photoUpdatedAt: string | null;
       /** Format: date-time */
       acceptedAt: string | null;
       /** Format: date-time */
@@ -1045,6 +1081,8 @@ export interface components {
       /** Format: uuid */
       locationId: string | null;
       active: boolean;
+      /** Format: date-time */
+      photoUpdatedAt: string | null;
       /** Format: date-time */
       acceptedAt: string | null;
       /** Format: date-time */
@@ -1094,6 +1132,8 @@ export interface components {
       /** Format: uuid */
       locationId: string | null;
       active: boolean;
+      /** Format: date-time */
+      photoUpdatedAt: string | null;
       /** Format: date-time */
       acceptedAt: string | null;
       /** Format: date-time */
@@ -1175,6 +1215,8 @@ export interface components {
       locationId: string | null;
       active: boolean;
       /** Format: date-time */
+      photoUpdatedAt: string | null;
+      /** Format: date-time */
       acceptedAt: string | null;
       /** Format: date-time */
       createdAt: string;
@@ -1183,6 +1225,10 @@ export interface components {
     };
     VerificationSentResponseDto: {
       verificationEmailSent: boolean;
+    };
+    PhotoResponseDto: {
+      /** Format: date-time */
+      photoUpdatedAt: string;
     };
     LocationListResponseDto: {
       /** Format: uuid */
@@ -1275,6 +1321,8 @@ export interface components {
           /** Format: uuid */
           id: string;
           name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
         }[];
       }[];
     };
@@ -1291,6 +1339,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** Format: date-time */
+            photoUpdatedAt: string | null;
           }[];
         }[];
       }[];
@@ -1314,6 +1364,8 @@ export interface components {
         /** Format: uuid */
         id: string;
         name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
       } | null;
     };
     UpdateCycleConfigDto: {
@@ -1336,6 +1388,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** Format: date-time */
+            photoUpdatedAt: string | null;
           }[];
         }[];
       } | null;
@@ -1510,6 +1564,8 @@ export interface components {
           /** Format: uuid */
           id: string;
           name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
         } | null;
         location: {
           /** Format: uuid */
@@ -1537,6 +1593,8 @@ export interface components {
           /** Format: uuid */
           id: string;
           name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
         } | null;
         topic: {
           /** Format: uuid */
@@ -1549,6 +1607,8 @@ export interface components {
               /** Format: uuid */
               id: string;
               name: string;
+              /** Format: date-time */
+              photoUpdatedAt: string | null;
             };
           }[];
         } | null;
@@ -1557,6 +1617,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** Format: date-time */
+            photoUpdatedAt: string | null;
           };
         }[];
         actionstepDone: {
@@ -1564,6 +1626,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** Format: date-time */
+            photoUpdatedAt: string | null;
           };
           /** Format: date-time */
           doneAt: string;
@@ -1622,6 +1686,8 @@ export interface components {
         /** Format: uuid */
         id: string;
         name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
       } | null;
       location: {
         /** Format: uuid */
@@ -1649,6 +1715,8 @@ export interface components {
         /** Format: uuid */
         id: string;
         name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
       } | null;
       topic: {
         /** Format: uuid */
@@ -1661,6 +1729,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** Format: date-time */
+            photoUpdatedAt: string | null;
           };
         }[];
       } | null;
@@ -1669,6 +1739,8 @@ export interface components {
           /** Format: uuid */
           id: string;
           name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
         };
       }[];
       actionstepDone: {
@@ -1676,6 +1748,8 @@ export interface components {
           /** Format: uuid */
           id: string;
           name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
         };
         /** Format: date-time */
         doneAt: string;
@@ -1691,6 +1765,8 @@ export interface components {
       /** Format: uuid */
       personId: string;
       name: string;
+      /** Format: date-time */
+      photoUpdatedAt: string | null;
       rank: number;
       facts: {
         /** Format: date */
@@ -1728,6 +1804,8 @@ export interface components {
       /** Format: uuid */
       personId: string;
       name: string;
+      /** Format: date-time */
+      photoUpdatedAt: string | null;
       rank: number;
       facts: {
         /** Format: date */
@@ -1852,6 +1930,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** Format: date-time */
+            photoUpdatedAt: string | null;
           };
         }[];
         meetings: {
@@ -1886,6 +1966,8 @@ export interface components {
           /** Format: uuid */
           id: string;
           name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
         };
       }[];
       meetings: {
@@ -1926,6 +2008,8 @@ export interface components {
           /** Format: uuid */
           id: string;
           name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
         } | null;
         timesPlayed: number;
         /** Format: date */
@@ -1950,6 +2034,8 @@ export interface components {
         /** Format: uuid */
         id: string;
         name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
       } | null;
     };
     CreateSongDto: {
@@ -1982,6 +2068,8 @@ export interface components {
         /** Format: uuid */
         id: string;
         name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
       } | null;
     }[];
     AddMeetingSongDto: {
@@ -2010,6 +2098,8 @@ export interface components {
         /** Format: uuid */
         id: string;
         name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
       } | null;
     };
     UpdateMeetingSongDto: {
@@ -2019,6 +2109,8 @@ export interface components {
       /** Format: uuid */
       id: string;
       name: string;
+      /** Format: date-time */
+      photoUpdatedAt: string | null;
     }[];
     SetSongLeadersDto: {
       personIds: string[];
@@ -2043,6 +2135,8 @@ export interface components {
           /** Format: uuid */
           id: string;
           name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
         };
       }[];
       total: number;
@@ -2069,6 +2163,8 @@ export interface components {
         /** Format: uuid */
         id: string;
         name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
       };
     };
     CreateAbsenceDto: {
@@ -2117,6 +2213,8 @@ export interface components {
           /** Format: uuid */
           id: string;
           name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
         };
         /** Format: uuid */
         meetingId: string | null;
@@ -2151,6 +2249,8 @@ export interface components {
           /** Format: uuid */
           id: string;
           name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
         } | null;
         topic: {
           /** Format: uuid */
@@ -2160,12 +2260,16 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** Format: date-time */
+            photoUpdatedAt: string | null;
           }[];
         } | null;
         songLeaders: {
           /** Format: uuid */
           id: string;
           name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
         }[];
         /** @enum {string} */
         myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
@@ -2181,6 +2285,8 @@ export interface components {
           /** Format: uuid */
           id: string;
           name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
         };
         /** Format: uuid */
         meetingId: string | null;
@@ -5147,6 +5253,26 @@ export interface operations {
       };
     };
   };
+  PhotoController_find: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   PersonController_resendInvitation: {
     parameters: {
       query?: never;
@@ -6757,6 +6883,113 @@ export interface operations {
         };
       };
       /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  PhotoController_upload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'multipart/form-data': {
+          /** Format: binary */
+          file?: string;
+        };
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PhotoResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  PhotoController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Gelöscht, kein Inhalt */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nicht angemeldet */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden */
       404: {
         headers: {
           [name: string]: unknown;

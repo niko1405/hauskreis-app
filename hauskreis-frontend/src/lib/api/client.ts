@@ -212,6 +212,35 @@ function ifMatchOf(precondition: Precondition): string | undefined {
   return precondition.etag;
 }
 
+/**
+ * Multipart — für den einen Fall, der kein JSON ist: das Profilbild.
+ *
+ * Bewusst **ohne** `Content-Type`: den setzt der Browser selbst, samt der
+ * `boundary`, die er sich ausdenkt. Wer ihn hier von Hand setzt, liefert eine
+ * Boundary, die zum Rumpf nicht passt, und der Server findet keine Datei.
+ */
+export async function apiPostForm<T>(path: string, form: FormData): Promise<T> {
+  const token = readAccessToken();
+
+  const response = await fetch(buildUrl(path), {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    credentials: 'omit',
+  });
+
+  if (!response.ok) {
+    const payload = await readErrorPayload(response, path);
+    const error = toApiError(response.status, path, payload);
+    if (error instanceof UnauthorizedError) handleUnauthorized?.();
+    throw error;
+  }
+
+  handleAuthorized?.();
+  return (await response.json()) as T;
+}
+
 // ── Lesen ───────────────────────────────────────────────────────────────────
 
 /** Für Listen und Aggregate, an denen nicht geschrieben wird. */
@@ -221,6 +250,53 @@ export async function apiGet<T>(
 ): Promise<T> {
   const raw = await request<T>({ method: 'GET', path, ...options });
   return expectBody(raw, path);
+}
+
+/**
+ * Ein Bild als Data-URL — für die Routen, die keine JSON-Antwort liefern.
+ *
+ * Nötig, weil die API **nur** das Bearer-Token kennt: ein `<img src="…">`
+ * schickt keinen Authorization-Header, ein direkter Verweis käme also mit 401
+ * zurück. Der Umweg über `fetch` ist der Preis dafür, dass es keine
+ * Cookie-Sitzung gibt — und die will man hier nicht haben.
+ *
+ * Data-URL und nicht `URL.createObjectURL`: eine Object-URL müsste wieder
+ * freigegeben werden, und zwar genau dann, wenn der Cache-Eintrag verschwindet
+ * — dafür gibt es in TanStack Query keinen verlässlichen Zeitpunkt. Eine
+ * Zeichenkette hat keinen Lebenszyklus. Bei 512 Pixeln WebP sind das rund
+ * 40 kB je Person; für eine Gruppe von neun ist das kein Thema.
+ */
+export async function apiGetDataUrl(
+  path: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<string> {
+  const token = readAccessToken();
+  const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+
+  const response = await fetch(buildUrl(path), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    signal: options.signal ? anySignal([options.signal, timeout]) : timeout,
+    credentials: 'omit',
+  });
+
+  if (!response.ok) {
+    const error = toApiError(response.status, path, null);
+    if (error instanceof UnauthorizedError) handleUnauthorized?.();
+    throw error;
+  }
+
+  handleAuthorized?.();
+
+  const blob = await response.blob();
+
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => resolve(reader.result as string));
+    reader.addEventListener('error', () =>
+      reject(new Error(`Bild ${path} nicht lesbar`)),
+    );
+    reader.readAsDataURL(blob);
+  });
 }
 
 /**

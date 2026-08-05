@@ -44,6 +44,7 @@ const personSelect = {
   playsInstrument: true,
   canHost: true,
   autoAttend: true,
+  photoUpdatedAt: true,
   locationId: true,
   active: true,
   acceptedAt: true,

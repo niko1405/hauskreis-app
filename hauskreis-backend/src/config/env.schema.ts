@@ -43,6 +43,10 @@ export const envSchema = z.object({
     .union([httpUrl, z.literal('')])
     .optional()
     .transform((value) => value || undefined),
+  /// Wohin Profilbilder geschrieben werden. Relativ zum Arbeitsverzeichnis,
+  /// im Container ein eingehängtes Volume — sonst wären die Bilder nach jedem
+  /// `docker compose up` weg, und niemand lädt sein Bild zweimal hoch.
+  UPLOAD_DIR: z.string().min(1).default('./uploads'),
   KEYCLOAK_REALM: z.string().min(1),
   KEYCLOAK_CLIENT_ID: z.string().min(1),
   KEYCLOAK_CLIENT_SECRET: z.string().min(1),

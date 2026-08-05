@@ -2361,6 +2361,44 @@ nicht herein".
 > durch `toast.success`. Das Backend war richtig, gelesen hat es nur niemand
 > richtig.
 
+### Profilbilder
+
+Datei im Volume, Zeitstempel in der Datenbank. Das Bild kommt **nicht** in eine
+Spalte: es ist kein Datensatz, den man abfragt, sondern ein Blob, den man
+ausliefert — in der Datenbank machte er jede Personen-Abfrage schwerer und jedes
+Backup größer, ohne dass irgendwer je `WHERE bild = …` schriebe.
+
+|           |                                                                          |
+| --------- | ------------------------------------------------------------------------ |
+| Ablage    | `UPLOAD_DIR/people/{id}.webp`, mittig zugeschnitten auf 512 px (`sharp`) |
+| Hochladen | `POST /api/me/photo`, Multipart, Feld `file`, max. 5 MB                  |
+| Abrufen   | `GET …/people/:id/photo` — `image/webp`, `ETag`, `private, max-age=3600` |
+| Entfernen | `DELETE /api/me/photo`; ein Austritt tut dasselbe                        |
+
+Der **Dateiname folgt der Id** statt in einer Spalte zu stehen: eine zweite
+Wahrheit über etwas, das ohnehin feststeht, könnte auseinanderlaufen.
+Gespeichert wird stattdessen `photoUpdatedAt` — und der ist mehr als
+Buchhaltung, er **ist** die Bild-URL. Die App hängt ihn als Query-Parameter an
+und erledigt damit das Zwischenspeichern im Browser; ohne ihn zeigte nach einem
+Wechsel weiter das alte Bild.
+
+`photoUpdatedAt` steht deshalb auch an **`personRefSchema`**, nicht nur an der
+vollen Person: ein Avatar taucht überall dort auf, wo jemand _benannt_ wird — als
+Gastgeber, als Themen-Zuständige, als Gebetsbuddy. Damit die zwölf
+handgeschriebenen `select`-Blöcke dazu nicht auseinanderlaufen, steht direkt
+neben dem Schema ein `personRefSelect`. Das Schema **filtert**: was im Select
+fehlt, fehlt in der Antwort, und die Antwort scheitert dann an ihrem eigenen
+Schema — mit 500, nicht mit einem Typfehler.
+
+Zwei Dinge, die man dabei leicht übersieht:
+
+- **`crossOriginResourcePolicy`** muss in `helmet()` auf `cross-origin` stehen.
+  Helmets Vorgabe `same-origin` lässt den Browser das Bild verwerfen,
+  **nachdem** es geladen wurde: im Netz-Tab steht 200, im `<img>` steht nichts.
+- **Ein `<img src>` schickt kein Bearer-Token.** Die App holt das Bild deshalb
+  über den Fetch-Wrapper und macht daraus eine Data-URL. Der Umweg ist der
+  Preis dafür, dass es keine Cookie-Sitzung gibt — und die will man hier nicht.
+
 ### Nutzername und Anzeigename
 
 Zwei Felder, eine klare Richtung — und der Grund ist nicht Ordnungsliebe:

@@ -55,6 +55,9 @@ services:
       # Wohin die Einladungsmail zurückführt. Ohne das endet sie auf einer
       # Keycloak-Seite statt in der App.
       APP_URL: ${APP_URL}
+      # Profilbilder. Muss auf ein Volume zeigen, sonst sind die Bilder nach
+      # jedem `docker compose up` weg — und niemand lädt sein Bild zweimal hoch.
+      UPLOAD_DIR: /data/uploads
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
       VAPID_SUBJECT: ${VAPID_SUBJECT}
@@ -64,6 +67,12 @@ services:
     # 3000 to the world would serve the API over plain HTTP.
     ports:
       - '127.0.0.1:3000:3000'
+    volumes:
+      # Profilbilder überleben damit einen Neustart und ein neues Image. Sie
+      # gehören nicht in die Datenbank: ein Bild ist kein Datensatz, den man
+      # abfragt, sondern ein Blob, den man ausliefert — in einer Spalte machte
+      # er jede Personen-Abfrage schwerer und jedes Backup größer.
+      - uploads:/data/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -147,3 +156,4 @@ services:
 volumes:
   postgres-data:
   keycloak-db-data:
+  uploads:

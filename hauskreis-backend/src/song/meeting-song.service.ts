@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import { AssignmentRole } from '../../generated/prisma/enums';
@@ -22,7 +23,7 @@ const meetingSongSelect = {
   song: {
     select: { id: true, title: true, artist: true, lyricsUrl: true },
   },
-  suggestedBy: { select: { id: true, name: true } },
+  suggestedBy: { select: personRefSelect },
 } as const;
 
 @Injectable()
@@ -146,7 +147,7 @@ export class MeetingSongService {
     return this.prisma.meetingSongLeader
       .findMany({
         where: { meetingId, meeting: { hauskreisId } },
-        select: { person: { select: { id: true, name: true } } },
+        select: { person: { select: personRefSelect } },
       })
       .then((rows) => rows.map((row) => row.person));
   }

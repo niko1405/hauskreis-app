@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AssignmentRole,
@@ -44,14 +45,14 @@ const meetingInclude = {
   // Nicht `true`: `locationResponseSchema` verlangt `residents`, und ohne das
   // Include fehlt es in der Antwort — siehe `locationInclude`.
   location: { include: locationInclude },
-  host: { select: { id: true, name: true } },
+  host: { select: personRefSelect },
   topic: {
     select: {
       id: true,
       title: true,
       status: true,
       responsibles: {
-        select: { person: { select: { id: true, name: true } } },
+        select: { person: { select: personRefSelect } },
       },
     },
   },
@@ -59,16 +60,16 @@ const meetingInclude = {
   // zurückgibt, ohne Umformung im Service — sonst müsste jede Stelle, die
   // einen Termin lädt, daran denken.
   songLeaders: {
-    select: { person: { select: { id: true, name: true } } },
+    select: { person: { select: personRefSelect } },
   },
   actionstepDone: {
-    select: { person: { select: { id: true, name: true } }, doneAt: true },
+    select: { person: { select: personRefSelect }, doneAt: true },
     orderBy: { doneAt: 'asc' },
   },
   attendances: {
     select: { personId: true, status: true },
   },
-  cancelledBy: { select: { id: true, name: true } },
+  cancelledBy: { select: personRefSelect },
 } as const;
 
 @Injectable()

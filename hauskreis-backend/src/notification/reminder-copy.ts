@@ -60,7 +60,7 @@ export function songReminderBody(date: Date): string {
  * bei einer Freizeit ist nicht *wann sie anfängt*, sondern *wie lange sie
  * dauert*.
  */
-function when(date: Date, endDate: Date | null): string {
+function whenPhrase(date: Date, endDate: Date | null): string {
   return endDate
     ? `Vom ${formatShortDate(date)} bis ${formatShortDate(endDate)}`
     : `Am ${formatMeetingDate(date)}`;
@@ -68,7 +68,7 @@ function when(date: Date, endDate: Date | null): string {
 
 /** Die Ankündigung, wenn jemand einen besonderen Termin einträgt. */
 export function customMeetingBody(date: Date, endDate: Date | null): string {
-  return `${when(date, endDate)} steht etwas Besonderes an.`;
+  return `${whenPhrase(date, endDate)} steht etwas Besonderes an.`;
 }
 
 /** Und die Erinnerung kurz davor — den hat man nicht im Kopf wie den Dienstag. */
@@ -76,5 +76,5 @@ export function customMeetingReminderBody(
   date: Date,
   endDate: Date | null,
 ): string {
-  return `${when(date, endDate)} ist es so weit.`;
+  return `${whenPhrase(date, endDate)} ist es so weit.`;
 }

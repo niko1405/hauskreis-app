@@ -12,7 +12,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { PageHeader } from '@/components/layout/app-shell';
-import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
@@ -28,6 +27,7 @@ import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { AbsencesCard } from './absences-card';
 import { AccountCard } from './account-card';
 import { HomeCard } from './home-card';
+import { PhotoPicker } from './photo-picker';
 import { MembersCard } from './members-card';
 import { NotificationsCard } from './notifications-card';
 
@@ -131,7 +131,7 @@ function Loaded({ personId }: { personId: string }) {
 
         <Card>
           <div className="flex items-center gap-4">
-            <Avatar person={current} size="lg" />
+            <PhotoPicker person={current} />
             <div className="min-w-0">
               <p className="truncate font-serif text-xl font-bold text-stone-900">
                 {current.name}
