@@ -499,9 +499,9 @@ sagt danach jemand doch zu, lebt er wieder auf. Beides schickt eine
 Benachrichtigung. Wer noch nicht geantwortet hat, verhindert die Absage — die
 Einzelheiten stehen im Backend-README.
 
-Die Planungstabelle bekommt davon nichts zu sehen, und das ist richtig: der
-Assignments-Endpunkt lässt abgesagte Abende schon serverseitig weg
-(`status: { not: CANCELLED }`). Ein abgesagter Abend ist keine Planungszeile.
+In der Planungstabelle steht ein abgesagter Abend blass da, statt zu
+verschwinden: dass er ausfällt, ist die Antwort auf „was ist am 12. Mai" —
+seine Zeile wegzulassen wäre keine.
 
 ### Lieder: zwei Wege, und der zweite fehlte
 
@@ -559,8 +559,20 @@ Browsers und lässt sich davon nicht zuverlässig trennen.
 Die Zellen sind nicht nur Anzeige — antippen öffnet dasselbe Sheet wie das
 Detail. Die Tabelle ist der Ort, an dem man merkt, dass etwas fehlt, also
 gehört das Eintragen auch dorthin. Dafür lädt sie den Termin beim Antippen
-nach: `useRoleAssignment` braucht ihn ganz (wegen `topicId`), die
-Assignments-Route liefert nur Datum, Rolle und Person.
+einzeln nach: `useRoleAssignment` braucht seinen ETag zum Schreiben, und den
+bringt eine paginierte Liste nicht mit.
+
+**Ihre Zeilen kommen aus den Terminen, nicht aus `…/assignments`.** Diese Route
+beantwortet „wer ist wofür dran" — eine Zeile je zugeteilter Person. Ein Abend,
+an dem noch niemand steht, erzeugt dort also nichts und fehlte in der Tabelle;
+genau der ist aber der, den man dort sucht. Die Terminliste bringt Gastgeber,
+Thema, Testimony und Musik ohnehin mit, es kostet also keine zweite Abfrage.
+
+Die mittlere Spalte folgt dem Abend: „Thema" oder „Testimony", nie beides —
+sie schließen einander aus, zwei Spalten wären also immer eine davon leer. Und
+eine Zelle ohne Baustein zeigt „–" statt „offen". Der Unterschied zwischen
+_fehlt_ und _gibt es hier nicht_ ist die ganze Frage, die man an so eine
+Tabelle stellt.
 
 ## Das Archiv zeigt Themen
 
@@ -582,6 +594,28 @@ aufgeschrieben hat.
 
 Die Daten kamen schon fast richtig: `topicResponseSchema` liefert `meetings`
 chronologisch mit, es fehlten nur `summaryText` und `actionstepText` je Termin.
+
+Jede dieser Zeilen ist ein **Link auf den Abend**. Geschrieben werden
+Zusammenfassung und Actionstep dort, dort gelten die Rechte schon, und dort
+steht das Feld schon; ein zweiter Bearbeitungsweg wäre eine zweite Stelle, an
+der dieselbe Regel stimmen muss.
+
+Das **Thema selbst** lässt sich hier umbenennen und löschen — von seinen
+Zuständigen und von Admins, dieselbe Regel wie auf der Terminseite. Beim
+Löschen bleiben die Abende stehen und verlieren nur ihre Verknüpfung; die
+Rückfrage sagt das. `useRenameTopic` liest den Einzelstand dafür selbst, statt
+ihn wie `useUpdateTopic` im Cache zu erwarten: das Archiv zeigt alle Themen
+nebeneinander, und für jedes vorsorglich einen ETag zu holen wäre teurer als
+einer, wenn wirklich jemand tippt. Dasselbe Muster wie `useSetHostWeight`.
+
+**Die Knöpfe eines Lieds erscheinen erst nach langem Druck.** Stift und
+Papierkorb standen an jeder Zeile dauerhaft da — zwei Ziele in einer Liste,
+durch die man scrollt, und beide traf der Daumen zuverlässiger als die Zeile.
+`useLongPress` arbeitet über Pointer-Events, damit dieselbe Geste mit der Maus
+gilt; drei Dinge sind dabei ausdrücklich behandelt: eine Bewegung über zehn
+Pixel war Scrollen, `contextmenu` gehört dazu (Android schickt beim langen
+Druck genau das), und die Textauswahl muss währenddessen aus, sonst zeigt iOS
+seine Auswahl-Lupe.
 
 ## Orte: wer was sieht, und wer was ändert
 

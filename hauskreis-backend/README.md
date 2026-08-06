@@ -1017,20 +1017,31 @@ unverändert, `null` löscht die Zuordnung.
 
 ### Woraus ein Abend besteht
 
-Vier Schalter am Termin — `hasHostSlot`, `hasTopicSlot`, `hasSongSlot`,
-`hasTestimonySlot` — und die Terminart ist nur noch ihre **Voreinstellung**:
+Drei Schalter am Termin — `hasTopicSlot`, `hasSongSlot`, `hasTestimonySlot` —
+und die Terminart ist nur noch ihre **Voreinstellung**:
 
-| Typ              | Gastgeber | Thema | Lieder | Testimony |
-| ---------------- | --------- | ----- | ------ | --------- |
-| `STANDARD`       | ✓         | ✓     | ✓      | –         |
-| `LOBPREIS_GEBET` | ✓         | –     | ✓      | ✓         |
-| `CUSTOM`         | –         | –     | –      | –         |
+| Typ              | Thema | Lieder | Testimony |
+| ---------------- | ----- | ------ | --------- |
+| `STANDARD`       | ✓     | ✓      | –         |
+| `LOBPREIS_GEBET` | –     | ✓      | ✓         |
+| `CUSTOM`         | –     | –      | –         |
 
 Vorher war der Typ eine **Behauptung**: er stand in der Antwort, geprüft wurde
 nichts. Man konnte einem Lobpreisabend ein Thema geben und einem Geburtstag ein
-Testimony, und „Geburtstag von Mira" zählte in der Host-Fairness wie ein ganz
-normaler Dienstag — obwohl dort niemand im Sinne der Rotation gehostet hat.
+Testimony, und „Geburtstag von Mira" zählte in der Fairness wie ein ganz
+normaler Dienstag — obwohl dort niemand im Sinne der Rotation dran war.
 Außerhalb der DTOs gab es genau drei Stellen mit Typ-Logik.
+
+**Einen Gastgeber-Schalter gibt es nicht.** Man trifft sich immer irgendwo; ein
+Schalter, der nie aus darf, ist keiner. Dass an einem Abend _niemand_
+gastgebend eingetragen ist — das Treffen im Schlosspark — bleibt davon
+unberührt: das ist ein leeres Feld, kein abgeschalteter Baustein.
+
+**Thema und Testimony schließen einander aus.** Beides ist der Beitrag, um den
+sich der Abend dreht, und zwei davon gibt es nicht. `assertSlotsExclusive`
+lehnt beides zugleich mit `400` ab; im Frontend führt das Formular gar nicht
+erst dorthin, weil `applySlotToggle` beim Anhaken des einen das andere
+abschaltet.
 
 Die Regeln stehen als reine Funktionen in
 [`meeting-slots.ts`](src/meeting/meeting-slots.ts) und gelten überall gleich:
@@ -1038,19 +1049,34 @@ Die Regeln stehen als reine Funktionen in
 - Ein Feld schreiben, dessen Baustein aus ist → `400`. `undefined` ist immer in
   Ordnung (ein PATCH mit dem Info-Text darf nicht an einem fremden Feld
   scheitern), ein ausdrückliches `null` auch — aufräumen darf man immer.
-- Einen Baustein abschalten **räumt auf**: Gastgeber und Ort, `topicId` samt
-  Zusammenfassung und Actionstep, Liedvorschläge samt Musik-Zuteilung,
-  Testimony. Ein Feld, das niemand mehr setzen kann und trotzdem einen Wert
-  trägt, ist die Sorte Fehler, die man erst Wochen später bemerkt.
-- Ein Wechsel der **Terminart** setzt alle vier auf deren Voreinstellung
+- Einen Baustein abschalten **räumt auf**: `topicId` samt Zusammenfassung und
+  Actionstep, Liedvorschläge samt Musik-Zuteilung, die Testimony-Zuteilung. Ein
+  Feld, das niemand mehr setzen kann und trotzdem einen Wert trägt, ist die
+  Sorte Fehler, die man erst Wochen später bemerkt.
+- Ein Wechsel der **Terminart** setzt alle drei auf deren Voreinstellung
   zurück; ausdrücklich mitgeschickte Schalter gewinnen trotzdem.
 
 Die Fairness-Rechnung braucht dafür keine eigene Bedingung: sie zählt Termine
-mit Gastgeber, mit Thema, mit Musik-Zuteilung — und ohne den Baustein kann
-keines davon gesetzt sein. Die Migration
-[`…_meeting_slots_backfill`](prisma/migrations) stellt genau das für den
-Bestand her: ein Baustein ist an, wenn die Terminart ihn vorsieht **oder** an
-ihm etwas hängt.
+mit Thema, mit Musik-Zuteilung, mit Testimony — und ohne den Baustein kann
+keines davon gesetzt sein.
+
+### Testimony ist eine Rolle
+
+`Meeting.testimonyPersonId`, nicht ein Textfeld. Ein Testimony ist nichts, was
+man vorher aufschreibt, sondern jemand, der davon erzählt; als
+`testimonyText` stand es leer da, und niemand wusste, wer es füllen sollte,
+weil daran keine Zuständigkeit hing.
+
+Damit ist es eine Rolle wie die anderen drei: mit Vorschlägen
+(`GET …/meetings/:id/testimony-suggestions`, dieselbe Rangfolge wie beim Thema,
+ohne Eignungsfilter — eine Geschichte hat jede:r), mit einer Erinnerung fünf
+Tage vorher (`TESTIMONY_REMINDER`), und in der Fairness als **ein Dienst je
+Abend**. Anders als das Thema, das sich über drei Dienstage ziehen kann und
+trotzdem als ein Dienst zählt: eine Geschichte ist ein Abend.
+
+Wer für den Abend absagt, gibt sie frei — wie Gastgeber und Musik und anders
+als das Thema, das stehen bleibt, weil die Person am nächsten Abend wieder da
+ist.
 
 ### Wer eintragen darf
 
