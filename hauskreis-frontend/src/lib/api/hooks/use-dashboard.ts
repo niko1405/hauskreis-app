@@ -20,8 +20,14 @@ export function useHome() {
 }
 
 /**
- * Ohne `personId` die Mehrwochen-Tabelle, mit `personId` die Badges einer
- * Person. Nicht paginiert — die Spanne ist serverseitig auf ein Jahr begrenzt.
+ * „Wer ist wofür dran" in einer Zeitspanne — eine Zeile je zugeteilter Person,
+ * über alle vier Rollen hinweg. Mit `personId` auf eine Person eingeengt.
+ * Nicht paginiert; die Spanne ist serverseitig auf ein Jahr begrenzt.
+ *
+ * **Nicht** die Quelle der Planungstabelle. Die zeigt jeden kommenden Abend,
+ * gerade auch den ohne jede Zuteilung — und der erzeugt hier keine Zeile. Sie
+ * liest deshalb die Terminliste, die Gastgeber, Thema und Musik ohnehin
+ * mitbringt.
  */
 export function useAssignments(params: AssignmentParams, enabled = true) {
   const hk = useHk();
