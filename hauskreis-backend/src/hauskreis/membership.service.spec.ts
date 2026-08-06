@@ -26,7 +26,13 @@ const user: AuthenticatedUser = {
 function setup(
   options: {
     me?: Record<string, unknown> | null;
-    others?: { id: string; name: string; role: PersonRole }[];
+    others?: {
+      id: string;
+      name: string;
+      role: PersonRole;
+      acceptedAt: Date | null;
+      email?: string;
+    }[];
     linked?: Record<string, unknown> | null;
     /** Was beim Verlassen an kommenden Abenden frei wurde. */
     leftover?: Partial<{
@@ -85,9 +91,14 @@ function setup(
   // Wer geht, nimmt sein Gesicht mit; die Zeile bleibt fürs Archiv.
   const removePhoto = jest.fn().mockResolvedValue(undefined);
 
+  const discardInvitationAccount = jest.fn().mockResolvedValue(undefined);
+
   const service = new MembershipService(
     prisma,
-    { syncHomes: jest.fn() } as unknown as PersonService,
+    {
+      syncHomes: jest.fn(),
+      discardInvitationAccount,
+    } as unknown as PersonService,
     {
       replanAfterMembershipChange,
     } as unknown as PrayerBuddyGeneratorService,
@@ -108,6 +119,7 @@ function setup(
     reconcile,
     notify,
     removePhoto,
+    discardInvitationAccount,
   };
 }
 
@@ -123,7 +135,13 @@ const admin = {
   role: PersonRole.ADMIN,
   locationId: null,
 };
-const other = (role: PersonRole) => ({ id: 'p2', name: 'Mira', role });
+/** Jemand, der schon einmal da war — `acceptedAt` ist gesetzt. */
+const other = (role: PersonRole) => ({
+  id: 'p2',
+  name: 'Mira',
+  role,
+  acceptedAt: new Date('2026-01-01'),
+});
 
 describe('MembershipService.create', () => {
   it('macht die gründende Person zum Admin', async () => {
@@ -341,7 +359,12 @@ describe('MembershipService.leave', () => {
       me: admin,
       others: [
         other(PersonRole.MEMBER),
-        { id: 'p3', name: 'Chris', role: PersonRole.MEMBER },
+        {
+          id: 'p3',
+          name: 'Chris',
+          role: PersonRole.MEMBER,
+          acceptedAt: new Date('2026-01-01'),
+        },
       ],
     });
 
@@ -362,5 +385,60 @@ describe('MembershipService.leave', () => {
       successorPersonId: null,
     });
     expect(hauskreisDelete).toHaveBeenCalledWith({ where: { id: 'hk-1' } });
+  });
+
+  /**
+   * Eine offene Einladung ist kein Mitglied. Vorher zählte sie mit, und die
+   * Verwaltung fiel an jemanden, der sich nie angemeldet hatte.
+   */
+  it('nimmt den Hauskreis auch mit, wenn nur Einladungen übrig sind', async () => {
+    const { service, hauskreisDelete, discardInvitationAccount } = setup({
+      me: admin,
+      others: [
+        {
+          id: 'p2',
+          name: 'Mira',
+          role: PersonRole.MEMBER,
+          acceptedAt: null,
+          email: 'mira@example.com',
+        },
+      ],
+    });
+
+    await expect(service.leave('hk-1', 'p1', {})).resolves.toEqual({
+      hauskreisDeleted: true,
+      successorPersonId: null,
+    });
+    expect(hauskreisDelete).toHaveBeenCalledWith({ where: { id: 'hk-1' } });
+    // Sonst bliebe ein Keycloak-Konto stehen, das sich anmelden kann und
+    // nirgends dazugehört.
+    expect(discardInvitationAccount).toHaveBeenCalledWith('mira@example.com');
+  });
+
+  /**
+   * Der Kreis der Nachfolge ist absichtlich weiter: wer seine Nachfolge
+   * einlädt und dann geht, soll das können — solange jemand anders bleibt.
+   */
+  it('lässt eine noch nicht angemeldete Person die Nachfolge antreten', async () => {
+    const { service, personUpdate } = setup({
+      me: admin,
+      others: [
+        other(PersonRole.MEMBER),
+        {
+          id: 'p3',
+          name: 'Chris',
+          role: PersonRole.MEMBER,
+          acceptedAt: null,
+          email: 'chris@example.com',
+        },
+      ],
+    });
+
+    await service.leave('hk-1', 'p1', { successorPersonId: 'p3' });
+
+    expect(personUpdate).toHaveBeenCalledWith({
+      where: { id: 'p3' },
+      data: { role: PersonRole.ADMIN },
+    });
   });
 });

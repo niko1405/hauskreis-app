@@ -361,16 +361,27 @@ export class PersonService {
     await this.syncHomes(person.locationId);
     await this.replanPrayerBuddies(hauskreisId);
 
-    // Das Konto nur löschen, wenn diese Einladung die einzige Spur war. Wer
-    // die App schon in einem anderen Hauskreis benutzt, verliert sonst durch
-    // eine zurückgezogene Einladung seinen Zugang.
     if (person.acceptedAt === null) {
-      const elsewhere = await this.prisma.person.count({
-        where: { email: person.email },
-      });
-      if (elsewhere === 0) {
-        await this.keycloakAdmin.deleteUserByEmail(person.email);
-      }
+      await this.discardInvitationAccount(person.email);
+    }
+  }
+
+  /**
+   * Räumt das Keycloak-Konto einer Einladung weg, die nie angenommen wurde.
+   *
+   * **Nur, wenn es die einzige Spur war**: wer die App schon in einem anderen
+   * Hauskreis benutzt, verliert sonst durch eine zurückgezogene Einladung
+   * seinen Zugang. Deshalb zählt die Methode selbst nach — und deshalb gehört
+   * sie hierher und nicht in die zwei Aufrufer (eine zurückgezogene Einladung,
+   * ein aufgelöster Hauskreis).
+   *
+   * Aufzurufen **nach** dem Löschen der Zeile, sonst zählt sie sich selbst mit.
+   */
+  async discardInvitationAccount(email: string): Promise<void> {
+    const elsewhere = await this.prisma.person.count({ where: { email } });
+
+    if (elsewhere === 0) {
+      await this.keycloakAdmin.deleteUserByEmail(email);
     }
   }
 

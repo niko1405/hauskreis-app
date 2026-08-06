@@ -118,12 +118,16 @@ export class MembershipService {
 
     const others = await this.prisma.person.findMany({
       where: { hauskreisId, active: true, id: { not: personId } },
-      select: { id: true, name: true, role: true },
+      select: { id: true, name: true, role: true, acceptedAt: true },
     });
 
-    if (others.length === 0) {
-      await this.prisma.hauskreis.delete({ where: { id: hauskreisId } });
-      this.logger.log(`Hauskreis ${hauskreisId} deleted: last member left`);
+    // **Da war** heißt: schon einmal angemeldet. `active` allein reicht nicht,
+    // denn dazu zählen auch offene Einladungen und eingesäte Zeilen — Menschen,
+    // die diesen Hauskreis noch nie gesehen haben. Wer als Letzter geht, ließe
+    // sonst eine Gruppe zurück, deren Verwaltung an jemanden fällt, der sich
+    // nie angemeldet hat.
+    if (others.every((person) => person.acceptedAt === null)) {
+      await this.deleteEmptyHauskreis(hauskreisId, others.length);
       return { hauskreisDeleted: true, successorPersonId: null };
     }
 
@@ -232,8 +236,45 @@ export class MembershipService {
   }
 
   /**
+   * Räumt einen Hauskreis weg, in dem niemand mehr ist.
+   *
+   * Die Zeilen nimmt der Fremdschlüssel mit (`onDelete: Cascade`). Die
+   * Keycloak-Konten offener Einladungen nicht — die räumt sonst
+   * `PersonService.remove` weg, wenn eine Einladung zurückgezogen wird, und
+   * ohne das hier bliebe je Einladung ein Konto stehen, das sich anmelden kann
+   * und nirgends dazugehört.
+   */
+  private async deleteEmptyHauskreis(
+    hauskreisId: string,
+    pendingCount: number,
+  ): Promise<void> {
+    const pending = await this.prisma.person.findMany({
+      where: { hauskreisId, acceptedAt: null },
+      select: { email: true },
+    });
+
+    await this.prisma.hauskreis.delete({ where: { id: hauskreisId } });
+
+    for (const person of pending) {
+      await this.people.discardInvitationAccount(person.email);
+    }
+
+    this.logger.log(
+      `Hauskreis ${hauskreisId} deleted: last member left` +
+        (pendingCount > 0
+          ? `, ${pendingCount} open invitation(s) dropped`
+          : ''),
+    );
+  }
+
+  /**
    * Wer übernimmt. `null` heißt: es braucht niemanden — entweder ist die
    * gehende Person kein Admin, oder es bleibt noch einer übrig.
+   *
+   * Der Kreis der Kandidat:innen ist absichtlich **weiter** als die Frage
+   * darüber, ob der Hauskreis überhaupt bleibt: wer seine Nachfolge einlädt
+   * und dann geht, soll das können, auch wenn sie sich noch nicht angemeldet
+   * hat. Nur ganz allein zurücklassen darf man niemanden.
    */
   private chooseSuccessor(
     myRole: PersonRole,
