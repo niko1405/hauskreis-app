@@ -1,10 +1,10 @@
-hauskreisName,name,email,birthdate,playsInstrument,canHost,locationName,active
-Holy-Homies,Niko,niko@example.com,,true,true,Bei Niko,true
-Holy-Homies,Antonia,toni@example.com,,true,true,Bei Antonia,true
-Holy-Homies,Reini,reini@example.com,,true,true,Bei Reini,true
-Holy-Homies,Julian,julian@example.com,,true,true,Bei Julian & Marlene,true
-Holy-Homies,Marlene,marlene@example.com,,false,true,Bei Julian & Marlene,true
-Holy-Homies,chris,chris@example.com,,false,true,Bei Chris,true
-Holy-Homies,elisha,elisha@example.com,,false,true,Bei Erik & Elisha,true
-Holy-Homies,erik,erik@example.com,,false,true,Bei Erik & Elisha,true
-Holy-Homies,sofie,sofie@example.com,,false,true,Bei Sofie,true
+hauskreisName,name,email,role,birthdate,playsInstrument,canHost,autoAttend,active,locationName
+Holy-Homies,Niko,niko@example.com,admin,,true,true,true,true,Bei Niko
+Holy-Homies,Antonia,toni@example.com,member,,true,true,true,true,Bei Antonia
+Holy-Homies,Reini,reini@example.com,member,,true,true,true,true,Bei Reini
+Holy-Homies,Julian,julian@example.com,member,,true,true,true,true,Bei Julian & Marlene
+Holy-Homies,Marlene,marlene@example.com,member,,false,true,true,true,Bei Julian & Marlene
+Holy-Homies,Chris,chris@example.com,member,,false,true,false,true,Bei Chris
+Holy-Homies,Elisha,elisha@example.com,member,,false,true,false,true,Bei Erik & Elisha
+Holy-Homies,Erik,erik@example.com,member,,false,true,false,true,Bei Erik & Elisha
+Holy-Homies,Sofie,sofie@example.com,member,,false,true,false,true,Bei Sofie

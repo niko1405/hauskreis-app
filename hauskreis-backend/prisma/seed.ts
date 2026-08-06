@@ -15,6 +15,7 @@ import { parse } from 'csv-parse/sync';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { z } from 'zod';
 import { PrismaClient } from '../generated/prisma/client';
+import { PersonRole } from '../generated/prisma/enums';
 import { homeName, normalizeAddress } from '../src/location/address';
 
 const SEED_DIR = join(__dirname, 'seed-data');
@@ -85,15 +86,23 @@ const personRow = z.object({
   hauskreisName: z.string().trim().min(1),
   name: z.string().trim().min(1),
   email: z.email(),
+  /// **Pflicht, und mindestens eine Zeile muss `admin` sein.** Ohne das hatte
+  /// ein frisch eingesäter Hauskreis keine Verwaltung und keinen Weg zu einer:
+  /// Admin ist eine Spalte an `person`, nicht eine Realm-Rolle, und befördern
+  /// darf nur, wer selbst Admin ist.
+  role: z.enum(['admin', 'member']),
   birthdate: optionalDate,
   playsInstrument: csvBool,
   canHost: csvBool,
+  /// „Ich bin grundsätzlich dabei." Ohne die Spalte starteten alle auf `false`,
+  /// und zum Ausprobieren fehlten überall die Zusagen.
+  autoAttend: csvBool,
+  active: csvBool,
   /// Empty for anyone who brings no home into the hosting rotation.
   locationName: z
     .string()
     .trim()
     .transform((value) => (value === '' ? null : value)),
-  active: csvBool,
 });
 
 function readCsv<T extends z.ZodType>(
@@ -146,6 +155,22 @@ async function main(): Promise<void> {
     const hauskreise = readCsv('hauskreis.csv', hauskreisRow);
     const locations = readCsv('location.csv', locationRow);
     const people = readCsv('person.csv', personRow);
+
+    // Lieber hier scheitern als später beim ersten Klick in die Verwaltung:
+    // ohne Admin lässt sich niemand einladen, niemand befördern und kein
+    // Termin erzeugen.
+    for (const name of new Set(people.map((row) => row.hauskreisName))) {
+      const hasAdmin = people.some(
+        (row) => row.hauskreisName === name && row.role === 'admin',
+      );
+
+      if (!hasAdmin) {
+        throw new Error(
+          `person.csv: „${name}" hat niemanden mit role=admin — ` +
+            'ohne Admin lässt sich der Hauskreis nicht verwalten.',
+        );
+      }
+    }
 
     const idByName = new Map<string, string>();
 
@@ -227,26 +252,21 @@ async function main(): Promise<void> {
         }
       }
 
+      const fields = {
+        name: row.name,
+        role: row.role === 'admin' ? PersonRole.ADMIN : PersonRole.MEMBER,
+        birthdate: row.birthdate ? new Date(row.birthdate) : null,
+        playsInstrument: row.playsInstrument,
+        canHost: row.canHost,
+        autoAttend: row.autoAttend,
+        locationId,
+        active: row.active,
+      };
+
       await prisma.person.upsert({
         where: { hauskreisId_email: { hauskreisId, email: row.email } },
-        update: {
-          name: row.name,
-          birthdate: row.birthdate ? new Date(row.birthdate) : null,
-          playsInstrument: row.playsInstrument,
-          canHost: row.canHost,
-          locationId,
-          active: row.active,
-        },
-        create: {
-          hauskreisId,
-          name: row.name,
-          email: row.email,
-          birthdate: row.birthdate ? new Date(row.birthdate) : null,
-          playsInstrument: row.playsInstrument,
-          canHost: row.canHost,
-          locationId,
-          active: row.active,
-        },
+        update: fields,
+        create: { hauskreisId, email: row.email, ...fields },
       });
     }
 

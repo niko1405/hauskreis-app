@@ -735,6 +735,24 @@ Der Import ist doppelt abgesichert und bricht ab, wenn eine der Bedingungen fehl
 - `SEED_ENABLED=true` muss in der `.env` gesetzt sein
 - `NODE_ENV` darf **nicht** `production` sein
 
+**Mindestens eine Zeile je Hauskreis braucht `role=admin`.** Das ist keine
+Formalie: Admin ist eine Spalte an `person`, keine Realm-Rolle, und befördern
+darf nur, wer selbst Admin ist. Ohne diese Spalte hatte ein frisch eingesäter
+Hauskreis keine Verwaltung — und keinen Weg zu einer. `seed.ts` bricht deshalb
+ab, bevor er etwas schreibt:
+
+```
+person.csv: „Holy-Homies" hat niemanden mit role=admin — ohne Admin lässt sich
+der Hauskreis nicht verwalten.
+```
+
+`autoAttend` steht aus demselben Grund in der CSV: ohne die Spalte starteten
+alle auf `false`, und zum Ausprobieren fehlten überall die Zusagen.
+
+**Termine legt der Seed nicht an.** Die entstehen durch den Generator — nach
+einem frischen Seed also einmal Verwaltung → Wartung → „Termine erzeugen",
+sonst steht der Plan bis zum nächsten nächtlichen Lauf leer.
+
 Neue Spalten/Dateien: CSV ergänzen und in `seed.ts` ein passendes Zod-Row-Schema
 hinterlegen. Referenzen laufen über Namen, nicht über IDs — `person.csv` zeigt
 per `hauskreisName` auf `hauskreis.csv` und per `locationName` auf
@@ -760,6 +778,27 @@ filled in together, or both left empty
 Die Positionen in den mitgelieferten Daten liegen in Karlsruhe und sind
 **erfunden** — Demodaten, um „In Maps öffnen" ausprobieren zu können, keine
 echten Anschriften.
+
+### Alles zurücksetzen
+
+```bash
+./scripts/reset-stack.sh
+```
+
+Wirft **beide** Datenbanken weg (Anwendung _und_ Keycloak), alle Profilbilder
+und alle Konten samt Passwörtern, fährt die Dienste neu hoch, spielt Schema und
+Testdaten ein und richtet Keycloak wieder ein. Fragt vorher nach; mit `--yes`
+nicht.
+
+Die Reihenfolge im Skript ist nicht beliebig: erst Volumes weg und Dienste hoch
+(sonst schreibt die Migration in die alte Datenbank), dann Migrationen und
+Client (der Seed braucht beides), dann Keycloak und **erst danach** der Seed —
+`GET /api/me` verknüpft ein Konto über die E-Mail-Adresse mit einer
+Personenzeile, und ein halb eingerichtetes Keycloak hinterließe sonst eine
+Umgebung, in der niemand ankommt.
+
+Danach: `testadmin` / `testmember`, beide `test1234`, `testadmin` ist Admin im
+eingesäten Hauskreis.
 
 ## Code-Qualität
 
@@ -844,6 +883,21 @@ unbemerkt geblieben: `loginTheme: "hauskreis"` stand im Realm, aber
 `GET /admin/serverinfo` kannte nur `keycloak.v2`. Seitdem prüft
 `setup-keycloak.sh` am Ende nach und bricht mit einer Diagnose ab.
 
+Die Frage „lädt mein Theme gerade?" ist ein eigener Befehl, damit sie kein
+volles Setup kostet:
+
+```bash
+./scripts/setup-keycloak.sh --check-only
+```
+
+Unter WSL stellt sie sich **regelmäßig neu**: nach einem Neustart des
+Docker-Daemons hängt das Bind-Mount wieder ins Leere, auch wenn die
+WSL-Integration eingeschaltet ist. Dann hilft
+`docker compose up -d --force-recreate keycloak`. Wer das leid ist, kopiert das
+Theme in ein eigenes Keycloak-Image (`FROM quay.io/keycloak/keycloak:26.4` plus
+`COPY`) — dafür kostet dann jede Farbänderung einen Neubau statt eines
+Neustarts, weshalb es hier beim Volume bleibt.
+
 Was im Container ankommt:
 
 ```bash
@@ -880,6 +934,14 @@ pnpm format:check   # Prettier prüfen
 pnpm check          # alles zusammen
 pnpm db:migrate     # prisma migrate dev
 pnpm db:seed        # CSV-Testdaten (nur mit SEED_ENABLED=true)
+```
+
+```bash
+./scripts/reset-stack.sh              # alles zurücksetzen (fragt nach)
+./scripts/setup-keycloak.sh           # Realm, Clients, Rollen, Testkonten
+./scripts/setup-keycloak.sh --check-only    # nur: ist das Theme da?
+./scripts/setup-keycloak.sh --reset-users   # Testkonten auf test1234 zurück
+./scripts/setup-keycloak.sh --production    # ohne Testkonten, echter Mailversand
 ```
 
 ## Sicherheit
@@ -2106,6 +2168,7 @@ stattgefunden", und das Archiv soll beides unterscheiden können.
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+./scripts/setup-keycloak.sh --production
 ```
 
 Das [Dockerfile](Dockerfile) ist mehrstufig. `prisma generate` muss **vor**
@@ -2165,6 +2228,36 @@ Zwei Dinge, die man wissen sollte:
 Im Prod-Compose läuft Keycloak in `start` statt `start-dev`, Ports hängen an
 `127.0.0.1` statt an allen Interfaces, und keine Zugangsdaten stehen in der
 Datei.
+
+### Wie der erste Mensch hineinkommt
+
+**Die Datenbank startet leer, und das bleibt so.** Der `migrate`-Service legt
+nur das Schema an, `SEED_ENABLED` steht im Prod-Compose fest auf `false`, und
+`--production` legt keine Testkonten an. Es gibt in der Produktion also weder
+`testadmin` noch eingesäte Personen, die später wieder weg müssten.
+
+Der Weg hinein ist derselbe, den jede:r geht:
+
+1. Auf der Keycloak-Anmeldeseite **registrieren** (`registrationAllowed` ist an).
+2. Die Bestätigungsmail anklicken — ohne bestätigte Adresse weist der
+   `AuthGuard` jedes Token ab. Deshalb prüft `--production` vorher, dass echte
+   SMTP-Werte gesetzt sind und bricht sonst ab: eine Anmeldeseite, an der sich
+   niemand anmelden kann, ist der teuerste Fehler dieser Einrichtung.
+3. In der App auf **„Hauskreis gründen"** — die gründende Person wird dabei
+   automatisch dessen Admin (`MembershipService.create`).
+4. Von dort die anderen acht einladen.
+
+Kein Bootstrap-Skript daneben. Ein zweiter Weg hinein müsste gepflegt werden,
+liefe im Alltag nie, und veraltete deshalb still — während dieser hier ohnehin
+funktionieren muss.
+
+`--production` bricht ab, solange eine der folgenden Variablen noch auf ihrer
+Entwicklungs-Vorgabe steht: `SMTP_HOST`, `SMTP_FROM`, `KEYCLOAK_URL`,
+`FRONTEND_URL`, `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_ADMIN_PASSWORD`.
+
+**Das Theme wird in der Produktion zwischengespeichert** (`start --optimized`,
+anders als im Entwicklungsmodus). Eine Änderung an Farben oder Texten kostet
+dort einen `docker compose restart keycloak`.
 
 ### Das Image lokal ausprobieren
 

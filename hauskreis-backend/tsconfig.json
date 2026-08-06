@@ -21,6 +21,9 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": ["src/**/*"],
+  // `prisma` gehört dazu, obwohl dort kein Anwendungscode liegt: `seed.ts`
+  // stand außerhalb der Prüfung und wäre erst beim Ausführen aufgefallen —
+  // also genau dann, wenn man gerade eine frische Datenbank füllen will.
+  "include": ["src/**/*", "prisma/**/*"],
   "exclude": ["node_modules", "dist", "build"]
 }

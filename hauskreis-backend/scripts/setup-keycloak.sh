@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Idempotent local Keycloak setup: realm, roles, both clients, test users.
-# Usage: ./scripts/setup-keycloak.sh [--reset-users]
+# Usage: ./scripts/setup-keycloak.sh [--reset-users] [--production] [--check-only]
 #
 # Das Skript ist dazu da, wiederholt zu laufen — jede neue Realm-Einstellung
 # wird erst durch einen erneuten Lauf scharf. Damit das gefahrlos bleibt, fasst
@@ -8,12 +8,28 @@
 # gehören ab dem Anlegen den Menschen davor, und ein Setup-Lauf, der sie
 # zurücksetzt, macht jede Änderung an einem Testkonto zur Falle. Wer genau das
 # will — weil ein Konto verkonfiguriert ist —, ruft `--reset-users` auf.
+#
+#   --production   Keine Testkonten, und die Vorgaben für Entwicklung sind
+#                  verboten: echter Mailversand, echte Adressen. Der erste
+#                  Mensch registriert sich danach selbst und gründet in der App
+#                  seinen Hauskreis — dabei wird er dessen Admin. Es gibt
+#                  bewusst keinen Bootstrap-Weg daneben: der Weg, der ohnehin
+#                  funktionieren muss, ist derselbe.
+#
+#   --check-only   Nichts einrichten, nur nachsehen, ob das Theme angekommen
+#                  ist. Unter WSL hängt das Bind-Mount nach einem Neustart des
+#                  Docker-Daemons regelmäßig ins Leere, und Keycloak fällt dann
+#                  wortlos auf die Standardseite zurück.
 set -euo pipefail
 
 RESET_USERS=0
+PRODUCTION=0
+CHECK_ONLY=0
 for arg in "$@"; do
   case "${arg}" in
     --reset-users) RESET_USERS=1 ;;
+    --production) PRODUCTION=1 ;;
+    --check-only) CHECK_ONLY=1 ;;
     *) echo "Unbekannte Option: ${arg}" >&2; exit 2 ;;
   esac
 done
@@ -43,6 +59,31 @@ SMTP_PASSWORD="${SMTP_PASSWORD:-}"
 SMTP_SSL="${SMTP_SSL:-false}"
 SMTP_STARTTLS="${SMTP_STARTTLS:-false}"
 
+# In der Produktion sind die Entwicklungs-Vorgaben nicht bloß unpassend,
+# sondern gefährlich: der Realm verlangt eine bestätigte Adresse, und ohne
+# funktionierenden Mailversand kommt **niemand** herein — auch der Gründer
+# nicht. Lieber hier abbrechen als mit einer Anmeldeseite dastehen, an der sich
+# niemand anmelden kann.
+if [ "${PRODUCTION}" = "1" ]; then
+  fail_if_default() {
+    local name="$1" value="$2" default="$3"
+    if [ "${value}" = "${default}" ]; then
+      echo "FEHLER: ${name} steht noch auf der Entwicklungs-Vorgabe (${default})." >&2
+      echo "        In der Produktion muss es ausdrücklich gesetzt sein." >&2
+      exit 2
+    fi
+  }
+
+  fail_if_default "SMTP_HOST" "${SMTP_HOST}" "mailpit"
+  fail_if_default "SMTP_FROM" "${SMTP_FROM}" "noreply@hauskreis.local"
+  fail_if_default "KEYCLOAK_URL" "${KC_URL}" "http://localhost:8080"
+  fail_if_default "FRONTEND_URL" "${FRONTEND_URL}" "http://localhost:3001"
+  fail_if_default "KEYCLOAK_CLIENT_SECRET" "${CLIENT_SECRET}" "local-dev-secret"
+  fail_if_default "KEYCLOAK_ADMIN_PASSWORD" "${KC_ADMIN_PASSWORD}" "admin"
+
+  echo "==> Produktionsmodus: keine Testkonten, echter Mailversand"
+fi
+
 echo "==> Requesting admin token from ${KC_URL}"
 TOKEN=$(curl -sf -X POST "${KC_URL}/realms/master/protocol/openid-connect/token" \
   -d "client_id=admin-cli" \
@@ -53,6 +94,54 @@ TOKEN=$(curl -sf -X POST "${KC_URL}/realms/master/protocol/openid-connect/token"
 auth=(-H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json")
 
 api_status() { curl -s -o /dev/null -w '%{http_code}' "${auth[@]}" "$@"; }
+
+check_theme() {
+  # Ein Realm lässt sich anstandslos auf ein Theme setzen, das es gar nicht
+  # gibt — Keycloak fällt dann still auf die Vorgabe zurück. Genau das ist hier
+  # über Wochen unbemerkt geblieben: der Realm zeigte auf 'hauskreis', der
+  # Server kannte nur 'keycloak.v2', und die Anmeldeseite sah aus wie von der
+  # Stange. Deshalb wird nachgesehen, ob das Theme wirklich angekommen ist.
+  echo "==> Prüfen, ob das Theme 'hauskreis' installiert ist"
+
+  local missing
+  missing=$(curl -sf "${auth[@]}" "${KC_URL}/admin/serverinfo" | node -pe '
+    const themes = JSON.parse(require("fs").readFileSync(0,"utf8")).themes ?? {};
+    const has = (kind) => (themes[kind] ?? []).some(t => t.name === "hauskreis");
+    ["login","email"].filter(kind => !has(kind)).join(",");
+  ')
+
+  if [ -n "${missing}" ]; then
+    echo ""
+    echo "FEHLER: Keycloak kennt kein Theme 'hauskreis' für: ${missing}"
+    echo ""
+    echo "  Der Realm zeigt darauf, der Server hat es nicht — dann nimmt Keycloak"
+    echo "  wortlos die Standardseite. Die Dateien liegen in"
+    echo "  keycloak/themes/hauskreis und werden per Volume eingehängt."
+    echo ""
+    echo "  Nachsehen, was im Container ankommt:"
+    echo "    docker compose exec keycloak ls /opt/keycloak/themes/hauskreis"
+    echo ""
+    echo "  Ist der Ordner dort leer, kommt der Daemon nicht an das Dateisystem:"
+    echo "    - unter WSL: in Docker Desktop unter Einstellungen > Resources >"
+    echo "      WSL Integration diese Distribution einschalten. Ohne das legt"
+    echo "      Docker für den Mount einen leeren Ordner an, statt zu scheitern."
+    echo "      Nach jedem Neustart des Docker-Daemons kann das erneut zuschlagen;"
+    echo "      dann hilft: docker compose up -d --force-recreate keycloak"
+    echo "    - sonst: docker compose up -d --force-recreate keycloak"
+    echo ""
+    return 1
+  fi
+
+  echo "    login und email: da"
+}
+
+if [ "${CHECK_ONLY}" = "1" ]; then
+  # Nichts einrichten. Die Frage „lädt mein Theme gerade?" soll ein Befehl sein
+  # und kein voller Setup-Lauf — unter WSL stellt sie sich nach jedem Neustart
+  # des Docker-Daemons erneut.
+  check_theme
+  exit $?
+fi
 
 echo "==> Ensuring realm '${REALM}'"
 if [ "$(api_status "${KC_URL}/admin/realms/${REALM}")" = "404" ]; then
@@ -299,47 +388,24 @@ create_user() {
 # GET /api/me links a Keycloak account to a person row by e-mail, so this is
 # what makes `pnpm db:seed` + this script produce a login that actually maps
 # onto a seeded member instead of a dead end.
-create_user "testadmin" "niko@example.com" "test1234" "admin"
-create_user "testmember" "toni@example.com" "test1234" "member"
-
-# Ein Realm lässt sich anstandslos auf ein Theme setzen, das es gar nicht gibt —
-# Keycloak fällt dann still auf die Vorgabe zurück. Genau das ist hier über
-# Wochen unbemerkt geblieben: der Realm zeigte auf 'hauskreis', der Server kannte
-# nur 'keycloak.v2', und die Anmeldeseite sah einfach aus wie von der Stange.
-# Deshalb wird hier nachgesehen, ob das Theme wirklich angekommen ist.
-echo "==> Prüfen, ob das Theme '${REALM}' installiert ist"
-THEME_CHECK=$(curl -sf "${auth[@]}" "${KC_URL}/admin/serverinfo" | node -pe '
-  const themes = JSON.parse(require("fs").readFileSync(0,"utf8")).themes ?? {};
-  const has = (kind) => (themes[kind] ?? []).some(t => t.name === "hauskreis");
-  ["login","email"].filter(kind => !has(kind)).join(",");
-')
-
-if [ -n "${THEME_CHECK}" ]; then
-  echo ""
-  echo "FEHLER: Keycloak kennt kein Theme 'hauskreis' für: ${THEME_CHECK}"
-  echo ""
-  echo "  Der Realm zeigt darauf, der Server hat es nicht — dann nimmt Keycloak"
-  echo "  wortlos die Standardseite. Die Dateien liegen in"
-  echo "  keycloak/themes/hauskreis und werden per Volume eingehängt."
-  echo ""
-  echo "  Nachsehen, was im Container ankommt:"
-  echo "    docker compose exec keycloak ls /opt/keycloak/themes/hauskreis"
-  echo ""
-  echo "  Ist der Ordner dort leer, kommt der Daemon nicht an das Dateisystem:"
-  echo "    - unter WSL: in Docker Desktop unter Einstellungen > Resources >"
-  echo "      WSL Integration diese Distribution einschalten. Ohne das legt"
-  echo "      Docker für den Mount einen leeren Ordner an, statt zu scheitern."
-  echo "    - sonst: docker compose up -d --force-recreate keycloak"
-  echo ""
-  exit 1
+#
+# In der Produktion gibt es sie nicht: dort startet die Datenbank leer, und der
+# erste Mensch registriert sich selbst.
+if [ "${PRODUCTION}" = "0" ]; then
+  create_user "testadmin" "niko@example.com" "test1234" "admin"
+  create_user "testmember" "toni@example.com" "test1234" "member"
 fi
-echo "    login und email: da"
+
+check_theme
 
 echo ""
 echo "Keycloak setup complete."
 echo "  Realm:   ${REALM}"
-echo "  Client:  ${CLIENT_ID} (secret: ${CLIENT_SECRET})"
-if [ "${RESET_USERS}" = "1" ]; then
+echo "  Client:  ${CLIENT_ID}"
+if [ "${PRODUCTION}" = "1" ]; then
+  echo "  Konten:  keine — der erste Mensch registriert sich selbst und"
+  echo "           gründet in der App seinen Hauskreis."
+elif [ "${RESET_USERS}" = "1" ]; then
   echo "  Users:   testadmin / testmember  (password: test1234)"
 else
   echo "  Users:   testadmin / testmember  (Passwörter unverändert;"
