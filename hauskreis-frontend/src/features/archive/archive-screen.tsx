@@ -5,7 +5,7 @@
  * Song-Datenbank. Gesucht wird serverseitig (`search`), sonst müsste die App
  * mit der Zeit alles laden, nur um clientseitig zu filtern.
  */
-import { Music, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Music, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import { useDeferredValue, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
@@ -21,6 +21,7 @@ import {
   LoadMore,
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
+import { useLongPress } from '@/components/ui/use-long-press';
 import { LyricsLink } from '@/components/domain/lyrics-link';
 import { SongSheet } from '@/components/domain/song-sheet';
 import { LocationsCard } from './locations-card';
@@ -326,6 +327,15 @@ function SongLibrary({ search }: { search: string }) {
         />
       )}
 
+      {query.items.length > 0 && (
+        // Einmal über der Liste, nicht an jeder Zeile: eine Geste, die man
+        // nicht sieht, muss dastehen — aber siebzehnmal untereinander wäre sie
+        // lauter als die Liste selbst.
+        <p className="px-1 text-[11px] text-stone-400">
+          Lange auf ein Lied drücken, um es zu ändern oder zu löschen.
+        </p>
+      )}
+
       <ul className="space-y-2">
         {query.items.map((song, index) => (
           <SongRow
@@ -341,14 +351,57 @@ function SongLibrary({ search }: { search: string }) {
   );
 }
 
+/**
+ * Eine Liedzeile — und ihre Knöpfe erst nach langem Druck.
+ *
+ * Stift und Papierkorb standen dauerhaft da: zwei Ziele an jeder Zeile einer
+ * Liste, durch die man scrollt, und beide traf der Daumen zuverlässiger als
+ * die Zeile selbst. Jetzt liegen sie hinter einer Geste, die man nicht
+ * versehentlich macht — lange drücken oder rechtsklicken.
+ *
+ * **Kein Platzhalter, der sie freihält.** Drei Knöpfe sind auf einem 390px
+ * breiten Bildschirm ein Drittel der Zeile; sie dauerhaft freizuhalten nähme
+ * dem Titel genau den Platz, den diese Änderung ihm geben soll. Dass die Zeile
+ * beim Aufklappen umbricht, ist verkraftbar — sie ist in dem Moment ohnehin
+ * hervorgehoben, man sieht also, dass etwas passiert ist.
+ */
 function SongRow({ song, rank }: { song: SongListItem; rank?: number }) {
   const remove = useDeleteSong();
   const confirm = useConfirm();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const { handlers, selectNone } = useLongPress(() => setRevealed(true));
+
+  const deleteSong = async () => {
+    const ok = await confirm({
+      title: `„${song.title}" löschen?`,
+      // Die Zahl gehört in die Rückfrage: ein Tippfehler von gestern und
+      // ein Lied, das an acht Abenden lief, sind nicht dieselbe
+      // Entscheidung.
+      body:
+        song.timesPlayed > 0
+          ? `Das Lied lief an ${song.timesPlayed} Abend${song.timesPlayed === 1 ? '' : 'en'}. Es verschwindet auch dort aus der Liste.`
+          : 'Das Lied wurde noch nie gesungen — es geht nichts verloren.',
+      confirmLabel: 'Löschen',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    remove.mutate(song.id, {
+      onSuccess: () => toast.success(`„${song.title}" ist weg.`),
+    });
+  };
 
   return (
-    <li className="flex items-center gap-3 rounded-md border border-line bg-card p-3">
+    <li
+      {...handlers}
+      className={cn(
+        'flex items-center gap-3 rounded-md border bg-card p-3 transition-colors',
+        revealed ? 'border-terracotta-100 bg-terracotta-50/40' : 'border-line',
+        selectNone,
+      )}
+    >
       {rank !== undefined && (
         <span className="w-6 shrink-0 text-center text-xs font-bold text-stone-300">
           {rank}
@@ -368,37 +421,26 @@ function SongRow({ song, rank }: { song: SongListItem; rank?: number }) {
       {song.createdBy && <Avatar person={song.createdBy} size="xs" />}
       <LyricsLink url={song.lyricsUrl} title={song.title} />
 
-      <IconButton
-        label={`${song.title} bearbeiten`}
-        onClick={() => setEditing(true)}
-      >
-        <Pencil size={14} />
-      </IconButton>
+      {revealed && (
+        <>
+          <IconButton
+            label={`${song.title} bearbeiten`}
+            onClick={() => setEditing(true)}
+          >
+            <Pencil size={14} />
+          </IconButton>
 
-      <IconButton
-        label={`${song.title} löschen`}
-        onClick={async () => {
-          const ok = await confirm({
-            title: `„${song.title}" löschen?`,
-            // Die Zahl gehört in die Rückfrage: ein Tippfehler von gestern und
-            // ein Lied, das an acht Abenden lief, sind nicht dieselbe
-            // Entscheidung.
-            body:
-              song.timesPlayed > 0
-                ? `Das Lied lief an ${song.timesPlayed} Abend${song.timesPlayed === 1 ? '' : 'en'}. Es verschwindet auch dort aus der Liste.`
-                : 'Das Lied wurde noch nie gesungen — es geht nichts verloren.',
-            confirmLabel: 'Löschen',
-            tone: 'danger',
-          });
-          if (!ok) return;
+          <IconButton label={`${song.title} löschen`} onClick={deleteSong}>
+            <Trash2 size={14} />
+          </IconButton>
 
-          remove.mutate(song.id, {
-            onSuccess: () => toast.success(`„${song.title}" ist weg.`),
-          });
-        }}
-      >
-        <Trash2 size={14} />
-      </IconButton>
+          {/* Ein Weg zurück, ohne die Seite zu verlassen. Ohne ihn bliebe die
+              Zeile aufgeklappt, bis die Liste neu lädt. */}
+          <IconButton label="Fertig" onClick={() => setRevealed(false)}>
+            <X size={14} />
+          </IconButton>
+        </>
+      )}
 
       {editing && (
         <SongSheet open onClose={() => setEditing(false)} song={song} />
