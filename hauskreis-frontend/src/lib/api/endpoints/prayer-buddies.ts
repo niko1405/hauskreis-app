@@ -34,11 +34,20 @@ export function listPrayerBuddyRounds(
   });
 }
 
+/**
+ * Die laufende Runde — oder `null`, wenn für heute niemand zugeteilt ist.
+ *
+ * `null` ist hier der Normalfall und kein Rand: ein frisch gegründeter
+ * Hauskreis hat noch keine Runde, und eine Gruppe aus einer Person bekommt
+ * auch keine (`buildGroups` gibt für weniger als zwei Menschen nichts zurück).
+ */
 export function getCurrentPrayerBuddies(
   hauskreisId: string,
   signal?: AbortSignal,
-): Promise<PrayerBuddyRound> {
-  return apiGet<PrayerBuddyRound>(`${base(hauskreisId)}/current`, { signal });
+): Promise<PrayerBuddyRound | null> {
+  return apiGet<PrayerBuddyRound | null>(`${base(hauskreisId)}/current`, {
+    signal,
+  });
 }
 
 export function getPrayerBuddyConfig(

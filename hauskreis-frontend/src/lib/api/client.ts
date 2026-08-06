@@ -181,8 +181,26 @@ async function request<T>(options: RequestOptions): Promise<RawResponse<T>> {
     return { status: 204, data: undefined, etag };
   }
 
-  const data = (await response.json()) as T;
+  const data = await readJson<T>(response);
   return { status: response.status, data, etag };
+}
+
+/**
+ * Den Rumpf lesen — und einen leeren als `null` verstehen.
+ *
+ * Nest schickt für ein `null` aus einem Controller **keinen** JSON-Rumpf,
+ * sondern gar keinen: `isNil(body) ? response.send() : response.json(body)`.
+ * Der Status bleibt dabei `200`. Ein `response.json()` darauf wirft
+ * `Unexpected end of JSON input` — und aus „für heute ist niemand zugeteilt"
+ * wurde ein roter Fehlerkasten.
+ *
+ * Deshalb hier und nicht an der einen Route, die es zuerst getroffen hat: jede
+ * Route, die „nichts" antworten darf, läuft in dieselbe Falle, und die nächste
+ * schreibt niemand mit diesem Wissen im Kopf.
+ */
+async function readJson<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  return (text === '' ? null : JSON.parse(text)) as T;
 }
 
 async function readErrorPayload(
@@ -238,7 +256,7 @@ export async function apiPostForm<T>(path: string, form: FormData): Promise<T> {
   }
 
   handleAuthorized?.();
-  return (await response.json()) as T;
+  return readJson<T>(response);
 }
 
 // ── Lesen ───────────────────────────────────────────────────────────────────
