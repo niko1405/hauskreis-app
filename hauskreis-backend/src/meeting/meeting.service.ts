@@ -26,7 +26,13 @@ import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
 import type { IfMatchCondition } from '../common/http/etag';
-import { isPast, toUtcDate } from './meeting-schedule';
+import {
+  finishedBefore,
+  isPast,
+  notFinishedBefore,
+  overlapping,
+  toUtcDate,
+} from './meeting-schedule';
 import {
   assertSlotsAllow,
   assertSlotsExclusive,
@@ -92,29 +98,34 @@ export class MeetingService {
   async findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
     const today = toUtcDate(new Date());
 
-    // `from`/`to` narrow the scope rather than replace it: `scope=past` with a
-    // `to` next year must still stop at today, or the archive would quietly
-    // start listing evenings that have not happened.
-    const date: { gte?: Date; lt?: Date; lte?: Date } = {};
+    // Jede Bedingung für sich, alle mit UND verknüpft. Vorher war es **ein**
+    // `date`-Objekt, in das Bereich und Zeitfenster hineingerechnet wurden —
+    // das ging, solange ein Termin ein Tag war. Seit er ein Zeitraum sein
+    // kann, ist jede Bedingung ein eigenes `OR` über zwei Zweige, und zwei
+    // davon nebeneinander im selben Objekt überschrieben sich.
+    //
+    // `from`/`to` engen den Bereich weiter ein, statt ihn zu ersetzen:
+    // `scope=past` mit einem `to` im nächsten Jahr muss trotzdem heute
+    // aufhören, sonst listete das Archiv Abende, die noch nicht waren.
+    const windows: object[] = [];
 
     if (query.scope === 'upcoming') {
-      date.gte = today;
+      windows.push(notFinishedBefore(today));
     } else if (query.scope === 'past') {
-      date.lt = today;
+      windows.push(finishedBefore(today));
     }
 
     if (query.from) {
-      const from = toUtcDate(query.from);
-      date.gte = date.gte && date.gte > from ? date.gte : from;
+      windows.push(notFinishedBefore(toUtcDate(query.from)));
     }
 
     if (query.to) {
-      date.lte = toUtcDate(query.to);
+      windows.push({ date: { lte: toUtcDate(query.to) } });
     }
 
     const where = {
       hauskreisId,
-      ...(Object.keys(date).length > 0 ? { date } : {}),
+      ...(windows.length > 0 ? { AND: windows } : {}),
       ...buildMeetingSearch(query.search),
     };
 
@@ -358,20 +369,11 @@ export class MeetingService {
     endDate: Date | null,
     excludeId?: string,
   ): Promise<void> {
-    const last = endDate ?? date;
-
     const clash = await this.prisma.meeting.findFirst({
       where: {
         hauskreisId,
         ...(excludeId ? { id: { not: excludeId } } : {}),
-        // Zwei Zeiträume überschneiden sich, wenn jeder vor dem Ende des
-        // anderen beginnt. Für einen eintägigen Termin ist `endDate` null,
-        // dann zählt sein Startdatum als Ende — deshalb die beiden Zweige.
-        date: { lte: last },
-        OR: [
-          { endDate: null, date: { gte: date } },
-          { endDate: { gte: date } },
-        ],
+        ...overlapping(date, endDate ?? date),
       },
       select: { date: true, title: true },
     });

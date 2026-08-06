@@ -67,3 +67,39 @@ export function isLastTuesdayOfMonth(date: Date): boolean {
 export function isPast(date: Date): boolean {
   return toUtcDate(date) < toUtcDate(new Date());
 }
+
+/**
+ * Die drei `where`-Fragmente für „wann findet dieser Termin statt".
+ *
+ * **Ein Termin ist ein Zeitraum, kein Tag.** Eine Freizeit von Freitag bis
+ * Sonntag ist eine Zeile mit `date` am Freitag; wer den Monat abfragt, der am
+ * Samstag beginnt, bekam sie ohne das hier nicht zu sehen — obwohl sie an
+ * diesem Samstag stattfindet. Genau das ist im Kalender passiert: ein Termin
+ * über den Monatswechsel stand nur im ersten Monat, und in der zweiten Hälfte
+ * fehlte er.
+ *
+ * Ein eintägiger Termin hat `endDate = null`; dann zählt sein Startdatum als
+ * Ende, daher in beiden Fragmenten die zwei Zweige.
+ *
+ * Als Bausteine und nicht als eine Funktion, weil sie sich unterschiedlich
+ * kombinieren: die Terminliste legt Bereich und Zeitfenster übereinander, die
+ * Prüfung auf einen zweiten Termin mitten in einem mehrtägigen braucht beides
+ * zusammen.
+ */
+export function notFinishedBefore(day: Date) {
+  return {
+    OR: [{ endDate: null, date: { gte: day } }, { endDate: { gte: day } }],
+  };
+}
+
+/** Vorbei — und zwar ganz, nicht nur angefangen. */
+export function finishedBefore(day: Date) {
+  return {
+    OR: [{ endDate: null, date: { lt: day } }, { endDate: { lt: day } }],
+  };
+}
+
+/** Berührt das Fenster `[from, to]` an mindestens einem Tag. */
+export function overlapping(from: Date, to: Date) {
+  return { AND: [notFinishedBefore(from), { date: { lte: to } }] };
+}

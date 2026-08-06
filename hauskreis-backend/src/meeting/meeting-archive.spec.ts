@@ -31,6 +31,26 @@ function setup() {
 
 const query = { take: 20, skip: 0, scope: 'past' as const };
 
+/**
+ * Die Zeitfenster aus dem `where`, jedes für sich.
+ *
+ * Seit ein Termin ein Zeitraum sein kann, ist jede Bedingung ein `OR` über
+ * zwei Zweige — „endet nicht vor X" trifft einen eintägigen Termin über sein
+ * Startdatum und einen mehrtägigen über sein Ende. Zwei davon nebeneinander in
+ * einem `date`-Objekt überschrieben sich, deshalb stehen sie jetzt als Liste
+ * unter `AND`.
+ */
+const windows = (findMany: jest.Mock): unknown[] =>
+  (findMany.mock.calls[0][0].where.AND as unknown[]) ?? [];
+
+const endetNichtVor = (day: Date) => ({
+  OR: [{ endDate: null, date: { gte: day } }, { endDate: { gte: day } }],
+});
+
+const vorbeiSeit = (day: Date) => ({
+  OR: [{ endDate: null, date: { lt: day } }, { endDate: { lt: day } }],
+});
+
 describe('MeetingService.findAll for the archive', () => {
   it('reads newest first', async () => {
     const { service, findMany } = setup();
@@ -38,7 +58,9 @@ describe('MeetingService.findAll for the archive', () => {
     await service.findAll('hk-1', query);
 
     expect(findMany.mock.calls[0][0].orderBy).toEqual({ date: 'desc' });
-    expect(findMany.mock.calls[0][0].where.date).toEqual({ lt: TODAY });
+    // Vorbei heißt **ganz** vorbei: eine Freizeit, die heute noch läuft,
+    // gehört nicht ins Archiv, auch wenn sie gestern begann.
+    expect(windows(findMany)).toEqual([vorbeiSeit(TODAY)]);
   });
 
   it('searches every field an evening was written down in', async () => {
@@ -82,10 +104,10 @@ describe('MeetingService.findAll for the archive', () => {
       to: utc('2026-06-30'),
     });
 
-    expect(findMany.mock.calls[0][0].where.date).toEqual({
-      gte: utc('2026-01-01'),
-      lte: utc('2026-06-30'),
-    });
+    expect(windows(findMany)).toEqual([
+      endetNichtVor(utc('2026-01-01')),
+      { date: { lte: utc('2026-06-30') } },
+    ]);
   });
 
   it('lets the scope keep its upper bound', async () => {
@@ -95,10 +117,10 @@ describe('MeetingService.findAll for the archive', () => {
 
     // Otherwise "past, bis Ende nächsten Jahres" would start listing evenings
     // that have not happened.
-    expect(findMany.mock.calls[0][0].where.date.lt).toEqual(TODAY);
+    expect(windows(findMany)).toContainEqual(vorbeiSeit(TODAY));
   });
 
-  it('takes the later of scope start and from', async () => {
+  it('lässt Bereich und Zeitfenster nebeneinander gelten', async () => {
     const { service, findMany } = setup();
 
     await service.findAll('hk-1', {
@@ -107,8 +129,14 @@ describe('MeetingService.findAll for the archive', () => {
       from: utc('2026-01-01'),
     });
 
-    // A `from` in the past must not drag an upcoming list backwards.
-    expect(findMany.mock.calls[0][0].where.date.gte).toEqual(TODAY);
+    // Beide Bedingungen stehen da und gelten mit UND — ein `from` in der
+    // Vergangenheit zieht eine Liste kommender Termine damit nicht zurück.
+    // Vorher wurde hier gerechnet („nimm das spätere"); das ging nur, solange
+    // eine Untergrenze eine einzelne Zahl war.
+    expect(windows(findMany)).toEqual([
+      endetNichtVor(TODAY),
+      endetNichtVor(utc('2026-01-01')),
+    ]);
   });
 
   it('leaves the date filter off entirely when nothing bounds it', async () => {
@@ -116,6 +144,6 @@ describe('MeetingService.findAll for the archive', () => {
 
     await service.findAll('hk-1', { ...query, scope: 'all' });
 
-    expect(findMany.mock.calls[0][0].where.date).toBeUndefined();
+    expect(findMany.mock.calls[0][0].where.AND).toBeUndefined();
   });
 });

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
-import { toUtcDate } from '../meeting/meeting-schedule';
+import { overlapping, toUtcDate } from '../meeting/meeting-schedule';
 
 export type AssignmentRoleName =
   'HOST' | 'TOPIC' | 'SONG' | 'TESTIMONY' | 'PRAYER_BUDDY';
@@ -63,7 +63,10 @@ export class AssignmentService {
       this.prisma.meeting.findMany({
         where: {
           hauskreisId,
-          date: { gte: from, lte: to },
+          // Überschneidung, nicht Startdatum: eine Freizeit, die vor dem
+          // Fenster begann, findet darin trotzdem statt — und wer dort
+          // gastgebend eingetragen ist, ist in diesen Wochen dran.
+          ...overlapping(from, to),
           // An evening that was called off is nobody's job any more.
           status: { not: MeetingStatus.CANCELLED },
         },

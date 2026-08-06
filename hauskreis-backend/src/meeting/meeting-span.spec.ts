@@ -129,14 +129,20 @@ describe('MeetingService.create — mehrere Tage', () => {
     await service.create('hk-1', FREIZEIT);
 
     const where = prisma.meeting.findFirst.mock.calls[0][0].where as {
-      date: { lte: Date };
-      OR: { endDate: unknown; date?: unknown }[];
+      AND: unknown[];
     };
 
-    expect(where.date.lte).toEqual(new Date('2026-08-16'));
-    expect(where.OR).toEqual([
-      { endDate: null, date: { gte: new Date('2026-08-14') } },
-      { endDate: { gte: new Date('2026-08-14') } },
+    // „Endet nicht vor dem Anfang" und „beginnt nicht nach dem Ende" — beides
+    // zusammen ist die Überschneidung. Ein eintägiger Termin trägt kein
+    // `endDate`, deshalb im ersten Teil zwei Zweige.
+    expect(where.AND).toEqual([
+      {
+        OR: [
+          { endDate: null, date: { gte: new Date('2026-08-14') } },
+          { endDate: { gte: new Date('2026-08-14') } },
+        ],
+      },
+      { date: { lte: new Date('2026-08-16') } },
     ]);
   });
 });

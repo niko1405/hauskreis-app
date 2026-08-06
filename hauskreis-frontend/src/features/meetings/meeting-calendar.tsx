@@ -4,6 +4,15 @@
  * Monatsansicht. Auf dem Telefon bewusst schmal: Zahl plus Punkt, und die
  * Termine des Monats als Liste darunter — ein Raster mit Text in den Zellen
  * wäre auf 390 px nicht mehr lesbar.
+ *
+ * **Ein Termin kann mehrere Tage füllen.** Eine Freizeit von Freitag bis
+ * Sonntag stand bisher nur am Freitag, und wer am Samstag nachsah, fand einen
+ * leeren Tag. Deshalb belegt ein Termin jeden Tag seines Zeitraums, und aus
+ * den Punkten wird ein durchgehender Balken — drei einzelne Punkte sähen aus
+ * wie drei Termine.
+ *
+ * In der Liste darunter steht er trotzdem **einmal**: die Frage „was ist
+ * diesen Monat" beantwortet man nicht dreimal hintereinander mit demselben.
  */
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
@@ -14,9 +23,11 @@ import { AttendanceToggle } from '@/components/domain/attendance-toggle';
 import { useMe, useMeetingList, useSetAttendance } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import {
+  addDays,
   addMonths,
   endOfMonth,
   formatDay,
+  formatDayRange,
   formatMonth,
   isPast,
   isToday,
@@ -38,10 +49,7 @@ export function MeetingCalendar() {
   const to = endOfMonth(anchor);
   const query = useMeetingList({ scope: 'all', from, to, take: 100 });
 
-  const byDate = useMemo(
-    () => new Map(query.items.map((meeting) => [meeting.date, meeting])),
-    [query.items],
-  );
+  const byDate = useMemo(() => spanByDate(query.items), [query.items]);
 
   const days = useMemo(() => buildGrid(anchor), [anchor]);
 
@@ -81,7 +89,7 @@ export function MeetingCalendar() {
 
         <div className="grid grid-cols-7 gap-1">
           {days.map((day) => {
-            const meeting = byDate.get(day);
+            const span = byDate.get(day);
             const inMonth = day.slice(0, 7) === anchor.slice(0, 7);
 
             const cell = (
@@ -91,28 +99,42 @@ export function MeetingCalendar() {
                   inMonth ? 'text-stone-700' : 'text-stone-300',
                   isToday(day) &&
                     'bg-terracotta-50 font-bold text-terracotta-700',
-                  meeting && 'font-bold',
+                  span && 'font-bold',
                 )}
               >
                 {parseDay(day).getDate()}
-                <span
-                  className={cn(
-                    'h-1.5 w-1.5 rounded-full',
-                    meeting
-                      ? meeting.status === 'CANCELLED'
-                        ? 'bg-stone-300'
-                        : 'bg-terracotta-500'
-                      : 'bg-transparent',
-                  )}
-                />
+                {/* Ein Streifen über die Zellbreite statt eines Punkts: an
+                    den Enden halb, dazwischen ganz. Das Raster hat `gap-1`,
+                    die Segmente stoßen also nicht aneinander — sie lesen sich
+                    trotzdem als eine Strecke, weil nur die beiden Enden rund
+                    sind. Ein einzelner Tag bleibt der Punkt, der er war. */}
+                <span className="flex h-1.5 w-full items-center">
+                  <span
+                    className={cn(
+                      'h-1.5',
+                      span
+                        ? span.status === 'CANCELLED'
+                          ? 'bg-stone-300'
+                          : 'bg-terracotta-500'
+                        : 'bg-transparent',
+                      span?.spans
+                        ? cn(
+                            'w-full',
+                            span.first && 'ml-auto w-1/2 rounded-l-full',
+                            span.last && 'mr-auto w-1/2 rounded-r-full',
+                          )
+                        : 'mx-auto w-1.5 rounded-full',
+                    )}
+                  />
+                </span>
               </span>
             );
 
-            return meeting ? (
+            return span ? (
               <Link
                 key={day}
-                href={`/termine/${meeting.id}`}
-                aria-label={`${formatDay(day)}: ${meetingHeadline(meeting)}`}
+                href={`/termine/${span.id}`}
+                aria-label={`${formatDay(day)}: ${meetingHeadline(span)}`}
                 className="transition-colors hover:bg-stone-50"
               >
                 {cell}
@@ -164,7 +186,9 @@ function MonthRow({ meeting }: { meeting: MeetingListItem }) {
       >
         <span className="min-w-0 flex-1">
           <span className="block text-[11px] font-bold text-terracotta-500">
-            {formatDay(meeting.date)}
+            {meeting.endDate
+              ? formatDayRange(meeting.date, meeting.endDate)
+              : formatDay(meeting.date)}
           </span>
           <span className="block truncate text-sm font-semibold text-stone-800">
             {meetingHeadline(meeting)}
@@ -187,6 +211,40 @@ function MonthRow({ meeting }: { meeting: MeetingListItem }) {
       </Link>
     </li>
   );
+}
+
+/**
+ * Jeden Tag eines Termins auf ihn zeigen lassen — samt der Frage, wo im
+ * Zeitraum dieser Tag liegt.
+ *
+ * `spans` unterscheidet den Balken vom Punkt, `first`/`last` seine Enden. Ohne
+ * das wären drei Tage drei Punkte, und ein Zeitraum sähe aus wie drei Termine
+ * in Folge.
+ */
+type DaySpan = MeetingListItem & {
+  spans: boolean;
+  first: boolean;
+  last: boolean;
+};
+
+function spanByDate(meetings: MeetingListItem[]): Map<string, DaySpan> {
+  const map = new Map<string, DaySpan>();
+
+  for (const meeting of meetings) {
+    const last = meeting.endDate ?? meeting.date;
+    const spans = last !== meeting.date;
+
+    for (let day = meeting.date; day <= last; day = addDays(day, 1)) {
+      map.set(day, {
+        ...meeting,
+        spans,
+        first: day === meeting.date,
+        last: day === last,
+      });
+    }
+  }
+
+  return map;
 }
 
 /** Sechs Wochen ab dem Montag vor dem Monatsersten — immer gleich hoch. */
