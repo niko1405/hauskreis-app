@@ -138,6 +138,10 @@ function setupRelease(
     status: 'PLANNED',
     hostPersonId: 'p1',
     locationId: 'l-niko',
+    // Seit Testimony eine Rolle ist, liest der Dienst auch dieses Feld. Ohne
+    // es hier wäre `undefined === personId` zwar falsch, aber der Test sagte
+    // nichts darüber, dass das Feld überhaupt gelesen wird.
+    testimonyPersonId: null,
     location: { requiresHost: true },
   },
 ) {
@@ -164,6 +168,7 @@ describe('RoleReleaseService.releaseFor', () => {
     await expect(service.releaseFor('m1', 'p1')).resolves.toEqual({
       host: true,
       song: false,
+      testimony: false,
     });
 
     expect(prisma.meeting.update).toHaveBeenCalledWith(
@@ -183,6 +188,7 @@ describe('RoleReleaseService.releaseFor', () => {
       status: 'PLANNED',
       hostPersonId: 'p1',
       locationId: 'l-park',
+      testimonyPersonId: null,
       location: { requiresHost: false },
     });
 
@@ -201,6 +207,7 @@ describe('RoleReleaseService.releaseFor', () => {
     await expect(service.releaseFor('m1', 'p2')).resolves.toEqual({
       host: false,
       song: false,
+      testimony: false,
     });
 
     expect(prisma.meeting.update).not.toHaveBeenCalled();
@@ -213,6 +220,7 @@ describe('RoleReleaseService.releaseFor', () => {
       status: 'PLANNED',
       hostPersonId: null,
       locationId: null,
+      testimonyPersonId: null,
       location: null,
     });
     prisma.meetingSongLeader.deleteMany.mockResolvedValue({ count: 1 });
@@ -220,7 +228,36 @@ describe('RoleReleaseService.releaseFor', () => {
     await expect(service.releaseFor('m1', 'p2')).resolves.toEqual({
       host: false,
       song: true,
+      testimony: false,
     });
+  });
+
+  /**
+   * Wer nicht kommt, erzählt an dem Abend nichts. Anders als das Thema, das
+   * über mehrere Abende läuft und stehen bleibt.
+   */
+  it('gibt das Testimony frei, wenn die erzählende Person absagt', async () => {
+    const { service, prisma } = setupRelease({
+      id: 'm1',
+      date: NAECHSTER_DIENSTAG,
+      status: 'PLANNED',
+      hostPersonId: null,
+      locationId: null,
+      testimonyPersonId: 'p2',
+      location: null,
+    });
+
+    await expect(service.releaseFor('m1', 'p2')).resolves.toEqual({
+      host: false,
+      song: false,
+      testimony: true,
+    });
+
+    expect(prisma.meeting.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ testimonyPersonId: null }),
+      }),
+    );
   });
 
   it('lässt einen vergangenen Abend unberührt', async () => {
@@ -396,7 +433,13 @@ describe('RoleReleaseService.releaseEverythingUpcoming', () => {
 
     await expect(
       service.releaseEverythingUpcoming('hk', 'p1'),
-    ).resolves.toEqual({ meetingIds: [], host: 0, song: 0, topic: 0 });
+    ).resolves.toEqual({
+      meetingIds: [],
+      host: 0,
+      song: 0,
+      topic: 0,
+      testimony: 0,
+    });
     expect(deletes).toEqual({});
   });
 });

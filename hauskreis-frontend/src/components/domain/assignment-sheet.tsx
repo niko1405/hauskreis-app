@@ -31,6 +31,7 @@ import {
   useHostSuggestions,
   usePeople,
   useSongLeaderSuggestions,
+  useTestimonySuggestions,
   useTopicSuggestions,
 } from '@/lib/api/hooks';
 import type {
@@ -49,6 +50,8 @@ const UNRANKED_HINT: Record<Exclude<AssignmentRole, 'PRAYER_BUDDY'>, string> = {
   TOPIC:
     'Wer an dem Abend abwesend ist, taucht oben nicht auf — eintragen lässt sich trotzdem, etwa wenn jemand vorbereitet und nur selbst nicht kommt.',
   SONG: 'Vorgeschlagen wird nur, wer ein Instrument spielt. Eintragen kann man jede:n — die Gruppe weiß besser, wer den Abend trägt.',
+  TESTIMONY:
+    'Wer an dem Abend abwesend ist, taucht oben nicht auf. Eintragen lässt sich trotzdem jede:r — eine Geschichte hat schließlich jede:r.',
 };
 
 export interface AssignmentSheetProps {
@@ -310,8 +313,13 @@ function useSuggestions(
   const host = useHostSuggestions(meetingId, active && kind === 'HOST');
   const topic = useTopicSuggestions(meetingId, active && kind === 'TOPIC');
   const song = useSongLeaderSuggestions(meetingId, active && kind === 'SONG');
+  const testimony = useTestimonySuggestions(
+    meetingId,
+    active && kind === 'TESTIMONY',
+  );
 
   if (kind === 'HOST') return host;
   if (kind === 'TOPIC') return topic;
+  if (kind === 'TESTIMONY') return testimony;
   return song;
 }

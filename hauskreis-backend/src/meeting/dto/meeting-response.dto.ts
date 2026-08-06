@@ -33,7 +33,7 @@ export const meetingResponseSchema = z.object({
   /// Letzter Tag, wenn sich der Termin über mehrere zieht (eine Freizeit von
   /// Freitag bis Sonntag). `null` heißt: ein Tag, der Normalfall.
   endDate: isoDateOut.nullable(),
-  /// Die Art des Abends — fürs Auge. **Was** dazugehört, sagen die vier Slots
+  /// Die Art des Abends — fürs Auge. **Was** dazugehört, sagen die drei Slots
   /// darunter; der Typ ist nur noch ihre Voreinstellung beim Anlegen.
   type: z.enum(MeetingType),
   status: z.enum(MeetingStatus),
@@ -41,7 +41,9 @@ export const meetingResponseSchema = z.object({
   /// dazu lässt sich nicht schreiben, die Rolle wird nicht vorgeschlagen, es
   /// gibt keine Erinnerung dafür, und der Abend zählt in der Fairness-Rechnung
   /// dieser Rolle nicht mit.
-  hasHostSlot: z.boolean(),
+  ///
+  /// Thema und Testimony sind nie beide an. Einen Gastgeber-Schalter gibt es
+  /// nicht — man trifft sich immer irgendwo.
   hasTopicSlot: z.boolean(),
   hasSongSlot: z.boolean(),
   hasTestimonySlot: z.boolean(),
@@ -51,8 +53,8 @@ export const meetingResponseSchema = z.object({
   /// Wie der Abend überschrieben ist. Gilt für jede Terminart; bleibt er leer,
   /// steht dort der Titel des Themas und sonst die Art des Termins.
   title: z.string().nullable(),
-  /// Nur bei `hasTestimonySlot`.
-  testimonyText: z.string().nullable(),
+  /// Wer sein Testimony erzählt. Nur bei `hasTestimonySlot`.
+  testimonyPersonId: z.uuid().nullable(),
   /// Der Vorsatz für die Woche danach, samt Zusammenfassung für alle, die
   /// nicht da waren.
   actionstepText: z.string().nullable(),
@@ -76,6 +78,7 @@ export const meetingResponseSchema = z.object({
   /// Voll ausgelesen, inklusive Koordinaten für „In Maps öffnen".
   location: locationResponseSchema.nullable(),
   host: personRefSchema.nullable(),
+  testimonyPerson: personRefSchema.nullable(),
   topic: z
     .object({
       id: z.uuid(),

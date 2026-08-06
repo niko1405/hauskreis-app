@@ -4,6 +4,7 @@ import { MeetingService } from './meeting.service';
 import { MeetingGeneratorService } from './meeting-generator.service';
 import { HostReminderService } from './host-reminder.service';
 import { ActionstepReminderService } from './actionstep-reminder.service';
+import { TestimonyReminderService } from './testimony-reminder.service';
 import { MeetingCancellationService } from './meeting-cancellation.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { RoleReleaseService } from './role-release.service';
@@ -36,6 +37,7 @@ import { EditRightsModule } from './edit-rights.module';
     MeetingGeneratorService,
     HostReminderService,
     ActionstepReminderService,
+    TestimonyReminderService,
     MeetingNotificationService,
     MeetingCancellationService,
     RoleReleaseService,
@@ -46,6 +48,7 @@ import { EditRightsModule } from './edit-rights.module';
     MeetingGeneratorService,
     HostReminderService,
     ActionstepReminderService,
+    TestimonyReminderService,
     // For AbsenceModule: a holiday produces ordinary drop-outs, and the host
     // should hear about them exactly as about a manual cancellation.
     MeetingNotificationService,

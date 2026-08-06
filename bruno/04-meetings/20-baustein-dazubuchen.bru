@@ -16,7 +16,7 @@ headers {
 
 body:json {
   {
-    "hasHostSlot": true
+    "hasSongSlot": true
   }
 }
 
@@ -27,7 +27,7 @@ script:post-response {
 tests {
   test("schaltet den Baustein an", function () {
     expect(res.getStatus()).to.equal(200);
-    expect(res.body.hasHostSlot).to.equal(true);
+    expect(res.body.hasSongSlot).to.equal(true);
   });
 
   test("lässt die anderen in Ruhe", function () {
@@ -40,13 +40,16 @@ docs {
   "Termin einzeln".
 
   Ein einzelner Schalter ändert nur sich selbst. Kommt dagegen ein anderer
-  `type` mit, werden **alle vier** auf dessen Voreinstellung zurückgesetzt —
+  `type` mit, werden **alle drei** auf dessen Voreinstellung zurückgesetzt —
   wer aus einem Geburtstag wieder einen Hauskreis-Abend macht, meint einen
   ganzen Abend und nicht ein leeres Gerüst mit neuem Namen. Ausdrücklich
   mitgeschickte Schalter gewinnen auch dann.
 
-  Zum Ausprobieren des Gegenwegs: `"hasHostSlot": false` schicken, während ein
-  Gastgeber eingetragen ist. Der Gastgeber (und eine Wohnung als Ort) fällt
-  dann in derselben Antwort weg. Im UI steht davor eine Rückfrage, die benennt,
-  was verlorengeht.
+  Einen Gastgeber-Baustein gibt es nicht: man trifft sich immer irgendwo.
+  Dass niemand eingetragen ist, ist ein leeres Feld und kein abgeschalteter
+  Baustein.
+
+  Zum Ausprobieren des Gegenwegs: `"hasSongSlot": false` schicken, während
+  Liedvorschläge dranhängen. Sie werden in derselben Antwort gelöscht. Im UI
+  steht davor eine Rückfrage, die benennt, was verlorengeht.
 }

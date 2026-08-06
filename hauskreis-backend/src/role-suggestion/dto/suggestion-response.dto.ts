@@ -20,7 +20,7 @@ const suggestionFactsSchema = z.object({
   /// aktuelle Last. Daran erkennt man, wem man gerade nichts mehr aufladen will.
   upcomingCommitments: z.array(
     z.object({
-      role: z.enum(['HOST', 'TOPIC', 'SONG']),
+      role: z.enum(['HOST', 'TOPIC', 'SONG', 'TESTIMONY']),
       date: isoDateOut,
     }),
   ),

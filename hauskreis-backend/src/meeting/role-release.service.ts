@@ -11,11 +11,13 @@ import { toUtcDate } from './meeting-schedule';
  * steht im Plan jemand, der nicht kommt. Das ist der wahrscheinlichere Weg von
  * beiden; Pläne stehen früh, Absagen kommen spät.
  *
- * Zwei Rollen werden frei, eine nicht:
+ * Drei Rollen werden frei, eine nicht:
  *
  * - **Gastgeber** — und mit ihm der Ort, wenn es seine Wohnung war. Host und Ort
  *   sind in `resolveVenue` eine Entscheidung, also fallen sie auch zusammen.
  * - **Musik** — gilt für genau diesen Abend.
+ * - **Testimony** — ebenso. Wer nicht kommt, erzählt an dem Abend nichts, und
+ *   der Platz gehört jemandem, der da ist.
  * - **Thema bleibt.** Es zieht sich über mehrere Abende; jemanden wegen einer
  *   einzelnen Absage von seiner Vorbereitung zu entbinden wäre falsch, und beim
  *   nächsten Termin stünde er ohnehin wieder da.
@@ -48,6 +50,7 @@ export class RoleReleaseService {
         status: true,
         hostPersonId: true,
         locationId: true,
+        testimonyPersonId: true,
         location: { select: { requiresHost: true } },
       },
     });
@@ -57,19 +60,28 @@ export class RoleReleaseService {
       meeting.status === MeetingStatus.CANCELLED ||
       toUtcDate(meeting.date) < toUtcDate(new Date())
     ) {
-      return { host: false, song: false };
+      return { host: false, song: false, testimony: false };
     }
 
     const host = meeting.hostPersonId === personId;
+    const testimony = meeting.testimonyPersonId === personId;
 
-    if (host) {
+    // Ein Schreibvorgang für beides: zwei Aktualisierungen wären zwei
+    // Versionssprünge an derselben Zeile, und die zweite ließe die erste als
+    // Konflikt aussehen.
+    if (host || testimony) {
       await this.prisma.meeting.update({
         where: { id: meetingId },
         data: {
-          hostPersonId: null,
-          // Ein Treffpunkt hing nie am Gastgeber und bleibt stehen; eine
-          // Wohnung ohne ihre Bewohner:innen ergibt keinen Sinn.
-          locationId: meeting.location?.requiresHost ? null : undefined,
+          ...(host
+            ? {
+                hostPersonId: null,
+                // Ein Treffpunkt hing nie am Gastgeber und bleibt stehen; eine
+                // Wohnung ohne ihre Bewohner:innen ergibt keinen Sinn.
+                locationId: meeting.location?.requiresHost ? null : undefined,
+              }
+            : {}),
+          ...(testimony ? { testimonyPersonId: null } : {}),
           version: { increment: 1 },
         },
       });
@@ -79,18 +91,19 @@ export class RoleReleaseService {
       where: { meetingId, personId },
     });
 
-    if (host || count > 0) {
+    if (host || testimony || count > 0) {
       this.logger.log(
         `Released roles of person ${personId} on meeting ${meetingId}: ${[
           host && 'host',
           count > 0 && 'song',
+          testimony && 'testimony',
         ]
           .filter(Boolean)
           .join(', ')}`,
       );
     }
 
-    return { host, song: count > 0 };
+    return { host, song: count > 0, testimony };
   }
 
   /**
@@ -126,6 +139,7 @@ export class RoleReleaseService {
       select: {
         id: true,
         hostPersonId: true,
+        testimonyPersonId: true,
         location: { select: { requiresHost: true } },
       },
     });
@@ -133,11 +147,15 @@ export class RoleReleaseService {
     const meetingIds = meetings.map((meeting) => meeting.id);
 
     if (meetingIds.length === 0) {
-      return { meetingIds: [], host: 0, song: 0, topic: 0 };
+      return { meetingIds: [], host: 0, song: 0, topic: 0, testimony: 0 };
     }
 
     const hosted = meetings.filter(
       (meeting) => meeting.hostPersonId === personId,
+    );
+
+    const telling = meetings.filter(
+      (meeting) => meeting.testimonyPersonId === personId,
     );
 
     // Die drei Löschungen zuerst, damit sie sich beim Auspacken benennen
@@ -162,16 +180,35 @@ export class RoleReleaseService {
             hostPersonId: null,
             // Wie oben: ein Treffpunkt hing nie am Gastgeber.
             locationId: meeting.location?.requiresHost ? null : undefined,
+            // Gleich mit, wo beides auf dieselbe Person zeigt — sonst
+            // schriebe die Schleife darunter dieselbe Zeile ein zweites Mal.
+            ...(meeting.testimonyPersonId === personId
+              ? { testimonyPersonId: null }
+              : {}),
             version: { increment: 1 },
           },
         }),
       ),
+      ...telling
+        .filter((meeting) => meeting.hostPersonId !== personId)
+        .map((meeting) =>
+          this.prisma.meeting.update({
+            where: { id: meeting.id },
+            data: { testimonyPersonId: null, version: { increment: 1 } },
+          }),
+        ),
     ]);
 
-    if (hosted.length > 0 || song.count > 0 || topic.count > 0) {
+    if (
+      hosted.length > 0 ||
+      telling.length > 0 ||
+      song.count > 0 ||
+      topic.count > 0
+    ) {
       this.logger.log(
         `Person ${personId} left: released ${hosted.length} host slot(s), ` +
-          `${song.count} song slot(s), ${topic.count} running topic(s)`,
+          `${song.count} song slot(s), ${topic.count} running topic(s), ` +
+          `${telling.length} testimony slot(s)`,
       );
     }
 
@@ -180,6 +217,7 @@ export class RoleReleaseService {
       host: hosted.length,
       song: song.count,
       topic: topic.count,
+      testimony: telling.length,
     };
   }
 }
@@ -187,6 +225,7 @@ export class RoleReleaseService {
 export interface ReleasedRoles {
   host: boolean;
   song: boolean;
+  testimony: boolean;
 }
 
 export interface LeftoverRoles {
@@ -195,4 +234,5 @@ export interface LeftoverRoles {
   host: number;
   song: number;
   topic: number;
+  testimony: number;
 }

@@ -158,6 +158,23 @@ export function getTopicSuggestions(
   );
 }
 
+/**
+ * Wer als Nächstes sein Testimony erzählen könnte.
+ *
+ * Dieselbe Rangfolge wie beim Thema und ohne Eignungsfilter — eine Geschichte
+ * hat jede:r.
+ */
+export function getTestimonySuggestions(
+  hauskreisId: string,
+  meetingId: string,
+  signal?: AbortSignal,
+): Promise<RoleSuggestion[]> {
+  return apiGet<RoleSuggestion[]>(
+    `${base(hauskreisId)}/${meetingId}/testimony-suggestions`,
+    { signal },
+  );
+}
+
 // ── Admin-Läufe ─────────────────────────────────────────────────────────────
 
 /** Legt Standard-Termine im Voraus an, sodass immer mind. 7 zuteilbar sind. */

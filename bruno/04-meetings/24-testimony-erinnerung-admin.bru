@@ -1,0 +1,24 @@
+meta {
+  name: Testimony-Erinnerung auslösen (Admin)
+  type: http
+  seq: 24
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/testimony-reminders
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body).to.have.property("notified");
+  });
+}
+
+docs {
+  Läuft sonst täglich um 9 Uhr. Erinnert die Person, die an einem kommenden
+  Abend ihr Testimony erzählt — dieselbe Vorlaufzeit wie beim Thema, weil man
+  auch das nicht am Abend selbst sortiert.
+}

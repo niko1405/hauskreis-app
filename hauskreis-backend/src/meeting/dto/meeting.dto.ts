@@ -10,16 +10,17 @@ const meetingType = z.enum(MeetingType);
 const attendanceStatus = z.enum(AttendanceStatus);
 
 /**
- * Woraus der Abend besteht — vier Schalter, überall optional.
+ * Woraus der Abend besteht — drei Schalter, überall optional.
  *
  * Weggelassen heißt beim Anlegen „nimm die Voreinstellung der Terminart" und
  * beim Ändern „lass es, wie es ist". Deshalb hier **kein** `.default()`: das
  * würde die Felder auch im PATCH zu Pflichtangaben machen (Zod-Vorgaben
  * überleben `.partial()`, siehe `types.ts` im Frontend), und dann müsste jeder,
- * der nur den Titel ändert, vier Schalter mitschicken.
+ * der nur den Titel ändert, drei Schalter mitschicken.
+ *
+ * Einen Gastgeber-Schalter gibt es nicht: man trifft sich immer irgendwo.
  */
 const slotFields = {
-  hasHostSlot: z.boolean().optional(),
   hasTopicSlot: z.boolean().optional(),
   hasSongSlot: z.boolean().optional(),
   hasTestimonySlot: z.boolean().optional(),
@@ -40,6 +41,8 @@ export const createMeetingSchema = z.object({
   locationId: z.uuid().nullish(),
   hostPersonId: z.uuid().nullish(),
   topicId: z.uuid().nullish(),
+  /// Wie `hostPersonId` eine Rolle, die man schon beim Anlegen vergeben darf.
+  testimonyPersonId: z.uuid().nullish(),
   title: z.string().trim().min(1).max(200).nullish(),
   infoText: z.string().trim().max(2000).nullish(),
   ...slotFields,
@@ -58,7 +61,8 @@ export const updateMeetingSchema = z.object({
   hostPersonId: z.uuid().nullish(),
   topicId: z.uuid().nullish(),
   title: z.string().trim().min(1).max(200).nullish(),
-  testimonyText: z.string().trim().max(5000).nullish(),
+  /// Wer sein Testimony erzählt. Nur bei `hasTestimonySlot`.
+  testimonyPersonId: z.uuid().nullish(),
   actionstepText: z.string().trim().max(2000).nullish(),
   summaryText: z.string().trim().max(5000).nullish(),
   infoText: z.string().trim().max(2000).nullish(),

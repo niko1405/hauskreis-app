@@ -1,16 +1,20 @@
 /**
  * Woraus ein Abend besteht.
  *
- * Vier Schalter am Termin, und der Typ ist nur noch ihre Voreinstellung. Vorher
+ * Drei Schalter am Termin, und der Typ ist nur noch ihre Voreinstellung. Vorher
  * war der Typ eine Behauptung: er stand in der Antwort, aber geprüft wurde
  * nichts. Man konnte einem Lobpreisabend ein Thema geben, einem Geburtstag ein
- * Testimony, und ein „Geburtstag von Mira" zählte in der Host-Fairness wie ein
- * ganz normaler Dienstag — obwohl dort niemand im Sinne der Rotation gehostet
- * hat.
+ * Testimony, und ein „Geburtstag von Mira" zählte in der Fairness wie ein ganz
+ * normaler Dienstag — obwohl dort niemand im Sinne der Rotation dran war.
  *
  * Die Schalter beantworten das, indem sie eine Frage von einer anderen trennen:
  * **was für ein Abend ist das** (der Typ, fürs Auge) und **was gehört dazu**
  * (die Slots, für die Logik).
+ *
+ * **Einen Gastgeber-Schalter gibt es nicht.** Man trifft sich immer irgendwo;
+ * ein Schalter, der nie aus darf, ist keiner. Dass an einem Abend *niemand*
+ * gastgebend eingetragen ist — das Treffen im Schlosspark — bleibt davon
+ * unberührt: das ist ein leeres Feld, kein abgeschalteter Baustein.
  *
  * Reine Funktionen, kein Dienst: die Regeln haben keine Abhängigkeiten und
  * lassen sich so an jeder Stelle prüfen, an der sie gelten — im Service, im
@@ -20,7 +24,6 @@ import { BadRequestException } from '@nestjs/common';
 import { MeetingType } from '../../generated/prisma/enums';
 
 export interface MeetingSlots {
-  hasHostSlot: boolean;
   hasTopicSlot: boolean;
   hasSongSlot: boolean;
   hasTestimonySlot: boolean;
@@ -38,7 +41,6 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
   switch (type) {
     case MeetingType.STANDARD:
       return {
-        hasHostSlot: true,
         hasTopicSlot: true,
         hasSongSlot: true,
         hasTestimonySlot: false,
@@ -46,14 +48,12 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
     case MeetingType.LOBPREIS_GEBET:
       // Kein Thema, dafür ein Testimony — oder auch nur Lieder (CLAUDE.md §5).
       return {
-        hasHostSlot: true,
         hasTopicSlot: false,
         hasSongSlot: true,
         hasTestimonySlot: true,
       };
     case MeetingType.CUSTOM:
       return {
-        hasHostSlot: false,
         hasTopicSlot: false,
         hasSongSlot: false,
         hasTestimonySlot: false,
@@ -63,7 +63,6 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
 
 /** Wie ein Slot heißt, wenn man einem Menschen erklärt, was fehlt. */
 const SLOT_LABEL: Record<keyof MeetingSlots, string> = {
-  hasHostSlot: 'keinen Gastgeber',
   hasTopicSlot: 'kein Thema',
   hasSongSlot: 'keine Lieder',
   hasTestimonySlot: 'kein Testimony',
@@ -78,10 +77,9 @@ const SLOT_LABEL: Record<keyof MeetingSlots, string> = {
  * niemand mehr setzen kann, aber noch einen alten Wert trägt.
  */
 export const SLOT_FIELDS = {
-  hasHostSlot: ['hostPersonId', 'locationId'],
   hasTopicSlot: ['topicId', 'actionstepText', 'summaryText'],
   hasSongSlot: [],
-  hasTestimonySlot: ['testimonyText'],
+  hasTestimonySlot: ['testimonyPersonId'],
 } as const satisfies Record<keyof MeetingSlots, readonly string[]>;
 
 /**
@@ -150,9 +148,27 @@ export function resolveSlots(
     dto.type && dto.type !== before.type ? slotDefaults(dto.type) : before;
 
   return {
-    hasHostSlot: dto.hasHostSlot ?? base.hasHostSlot,
     hasTopicSlot: dto.hasTopicSlot ?? base.hasTopicSlot,
     hasSongSlot: dto.hasSongSlot ?? base.hasSongSlot,
     hasTestimonySlot: dto.hasTestimonySlot ?? base.hasTestimonySlot,
   };
+}
+
+/**
+ * Thema und Testimony schließen einander aus.
+ *
+ * Beides ist der Beitrag, um den sich der Abend dreht, und zwei davon gibt es
+ * nicht: wer sein Testimony erzählt, bereitet kein Thema vor, und umgekehrt.
+ * Bisher ließ sich beides zugleich anschalten — der Abend stand dann mit zwei
+ * Rollen da, von denen eine an dem Abend nie stattfinden würde.
+ *
+ * Getrennt von `assertSlotsAllow`: die eine Regel prüft, ob ein **Feld** zu den
+ * Bausteinen passt, diese, ob die Bausteine zueinander passen.
+ */
+export function assertSlotsExclusive(slots: MeetingSlots): void {
+  if (slots.hasTopicSlot && slots.hasTestimonySlot) {
+    throw new BadRequestException(
+      'Ein Abend hat entweder ein Thema oder ein Testimony — nicht beides',
+    );
+  }
 }

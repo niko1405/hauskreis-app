@@ -8,6 +8,7 @@
 import { BadRequestException } from '@nestjs/common';
 import {
   assertSlotsAllow,
+  assertSlotsExclusive,
   clearedByTurningOff,
   resolveSlots,
   slotDefaults,
@@ -19,7 +20,6 @@ import { MeetingType } from '../../generated/prisma/enums';
 const an = (slots: MeetingSlots) =>
   (
     [
-      ['host', slots.hasHostSlot],
       ['topic', slots.hasTopicSlot],
       ['song', slots.hasSongSlot],
       ['testimony', slots.hasTestimonySlot],
@@ -29,18 +29,13 @@ const an = (slots: MeetingSlots) =>
     .map(([name]) => name);
 
 describe('slotDefaults', () => {
-  it('gibt einem Hauskreis-Abend Gastgeber, Thema und Lieder', () => {
-    expect(an(slotDefaults(MeetingType.STANDARD))).toEqual([
-      'host',
-      'topic',
-      'song',
-    ]);
+  it('gibt einem Hauskreis-Abend Thema und Lieder', () => {
+    expect(an(slotDefaults(MeetingType.STANDARD))).toEqual(['topic', 'song']);
   });
 
   /** Kein Thema, dafür ein Testimony — oder auch nur Lieder (CLAUDE.md §5). */
   it('tauscht beim Lobpreisabend das Thema gegen ein Testimony', () => {
     expect(an(slotDefaults(MeetingType.LOBPREIS_GEBET))).toEqual([
-      'host',
       'song',
       'testimony',
     ]);
@@ -65,9 +60,19 @@ describe('assertSlotsAllow', () => {
   });
 
   it('nennt in der Meldung, was fehlt', () => {
-    expect(() => assertSlotsAllow(leer, { hostPersonId: 'p1' })).toThrow(
-      /keinen Gastgeber/,
+    expect(() => assertSlotsAllow(leer, { testimonyPersonId: 'p1' })).toThrow(
+      /kein Testimony/,
     );
+  });
+
+  /**
+   * Ein Gastgeber braucht keinen Baustein mehr — man trifft sich immer
+   * irgendwo. Ohne diesen Test wäre nicht festgehalten, dass das Absicht ist.
+   */
+  it('lässt einen Gastgeber überall zu', () => {
+    expect(() =>
+      assertSlotsAllow(leer, { hostPersonId: 'p1', locationId: 'l1' }),
+    ).not.toThrow();
   });
 
   /** Sonst scheiterte ein PATCH mit dem Info-Text an einem fremden Feld. */
@@ -80,7 +85,7 @@ describe('assertSlotsAllow', () => {
   /** Aufräumen darf man immer — und beim Abschalten tun wir selbst genau das. */
   it('lässt ein ausdrückliches null durch', () => {
     expect(() =>
-      assertSlotsAllow(leer, { topicId: null, hostPersonId: null }),
+      assertSlotsAllow(leer, { topicId: null, testimonyPersonId: null }),
     ).not.toThrow();
   });
 
@@ -145,7 +150,6 @@ describe('resolveSlots', () => {
    */
   it('setzt beim Wechsel der Terminart auf deren Voreinstellung', () => {
     expect(an(resolveSlots(custom, { type: MeetingType.STANDARD }))).toEqual([
-      'host',
       'topic',
       'song',
     ]);
@@ -157,7 +161,7 @@ describe('resolveSlots', () => {
       hasTopicSlot: false,
     });
 
-    expect(an(slots)).toEqual(['host', 'song']);
+    expect(an(slots)).toEqual(['song']);
   });
 
   /** Derselbe Typ noch einmal ist kein Wechsel und setzt nichts zurück. */
@@ -167,5 +171,38 @@ describe('resolveSlots', () => {
     expect(an(resolveSlots(gebucht, { type: MeetingType.CUSTOM }))).toEqual([
       'song',
     ]);
+  });
+});
+
+describe('assertSlotsExclusive', () => {
+  /**
+   * Beides ist der Beitrag, um den sich der Abend dreht, und zwei davon gibt
+   * es nicht. Bisher ließ sich beides zugleich anschalten — der Abend stand
+   * dann mit zwei Rollen da, von denen eine nie stattfinden würde.
+   */
+  it('weist Thema und Testimony am selben Abend ab', () => {
+    expect(() =>
+      assertSlotsExclusive({
+        hasTopicSlot: true,
+        hasSongSlot: false,
+        hasTestimonySlot: true,
+      }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('lässt jedes von beiden für sich zu', () => {
+    expect(() =>
+      assertSlotsExclusive(slotDefaults(MeetingType.STANDARD)),
+    ).not.toThrow();
+    expect(() =>
+      assertSlotsExclusive(slotDefaults(MeetingType.LOBPREIS_GEBET)),
+    ).not.toThrow();
+  });
+
+  /** Ein Geburtstagsabend hat weder das eine noch das andere. */
+  it('lässt einen Abend ohne beides zu', () => {
+    expect(() =>
+      assertSlotsExclusive(slotDefaults(MeetingType.CUSTOM)),
+    ).not.toThrow();
   });
 });

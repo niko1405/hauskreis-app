@@ -12,7 +12,7 @@ import { isoDateOut, personRefSchema } from '../../common/dto/response';
  * `PRAYER_BUDDY` gesetzt, `meetingId` nur bei den übrigen dreien.
  */
 export const assignmentSchema = z.object({
-  role: z.enum(['HOST', 'TOPIC', 'SONG', 'PRAYER_BUDDY']),
+  role: z.enum(['HOST', 'TOPIC', 'SONG', 'TESTIMONY', 'PRAYER_BUDDY']),
   date: isoDateOut,
   /// Nur bei `PRAYER_BUDDY`: das Ende des Zeitraums, einschließlich.
   endDate: isoDateOut.nullable(),

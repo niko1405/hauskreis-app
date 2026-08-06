@@ -307,6 +307,21 @@ export function useTopicSuggestions(
   });
 }
 
+export function useTestimonySuggestions(
+  meetingId: string | undefined,
+  active = true,
+) {
+  const { hauskreisId, enabled, keys } = useHk();
+
+  return useQuery({
+    queryKey: keys.meetings.testimonySuggestions(meetingId ?? ''),
+    queryFn: ({ signal }) =>
+      meetingsApi.getTestimonySuggestions(hauskreisId, meetingId!, signal),
+    enabled: enabled && Boolean(meetingId) && active,
+    staleTime: STALE.suggestions,
+  });
+}
+
 // ── Admin-Läufe ─────────────────────────────────────────────────────────────
 
 export function useGenerateMeetings() {

@@ -57,7 +57,6 @@ describe('MeetingService.findAll for the archive', () => {
       'summaryText',
       'actionstepText',
       'infoText',
-      'testimonyText',
       'topic',
     ]);
   });

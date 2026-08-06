@@ -1,0 +1,23 @@
+meta {
+  name: Testimony-Vorschläge
+  type: http
+  seq: 22
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/testimony-suggestions
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Dieselbe Rangfolge wie beim Thema, ohne Eignungsfilter — eine Geschichte hat
+  jede:r. Der eigene Abend zählt nicht in der Historie mit, sonst schöbe die
+  schon eingetragene Person sich selbst nach unten.
+}

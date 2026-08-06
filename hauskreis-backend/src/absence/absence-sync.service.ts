@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { MeetingCancellationService } from '../meeting/meeting-cancellation.service';
 import { RoleReleaseService } from '../meeting/role-release.service';
+import type { ReleasedRoles } from '../meeting/role-release.service';
 import { MeetingNotificationService } from '../meeting/meeting-notification.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import {
@@ -159,7 +160,7 @@ export class AbsenceSyncService {
     // bliebe im Plan ein Gastgeber stehen, der nachweislich verreist ist.
     // Läuft auch ohne `notify`: freigeben ist eine Änderung an den Daten,
     // nicht eine Nachricht darüber.
-    const released = new Map<string, { host: boolean; song: boolean }>();
+    const released = new Map<string, ReleasedRoles>();
 
     for (const meetingId of toDecline) {
       released.set(

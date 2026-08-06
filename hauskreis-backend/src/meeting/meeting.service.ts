@@ -29,6 +29,7 @@ import type { IfMatchCondition } from '../common/http/etag';
 import { isPast, toUtcDate } from './meeting-schedule';
 import {
   assertSlotsAllow,
+  assertSlotsExclusive,
   clearedByTurningOff,
   resolveSlots,
   slotDefaults,
@@ -46,6 +47,7 @@ const meetingInclude = {
   // Include fehlt es in der Antwort — siehe `locationInclude`.
   location: { include: locationInclude },
   host: { select: personRefSelect },
+  testimonyPerson: { select: personRefSelect },
   topic: {
     select: {
       id: true,
@@ -164,6 +166,7 @@ export class MeetingService {
       dto,
     );
     assertSlotsAllow(slots, dto);
+    assertSlotsExclusive(slots);
 
     const venue = await this.resolveVenue(hauskreisId, dto, {
       hostPersonId: null,
@@ -180,6 +183,7 @@ export class MeetingService {
         locationId: venue.locationId ?? null,
         hostPersonId: venue.hostPersonId ?? null,
         topicId: dto.topicId ?? null,
+        testimonyPersonId: dto.testimonyPersonId ?? null,
         title: dto.title ?? null,
         infoText: dto.infoText ?? null,
       },
@@ -217,6 +221,7 @@ export class MeetingService {
     // darf, entscheidet, ob die übrigen Felder zulässig sind.
     const slots = resolveSlots(before, dto);
     assertSlotsAllow(slots, dto);
+    assertSlotsExclusive(slots);
     const cleared = clearedByTurningOff(before, slots);
 
     const type = dto.type ?? before.type;
@@ -256,7 +261,7 @@ export class MeetingService {
             hostPersonId: venue.hostPersonId,
             topicId: dto.topicId,
             title: dto.title,
-            testimonyText: dto.testimonyText,
+            testimonyPersonId: dto.testimonyPersonId,
             actionstepText: dto.actionstepText,
             summaryText: dto.summaryText,
             infoText: dto.infoText,
@@ -529,6 +534,21 @@ export class MeetingService {
   }
 
   /**
+   * Wer als Nächstes sein Testimony erzählen könnte.
+   *
+   * Ohne den eigenen Abend in der Historie: sonst schöbe die schon eingetragene
+   * Person sich selbst nach unten, sobald jemand die Auswahl noch einmal
+   * öffnet.
+   */
+  async suggestTestimony(hauskreisId: string, id: string) {
+    const meeting = await this.loadForSuggestions(hauskreisId, id);
+
+    return this.roleSuggestions.suggestTestimony(hauskreisId, meeting.date, {
+      excludeMeetingId: meeting.id,
+    });
+  }
+
+  /**
    * The three fields the suggestion engines actually need.
    *
    * Going through `findOne` would pull the full `meetingInclude` — location,
@@ -745,10 +765,18 @@ export class MeetingService {
       locationId?: string | null;
       hostPersonId?: string | null;
       topicId?: string | null;
+      testimonyPersonId?: string | null;
     },
   ): Promise<void> {
     if (dto.hostPersonId) {
       await this.assertPersonBelongsToHauskreis(hauskreisId, dto.hostPersonId);
+    }
+
+    if (dto.testimonyPersonId) {
+      await this.assertPersonBelongsToHauskreis(
+        hauskreisId,
+        dto.testimonyPersonId,
+      );
     }
 
     if (dto.topicId) {
@@ -816,7 +844,6 @@ function buildMeetingSearch(search: string | undefined) {
       { summaryText: contains },
       { actionstepText: contains },
       { infoText: contains },
-      { testimonyText: contains },
       { topic: { title: contains } },
     ],
   };

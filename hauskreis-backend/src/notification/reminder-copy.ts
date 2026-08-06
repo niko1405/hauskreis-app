@@ -49,6 +49,10 @@ export function topicReminderBody(
     : `Am ${when} bist du mit dem Thema dran.`;
 }
 
+export function testimonyReminderBody(date: Date): string {
+  return `Am ${formatMeetingDate(date)} erzählst du dein Testimony.`;
+}
+
 export function songReminderBody(date: Date): string {
   return `Am ${formatMeetingDate(date)} machst du die Musik.`;
 }

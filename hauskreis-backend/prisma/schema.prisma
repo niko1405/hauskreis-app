@@ -61,6 +61,10 @@ enum AssignmentRole {
   HOST
   TOPIC
   SONG
+  /// Wer an einem Lobpreis-/Gebetsabend seine Geschichte erzählt. Steht neben
+  /// TOPIC und nie mit ihm zusammen: ein Abend hat entweder ein Thema oder ein
+  /// Testimony, nicht beides.
+  TESTIMONY
 
   @@map("assignment_role")
 }
@@ -107,6 +111,8 @@ enum NotificationType {
   CUSTOM_MEETING_CREATED
   /// Ein besonderer Termin steht bevor — an alle, nicht nur an Zuständige.
   CUSTOM_MEETING_REMINDER
+  /// Ahead of the meeting where you tell your story.
+  TESTIMONY_REMINDER
 
   @@map("notification_type")
 }
@@ -224,6 +230,7 @@ model Person {
   hauskreis             Hauskreis                @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
   location              Location?                @relation(fields: [locationId], references: [id], onDelete: SetNull)
   hostedMeetings        Meeting[]                @relation("MeetingHost")
+  testimonies           Meeting[]                @relation("MeetingTestimony")
   cancelledMeetings     Meeting[]                @relation("MeetingCanceller")
   songsCreated          Song[]                   @relation("SongCreator")
   songLeaderships       MeetingSongLeader[]      @relation("SongLeader")
@@ -324,16 +331,23 @@ model Meeting {
   endDate        DateTime?     @map("end_date") @db.Date
   type           MeetingType   @default(STANDARD)
   status         MeetingStatus @default(PLANNED)
-  /// Woraus der Abend besteht. Die vier Schalter sind das, was der **Typ**
+  /// Woraus der Abend besteht. Die drei Schalter sind das, was der **Typ**
   /// vorher nur behauptet hat: geprüft wurde nie etwas, man konnte einem
   /// Lobpreisabend ein Thema geben und einem Geburtstag ein Testimony.
   ///
   /// Jetzt ist der Typ eine Voreinstellung und die Schalter sind die Regel —
-  /// STANDARD bringt Host, Thema und Lieder mit, LOBPREIS_GEBET Host, Lieder
-  /// und Testimony, CUSTOM gar nichts und alles einzeln zubuchbar. Ein
+  /// STANDARD bringt Thema und Lieder mit, LOBPREIS_GEBET Lieder und
+  /// Testimony, CUSTOM gar nichts und alles einzeln zubuchbar. Ein
   /// Geburtstagsabend braucht keine Themenzuteilung, und er soll in der
-  /// Host-Fairness auch nicht als Hosting-Runde zählen.
-  hasHostSlot      Boolean @default(true) @map("has_host_slot")
+  /// Fairness-Rechnung des Themas auch nicht mitzählen.
+  ///
+  /// **Thema und Testimony schließen einander aus** — beides ist der Beitrag,
+  /// um den sich der Abend dreht, und zwei davon gibt es nicht.
+  /// Durchgesetzt in `assertSlotsExclusive`.
+  ///
+  /// Einen Gastgeber-Schalter gibt es bewusst nicht: man trifft sich immer
+  /// irgendwo. Dass niemand eingetragen ist (`hostPersonId = null`, Treffen im
+  /// Schlosspark) ist davon unberührt und ein gültiger Zustand.
   hasTopicSlot     Boolean @default(true) @map("has_topic_slot")
   hasSongSlot      Boolean @default(true) @map("has_song_slot")
   hasTestimonySlot Boolean @default(false) @map("has_testimony_slot")
@@ -347,8 +361,12 @@ model Meeting {
   /// bleibt er leer, steht dort der Titel des Themas und sonst die Art des
   /// Termins (siehe `meetingHeadline` im Frontend).
   title          String?
-  /// Only used by LOBPREIS_GEBET meetings.
-  testimonyText  String?       @map("testimony_text")
+  /// Wer an diesem Abend sein Testimony erzählt. Nur bei `hasTestimonySlot`.
+  ///
+  /// Eine Person und kein Text: ein Testimony ist nichts, was man vorher
+  /// aufschreibt, sondern jemand, der davon erzählt. Als Textfeld stand es
+  /// leer da und niemand wusste, wer es füllen sollte.
+  testimonyPersonId String?    @map("testimony_person_id") @db.Uuid
   actionstepText String?       @map("actionstep_text")
   summaryText    String?       @map("summary_text")
   infoText       String?       @map("info_text")
@@ -371,6 +389,7 @@ model Meeting {
   hauskreis      Hauskreis               @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
   location       Location?               @relation(fields: [locationId], references: [id], onDelete: SetNull)
   host           Person?                 @relation("MeetingHost", fields: [hostPersonId], references: [id], onDelete: SetNull)
+  testimonyPerson Person?                @relation("MeetingTestimony", fields: [testimonyPersonId], references: [id], onDelete: SetNull)
   cancelledBy    Person?                 @relation("MeetingCanceller", fields: [cancelledByPersonId], references: [id], onDelete: SetNull)
   topic          Topic?                  @relation(fields: [topicId], references: [id], onDelete: SetNull)
   attendances    MeetingAttendance[]

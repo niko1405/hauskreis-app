@@ -17,7 +17,11 @@ import { Sheet } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast';
 import { SlotToggles } from '@/components/domain/slot-toggles';
 import { useCreateMeeting, useLocations } from '@/lib/api/hooks';
-import { MEETING_TYPE_LABEL, slotDefaults } from '@/lib/meeting';
+import {
+  MEETING_TYPE_LABEL,
+  applySlotToggle,
+  slotDefaults,
+} from '@/lib/meeting';
 import { isSelectableWithoutHost } from '@/lib/location';
 import { MEETING_TYPES } from '@/lib/api/types';
 import { addDays, today } from '@/lib/date';
@@ -53,8 +57,11 @@ export function CreateMeetingSheet({
     if (next !== 'CUSTOM') setEndDate('');
   };
 
+  // Über `applySlotToggle`, nicht mit einem einfachen Spread: Thema und
+  // Testimony schließen einander aus, und das Formular soll gar nicht erst in
+  // einen Zustand führen, den der Server mit 400 ablehnt.
   const toggle = (key: MeetingSlotKey, value: boolean) =>
-    setSlots((current) => ({ ...current, [key]: value }));
+    setSlots((current) => applySlotToggle(current, key, value));
 
   const submit = () => {
     create.mutate(
@@ -63,9 +70,7 @@ export function CreateMeetingSheet({
         endDate: endDate === '' ? null : endDate,
         type,
         title: title.trim() === '' ? null : title.trim(),
-        // Ein Ort ohne Gastgeber-Baustein wäre ein Widerspruch, und der Server
-        // lehnt ihn ab. Das Feld erscheint dann gar nicht erst.
-        locationId: slots.hasHostSlot && locationId !== '' ? locationId : null,
+        locationId: locationId === '' ? null : locationId,
         ...slots,
       },
       {
@@ -138,28 +143,28 @@ export function CreateMeetingSheet({
           <SlotToggles slots={slots} onToggle={toggle} />
         </Field>
 
-        {slots.hasHostSlot && (
-          <Field
-            label="Ort"
-            hint="Kann offen bleiben — etwa für ein Treffen draußen. Wohnungen ergeben sich aus dem Gastgeber."
+        {/* Immer da: man trifft sich immer irgendwo, auch bei einem
+            Geburtstag. Offen bleiben darf es trotzdem. */}
+        <Field
+          label="Ort"
+          hint="Kann offen bleiben — etwa für ein Treffen draußen. Wohnungen ergeben sich aus dem Gastgeber."
+        >
+          <Select
+            value={locationId}
+            onChange={(event) => setLocationId(event.target.value)}
           >
-            <Select
-              value={locationId}
-              onChange={(event) => setLocationId(event.target.value)}
-            >
-              <option value="">Noch offen</option>
-              {/* Nur Treffpunkte: eine Wohnung folgt ihrem Gastgeber, und sie
-                  hier zu wählen hätte der Server ohnehin abgelehnt. */}
-              {(locations.data ?? [])
-                .filter((location) => isSelectableWithoutHost(location))
-                .map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {location.name}
-                  </option>
-                ))}
-            </Select>
-          </Field>
-        )}
+            <option value="">Noch offen</option>
+            {/* Nur Treffpunkte: eine Wohnung folgt ihrem Gastgeber, und sie
+                hier zu wählen hätte der Server ohnehin abgelehnt. */}
+            {(locations.data ?? [])
+              .filter((location) => isSelectableWithoutHost(location))
+              .map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
+              ))}
+          </Select>
+        </Field>
 
         <div className="flex gap-2 pt-2">
           <Button variant="ghost" className="flex-1" onClick={onClose}>

@@ -2139,6 +2139,78 @@
         ]
       }
     },
+    "/api/hauskreise/{hauskreisId}/meetings/testimony-reminders": {
+      "post": {
+        "operationId": "MeetingController_runTestimonyReminders",
+        "parameters": [
+          {
+            "name": "hauskreisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderRunResultResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Meeting"
+        ]
+      }
+    },
     "/api/hauskreise/{hauskreisId}/meetings/{id}": {
       "get": {
         "operationId": "MeetingController_findOne",
@@ -2722,6 +2794,88 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HostSuggestionListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Meeting"
+        ]
+      }
+    },
+    "/api/hauskreise/{hauskreisId}/meetings/{id}/testimony-suggestions": {
+      "get": {
+        "operationId": "MeetingController_suggestTestimony",
+        "parameters": [
+          {
+            "name": "hauskreisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleSuggestionListResponseDto"
                 }
               }
             }
@@ -6595,7 +6749,8 @@
                 "HOST_CAPACITY_UNLOCKED",
                 "MEMBER_LEFT",
                 "CUSTOM_MEETING_CREATED",
-                "CUSTOM_MEETING_REMINDER"
+                "CUSTOM_MEETING_REMINDER",
+                "TESTIMONY_REMINDER"
               ]
             }
           }
@@ -8659,7 +8814,8 @@
                 "HOST_CAPACITY_UNLOCKED",
                 "MEMBER_LEFT",
                 "CUSTOM_MEETING_CREATED",
-                "CUSTOM_MEETING_REMINDER"
+                "CUSTOM_MEETING_REMINDER",
+                "TESTIMONY_REMINDER"
               ]
             },
             "label": {
@@ -8819,7 +8975,8 @@
               "HOST_CAPACITY_UNLOCKED",
               "MEMBER_LEFT",
               "CUSTOM_MEETING_CREATED",
-              "CUSTOM_MEETING_REMINDER"
+              "CUSTOM_MEETING_REMINDER",
+              "TESTIMONY_REMINDER"
             ]
           },
           "label": {
@@ -9130,9 +9287,6 @@
                     "COMPLETED"
                   ]
                 },
-                "hasHostSlot": {
-                  "type": "boolean"
-                },
                 "hasTopicSlot": {
                   "type": "boolean"
                 },
@@ -9164,8 +9318,10 @@
                   "type": "string",
                   "nullable": true
                 },
-                "testimonyText": {
+                "testimonyPersonId": {
                   "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                   "nullable": true
                 },
                 "actionstepText": {
@@ -9334,6 +9490,32 @@
                   "nullable": true
                 },
                 "host": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "photoUpdatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "photoUpdatedAt"
+                  ],
+                  "additionalProperties": false,
+                  "nullable": true
+                },
+                "testimonyPerson": {
                   "type": "object",
                   "properties": {
                     "id": {
@@ -9539,7 +9721,6 @@
                 "endDate",
                 "type",
                 "status",
-                "hasHostSlot",
                 "hasTopicSlot",
                 "hasSongSlot",
                 "hasTestimonySlot",
@@ -9547,7 +9728,7 @@
                 "hostPersonId",
                 "topicId",
                 "title",
-                "testimonyText",
+                "testimonyPersonId",
                 "actionstepText",
                 "summaryText",
                 "infoText",
@@ -9560,6 +9741,7 @@
                 "cancelledBy",
                 "location",
                 "host",
+                "testimonyPerson",
                 "topic",
                 "songLeaders",
                 "actionstepDone",
@@ -9637,9 +9819,6 @@
               "COMPLETED"
             ]
           },
-          "hasHostSlot": {
-            "type": "boolean"
-          },
           "hasTopicSlot": {
             "type": "boolean"
           },
@@ -9671,8 +9850,10 @@
             "type": "string",
             "nullable": true
           },
-          "testimonyText": {
+          "testimonyPersonId": {
             "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
             "nullable": true
           },
           "actionstepText": {
@@ -9841,6 +10022,32 @@
             "nullable": true
           },
           "host": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "name": {
+                "type": "string"
+              },
+              "photoUpdatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "photoUpdatedAt"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          },
+          "testimonyPerson": {
             "type": "object",
             "properties": {
               "id": {
@@ -10046,7 +10253,6 @@
           "endDate",
           "type",
           "status",
-          "hasHostSlot",
           "hasTopicSlot",
           "hasSongSlot",
           "hasTestimonySlot",
@@ -10054,7 +10260,7 @@
           "hostPersonId",
           "topicId",
           "title",
-          "testimonyText",
+          "testimonyPersonId",
           "actionstepText",
           "summaryText",
           "infoText",
@@ -10067,6 +10273,7 @@
           "cancelledBy",
           "location",
           "host",
+          "testimonyPerson",
           "topic",
           "songLeaders",
           "actionstepDone",
@@ -10129,7 +10336,8 @@
                         "enum": [
                           "HOST",
                           "TOPIC",
-                          "SONG"
+                          "SONG",
+                          "TESTIMONY"
                         ]
                       },
                       "date": {
@@ -10308,7 +10516,8 @@
                         "enum": [
                           "HOST",
                           "TOPIC",
-                          "SONG"
+                          "SONG",
+                          "TESTIMONY"
                         ]
                       },
                       "date": {
@@ -10385,6 +10594,12 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
             "nullable": true
           },
+          "testimonyPersonId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "nullable": true
+          },
           "title": {
             "type": "string",
             "minLength": 1,
@@ -10395,9 +10610,6 @@
             "type": "string",
             "maxLength": 2000,
             "nullable": true
-          },
-          "hasHostSlot": {
-            "type": "boolean"
           },
           "hasTopicSlot": {
             "type": "boolean"
@@ -10454,9 +10666,10 @@
             "maxLength": 200,
             "nullable": true
           },
-          "testimonyText": {
+          "testimonyPersonId": {
             "type": "string",
-            "maxLength": 5000,
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
             "nullable": true
           },
           "actionstepText": {
@@ -10473,9 +10686,6 @@
             "type": "string",
             "maxLength": 2000,
             "nullable": true
-          },
-          "hasHostSlot": {
-            "type": "boolean"
           },
           "hasTopicSlot": {
             "type": "boolean"
@@ -11852,6 +12062,7 @@
                     "HOST",
                     "TOPIC",
                     "SONG",
+                    "TESTIMONY",
                     "PRAYER_BUDDY"
                   ]
                 },
@@ -12144,6 +12355,7 @@
                     "HOST",
                     "TOPIC",
                     "SONG",
+                    "TESTIMONY",
                     "PRAYER_BUDDY"
                   ]
                 },

@@ -9,6 +9,7 @@ import {
 import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
 import { toUtcDate } from './meeting-schedule';
 import { appPath } from '../notification/app-paths';
+import type { ReleasedRoles } from './role-release.service';
 
 /**
  * The notifications that fire because something changed, not because a date
@@ -120,7 +121,7 @@ export class MeetingNotificationService {
      * geht die ganze Gruppe an und nicht nur den Gastgeber, den es nicht mehr
      * gibt.
      */
-    released: { host: boolean; song: boolean } = { host: false, song: false },
+    released: ReleasedRoles = { host: false, song: false, testimony: false },
   ): Promise<void> {
     const meeting = await this.prisma.meeting.findUnique({
       where: { id: meetingId },
@@ -160,9 +161,10 @@ export class MeetingNotificationService {
   private async announceReleasedRoles(
     meeting: { id: string; hauskreisId: string; date: Date },
     personId: string,
-    released: { host: boolean; song: boolean },
+    released: ReleasedRoles,
   ): Promise<void> {
-    if (!released.host && !released.song) return;
+    const what = describeReleased(released);
+    if (!what) return;
 
     const [person, others] = await Promise.all([
       this.prisma.person.findUnique({
@@ -180,12 +182,6 @@ export class MeetingNotificationService {
     ]);
 
     if (!person) return;
-
-    const what = released.host
-      ? released.song
-        ? 'Gastgeber und Musik sind'
-        : 'Der Gastgeber-Platz ist'
-      : 'Die Musik ist';
 
     await this.sendAll(
       others.map((other) => ({
@@ -295,4 +291,27 @@ export class MeetingNotificationService {
 
     return results.filter((result) => result.skipped === 0).length;
   }
+}
+
+/**
+ * „Gastgeber und Musik sind wieder frei." — oder nichts, wenn nichts frei wurde.
+ *
+ * Als Liste und nicht als geschachtelte Bedingung: bei zwei Rollen ließ sich
+ * das noch mit einem Dreifach-Fragezeichen schreiben, bei dreien wären es acht
+ * Zweige für einen Satz. Dieselbe Form wie `describeOpenRoles` beim Austritt.
+ */
+function describeReleased(released: ReleasedRoles): string | null {
+  const free = [
+    released.host && 'Der Gastgeber-Platz',
+    released.song && 'Die Musik',
+    released.testimony && 'Das Testimony',
+  ].filter((entry): entry is string => typeof entry === 'string');
+
+  if (free.length === 0) return null;
+  if (free.length === 1) return `${free[0]} ist`;
+
+  // Ab zweien steht der Artikel im Weg: „Der Gastgeber-Platz und Die Musik".
+  const bare = free.map((entry) => entry.replace(/^(Der|Die|Das) /, ''));
+
+  return `${bare.slice(0, -1).join(', ')} und ${bare[bare.length - 1]} sind`;
 }

@@ -356,6 +356,7 @@ function describeOpenRoles(leftover: LeftoverRoles): string | undefined {
     leftover.host > 0 && 'einen Gastgeber',
     leftover.song > 0 && 'jemanden für die Musik',
     leftover.topic > 0 && 'jemanden fürs Thema',
+    leftover.testimony > 0 && 'jemanden fürs Testimony',
   ].filter((entry): entry is string => typeof entry === 'string');
 
   if (open.length === 0) {

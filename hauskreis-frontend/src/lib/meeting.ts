@@ -2,13 +2,16 @@
  * Wie ein Termin heißt und woraus er besteht.
  *
  * Was dazugehört, sagt seit den Bausteinen der Termin selbst und nicht mehr
- * seine Art: `hasHostSlot`, `hasTopicSlot`, `hasSongSlot`, `hasTestimonySlot`
- * stehen als Felder in der Antwort. Die Art ist nur noch die Voreinstellung
- * beim Anlegen — ein besonderer Termin startet leer und bekommt einzeln
- * dazugebucht, was er braucht.
+ * seine Art: `hasTopicSlot`, `hasSongSlot`, `hasTestimonySlot` stehen als
+ * Felder in der Antwort. Die Art ist nur noch die Voreinstellung beim
+ * Anlegen — ein besonderer Termin startet leer und bekommt einzeln dazugebucht,
+ * was er braucht.
  *
  * Deshalb gibt es hier keine `hasTopicSlot(type)`-Funktion mehr: sie war eine
  * Ableitung aus etwas, das die Frage gar nicht beantwortet.
+ *
+ * Gastgeber ist kein Baustein: man trifft sich immer irgendwo. Dass an einem
+ * Abend niemand gastgebend eingetragen ist, bleibt davon unberührt.
  */
 import type { AssignmentRole, MeetingType } from './api/types';
 
@@ -20,11 +23,6 @@ export const MEETING_TYPE_LABEL: Record<MeetingType, string> = {
 
 /** Die vier Bausteine, in der Reihenfolge, in der sie auf der Seite stehen. */
 export const MEETING_SLOTS = [
-  {
-    key: 'hasHostSlot',
-    label: 'Gastgeber & Ort',
-    hint: 'Wer einlädt — und damit auch, wo es stattfindet.',
-  },
   {
     key: 'hasTopicSlot',
     label: 'Thema',
@@ -47,7 +45,7 @@ export const MEETING_SLOTS = [
 }[];
 
 export type MeetingSlotKey =
-  'hasHostSlot' | 'hasTopicSlot' | 'hasSongSlot' | 'hasTestimonySlot';
+  'hasTopicSlot' | 'hasSongSlot' | 'hasTestimonySlot';
 
 export type MeetingSlots = Record<MeetingSlotKey, boolean>;
 
@@ -62,7 +60,6 @@ export type MeetingSlots = Record<MeetingSlotKey, boolean>;
 export function slotDefaults(type: MeetingType): MeetingSlots {
   if (type === 'STANDARD') {
     return {
-      hasHostSlot: true,
       hasTopicSlot: true,
       hasSongSlot: true,
       hasTestimonySlot: false,
@@ -71,7 +68,6 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
 
   if (type === 'LOBPREIS_GEBET') {
     return {
-      hasHostSlot: true,
       hasTopicSlot: false,
       hasSongSlot: true,
       hasTestimonySlot: true,
@@ -79,11 +75,32 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
   }
 
   return {
-    hasHostSlot: false,
     hasTopicSlot: false,
     hasSongSlot: false,
     hasTestimonySlot: false,
   };
+}
+
+/**
+ * Einen Schalter umlegen — und dabei die Regel wahren, dass Thema und
+ * Testimony einander ausschließen.
+ *
+ * Der Server lehnt beides zugleich mit `400` ab. Das Formular soll aber gar
+ * nicht erst dorthin führen: wer Testimony anhakt, meint damit ersichtlich
+ * „statt eines Themas", und ihn dafür in eine Fehlermeldung laufen zu lassen
+ * wäre eine Belehrung über eine Regel, die er gerade befolgt.
+ */
+export function applySlotToggle(
+  slots: MeetingSlots,
+  key: MeetingSlotKey,
+  value: boolean,
+): MeetingSlots {
+  const next = { ...slots, [key]: value };
+
+  if (value && key === 'hasTopicSlot') next.hasTestimonySlot = false;
+  if (value && key === 'hasTestimonySlot') next.hasTopicSlot = false;
+
+  return next;
 }
 
 /**
@@ -137,6 +154,7 @@ export const ROLE_LABEL: Record<AssignmentRole, string> = {
   HOST: 'Host',
   TOPIC: 'Thema',
   SONG: 'Musik',
+  TESTIMONY: 'Testimony',
   PRAYER_BUDDY: 'Gebetsbuddy',
 };
 
@@ -145,6 +163,7 @@ export const ROLE_QUESTION: Record<AssignmentRole, string> = {
   HOST: 'Wer hostet?',
   TOPIC: 'Wer macht das Thema?',
   SONG: 'Wer macht die Musik?',
+  TESTIMONY: 'Wer erzählt?',
   PRAYER_BUDDY: 'Wer betet miteinander?',
 };
 

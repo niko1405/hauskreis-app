@@ -59,6 +59,8 @@ export const qk = {
           [...root, 'meetings', meetingId, 'host-suggestions'] as const,
         topicSuggestions: (meetingId: string) =>
           [...root, 'meetings', meetingId, 'topic-suggestions'] as const,
+        testimonySuggestions: (meetingId: string) =>
+          [...root, 'meetings', meetingId, 'testimony-suggestions'] as const,
         songLeaderSuggestions: (meetingId: string) =>
           [...root, 'meetings', meetingId, 'song-leader-suggestions'] as const,
         songs: (meetingId: string) =>

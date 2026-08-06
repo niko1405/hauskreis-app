@@ -4,7 +4,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
 import { toUtcDate } from '../meeting/meeting-schedule';
 
-export type AssignmentRoleName = 'HOST' | 'TOPIC' | 'SONG' | 'PRAYER_BUDDY';
+export type AssignmentRoleName =
+  'HOST' | 'TOPIC' | 'SONG' | 'TESTIMONY' | 'PRAYER_BUDDY';
 
 /**
  * One thing somebody is down for.
@@ -70,6 +71,7 @@ export class AssignmentService {
           id: true,
           date: true,
           host: { select: personRefSelect },
+          testimonyPerson: { select: personRefSelect },
           location: { select: { name: true } },
           topic: {
             select: {
@@ -119,6 +121,18 @@ export class AssignmentService {
           meetingId: meeting.id,
           groupId: null,
           label: meeting.location?.name ?? null,
+        });
+      }
+
+      if (meeting.testimonyPerson) {
+        assignments.push({
+          role: 'TESTIMONY',
+          date,
+          endDate: null,
+          person: meeting.testimonyPerson,
+          meetingId: meeting.id,
+          groupId: null,
+          label: null,
         });
       }
 
@@ -182,7 +196,10 @@ export class AssignmentService {
 
 const ROLE_ORDER: Record<AssignmentRoleName, number> = {
   HOST: 0,
+  // Thema und Testimony teilen sich einen Platz: sie schließen einander aus,
+  // an einem Abend steht also immer nur eines davon.
   TOPIC: 1,
+  TESTIMONY: 1,
   SONG: 2,
   PRAYER_BUDDY: 3,
 };

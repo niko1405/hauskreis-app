@@ -4,7 +4,7 @@
  * Ein Rollen-Chip: „Host: Lukas". Ist niemand eingetragen, wird daraus die
  * Einladung „+ Host eintragen" — nicht ein leeres Feld oder ein Gedankenstrich.
  */
-import { BookOpen, House, Music, Users } from 'lucide-react';
+import { BookOpen, House, Mic, Music, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { ROLE_LABEL } from '@/lib/meeting';
@@ -14,13 +14,20 @@ export const ROLE_ICON: Record<AssignmentRole, LucideIcon> = {
   HOST: House,
   TOPIC: BookOpen,
   SONG: Music,
+  TESTIMONY: Mic,
   PRAYER_BUDDY: Users,
 };
+
+// Testimony trägt bewusst die Farbe des Themas: die beiden schließen einander
+// aus, an einem Abend steht immer nur eines davon. Eine eigene Farbe behauptete
+// eine fünfte Sorte Aufgabe, die es nicht gibt — es ist dieselbe Stelle im
+// Abend, nur anders gefüllt.
 
 const ROLE_STYLE: Record<AssignmentRole, string> = {
   HOST: 'bg-terracotta-50 text-terracotta-700 border-terracotta-100',
   TOPIC: 'bg-topic-bg text-topic border-topic-line',
   SONG: 'bg-music-bg text-music border-music-line',
+  TESTIMONY: 'bg-topic-bg text-topic border-topic-line',
   PRAYER_BUDDY: 'bg-info-bg text-info border-info-line',
 };
 
@@ -28,6 +35,7 @@ const ROLE_EMPTY_STYLE: Record<AssignmentRole, string> = {
   HOST: 'text-terracotta-700 border-terracotta-100 bg-terracotta-50/40',
   TOPIC: 'text-topic border-topic-line bg-topic-bg/40',
   SONG: 'text-music border-music-line bg-music-bg/40',
+  TESTIMONY: 'text-topic border-topic-line bg-topic-bg/40',
   PRAYER_BUDDY: 'text-info border-info-line bg-info-bg/40',
 };
 

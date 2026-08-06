@@ -14,6 +14,7 @@ const TITLE: Record<AssignmentRole, string> = {
   HOST: 'Du hostest',
   TOPIC: 'Du machst das Thema',
   SONG: 'Du machst die Musik',
+  TESTIMONY: 'Du erzählst dein Testimony',
 };
 
 /**

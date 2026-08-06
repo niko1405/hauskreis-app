@@ -1,10 +1,13 @@
 'use client';
 
 /**
- * Rollen eintragen — die drei Rollen sitzen an drei verschiedenen Stellen der
+ * Rollen eintragen — die vier Rollen sitzen an drei verschiedenen Stellen der
  * API, was im UI niemand sehen soll:
  *
  * - **Host** ist ein Feld am Termin (`hostPersonId`).
+ * - **Testimony** ebenso (`testimonyPersonId`). Anders als das Thema hängt es
+ *   am Abend und nicht an einer eigenen Entität: eine Geschichte zieht sich
+ *   nicht über drei Dienstage.
  * - **Thema** hängt am *Thema*, nicht am Termin. Hat der Termin noch keins,
  *   wird eines angelegt und verknüpft — ein Thema kann sich schließlich über
  *   mehrere Termine ziehen (CLAUDE.md §5).
@@ -41,6 +44,16 @@ export function useRoleAssignment(meeting: Meeting) {
     (personIds: string[]) => {
       updateMeeting.mutate(
         { hostPersonId: personIds[0] ?? null },
+        { onError: fail },
+      );
+    },
+    [updateMeeting, fail],
+  );
+
+  const assignTestimony = useCallback(
+    (personIds: string[]) => {
+      updateMeeting.mutate(
+        { testimonyPersonId: personIds[0] ?? null },
         { onError: fail },
       );
     },
@@ -101,6 +114,7 @@ export function useRoleAssignment(meeting: Meeting) {
 
   return {
     assignHost,
+    assignTestimony,
     assignTopicResponsibles,
     assignSongLeaders,
     renameTopic,

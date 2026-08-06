@@ -102,6 +102,21 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     defaultEnabled: true,
   },
   {
+    type: NotificationType.TESTIMONY_REMINDER,
+    label: 'Du erzählst dein Testimony',
+    description:
+      'Erinnerung, bevor du an einem Lobpreis- und Gebetsabend deine Geschichte erzählst.',
+    // Wie beim Thema und aus demselben Grund: was man erzählen will, sortiert
+    // man nicht am Abend selbst.
+    schedule: {
+      kind: 'LEAD_TIME',
+      defaultLeadDays: 5,
+      minLeadDays: 1,
+      maxLeadDays: 14,
+    },
+    defaultEnabled: true,
+  },
+  {
     type: NotificationType.TOPIC_REMINDER,
     label: 'Du bereitest das Thema vor',
     description:

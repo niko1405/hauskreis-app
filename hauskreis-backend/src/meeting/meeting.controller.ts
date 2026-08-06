@@ -16,6 +16,7 @@ import { MeetingGeneratorService } from './meeting-generator.service';
 import { HostReminderService } from './host-reminder.service';
 import { ActionstepReminderService } from './actionstep-reminder.service';
 import { CustomMeetingNotificationService } from './custom-meeting-notification.service';
+import { TestimonyReminderService } from './testimony-reminder.service';
 import {
   CancelMeetingDto,
   CreateMeetingDto,
@@ -59,6 +60,7 @@ export class MeetingController {
     private readonly hostReminders: HostReminderService,
     private readonly actionstepReminders: ActionstepReminderService,
     private readonly customMeetingNotifications: CustomMeetingNotificationService,
+    private readonly testimonyReminders: TestimonyReminderService,
     private readonly people: PersonService,
   ) {}
 
@@ -103,6 +105,12 @@ export class MeetingController {
       params.hauskreisId,
       params.id,
     );
+  }
+
+  @Get(':id/testimony-suggestions')
+  @ApiZodResponse(RoleSuggestionListResponseDto)
+  suggestTestimony(@Param() params: MeetingParamsDto) {
+    return this.meetingService.suggestTestimony(params.hauskreisId, params.id);
   }
 
   @Post()
@@ -248,6 +256,17 @@ export class MeetingController {
   @HttpCode(HttpStatus.OK)
   runHostReminders(@Param() params: HauskreisParamsDto) {
     return this.hostReminders.sendDueReminders({
+      hauskreisId: params.hauskreisId,
+    });
+  }
+
+  /** Dasselbe für die Erinnerung an das eigene Testimony. */
+  @Post('testimony-reminders')
+  @ApiZodResponse(ReminderRunResultResponseDto)
+  @HauskreisAdmin()
+  @HttpCode(HttpStatus.OK)
+  runTestimonyReminders(@Param() params: HauskreisParamsDto) {
+    return this.testimonyReminders.sendDueReminders({
       hauskreisId: params.hauskreisId,
     });
   }

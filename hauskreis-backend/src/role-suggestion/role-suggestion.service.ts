@@ -186,6 +186,52 @@ export class RoleSuggestionService {
   }
 
   /**
+   * Wer als Nächstes sein Testimony erzählt, bester Vorschlag zuerst.
+   *
+   * Dieselbe Rangfolge wie beim Thema und mit demselben Grund: es ist ein
+   * Beitrag, den jemand vorbereitet, und die Frage lautet „wer war am längsten
+   * nicht dran". Kein Eignungsfilter — eine Geschichte hat jede:r.
+   *
+   * Anders als das Thema **ohne** `slotKey` bei den Ereignissen: ein Thema kann
+   * sich über drei Abende ziehen und zählt trotzdem als ein Dienst; ein
+   * Testimony ist ein Abend.
+   */
+  async suggestTestimony(
+    hauskreisId: string,
+    targetDate: Date,
+    options: { excludeMeetingId?: string } = {},
+  ): Promise<RoleSuggestion[]> {
+    const [
+      people,
+      hostEvents,
+      topicEvents,
+      testimonyEvents,
+      calendar,
+      declined,
+    ] = await Promise.all([
+      this.prisma.person.findMany({
+        where: { hauskreisId, active: true },
+        select: { id: true, name: true, photoUpdatedAt: true },
+      }),
+      this.collectEvents(hauskreisId),
+      this.collectTopicEvents(hauskreisId),
+      this.collectTestimonyEvents(hauskreisId, options.excludeMeetingId),
+      this.loadAbsences(hauskreisId),
+      this.availability.findDeclined(options.excludeMeetingId),
+    ]);
+
+    return rankForRole({
+      people: people.filter(
+        (person) =>
+          !calendar.isAway(person.id, targetDate) && !declined.has(person.id),
+      ),
+      events: [...hostEvents, ...topicEvents, ...testimonyEvents],
+      role: AssignmentRole.TESTIMONY,
+      targetDate,
+    });
+  }
+
+  /**
    * Who should look after the music, best fit first.
    *
    * The only difference to the topic ranking is the eligibility filter: not
@@ -440,6 +486,31 @@ export class RoleSuggestionService {
    * Music duty, one event per (person, evening). No `slotKey`: songs are picked
    * per evening, so one evening is one job — unlike a topic.
    */
+  /**
+   * Testimonys, ein Ereignis je (Person, Abend). Wie die Musik und anders als
+   * das Thema: an einem Abend erzählt eine Person, und damit ist es ein Dienst.
+   */
+  private async collectTestimonyEvents(
+    hauskreisId: string,
+    excludeMeetingId?: string,
+  ): Promise<RoleAssignmentEvent[]> {
+    const meetings = await this.prisma.meeting.findMany({
+      where: {
+        hauskreisId,
+        status: { not: MeetingStatus.CANCELLED },
+        testimonyPersonId: { not: null },
+        ...(excludeMeetingId ? { id: { not: excludeMeetingId } } : {}),
+      },
+      select: { date: true, testimonyPersonId: true },
+    });
+
+    return meetings.map((meeting) => ({
+      personId: meeting.testimonyPersonId as string,
+      role: AssignmentRole.TESTIMONY,
+      date: meeting.date,
+    }));
+  }
+
   private async collectSongEvents(
     hauskreisId: string,
     excludeMeetingId?: string,

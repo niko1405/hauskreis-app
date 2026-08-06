@@ -1,0 +1,35 @@
+meta {
+  name: Thema und Testimony zugleich scheitert
+  type: http
+  seq: 23
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{meetingEtag}}
+}
+
+body:json {
+  {
+    "hasTopicSlot": true,
+    "hasTestimonySlot": true
+  }
+}
+
+tests {
+  test("weist beides zugleich ab", function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(res.body.message).to.contain("entweder");
+  });
+}
+
+docs {
+  Beides ist der Beitrag, um den sich der Abend dreht, und zwei davon gibt es
+  nicht. Im UI führt das Formular gar nicht erst hierher: `applySlotToggle`
+  schaltet beim Anhaken des einen das andere ab.
+}

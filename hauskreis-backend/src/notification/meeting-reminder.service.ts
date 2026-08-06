@@ -25,6 +25,7 @@ export interface ReminderMeeting {
   title: string | null;
   hostPersonId: string | null;
   topicId: string | null;
+  testimonyPersonId: string | null;
   location: { name: string } | null;
   topic: { title: string | null; responsibles: { personId: string }[] } | null;
   songLeaders: { personId: string }[];
@@ -112,6 +113,7 @@ export class MeetingReminderService {
         title: true,
         hostPersonId: true,
         topicId: true,
+        testimonyPersonId: true,
         location: { select: { name: true } },
         topic: {
           select: {

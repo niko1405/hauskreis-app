@@ -292,6 +292,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/meetings/testimony-reminders': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['MeetingController_runTestimonyReminders'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/meetings/{id}': {
     parameters: {
       query?: never;
@@ -364,6 +380,22 @@ export interface paths {
       cookie?: never;
     };
     get: operations['MeetingController_suggestHosts'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/meetings/{id}/testimony-suggestions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['MeetingController_suggestTestimony'];
     put?: never;
     post?: never;
     delete?: never;
@@ -1413,7 +1445,8 @@ export interface components {
         | 'HOST_CAPACITY_UNLOCKED'
         | 'MEMBER_LEFT'
         | 'CUSTOM_MEETING_CREATED'
-        | 'CUSTOM_MEETING_REMINDER';
+        | 'CUSTOM_MEETING_REMINDER'
+        | 'TESTIMONY_REMINDER';
       label: string;
       description: string;
       schedule:
@@ -1457,7 +1490,8 @@ export interface components {
         | 'HOST_CAPACITY_UNLOCKED'
         | 'MEMBER_LEFT'
         | 'CUSTOM_MEETING_CREATED'
-        | 'CUSTOM_MEETING_REMINDER';
+        | 'CUSTOM_MEETING_REMINDER'
+        | 'TESTIMONY_REMINDER';
       label: string;
       description: string;
       schedule:
@@ -1535,7 +1569,6 @@ export interface components {
         type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
         /** @enum {string} */
         status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
-        hasHostSlot: boolean;
         hasTopicSlot: boolean;
         hasSongSlot: boolean;
         hasTestimonySlot: boolean;
@@ -1546,7 +1579,8 @@ export interface components {
         /** Format: uuid */
         topicId: string | null;
         title: string | null;
-        testimonyText: string | null;
+        /** Format: uuid */
+        testimonyPersonId: string | null;
         actionstepText: string | null;
         summaryText: string | null;
         infoText: string | null;
@@ -1590,6 +1624,13 @@ export interface components {
           version: number;
         } | null;
         host: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+        testimonyPerson: {
           /** Format: uuid */
           id: string;
           name: string;
@@ -1657,7 +1698,6 @@ export interface components {
       type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
       /** @enum {string} */
       status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
-      hasHostSlot: boolean;
       hasTopicSlot: boolean;
       hasSongSlot: boolean;
       hasTestimonySlot: boolean;
@@ -1668,7 +1708,8 @@ export interface components {
       /** Format: uuid */
       topicId: string | null;
       title: string | null;
-      testimonyText: string | null;
+      /** Format: uuid */
+      testimonyPersonId: string | null;
       actionstepText: string | null;
       summaryText: string | null;
       infoText: string | null;
@@ -1712,6 +1753,13 @@ export interface components {
         version: number;
       } | null;
       host: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      } | null;
+      testimonyPerson: {
         /** Format: uuid */
         id: string;
         name: string;
@@ -1775,7 +1823,7 @@ export interface components {
         timesAssigned: number;
         upcomingCommitments: {
           /** @enum {string} */
-          role: 'HOST' | 'TOPIC' | 'SONG';
+          role: 'HOST' | 'TOPIC' | 'SONG' | 'TESTIMONY';
           /** Format: date */
           date: string;
         }[];
@@ -1814,7 +1862,7 @@ export interface components {
         timesAssigned: number;
         upcomingCommitments: {
           /** @enum {string} */
-          role: 'HOST' | 'TOPIC' | 'SONG';
+          role: 'HOST' | 'TOPIC' | 'SONG' | 'TESTIMONY';
           /** Format: date */
           date: string;
         }[];
@@ -1836,9 +1884,10 @@ export interface components {
       hostPersonId?: string | null;
       /** Format: uuid */
       topicId?: string | null;
+      /** Format: uuid */
+      testimonyPersonId?: string | null;
       title?: string | null;
       infoText?: string | null;
-      hasHostSlot?: boolean;
       hasTopicSlot?: boolean;
       hasSongSlot?: boolean;
       hasTestimonySlot?: boolean;
@@ -1855,11 +1904,11 @@ export interface components {
       /** Format: uuid */
       topicId?: string | null;
       title?: string | null;
-      testimonyText?: string | null;
+      /** Format: uuid */
+      testimonyPersonId?: string | null;
       actionstepText?: string | null;
       summaryText?: string | null;
       infoText?: string | null;
-      hasHostSlot?: boolean;
       hasTopicSlot?: boolean;
       hasSongSlot?: boolean;
       hasTestimonySlot?: boolean;
@@ -2204,7 +2253,7 @@ export interface components {
     AssignmentListResponseDto: {
       items: {
         /** @enum {string} */
-        role: 'HOST' | 'TOPIC' | 'SONG' | 'PRAYER_BUDDY';
+        role: 'HOST' | 'TOPIC' | 'SONG' | 'TESTIMONY' | 'PRAYER_BUDDY';
         /** Format: date */
         date: string;
         /** Format: date */
@@ -2276,7 +2325,7 @@ export interface components {
       } | null;
       myRoles: {
         /** @enum {string} */
-        role: 'HOST' | 'TOPIC' | 'SONG' | 'PRAYER_BUDDY';
+        role: 'HOST' | 'TOPIC' | 'SONG' | 'TESTIMONY' | 'PRAYER_BUDDY';
         /** Format: date */
         date: string;
         /** Format: date */
@@ -3888,6 +3937,63 @@ export interface operations {
       };
     };
   };
+  MeetingController_runTestimonyReminders: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ReminderRunResultResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
   MeetingController_findOne: {
     parameters: {
       query?: never;
@@ -4299,6 +4405,64 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['HostSuggestionListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeetingController_suggestTestimony: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RoleSuggestionListResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -7184,7 +7348,8 @@ export interface operations {
           | 'HOST_CAPACITY_UNLOCKED'
           | 'MEMBER_LEFT'
           | 'CUSTOM_MEETING_CREATED'
-          | 'CUSTOM_MEETING_REMINDER';
+          | 'CUSTOM_MEETING_REMINDER'
+          | 'TESTIMONY_REMINDER';
       };
       cookie?: never;
     };
