@@ -6,13 +6,14 @@
  * mit der Zeit alles laden, nur um clientseitig zu filtern.
  */
 import { Music, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import { useDeferredValue, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Avatar, AvatarStack } from '@/components/ui/avatar';
 import { IconButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
-import { TextInput } from '@/components/ui/field';
+import { InlineEdit, TextInput } from '@/components/ui/field';
 import {
   CardSkeleton,
   EmptyState,
@@ -26,6 +27,9 @@ import { LocationsCard } from './locations-card';
 import {
   useArchiveSummary,
   useDeleteSong,
+  useDeleteTopic,
+  useMe,
+  useRenameTopic,
   useSongList,
   useTopicList,
 } from '@/lib/api/hooks';
@@ -147,17 +151,77 @@ function CompletedTopics({ search }: { search: string }) {
  * vorgenommen" ist eine Frage an einen Abend, nicht an ein Thema.
  */
 function TopicEntry({ topic }: { topic: TopicListItem }) {
+  const me = useMe();
+  const rename = useRenameTopic();
+  const remove = useDeleteTopic();
+  const confirm = useConfirm();
+  const toast = useToast();
+
   // Abende ohne Notiz stehen nicht da: eine leere Zeile mit Datum sagt nur,
   // dass niemand etwas aufgeschrieben hat, und das weiß man auch so.
   const written = topic.meetings.filter(
     (meeting) => meeting.summaryText || meeting.actionstepText,
   );
 
+  /**
+   * Dieselbe Regel wie im Backend (`edit-rights.ts`): wer ein Thema
+   * vorbereitet hat, benennt und räumt es auch. Ist niemand eingetragen, darf
+   * jede:r — sonst wäre ein herrenloses Thema für immer unantastbar. Admins
+   * immer.
+   */
+  const mayEdit =
+    me.isAdmin ||
+    topic.responsibles.length === 0 ||
+    (me.me ? topic.responsibles.some((r) => r.person.id === me.me?.id) : false);
+
+  const deleteTopic = async () => {
+    const ok = await confirm({
+      title: `„${topicTitle(topic)}" löschen?`,
+      body:
+        topic.meetings.length === 0
+          ? 'Es hängt an keinem Abend — es geht nichts verloren.'
+          : `Die ${topic.meetings.length} Abende bleiben stehen und verlieren nur ihr Thema. Zusammenfassung und Actionstep sind danach nur noch am Abend selbst zu finden.`,
+      confirmLabel: 'Löschen',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    remove.mutate(topic.id, {
+      onSuccess: () => toast.success('Thema gelöscht.'),
+    });
+  };
+
   return (
     <Card>
-      <p className="font-serif text-base font-bold text-stone-900">
-        {topicTitle(topic)}
-      </p>
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <InlineEdit
+            label="Thema"
+            value={topic.title}
+            // Wie auf der Terminseite: ein echter Vorschlag statt eines leeren
+            // Platzhalters, abgeleitet und nicht gespeichert.
+            emptyLabel={topicTitle(topic)}
+            placeholder={topicTitle(topic)}
+            className="font-serif text-base font-bold text-stone-900"
+            saving={rename.isPending}
+            onSave={
+              mayEdit
+                ? (title) => rename.mutate({ topicId: topic.id, title })
+                : undefined
+            }
+          />
+        </div>
+
+        {mayEdit && (
+          <IconButton
+            label={`${topicTitle(topic)} löschen`}
+            disabled={remove.isPending}
+            onClick={deleteTopic}
+          >
+            <Trash2 size={14} />
+          </IconButton>
+        )}
+      </div>
 
       <div className="mt-2 flex items-center justify-between gap-3">
         <AvatarStack
@@ -176,21 +240,30 @@ function TopicEntry({ topic }: { topic: TopicListItem }) {
         <ul className="mt-3 space-y-3 border-t border-line pt-3">
           {written.map((meeting) => (
             <li key={meeting.id}>
-              <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">
-                {formatDay(meeting.date)}
-              </p>
-              {meeting.summaryText && (
-                <p className="mt-1 text-xs leading-relaxed text-stone-500">
-                  {meeting.summaryText}
+              {/* Zum Abend selbst: dort werden Zusammenfassung und Actionstep
+                  geschrieben, dort gelten die Rechte schon, und dort steht das
+                  Feld schon. Ein zweiter Bearbeitungsweg wäre eine zweite
+                  Stelle, an der dieselbe Regel stimmen muss. */}
+              <Link
+                href={`/termine/${meeting.id}`}
+                className="block rounded-md transition-colors hover:bg-shell"
+              >
+                <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">
+                  {formatDay(meeting.date)}
                 </p>
-              )}
-              {meeting.actionstepText && (
-                <div className="mt-1.5 rounded-md bg-terracotta-50/60 px-2.5 py-1.5">
-                  <p className="text-[11px] font-semibold text-terracotta-700">
-                    Actionstep: {meeting.actionstepText}
+                {meeting.summaryText && (
+                  <p className="mt-1 text-xs leading-relaxed text-stone-500">
+                    {meeting.summaryText}
                   </p>
-                </div>
-              )}
+                )}
+                {meeting.actionstepText && (
+                  <div className="mt-1.5 rounded-md bg-terracotta-50/60 px-2.5 py-1.5">
+                    <p className="text-[11px] font-semibold text-terracotta-700">
+                      Actionstep: {meeting.actionstepText}
+                    </p>
+                  </div>
+                )}
+              </Link>
             </li>
           ))}
         </ul>

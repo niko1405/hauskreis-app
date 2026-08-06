@@ -56,7 +56,34 @@ export function useUpdateTopic(topicId: string) {
   });
 }
 
-/** Nur Admin. */
+/**
+ * Ein Thema umbenennen, ohne seinen Einzelstand im Cache zu haben.
+ *
+ * Liest ihn **selbst**, statt ihn wie `useUpdateTopic` dort zu erwarten: das
+ * Archiv zeigt alle abgeschlossenen Themen nebeneinander, und für jedes
+ * vorsorglich einen Detail-Stand samt ETag zu holen wäre teurer als einer,
+ * wenn wirklich jemand einen Titel ändert. Dasselbe Muster wie
+ * `useSetHostWeight`.
+ */
+export function useRenameTopic() {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useApiMutation(
+    async ({ topicId, title }: { topicId: string; title: string | null }) => {
+      const current = await topicsApi.getTopic(hauskreisId, topicId);
+
+      return topicsApi.updateTopic(
+        hauskreisId,
+        topicId,
+        { title },
+        current.etag,
+      );
+    },
+    { invalidateKeys: [keys.topics.all, keys.meetings.all, ...derived] },
+  );
+}
+
+/** Zuständige und Admins. Die Abende bleiben stehen, sie verlieren nur ihr Thema. */
 export function useDeleteTopic() {
   const { hauskreisId, keys, derived } = useHk();
 

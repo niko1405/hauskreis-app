@@ -1,0 +1,27 @@
+meta {
+  name: Thema löschen
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/topics/{{topicId}}
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 204", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Nicht mehr nur Admin: dieselbe Zuständigkeitsregel wie beim Umbenennen —
+  wer ein Thema vorbereitet hat, räumt es auch wieder weg. Ist niemand
+  zugeteilt, darf jedes Mitglied; Admins immer.
+
+  Die Abende bleiben stehen, `topic_id` fällt auf `NULL`. Zusammenfassung und
+  Actionstep bleiben also am Termin, sind danach aber nicht mehr über das
+  Archiv zu finden — dort gibt es nur noch Themen.
+}

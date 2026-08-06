@@ -239,6 +239,26 @@ function Loaded({
   const mayEditTopic = mayDo(roles.topicPeople.map((person) => person.id));
 
   /**
+   * Ob die Thema-Sektion vor dem Abend überhaupt zu sehen ist.
+   *
+   * **Sehen und Ändern sind zwei Fragen**, und `mayDo` beantwortet nur die
+   * zweite. Sein dritter Fall — „niemand zugeteilt, also darf jede:r" — ist
+   * beim Ändern richtig und beim Sehen falsch: er machte den Actionstep der
+   * nächsten Woche für alle sichtbar, sobald das Thema noch keine Zuständigen
+   * hatte. Und ohne Zuständige ist es genau der Fall, in dem noch gar nichts
+   * feststeht.
+   *
+   * Also: vorher nur, wer wirklich zuständig ist (Admins mitgezählt). Ab dem
+   * Termintag alle — da ist er ja gesagt worden.
+   */
+  const seesTopic =
+    !ahead ||
+    me.isAdmin ||
+    (me.me
+      ? roles.topicPeople.some((person) => person.id === me.me?.id)
+      : false);
+
+  /**
    * Abhaken darf vor dem Abend, wer die Musik macht — danach jede:r. Nur an
    * einem **abgesagten** Abend gar niemand: dort gibt es nichts zu protokollieren.
    */
@@ -460,15 +480,13 @@ function Loaded({
 
         <AttendanceCard meeting={meeting} readOnly={locked} />
 
-        {/* Nachbereitung. Vor dem Abend gibt es dazu nichts zu sagen — die
-            Felder erscheinen erst am Termintag, der Server lehnt es davor
-            ohnehin ab. Und ohne Thema gar nicht: was an einem Abend besprochen
-            wurde, ist die Zusammenfassung eines Themas. */}
-        {/* Vor dem Abend sieht die Sektion nur, wer hier schreiben darf: der
+        {/* Thema samt Nachbereitung. Ohne Thema gar nicht: was an einem Abend
+            besprochen wurde, ist die Zusammenfassung eines Themas.
+            Vor dem Abend sieht die Sektion nur, wer dafür zuständig ist — der
             Actionstep der nächsten Woche eine Woche zu früh für alle wäre genau
             das Gegenteil von dem, wozu ein Actionstep da ist. Ab dem Termintag
-            sehen ihn alle — da ist er ja gesagt worden. */}
-        {meeting.hasTopicSlot && (!ahead || mayEditTopic) && (
+            sehen ihn alle, da ist er ja gesagt worden. */}
+        {meeting.hasTopicSlot && seesTopic && (
           <TopicCard
             meeting={meeting}
             editable={mayEditTopic}

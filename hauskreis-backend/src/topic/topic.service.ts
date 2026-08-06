@@ -258,8 +258,14 @@ export class TopicService {
     });
   }
 
-  async remove(hauskreisId: string, id: string) {
+  async remove(hauskreisId: string, id: string, actorPersonId?: string) {
     await this.findOne(hauskreisId, id);
+
+    // Dieselbe Regel wie beim Umbenennen: wer vorbereitet hat, räumt weg.
+    if (actorPersonId) {
+      await this.editRights.assertMayEditTopic(id, actorPersonId);
+    }
+
     // Meetings keep their row; `topic_id` is set to null by the foreign key.
     await this.prisma.topic.delete({ where: { id } });
   }

@@ -111,11 +111,24 @@ export class TopicController {
     );
   }
 
+  /**
+   * Löscht ein Thema. Die Abende bleiben stehen und verlieren nur ihre
+   * Verknüpfung (`topic_id` fällt auf `NULL`).
+   *
+   * Nicht mehr `@HauskreisAdmin()`, sondern dieselbe Zuständigkeitsregel wie
+   * beim Umbenennen: wer ein Thema vorbereitet hat, räumt es auch wieder weg.
+   * Admins lässt der Helfer ohnehin durch — die Regel wird damit weiter, nicht
+   * enger.
+   */
   @Delete(':id')
   @ApiZodNoContent()
-  @HauskreisAdmin()
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param() params: TopicParamsDto) {
-    return this.topicService.remove(params.hauskreisId, params.id);
+  async remove(
+    @Param() params: TopicParamsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const person = await this.people.resolveForUser(user);
+
+    return this.topicService.remove(params.hauskreisId, params.id, person.id);
   }
 }
