@@ -77,7 +77,11 @@ import { SlotCard } from '@/components/domain/slot-toggles';
 import type { MeetingSlotKey } from '@/lib/meeting';
 import type { AssignmentRole, Meeting, PersonRef } from '@/lib/api/types';
 import { AttendanceCard } from './attendance-card';
-import { CancelledNotice, CancelMeetingBlock } from './cancellation-card';
+import {
+  CancelledNotice,
+  CancelMeetingBlock,
+  DeleteMeetingBlock,
+} from './cancellation-card';
 import { SongsCard } from './songs-card';
 import { TopicCard } from './topic-card';
 import { useRoleAssignment } from './use-role-assignment';
@@ -515,6 +519,8 @@ function Loaded({
       </div>
 
       {!cancelled && <CancelMeetingBlock meeting={meeting} past={past} />}
+
+      <DeleteMeetingBlock meeting={meeting} />
 
       {sheet && (
         <AssignmentSheet

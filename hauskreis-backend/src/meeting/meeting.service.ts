@@ -570,8 +570,28 @@ export class MeetingService {
     return meeting;
   }
 
+  /**
+   * Löscht einen Termin vollständig — nur einen besonderen.
+   *
+   * Ein Hauskreis-Abend fällt aus, er verschwindet nicht: dass am Dienstag
+   * nichts war, gehört in die Geschichte der Gruppe und in die
+   * Vorschlagslogik. Dafür gibt es `POST …/cancel`. Ihn zu löschen brächte
+   * außerdem nichts, weil der Generator ihn beim nächsten Lauf wieder anlegt.
+   *
+   * Ein Geburtstag, den jemand versehentlich angelegt hat, ist der andere
+   * Fall: da war nie etwas, das man absagen könnte. Deshalb geht auch keine
+   * Nachricht raus — eine Absage für einen Termin, den es nie gab, wäre die
+   * erste Nachricht, die viele davon überhaupt sehen.
+   */
   async remove(hauskreisId: string, id: string) {
-    await this.findOne(hauskreisId, id);
+    const meeting = await this.findOne(hauskreisId, id);
+
+    if (meeting.type !== MeetingType.CUSTOM) {
+      throw new BadRequestException(
+        'Einen Hauskreis-Abend sagt man ab, statt ihn zu löschen — sonst legt der Terminplaner ihn gleich wieder an',
+      );
+    }
+
     await this.prisma.meeting.delete({ where: { id } });
   }
 

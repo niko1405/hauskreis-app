@@ -146,3 +146,54 @@ describe('MeetingService.create — mehrere Tage', () => {
     ]);
   });
 });
+
+/**
+ * Löschen und Absagen sind zwei verschiedene Dinge, und der Unterschied ist
+ * kein technischer: ein Dienstag, der ausfällt, bleibt Teil der Geschichte —
+ * und der Terminplaner legte ihn ohnehin gleich wieder an.
+ */
+describe('MeetingService.remove', () => {
+  function setupRemove(type: MeetingType) {
+    const del = jest.fn().mockResolvedValue({});
+    const prisma = {
+      meeting: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'm1', type }),
+        delete: del,
+      },
+    };
+
+    const service = new MeetingService(
+      prisma as unknown as PrismaService,
+      {} as unknown as RoleSuggestionService,
+      {} as unknown as MeetingNotificationService,
+      {} as unknown as MeetingCancellationService,
+      {} as unknown as RoleAssignmentNotifier,
+      {} as unknown as AvailabilityService,
+      {} as unknown as RoleReleaseService,
+      {} as unknown as AutoAttendanceService,
+      {} as unknown as CustomMeetingNotificationService,
+    );
+
+    return { service, del };
+  }
+
+  it('löscht einen besonderen Termin', async () => {
+    const { service, del } = setupRemove(MeetingType.CUSTOM);
+
+    await service.remove('hk-1', 'm1');
+
+    expect(del).toHaveBeenCalledWith({ where: { id: 'm1' } });
+  });
+
+  it.each([MeetingType.STANDARD, MeetingType.LOBPREIS_GEBET])(
+    'weist %s ab — der wird abgesagt, nicht gelöscht',
+    async (type) => {
+      const { service, del } = setupRemove(type);
+
+      await expect(service.remove('hk-1', 'm1')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(del).not.toHaveBeenCalled();
+    },
+  );
+});

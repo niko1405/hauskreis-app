@@ -1,0 +1,28 @@
+meta {
+  name: Besonderen Termin löschen (Admin)
+  type: http
+  seq: 25
+}
+
+delete {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{freizeitId}}
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 204", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Nur bei `type: CUSTOM`. Ein Hauskreis-Abend wird abgesagt
+  (`POST …/cancel`), nicht gelöscht: dass am Dienstag nichts war, gehört in
+  die Geschichte der Gruppe und in die Vorschlagslogik — und der Terminplaner
+  legte ihn beim nächsten Lauf ohnehin wieder an. Für alles andere kommt
+  hier ein 400.
+
+  Es geht **keine** Benachrichtigung raus. Eine Absage für einen Termin, den
+  es nie gab, wäre für viele die erste Nachricht darüber, dass er existierte.
+}
