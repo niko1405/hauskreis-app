@@ -17,6 +17,7 @@ import type { RoleAssignmentNotifier } from '../notification/role-assignment-not
 import type { AvailabilityService } from '../role-suggestion/availability.service';
 import type { RoleReleaseService } from './role-release.service';
 import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
+import type { TopicLinkService } from '../topic/topic-link.service';
 import type { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import { MeetingType } from '../../generated/prisma/enums';
 
@@ -57,10 +58,14 @@ function setup(clash: { date: Date } | null = null) {
     {
       announceCreation,
     } as unknown as CustomMeetingNotificationService,
+    { detachIfUpcoming: jest.fn() } as unknown as TopicLinkService,
   );
 
   return { service, prisma, create, announceCreation };
 }
+
+/** Wer anlegt. Für diese Tests egal, aber der Dienst will es wissen. */
+const ICH = { personId: 'p-ich', isAdmin: false };
 
 const FREIZEIT = {
   date: '2026-08-14',
@@ -73,7 +78,7 @@ describe('MeetingService.create — mehrere Tage', () => {
   it('legt einen Termin mit Zeitraum an', async () => {
     const { service, create } = setup();
 
-    await service.create('hk-1', FREIZEIT);
+    await service.create('hk-1', FREIZEIT, ICH);
 
     expect(create.mock.calls[0][0].data.endDate).toEqual(
       new Date('2026-08-16'),
@@ -89,7 +94,7 @@ describe('MeetingService.create — mehrere Tage', () => {
     const { service } = setup();
 
     await expect(
-      service.create('hk-1', { ...FREIZEIT, type: MeetingType.STANDARD }),
+      service.create('hk-1', { ...FREIZEIT, type: MeetingType.STANDARD }, ICH),
     ).rejects.toThrow(/besonderer Termin/);
   });
 
@@ -97,7 +102,7 @@ describe('MeetingService.create — mehrere Tage', () => {
     const { service } = setup();
 
     await expect(
-      service.create('hk-1', { ...FREIZEIT, endDate: '2026-08-12' }),
+      service.create('hk-1', { ...FREIZEIT, endDate: '2026-08-12' }, ICH),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -105,7 +110,7 @@ describe('MeetingService.create — mehrere Tage', () => {
   it('macht aus „endet am selben Tag" ein schlichtes null', async () => {
     const { service, create } = setup();
 
-    await service.create('hk-1', { ...FREIZEIT, endDate: FREIZEIT.date });
+    await service.create('hk-1', { ...FREIZEIT, endDate: FREIZEIT.date }, ICH);
 
     expect(create.mock.calls[0][0].data.endDate).toBeNull();
   });
@@ -113,7 +118,7 @@ describe('MeetingService.create — mehrere Tage', () => {
   it('weist einen Termin ab, der in einen bestehenden fällt', async () => {
     const { service } = setup({ date: new Date('2026-08-14') });
 
-    await expect(service.create('hk-1', FREIZEIT)).rejects.toThrow(
+    await expect(service.create('hk-1', FREIZEIT, ICH)).rejects.toThrow(
       /steht schon ein Termin/,
     );
   });
@@ -126,7 +131,7 @@ describe('MeetingService.create — mehrere Tage', () => {
   it('fragt nach Überschneidungen in beide Richtungen', async () => {
     const { service, prisma } = setup();
 
-    await service.create('hk-1', FREIZEIT);
+    await service.create('hk-1', FREIZEIT, ICH);
 
     const where = prisma.meeting.findFirst.mock.calls[0][0].where as {
       AND: unknown[];
@@ -171,6 +176,7 @@ function setupRemove(type: MeetingType) {
     {} as unknown as RoleReleaseService,
     {} as unknown as AutoAttendanceService,
     {} as unknown as CustomMeetingNotificationService,
+    { detachIfUpcoming: jest.fn() } as unknown as TopicLinkService,
   );
 
   return { service, del };

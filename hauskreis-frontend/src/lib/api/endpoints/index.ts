@@ -8,6 +8,7 @@ export * as coreApi from './core';
 export * as dashboardApi from './dashboard';
 export * as locationsApi from './locations';
 export * as meetingSongsApi from './meeting-songs';
+export * as meetingTopicsApi from './meeting-topics';
 export * as meetingsApi from './meetings';
 export * as peopleApi from './people';
 export * as prayerBuddiesApi from './prayer-buddies';

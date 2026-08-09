@@ -22,6 +22,11 @@ export interface MeetingListParams extends PageParams {
 }
 
 export interface TopicListParams extends PageParams {
+  /**
+   * `public` (Vorgabe) listet Themen, von denen mindestens ein Abend war —
+   * das Archiv. `mine` die eigenen, auch die noch nicht gehaltenen.
+   */
+  scope?: 'public' | 'mine';
   status?: TopicStatus;
   search?: string;
   from?: string;

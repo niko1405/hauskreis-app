@@ -334,19 +334,20 @@ laufendes Thema eingetragen und hatte für kommende Abende zugesagt.
 
 Geräumt wird jetzt, für alle Termine ab heute:
 
-| Was                          | Warum                                                                       |
-| ---------------------------- | --------------------------------------------------------------------------- |
-| Gastgeber-Platz (samt Ort)   | Host und Ort sind eine Entscheidung, sobald der Ort seine Wohnung war       |
-| Musik-Zuteilungen            | gilt je Abend                                                               |
-| eigene Zu-/Absagen           | „kommt nicht" von jemandem, der nicht mehr dabei ist, verzerrt jede Zählung |
-| Themen mit `status: RUNNING` | ein Thema, das auf sie wartet, wäre eine Zusage, die niemand einlösen kann  |
+| Was                        | Warum                                                                       |
+| -------------------------- | --------------------------------------------------------------------------- |
+| Gastgeber-Platz (samt Ort) | Host und Ort sind eine Entscheidung, sobald der Ort seine Wohnung war       |
+| Musik-Zuteilungen          | gilt je Abend                                                               |
+| eigene Zu-/Absagen         | „kommt nicht" von jemandem, der nicht mehr dabei ist, verzerrt jede Zählung |
+| Themen-Zuteilungen         | ein Abend, an dem die Person eingeteilt ist, wäre eine Zusage ohne jemanden |
 
-Drei Unterschiede zur einzelnen Absage (`RoleReleaseService.releaseFor`), und
-alle drei folgen aus demselben Satz — **wer geht, ist an keinem Abend mehr da**:
+Zwei Unterschiede zur einzelnen Absage (`RoleReleaseService.releaseFor`), beide
+aus demselben Satz — **wer geht, ist an keinem Abend mehr da**:
 
-- Beim Absagen bleibt das **Thema** stehen, weil die Person am nächsten Abend
-  wieder da ist. Hier fällt es mit. Abgeschlossene Themen behalten ihre Leute,
-  das ist Archiv und keine Planung.
+- Beim Absagen fällt **eine** Themen-Zuteilung, hier alle kommenden auf einmal.
+  Was die Person an ihren Themen gearbeitet hat, bleibt: Einheiten und ihre
+  Verantwortlichen sind Archiv, ein Thema verliert höchstens seinen Owner
+  (`onDelete: SetNull`) und ist dann für alle bearbeitbar.
 - Beim Absagen bleiben **abgesagte Abende** in Ruhe, damit ein Wiederaufleben
   die Rollen zurückbringt. Hier wäre das Zurückgebrachte ein Mensch, der nicht
   mehr da ist.
@@ -426,6 +427,25 @@ Das Frontend braucht dafür keinen Extra-Request: die Entitäten enthalten ihr
 `version`-Feld auch in Listen-Antworten, der ETag lässt sich also als
 `W/"<version>"` selbst bilden.
 
+### Wenn etwas Fremdes in der Antwort steht
+
+Der ETag eines Termins entsteht **allein** aus `meeting.version`. In seiner
+Antwort stehen aber Dinge, die in eigenen Tabellen liegen: die Zuteilungen, die
+gewählte Einheit, die Anwesenheit, die Actionstep-Haken. Wer eine davon ändert,
+ohne die Version anzuheben, hinterlässt einen ETag, der den Körper nicht mehr
+beschreibt — der Server antwortet `304`, und der Bildschirm zeigt weiter den
+alten Stand. Genau so sah es aus: „aktualisiert sich erst nach einem Reload".
+
+Dafür gibt es [`touchMeeting`](src/meeting/meeting-version.ts) und
+[`touchTopic`](src/topic/topic-version.ts) — zwei Zeilen, aufgerufen im selben
+Transaktionsblock wie die Änderung. Faustregel: **steht das Feld in der Antwort
+der Ressource, gehört ihre Version angehoben.** Lieder brauchen es nicht, sie
+kommen von einer eigenen Sammel-URL mit eigenem ETag.
+
+Dass damit auch ausstehende `If-Match`-Token ungültig werden, ist kein
+Nebenschaden, sondern derselbe Satz von der anderen Seite: wer den Termin vor
+einer Themenänderung gelesen hat, schreibt gegen ein veraltetes Bild.
+
 ### Für neue Endpunkte
 
 1. Entität im Prisma-Schema mit `version Int @default(0)` versehen.
@@ -433,6 +453,8 @@ Das Frontend braucht dafür keinen Extra-Request: die Entitäten enthalten ihr
    [`updateWithVersionCheck`](src/common/http/optimistic-update.ts).
 3. Im Controller `@IfMatch() ifMatch?: IfMatchCondition` als Parameter ergänzen
    und durchreichen.
+4. Ändert der Endpunkt etwas, das in der Antwort einer **anderen** Ressource
+   steht, dort `touchMeeting`/`touchTopic` aufrufen.
 
 Den ETag setzt der globale
 [`EtagInterceptor`](src/common/http/etag.interceptor.ts) automatisch, sobald der
@@ -1049,16 +1071,20 @@ Die Regeln stehen als reine Funktionen in
 - Ein Feld schreiben, dessen Baustein aus ist → `400`. `undefined` ist immer in
   Ordnung (ein PATCH mit dem Info-Text darf nicht an einem fremden Feld
   scheitern), ein ausdrückliches `null` auch — aufräumen darf man immer.
-- Einen Baustein abschalten **räumt auf**: `topicId` samt Zusammenfassung und
-  Actionstep, Liedvorschläge samt Musik-Zuteilung, die Testimony-Zuteilung. Ein
-  Feld, das niemand mehr setzen kann und trotzdem einen Wert trägt, ist die
-  Sorte Fehler, die man erst Wochen später bemerkt.
+- Einen Baustein abschalten **räumt auf**: Liedvorschläge samt Musik-Zuteilung,
+  die Testimony-Zuteilung. Ein Feld, das niemand mehr setzen kann und trotzdem
+  einen Wert trägt, ist die Sorte Fehler, die man erst Wochen später bemerkt.
+- Beim **Thema** wird nicht geräumt, sondern **gelöst**: die Einheit verliert
+  ihren Termin und bleibt als Entwurf erhalten, die Zuteilung bleibt stehen. Ein
+  versehentlich umgelegter Schalter soll keine Vorbereitung kosten, und wer ihn
+  wieder anschaltet, findet wieder vor, wer dran war.
 - Ein Wechsel der **Terminart** setzt alle drei auf deren Voreinstellung
   zurück; ausdrücklich mitgeschickte Schalter gewinnen trotzdem.
 
-Die Fairness-Rechnung braucht dafür keine eigene Bedingung: sie zählt Termine
-mit Thema, mit Musik-Zuteilung, mit Testimony — und ohne den Baustein kann
-keines davon gesetzt sein.
+Die Fairness-Rechnung zählt Termine mit Musik-Zuteilung und mit Testimony —
+ohne den Baustein kann keines von beiden gesetzt sein. Beim Thema filtert sie
+zusätzlich auf `hasTopicSlot`: die Zuteilung überlebt das Abschalten, und ein
+Geburtstagsabend soll in der Fairness des Themas nicht mitzählen.
 
 ### Testimony ist eine Rolle
 
@@ -1074,9 +1100,11 @@ Tage vorher (`TESTIMONY_REMINDER`), und in der Fairness als **ein Dienst je
 Abend**. Anders als das Thema, das sich über drei Dienstage ziehen kann und
 trotzdem als ein Dienst zählt: eine Geschichte ist ein Abend.
 
-Wer für den Abend absagt, gibt sie frei — wie Gastgeber und Musik und anders
-als das Thema, das stehen bleibt, weil die Person am nächsten Abend wieder da
-ist.
+Wer für den Abend absagt, gibt sie frei — wie Gastgeber, Musik und Thema. Beim
+Thema war das lange anders, weil die Zuständigkeit am _Thema_ hing und nicht am
+Abend; sie fallen zu lassen hätte geheißen, jemanden von seiner Vorbereitung für
+alle kommenden Abende zu entbinden. Seit sie am Abend steht, gilt für alle vier
+dasselbe: wer nicht da ist, ist nicht eingeteilt.
 
 ### Wer eintragen darf
 
@@ -1097,25 +1125,32 @@ niemand eingeteilt ist, gesperrt — und die Zuteilung damit die Voraussetzung
 fürs Nachbereiten. Im echten Leben läuft es umgekehrt: erst passiert der Abend,
 dann schreibt jemand auf, was war.
 
-| Was                         | Zuständigkeit                                | Ausnahme                   |
-| --------------------------- | -------------------------------------------- | -------------------------- |
-| Themenname                  | die Zuständigen des **Themas**               | –                          |
-| Zusammenfassung, Actionstep | die Zuständigen des Themas **dieses Abends** | –                          |
-| Lieder abhaken              | die Musik-Zuständigen des Abends             | nach dem Abend darf jede:r |
+| Was                           | Zuständigkeit                     | Ausnahme                   |
+| ----------------------------- | --------------------------------- | -------------------------- |
+| Lieder abhaken                | die Musik-Zuständigen des Abends  | nach dem Abend darf jede:r |
+| Ein Thema wählen              | die Zuteilung an **diesem** Abend | –                          |
+| Alles am Thema (jede Einheit) | Owner und Mitarbeitende           | –                          |
+| Ein Thema löschen             | nur der Owner                     | –                          |
 
 Die Ausnahme bei den Liedern kommt von der Bedeutung: vorher ist das Abhaken
 eine **Entscheidung** („das singen wir"), hinterher ein **Protokoll** („das
 haben wir gesungen"). An das zweite erinnert sich jede:r gleich gut.
 
+Die unteren drei Zeilen folgen derselben Form, aber einer anderen Frage: nicht
+„wer ist an diesem Abend zugeteilt", sondern „wer gehört zu diesem Thema". Ein
+Thema zieht sich über mehrere Abende, sein Bearbeitungsrecht deshalb auch — die
+Regel dafür steht in [`topic-visibility.ts`](src/topic/topic-visibility.ts).
+Der dritte Fall gilt dort genauso: ein Thema ohne Owner und ohne Mitarbeitende
+darf jede:r ändern, sonst wäre es für immer eingefroren.
+
 Nicht geprüft wird die **Zuteilung** selbst — wer vorbereitet, wer hostet, wer
 Musik macht, bleibt eine Frage an die Gruppe und läuft weiter über das
-Vorschlagssystem. Ebenso `status` am Thema: „abgeschlossen" stößt den Vorschlag
-fürs nächste Thema an und ist damit Planung.
+Vorschlagssystem.
 
-`EditRightsModule` importiert **nichts**. Es wird von `MeetingModule`,
-`TopicModule` und `SongModule` gebraucht; läge es in einem davon, hätten die
-anderen beiden eine Kante dorthin — und der Modulgraph hat schon einmal genau
-so einen Zyklus bekommen, der weder in `pnpm check` noch in den Tests auffällt,
+`EditRightsModule` importiert **nichts**. Dasselbe gilt für `TopicLinkModule`.
+Beide werden von mehreren Modulen gebraucht; lägen sie in einem davon, hätten
+die anderen eine Kante dorthin — und der Modulgraph hat schon einmal genau so
+einen Zyklus bekommen, der weder in `pnpm check` noch in den Tests auffällt,
 sondern erst beim Hochfahren. Möglich ist das, weil `PrismaModule` `@Global` ist.
 
 > **Was dabei weggefallen ist:** die Datumsprüfung, die Zusammenfassung und
@@ -1535,46 +1570,195 @@ immer, worauf sich die Gruppe geeinigt hat.
 Beide Ranking-Funktionen sind reine Funktionen über bereits geladene Daten und
 ohne Datenbank getestet.
 
-## Themen
+## Themen und ihre Einheiten
 
-Ein Thema ist **nicht** an einen Termin gebunden: es kann über mehrere Abende
-laufen, und ein `LOBPREIS_GEBET`-Abend hat gar keins. Der Titel ist optional —
-nicht jeder legt ihn vorab fest.
+Ein Thema ist **nicht** an einen Termin gebunden: es zieht sich über beliebig
+viele Abende, und jeder davon ist eine `TopicSession` — hier „Einheit". Der Titel
+ist optional, auf beiden Ebenen: nicht jeder legt ihn vorab fest.
 
-| Methode  | Pfad                  | Rechte                      |
-| -------- | --------------------- | --------------------------- |
-| `GET`    | `…/topics?status=`    | eingeloggt                  |
-| `GET`    | `…/topics/:id`        | eingeloggt                  |
-| `POST`   | `…/topics`            | eingeloggt                  |
-| `PATCH`  | `…/topics/:id`        | eingeloggt (`If-Match`)     |
-| `DELETE` | `…/topics/:id`        | `admin`                     |
-| `POST`   | `…/topics/carry-over` | `admin` (manueller Trigger) |
+Drei Dinge, die früher in einer Tabelle steckten, sind auseinandergezogen:
 
-Abgeschlossen wird über `PATCH` mit `{ "status": "COMPLETED" }`. Die
-Verantwortlichen liegen in einer Join-Tabelle statt in zwei nullable Spalten —
-eine dritte Person bräuchte so keine Migration. `responsiblePersonIds` ersetzt
-die Liste komplett, weglassen lässt sie unverändert.
+| Was               | Wo                                                  |
+| ----------------- | --------------------------------------------------- |
+| **Zuständigkeit** | `meeting_topic_responsible` — die Rolle am Abend    |
+| **Auswahl**       | `topic_session.meeting_id` — nullable und `@unique` |
+| **Inhalt**        | an der Einheit, nicht am Termin                     |
+
+Dazwischen liegt ein Zustand, den es vorher nicht gab und der der Punkt der
+Sache ist: **zugeteilt, aber noch nichts gewählt**. Vorher legte eine Zuteilung
+sofort ein leeres Thema an, und der Abend sah aus, als stünde schon etwas fest.
+
+`meeting_id = NULL` heißt **unfertig**: vorbereitet, aber an keinem Abend. Der
+eindeutige Index darauf trägt zwei Lasten — fachlich hängt an einem Abend
+höchstens eine Einheit, technisch ist er die Absicherung dagegen, dass zwei
+gleichzeitig Zugeteilte beide wählen. Der zweite Schreibvorgang läuft in den
+Konflikt und wird zu einem 409, statt eine zweite Einheit anzulegen. Postgres
+zählt `NULL` als verschieden, unfertige Einheiten stören sich also nicht.
+
+### Die Wahl
+
+| Methode  | Pfad                                | Rechte                         |
+| -------- | ----------------------------------- | ------------------------------ |
+| `GET`    | `…/meetings/:id/topic-responsibles` | eingeloggt                     |
+| `PUT`    | `…/meetings/:id/topic-responsibles` | eingeloggt (ohne Vorbedingung) |
+| `GET`    | `…/meetings/:id/topic-choices`      | eingeloggt                     |
+| `POST`   | `…/meetings/:id/topic-session`      | **nur zugeteilt**              |
+| `DELETE` | `…/meetings/:id/topic-session`      | dito, nur vor dem Abend        |
+
+`POST …/topic-session` nimmt einen von drei Wegen:
+
+- `{ "mode": "new", "title": "…" }` — neues Thema, die handelnde Person wird
+  sein **Owner**.
+- `{ "mode": "existing", "topicId": "…" }` — ein eigenes Thema um einen weiteren
+  Abend erweitern. `title`, `actionstepText` und `summaryText` dürfen gleich
+  mitkommen.
+- `{ "mode": "resume", "sessionId": "…" }` — eine eigene **offene** Einheit
+  aufnehmen; ihr Inhalt bleibt vollständig erhalten. Hängt sie an einem anderen
+  _kommenden_ Abend, zieht sie um.
+
+**Owner wird, wer zuerst tatsächlich wählt**, nicht wer zuerst zugeteilt wurde.
+Alle, die in diesem Moment ebenfalls für den Abend zugeteilt sind, kommen als
+Verantwortliche der Einheit mit und werden damit Mitarbeitende des Themas.
+
+**Wählen darf nur, wer an dem Abend zugeteilt ist.** Zwei Zweige der Hausregel
+aus `edit-rights.ts` gelten hier nicht: kein Admin-Freifahrtschein, und „niemand
+zugeteilt heißt jede:r darf" auch nicht. Die Wahl ist kein Verwaltungsakt,
+sondern die Aussage „ich bereite das vor" — die kann niemand für einen anderen
+treffen. Wer sie treffen will, trägt sich vorher über `PUT …/topic-responsibles`
+ein; das prüft absichtlich nichts.
+
+Hängt am Abend schon eine Einheit, ist das kein Fehler, sondern ein **Wechsel**:
+die bisherige löst sich in derselben Transaktion und wartet als Entwurf. An
+einem vergangenen Abend nicht — `400`. Der eindeutige Index bleibt der
+Rennschutz; ein `updateMany` mit dem _beobachteten_ `meeting_id` in der Bedingung
+hält den Compare-and-swap aufrecht.
+
+### Entkoppeln statt Löschen
+
+Nichts wird weggeräumt, wenn eine Rolle wechselt — die Einheit wird nur vom
+Abend **gelöst** (`meeting_id = NULL`) und wartet als Entwurf. Die Regel dafür
+steht in `TopicLinkService.reconcile`: _entkoppelt wird, wenn niemand mehr
+zugeteilt ist, der zum Thema gehört._
+
+- Aus zwei Zugeteilten wird einer → die Einheit bleibt, der Übriggebliebene
+  gehört ja dazu.
+- Statt A ist jetzt C dran → entkoppelt, der Entwurf wartet auf A.
+- C kommt zu A dazu → die Einheit bleibt, C wird Verantwortliche und
+  Mitarbeiterin.
+
+Denselben Weg gehen das Abschalten des Bausteins „Thema" und die Absage einer
+zuständigen Person. **Ein vergangener Abend ist davon ausgenommen**: was war,
+war, und eine Zusammenfassung rückwirkend aus dem Archiv zu nehmen, weil jemand
+eine Rolle korrigiert, wäre der Preis für eine Aufräumaktion.
+
+Wer aus der Zuteilung **herausfällt**, verliert dagegen etwas — aber nur im
+Zweig, in dem die Einheit hängen bleibt. `TopicLinkService.leave` nimmt ihm die
+Zeile an _dieser_ Einheit (sie wäre ab jetzt eine falsche Behauptung und keine
+Geschichte) und das Schreibrecht am **Thema** nur dann, wenn er sonst nirgends
+mehr daran hängt — gehalten oder geplant. Der Owner verliert nie etwas.
+
+Im Entkoppel-Zweig wird ausdrücklich **nicht** aufgeräumt: der Entwurf wartet ab
+sofort auf genau die Leute, die eben herausgefallen sind. Nähme man ihnen die
+Zeile, verschwände er aus ihrem „Angefangenes" — und ein Entwurf, den niemand
+mehr sehen kann, ist gelöscht, nur langsamer.
+
+**Die Zuteilung selbst** fällt beim Abschalten des Bausteins dagegen weg, wie
+bei der Musik. Sie blieb einmal aus Vorsicht stehen, aber an einem Abend ohne
+Thema ist sie keine geduldige Notiz, sondern eine falsche Aussage:
+`TopicReminderService` fragt nicht nach `hasTopicSlot` und schickte „Du bist dran
+mit dem Thema" für einen Abend, an dem keins ist.
+
+`TopicLinkService` liegt in einem Modul ohne Importe — `MeetingModule` und
+`TopicModule` brauchen ihn beide, und eine Kante zwischen den zweien hat den
+Modulgraphen schon einmal in einen Zyklus geführt (wie bei `EditRightsModule`).
+
+### Sichtbarkeit
+
+Drei Fragen, die man leicht verwechselt, in `topic-visibility.ts` als reine
+Funktionen getrennt:
+
+- **gehalten** — verknüpft, Termin vorbei, nicht abgesagt. Rein zeitlich, kein
+  Häkchen.
+- **öffentlich** — eine Eigenschaft des _Themas_: sobald eine Einheit gehalten
+  wurde, steht es im Archiv, und alles, was danach dazukommt, ist sofort
+  mitzusehen.
+- **Inhalt sichtbar** — die Frage des einzelnen Abends. Titel, Actionstep und
+  Zusammenfassung gehören bis **18 Uhr am Termintag** (`common/time/local-evening.ts`)
+  denen, die sie vorbereiten. Danach allen.
+
+Zurückgehalten wird im Backend: die Felder gehen als `null` raus und
+`contentVisible` sagt, dass da etwas ist. Sie im Frontend auszublenden hieße,
+sie trotzdem über die Leitung zu schicken.
+
+Ein abgesagter Termin macht seine Einheit nicht „gehalten" — die Einheit bleibt
+aber hängen. Wird die Absage zurückgenommen, ist alles wieder da, ohne dass
+jemand neu wählen müsste.
+
+### Themen
+
+| Methode  | Pfad                                            | Rechte                          |
+| -------- | ----------------------------------------------- | ------------------------------- |
+| `GET`    | `…/topics?scope=public\|mine&search=&from=&to=` | eingeloggt (paginiert)          |
+| `GET`    | `…/topics/:id`                                  | eingeloggt                      |
+| `PATCH`  | `…/topics/:id`                                  | Owner/Mitarbeit (`If-Match`)    |
+| `DELETE` | `…/topics/:id`                                  | Owner oder `admin`              |
+| `DELETE` | `…/topics/:id/collaborators/:personId`          | Owner oder `admin`              |
+| `POST`   | `…/topics/:id/sessions`                         | Owner/Mitarbeit                 |
+| `GET`    | `…/topic-sessions/:id`                          | eingeloggt                      |
+| `PATCH`  | `…/topic-sessions/:id`                          | Owner/Mitarbeit (`If-Match`)    |
+| `DELETE` | `…/topic-sessions/:id`                          | Owner/Mitarbeit, nicht gehalten |
+
+Es gibt **kein** `POST …/topics`: ein Thema entsteht beim Wählen an einem Abend.
+Eines ohne Anlass wäre ein leerer Datensatz — genau der, von dem das alte Modell
+nicht loskam.
+
+Eine **Einheit** dagegen entsteht auch ohne Abend: `POST …/topics/:id/sessions`
+ist der Ort zum Vorarbeiten. Vorher ging nur der umgekehrte Weg — erst einen
+Termin belegen, dann dort schreiben. Der Titel ist dort **Pflicht**: ein Entwurf
+ohne Abend hat nichts als seinen Titel. Wer anlegt, wird seine Verantwortliche,
+sonst griffe die Rettung aus Spec 8.5 für handgemachte Entwürfe nicht.
+
+`DELETE …/topic-sessions/:id` geht nur, solange die Einheit **nicht gehalten**
+wurde (kein Abend, ein kommender, oder ein abgesagter — dasselbe `isHeld` wie
+überall). Ein gehaltener Abend ist das Protokoll dessen, was war und geht nur
+mit dem ganzen Thema.
+
+`scope=public` (Vorgabe) listet Themen mit mindestens einem gehaltenen Abend,
+`scope=mine` die eigenen — auch die, die noch niemand gesehen hat. Abgeschlossen
+wird über `PATCH` mit `{ "status": "COMPLETED" }`.
+
+**Bearbeiten darf, wer zum Thema gehört** (Owner oder Mitarbeit), und zwar jede
+Einheit davon — auch die, bei der man selbst nicht dabei war. Ein Thema ist eine
+gemeinsame Arbeit; ein Recht je Abend wäre Buchhaltung. **Löschen** ist enger:
+nur der Owner. Mitarbeitende kommen automatisch dazu, wer eine Einheit hält;
+entfernen darf sie nur der Owner, und wer entfernt wird, bleibt an den Abenden
+stehen, die er gehalten hat — das ist Geschichte und kein Recht.
+
+Ein Thema ohne Owner und ohne Mitarbeitende (aus der Zeit vor diesem Modell,
+oder weil der Owner den Hauskreis verlassen hat) fällt in den dritten Zweig der
+Hausregel aus `edit-rights.ts`: dann darf jede:r. Sonst wäre es für immer
+eingefroren.
+
+### Fairness
 
 Wer das nächste Thema vorbereiten könnte, liefert
 `GET …/meetings/:id/topic-suggestions` — dieselbe Rangliste wie beim Host, nur
 ohne Ortsbezug.
 
-### Automatische Übernahme
+Gelesen wird die **Zuteilung am Termin**, nicht wer an einer Einheit steht. Das
+ist zweierlei, und die Fairness meint das erste: wer eingeteilt war und nichts
+eingetragen hat, war trotzdem dran — und wer für einen kommenden Abend
+eingeteilt ist, hat schon etwas zu tun, obwohl es dort noch gar keine Einheit
+gibt. Der `slotKey` ist die Id des **Themas**; das ist es, was ein Thema über
+drei Dienstage zu einem einzigen Dienst zusammenfasst (CLAUDE.md §5).
 
-`TopicCarryOverService` läuft nachts um 3:15 Uhr, eine Viertelstunde nach dem
-Termin-Generator, und setzt ein laufendes Thema auf den **nächsten** Termin.
-Betroffen sind nur `STANDARD`-Abende: `LOBPREIS_GEBET` trägt stattdessen ein
-Testimony, `CUSTOM` ist, was die Gruppe daraus macht.
+### Was es nicht mehr gibt
 
-Gesucht wird der **früheste kommende** Termin — bewusst _ohne_ Filter auf „hat
-noch kein Thema". Würde der Job stattdessen zum nächsten themenlosen Abend
-springen, belegte er bei jedem nächtlichen Lauf einen weiteren, und nach einer
-Woche gehörte das ganze Planungsfenster einem Thema, das meist zwei bis drei
-Abende läuft. So bereitet er immer nur den nächsten Abend vor und ist echt
-idempotent.
-
-Ein von Hand gesetztes Thema wird nie überschrieben: das `UPDATE` ist zusätzlich
-auf `topic_id IS NULL` abgesichert.
+Die nächtliche Übernahme (`TopicCarryOverService`, 3:15 Uhr) belegte den
+nächsten Abend im Voraus mit dem laufenden Thema. Sie ist weg: sie stand der
+Regel im Weg, dass Owner wird, wer zuerst wählt. Stattdessen steht ein laufendes
+eigenes Thema in `…/topic-choices` ganz oben — `status` sortiert jetzt diese
+Liste, statt einen Job zu steuern.
 
 ## Songs
 
@@ -2151,13 +2335,15 @@ zu schreiben.
 | Vergangene Abende      | `GET …/meetings?scope=past`                |
 | Suche im Archiv        | `…&search=Vergebung`                       |
 | Ein Jahr               | `…&from=2026-01-01&to=2026-12-31`          |
-| Abgeschlossene Themen  | `GET …/topics?status=COMPLETED&search=…`   |
+| Themen                 | `GET …/topics?scope=public&search=…`       |
+| Nur die eigenen        | `GET …/topics?scope=mine`                  |
 | Song-Datenbank         | `GET …/songs?sort=popular&playedOnly=true` |
 
 ### Suche
 
-Bei Terminen läuft sie über **alle** Textfelder — Titel, Zusammenfassung,
-Actionstep, Info, Testimony und den Titel des Themas. Die Archivfrage lautet
+Bei Terminen läuft sie über **alle** Textfelder — Titel und Info-Zeile des
+Abends, dazu Titel, Zusammenfassung und Actionstep der Einheit, die daran hing,
+und den Titel ihres Themas. Die Archivfrage lautet
 „wann ging es nochmal um Vergebung", und niemand weiß mehr, in welchem der
 Felder das gelandet ist. `contains` mit `insensitive`, kein Volltext-Index: bei
 ein paar hundert Abenden kostet die Pflege des Index mehr als der Scan.
@@ -2385,12 +2571,16 @@ beide aus derselben Variable ab.
 | `POST`                  | `…/meetings/generate`                        | `admin` (manueller Generator-Trigger)        |
 | `POST`                  | `…/meetings/host-reminders`                  | `admin` (manueller Reminder-Trigger)         |
 | `POST`                  | `…/meetings/actionstep-reminders`            | `admin` (manueller Reminder-Trigger)         |
-| `GET`                   | `…/topics?status=…&search=&from=&to=`        | eingeloggt (paginiert)                       |
+| `GET`/`PUT`             | `…/meetings/:id/topic-responsibles`          | eingeloggt (PUT ohne If-Match)               |
+| `GET`                   | `…/meetings/:id/topic-choices`               | eingeloggt                                   |
+| `POST`/`DELETE`         | `…/meetings/:id/topic-session`               | nur zugeteilt                                |
+| `GET`                   | `…/topics?scope=…&search=&from=&to=`         | eingeloggt (paginiert)                       |
 | `GET`                   | `…/topics/:id`                               | eingeloggt                                   |
-| `POST`                  | `…/topics`                                   | eingeloggt                                   |
-| `PATCH`                 | `…/topics/:id`                               | eingeloggt                                   |
-| `DELETE`                | `…/topics/:id`                               | `admin`                                      |
-| `POST`                  | `…/topics/carry-over`                        | `admin` (manuelle Themen-Übernahme)          |
+| `PATCH`                 | `…/topics/:id`                               | Owner/Mitarbeit                              |
+| `DELETE`                | `…/topics/:id`                               | Owner oder `admin`                           |
+| `DELETE`                | `…/topics/:id/collaborators/:personId`       | Owner oder `admin`                           |
+| `POST`                  | `…/topics/:id/sessions`                      | Owner/Mitarbeit                              |
+| `GET`/`PATCH`/`DELETE`  | `…/topic-sessions/:id`                       | Owner/Mitarbeit                              |
 | `POST`                  | `…/topics/reminders`                         | `admin` (manueller Reminder-Trigger)         |
 | `GET`                   | `…/songs?search=&sort=&playedOnly=`          | eingeloggt (paginiert)                       |
 | `GET`                   | `…/songs/:id`                                | eingeloggt                                   |

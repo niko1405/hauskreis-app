@@ -7,32 +7,118 @@ import { isoDay } from '../../common/dto/iso-day';
 const topicStatus = z.enum(TopicStatus);
 
 /**
- * The title is optional on purpose — CLAUDE.md §5: nicht jeder trägt vorab
- * einen Titel ein. A topic with only a responsible person is a valid state.
+ * Der Titel ist optional — CLAUDE.md §5: nicht jeder trägt vorab einen ein.
+ *
+ * Angelegt wird ein Thema **nicht** über eine eigene Route, sondern indem jemand
+ * für einen Abend zugeteilt ist und sich für „neues Thema" entscheidet
+ * (`POST …/meetings/:id/topic-session`). Ein Thema, das an keinem Abend hängt und
+ * keinen Owner hat, wäre ein Datensatz ohne Anlass.
  */
-export const createTopicSchema = z.object({
-  title: z.string().trim().min(1).max(200).nullish(),
-  /// One or two people prepare a topic; the schema allows more rather than
-  /// hard-coding a limit the group might outgrow.
-  responsiblePersonIds: z.array(z.uuid()).max(5).default([]),
-});
-
 export const updateTopicSchema = z.object({
   title: z.string().trim().min(1).max(200).nullish(),
+  /// Der Bogen über alle Einheiten. Die Nachbereitung des einzelnen Abends steht
+  /// an der Einheit.
+  summaryText: z.string().trim().min(1).max(5000).nullish(),
   status: topicStatus.optional(),
-  /// Omitted leaves the current people alone; an array replaces them wholesale,
-  /// which is what a "wer bereitet vor" picker sends back.
-  responsiblePersonIds: z.array(z.uuid()).max(5).optional(),
 });
 
+/**
+ * Was im Archiv gelistet wird.
+ *
+ * `public` ist die Vorgabe und heißt: Themen, von denen mindestens eine Einheit
+ * gehalten wurde. `mine` nimmt zusätzlich die eigenen dazu, auch die noch nicht
+ * gehaltenen — der Filter „nur eigene Themen" aus Spec 5.3.
+ */
 export const listTopicsQuerySchema = paginationSchema.extend({
+  scope: z.enum(['public', 'mine']).default('public'),
   status: topicStatus.optional(),
-  /// Matches the title. Topics without one are simply never hits — that is
-  /// honest, since there is nothing to match against.
+  /// Trifft auf Titel und Zusammenfassung. Themen ohne beides sind schlicht nie
+  /// ein Treffer — das ist ehrlich, es gibt ja nichts zu vergleichen.
   search: z.string().trim().min(1).max(200).optional(),
-  /// Inclusive bounds on when the topic was started.
+  /// Einschließende Grenzen darauf, wann das Thema angefangen wurde.
   from: isoDay.optional(),
   to: isoDay.optional(),
+});
+
+/** Titel, Actionstep und Zusammenfassung eines einzelnen Abends. */
+export const updateTopicSessionSchema = z.object({
+  title: z.string().trim().min(1).max(200).nullish(),
+  actionstepText: z.string().trim().min(1).max(2000).nullish(),
+  summaryText: z.string().trim().min(1).max(5000).nullish(),
+});
+
+/**
+ * Eine Einheit anlegen, ohne dass ein Abend dafür feststeht.
+ *
+ * Der Titel ist hier **Pflicht**, anders als beim Wählen an einem Abend. Dort
+ * steht die Einheit unter ihrem Termin und ist auch ohne Titel auffindbar. Ein
+ * Entwurf ohne Abend hat nichts als seinen Titel — ohne ihn stünde in
+ * „Angefangenes" eine Zeile, die niemand wiedererkennt.
+ */
+export const createTopicSessionSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  actionstepText: z.string().trim().min(1).max(2000).nullish(),
+  summaryText: z.string().trim().min(1).max(5000).nullish(),
+});
+
+/**
+ * Die drei Wege, mit denen eine zugeteilte Person ihre Wahl trifft (Spec §3).
+ *
+ * - `new` — ein neues Thema. Wer das wählt, wird sein Owner.
+ * - `existing` — ein eigenes Thema um einen weiteren Abend erweitern. Titel,
+ *   Actionstep und Zusammenfassung dürfen gleich mitkommen.
+ * - `resume` — eine offene Einheit aufnehmen; ihr Inhalt bleibt. „Offen" heißt
+ *   auch: sie hängt gerade an einem *anderen kommenden* Abend und zieht dann um.
+ *
+ * Hängt an diesem Abend schon eine Einheit, ist das kein Fehler, sondern ein
+ * Wechsel — die bisherige löst sich und wartet als Entwurf.
+ *
+ * Ein flaches Objekt mit `superRefine` und **keine** `discriminatedUnion`,
+ * obwohl die fachlich genauer wäre: `createZodDto` braucht einen Objekttyp mit
+ * bekannten Feldern, und eine Union ist keiner. Die Genauigkeit ist damit nicht
+ * verloren, sie steht nur in der Prüfung statt im Typ — ein `existing` ohne
+ * `topicId` scheitert weiterhin mit 400 an dem Feld, das fehlt.
+ */
+export const chooseTopicSessionSchema = z
+  .object({
+    mode: z.enum(['new', 'existing', 'resume']),
+    /// Bei `new` der Titel des Themas, bei `existing` der des Abends. Beide Male
+    /// optional — den Titel trägt ein, wer sich vorbereitet, und das ist nicht
+    /// immer schon im Moment der Wahl.
+    title: z.string().trim().min(1).max(200).nullish(),
+    /// Nur bei `existing`: das Anlege-Sheet fragt beides ab, und sie hinterher
+    /// nachzuschieben ließe den Abend kurz mit einer leeren Einheit dastehen.
+    actionstepText: z.string().trim().min(1).max(2000).nullish(),
+    summaryText: z.string().trim().min(1).max(5000).nullish(),
+    topicId: z.uuid().optional(),
+    sessionId: z.uuid().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.mode === 'existing' && !value.topicId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['topicId'],
+        message: 'Bei mode=existing wird topicId gebraucht',
+      });
+    }
+
+    if (value.mode === 'resume' && !value.sessionId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['sessionId'],
+        message: 'Bei mode=resume wird sessionId gebraucht',
+      });
+    }
+  });
+
+/**
+ * Wer an diesem Abend das Thema vorbereitet — ersetzt die Liste.
+ *
+ * Leer ist gültig und heißt „noch kein Zuständiger"; eine verknüpfte Einheit
+ * wird dann entkoppelt, sofern der Abend noch bevorsteht.
+ */
+export const setTopicResponsiblesSchema = z.object({
+  personIds: z.array(z.uuid()).max(9),
 });
 
 const topicParamsSchema = z.object({
@@ -40,7 +126,41 @@ const topicParamsSchema = z.object({
   id: z.uuid(),
 });
 
-export class CreateTopicDto extends createZodDto(createTopicSchema) {}
+const topicCollaboratorParamsSchema = topicParamsSchema.extend({
+  personId: z.uuid(),
+});
+
+const topicSessionParamsSchema = z.object({
+  hauskreisId: z.uuid(),
+  sessionId: z.uuid(),
+});
+
+const meetingTopicParamsSchema = z.object({
+  hauskreisId: z.uuid(),
+  meetingId: z.uuid(),
+});
+
 export class UpdateTopicDto extends createZodDto(updateTopicSchema) {}
 export class ListTopicsQueryDto extends createZodDto(listTopicsQuerySchema) {}
+export class UpdateTopicSessionDto extends createZodDto(
+  updateTopicSessionSchema,
+) {}
+export class CreateTopicSessionDto extends createZodDto(
+  createTopicSessionSchema,
+) {}
+export class ChooseTopicSessionDto extends createZodDto(
+  chooseTopicSessionSchema,
+) {}
+export class SetTopicResponsiblesDto extends createZodDto(
+  setTopicResponsiblesSchema,
+) {}
 export class TopicParamsDto extends createZodDto(topicParamsSchema) {}
+export class TopicCollaboratorParamsDto extends createZodDto(
+  topicCollaboratorParamsSchema,
+) {}
+export class TopicSessionParamsDto extends createZodDto(
+  topicSessionParamsSchema,
+) {}
+export class MeetingTopicParamsDto extends createZodDto(
+  meetingTopicParamsSchema,
+) {}

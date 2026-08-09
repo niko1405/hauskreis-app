@@ -72,15 +72,21 @@ export class ActionstepReminderService {
         hauskreisId,
         date: { lt: today },
         status: { not: MeetingStatus.CANCELLED },
-        // An empty string counts as no actionstep: the field is free text and
-        // a blank one carries nothing worth interrupting anyone for.
-        actionstepText: { not: null },
+        // Der Actionstep steht an der Einheit, die an dem Abend hing — nicht
+        // mehr am Abend selbst. Ein leerer Text zählt als keiner: das Feld ist
+        // Freitext, und ein Leerzeichen ist niemanden zu unterbrechen wert.
+        topicSession: { actionstepText: { not: null } },
       },
       orderBy: { date: 'desc' },
-      select: { id: true, actionstepText: true },
+      select: {
+        id: true,
+        topicSession: { select: { actionstepText: true } },
+      },
     });
 
-    if (!meeting || meeting.actionstepText?.trim() === '') {
+    const actionstep = meeting?.topicSession?.actionstepText;
+
+    if (!meeting || !actionstep || actionstep.trim() === '') {
       return { notified: 0, skipped: 0, meetingId: null };
     }
 
@@ -119,7 +125,7 @@ export class ActionstepReminderService {
           relatedMeetingId: meeting.id,
           payload: {
             title: 'Dein Actionstep',
-            body: `Wie läuft es damit? "${meeting.actionstepText}"`,
+            body: `Wie läuft es damit? "${actionstep}"`,
             url: appPath.meeting(meeting.id),
           },
         }),

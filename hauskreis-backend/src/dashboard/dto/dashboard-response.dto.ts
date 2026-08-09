@@ -61,13 +61,20 @@ export const homeScreenSchema = z.object({
         })
         .nullable(),
       host: personRefSchema.nullable(),
-      /// Mit den Zuständigen, nicht nur dem Titel: ein Thema hat oft gar keinen
-      /// Titel (CLAUDE.md §5), und dann stünde hier sonst nichts über das Thema.
+      /// Wer an diesem Abend das Thema vorbereitet — die Zuteilung. Steht für
+      /// sich, weil sie schon dasteht, bevor jemand ein Thema gewählt hat: „Lena
+      /// ist dran" ist die Nachricht, auch wenn noch offen ist, womit.
+      ///
+      /// Flach, nicht `{ person }` wie im Termin-DTO: dort spiegelt die Hülle
+      /// die Verknüpfungstabelle, hier ist es eine eigens gebaute Ansicht.
+      topicResponsibles: z.array(personRefSchema),
+      /// Was gewählt wurde. `null` heißt entweder „noch nichts" oder „geht dich
+      /// vor dem Abend nichts an" — beides sieht von außen gleich aus, und das
+      /// ist gewollt.
       topic: z
         .object({
           id: z.uuid(),
           title: z.string().nullable(),
-          responsibles: z.array(personRefSchema),
         })
         .nullable(),
       /// Wer die Musik macht. Flach, nicht `{ person }` wie im Termin-DTO —

@@ -1,35 +1,34 @@
 import { Module } from '@nestjs/common';
 import { TopicController } from './topic.controller';
+import { MeetingTopicController } from './meeting-topic.controller';
 import { TopicService } from './topic.service';
-import { TopicCarryOverService } from './topic-carry-over.service';
+import { TopicSessionService } from './topic-session.service';
 import { TopicReminderService } from './topic-reminder.service';
+import { TopicLinkModule } from './topic-link.module';
 import { NotificationModule } from '../notification/notification.module';
-import { PersonModule } from '../person/person.module';
 import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module';
-import { EditRightsModule } from '../meeting/edit-rights.module';
 
 /**
- * Owns topics and the carry-over that keeps a running one on the next meeting.
+ * Themen, ihre Einheiten und die Rolle „Thema" am einzelnen Abend.
  *
- * Note what is *not* here: the ranking for "wer bereitet das nächste Thema vor"
- * lives in `RoleSuggestionModule` and is the very same function that ranks
- * hosts — only the event adapter and the eligibility filter differ. Von dort
- * kommt allerdings `AvailabilityService`: wer an dem Abend nicht da ist, kann
- * das Thema nicht vorbereiten.
+ * Was hier **nicht** liegt: die Rangfolge für „wer bereitet das nächste Thema
+ * vor" steht im `RoleSuggestionModule` und ist dieselbe Funktion, die auch
+ * Gastgeber sortiert — nur Ereignis-Adapter und Eignungsfilter unterscheiden
+ * sich. Von dort kommt allerdings `AvailabilityService`: wer an dem Abend nicht
+ * da ist, kann das Thema nicht vorbereiten.
+ *
+ * `MeetingTopicController` hängt an Termin-Pfaden, gehört aber hierher — wie die
+ * Musik im `SongModule`. Das `MeetingModule` weiß dadurch von Themen nichts,
+ * und der Modulgraph bleibt ohne Kante zwischen den beiden.
+ *
+ * Auch weg: die nächtliche Übernahme des laufenden Themas. Sie belegte den
+ * nächsten Abend im Voraus und stand damit der Regel im Weg, dass Owner wird,
+ * wer zuerst wählt.
  */
 @Module({
-  // PersonModule: wer einträgt, steht im Token — und bekommt keine Nachricht
-  // darüber, dass er selbst eingetragen hat.
-  // EditRightsModule: den Namen eines Themas ändert, wer es vorbereitet. Ein
-  // eigenes Modul ohne Importe, damit daraus keine Kante zu MeetingModule wird.
-  imports: [
-    NotificationModule,
-    PersonModule,
-    RoleSuggestionModule,
-    EditRightsModule,
-  ],
-  controllers: [TopicController],
-  providers: [TopicService, TopicCarryOverService, TopicReminderService],
-  exports: [TopicService, TopicReminderService],
+  imports: [NotificationModule, RoleSuggestionModule, TopicLinkModule],
+  controllers: [TopicController, MeetingTopicController],
+  providers: [TopicService, TopicSessionService, TopicReminderService],
+  exports: [TopicService, TopicSessionService, TopicReminderService],
 })
 export class TopicModule {}

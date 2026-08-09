@@ -67,6 +67,10 @@ export const qk = {
           [...root, 'meetings', meetingId, 'songs'] as const,
         songLeaders: (meetingId: string) =>
           [...root, 'meetings', meetingId, 'song-leaders'] as const,
+        topicResponsibles: (meetingId: string) =>
+          [...root, 'meetings', meetingId, 'topic-responsibles'] as const,
+        topicChoices: (meetingId: string) =>
+          [...root, 'meetings', meetingId, 'topic-choices'] as const,
       },
 
       topics: {
@@ -75,6 +79,11 @@ export const qk = {
           [...root, 'topics', 'list', params] as const,
         detail: (topicId: string) =>
           [...root, 'topics', 'detail', topicId] as const,
+        /// Die einzelne Einheit. Unter `topics`, damit ein Schreibvorgang daran
+        /// über das `all`-Präfix auch die Themenliste ungültig macht — dort
+        /// steht sie ja mit drin.
+        session: (sessionId: string) =>
+          [...root, 'topics', 'session', sessionId] as const,
       },
 
       songs: {

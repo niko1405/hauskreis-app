@@ -12,6 +12,7 @@ import {
   clearedByTurningOff,
   resolveSlots,
   slotDefaults,
+  SLOT_FIELDS,
   type MeetingSlots,
 } from './meeting-slots';
 import { MeetingType } from '../../generated/prisma/enums';
@@ -53,8 +54,8 @@ describe('slotDefaults', () => {
 describe('assertSlotsAllow', () => {
   const leer = slotDefaults(MeetingType.CUSTOM);
 
-  it('weist ein Thema an einem Termin ohne Themen-Baustein ab', () => {
-    expect(() => assertSlotsAllow(leer, { topicId: 't1' })).toThrow(
+  it('weist ein Testimony an einem Termin ohne Testimony-Baustein ab', () => {
+    expect(() => assertSlotsAllow(leer, { testimonyPersonId: 'p1' })).toThrow(
       BadRequestException,
     );
   });
@@ -85,35 +86,41 @@ describe('assertSlotsAllow', () => {
   /** Aufräumen darf man immer — und beim Abschalten tun wir selbst genau das. */
   it('lässt ein ausdrückliches null durch', () => {
     expect(() =>
-      assertSlotsAllow(leer, { topicId: null, testimonyPersonId: null }),
+      assertSlotsAllow(leer, { testimonyPersonId: null }),
     ).not.toThrow();
   });
 
   it('lässt alles zu, was der Baustein deckt', () => {
     expect(() =>
-      assertSlotsAllow(slotDefaults(MeetingType.STANDARD), {
-        topicId: 't1',
+      assertSlotsAllow(slotDefaults(MeetingType.LOBPREIS_GEBET), {
+        testimonyPersonId: 'p1',
         hostPersonId: 'p1',
-        summaryText: 'War schön',
       }),
     ).not.toThrow();
+  });
+
+  /**
+   * Das Thema hat am Termin selbst kein Feld mehr — Zuteilung und Einheit
+   * liegen in eigenen Tabellen und werden über eigene Routen geschrieben. Ein
+   * `PATCH` am Termin kann hier also gar nichts mehr verletzen; abgewiesen wird
+   * das Zuteilen stattdessen in `TopicSessionService.setResponsibles`.
+   */
+  it('hat für das Thema nichts mehr zu prüfen', () => {
+    expect(SLOT_FIELDS.hasTopicSlot).toEqual([]);
   });
 });
 
 describe('clearedByTurningOff', () => {
   const alles = slotDefaults(MeetingType.STANDARD);
+  const mitTestimony = slotDefaults(MeetingType.LOBPREIS_GEBET);
 
   it('leert die Felder eines abgeschalteten Bausteins', () => {
-    const cleared = clearedByTurningOff(alles, {
-      ...alles,
-      hasTopicSlot: false,
+    const cleared = clearedByTurningOff(mitTestimony, {
+      ...mitTestimony,
+      hasTestimonySlot: false,
     });
 
-    expect(cleared).toEqual({
-      topicId: null,
-      actionstepText: null,
-      summaryText: null,
-    });
+    expect(cleared).toEqual({ testimonyPersonId: null });
   });
 
   /** Ein `null` mehr wäre eine Schreiboperation samt Versionssprung. */

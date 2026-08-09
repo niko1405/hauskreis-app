@@ -5,6 +5,11 @@ import { PrayerBuddyService } from '../prayer-buddy/prayer-buddy.service';
 import { AssignmentService, type Assignment } from './assignment.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
 import { addDays, toUtcDate } from '../meeting/meeting-schedule';
+import {
+  sessionSelectWithTopic,
+  shapeSessionForMeeting,
+  type Viewer,
+} from '../topic/topic-shape';
 
 /** How far ahead the home screen looks for your own jobs. */
 export const HOME_HORIZON_DAYS = 8 * 7;
@@ -35,11 +40,10 @@ export interface HomeScreen {
       requiresHost: boolean;
     } | null;
     host: { id: string; name: string } | null;
-    topic: {
-      id: string;
-      title: string | null;
-      responsibles: { id: string; name: string }[];
-    } | null;
+    /** Wer für das Thema zugeteilt ist — steht auch ohne gewähltes Thema da. */
+    topicResponsibles: { id: string; name: string }[];
+    /** Was gewählt wurde, sofern es der Betrachter schon sehen darf. */
+    topic: { id: string; title: string | null } | null;
     /** Who is on for the music. Empty is valid — not every evening has songs. */
     songLeaders: { id: string; name: string }[];
     /** What *you* answered for that evening. */
@@ -91,9 +95,10 @@ export class DashboardService {
 
   async build(
     hauskreisId: string,
-    personId: string,
+    viewer: Viewer,
     options: { now?: Date } = {},
   ): Promise<HomeScreen> {
+    const { personId, isAdmin } = viewer;
     const now = options.now ?? new Date();
     const today = toUtcDate(now);
 
@@ -125,15 +130,11 @@ export class DashboardService {
               },
             },
             host: { select: personRefSelect },
-            topic: {
-              select: {
-                id: true,
-                title: true,
-                responsibles: {
-                  select: { person: { select: personRefSelect } },
-                },
-              },
+            topicResponsibles: {
+              select: { person: { select: personRefSelect } },
+              orderBy: { person: { name: 'asc' } },
             },
+            topicSession: { select: sessionSelectWithTopic },
             songLeaders: {
               select: { person: { select: personRefSelect } },
             },
@@ -148,13 +149,14 @@ export class DashboardService {
             hauskreisId,
             date: { lt: today },
             status: { not: MeetingStatus.CANCELLED },
-            actionstepText: { not: null },
+            // Der Actionstep steht an der Einheit, die an dem Abend hing.
+            topicSession: { actionstepText: { not: null } },
           },
           orderBy: { date: 'desc' },
           select: {
             id: true,
             date: true,
-            actionstepText: true,
+            topicSession: { select: { actionstepText: true } },
             // Nur die Ids: der Startbildschirm zeigt eine Zahl und den eigenen
             // Haken, die Namen stehen auf der Detailseite.
             actionstepDone: { select: { personId: true } },
@@ -173,6 +175,19 @@ export class DashboardService {
       group.members.some((member) => member.id === personId),
     );
 
+    // `now` reicht bis hierher durch: die Abendregel ist eine Frage an die Uhr,
+    // und ein Startbildschirm, der sie anders beantwortet als der Termin selbst,
+    // wäre der Fehler, den ein gemeinsamer Helfer gerade verhindern soll.
+    const nextSession = meeting?.topicSession
+      ? shapeSessionForMeeting(
+          meeting.topicSession,
+          meeting.topicSession.topic,
+          { personId, isAdmin, now },
+        )
+      : null;
+
+    const actionstepText = actionstep?.topicSession?.actionstepText;
+
     return {
       nextMeeting: meeting
         ? {
@@ -185,12 +200,13 @@ export class DashboardService {
             title: meeting.title,
             location: meeting.location,
             host: meeting.host,
-            topic: meeting.topic
-              ? {
-                  id: meeting.topic.id,
-                  title: meeting.topic.title,
-                  responsibles: meeting.topic.responsibles.map((r) => r.person),
-                }
+            topicResponsibles: meeting.topicResponsibles.map((r) => r.person),
+            // Über dieselbe Umformung wie überall: vor 18 Uhr am Termintag
+            // gehört der Titel denen, die ihn vorbereiten, und `shapeSession`
+            // gibt ihn dann als `null` zurück. Ein zweiter Weg an dieselbe
+            // Frage wäre ein zweiter Weg, sie falsch zu beantworten.
+            topic: nextSession?.contentVisible
+              ? { id: nextSession.topic.id, title: nextSession.topic.title }
               : null,
             songLeaders: meeting.songLeaders.map((leader) => leader.person),
             // No row means nobody answered yet, which is exactly UNKNOWN.
@@ -199,9 +215,9 @@ export class DashboardService {
         : null,
       myRoles: myRoles.filter((role) => role.role !== 'PRAYER_BUDDY'),
       openActionstep:
-        actionstep && actionstep.actionstepText?.trim()
+        actionstep && actionstepText?.trim()
           ? {
-              text: actionstep.actionstepText,
+              text: actionstepText,
               meetingId: actionstep.id,
               date: isoDate(actionstep.date),
               done: actionstep.actionstepDone.some(

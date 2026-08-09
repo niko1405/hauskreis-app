@@ -24,10 +24,19 @@ export interface ReminderMeeting {
   type: MeetingType;
   title: string | null;
   hostPersonId: string | null;
-  topicId: string | null;
   testimonyPersonId: string | null;
   location: { name: string } | null;
-  topic: { title: string | null; responsibles: { personId: string }[] } | null;
+  /** Wer an diesem Abend das Thema vorbereitet — die Rolle, nicht das Thema. */
+  topicResponsibles: { personId: string }[];
+  /**
+   * Die gewählte Einheit, falls es schon eine gibt. Kann fehlen, obwohl jemand
+   * zugeteilt ist: dann steht die Erinnerung ohne Titel da, und das ist genau
+   * die richtige Nachricht — es fehlt ja noch die Entscheidung.
+   */
+  topicSession: {
+    title: string | null;
+    topic: { title: string | null };
+  } | null;
   songLeaders: { personId: string }[];
 }
 
@@ -112,14 +121,11 @@ export class MeetingReminderService {
         type: true,
         title: true,
         hostPersonId: true,
-        topicId: true,
         testimonyPersonId: true,
         location: { select: { name: true } },
-        topic: {
-          select: {
-            title: true,
-            responsibles: { select: { personId: true } },
-          },
+        topicResponsibles: { select: { personId: true } },
+        topicSession: {
+          select: { title: true, topic: { select: { title: true } } },
         },
         songLeaders: { select: { personId: true } },
       },

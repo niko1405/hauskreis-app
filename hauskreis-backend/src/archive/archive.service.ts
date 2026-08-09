@@ -56,7 +56,12 @@ export class ArchiveService {
         orderBy: { date: 'asc' },
         select: { date: true },
       }),
-      this.prisma.topic.count({ where: { hauskreisId } }),
+      // Nur was auch im Archiv steht: ein Thema wird öffentlich, sobald eine
+      // seiner Einheiten gehalten wurde. Alle zu zählen hieße, eine Zahl über
+      // die Karte zu schreiben, die größer ist als die Liste darunter.
+      this.prisma.topic.count({
+        where: { hauskreisId, sessions: { some: { meeting: past } } },
+      }),
       this.prisma.song.count({ where: { hauskreisId } }),
       this.prisma.song.count({
         where: {

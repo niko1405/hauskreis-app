@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { MeetingStatus, TopicStatus } from '../../generated/prisma/enums';
+import { MeetingStatus } from '../../generated/prisma/enums';
+import { TopicLinkService } from '../topic/topic-link.service';
 import { toUtcDate } from './meeting-schedule';
+import { touchMeeting } from './meeting-version';
 
 /**
  * Wer absagt, gibt seine Rollen für diesen Abend frei.
@@ -11,16 +13,20 @@ import { toUtcDate } from './meeting-schedule';
  * steht im Plan jemand, der nicht kommt. Das ist der wahrscheinlichere Weg von
  * beiden; Pläne stehen früh, Absagen kommen spät.
  *
- * Drei Rollen werden frei, eine nicht:
+ * Alle vier Rollen werden frei:
  *
  * - **Gastgeber** — und mit ihm der Ort, wenn es seine Wohnung war. Host und Ort
  *   sind in `resolveVenue` eine Entscheidung, also fallen sie auch zusammen.
  * - **Musik** — gilt für genau diesen Abend.
  * - **Testimony** — ebenso. Wer nicht kommt, erzählt an dem Abend nichts, und
  *   der Platz gehört jemandem, der da ist.
- * - **Thema bleibt.** Es zieht sich über mehrere Abende; jemanden wegen einer
- *   einzelnen Absage von seiner Vorbereitung zu entbinden wäre falsch, und beim
- *   nächsten Termin stünde er ohnehin wieder da.
+ * - **Thema** — seit Neuestem auch. Es blieb einmal stehen, weil die
+ *   Zuständigkeit am *Thema* hing und nicht am Abend: sie fallen zu lassen hätte
+ *   geheißen, jemanden von seiner Vorbereitung für alle kommenden Abende zu
+ *   entbinden. Jetzt ist es eine Zuteilung wie die anderen drei, und ein Abend,
+ *   an dem der Zuständige nachweislich fehlt, soll nicht zugeteilt aussehen. Die
+ *   Vorbereitung geht dabei nicht verloren — die Einheit wird nur vom Termin
+ *   gelöst und wartet als Entwurf.
  *
  * Vergangene und abgesagte Abende bleiben unberührt: dort wird nachgetragen,
  * was war, und was war, ändert eine Absage von heute nicht mehr.
@@ -29,7 +35,10 @@ import { toUtcDate } from './meeting-schedule';
 export class RoleReleaseService {
   private readonly logger = new Logger(RoleReleaseService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly topicLinks: TopicLinkService,
+  ) {}
 
   /**
    * Gibt die Rollen frei, die diese Person an diesem Abend hatte.
@@ -60,7 +69,7 @@ export class RoleReleaseService {
       meeting.status === MeetingStatus.CANCELLED ||
       toUtcDate(meeting.date) < toUtcDate(new Date())
     ) {
-      return { host: false, song: false, testimony: false };
+      return { host: false, song: false, testimony: false, topic: false };
     }
 
     const host = meeting.hostPersonId === personId;
@@ -87,23 +96,40 @@ export class RoleReleaseService {
       });
     }
 
-    const { count } = await this.prisma.meetingSongLeader.deleteMany({
-      where: { meetingId, personId },
+    const { count } = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.meetingSongLeader.deleteMany({
+        where: { meetingId, personId },
+      });
+
+      // Nur wenn oben nichts geschrieben wurde: dort ist die Version schon
+      // gesprungen, und ein zweiter Sprung an derselben Zeile machte aus einem
+      // Vorgang zwei.
+      if (result.count > 0 && !host && !testimony) {
+        await touchMeeting(tx, meetingId);
+      }
+
+      return result;
     });
 
-    if (host || testimony || count > 0) {
+    // Das Thema zuletzt, weil daran mehr hängt als eine Zeile: bleibt niemand
+    // übrig, der zum gewählten Thema gehört, löst sich auch die Einheit vom
+    // Abend — sie bleibt als Entwurf erhalten.
+    const topic = await this.topicLinks.releaseFor(meetingId, personId);
+
+    if (host || testimony || topic || count > 0) {
       this.logger.log(
         `Released roles of person ${personId} on meeting ${meetingId}: ${[
           host && 'host',
           count > 0 && 'song',
           testimony && 'testimony',
+          topic && 'topic',
         ]
           .filter(Boolean)
           .join(', ')}`,
       );
     }
 
-    return { host, song: count > 0, testimony };
+    return { host, song: count > 0, testimony, topic };
   }
 
   /**
@@ -113,11 +139,10 @@ export class RoleReleaseService {
    * Verlassen ist nicht dasselbe wie absagen, und deshalb gelten hier drei
    * Regeln anders:
    *
-   * - **Das Thema fällt mit.** Bei einer einzelnen Absage bleibt es stehen,
-   *   weil die Person am nächsten Abend wieder da ist. Wer geht, ist an keinem
-   *   Abend mehr da; ein Thema, das auf sie wartet, wäre eine Zusage, die
-   *   niemand einlösen kann. Abgeschlossene Themen behalten ihre Leute — das
-   *   ist Archiv, keine Planung.
+   * - **Auch die Themen-Zuteilung fällt** — und zwar an *allen* kommenden
+   *   Abenden auf einmal, nicht nur an einem. Was die Person an ihren Themen
+   *   gearbeitet hat, bleibt: Einheiten und ihre Verantwortlichen sind Archiv,
+   *   und ein Thema verliert höchstens seinen Owner (`onDelete: SetNull`).
    * - **Die eigenen Antworten verschwinden.** „Kommt" oder „kommt nicht" von
    *   jemandem, der gar nicht mehr dabei ist, verzerrt jede Zählung.
    * - **Auch abgesagte Abende werden geräumt.** Bei einer Absage bleiben sie in
@@ -164,11 +189,8 @@ export class RoleReleaseService {
       this.prisma.meetingSongLeader.deleteMany({
         where: { personId, meetingId: { in: meetingIds } },
       }),
-      this.prisma.topicResponsible.deleteMany({
-        where: {
-          personId,
-          topic: { hauskreisId, status: TopicStatus.RUNNING },
-        },
+      this.prisma.meetingTopicResponsible.deleteMany({
+        where: { personId, meetingId: { in: meetingIds } },
       }),
       this.prisma.meetingAttendance.deleteMany({
         where: { personId, meetingId: { in: meetingIds } },
@@ -197,6 +219,15 @@ export class RoleReleaseService {
             data: { testimonyPersonId: null, version: { increment: 1 } },
           }),
         ),
+      // Über alle, nicht nur die berührten: hier verlässt jemand den Hauskreis,
+      // und damit verschwindet er aus jeder Anwesenheits- und Rollenliste, die
+      // an einem kommenden Abend hängt. Ein ETag, der das nicht mitbekommt,
+      // zeigte ihn weiter an. Dass ein paar Zeilen dabei zweimal springen,
+      // schadet nicht — die Version zählt Revisionen, keine Änderungen.
+      this.prisma.meeting.updateMany({
+        where: { id: { in: meetingIds } },
+        data: { version: { increment: 1 } },
+      }),
     ]);
 
     if (
@@ -226,6 +257,7 @@ export interface ReleasedRoles {
   host: boolean;
   song: boolean;
   testimony: boolean;
+  topic: boolean;
 }
 
 export interface LeftoverRoles {

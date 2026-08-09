@@ -147,7 +147,7 @@ function MeetingListView() {
           }
           hint={
             scope === 'upcoming'
-              ? 'Standard-Termine legt das Backend selbst an — sonst hier einen eigenen anlegen.'
+              ? 'Standard-Termine werden automatisch angelegt — du kannst auch hier einen eigenen anlegen.'
               : undefined
           }
         />

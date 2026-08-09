@@ -9,6 +9,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { AvailabilityService } from './availability.service';
 import { RoleReleaseService } from '../meeting/role-release.service';
+import type { TopicLinkService } from '../topic/topic-link.service';
 import type { PrismaService } from '../prisma/prisma.service';
 
 const HEUTE = new Date('2026-08-04T00:00:00.000Z');
@@ -145,19 +146,36 @@ function setupRelease(
     location: { requiresHost: true },
   },
 ) {
-  const prisma = {
+  const db = {
     meeting: {
       findUnique: jest.fn().mockResolvedValue(meeting),
       update: jest.fn().mockResolvedValue({}),
+      // Die Musik-Zuteilung steht mit in der Antwort des Termins; fällt sie
+      // weg, ohne dass oben schon geschrieben wurde, springt hier die Version.
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     meetingSongLeader: {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
   };
 
+  const prisma = {
+    ...db,
+    $transaction: (run: (tx: typeof db) => unknown) => run(db),
+  };
+
+  // Die Themen-Rolle liegt in einer eigenen Tabelle und wird über den
+  // gemeinsamen Dienst freigegeben — hier als Attrappe, seine eigene Logik
+  // steht in `topic-link.service.spec.ts`.
+  const topicLinks = { releaseFor: jest.fn().mockResolvedValue(false) };
+
   return {
-    service: new RoleReleaseService(prisma as unknown as PrismaService),
-    prisma,
+    service: new RoleReleaseService(
+      prisma as unknown as PrismaService,
+      topicLinks as unknown as TopicLinkService,
+    ),
+    prisma: db,
+    topicLinks,
   };
 }
 
@@ -169,6 +187,7 @@ describe('RoleReleaseService.releaseFor', () => {
       host: true,
       song: false,
       testimony: false,
+      topic: false,
     });
 
     expect(prisma.meeting.update).toHaveBeenCalledWith(
@@ -208,6 +227,7 @@ describe('RoleReleaseService.releaseFor', () => {
       host: false,
       song: false,
       testimony: false,
+      topic: false,
     });
 
     expect(prisma.meeting.update).not.toHaveBeenCalled();
@@ -229,13 +249,11 @@ describe('RoleReleaseService.releaseFor', () => {
       host: false,
       song: true,
       testimony: false,
+      topic: false,
     });
   });
 
-  /**
-   * Wer nicht kommt, erzählt an dem Abend nichts. Anders als das Thema, das
-   * über mehrere Abende läuft und stehen bleibt.
-   */
+  /** Wer nicht kommt, erzählt an dem Abend nichts. */
   it('gibt das Testimony frei, wenn die erzählende Person absagt', async () => {
     const { service, prisma } = setupRelease({
       id: 'm1',
@@ -251,6 +269,7 @@ describe('RoleReleaseService.releaseFor', () => {
       host: false,
       song: false,
       testimony: true,
+      topic: false,
     });
 
     expect(prisma.meeting.update).toHaveBeenCalledWith(
@@ -260,8 +279,22 @@ describe('RoleReleaseService.releaseFor', () => {
     );
   });
 
+  /**
+   * Bis vor Kurzem blieb das Thema stehen, weil die Zuständigkeit am *Thema*
+   * hing und nicht am Abend. Jetzt ist es eine Zuteilung wie die anderen drei.
+   */
+  it('gibt auch die Themen-Rolle frei', async () => {
+    const { service, topicLinks } = setupRelease();
+    topicLinks.releaseFor.mockResolvedValue(true);
+
+    await expect(service.releaseFor('m1', 'p1')).resolves.toMatchObject({
+      topic: true,
+    });
+    expect(topicLinks.releaseFor).toHaveBeenCalledWith('m1', 'p1');
+  });
+
   it('lässt einen vergangenen Abend unberührt', async () => {
-    const { service, prisma } = setupRelease({
+    const { service, prisma, topicLinks } = setupRelease({
       id: 'm1',
       date: LETZTER_DIENSTAG,
       status: 'PLANNED',
@@ -274,6 +307,7 @@ describe('RoleReleaseService.releaseFor', () => {
 
     expect(prisma.meeting.update).not.toHaveBeenCalled();
     expect(prisma.meetingSongLeader.deleteMany).not.toHaveBeenCalled();
+    expect(topicLinks.releaseFor).not.toHaveBeenCalled();
   });
 
   // Ein abgesagter Abend hat keine Rollen mehr zu vergeben, und ihn beim
@@ -306,6 +340,7 @@ function setupLeaving(
   }[],
 ) {
   const meetingUpdate = jest.fn().mockResolvedValue({});
+  const meetingTouch = jest.fn().mockResolvedValue({ count: 0 });
   const deletes: Record<string, unknown> = {};
 
   const batch = (name: string, count: number) =>
@@ -327,9 +362,13 @@ function setupLeaving(
         })),
       ),
       update: meetingUpdate,
+      // Wer geht, verschwindet aus jeder Anwesenheits- und Rollenliste an jedem
+      // kommenden Abend — deshalb springt dort die Version, auch wo sonst
+      // nichts geschrieben wurde.
+      updateMany: meetingTouch,
     },
     meetingSongLeader: { deleteMany: batch('song', 1) },
-    topicResponsible: { deleteMany: batch('topic', 1) },
+    meetingTopicResponsible: { deleteMany: batch('topic', 1) },
     meetingAttendance: { deleteMany: batch('attendance', 2) },
     $transaction: jest.fn((operations: Promise<unknown>[]) =>
       Promise.all(operations),
@@ -337,8 +376,12 @@ function setupLeaving(
   };
 
   return {
-    service: new RoleReleaseService(prisma as unknown as PrismaService),
+    service: new RoleReleaseService(
+      prisma as unknown as PrismaService,
+      { releaseFor: jest.fn() } as unknown as TopicLinkService,
+    ),
     meetingUpdate,
+    meetingTouch,
     deletes,
   };
 }
@@ -381,13 +424,14 @@ describe('RoleReleaseService.releaseEverythingUpcoming', () => {
   });
 
   /**
-   * Der Unterschied zur einzelnen Absage: dort bleibt das Thema stehen, weil
-   * die Person am nächsten Abend wieder da ist. Wer geht, ist an keinem Abend
-   * mehr da.
+   * Der Unterschied zur einzelnen Absage: die gibt eine Zuteilung frei, diese
+   * hier alle auf einmal. Was die Person an ihren Themen gearbeitet hat, bleibt
+   * — Einheiten und ihre Verantwortlichen sind Archiv.
    */
-  it('nimmt auch laufende Themen mit — abgeschlossene nicht', async () => {
+  it('nimmt die Themen-Zuteilung an allen kommenden Abenden mit', async () => {
     const { service, deletes } = setupLeaving([
       { id: 'm1', hostPersonId: null },
+      { id: 'm2', hostPersonId: null },
     ]);
 
     const result = await service.releaseEverythingUpcoming('hk', 'p1');
@@ -395,7 +439,7 @@ describe('RoleReleaseService.releaseEverythingUpcoming', () => {
     expect(result.topic).toBe(1);
     expect(deletes.topic).toEqual({
       personId: 'p1',
-      topic: { hauskreisId: 'hk', status: 'RUNNING' },
+      meetingId: { in: ['m1', 'm2'] },
     });
   });
 

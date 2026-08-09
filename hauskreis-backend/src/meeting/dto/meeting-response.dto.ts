@@ -6,7 +6,6 @@ import {
   MeetingCancelSource,
   MeetingStatus,
   MeetingType,
-  TopicStatus,
 } from '../../../generated/prisma/enums';
 import {
   isoDateOut,
@@ -15,6 +14,7 @@ import {
   personRefSchema,
 } from '../../common/dto/response';
 import { locationResponseSchema } from '../../location/dto/location-response.dto';
+import { topicSessionInMeetingSchema } from '../../topic/dto/topic-response.dto';
 
 /**
  * Ein Abend.
@@ -49,16 +49,11 @@ export const meetingResponseSchema = z.object({
   hasTestimonySlot: z.boolean(),
   locationId: z.uuid().nullable(),
   hostPersonId: z.uuid().nullable(),
-  topicId: z.uuid().nullable(),
   /// Wie der Abend überschrieben ist. Gilt für jede Terminart; bleibt er leer,
   /// steht dort der Titel des Themas und sonst die Art des Termins.
   title: z.string().nullable(),
   /// Wer sein Testimony erzählt. Nur bei `hasTestimonySlot`.
   testimonyPersonId: z.uuid().nullable(),
-  /// Der Vorsatz für die Woche danach, samt Zusammenfassung für alle, die
-  /// nicht da waren.
-  actionstepText: z.string().nullable(),
-  summaryText: z.string().nullable(),
   infoText: z.string().nullable(),
   createdAt: isoDateTimeOut,
   updatedAt: isoDateTimeOut,
@@ -79,14 +74,14 @@ export const meetingResponseSchema = z.object({
   location: locationResponseSchema.nullable(),
   host: personRefSchema.nullable(),
   testimonyPerson: personRefSchema.nullable(),
-  topic: z
-    .object({
-      id: z.uuid(),
-      title: z.string().nullable(),
-      status: z.enum(TopicStatus),
-      responsibles: z.array(z.object({ person: personRefSchema })),
-    })
-    .nullable(),
+  /// Wer an diesem Abend das Thema vorbereitet — die **Zuteilung**, unabhängig
+  /// davon, ob schon etwas gewählt ist. Genau dieser Zwischenzustand fehlte
+  /// vorher: eine Zuteilung legte sofort ein leeres Thema an, und der Abend sah
+  /// aus, als stünde schon etwas fest.
+  topicResponsibles: z.array(z.object({ person: personRefSchema })),
+  /// Die gewählte Einheit samt Nachbereitung. `null` heißt „noch nichts
+  /// gewählt"; ihre Textfelder sind `null`, solange `contentVisible` falsch ist.
+  topicSession: topicSessionInMeetingSchema.nullable(),
   /// Wer an dem Abend für die Musik zuständig ist — leer ist gültig, nicht
   /// jeder Abend hat Lieder (CLAUDE.md §6).
   ///

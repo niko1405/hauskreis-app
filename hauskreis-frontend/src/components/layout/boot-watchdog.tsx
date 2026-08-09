@@ -80,7 +80,7 @@ const FALLBACK_HTML = `
   <div style="max-width:22rem;text-align:center">
     <h1 style="font-size:1.25rem;margin:0 0 .5rem;font-weight:700">Die App kam nicht ganz an</h1>
     <p id="${HINT_ID}" style="font-size:.875rem;line-height:1.6;color:#78716c;margin:0 0 1.5rem">
-      Ein Teil der App fehlt — meistens liegt das an einer wackligen Verbindung.
+      Ein Teil der App fehlt — meistens liegt das an einer instabilen Verbindung.
     </p>
     <button type="button" onclick="location.reload()"
       style="border:none;border-radius:9999px;padding:.75rem 1.5rem;background:#cc7a5e;color:#fff;font-weight:600;font-size:.875rem;cursor:pointer">

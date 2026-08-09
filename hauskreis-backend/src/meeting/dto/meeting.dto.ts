@@ -40,8 +40,10 @@ export const createMeetingSchema = z.object({
   type: meetingType.default(MeetingType.CUSTOM),
   locationId: z.uuid().nullish(),
   hostPersonId: z.uuid().nullish(),
-  topicId: z.uuid().nullish(),
   /// Wie `hostPersonId` eine Rolle, die man schon beim Anlegen vergeben darf.
+  /// Das Thema fehlt hier bewusst: es wird über `…/topic-responsibles`
+  /// zugeteilt und danach *gewählt* — zwei Schritte, die an den Termin zu
+  /// hängen hieße, sie wieder zu einem zu machen.
   testimonyPersonId: z.uuid().nullish(),
   title: z.string().trim().min(1).max(200).nullish(),
   infoText: z.string().trim().max(2000).nullish(),
@@ -59,12 +61,12 @@ export const updateMeetingSchema = z.object({
   endDate: z.iso.date().nullish(),
   locationId: z.uuid().nullish(),
   hostPersonId: z.uuid().nullish(),
-  topicId: z.uuid().nullish(),
   title: z.string().trim().min(1).max(200).nullish(),
   /// Wer sein Testimony erzählt. Nur bei `hasTestimonySlot`.
   testimonyPersonId: z.uuid().nullish(),
-  actionstepText: z.string().trim().max(2000).nullish(),
-  summaryText: z.string().trim().max(5000).nullish(),
+  /// Zusammenfassung und Actionstep stehen nicht mehr hier, sondern an der
+  /// Einheit (`PATCH …/topic-sessions/:id`): sie gehören zu dem, was besprochen
+  /// wurde, und sollen einen Rollenwechsel überleben.
   infoText: z.string().trim().max(2000).nullish(),
   ...slotFields,
 });

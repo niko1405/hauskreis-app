@@ -121,7 +121,12 @@ export class MeetingNotificationService {
      * geht die ganze Gruppe an und nicht nur den Gastgeber, den es nicht mehr
      * gibt.
      */
-    released: ReleasedRoles = { host: false, song: false, testimony: false },
+    released: ReleasedRoles = {
+      host: false,
+      song: false,
+      testimony: false,
+      topic: false,
+    },
   ): Promise<void> {
     const meeting = await this.prisma.meeting.findUnique({
       where: { id: meetingId },

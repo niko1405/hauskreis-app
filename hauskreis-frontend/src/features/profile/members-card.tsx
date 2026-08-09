@@ -29,7 +29,7 @@ export function MembersCard() {
   return (
     <section>
       <SectionTitle>
-        Wer dabei ist{members.length > 0 && ` (${members.length})`}
+        Alle Mitglieder{members.length > 0 && ` (${members.length})`}
       </SectionTitle>
       <Card className="space-y-2">
         {people.isLoading && <Skeleton className="h-24 w-full" />}
@@ -75,7 +75,7 @@ function MemberRow({ person }: { person: PersonListEntry }) {
         {person.playsInstrument && <Badge variant="music">Instrument</Badge>}
         {!person.canHost && <Badge>hostet nicht</Badge>}
         {person.role === 'ADMIN' && (
-          <Badge variant="info">
+          <Badge variant="terracotta">
             <Shield size={11} />
             Admin
           </Badge>

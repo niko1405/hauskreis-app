@@ -23,7 +23,7 @@ export const ROLE_ICON: Record<AssignmentRole, LucideIcon> = {
 // eine fünfte Sorte Aufgabe, die es nicht gibt — es ist dieselbe Stelle im
 // Abend, nur anders gefüllt.
 
-const ROLE_STYLE: Record<AssignmentRole, string> = {
+export const ROLE_STYLE: Record<AssignmentRole, string> = {
   HOST: 'bg-terracotta-50 text-terracotta-700 border-terracotta-100',
   TOPIC: 'bg-topic-bg text-topic border-topic-line',
   SONG: 'bg-music-bg text-music border-music-line',

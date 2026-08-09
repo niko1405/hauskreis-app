@@ -10,19 +10,24 @@ const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 function setup(
   options: {
     meeting?: { id: string; actionstepText: string | null } | null;
+    /* Der Actionstep steht an der Einheit, die an dem Abend hing. */
     people?: string[];
     weekdaysByPerson?: Record<string, number[]>;
     /** Wer den Actionstep schon abgehakt hat. */
     done?: string[];
   } = {},
 ) {
-  const findFirst = jest
-    .fn()
-    .mockResolvedValue(
-      options.meeting === undefined
-        ? { id: 'meeting-1', actionstepText: 'Jeden Tag 10 Minuten lesen' }
-        : options.meeting,
-    );
+  const abend =
+    options.meeting === undefined
+      ? { id: 'meeting-1', actionstepText: 'Jeden Tag 10 Minuten lesen' }
+      : options.meeting;
+
+  const findFirst = jest.fn().mockResolvedValue(
+    abend && {
+      id: abend.id,
+      topicSession: { actionstepText: abend.actionstepText },
+    },
+  );
 
   const people = options.people ?? ['anna', 'chris'];
   const findManyPeople = jest

@@ -16,11 +16,16 @@ import {
 import { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
 import { AvailabilityService } from '../role-suggestion/availability.service';
 import { locationInclude } from '../location/location.service';
+import { TopicLinkService } from '../topic/topic-link.service';
+import {
+  sessionSelectWithTopic,
+  shapeSessionForMeeting,
+  type Viewer,
+} from '../topic/topic-shape';
 import { MeetingCancellationService } from './meeting-cancellation.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { RoleReleaseService } from './role-release.service';
 import { CustomMeetingNotificationService } from './custom-meeting-notification.service';
-import { EditRightsService } from './edit-rights.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
@@ -33,6 +38,7 @@ import {
   overlapping,
   toUtcDate,
 } from './meeting-schedule';
+import { touchMeeting } from './meeting-version';
 import {
   assertSlotsAllow,
   assertSlotsExclusive,
@@ -54,17 +60,14 @@ const meetingInclude = {
   location: { include: locationInclude },
   host: { select: personRefSelect },
   testimonyPerson: { select: personRefSelect },
-  topic: {
-    select: {
-      id: true,
-      title: true,
-      status: true,
-      responsibles: {
-        select: { person: { select: personRefSelect } },
-      },
-    },
+  // Wer an diesem Abend das Thema vorbereitet. Die **Zuteilung** — was daraus
+  // gewählt wurde, steht darunter und kann fehlen.
+  topicResponsibles: {
+    select: { person: { select: personRefSelect } },
+    orderBy: { person: { name: 'asc' } },
   },
-  // Dieselbe Verschachtelung wie bei `topic.responsibles`: so wie Prisma es
+  topicSession: { select: sessionSelectWithTopic },
+  // Dieselbe Verschachtelung wie bei `topicResponsibles`: so wie Prisma es
   // zurückgibt, ohne Umformung im Service — sonst müsste jede Stelle, die
   // einen Termin lädt, daran denken.
   songLeaders: {
@@ -92,10 +95,14 @@ export class MeetingService {
     private readonly roleRelease: RoleReleaseService,
     private readonly autoAttendance: AutoAttendanceService,
     private readonly customMeetingNotifications: CustomMeetingNotificationService,
-    private readonly editRights: EditRightsService,
+    private readonly topicLinks: TopicLinkService,
   ) {}
 
-  async findAll(hauskreisId: string, query: ListMeetingsQueryDto) {
+  async findAll(
+    hauskreisId: string,
+    query: ListMeetingsQueryDto,
+    viewer: Viewer,
+  ) {
     const today = toUtcDate(new Date());
 
     // Jede Bedingung für sich, alle mit UND verknüpft. Vorher war es **ein**
@@ -141,10 +148,14 @@ export class MeetingService {
       this.prisma.meeting.count({ where }),
     ]);
 
-    return toPage(items, total, query);
+    return toPage(
+      items.map((meeting) => withTopicSession(meeting, viewer)),
+      total,
+      query,
+    );
   }
 
-  async findOne(hauskreisId: string, id: string) {
+  async findOne(hauskreisId: string, id: string, viewer: Viewer) {
     const meeting = await this.prisma.meeting.findFirst({
       where: { id, hauskreisId },
       include: meetingInclude,
@@ -154,14 +165,14 @@ export class MeetingService {
       throw new NotFoundException(`Meeting ${id} not found`);
     }
 
-    return meeting;
+    return withTopicSession(meeting, viewer);
   }
 
   async create(
     hauskreisId: string,
     dto: CreateMeetingDto,
     /** Wer anlegt — bekommt keine Nachricht über den eigenen Termin. */
-    actorPersonId?: string,
+    viewer: Viewer,
   ) {
     const date = new Date(dto.date);
     const endDate = this.resolveEndDate(dto.type, date, dto.endDate);
@@ -193,7 +204,6 @@ export class MeetingService {
         ...slots,
         locationId: venue.locationId ?? null,
         hostPersonId: venue.hostPersonId ?? null,
-        topicId: dto.topicId ?? null,
         testimonyPersonId: dto.testimonyPersonId ?? null,
         title: dto.title ?? null,
         infoText: dto.infoText ?? null,
@@ -210,10 +220,10 @@ export class MeetingService {
     // bisher unter, wenn niemand ausdrücklich Bescheid sagte.
     await this.customMeetingNotifications.announceCreation(
       meeting.id,
-      actorPersonId,
+      viewer.personId,
     );
 
-    return this.findOne(hauskreisId, meeting.id);
+    return this.findOne(hauskreisId, meeting.id, viewer);
   }
 
   async update(
@@ -221,11 +231,10 @@ export class MeetingService {
     id: string,
     dto: UpdateMeetingDto,
     /** Wer gerade einträgt — bekommt keine Nachricht über sich selbst. */
-    actorPersonId?: string,
+    viewer: Viewer,
     condition?: IfMatchCondition,
   ) {
-    const before = await this.findOne(hauskreisId, id);
-    await this.assertMayWriteSummary(id, dto, actorPersonId);
+    const before = await this.findOne(hauskreisId, id, viewer);
     await this.assertReferencesBelongToHauskreis(hauskreisId, dto);
 
     // Erst die Bausteine, dann alles andere: was ein Termin überhaupt haben
@@ -270,11 +279,8 @@ export class MeetingService {
             // distinction is what lets a host or location be un-assigned.
             locationId: venue.locationId,
             hostPersonId: venue.hostPersonId,
-            topicId: dto.topicId,
             title: dto.title,
             testimonyPersonId: dto.testimonyPersonId,
-            actionstepText: dto.actionstepText,
-            summaryText: dto.summaryText,
             infoText: dto.infoText,
             // Zuletzt, damit es gewinnt: ein abgeschalteter Baustein räumt
             // seine Felder weg, auch wenn oben noch alte Werte stünden.
@@ -284,18 +290,40 @@ export class MeetingService {
         }),
       exists: () =>
         this.prisma.meeting.findFirst({ where: { id, hauskreisId } }),
-      reload: () => this.findOne(hauskreisId, id),
+      reload: () => this.findOne(hauskreisId, id, viewer),
       notFoundMessage: `Meeting ${id} not found`,
     });
+
+    // Zweierlei, und mit Absicht ungleich behandelt. Die **Einheit** wird
+    // gelöst, nicht geleert: sie trägt die Vorbereitung, und die soll ein
+    // versehentlich umgelegter Schalter nicht kosten (vergangene Abende
+    // ausgenommen — das entscheidet `detachIfUpcoming`). Die **Zuteilung**
+    // dagegen fällt, wie bei der Musik: sie blieb einmal aus Vorsicht stehen,
+    // aber an einem Abend ohne Thema ist sie keine geduldige Notiz, sondern eine
+    // falsche Aussage. `TopicReminderService` fragt nicht nach `hasTopicSlot`
+    // und schrieb „Du bist dran mit dem Thema" für einen Abend, an dem keins
+    // ist; auf dem Startbildschirm stand derselbe Rollen-Chip.
+    if (before.hasTopicSlot && !slots.hasTopicSlot) {
+      await this.topicLinks.detachIfUpcoming(id);
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.meetingTopicResponsible.deleteMany({
+          where: { meetingId: id },
+        });
+
+        await touchMeeting(tx, id);
+      });
+    }
 
     // Lieder hängen nicht am Termin, sondern in zwei eigenen Tabellen — der
     // `data`-Block oben kann sie nicht mitleeren. Nach dem Schreiben, damit ein
     // gescheiterter Versionsvergleich nichts wegräumt.
     if (before.hasSongSlot && !slots.hasSongSlot) {
-      await this.prisma.$transaction([
-        this.prisma.meetingSong.deleteMany({ where: { meetingId: id } }),
-        this.prisma.meetingSongLeader.deleteMany({ where: { meetingId: id } }),
-      ]);
+      await this.prisma.$transaction(async (tx) => {
+        await tx.meetingSong.deleteMany({ where: { meetingId: id } });
+        await tx.meetingSongLeader.deleteMany({ where: { meetingId: id } });
+        await touchMeeting(tx, id);
+      });
     }
 
     // Wer eingeteilt wird, soll es sofort erfahren und nicht erst durch die
@@ -310,7 +338,7 @@ export class MeetingService {
         id,
         AssignmentRole.HOST,
         [updated.hostPersonId],
-        actorPersonId,
+        viewer.personId,
       );
     }
 
@@ -386,38 +414,6 @@ export class MeetingService {
   }
 
   /**
-   * Zusammenfassung und Actionstep trägt ein, wer das Thema vorbereitet.
-   *
-   * Hier stand einmal eine **Datumsprüfung**: vor dem Abend ließ sich beides
-   * gar nicht schreiben, weil es dazu ja noch nichts zu sagen gab. Das stimmt
-   * für alle anderen — aber nicht für die Zuständigen. Wer das Thema
-   * vorbereitet, hat den Actionstep oft vorher im Kopf und will ihn hinlegen,
-   * wo er am Abend gebraucht wird. Ihn erst ab 0 Uhr des Termintags tippen zu
-   * dürfen, war eine Sperre gegen genau die Person, die sie am wenigsten
-   * brauchte.
-   *
-   * Ersetzt durch die Zuständigkeit (`EditRightsService`), die dasselbe Ziel
-   * besser trifft: der falsche Termin in der Liste ist damit weiterhin
-   * geschützt, denn dort ist man in aller Regel nicht zuständig.
-   *
-   * Ohne `actorPersonId` — etwa aus einem Skript — bleibt es ungeprüft; die
-   * Route liefert sie immer.
-   */
-  private async assertMayWriteSummary(
-    meetingId: string,
-    dto: Pick<UpdateMeetingDto, 'actionstepText' | 'summaryText'>,
-    actorPersonId?: string,
-  ): Promise<void> {
-    if (dto.actionstepText === undefined && dto.summaryText === undefined) {
-      return;
-    }
-
-    if (!actorPersonId) return;
-
-    await this.editRights.assertMayWriteSummary(meetingId, actorPersonId);
-  }
-
-  /**
    * Sagt den ganzen Abend ab. Nur Admins — die eigene Teilnahme abzusagen ist
    * etwas anderes und geht über `setAttendance`.
    */
@@ -425,10 +421,10 @@ export class MeetingService {
     hauskreisId: string,
     id: string,
     dto: CancelMeetingDto,
-    byPersonId: string,
+    viewer: Viewer,
     condition?: IfMatchCondition,
   ) {
-    const before = await this.findOne(hauskreisId, id);
+    const before = await this.findOne(hauskreisId, id, viewer);
 
     const cancelled = await updateWithVersionCheck({
       condition,
@@ -438,7 +434,7 @@ export class MeetingService {
           data: {
             status: MeetingStatus.CANCELLED,
             cancelledAt: new Date(),
-            cancelledByPersonId: byPersonId,
+            cancelledByPersonId: viewer.personId,
             cancelSource: MeetingCancelSource.MANUAL,
             cancelReason: dto.reason ?? null,
             version: { increment: 1 },
@@ -446,7 +442,7 @@ export class MeetingService {
         }),
       exists: () =>
         this.prisma.meeting.findFirst({ where: { id, hauskreisId } }),
-      reload: () => this.findOne(hauskreisId, id),
+      reload: () => this.findOne(hauskreisId, id, viewer),
       notFoundMessage: `Meeting ${id} not found`,
     });
 
@@ -468,9 +464,10 @@ export class MeetingService {
   async uncancel(
     hauskreisId: string,
     id: string,
+    viewer: Viewer,
     condition?: IfMatchCondition,
   ) {
-    const before = await this.findOne(hauskreisId, id);
+    const before = await this.findOne(hauskreisId, id, viewer);
 
     const revived = await updateWithVersionCheck({
       condition,
@@ -488,7 +485,7 @@ export class MeetingService {
         }),
       exists: () =>
         this.prisma.meeting.findFirst({ where: { id, hauskreisId } }),
-      reload: () => this.findOne(hauskreisId, id),
+      reload: () => this.findOne(hauskreisId, id, viewer),
       notFoundMessage: `Meeting ${id} not found`,
     });
 
@@ -517,8 +514,9 @@ export class MeetingService {
   /**
    * Who could prepare the topic for this meeting, best fit first.
    *
-   * A topic already on the meeting is left out of the history, so re-opening
-   * the picker does not push its own people down the list.
+   * Das an diesem Abend schon gewählte Thema bleibt aus der Historie heraus,
+   * damit ein zweites Öffnen der Auswahl seine eigenen Leute nicht nach unten
+   * schiebt.
    */
   async suggestTopicResponsibles(hauskreisId: string, id: string) {
     const meeting = await this.loadForSuggestions(hauskreisId, id);
@@ -527,7 +525,7 @@ export class MeetingService {
       hauskreisId,
       meeting.date,
       {
-        excludeTopicId: meeting.topicId ?? undefined,
+        excludeTopicId: meeting.topicSession?.topicId ?? undefined,
         // Nicht zum Ausschließen aus der Historie, sondern um zu wissen, wer
         // für genau diesen Abend abgesagt hat.
         meetingId: meeting.id,
@@ -554,13 +552,37 @@ export class MeetingService {
    * The three fields the suggestion engines actually need.
    *
    * Going through `findOne` would pull the full `meetingInclude` — location,
-   * host, topic with its responsibles, every attendance — to read a date. The
+   * host, die Einheit mit ihrem Thema, every attendance — to read a date. The
    * song variant in `meeting-song.controller.ts` already does it this way.
    */
+  /**
+   * Der Termin, ohne die Frage „wer fragt".
+   *
+   * Für die drei Stellen, die nur wissen müssen, *dass* es ihn gibt und welchen
+   * Tag er hat. `findOne` bräuchte dafür einen Betrachter, obwohl es hier
+   * niemanden gibt, dem etwas zu zeigen wäre.
+   */
+  private async loadPlain(hauskreisId: string, id: string) {
+    const meeting = await this.prisma.meeting.findFirst({
+      where: { id, hauskreisId },
+      select: { id: true, date: true, type: true, status: true },
+    });
+
+    if (!meeting) {
+      throw new NotFoundException(`Meeting ${id} not found`);
+    }
+
+    return meeting;
+  }
+
   private async loadForSuggestions(hauskreisId: string, id: string) {
     const meeting = await this.prisma.meeting.findFirst({
       where: { id, hauskreisId },
-      select: { id: true, date: true, topicId: true },
+      select: {
+        id: true,
+        date: true,
+        topicSession: { select: { topicId: true } },
+      },
     });
 
     if (!meeting) {
@@ -584,7 +606,7 @@ export class MeetingService {
    * erste Nachricht, die viele davon überhaupt sehen.
    */
   async remove(hauskreisId: string, id: string) {
-    const meeting = await this.findOne(hauskreisId, id);
+    const meeting = await this.loadPlain(hauskreisId, id);
 
     if (meeting.type !== MeetingType.CUSTOM) {
       throw new BadRequestException(
@@ -596,7 +618,7 @@ export class MeetingService {
   }
 
   async setAttendance(hauskreisId: string, id: string, dto: SetAttendanceDto) {
-    await this.findOne(hauskreisId, id);
+    await this.loadPlain(hauskreisId, id);
     await this.assertPersonBelongsToHauskreis(hauskreisId, dto.personId);
 
     const previous = await this.prisma.meetingAttendance.findUnique({
@@ -604,18 +626,28 @@ export class MeetingService {
       select: { status: true },
     });
 
-    const attendance = await this.prisma.meetingAttendance.upsert({
-      where: { meetingId_personId: { meetingId: id, personId: dto.personId } },
-      // Answering by hand claims the row, even when an absence period wrote it.
-      // Without this a "doch, ich komme" would keep the ABSENCE marker and the
-      // next sync would feel free to delete it again.
-      update: { status: dto.status, source: AttendanceSource.SELF },
-      create: {
-        meetingId: id,
-        personId: dto.personId,
-        status: dto.status,
-        source: AttendanceSource.SELF,
-      },
+    const attendance = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.meetingAttendance.upsert({
+        where: {
+          meetingId_personId: { meetingId: id, personId: dto.personId },
+        },
+        // Answering by hand claims the row, even when an absence period wrote
+        // it. Without this a "doch, ich komme" would keep the ABSENCE marker and
+        // the next sync would feel free to delete it again.
+        update: { status: dto.status, source: AttendanceSource.SELF },
+        create: {
+          meetingId: id,
+          personId: dto.personId,
+          status: dto.status,
+          source: AttendanceSource.SELF,
+        },
+      });
+
+      // Die Anwesenheit steht mit in der Antwort des Termins — ohne diesen
+      // Griff bliebe sein ETag stehen und die Anzeige mit ihm.
+      await touchMeeting(tx, id);
+
+      return row;
     });
 
     // Only on the transition into "absent": re-saving the same answer, or
@@ -660,7 +692,7 @@ export class MeetingService {
     personId: string,
     done: boolean,
   ) {
-    const meeting = await this.findOne(hauskreisId, id);
+    const meeting = await this.loadPlain(hauskreisId, id);
 
     // Einen Actionstep abhaken, den es an einem künftigen Abend noch gar nicht
     // geben kann, ist immer ein Versehen.
@@ -674,19 +706,31 @@ export class MeetingService {
 
     const key = { meetingId_personId: { meetingId: id, personId } };
 
+    // Die Haken stehen mit in der Antwort des Termins, deshalb hier wie bei der
+    // Anwesenheit ein Griff an seine Version.
     if (!done) {
-      await this.prisma.meetingActionstepDone.deleteMany({
-        where: { meetingId: id, personId },
+      await this.prisma.$transaction(async (tx) => {
+        await tx.meetingActionstepDone.deleteMany({
+          where: { meetingId: id, personId },
+        });
+
+        await touchMeeting(tx, id);
       });
 
       return { meetingId: id, personId, done: false, doneAt: null };
     }
 
-    const row = await this.prisma.meetingActionstepDone.upsert({
-      where: key,
-      // Leer: ein zweites Antippen ist kein neues Abhaken.
-      update: {},
-      create: { meetingId: id, personId },
+    const row = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.meetingActionstepDone.upsert({
+        where: key,
+        // Leer: ein zweites Antippen ist kein neues Abhaken.
+        update: {},
+        create: { meetingId: id, personId },
+      });
+
+      await touchMeeting(tx, id);
+
+      return created;
     });
 
     return { meetingId: id, personId, done: true, doneAt: row.doneAt };
@@ -786,7 +830,6 @@ export class MeetingService {
     dto: {
       locationId?: string | null;
       hostPersonId?: string | null;
-      topicId?: string | null;
       testimonyPersonId?: string | null;
     },
   ): Promise<void> {
@@ -799,18 +842,6 @@ export class MeetingService {
         hauskreisId,
         dto.testimonyPersonId,
       );
-    }
-
-    if (dto.topicId) {
-      const topic = await this.prisma.topic.findFirst({
-        where: { id: dto.topicId, hauskreisId },
-      });
-
-      if (!topic) {
-        throw new BadRequestException(
-          `Topic ${dto.topicId} does not belong to this Hauskreis`,
-        );
-      }
     }
 
     if (dto.locationId) {
@@ -843,11 +874,41 @@ export class MeetingService {
 }
 
 /**
+ * Der Termin mit seiner Einheit in Antwortform.
+ *
+ * Der einzige Teil eines Abends, der davon abhängt, **wer** fragt: bis 18 Uhr am
+ * Termintag gehören Titel, Actionstep und Zusammenfassung denen, die sie
+ * vorbereiten. `shapeSessionForMeeting` setzt sie für alle anderen auf `null` —
+ * hier und nicht im Frontend, sonst gingen sie trotzdem über die Leitung.
+ */
+function withTopicSession<
+  T extends {
+    topicSession:
+      | (Parameters<typeof shapeSessionForMeeting>[0] & {
+          topic: Parameters<typeof shapeSessionForMeeting>[1];
+        })
+      | null;
+  },
+>(meeting: T, viewer: Viewer) {
+  return {
+    ...meeting,
+    topicSession: meeting.topicSession
+      ? shapeSessionForMeeting(
+          meeting.topicSession,
+          meeting.topicSession.topic,
+          viewer,
+        )
+      : null,
+  };
+}
+
+/**
  * Matches free text against everything an evening was written down as.
  *
- * Deliberately spread across all the text fields plus the topic's title: the
- * archive question is "wann ging es nochmal um Vergebung", and nobody
- * remembers whether that ended up in the summary, the info line or the topic.
+ * Über alle Textfelder des Abends **und** die der Einheit, die daran hing: die
+ * Archivfrage lautet „wann ging es nochmal um Vergebung", und niemand weiß
+ * hinterher, ob das in der Zusammenfassung stand, in der Info-Zeile oder im
+ * Titel des Themas.
  *
  * `contains` with `insensitive` rather than full-text search — at a few hundred
  * evenings the index would cost more to maintain than the scan costs to run,
@@ -863,10 +924,18 @@ function buildMeetingSearch(search: string | undefined) {
   return {
     OR: [
       { title: contains },
-      { summaryText: contains },
-      { actionstepText: contains },
       { infoText: contains },
-      { topic: { title: contains } },
+      {
+        topicSession: {
+          OR: [
+            { title: contains },
+            { summaryText: contains },
+            { actionstepText: contains },
+            { topic: { title: contains } },
+            { topic: { summaryText: contains } },
+          ],
+        },
+      },
     ],
   };
 }

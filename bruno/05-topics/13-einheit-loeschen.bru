@@ -1,0 +1,35 @@
+meta {
+  name: Einheit löschen
+  type: http
+  seq: 13
+}
+
+delete {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/topic-sessions/{{draftSessionId}}
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 204", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Löscht eine einzelne Einheit — **nur, solange sie noch nicht gehalten wurde**.
+  Also: an keinem Abend, an einem kommenden, oder an einem abgesagten. Dieselbe
+  Unterscheidung wie überall (`isHeld`): ein abgesagter Abend hat nicht
+  stattgefunden, auch wenn sein Datum vorbei ist.
+
+  Ein gehaltener Abend ist das Protokoll dessen, was war, und antwortet mit
+  `400`. Wer den loswerden will, löscht das ganze Thema und trifft damit eine
+  sichtbar größere Entscheidung.
+
+  Hing die Einheit an einem Termin, steht der danach wieder ohne Thema da — die
+  **Zuteilung** bleibt, die Leute sind dort weiter zuständig.
+
+  Die Mitarbeiter-Zeilen am Thema bleiben absichtlich stehen: eine Einheit zu
+  löschen ist kein Rollenwechsel. Dafür gibt es
+  `DELETE …/topics/{id}/collaborators/{personId}`.
+}

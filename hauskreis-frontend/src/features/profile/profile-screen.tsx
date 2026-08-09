@@ -156,7 +156,7 @@ function Loaded({ personId }: { personId: string }) {
         <section>
           <SectionTitle>Deine Angaben</SectionTitle>
           <Card className="space-y-4">
-            <Field label="Name">
+            <Field label="Anzeigename">
               <TextInput
                 value={name}
                 onChange={(event) => setName(event.target.value)}
@@ -164,8 +164,8 @@ function Loaded({ personId }: { personId: string }) {
             </Field>
 
             <Field
-              label="Nutzername"
-              hint="Damit meldest du dich an — die Änderung gilt sofort auch dort. Kleinbuchstaben, Ziffern, Punkt, Strich oder Unterstrich."
+              label="Anmeldename"
+              hint="Damit meldest du dich in der App an, du kannst auch die E-Mail Adresse verwenden."
             >
               <TextInput
                 value={username}
@@ -207,8 +207,7 @@ function Loaded({ personId }: { personId: string }) {
               label="Ich bin grundsätzlich dabei"
               description={
                 'Sagt kommende Abende gleich für dich zu, statt sie auf „weiß noch nicht“ ' +
-                'zu lassen. Ein Abwesenheitszeitraum sticht weiterhin, und absagen ' +
-                'kannst du jederzeit einzeln.'
+                'zu lassen - Abwesenheiten und Absagen werden berücksichtigt.'
               }
               checked={autoAttend}
               onChange={(event) => setAutoAttend(event.target.checked)}

@@ -206,6 +206,7 @@ export function InlineEdit({
         className={cn(
           'text-sm leading-relaxed whitespace-pre-line',
           value ? 'text-stone-700' : 'text-stone-400 italic',
+          className
         )}
       >
         {value ?? emptyLabel}

@@ -7,6 +7,11 @@ import type { PrayerBuddyService } from '../prayer-buddy/prayer-buddy.service';
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const NOW = utc('2026-07-29');
 
+/** Wer den Startbildschirm aufmacht. Niko ist nicht fürs Thema zugeteilt. */
+const NIKO = { personId: 'niko', isAdmin: false };
+/** Antonia schon — sie sieht den Titel auch vor dem Abend. */
+const ANTONIA = { personId: 'antonia', isAdmin: false };
+
 const nextMeeting = {
   id: 'm1',
   date: utc('2026-08-04'),
@@ -14,10 +19,36 @@ const nextMeeting = {
   title: null,
   location: { id: 'loc-chris', name: 'Bei Chris', requiresHost: true },
   host: { id: 'chris', name: 'chris' },
-  topic: {
-    id: 't1',
-    title: 'Vergebung',
-    responsibles: [{ person: { id: 'antonia', name: 'Antonia' } }],
+  topicResponsibles: [{ person: { id: 'antonia', name: 'Antonia' } }],
+  // So kommt die Einheit aus Prisma — `shapeSessionForMeeting` macht daraus
+  // das, was der Betrachter sehen darf.
+  topicSession: {
+    id: 's1',
+    topicId: 't1',
+    meetingId: 'm1',
+    title: null,
+    actionstepText: null,
+    summaryText: null,
+    createdAt: utc('2026-07-01'),
+    updatedAt: utc('2026-07-01'),
+    version: 0,
+    meeting: {
+      id: 'm1',
+      date: utc('2026-08-04'),
+      status: 'PLANNED',
+      title: null,
+      topicResponsibles: [{ personId: 'antonia' }],
+    },
+    responsibles: [],
+    topic: {
+      id: 't1',
+      title: 'Vergebung',
+      status: 'RUNNING',
+      ownerPersonId: 'antonia',
+      collaborators: [],
+      // Die Geschwister — daraus wird „Session 1 von 1".
+      sessions: [{ id: 's1', meeting: { date: utc('2026-08-04') } }],
+    },
   },
   songLeaders: [{ person: { id: 'lena', name: 'Lena' } }],
   attendances: [] as { status: string }[],
@@ -26,7 +57,7 @@ const nextMeeting = {
 const pastWithActionstep = {
   id: 'm0',
   date: utc('2026-07-28'),
-  actionstepText: 'Jeden Tag 10 Minuten still werden',
+  topicSession: { actionstepText: 'Jeden Tag 10 Minuten still werden' },
   actionstepDone: [] as { personId: string }[],
 };
 
@@ -36,7 +67,7 @@ function setup(
     actionstep?: {
       id: string;
       date: Date;
-      actionstepText: string | null;
+      topicSession: { actionstepText: string | null } | null;
       actionstepDone: { personId: string }[];
     } | null;
     buddies?: {
@@ -92,19 +123,21 @@ describe('DashboardService.build', () => {
   it('puts the whole home screen together', async () => {
     const { service } = setup();
 
-    const home = await service.build('hk-1', 'niko', { now: NOW });
+    const home = await service.build('hk-1', NIKO, { now: NOW });
 
     expect(home.nextMeeting).toMatchObject({
       id: 'm1',
       date: '2026-08-04',
       host: { name: 'chris' },
-      topic: { title: 'Vergebung' },
     });
     // Alle drei Rollen mit Personen: das Thema hat oft keinen Titel, dann ist
     // „wer bereitet vor" das Einzige, was über den Abend etwas aussagt.
-    expect(home.nextMeeting?.topic?.responsibles).toEqual([
+    expect(home.nextMeeting?.topicResponsibles).toEqual([
       { id: 'antonia', name: 'Antonia' },
     ]);
+    // Der Titel gehört bis zum Abend denen, die ihn vorbereiten — Niko ist
+    // nicht dabei, für ihn steht dort nichts. Siehe den Test darunter.
+    expect(home.nextMeeting?.topic).toBeNull();
     expect(home.nextMeeting?.songLeaders).toEqual([
       { id: 'lena', name: 'Lena' },
     ]);
@@ -125,7 +158,7 @@ describe('DashboardService.build', () => {
   it('treats a missing attendance row as undecided', async () => {
     const { service } = setup();
 
-    const home = await service.build('hk-1', 'niko', { now: NOW });
+    const home = await service.build('hk-1', NIKO, { now: NOW });
 
     // No row means nobody answered yet, which is exactly what UNKNOWN says.
     expect(home.nextMeeting?.myAttendance).toBe('UNKNOWN');
@@ -136,7 +169,7 @@ describe('DashboardService.build', () => {
       meeting: { ...nextMeeting, attendances: [{ status: 'ABSENT' }] },
     });
 
-    const home = await service.build('hk-1', 'niko', { now: NOW });
+    const home = await service.build('hk-1', NIKO, { now: NOW });
 
     expect(home.nextMeeting?.myAttendance).toBe('ABSENT');
   });
@@ -144,10 +177,22 @@ describe('DashboardService.build', () => {
   it('copes with nothing planned', async () => {
     const { service } = setup({ meeting: null });
 
-    const home = await service.build('hk-1', 'niko', { now: NOW });
+    const home = await service.build('hk-1', NIKO, { now: NOW });
 
     // A valid state, not an error — the generator may simply not have run yet.
     expect(home.nextMeeting).toBeNull();
+  });
+
+  /**
+   * Die Abendregel auf dem Startbildschirm: derselbe Aufruf, zwei Antworten.
+   * Wer vorbereitet, sieht sein Thema jederzeit.
+   */
+  it('zeigt der Zuständigen ihr Thema schon vorher', async () => {
+    const { service } = setup();
+
+    const home = await service.build('hk-1', ANTONIA, { now: NOW });
+
+    expect(home.nextMeeting?.topic).toEqual({ id: 't1', title: 'Vergebung' });
   });
 
   it('counts who ticked the actionstep off, and whether you did', async () => {
@@ -159,7 +204,7 @@ describe('DashboardService.build', () => {
       peopleCount: 9,
     });
 
-    const home = await service.build('hk-1', 'niko', { now: NOW });
+    const home = await service.build('hk-1', NIKO, { now: NOW });
 
     // „2 von 9 haben's geschafft" — und du bist eine davon.
     expect(home.openActionstep).toMatchObject({
@@ -172,7 +217,7 @@ describe('DashboardService.build', () => {
   it('shows no actionstep when the last ones had none', async () => {
     const { service } = setup({ actionstep: null });
 
-    const home = await service.build('hk-1', 'niko', { now: NOW });
+    const home = await service.build('hk-1', NIKO, { now: NOW });
 
     expect(home.openActionstep).toBeNull();
   });
@@ -187,7 +232,7 @@ describe('DashboardService.build', () => {
       },
     });
 
-    const home = await service.build('hk-1', 'niko', { now: NOW });
+    const home = await service.build('hk-1', NIKO, { now: NOW });
 
     expect(home.openActionstep).toBeNull();
   });
@@ -200,7 +245,7 @@ describe('DashboardService.build', () => {
       },
     });
 
-    const home = await service.build('hk-1', 'niko', { now: NOW });
+    const home = await service.build('hk-1', NIKO, { now: NOW });
 
     expect(home.prayerBuddies).toBeNull();
   });
@@ -213,7 +258,7 @@ describe('DashboardService.build', () => {
       ],
     });
 
-    const home = await service.build('hk-1', 'niko', { now: NOW });
+    const home = await service.build('hk-1', NIKO, { now: NOW });
 
     // Mit jemandem zusammen beten ist keine Aufgabe, die man abarbeitet — und
     // es steht schon in `prayerBuddies`. In `…/assignments` bleibt es drin.
@@ -223,7 +268,7 @@ describe('DashboardService.build', () => {
   it('asks only for that person, eight weeks out', async () => {
     const { service, findAssignments } = setup();
 
-    await service.build('hk-1', 'niko', { now: NOW });
+    await service.build('hk-1', NIKO, { now: NOW });
 
     expect(findAssignments).toHaveBeenCalledWith('hk-1', {
       from: utc('2026-07-29'),
@@ -235,12 +280,13 @@ describe('DashboardService.build', () => {
   it('uses the same actionstep rule as the reminder', async () => {
     const { service, findFirst } = setup();
 
-    await service.build('hk-1', 'niko', { now: NOW });
+    await service.build('hk-1', NIKO, { now: NOW });
 
     // Most recent past evening that has one — not simply the last evening.
     const where = findFirst.mock.calls[1][0].where;
     expect(where.date).toEqual({ lt: utc('2026-07-29') });
-    expect(where.actionstepText).toEqual({ not: null });
+    // Der Actionstep steht an der Einheit, die an dem Abend hing.
+    expect(where.topicSession).toEqual({ actionstepText: { not: null } });
     expect(findFirst.mock.calls[1][0].orderBy).toEqual({ date: 'desc' });
   });
 });

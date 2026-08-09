@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
-import { ROLE_ICON, RoleChip } from '@/components/domain/role-badge';
+import { ROLE_ICON, ROLE_STYLE, RoleChip } from '@/components/domain/role-badge';
 import {
   useHome,
   useMe,
@@ -283,6 +283,7 @@ function RoleGroup({
 
 function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
   const Icon = ROLE_ICON[role.role];
+  const Style = ROLE_STYLE[role.role];
 
   const content = (
     <span className="flex items-center justify-between gap-3">
@@ -290,12 +291,10 @@ function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
         <span
           className={cn(
             'flex h-9 w-9 shrink-0 items-center justify-center rounded-md',
-            urgent
-              ? 'bg-terracotta-100 text-terracotta-700'
-              : 'bg-terracotta-50 text-terracotta-600',
+            Style
           )}
         >
-          <Icon size={15} />
+          <Icon size={20} />
         </span>
         <span className="min-w-0">
           <span className="block truncate text-sm font-bold text-stone-800">
@@ -355,7 +354,7 @@ function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
           {formatDay(meeting.date)} · {formatRelativeDay(meeting.date)}
         </span>
         <h3 className="mt-0.5 font-serif text-lg font-bold text-stone-900">
-          {meetingHeadline({ ...meeting, topic: meeting.topic })}
+          {meetingHeadline(meeting)}
         </h3>
       </Link>
 
@@ -396,7 +395,7 @@ function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
           }
         />
         {meeting.hasTopicSlot && (
-          <RoleChip kind="TOPIC" people={meeting.topic?.responsibles ?? []} />
+          <RoleChip kind="TOPIC" people={meeting.topicResponsibles} />
         )}
         {meeting.hasSongSlot && (
           <RoleChip kind="SONG" people={meeting.songLeaders} />

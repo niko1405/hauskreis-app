@@ -11,6 +11,7 @@
 @theme {
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-instrument), ui-serif, Georgia, serif;
+  --font-roboto-slab: var(--font-roboto-slab), "Roboto Slab", serif;
 
   /* Terracotta — die tragende Farbe: Aktion, Auswahl, aktiver Tab */
   --color-terracotta-50: #f9ebe5;

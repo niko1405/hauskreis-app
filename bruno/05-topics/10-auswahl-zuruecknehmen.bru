@@ -1,0 +1,25 @@
+meta {
+  name: Auswahl zurücknehmen
+  type: http
+  seq: 10
+}
+
+delete {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/topic-session
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 204", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Die Einheit wird wieder ein Entwurf und behält alles, was schon darin steht.
+  Gelöscht wird nichts — das ist die Regel des ganzen Modells.
+
+  Nur solange der Abend bevorsteht: danach ist die Einheit das Protokoll eines
+  Abends, der stattgefunden hat, und `400` sagt genau das.
+}

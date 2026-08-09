@@ -11,25 +11,23 @@ import { RoleReleaseService } from './role-release.service';
 import { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module';
 import { NotificationModule } from '../notification/notification.module';
-import { PersonModule } from '../person/person.module';
 import { AttendanceModule } from '../attendance/attendance.module';
-import { EditRightsModule } from './edit-rights.module';
+import { TopicLinkModule } from '../topic/topic-link.module';
 
 @Module({
   // Die ersten beiden Importe sind der Sinn des Modul-Schnitts: das Ranking
   // liegt in RoleSuggestionModule, die Push-Verkabelung in NotificationModule,
-  // dieses Modul besitzt beides nicht. PersonModule kam für den
-  // Actionstep-Haken dazu — wer abhakt, steht im Token und nicht im Body.
+  // dieses Modul besitzt beides nicht.
   // AttendanceModule: ein neuer Abend braucht die Zusagen derer, die
   // grundsätzlich dabei sind.
-  // EditRightsModule: Zusammenfassung und Actionstep trägt ein, wer das Thema
-  // vorbereitet — dieselbe Regel wie bei Themenname und Liedauswahl.
+  // TopicLinkModule: wer absagt oder den Baustein „Thema" abschaltet, löst die
+  // Einheit vom Abend. Ein Modul ohne Importe, damit daraus keine Kante zum
+  // TopicModule wird — Themen wissen von Terminen, Termine nicht von Themen.
   imports: [
     RoleSuggestionModule,
     NotificationModule,
-    PersonModule,
     AttendanceModule,
-    EditRightsModule,
+    TopicLinkModule,
   ],
   controllers: [MeetingController],
   providers: [

@@ -447,12 +447,23 @@ export class RoleSuggestionService {
   }
 
   /**
-   * Topic assignments, one event per (person, evening the topic is on).
+   * Themen-Dienste, ein Ereignis je (Person, Abend).
    *
-   * They all carry the topic id as `slotKey`, which is what collapses a topic
-   * running over three evenings into a single slot — CLAUDE.md §5. The
-   * per-evening granularity still matters: only that tells whether someone is
-   * busy on the exact evening being planned.
+   * Gelesen wird die **Zuteilung am Termin**, nicht wer an einer Einheit steht.
+   * Das ist seit dem Einheiten-Modell zweierlei, und die Fairness meint das
+   * erste: „wer war dran" heißt „wer war eingeteilt". Wer eingeteilt war und
+   * hinterher nichts eingetragen hat, war trotzdem dran — und wer für einen
+   * kommenden Abend eingeteilt ist, hat schon etwas zu tun, obwohl es dort noch
+   * gar keine Einheit gibt. Über die Einheiten zu gehen hieße, die Hälfte der
+   * Auslastung nicht zu sehen.
+   *
+   * `slotKey` ist die Id des **Themas**, an dem der Abend hängt — das ist es,
+   * was ein Thema über drei Dienstage zu einem einzigen Dienst zusammenfasst
+   * (CLAUDE.md §5). Wo noch nichts gewählt ist, tritt die Termin-Id an ihre
+   * Stelle: ein Abend ohne Thema ist für sich genommen ein Dienst.
+   *
+   * Abende ohne Thema-Baustein bleiben draußen. Ein Geburtstagsabend soll in der
+   * Fairness-Rechnung des Themas nicht mitzählen.
    */
   private async collectTopicEvents(
     hauskreisId: string,
@@ -462,22 +473,26 @@ export class RoleSuggestionService {
       where: {
         hauskreisId,
         status: { not: MeetingStatus.CANCELLED },
-        topicId: { not: null },
-        ...(excludeTopicId ? { NOT: { topicId: excludeTopicId } } : {}),
+        hasTopicSlot: true,
+        topicResponsibles: { some: {} },
+        ...(excludeTopicId
+          ? { NOT: { topicSession: { topicId: excludeTopicId } } }
+          : {}),
       },
       select: {
+        id: true,
         date: true,
-        topicId: true,
-        topic: { select: { responsibles: { select: { personId: true } } } },
+        topicResponsibles: { select: { personId: true } },
+        topicSession: { select: { topicId: true } },
       },
     });
 
     return meetings.flatMap((meeting) =>
-      (meeting.topic?.responsibles ?? []).map((responsible) => ({
+      meeting.topicResponsibles.map((responsible) => ({
         personId: responsible.personId,
         role: AssignmentRole.TOPIC,
         date: meeting.date,
-        slotKey: meeting.topicId as string,
+        slotKey: meeting.topicSession?.topicId ?? meeting.id,
       })),
     );
   }

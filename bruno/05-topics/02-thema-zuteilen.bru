@@ -1,0 +1,42 @@
+meta {
+  name: Thema zuteilen
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/topic-responsibles
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "personIds": ["{{myPersonId}}"]
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("liefert die neue Liste", function () {
+    expect(res.body.responsibles).to.have.lengthOf(1);
+  });
+}
+
+docs {
+  Der **erste** von zwei Schritten: an diesem Abend bist du dran. Womit, steht
+  danach immer noch offen — genau dieser Zwischenzustand fehlte früher, weil
+  eine Zuteilung sofort ein leeres Thema anlegte.
+
+  Ohne Vorbedingung, wie bei der Musik. Eine leere Liste ist gültig und heißt
+  „noch kein Zuständiger"; steht danach niemand mehr da, der zum gewählten
+  Thema gehört, löst der Server die Einheit vom Abend — sie bleibt als Entwurf
+  erhalten. Bei einem vergangenen Abend passiert das nicht: was war, war.
+}

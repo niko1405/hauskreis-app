@@ -68,17 +68,26 @@ describe('MeetingService.findAll for the archive', () => {
 
     await service.findAll('hk-1', { ...query, search: 'Vergebung' });
 
-    // Nobody remembers whether it ended up in the summary, the info line or
-    // the topic title, so the search does not ask them to.
-    const fields = findMany.mock.calls[0][0].where.OR.map(
+    // Niemand weiß hinterher, ob es in der Zusammenfassung stand, in der
+    // Info-Zeile oder im Titel des Themas — also fragt die Suche auch nicht
+    // danach. Zusammenfassung und Actionstep hängen inzwischen an der Einheit,
+    // deshalb der zweite Kranz darunter.
+    const where = findMany.mock.calls[0][0].where;
+    const fields = where.OR.map(
       (clause: Record<string, unknown>) => Object.keys(clause)[0],
     );
 
-    expect(fields).toEqual([
+    expect(fields).toEqual(['title', 'infoText', 'topicSession']);
+
+    const inSession = where.OR[2].topicSession.OR.map(
+      (clause: Record<string, unknown>) => Object.keys(clause)[0],
+    );
+
+    expect(inSession).toEqual([
       'title',
       'summaryText',
       'actionstepText',
-      'infoText',
+      'topic',
       'topic',
     ]);
   });

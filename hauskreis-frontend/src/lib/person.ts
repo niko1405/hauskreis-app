@@ -54,3 +54,17 @@ export function displayName(
 export function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] ?? name;
 }
+
+/**
+ * „Antonia und Reini" — eine Aufzählung, wie man sie sagen würde.
+ *
+ * Vornamen, weil die Gruppe neun Leute groß ist und niemand dort mit Nachnamen
+ * angesprochen wird. Das letzte Komma wird zu einem „und": „Antonia, Reini und
+ * Lena" liest sich als Satz, „Antonia, Reini, Lena" als Liste.
+ */
+export function namesOf(people: readonly PersonRef[]): string {
+  const names = people.map((person) => firstName(person.name));
+  if (names.length <= 1) return names[0] ?? '';
+
+  return `${names.slice(0, -1).join(', ')} und ${names.at(-1)}`;
+}

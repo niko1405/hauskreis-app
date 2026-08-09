@@ -4,6 +4,7 @@ export * from './use-hk';
 export * from './use-locations';
 export * from './use-me';
 export * from './use-meeting-songs';
+export * from './use-meeting-topics';
 export * from './use-meetings';
 export * from './use-paginated';
 export * from './use-people';

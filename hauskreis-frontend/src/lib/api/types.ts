@@ -96,7 +96,8 @@ export type Invitation = S['InvitationListResponseDto'][number];
 export type MeetingType = Meeting['type'];
 export type MeetingStatus = Meeting['status'];
 export type AttendanceStatus = Meeting['attendances'][number]['status'];
-export type MeetingTopic = NonNullable<Meeting['topic']>;
+/** Die Einheit am Abend — dort sitzt die Nachbereitung. */
+export type MeetingTopicSession = NonNullable<Meeting['topicSession']>;
 
 export type SetAttendanceInput = S['SetAttendanceDto'];
 export type Attendance = S['AttendanceResponseDto'];
@@ -126,8 +127,29 @@ export type UpcomingCommitment = SuggestionFacts['upcomingCommitments'][number];
 export type Topic = S['TopicResponseDto'];
 export type TopicListItem = S['TopicPageResponseDto']['items'][number];
 export type TopicStatus = Topic['status'];
-export type CreateTopicInput = S['CreateTopicDto'];
 export type UpdateTopicInput = S['UpdateTopicDto'];
+
+/** Ein Abend eines Themas — hier sitzt der Inhalt, nicht am Termin. */
+export type TopicSession = S['TopicSessionResponseDto'];
+/** Dieselbe Einheit unter ihrem Thema: ohne die Kopfzeile, die darüber steht. */
+export type TopicSessionInTopic = Topic['sessions'][number];
+/** Und unter ihrem Termin: ohne den Termin, an dem sie ohnehin hängt. */
+export type TopicSessionInMeeting = NonNullable<Meeting['topicSession']>;
+export type UpdateTopicSessionInput = S['UpdateTopicSessionDto'];
+/** Eine Einheit anlegen, ohne dass ein Abend dafür feststeht. Titel ist Pflicht. */
+export type CreateTopicSessionInput = S['CreateTopicSessionDto'];
+/** Die drei Wege aus Spec §3: neues Thema, eigenes fortsetzen, Entwurf zurück. */
+export type ChooseTopicSessionInput = S['ChooseTopicSessionDto'];
+export type TopicChoices = S['TopicChoicesResponseDto'];
+export type TopicChoiceTopic = TopicChoices['topics'][number];
+/** Offene Einheiten eines Themas, gebündelt — so, wie sie angezeigt werden. */
+export type TopicChoiceGroup = TopicChoices['openSessions'][number];
+/**
+ * Eine offene Einheit. Trägt `meeting`, wenn sie gerade an einem **anderen**
+ * kommenden Abend hängt — dann kostet das Aufnehmen jenen Abend seine Auswahl.
+ */
+export type OpenTopicSession = TopicChoiceGroup['sessions'][number];
+export type TopicResponsibles = S['TopicResponsiblesResponseDto'];
 
 // ── Lieder ──────────────────────────────────────────────────────────────────
 
@@ -189,5 +211,4 @@ export type DeliveryResult = S['DeliveryResultResponseDto'];
 export type GenerationResult = S['GenerationResultResponseDto'];
 export type ReminderRunResult = S['ReminderRunResultResponseDto'];
 export type ActionstepRunResult = S['ActionstepRunResultResponseDto'];
-export type CarryOverResult = S['CarryOverResultResponseDto'];
 export type SyncResult = S['SyncResultResponseDto'];

@@ -117,8 +117,13 @@ enum NotificationType {
   @@map("notification_type")
 }
 
+/// Ob die Gruppe mit einem Thema durch ist.
+///
+/// Belegt keinen Abend mehr von selbst vor — das tat einmal ein nächtlicher Lauf
+/// und stand damit dem „wer zuerst wählt, wird Owner" im Weg. Der Status sortiert
+/// jetzt die Auswahl: ein laufendes eigenes Thema steht ganz oben, wenn jemand
+/// für einen Abend zugeteilt ist und sich entscheidet.
 enum TopicStatus {
-  /// Carries over to the next meeting on its own.
   RUNNING
   COMPLETED
 
@@ -168,8 +173,8 @@ model Hauskreis {
 }
 
 model Person {
-  id              String    @id @default(uuid()) @db.Uuid
-  hauskreisId     String    @map("hauskreis_id") @db.Uuid
+  id              String     @id @default(uuid()) @db.Uuid
+  hauskreisId     String     @map("hauskreis_id") @db.Uuid
   /// **Global** eindeutig, und das ist die Regel, nicht ein Hindernis: ein
   /// Mensch gehört zu genau einem Hauskreis. Ein Wechsel ist ein Umzug.
   ///
@@ -177,7 +182,7 @@ model Person {
   /// — die Zeile bleibt, damit vergangene Abende weiter zeigen, wer gehostet
   /// hat. Eine offene Einladung hat aus demselben Grund noch keine Id: sie
   /// nimmt niemandem seine Mitgliedschaft weg, bis sie angenommen wird.
-  keycloakUserId  String?   @unique @map("keycloak_user_id")
+  keycloakUserId  String?    @unique @map("keycloak_user_id")
   /// Der Name, mit dem man sich anmeldet — derselbe wie in Keycloak.
   ///
   /// **Global** eindeutig, weil Keycloak es realmweit erzwingt: zwei Wahrheiten
@@ -187,7 +192,7 @@ model Person {
   ///
   /// Getrennt von `name`, weil Keycloak auf Kleinschreibung normalisiert —
   /// „niko" stünde sonst auf jeder Karte und in jeder Benachrichtigung.
-  username        String?   @unique
+  username        String?    @unique
   /// Der **Anzeigename**: was auf Karten, Avataren und in „Du bist dran" steht.
   name            String
   /// Wann das Profilbild zuletzt geschrieben wurde — `null` heißt: keins, dann
@@ -197,54 +202,64 @@ model Person {
   /// heißt immer `{id}.webp`, und ein Name, der sich nie ändert, wäre für den
   /// Browser für immer dasselbe Bild. So hängt er als Query-Parameter an der
   /// URL und das Zwischenspeichern erledigt sich von selbst.
-  photoUpdatedAt  DateTime? @map("photo_updated_at")
+  photoUpdatedAt  DateTime?  @map("photo_updated_at")
   email           String
   /// Gilt nur hier. Siehe `PersonRole`.
   role            PersonRole @default(MEMBER)
-  birthdate       DateTime? @db.Date
-  playsInstrument Boolean   @default(false) @map("plays_instrument")
-  canHost         Boolean   @default(true) @map("can_host")
+  birthdate       DateTime?  @db.Date
+  playsInstrument Boolean    @default(false) @map("plays_instrument")
+  canHost         Boolean    @default(true) @map("can_host")
   /// „Ich bin grundsätzlich dabei." Sagt kommende Abende im Voraus zu, solange
   /// nichts anderes dasteht — ein Abwesenheitszeitraum sticht weiter, eine
   /// Antwort von Hand erst recht. Vorgabe `false`: eine Zusage, die man nie
   /// gegeben hat, ist keine.
-  autoAttend      Boolean   @default(false) @map("auto_attend")
+  autoAttend      Boolean    @default(false) @map("auto_attend")
   /// Where this person hosts. Null for anyone who brings no home into the
   /// rotation — they can still take every other role.
   ///
   /// Only ever answers "who lives here *now*". Past evenings are attributed via
   /// `meeting.location_id`, so moving house does not rewrite history.
-  locationId      String?   @map("location_id") @db.Uuid
-  active          Boolean   @default(true)
+  locationId      String?    @map("location_id") @db.Uuid
+  active          Boolean    @default(true)
   /// Wann sich diese Person zum ersten Mal angemeldet hat.
   ///
   /// `null` heißt „eingeladen, aber noch nicht da". Die `keycloakUserId` taugt
   /// dafür nicht: die steht schon ab dem Einladen drin, weil das Konto vor der
   /// Person angelegt wird. Gesetzt wird es in `resolveForUser` — der einzige
   /// Moment, in dem feststeht, dass wirklich jemand vor dem Bildschirm saß.
-  acceptedAt      DateTime? @map("accepted_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
+  acceptedAt      DateTime?  @map("accepted_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
   /// Optimistic locking counter, see docs/conditional requests.
-  version         Int       @default(0)
+  version         Int        @default(0)
 
-  hauskreis             Hauskreis                @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
-  location              Location?                @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  hostedMeetings        Meeting[]                @relation("MeetingHost")
-  testimonies           Meeting[]                @relation("MeetingTestimony")
-  cancelledMeetings     Meeting[]                @relation("MeetingCanceller")
-  songsCreated          Song[]                   @relation("SongCreator")
-  songLeaderships       MeetingSongLeader[]      @relation("SongLeader")
-  songsSuggested        MeetingSong[]            @relation("SongSuggester")
-  topicResponsibilities TopicResponsible[]
-  prayerBuddyGroups     PrayerBuddyGroupMember[] @relation("PrayerBuddy")
-  cycleConfigEdits      PrayerBuddyCycleConfig[] @relation("CycleConfigEditor")
-  attendances           MeetingAttendance[]
-  actionstepsDone       MeetingActionstepDone[]  @relation("ActionstepDoneBy")
-  pushSubscriptions     PushSubscription[]
-  notifications         NotificationLog[]
-  notificationsAbout    NotificationLog[]        @relation("NotificationSubject")
-  notificationSettings  NotificationPreference[]
-  absences              AbsencePeriod[]
+  hauskreis            Hauskreis                 @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  location             Location?                 @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  hostedMeetings       Meeting[]                 @relation("MeetingHost")
+  testimonies          Meeting[]                 @relation("MeetingTestimony")
+  cancelledMeetings    Meeting[]                 @relation("MeetingCanceller")
+  songsCreated         Song[]                    @relation("SongCreator")
+  songLeaderships      MeetingSongLeader[]       @relation("SongLeader")
+  songsSuggested       MeetingSong[]             @relation("SongSuggester")
+  /// Die Rolle „Thema" an einem einzelnen Abend — das Gegenstück zu
+  /// `songLeaderships`. Zuständigkeit für einen Abend, nicht für ein Thema.
+  topicDuties          MeetingTopicResponsible[]
+  /// Wer eine einzelne Einheit gehalten hat. Historisch und rückwirkend
+  /// unantastbar (Spec 8.5): auch wer später als Collaborator entfernt wird,
+  /// bleibt hier stehen — er war ja dabei.
+  topicSessionsHeld    TopicSessionResponsible[]
+  /// Themen, die dieser Person gehören. Wer als Erster wählt, wird Owner.
+  topicsOwned          Topic[]                   @relation("TopicOwner")
+  /// Themen, an denen die Person mitarbeiten darf. Ein Recht, keine Pflicht.
+  topicCollaborations  TopicCollaborator[]
+  prayerBuddyGroups    PrayerBuddyGroupMember[]  @relation("PrayerBuddy")
+  cycleConfigEdits     PrayerBuddyCycleConfig[]  @relation("CycleConfigEditor")
+  attendances          MeetingAttendance[]
+  actionstepsDone      MeetingActionstepDone[]   @relation("ActionstepDoneBy")
+  pushSubscriptions    PushSubscription[]
+  notifications        NotificationLog[]
+  notificationsAbout   NotificationLog[]         @relation("NotificationSubject")
+  notificationSettings NotificationPreference[]
+  absences             AbsencePeriod[]
 
   @@unique([hauskreisId, email])
   @@index([hauskreisId])
@@ -317,9 +332,9 @@ model Location {
 }
 
 model Meeting {
-  id             String        @id @default(uuid()) @db.Uuid
-  hauskreisId    String        @map("hauskreis_id") @db.Uuid
-  date           DateTime      @db.Date
+  id                  String               @id @default(uuid()) @db.Uuid
+  hauskreisId         String               @map("hauskreis_id") @db.Uuid
+  date                DateTime             @db.Date
   /// Letzter Tag eines mehrtägigen Termins — eine Freizeit von Freitag bis
   /// Sonntag ist **ein** Abend im Plan, kein Stapel aus dreien. `null` heißt:
   /// ein Tag, der Normalfall.
@@ -328,9 +343,9 @@ model Meeting {
   /// eine Zeile je Termin. Dass in den Zeitraum kein zweiter fällt, prüft
   /// `MeetingService`, nicht die Datenbank — ein Ausschluss über Bereiche
   /// bräuchte eine Exclusion Constraint, die Prisma nicht ausdrücken kann.
-  endDate        DateTime?     @map("end_date") @db.Date
-  type           MeetingType   @default(STANDARD)
-  status         MeetingStatus @default(PLANNED)
+  endDate             DateTime?            @map("end_date") @db.Date
+  type                MeetingType          @default(STANDARD)
+  status              MeetingStatus        @default(PLANNED)
   /// Woraus der Abend besteht. Die drei Schalter sind das, was der **Typ**
   /// vorher nur behauptet hat: geprüft wurde nie etwas, man konnte einem
   /// Lobpreisabend ein Thema geben und einem Geburtstag ein Testimony.
@@ -348,55 +363,61 @@ model Meeting {
   /// Einen Gastgeber-Schalter gibt es bewusst nicht: man trifft sich immer
   /// irgendwo. Dass niemand eingetragen ist (`hostPersonId = null`, Treffen im
   /// Schlosspark) ist davon unberührt und ein gültiger Zustand.
-  hasTopicSlot     Boolean @default(true) @map("has_topic_slot")
-  hasSongSlot      Boolean @default(true) @map("has_song_slot")
-  hasTestimonySlot Boolean @default(false) @map("has_testimony_slot")
-  locationId     String?       @map("location_id") @db.Uuid
-  hostPersonId   String?       @map("host_person_id") @db.Uuid
-  /// Nullable and shared: a topic can span several meetings, and a
-  /// LOBPREIS_GEBET evening has none at all.
-  topicId        String?       @map("topic_id") @db.Uuid
+  hasTopicSlot        Boolean              @default(true) @map("has_topic_slot")
+  hasSongSlot         Boolean              @default(true) @map("has_song_slot")
+  hasTestimonySlot    Boolean              @default(false) @map("has_testimony_slot")
+  locationId          String?              @map("location_id") @db.Uuid
+  hostPersonId        String?              @map("host_person_id") @db.Uuid
   /// Wie der Abend überschrieben ist — „Geburtstag von Mira", aber auch ein
   /// eigener Name für einen ganz normalen Dienstag. Gilt für jede Terminart:
   /// bleibt er leer, steht dort der Titel des Themas und sonst die Art des
   /// Termins (siehe `meetingHeadline` im Frontend).
-  title          String?
+  title               String?
   /// Wer an diesem Abend sein Testimony erzählt. Nur bei `hasTestimonySlot`.
   ///
   /// Eine Person und kein Text: ein Testimony ist nichts, was man vorher
   /// aufschreibt, sondern jemand, der davon erzählt. Als Textfeld stand es
   /// leer da und niemand wusste, wer es füllen sollte.
-  testimonyPersonId String?    @map("testimony_person_id") @db.Uuid
-  actionstepText String?       @map("actionstep_text")
-  summaryText    String?       @map("summary_text")
-  infoText       String?       @map("info_text")
+  testimonyPersonId   String?              @map("testimony_person_id") @db.Uuid
+  /// Was **über** den Abend dasteht, unabhängig vom Thema. Zusammenfassung und
+  /// Actionstep standen bis eben auch hier und sind an die Einheit gewandert
+  /// (`TopicSession`): sie gehören zu dem, was besprochen wurde, und sollen eine
+  /// Umverteilung der Rolle überleben.
+  infoText            String?              @map("info_text")
   /// Wann der Abend abgesagt wurde. `status` allein sagt nur *dass*, und ein
   /// abgesagter Termin, an dem nichts weiter steht, wirft genau die Fragen auf,
   /// die er beantworten sollte.
-  cancelledAt    DateTime?     @map("cancelled_at")
+  cancelledAt         DateTime?            @map("cancelled_at")
   /// Wer abgesagt hat. `null` bei `ALL_DECLINED` — dann war es niemand.
-  cancelledByPersonId String?  @map("cancelled_by_person_id") @db.Uuid
+  cancelledByPersonId String?              @map("cancelled_by_person_id") @db.Uuid
   /// Nicht bloß Buchhaltung: **nur eine automatische Absage wird auch
   /// automatisch zurückgenommen**, sobald wieder jemand zusagt. Eine von Hand
   /// abgesagte bleibt abgesagt, bis ein Mensch etwas anderes sagt.
-  cancelSource   MeetingCancelSource? @map("cancel_source")
-  cancelReason   String?       @map("cancel_reason")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  cancelSource        MeetingCancelSource? @map("cancel_source")
+  cancelReason        String?              @map("cancel_reason")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
   /// Optimistic locking counter, see docs/conditional requests.
-  version        Int           @default(0)
+  version             Int                  @default(0)
 
-  hauskreis      Hauskreis               @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
-  location       Location?               @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  host           Person?                 @relation("MeetingHost", fields: [hostPersonId], references: [id], onDelete: SetNull)
-  testimonyPerson Person?                @relation("MeetingTestimony", fields: [testimonyPersonId], references: [id], onDelete: SetNull)
-  cancelledBy    Person?                 @relation("MeetingCanceller", fields: [cancelledByPersonId], references: [id], onDelete: SetNull)
-  topic          Topic?                  @relation(fields: [topicId], references: [id], onDelete: SetNull)
-  attendances    MeetingAttendance[]
-  songLeaders    MeetingSongLeader[]
-  songs          MeetingSong[]
-  actionstepDone MeetingActionstepDone[]
-  notifications  NotificationLog[]
+  hauskreis         Hauskreis                 @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  location          Location?                 @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  host              Person?                   @relation("MeetingHost", fields: [hostPersonId], references: [id], onDelete: SetNull)
+  testimonyPerson   Person?                   @relation("MeetingTestimony", fields: [testimonyPersonId], references: [id], onDelete: SetNull)
+  cancelledBy       Person?                   @relation("MeetingCanceller", fields: [cancelledByPersonId], references: [id], onDelete: SetNull)
+  /// Wer an diesem Abend für das Thema zuständig ist. Die **Zuteilung** — von
+  /// der Auswahl darunter getrennt: zugeteilt sein heißt noch nicht, schon
+  /// gewählt zu haben (Spec §2, Zustand 3).
+  topicResponsibles MeetingTopicResponsible[]
+  /// Die gewählte Einheit. Höchstens eine, erzwungen über `@unique` drüben —
+  /// das ist zugleich die Absicherung dagegen, dass zwei Zugeteilte im selben
+  /// Moment wählen.
+  topicSession      TopicSession?
+  attendances       MeetingAttendance[]
+  songLeaders       MeetingSongLeader[]
+  songs             MeetingSong[]
+  actionstepDone    MeetingActionstepDone[]
+  notifications     NotificationLog[]
 
   /// One meeting per date per group — this is what makes the generator idempotent.
   @@unique([hauskreisId, date])
@@ -404,31 +425,103 @@ model Meeting {
   @@map("meeting")
 }
 
-/// A subject the group works through. Deliberately *not* tied one-to-one to a
-/// meeting: a topic may run over several evenings, and while it is RUNNING the
-/// next meeting is prefilled with it.
+/// Ein Stoff, den die Gruppe durcharbeitet — bewusst **nicht** an einen Abend
+/// gebunden. Ein Thema kann sich über mehrere Dienstage ziehen; jeder einzelne
+/// davon ist eine `TopicSession`.
+///
+/// Der Titel ist optional, weil sich nicht jede:r vorab auf einen festlegt, und
+/// `summaryText` ist der Überblick über *alle* Einheiten — die Nachbereitung des
+/// einzelnen Abends steht an der Einheit.
 model Topic {
-  id          String      @id @default(uuid()) @db.Uuid
-  hauskreisId String      @map("hauskreis_id") @db.Uuid
+  id            String      @id @default(uuid()) @db.Uuid
+  hauskreisId   String      @map("hauskreis_id") @db.Uuid
   /// Optional — not everyone settles on a title in advance.
-  title       String?
-  status      TopicStatus @default(RUNNING)
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  title         String?
+  /// Der Bogen über alle Einheiten. Was an *einem* Abend besprochen wurde, steht
+  /// in `TopicSession.summaryText`.
+  summaryText   String?     @map("summary_text")
+  status        TopicStatus @default(RUNNING)
+  /// Wem das Thema gehört: wer als Erster eine Einheit dafür gewählt hat, nicht
+  /// wer zuerst der Rolle zugeteilt wurde (Spec §3).
+  ///
+  /// Nullable aus zwei Gründen: Themen aus der Zeit vor diesem Modell haben
+  /// keinen, und wer den Hauskreis verlässt, hinterlässt sein Thema statt es
+  /// mitzunehmen (`onDelete: SetNull`). Ein Thema ohne Owner und ohne
+  /// Collaborator fällt in den dritten Zweig der Hausregel aus `edit-rights.ts`:
+  /// dann darf jede:r.
+  ownerPersonId String?     @map("owner_person_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
   /// Optimistic locking counter, see docs/conditional requests.
-  version     Int         @default(0)
+  version       Int         @default(0)
 
-  hauskreis    Hauskreis          @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
-  responsibles TopicResponsible[]
-  meetings     Meeting[]
+  hauskreis     Hauskreis           @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  owner         Person?             @relation("TopicOwner", fields: [ownerPersonId], references: [id], onDelete: SetNull)
+  collaborators TopicCollaborator[]
+  sessions      TopicSession[]
 
   @@index([hauskreisId, status])
   @@map("topic")
 }
 
-/// Who prepares a topic — one or two people. A join table rather than two
-/// nullable columns, so a third would not need a migration.
-model TopicResponsible {
+/// Ein Abend eines Themas.
+///
+/// Der Kern des Modells: die Einheit trägt den Inhalt, nicht der Termin. Damit
+/// überlebt eine Vorbereitung jeden Rollenwechsel — entkoppelt wird sie, gelöscht
+/// nie (Spec §4).
+model TopicSession {
+  id             String   @id @default(uuid()) @db.Uuid
+  topicId        String   @map("topic_id") @db.Uuid
+  /// `null` heißt **unfertig**: vorbereitet, aber (noch) an keinem Abend.
+  ///
+  /// `@unique` trägt hier zwei Lasten. Fachlich: an einem Abend hängt höchstens
+  /// eine Einheit. Technisch: es ist die atomare Absicherung dafür, dass von
+  /// zwei gleichzeitig Zugeteilten nur eine:r wählt — der zweite Schreibvorgang
+  /// läuft in den Konflikt statt in eine zweite Einheit. Postgres zählt `NULL`
+  /// als verschieden, unfertige Einheiten stören sich also nicht.
+  meetingId      String?  @unique @map("meeting_id") @db.Uuid
+  /// Der Titel dieses Abends innerhalb des Themas („Teil 2: Was Petrus tat").
+  title          String?
+  actionstepText String?  @map("actionstep_text")
+  summaryText    String?  @map("summary_text")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  /// Optimistic locking counter, see docs/conditional requests.
+  version        Int      @default(0)
+
+  topic        Topic                     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  meeting      Meeting?                  @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  responsibles TopicSessionResponsible[]
+
+  @@index([topicId])
+  @@map("topic_session")
+}
+
+/// Wer diese Einheit hält oder gehalten hat.
+///
+/// Eine historische Tatsache, kein Recht: das Bearbeitungsrecht hängt am Thema
+/// (`TopicCollaborator`). Wird jemand dort entfernt, bleiben diese Zeilen stehen
+/// — „wer war damals dabei" wird nicht rückwirkend gelöscht (Spec 8.5).
+model TopicSessionResponsible {
+  sessionId String @map("session_id") @db.Uuid
+  personId  String @map("person_id") @db.Uuid
+
+  session TopicSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  person  Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, personId])
+  @@index([personId])
+  @@map("topic_session_responsible")
+}
+
+/// Wer am Thema mitarbeiten darf — das Bearbeitungsrecht, thema-weit.
+///
+/// Gespeichert und nicht aus den Einheiten abgeleitet: die Ableitung aus Spec 8.4
+/// ist „alle Verantwortlichen aller Einheiten **minus** die vom Owner Entfernten",
+/// und für dieses Minus bräuchte es ohnehin eine Tabelle. Dann lieber die Menge
+/// selbst. Eingetragen wird automatisch beim Wählen einer Einheit, entfernen darf
+/// nur der Owner.
+model TopicCollaborator {
   topicId  String @map("topic_id") @db.Uuid
   personId String @map("person_id") @db.Uuid
 
@@ -437,7 +530,26 @@ model TopicResponsible {
 
   @@id([topicId, personId])
   @@index([personId])
-  @@map("topic_responsible")
+  @@map("topic_collaborator")
+}
+
+/// Wer an **diesem Abend** für das Thema zuständig ist — der Zwilling von
+/// `MeetingSongLeader`.
+///
+/// Bis eben gab es diese Tabelle nicht: Zuständigkeit hing am Thema, und damit
+/// wechselte ein Rollenwechsel rückwirkend die Zuständigen jedes Abends, an dem
+/// das Thema je dran war. Jetzt ist Thema die vierte Rolle mit derselben Mechanik
+/// wie die anderen drei, und die Zuteilung ist von der Auswahl getrennt.
+model MeetingTopicResponsible {
+  meetingId String @map("meeting_id") @db.Uuid
+  personId  String @map("person_id") @db.Uuid
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([meetingId, personId])
+  @@index([personId])
+  @@map("meeting_topic_responsible")
 }
 
 /// A song the group knows. The database grows by itself: whatever gets

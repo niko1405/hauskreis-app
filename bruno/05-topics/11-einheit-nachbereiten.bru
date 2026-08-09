@@ -1,0 +1,44 @@
+meta {
+  name: Einheit nachbereiten
+  type: http
+  seq: 11
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/topic-sessions/{{sessionId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{sessionEtag}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "summaryText": "Worum es an dem Abend ging.",
+    "actionstepText": "Einmal diese Woche jemandem danken."
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("sessionEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Zusammenfassung und Actionstep hängen an der **Einheit**, nicht mehr am
+  Termin: so überleben sie einen Rollenwechsel.
+
+  Schreiben darf, wer zum Thema gehört — und zwar an **jeder** Einheit davon,
+  auch der, bei der man selbst nicht dabei war. Ein Thema ist eine gemeinsame
+  Arbeit; ein Recht je Abend wäre Buchhaltung.
+
+  Den ETag holt `GET …/topic-sessions/{{sessionId}}`.
+}

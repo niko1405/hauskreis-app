@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { DashboardController } from './dashboard.controller';
 import { AssignmentService } from './assignment.service';
 import { DashboardService } from './dashboard.service';
-import { PersonModule } from '../person/person.module';
 import { PrayerBuddyModule } from '../prayer-buddy/prayer-buddy.module';
 
 /**
@@ -15,7 +14,7 @@ import { PrayerBuddyModule } from '../prayer-buddy/prayer-buddy.module';
  * on who is on for an evening.
  */
 @Module({
-  imports: [PersonModule, PrayerBuddyModule],
+  imports: [PrayerBuddyModule],
   controllers: [DashboardController],
   providers: [AssignmentService, DashboardService],
   exports: [AssignmentService],

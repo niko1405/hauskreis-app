@@ -110,44 +110,22 @@ export function applySlotToggle(
 export function meetingHeadline(meeting: {
   type: MeetingType;
   title: string | null;
-  topic?: { title: string | null } | null;
+  topicSession?: {
+    title: string | null;
+    topic: { title: string | null };
+  } | null;
 }): string {
   if (meeting.title) return meeting.title;
-  // Hier **nicht** `topicTitle`: ein „Thema von Niko" als Kartenüberschrift
-  // sagt weniger als „Hauskreis-Abend". Der Vorschlag gehört in die
-  // Thema-Sektion, wo er ein Feld füllt, das man ändern kann.
-  if (meeting.topic?.title) return meeting.topic.title;
+
+  // Der Titel des Abends schlägt den des Themas: „Teil 2: Was Petrus tat" sagt
+  // mehr als „Vergebung", wenn beides dasteht. Beide sind `null`, solange die
+  // Einheit für den Betrachter nicht freigegeben ist — dann steht hier die
+  // Terminart, und das ist genau richtig: zu sehen gibt es noch nichts.
+  const session = meeting.topicSession;
+  if (session?.title) return session.title;
+  if (session?.topic.title) return session.topic.title;
+
   return MEETING_TYPE_LABEL[meeting.type];
-}
-
-/**
- * Wie ein Thema heißt — mit einem brauchbaren Vorschlag, wenn niemand einen
- * Titel getippt hat.
- *
- * **Abgeleitet und nicht gespeichert.** Ein „Thema von Niko", das beim ersten
- * Anlegen in die Datenbank geschrieben würde, stünde beim nächsten Rollentausch
- * falsch da — und niemand ginge hin und korrigierte einen Titel, den er nie
- * getippt hat. So bleibt `title` genau das: was jemand eingetragen hat, sonst
- * `null`.
- *
- * Ohne Zuständige schlicht „Thema". Ein Vorschlag mit leerer Lücke wäre keiner.
- */
-export function topicTitle(topic: {
-  title: string | null;
-  responsibles?: { person: { name: string } }[];
-}): string {
-  if (topic.title) return topic.title;
-
-  const names = (topic.responsibles ?? []).map((r) => r.person.name);
-  if (names.length === 0) return 'Thema';
-
-  return `Thema von ${listNames(names)}`;
-}
-
-/** „Niko", „Niko und Mira", „Niko, Mira und Chris". */
-function listNames(names: readonly string[]): string {
-  if (names.length <= 1) return names[0] ?? '';
-  return `${names.slice(0, -1).join(', ')} und ${names.at(-1)}`;
 }
 
 export const ROLE_LABEL: Record<AssignmentRole, string> = {

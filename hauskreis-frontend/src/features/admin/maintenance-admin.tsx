@@ -13,7 +13,6 @@ import { ConflictBanner } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
 import {
-  useCarryOverTopics,
   useGenerateMeetings,
   usePlanPrayerBuddyRounds,
   usePrayerBuddyConfig,
@@ -138,7 +137,6 @@ function JobsCard() {
   // von Hook-Aufrufen muss über Renderdurchläufe hinweg dieselbe sein.
   const generate = useGenerateMeetings();
   const planRounds = usePlanPrayerBuddyRounds();
-  const carryOver = useCarryOverTopics();
   const syncAbsences = useSyncAbsences();
   const purgeLocations = usePurgeAbandonedLocations();
   const hostReminders = useRunHostReminders();
@@ -173,16 +171,6 @@ function JobsCard() {
                 ? `${r.created} Runde(n) ergänzt.`
                 : 'Der Vorlauf stand schon voll.',
             ),
-          onError: fail,
-        }),
-    },
-    {
-      label: 'Laufendes Thema übertragen',
-      hint: 'Belegt kommende Termine mit dem Thema, das noch läuft.',
-      pending: carryOver.isPending,
-      run: () =>
-        carryOver.mutate(undefined, {
-          onSuccess: (r) => toast.success(`${r.filled} Termine vorbelegt.`),
           onError: fail,
         }),
     },

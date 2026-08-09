@@ -1,0 +1,72 @@
+meta {
+  name: Thema wählen
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/topic-session
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "mode": "new",
+    "title": "Bruno-Testthema"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("topicId", res.body.topicId);
+  bru.setEnvVar("sessionId", res.body.id);
+}
+
+tests {
+  test("antwortet mit 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("hängt am Abend", function () {
+    expect(res.body.meetingId).to.be.a("string");
+  });
+}
+
+docs {
+  Der **zweite** Schritt, und der einzige Weg, ein Thema anzulegen — ein
+  `POST …/topics` gibt es nicht. Ein Thema ohne Anlass wäre ein leerer Datensatz.
+
+  Drei Wege:
+
+  - `{ "mode": "new", "title": "…" }` — neues Thema, du wirst sein **Owner**.
+  - `{ "mode": "existing", "topicId": "…" }` — ein eigenes Thema um einen
+    weiteren Abend erweitern. `title`, `actionstepText` und `summaryText` dürfen
+    gleich mitkommen; das Anlege-Sheet fragt sie ohnehin ab, und sie hinterher
+    nachzuschieben ließe den Abend kurz mit einer leeren Einheit dastehen.
+  - `{ "mode": "resume", "sessionId": "…" }` — eine eigene **offene** Einheit
+    aufnehmen; ihr Inhalt bleibt vollständig erhalten. Hängt sie an einem anderen
+    *kommenden* Abend, zieht sie um: jener fällt auf „zugeteilt, aber noch nichts
+    gewählt" zurück und behält seine Zuteilung. Von einem vergangenen Abend geht
+    es nicht — `400`.
+
+  Wählen darf **nur, wer an dem Abend zugeteilt ist**. Kein Admin-Freifahrtschein,
+  und „niemand zugeteilt heißt jede:r darf" gilt hier auch nicht: die Wahl ist
+  kein Verwaltungsakt, sondern die Aussage „ich bereite das vor". Wer sie treffen
+  will, trägt sich vorher über `PUT …/topic-responsibles` ein.
+
+  Owner wird, wer **zuerst wählt** — nicht wer zuerst zugeteilt wurde. Alle, die
+  in diesem Moment ebenfalls zugeteilt sind, kommen als Verantwortliche der
+  Einheit mit und dürfen ab dann am ganzen Thema schreiben.
+
+  Hängt am Abend schon eine Einheit, ist das kein Fehler, sondern ein **Wechsel**:
+  die bisherige löst sich und wartet als Entwurf. An einem vergangenen Abend
+  nicht — `400`.
+
+  Klicken zwei gleichzeitig, gewinnt einer: der eindeutige Index auf
+  `topic_session.meeting_id` lässt den zweiten Schreibvorgang mit `409`
+  auflaufen, statt eine zweite Einheit anzulegen.
+}

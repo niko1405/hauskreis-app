@@ -4,7 +4,7 @@
  * Geprüft wird über `update`, nicht über die private Methode: was zählt, ist
  * was am Ende in der Datenbank landet, und genau da ging es vorher auseinander.
  */
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { MeetingService } from './meeting.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
@@ -15,11 +15,15 @@ import type { AvailabilityService } from '../role-suggestion/availability.servic
 import type { RoleReleaseService } from './role-release.service';
 import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import type { CustomMeetingNotificationService } from './custom-meeting-notification.service';
-import type { EditRightsService } from './edit-rights.service';
+import type { TopicLinkService } from '../topic/topic-link.service';
 import type { IfMatchCondition } from '../common/http/etag';
 
 /** Diese Endpunkte verlangen eine Vorbedingung; hier interessiert sie nicht. */
 const EGAL: IfMatchCondition = { kind: 'any' };
+
+/** Wer gerade schreibt. Für diese Tests immer dieselbe Person, kein Admin. */
+const ICH = { personId: 'p-ich', isAdmin: false };
+const ADMIN = { personId: 'admin', isAdmin: true };
 
 const HEUTE = new Date('2026-08-03T00:00:00.000Z');
 const KOMMENDER_DIENSTAG = new Date('2026-08-11T00:00:00.000Z');
@@ -84,10 +88,10 @@ function setup(before = meeting()) {
   // Spec; hier soll sie den anderen Tests nicht im Weg stehen.
   const availability = { assertAvailable: jest.fn(), findDeclined: jest.fn() };
   const roleRelease = { releaseFor: jest.fn() };
-  // Standardmäßig darf man: die Regel selbst hat ihren eigenen Spec, hier soll
-  // sie den anderen Tests nicht im Weg stehen.
-  const editRights = {
-    assertMayWriteSummary: jest.fn().mockResolvedValue(undefined),
+  // Das Lösen der Einheit beim Abschalten des Bausteins hat seinen eigenen
+  // Spec; hier soll es den anderen Tests nicht im Weg stehen.
+  const topicLinks = {
+    detachIfUpcoming: jest.fn().mockResolvedValue(false),
   };
 
   const service = new MeetingService(
@@ -100,7 +104,7 @@ function setup(before = meeting()) {
     roleRelease as unknown as RoleReleaseService,
     {} as unknown as AutoAttendanceService,
     {} as unknown as CustomMeetingNotificationService,
-    editRights as unknown as EditRightsService,
+    topicLinks as unknown as TopicLinkService,
   );
 
   return {
@@ -111,7 +115,7 @@ function setup(before = meeting()) {
     roleAssignments,
     availability,
     roleRelease,
-    editRights,
+    topicLinks,
     state,
   };
 }
@@ -141,7 +145,7 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
       locationId: 'l-niko',
     });
 
-    await service.update('hk1', 'm1', { hostPersonId: 'p1' }, undefined, EGAL);
+    await service.update('hk1', 'm1', { hostPersonId: 'p1' }, ICH, EGAL);
 
     expect(written(prisma)).toMatchObject({
       hostPersonId: 'p1',
@@ -158,7 +162,7 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
     });
 
     await expect(
-      service.update('hk1', 'm1', { hostPersonId: 'p2' }, undefined, EGAL),
+      service.update('hk1', 'm1', { hostPersonId: 'p2' }, ICH, EGAL),
     ).rejects.toThrow(/Mira hat keine Adresse/);
     expect(prisma.meeting.updateMany).not.toHaveBeenCalled();
   });
@@ -214,7 +218,7 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
     });
 
     await expect(
-      service.update('hk1', 'm1', { locationId: 'l-chris' }, undefined, EGAL),
+      service.update('hk1', 'm1', { locationId: 'l-chris' }, ICH, EGAL),
     ).rejects.toThrow(/trag die Person als Gastgeber ein/);
   });
 
@@ -227,7 +231,7 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
       }),
     );
 
-    await service.update('hk1', 'm1', { hostPersonId: null }, undefined, EGAL);
+    await service.update('hk1', 'm1', { hostPersonId: null }, ICH, EGAL);
 
     expect(written(prisma)).toMatchObject({
       hostPersonId: null,
@@ -245,7 +249,7 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
       }),
     );
 
-    await service.update('hk1', 'm1', { hostPersonId: null }, undefined, EGAL);
+    await service.update('hk1', 'm1', { hostPersonId: null }, ICH, EGAL);
 
     expect(written(prisma)).toMatchObject({
       hostPersonId: null,
@@ -268,7 +272,7 @@ describe('MeetingService.update — Ort folgt dem Gastgeber', () => {
     prisma.location.findFirst.mockResolvedValue({ id: 'l-park' });
 
     await expect(
-      service.update('hk1', 'm1', { locationId: 'l-park' }, undefined, EGAL),
+      service.update('hk1', 'm1', { locationId: 'l-park' }, ICH, EGAL),
     ).rejects.toThrow(/Nimm erst den Gastgeber heraus/);
   });
 });
@@ -287,7 +291,7 @@ describe('MeetingService.update — wer eingeteilt wird, hört davon', () => {
     const { service, prisma, roleAssignments } = setup();
     withHost(prisma);
 
-    await service.update('hk1', 'm1', { hostPersonId: 'p1' }, 'admin', EGAL);
+    await service.update('hk1', 'm1', { hostPersonId: 'p1' }, ADMIN, EGAL);
 
     expect(roleAssignments.announce).toHaveBeenCalledWith(
       'm1',
@@ -328,7 +332,7 @@ describe('MeetingService.update — wer eingeteilt wird, hört davon', () => {
       }),
     );
 
-    await service.update('hk1', 'm1', { hostPersonId: null }, 'admin', EGAL);
+    await service.update('hk1', 'm1', { hostPersonId: null }, ADMIN, EGAL);
 
     expect(roleAssignments.announce).not.toHaveBeenCalled();
   });
@@ -338,7 +342,7 @@ describe('MeetingService — Absage vergangener Abende', () => {
   it('benachrichtigt bei einem kommenden Termin', async () => {
     const { service, notifications } = setup();
 
-    await service.cancel('hk1', 'm1', {}, 'p1', EGAL);
+    await service.cancel('hk1', 'm1', {}, ICH, EGAL);
 
     expect(notifications.announceCancellation).toHaveBeenCalledWith('m1');
   });
@@ -348,7 +352,7 @@ describe('MeetingService — Absage vergangener Abende', () => {
       meeting({ date: LETZTER_DIENSTAG }),
     );
 
-    await service.cancel('hk1', 'm1', {}, 'p1', EGAL);
+    await service.cancel('hk1', 'm1', {}, ICH, EGAL);
 
     expect(notifications.announceCancellation).not.toHaveBeenCalled();
   });
@@ -356,7 +360,7 @@ describe('MeetingService — Absage vergangener Abende', () => {
   it('zählt den heutigen Abend noch als kommend', async () => {
     const { service, notifications } = setup(meeting({ date: HEUTE }));
 
-    await service.cancel('hk1', 'm1', {}, 'p1', EGAL);
+    await service.cancel('hk1', 'm1', {}, ICH, EGAL);
 
     expect(notifications.announceCancellation).toHaveBeenCalled();
   });
@@ -370,13 +374,13 @@ describe('MeetingService — wer abgesagt hat, steht dabei', () => {
       'hk1',
       'm1',
       { reason: 'Halbe Gruppe krank' },
-      'p1',
+      ICH,
       EGAL,
     );
 
     expect(written(prisma)).toMatchObject({
       status: 'CANCELLED',
-      cancelledByPersonId: 'p1',
+      cancelledByPersonId: ICH.personId,
       cancelSource: 'MANUAL',
       cancelReason: 'Halbe Gruppe krank',
     });
@@ -385,7 +389,7 @@ describe('MeetingService — wer abgesagt hat, steht dabei', () => {
   it('lässt den Grund weg, wenn keiner genannt wurde', async () => {
     const { service, prisma } = setup();
 
-    await service.cancel('hk1', 'm1', {}, 'p1', EGAL);
+    await service.cancel('hk1', 'm1', {}, ICH, EGAL);
 
     expect(written(prisma).cancelReason).toBeNull();
   });
@@ -399,7 +403,7 @@ describe('MeetingService — wer abgesagt hat, steht dabei', () => {
       meeting({ status: 'CANCELLED' }),
     );
 
-    await service.uncancel('hk1', 'm1', EGAL);
+    await service.uncancel('hk1', 'm1', ICH, EGAL);
 
     expect(written(prisma)).toMatchObject({
       status: 'PLANNED',
@@ -416,60 +420,8 @@ describe('MeetingService — wer abgesagt hat, steht dabei', () => {
       meeting({ status: 'CANCELLED', date: LETZTER_DIENSTAG }),
     );
 
-    await service.uncancel('hk1', 'm1', EGAL);
+    await service.uncancel('hk1', 'm1', ICH, EGAL);
 
     expect(notifications.announceRevival).not.toHaveBeenCalled();
-  });
-});
-
-describe('MeetingService — Nachbereitung gehört den Zuständigen', () => {
-  /**
-   * Hier stand einmal eine Datumsprüfung: vor dem Abend ließ sich weder
-   * Zusammenfassung noch Actionstep schreiben. Die ist bewusst weg — wer das
-   * Thema vorbereitet, hat den Actionstep oft vorher im Kopf und soll ihn
-   * hinlegen dürfen, wo er am Abend gebraucht wird.
-   */
-  it('lässt eine Zuständige im Voraus schreiben', async () => {
-    const { service, prisma } = setup();
-
-    await service.update('hk1', 'm1', { summaryText: 'War schön' }, 'p1', EGAL);
-
-    expect(written(prisma).summaryText).toBe('War schön');
-  });
-
-  it('fragt für beide Felder nach dem Recht', async () => {
-    const { service, editRights } = setup();
-
-    await service.update('hk1', 'm1', { actionstepText: 'Beten' }, 'p1', EGAL);
-
-    expect(editRights.assertMayWriteSummary).toHaveBeenCalledWith('m1', 'p1');
-  });
-
-  it('reicht ein Nein des Rechte-Dienstes durch', async () => {
-    const { service, editRights } = setup();
-    editRights.assertMayWriteSummary.mockRejectedValue(
-      new ForbiddenException('nope'),
-    );
-
-    await expect(
-      service.update('hk1', 'm1', { summaryText: 'War schön' }, 'p1', EGAL),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-  });
-
-  // Sonst stünde jeder Ortswechsel unter derselben Prüfung — die Regel gilt
-  // den beiden Feldern, nicht dem Termin.
-  it('lässt alles andere ungeprüft durch', async () => {
-    const { service, prisma, editRights } = setup();
-
-    await service.update(
-      'hk1',
-      'm1',
-      { infoText: 'Bringt Kuchen' },
-      'p1',
-      EGAL,
-    );
-
-    expect(editRights.assertMayWriteSummary).not.toHaveBeenCalled();
-    expect(written(prisma).infoText).toBe('Bringt Kuchen');
   });
 });

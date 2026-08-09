@@ -35,8 +35,6 @@ export const ADMIN_ONLY_ROUTES = [
   'POST   /hauskreise/{id}/meetings/generate',
   'POST   /hauskreise/{id}/meetings/host-reminders',
   'POST   /hauskreise/{id}/meetings/actionstep-reminders',
-  'DELETE /hauskreise/{id}/topics/{topicId}',
-  'POST   /hauskreise/{id}/topics/carry-over',
   'POST   /hauskreise/{id}/topics/reminders',
   'DELETE /hauskreise/{id}/songs/{songId}',
   'POST   /hauskreise/{id}/songs/reminders',

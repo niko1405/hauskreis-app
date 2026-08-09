@@ -11,19 +11,21 @@ import {
   Query,
 } from '@nestjs/common';
 import { TopicService } from './topic.service';
-import { TopicCarryOverService } from './topic-carry-over.service';
+import { TopicSessionService } from './topic-session.service';
 import { TopicReminderService } from './topic-reminder.service';
 import {
-  CreateTopicDto,
+  CreateTopicSessionDto,
   ListTopicsQueryDto,
+  TopicCollaboratorParamsDto,
   TopicParamsDto,
+  TopicSessionParamsDto,
   UpdateTopicDto,
+  UpdateTopicSessionDto,
 } from './dto/topic.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { HauskreisAdmin } from '../auth/hauskreis-admin.decorator';
-import { CurrentUser } from '../auth/current-user.decorator';
-import { PersonService } from '../person/person.service';
-import type { AuthenticatedUser } from '../auth/auth.types';
+import { CurrentMembership } from '../auth/current-membership.decorator';
+import type { HauskreisMembership } from '../auth/auth.types';
 import { IfMatch } from '../common/http/if-match.decorator';
 import type { IfMatchCondition } from '../common/http/etag';
 import {
@@ -32,55 +34,50 @@ import {
   ApiZodResponse,
 } from '../common/http/api-response.decorator';
 import {
-  CarryOverResultResponseDto,
   TopicPageResponseDto,
   TopicResponseDto,
+  TopicSessionResponseDto,
 } from './dto/topic-response.dto';
 import { ReminderRunResultResponseDto } from '../meeting/dto/meeting-response.dto';
+import { viewerOf } from './topic-shape';
 
-@Controller('hauskreise/:hauskreisId/topics')
+@Controller('hauskreise/:hauskreisId')
 export class TopicController {
   constructor(
-    private readonly topicService: TopicService,
-    private readonly carryOverService: TopicCarryOverService,
+    private readonly topics: TopicService,
+    private readonly sessions: TopicSessionService,
     private readonly reminders: TopicReminderService,
-    private readonly people: PersonService,
   ) {}
 
-  @Get()
+  /**
+   * Das Archiv. `scope=public` (Vorgabe) listet Themen, von denen mindestens
+   * ein Abend war; `scope=mine` die eigenen, auch die noch nicht gehaltenen.
+   */
+  @Get('topics')
   @ApiZodResponse(TopicPageResponseDto)
   findAll(
     @Param() params: HauskreisParamsDto,
     @Query() query: ListTopicsQueryDto,
+    @CurrentMembership() membership: HauskreisMembership,
   ) {
-    return this.topicService.findAll(params.hauskreisId, query);
+    return this.topics.findAll(params.hauskreisId, query, viewerOf(membership));
   }
 
-  @Get(':id')
+  @Get('topics/:id')
   @ApiZodResponse(TopicResponseDto)
-  findOne(@Param() params: TopicParamsDto) {
-    return this.topicService.findOne(params.hauskreisId, params.id);
+  findOne(
+    @Param() params: TopicParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.topics.findOne(
+      params.hauskreisId,
+      params.id,
+      viewerOf(membership),
+    );
   }
 
-  @Post()
-  @ApiZodResponse(TopicResponseDto, { status: 201 })
-  create(@Param() params: HauskreisParamsDto, @Body() dto: CreateTopicDto) {
-    return this.topicService.create(params.hauskreisId, dto);
-  }
-
-  /** Manual trigger for the nightly carry-over, handy for setup and testing. */
-  @Post('carry-over')
-  @ApiZodResponse(CarryOverResultResponseDto, {
-    description: 'Legt das laufende Thema auf die naechsten Termine',
-  })
-  @HauskreisAdmin()
-  @HttpCode(HttpStatus.OK)
-  carryOver(@Param() params: HauskreisParamsDto) {
-    return this.carryOverService.carryOverFor(params.hauskreisId);
-  }
-
-  /** Manual trigger for the daily topic reminders, scoped to this group. */
-  @Post('reminders')
+  /** Von Hand ausgelöste Themen-Erinnerungen, auf diese Gruppe beschränkt. */
+  @Post('topics/reminders')
   @ApiZodResponse(ReminderRunResultResponseDto)
   @HauskreisAdmin()
   @HttpCode(HttpStatus.OK)
@@ -90,45 +87,131 @@ export class TopicController {
     });
   }
 
-  /** Also how a topic is marked completed — `{ "status": "COMPLETED" }`. */
-  @Patch(':id')
+  /** Auch der Weg zu „abgeschlossen" — `{ "status": "COMPLETED" }`. */
+  @Patch('topics/:id')
   @ApiZodResponse(TopicResponseDto)
   @ApiConditionalWrite()
-  async update(
+  update(
     @Param() params: TopicParamsDto,
     @Body() dto: UpdateTopicDto,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentMembership() membership: HauskreisMembership,
     @IfMatch() ifMatch?: IfMatchCondition,
   ) {
-    const person = await this.people.resolveForUser(user);
-
-    return this.topicService.update(
+    return this.topics.update(
       params.hauskreisId,
       params.id,
       dto,
-      person.id,
+      viewerOf(membership),
       ifMatch,
     );
   }
 
   /**
-   * Löscht ein Thema. Die Abende bleiben stehen und verlieren nur ihre
-   * Verknüpfung (`topic_id` fällt auf `NULL`).
-   *
-   * Nicht mehr `@HauskreisAdmin()`, sondern dieselbe Zuständigkeitsregel wie
-   * beim Umbenennen: wer ein Thema vorbereitet hat, räumt es auch wieder weg.
-   * Admins lässt der Helfer ohnehin durch — die Regel wird damit weiter, nicht
-   * enger.
+   * Löscht ein Thema samt Einheiten. Kommende Abende verlieren ihre Auswahl und
+   * stehen wieder bei „zugeteilt, aber noch nichts gewählt"; die Zuteilung
+   * selbst bleibt.
    */
-  @Delete(':id')
+  @Delete('topics/:id')
   @ApiZodNoContent()
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(
+  remove(
     @Param() params: TopicParamsDto,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentMembership() membership: HauskreisMembership,
   ) {
-    const person = await this.people.resolveForUser(user);
+    return this.topics.remove(
+      params.hauskreisId,
+      params.id,
+      viewerOf(membership),
+    );
+  }
 
-    return this.topicService.remove(params.hauskreisId, params.id, person.id);
+  /**
+   * Nimmt jemandem das Bearbeitungsrecht am Thema. Was die Person gehalten hat,
+   * bleibt an den Einheiten stehen — das ist Geschichte, kein Recht.
+   */
+  @Delete('topics/:id/collaborators/:personId')
+  @ApiZodNoContent()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeCollaborator(
+    @Param() params: TopicCollaboratorParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.topics.removeCollaborator(
+      params.hauskreisId,
+      params.id,
+      params.personId,
+      viewerOf(membership),
+    );
+  }
+
+  /**
+   * Eine Einheit anlegen, ohne dass ein Abend dafür feststeht.
+   *
+   * Der Weg, sein Thema in Ruhe vorzubereiten und den Dienstag später zu suchen.
+   * Sie taucht danach beim Wählen unter „Angefangenes" auf.
+   */
+  @Post('topics/:id/sessions')
+  @ApiZodResponse(TopicSessionResponseDto, { status: HttpStatus.CREATED })
+  createSession(
+    @Param() params: TopicParamsDto,
+    @Body() dto: CreateTopicSessionDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.sessions.createSession(
+      params.hauskreisId,
+      params.id,
+      dto,
+      viewerOf(membership),
+    );
+  }
+
+  @Get('topic-sessions/:sessionId')
+  @ApiZodResponse(TopicSessionResponseDto)
+  findSession(
+    @Param() params: TopicSessionParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.sessions.findSession(
+      params.hauskreisId,
+      params.sessionId,
+      viewerOf(membership),
+    );
+  }
+
+  /** Titel, Actionstep und Zusammenfassung eines einzelnen Abends. */
+  @Patch('topic-sessions/:sessionId')
+  @ApiZodResponse(TopicSessionResponseDto)
+  @ApiConditionalWrite()
+  updateSession(
+    @Param() params: TopicSessionParamsDto,
+    @Body() dto: UpdateTopicSessionDto,
+    @CurrentMembership() membership: HauskreisMembership,
+    @IfMatch() ifMatch?: IfMatchCondition,
+  ) {
+    return this.sessions.updateSession(
+      params.hauskreisId,
+      params.sessionId,
+      dto,
+      viewerOf(membership),
+      ifMatch,
+    );
+  }
+
+  /**
+   * Löscht eine einzelne Einheit — nur, solange sie noch nicht gehalten wurde.
+   * Ein Abend, der war, geht nur mit dem ganzen Thema.
+   */
+  @Delete('topic-sessions/:sessionId')
+  @ApiZodNoContent()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeSession(
+    @Param() params: TopicSessionParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.sessions.removeSession(
+      params.hauskreisId,
+      params.sessionId,
+      viewerOf(membership),
+    );
   }
 }

@@ -29,3 +29,9 @@ tests {
     expect(res.body).to.have.property("hasMore");
   });
 }
+
+docs {
+  Ohne `scope` gilt `public`: Themen, von denen mindestens ein Abend vorbei ist.
+  Ein frisch angelegtes steht hier also nicht — es taucht erst auf, wenn sein
+  erster Abend war. Bis dahin findet man es über `scope=mine`.
+}

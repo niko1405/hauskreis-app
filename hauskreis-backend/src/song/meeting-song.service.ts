@@ -9,6 +9,7 @@ import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier
 import { AssignmentRole } from '../../generated/prisma/enums';
 import { AvailabilityService } from '../role-suggestion/availability.service';
 import { EditRightsService } from '../meeting/edit-rights.service';
+import { touchMeeting } from '../meeting/meeting-version';
 import { SongService } from './song.service';
 import type {
   AddMeetingSongDto,
@@ -188,15 +189,21 @@ export class MeetingSongService {
       dto.personIds.filter((personId) => !known.has(personId)),
     );
 
-    await this.prisma.$transaction([
-      this.prisma.meetingSongLeader.deleteMany({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.meetingSongLeader.deleteMany({
         where: { meetingId, personId: { notIn: dto.personIds } },
-      }),
-      this.prisma.meetingSongLeader.createMany({
+      });
+
+      await tx.meetingSongLeader.createMany({
         data: dto.personIds.map((personId) => ({ meetingId, personId })),
         skipDuplicates: true,
-      }),
-    ]);
+      });
+
+      // Die Musik-Zuteilung steht mit in der Antwort des Termins. Die Lieder
+      // selbst nicht — die kommen von `…/meetings/:id/songs` mit eigenem ETag
+      // und brauchen diesen Griff deshalb nicht.
+      await touchMeeting(tx, meetingId);
+    });
 
     await this.roleAssignments.announce(
       meetingId,

@@ -1,0 +1,47 @@
+meta {
+  name: Was zur Wahl steht
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/topic-choices
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("nennt Themen und offene Einheiten getrennt", function () {
+    expect(res.body).to.have.property("topics");
+    expect(res.body).to.have.property("openSessions");
+  });
+
+  test("bündelt offene Einheiten unter ihrem Thema", function () {
+    for (const gruppe of res.body.openSessions) {
+      expect(gruppe).to.have.property("topic");
+      expect(gruppe.sessions).to.be.an("array");
+    }
+  });
+}
+
+docs {
+  Die Optionen B und C für `…/topic-session`. Option A („neues Thema") braucht
+  keine Daten und steht deshalb nicht drin.
+
+  `topics` sind die eigenen (Owner oder Mitarbeit), laufende zuerst.
+  `openSessions` sind eigene **offene** Einheiten, nach Thema gebündelt: „Vergebung
+  — Teil 2, Teil 3" liest sich als ein Faden, drei lose Zeilen tun das nicht.
+
+  „Offen" heißt nicht nur „an keinem Abend". Eine Einheit, die an einem *anderen
+  kommenden* Termin hängt, steht ebenfalls hier und bringt ihn in `meeting` mit —
+  wer sie hierher holt, nimmt jenem Abend seine Auswahl, und die Rückfrage im
+  Frontend braucht ein Datum. Ein **vergangener** Abend steht nie dabei.
+
+  Der Grenzfall aus Spec 8.5 sitzt im zweiten Teil: ein eigener Entwurf bleibt
+  greifbar, auch wenn der Owner einen als Mitarbeiter entfernt hat. Nimmt man
+  ihn wieder auf, wird man darüber automatisch wieder Mitarbeiter.
+}

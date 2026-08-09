@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Instrument_Serif, Plus_Jakarta_Sans } from 'next/font/google';
+import { Instrument_Serif, Plus_Jakarta_Sans, Roboto_Slab } from 'next/font/google';
 import { BootWatchdog } from '@/components/layout/boot-watchdog';
 import { Providers } from './providers';
 import './globals.css';
@@ -16,6 +16,12 @@ const instrument = Instrument_Serif({
   weight: '400',
   style: ['normal', 'italic'],
   variable: '--font-instrument',
+  display: 'swap',
+});
+
+const robotoSlab = Roboto_Slab({
+  subsets: ['latin'],
+  variable: '--font-roboto-slab',
   display: 'swap',
 });
 
@@ -52,7 +58,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="de" className={`${jakarta.variable} ${instrument.variable}`}>
+    <html lang="de" className={`${jakarta.variable} ${instrument.variable} ${robotoSlab.variable}`}>
       <body className="bg-shell font-sans text-stone-800 antialiased selection:bg-terracotta-500 selection:text-white">
         <Providers>{children}</Providers>
         {/* Steht bewusst außerhalb von `Providers`: er muss auch dann etwas

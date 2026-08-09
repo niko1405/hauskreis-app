@@ -1,105 +1,288 @@
 'use client';
 
 /**
- * Das Thema des Abends — Titel, Zusammenfassung, Actionstep an einer Stelle.
+ * Das Thema des Abends — vier Zustände, einer davon neu.
  *
- * Vorher lagen die drei über die ganze Seite verteilt: der Titel oben in der
- * Überschrift, die Zusammenfassung ganz unten, der Actionstep darunter, und das
- * Thema selbst als Rollen-Zeile dazwischen. Vier Orte für eine Sache, und keiner
- * sagte, dass sie zusammengehören.
+ * 1. Baustein aus → die Sektion gibt es gar nicht (entschieden vom Aufrufer).
+ * 2. **Niemand zugeteilt** → „Noch kein Zuständiger."
+ * 3. **Zugeteilt, aber noch nichts gewählt** → wer dran ist, sieht die Optionen;
+ *    alle anderen sehen, dass es sie gibt und sonst nichts.
+ * 4. **Gewählt** → das Thema als Überschrift, darunter *dieser* Abend.
  *
- * **Wer sie sieht.** Vor dem Abend nur, wer schreiben darf — sonst stünde der
- * Actionstep der nächsten Woche eine Woche zu früh für alle da, und darum geht
- * es bei einem Actionstep gerade nicht. Ab dem Termintag sehen ihn alle; da ist
- * er ja gesagt worden.
+ * Die Hierarchie ist der Punkt der Sektion: oben steht, wozu der Abend gehört,
+ * darunter, was an ihm dran ist. Vorher standen beide Titel gleichrangig und man
+ * musste raten, welcher der größere war. Das Thema selbst ist hier **nur ein
+ * Link** — Titel und Zusammenfassung ändert man auf seiner Seite, weil es über
+ * mehreren Abenden steht und nicht über diesem einen.
  *
- * **Wer sie ändert.** Wer das Thema vorbereitet — oder jede:r, solange niemand
- * dafür eingeteilt ist. Durchgesetzt wird das im Backend
- * (`EditRightsService`); hier steht nur, was man davon sieht.
+ * **Wer was sieht.** Der Inhalt einer noch nicht gehaltenen Einheit gehört bis
+ * 18 Uhr am Termintag denen, die ihn vorbereiten — der Actionstep der nächsten
+ * Woche eine Woche zu früh für alle wäre das Gegenteil von dem, wozu er da ist.
+ * Entschieden hat das der Server: er liefert die Felder dann als `null` und
+ * setzt `contentVisible: false`. Hier steht nur, was man davon sieht.
  */
+import { ArrowUpRight, ChevronDown } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { InlineEdit } from '@/components/ui/field';
-import { topicTitle } from '@/lib/meeting';
-import type { Meeting } from '@/lib/api/types';
+import { cn } from '@/lib/cn';
+import { useTopic } from '@/lib/api/hooks';
+import { formatDay } from '@/lib/date';
+import { namesOf } from '@/lib/person';
+import type { Meeting, PersonRef, TopicSessionInTopic } from '@/lib/api/types';
 
 export function TopicCard({
   meeting,
-  /** Ob die eigene Person hier eintragen darf. */
+  responsibles,
+  /** Ob jetzt gerade am Inhalt geschrieben werden darf. */
   editable,
+  /** Ob gewählt werden darf — nur die Zugeteilten. */
+  mayChoose,
   saving,
+  onChoose,
   onTitle,
   onSummary,
   onActionstep,
   children,
 }: {
   meeting: Meeting;
+  responsibles: PersonRef[];
   editable: boolean;
+  mayChoose: boolean;
   saving: boolean;
+  onChoose: () => void;
   onTitle: (next: string | null) => void;
   onSummary: (next: string | null) => void;
   onActionstep: (next: string | null) => void;
   /** Der Abhak-Block, den nur die Detailseite kennt. */
   children?: React.ReactNode;
 }) {
-  const topic = meeting.topic;
+  const session = meeting.topicSession;
+  const sichtbar = session?.contentVisible ?? false;
 
   return (
     <section>
       <SectionTitle>Thema</SectionTitle>
-      <Card className="space-y-5">
-        {topic ? (
-          <InlineEdit
-            label="Thema"
-            value={topic.title}
-            // Kein leerer Platzhalter, sondern ein echter Vorschlag: „Thema von
-            // Niko" steht da, bis jemand etwas Besseres weiß. Abgeleitet und
-            // nicht gespeichert — sonst stünde er beim nächsten Rollentausch
-            // falsch da, und niemand korrigiert einen Titel, den er nie getippt
-            // hat.
-            emptyLabel={topicTitle(topic)}
-            placeholder={topicTitle(topic)}
-            className="font-serif text-lg font-bold"
-            saving={saving}
-            onSave={editable ? onTitle : undefined}
-          />
-        ) : (
-          <p className="text-sm text-stone-400">
-            Noch kein Thema — trag oben jemanden ein, dann entsteht eines.
-          </p>
+      <Card className="space-y-4">
+        {!session && <NothingChosen responsibles={responsibles} />}
+        {session && !sichtbar && <Withheld responsibles={responsibles} />}
+
+        {session && sichtbar && (
+          <>
+            <TopicHeading session={session} />
+
+            <div className="mt-6 relative rounded-lg border border-line-strong p-4 pt-5">
+              <span className="absolute -top-2.5 left-3 rounded-md bg-terracotta-600 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white">
+                Einheit {session.sessionIndex} von {session.sessionCount}
+              </span>
+
+              <InlineEdit
+                label="Titel dieses Abends"
+                value={session.title}
+                emptyLabel="Noch ohne eigenen Titel"
+                placeholder="Worum geht es an diesem Abend?"
+                className="font-roboto-slab text-2xl font-bold text-stone-900"
+                saving={saving}
+                onSave={editable ? onTitle : undefined}
+              />
+
+              <div className="mt-4">
+                <FieldLabel>Zusammenfassung</FieldLabel>
+                <InlineEdit
+                  label="Zusammenfassung"
+                  multiline
+                  value={session.summaryText}
+                  emptyLabel="Noch nichts — hilft allen, die nicht da waren."
+                  saving={saving}
+                  onSave={editable ? onSummary : undefined}
+                />
+              </div>
+
+              <div className="mt-4 rounded-lg border border-line-strong bg-canvas p-3">
+                <FieldLabel>Actionstep</FieldLabel>
+                <InlineEdit
+                  label="Actionstep"
+                  value={session.actionstepText}
+                  emptyLabel="Noch kein Actionstep für die Woche"
+                  saving={saving}
+                  onSave={editable ? onActionstep : undefined}
+                />
+                {session.actionstepText && children}
+              </div>
+            </div>
+
+            {session.sessionCount > 1 && (
+              <OtherSessions
+                topicId={session.topic.id}
+                exclude={session.id}
+                count={session.sessionCount - 1}
+              />
+            )}
+          </>
         )}
 
-        {topic && (
-          <>
-            <div>
-              <p className="mb-1.5 text-[11px] font-semibold text-stone-500">
-                Zusammenfassung
-              </p>
-              <InlineEdit
-                label="Zusammenfassung"
-                multiline
-                value={meeting.summaryText}
-                emptyLabel="Noch nichts — hilft allen, die nicht da waren."
-                saving={saving}
-                onSave={editable ? onSummary : undefined}
-              />
-            </div>
-
-            <div>
-              <p className="mb-1.5 text-[11px] font-semibold text-stone-500">
-                Actionstep
-              </p>
-              <InlineEdit
-                label="Actionstep"
-                value={meeting.actionstepText}
-                emptyLabel="Noch kein Actionstep für die Woche"
-                saving={saving}
-                onSave={editable ? onActionstep : undefined}
-              />
-              {meeting.actionstepText && children}
-            </div>
-          </>
+        {mayChoose && (
+          <Button size="sm" loading={saving} onClick={onChoose}>
+            {session ? 'Anderes Thema wählen' : 'Thema wählen'}
+          </Button>
         )}
       </Card>
     </section>
+  );
+}
+
+/** Die Kopfzeile: wozu dieser Abend gehört, und der Weg dorthin. */
+function TopicHeading({
+  session,
+}: {
+  session: NonNullable<Meeting['topicSession']>;
+}) {
+  return (
+    <div>
+      <FieldLabel>Zugehöriges Thema</FieldLabel>
+      <Link
+        href={`/archiv/themen/${session.topic.id}`}
+        className="inline-flex items-baseline gap-1 font-serif text-xl font-bold text-stone-900 hover:text-terracotta-600"
+      >
+        {session.topic.title ?? 'Thema ohne Titel'}
+        <ArrowUpRight className="size-4 shrink-0 self-center text-stone-400" />
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * Die anderen Abende desselben Themas, zum Ausklappen.
+ *
+ * Geladen wird erst beim Öffnen — und über `GET …/topics/:id`, wo die
+ * Sichtbarkeitsregeln schon stehen. Ein zweiter Weg an dieselbe Frage wäre ein
+ * zweiter Weg, sie falsch zu beantworten.
+ */
+function OtherSessions({
+  topicId,
+  exclude,
+  count,
+}: {
+  topicId: string;
+  exclude: string;
+  count: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const query = useTopic(open ? topicId : undefined);
+
+  const andere = (query.data?.data.sessions ?? []).filter(
+    (session) => session.id !== exclude && session.meeting,
+  );
+
+  return (
+    <div className="rounded-lg border border-line">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full items-center justify-between gap-3 p-3 text-left"
+      >
+        <span className="text-xs font-semibold text-stone-500">
+          Weitere Einheiten ({count})
+        </span>
+        <ChevronDown
+          className={cn(
+            'size-4 shrink-0 text-stone-400 transition-transform',
+            open && 'rotate-180',
+          )}
+        />
+      </button>
+
+      {open && (
+        <ul className="space-y-2 border-t border-line p-3">
+          {query.isLoading && (
+            <li className="text-xs text-stone-400">Wird geladen …</li>
+          )}
+          {andere.map((session) => (
+            <li key={session.id}>
+              <OtherSessionRow session={session} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function OtherSessionRow({ session }: { session: TopicSessionInTopic }) {
+  return (
+    <Link
+      href={`/termine/${session.meeting?.id}`}
+      className="block rounded-md p-2 transition-colors hover:bg-canvas"
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="truncate font-roboto-slab text-sm font-bold text-stone-800">
+          {session.title ?? 'Ohne eigenen Titel'}
+        </span>
+        <span className="shrink-0 text-[10px] font-bold tracking-widest text-stone-400 uppercase">
+          {session.meeting && formatDay(session.meeting.date)}
+        </span>
+      </div>
+      {session.summaryText && (
+        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-stone-500">
+          {session.summaryText}
+        </p>
+      )}
+      {!session.contentVisible && (
+        <p className="mt-1 text-xs text-stone-400">
+          Zu sehen gibt es das am Abend.
+        </p>
+      )}
+    </Link>
+  );
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-stone-500 uppercase">
+      {children}
+    </p>
+  );
+}
+
+/** Zustand 2 und 3: es steht noch nichts, und warum. */
+function NothingChosen({ responsibles }: { responsibles: PersonRef[] }) {
+  if (responsibles.length === 0) {
+    return (
+      <p className="text-sm text-stone-400">
+        Noch kein Zuständiger — trag oben jemanden ein.
+      </p>
+    );
+  }
+
+  return (
+    <p className="text-sm text-stone-400">
+      {namesOf(responsibles)} {responsibles.length > 1 ? 'sind' : 'ist'} für das
+      Thema zuständig — hier gibt es noch nichts zu sehen.
+    </p>
+  );
+}
+
+/**
+ * Zustand 4, aber noch nicht freigegeben.
+ *
+ * Bewusst dieselbe Sprache wie Zustand 3: dass jemand schon etwas vorbereitet
+ * hat, ist keine Neuigkeit, die vor dem Abend jemanden weiterbringt.
+ */
+function Withheld({ responsibles }: { responsibles: PersonRef[] }) {
+  return (
+    <p className="text-sm text-stone-400">
+      {responsibles.length > 0 ? (
+        <>
+          {namesOf(responsibles)}{' '}
+          {responsibles.length > 1 ? 'bereiten' : 'bereitet'} etwas vor — zu
+          sehen gibt es das am Abend.
+        </>
+      ) : (
+        <>Etwas ist vorbereitet — zu sehen gibt es das am Abend.</>
+      )}
+    </p>
   );
 }

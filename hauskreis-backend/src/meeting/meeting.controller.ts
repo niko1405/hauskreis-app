@@ -28,9 +28,9 @@ import {
 } from './dto/meeting.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { HauskreisAdmin } from '../auth/hauskreis-admin.decorator';
-import { CurrentUser } from '../auth/current-user.decorator';
-import type { AuthenticatedUser } from '../auth/auth.types';
-import { PersonService } from '../person/person.service';
+import { CurrentMembership } from '../auth/current-membership.decorator';
+import type { HauskreisMembership } from '../auth/auth.types';
+import { viewerOf } from '../topic/topic-shape';
 import { IfMatch } from '../common/http/if-match.decorator';
 import type { IfMatchCondition } from '../common/http/etag';
 import {
@@ -61,7 +61,6 @@ export class MeetingController {
     private readonly actionstepReminders: ActionstepReminderService,
     private readonly customMeetingNotifications: CustomMeetingNotificationService,
     private readonly testimonyReminders: TestimonyReminderService,
-    private readonly people: PersonService,
   ) {}
 
   @Get()
@@ -71,14 +70,26 @@ export class MeetingController {
   findAll(
     @Param() params: HauskreisParamsDto,
     @Query() query: ListMeetingsQueryDto,
+    @CurrentMembership() membership: HauskreisMembership,
   ) {
-    return this.meetingService.findAll(params.hauskreisId, query);
+    return this.meetingService.findAll(
+      params.hauskreisId,
+      query,
+      viewerOf(membership),
+    );
   }
 
   @Get(':id')
   @ApiZodResponse(MeetingResponseDto)
-  findOne(@Param() params: MeetingParamsDto) {
-    return this.meetingService.findOne(params.hauskreisId, params.id);
+  findOne(
+    @Param() params: MeetingParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.meetingService.findOne(
+      params.hauskreisId,
+      params.id,
+      viewerOf(membership),
+    );
   }
 
   /**
@@ -115,34 +126,34 @@ export class MeetingController {
 
   @Post()
   @ApiZodResponse(MeetingResponseDto, { status: 201 })
-  async create(
+  create(
     @Param() params: HauskreisParamsDto,
     @Body() dto: CreateMeetingDto,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentMembership() membership: HauskreisMembership,
   ) {
     // Wer anlegt, braucht keine Nachricht darüber, dass er angelegt hat.
-    const person = await this.people.resolveForUser(user);
-
-    return this.meetingService.create(params.hauskreisId, dto, person.id);
+    return this.meetingService.create(
+      params.hauskreisId,
+      dto,
+      viewerOf(membership),
+    );
   }
 
   @Patch(':id')
   @ApiZodResponse(MeetingResponseDto)
   @ApiConditionalWrite()
-  async update(
+  update(
     @Param() params: MeetingParamsDto,
     @Body() dto: UpdateMeetingDto,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentMembership() membership: HauskreisMembership,
     @IfMatch() ifMatch?: IfMatchCondition,
   ) {
     // Wer einträgt, braucht keine Nachricht darüber, dass er eingetragen hat.
-    const person = await this.people.resolveForUser(user);
-
     return this.meetingService.update(
       params.hauskreisId,
       params.id,
       dto,
-      person.id,
+      viewerOf(membership),
       ifMatch,
     );
   }
@@ -163,19 +174,17 @@ export class MeetingController {
   @ApiConditionalWrite()
   // Returns the updated meeting rather than creating anything, so 200 not 201.
   @HttpCode(HttpStatus.OK)
-  async cancel(
+  cancel(
     @Param() params: MeetingParamsDto,
     @Body() dto: CancelMeetingDto,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentMembership() membership: HauskreisMembership,
     @IfMatch() ifMatch?: IfMatchCondition,
   ) {
-    const person = await this.people.resolveForUser(user);
-
     return this.meetingService.cancel(
       params.hauskreisId,
       params.id,
       dto,
-      person.id,
+      viewerOf(membership),
       ifMatch,
     );
   }
@@ -190,9 +199,15 @@ export class MeetingController {
   @HttpCode(HttpStatus.OK)
   uncancel(
     @Param() params: MeetingParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
     @IfMatch() ifMatch?: IfMatchCondition,
   ) {
-    return this.meetingService.uncancel(params.hauskreisId, params.id, ifMatch);
+    return this.meetingService.uncancel(
+      params.hauskreisId,
+      params.id,
+      viewerOf(membership),
+      ifMatch,
+    );
   }
 
   @Put(':id/attendance')
@@ -218,17 +233,15 @@ export class MeetingController {
   @ApiZodResponse(ActionstepDoneResponseDto, {
     description: 'Ohne If-Match — ein Schalter, kein Wettlauf',
   })
-  async setActionstepDone(
+  setActionstepDone(
     @Param() params: MeetingParamsDto,
     @Body() dto: SetActionstepDoneDto,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentMembership() membership: HauskreisMembership,
   ) {
-    const person = await this.people.resolveForUser(user);
-
     return this.meetingService.setActionstepDone(
       params.hauskreisId,
       params.id,
-      person.id,
+      membership.id,
       dto.done,
     );
   }

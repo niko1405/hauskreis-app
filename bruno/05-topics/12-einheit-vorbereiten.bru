@@ -1,0 +1,60 @@
+meta {
+  name: Einheit vorbereiten
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/topics/{{topicId}}/sessions
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Bruno-Einheit ohne Abend",
+    "actionstepText": "Einmal diese Woche jemandem danken."
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("draftSessionId", res.body.id);
+}
+
+tests {
+  test("antwortet mit 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("hängt an keinem Abend", function () {
+    expect(res.body.meetingId).to.equal(null);
+  });
+
+  test("die anlegende Person ist verantwortlich", function () {
+    expect(res.body.responsibles).to.have.lengthOf(1);
+  });
+}
+
+docs {
+  Vorarbeiten, ohne dass ein Dienstag feststeht.
+
+  Vorher ging nur der umgekehrte Weg — erst einen Termin belegen, dann dort
+  schreiben —, und wer zwischendurch eine Idee hatte, hatte keinen Platz dafür.
+  Die Einheit taucht danach unter `…/topic-choices` in `openSessions` auf und
+  lässt sich an einem Abend auswählen.
+
+  Der Titel ist hier **Pflicht**, anders als beim Wählen an einem Abend. Dort
+  steht die Einheit unter ihrem Termin und ist auch ohne Titel auffindbar; ein
+  Entwurf ohne Abend hat nichts als seinen Titel.
+
+  Wer anlegt, wird ihre Verantwortliche — sonst griffe die Rettung aus Spec 8.5
+  (der eigene Entwurf bleibt greifbar, auch wenn der Owner einen als Mitarbeiter
+  entfernt) für handgemachte Entwürfe nicht.
+
+  Ist das Thema `COMPLETED`, läuft es danach wieder: wer fortsetzt, sagt damit,
+  dass es doch nicht fertig war.
+}

@@ -20,11 +20,14 @@ import {
 function setup() {
   const upsert = jest.fn().mockResolvedValue({});
 
-  const prisma = {
+  const db = {
     meeting: {
       findFirst: jest
         .fn()
         .mockResolvedValue({ id: 'm-1', hauskreisId: 'hk-1' }),
+      // Die Anwesenheit steht mit in der Antwort des Termins, deshalb springt
+      // seine Version mit — sonst bliebe der ETag stehen.
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     person: { findFirst: jest.fn().mockResolvedValue({ id: 'niko' }) },
     meetingAttendance: {
@@ -33,6 +36,11 @@ function setup() {
         .mockResolvedValue({ status: AttendanceStatus.ABSENT }),
       upsert,
     },
+  };
+
+  const prisma = {
+    ...db,
+    $transaction: (run: (tx: typeof db) => unknown) => run(db),
   } as unknown as PrismaService;
 
   const reconcile = jest.fn();

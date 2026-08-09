@@ -1,57 +1,46 @@
 import {
-  BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  AssignmentRole,
-  MeetingStatus,
-  TopicStatus,
-} from '../../generated/prisma/enums';
-import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
-import { AvailabilityService } from '../role-suggestion/availability.service';
-import { EditRightsService } from '../meeting/edit-rights.service';
-import { toUtcDate } from '../meeting/meeting-schedule';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
 import type { IfMatchCondition } from '../common/http/etag';
-import type {
-  CreateTopicDto,
-  ListTopicsQueryDto,
-  UpdateTopicDto,
-} from './dto/topic.dto';
+import {
+  membershipOf,
+  shapeTopic,
+  topicInclude,
+  topicScopeWhere,
+  type Viewer,
+} from './topic-shape';
+import { mayDeleteTopic, mayEditTopic } from './topic-visibility';
+import type { ListTopicsQueryDto, UpdateTopicDto } from './dto/topic.dto';
 
-const topicInclude = {
-  responsibles: {
-    select: { person: { select: personRefSelect } },
-  },
-  meetings: {
-    // Zusammenfassung und Actionstep gehören zum Thema, nur eben pro Abend:
-    // ein Thema über drei Dienstage hat drei davon. Das Archiv listet sie
-    // untereinander — deshalb kommen sie hier mit und nicht über eine zweite
-    // Abfrage je Thema.
-    select: {
-      id: true,
-      date: true,
-      summaryText: true,
-      actionstepText: true,
-    },
-    orderBy: { date: 'asc' },
-  },
-} as const;
-
+/**
+ * Themen lesen, benennen und wegräumen.
+ *
+ * Angelegt werden sie hier nicht — das passiert beim Wählen an einem Abend
+ * (`TopicSessionService`). Ein Thema ohne Anlass wäre ein leerer Datensatz, und
+ * genau davon kam das alte Modell nicht los.
+ */
 @Injectable()
 export class TopicService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly roleAssignments: RoleAssignmentNotifier,
-    private readonly availability: AvailabilityService,
-    private readonly editRights: EditRightsService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(hauskreisId: string, query: ListTopicsQueryDto) {
+  /**
+   * Die Archivliste.
+   *
+   * `scope=public` zeigt, was gehalten wurde — die Bedingung steckt als
+   * `where`-Fragment in `topicScopeWhere` und nicht in einem Filter danach:
+   * sonst müsste die Seitenzahl raten, wie viele Treffer nach dem Aussortieren
+   * übrig bleiben.
+   */
+  async findAll(
+    hauskreisId: string,
+    query: ListTopicsQueryDto,
+    viewer: Viewer,
+  ) {
     const createdAt: { gte?: Date; lte?: Date } = {};
 
     if (query.from) {
@@ -59,19 +48,16 @@ export class TopicService {
     }
 
     if (query.to) {
-      // The bound is a date, the column a timestamp — without pushing to the
-      // end of the day a topic started at noon would fall outside "bis heute".
+      // Die Grenze ist ein Tag, die Spalte ein Zeitstempel — ohne das Anheben
+      // fiele ein mittags begonnenes Thema aus „bis heute" heraus.
       createdAt.lte = endOfUtcDay(query.to);
     }
 
     const where = {
       hauskreisId,
+      ...topicScopeWhere(query.scope, viewer.personId),
       ...(query.status ? { status: query.status } : {}),
-      ...(query.search
-        ? {
-            title: { contains: query.search, mode: 'insensitive' as const },
-          }
-        : {}),
+      ...(query.search ? buildTopicSearch(query.search) : {}),
       ...(Object.keys(createdAt).length > 0 ? { createdAt } : {}),
     };
 
@@ -79,8 +65,8 @@ export class TopicService {
       this.prisma.topic.findMany({
         where,
         include: topicInclude,
-        // Newest first: the archive and the "was läuft gerade" view both read
-        // that way round.
+        // Neueste zuerst: so liest sich sowohl das Archiv als auch „was läuft
+        // gerade".
         orderBy: { createdAt: 'desc' },
         take: query.take,
         skip: query.skip,
@@ -88,10 +74,22 @@ export class TopicService {
       this.prisma.topic.count({ where }),
     ]);
 
-    return toPage(items, total, query);
+    return toPage(
+      items.map((topic) => shapeTopic(topic, viewer)),
+      total,
+      query,
+    );
   }
 
-  async findOne(hauskreisId: string, id: string) {
+  /**
+   * Ein Thema samt seiner Einheiten.
+   *
+   * Ohne Sichtbarkeitsprüfung auf dem Thema selbst: wer die Id kennt, darf es
+   * sehen. Zurückgehalten wird auf der Ebene darunter — unfertige Einheiten
+   * fallen für Fremde weg, und der Inhalt einer noch nicht gehaltenen bleibt
+   * `null` (`shapeTopic`).
+   */
+  async findOne(hauskreisId: string, id: string, viewer: Viewer) {
     const topic = await this.prisma.topic.findFirst({
       where: { id, hauskreisId },
       include: topicInclude,
@@ -101,248 +99,157 @@ export class TopicService {
       throw new NotFoundException(`Topic ${id} not found`);
     }
 
-    return topic;
+    return shapeTopic(topic, viewer);
   }
 
-  async create(hauskreisId: string, dto: CreateTopicDto) {
-    await this.assertPeopleBelongToHauskreis(
-      hauskreisId,
-      dto.responsiblePersonIds,
-    );
-
-    return this.prisma.topic.create({
-      data: {
-        hauskreisId,
-        title: dto.title ?? null,
-        responsibles: {
-          create: dto.responsiblePersonIds.map((personId) => ({ personId })),
-        },
-      },
-      include: topicInclude,
-    });
-  }
-
+  /**
+   * Titel, Zusammenfassung, Status.
+   *
+   * Alle drei unterliegen derselben Regel: ändern darf, wer zum Thema gehört.
+   * Anders als früher gilt das auch für `status` — „wir sind damit durch" ist
+   * eine Aussage über die eigene Arbeit, und seit die nächtliche Übernahme weg
+   * ist, stößt sie auch nichts mehr an, das die ganze Gruppe betrifft.
+   */
   async update(
     hauskreisId: string,
     id: string,
     dto: UpdateTopicDto,
-    /** Wer gerade einträgt — bekommt keine Nachricht über sich selbst. */
-    actorPersonId?: string,
+    viewer: Viewer,
     condition?: IfMatchCondition,
   ) {
-    await this.findOne(hauskreisId, id);
+    await this.assertMayEdit(hauskreisId, id, viewer);
 
-    // Nur der **Name**. Wer ein Thema vorbereitet, benennt es — aber wer
-    // vorbereitet, bleibt eine Frage an die Gruppe und läuft weiter über die
-    // Zuteilung mit ihren Vorschlägen. Und `status` ebenso: „abgeschlossen"
-    // stößt den Vorschlag fürs nächste Thema an, das ist Planung.
-    if (dto.title !== undefined && actorPersonId) {
-      await this.editRights.assertMayEditTopic(id, actorPersonId);
-    }
-
-    if (dto.responsiblePersonIds) {
-      await this.assertPeopleBelongToHauskreis(
-        hauskreisId,
-        dto.responsiblePersonIds,
-      );
-    }
-
-    // Vor dem Schreiben lesen: benachrichtigt werden soll, wer **dazukommt**.
-    // Die ganze Liste zu nehmen hieße, beim Nachrücken einer zweiten Person
-    // auch die erste noch einmal anzuschreiben.
-    const before = dto.responsiblePersonIds
-      ? await this.prisma.topicResponsible.findMany({
-          where: { topicId: id },
-          select: { personId: true },
-        })
-      : [];
-
-    const arriving = dto.responsiblePersonIds?.filter(
-      (personId) => !before.some((row) => row.personId === personId),
-    );
-
-    // Geprüft wird gegen den **nächsten kommenden** Abend des Themas — denselben,
-    // für den auch die Nachricht rausgeht. Ein Thema zieht sich über mehrere
-    // Abende; an jedem einzelnen zu prüfen hieße, eine Vorbereitung an einer
-    // Absage für irgendeinen davon scheitern zu lassen.
-    if (arriving && arriving.length > 0) {
-      const meeting = await this.nextMeetingOf(hauskreisId, id);
-
-      if (meeting) {
-        await this.availability.assertAvailable(
-          hauskreisId,
-          meeting.id,
-          arriving,
-        );
-      }
-    }
-
-    const updated = await updateWithVersionCheck({
+    return updateWithVersionCheck({
       condition,
-      update: async (versionConstraint) => {
-        const result = await this.prisma.topic.updateMany({
+      update: (versionConstraint) =>
+        this.prisma.topic.updateMany({
           where: { id, hauskreisId, ...versionConstraint },
           data: {
             title: dto.title,
+            summaryText: dto.summaryText,
             status: dto.status,
             version: { increment: 1 },
           },
-        });
-
-        // Only touch the join rows once the version check has passed, so a
-        // stale write leaves the responsible people as they were.
-        if (result.count > 0 && dto.responsiblePersonIds) {
-          await this.replaceResponsibles(id, dto.responsiblePersonIds);
-        }
-
-        return result;
-      },
+        }),
       exists: () => this.prisma.topic.findFirst({ where: { id, hauskreisId } }),
-      reload: () => this.findOne(hauskreisId, id),
+      reload: () => this.findOne(hauskreisId, id, viewer),
       notFoundMessage: `Topic ${id} not found`,
     });
-
-    if (arriving) {
-      await this.announceNewResponsibles(
-        hauskreisId,
-        id,
-        arriving,
-        actorPersonId,
-      );
-    }
-
-    return updated;
   }
 
   /**
-   * Ein Thema hängt an mehreren Abenden — die Nachricht geht deshalb an den
-   * **nächsten kommenden**, sonst gäbe es eine je Abend. Hängt es an gar
-   * keinem, bleibt es still: ohne Termin gibt es weder ein Datum zu nennen noch
-   * einen Ort, zu dem die Nachricht springen könnte.
+   * Löscht ein Thema samt aller Einheiten.
+   *
+   * Nur der Owner (und Admins) — ein Mitarbeiter darf jeden Text ändern, aber
+   * nicht die Arbeit aller wegräumen (Spec 8.2).
+   *
+   * Hing eine Einheit an einem kommenden Abend, fällt der auf „zugeteilt, aber
+   * noch nichts gewählt" zurück. Die Zuteilung ist davon unberührt: sie steht am
+   * Termin und hatte mit dem Thema nie etwas zu tun.
    */
-  private async announceNewResponsibles(
-    hauskreisId: string,
-    topicId: string,
-    personIds: string[],
-    actorPersonId?: string,
-  ): Promise<void> {
-    if (personIds.length === 0) return;
+  async remove(hauskreisId: string, id: string, viewer: Viewer) {
+    const topic = await this.load(hauskreisId, id);
 
-    const meeting = await this.nextMeetingOf(hauskreisId, topicId);
-
-    if (!meeting) return;
-
-    await this.roleAssignments.announce(
-      meeting.id,
-      AssignmentRole.TOPIC,
-      personIds,
-      actorPersonId,
-    );
-  }
-
-  /**
-   * Der nächste Abend, an dem dieses Thema dran ist. Der Bezugspunkt für alles,
-   * was ein Thema mit einem einzelnen Abend zu tun hat — Nachricht wie
-   * Anwesenheitsprüfung.
-   */
-  private nextMeetingOf(hauskreisId: string, topicId: string) {
-    return this.prisma.meeting.findFirst({
-      where: {
-        hauskreisId,
-        topicId,
-        date: { gte: toUtcDate(new Date()) },
-        status: { not: MeetingStatus.CANCELLED },
-      },
-      orderBy: { date: 'asc' },
-      select: { id: true },
-    });
-  }
-
-  async remove(hauskreisId: string, id: string, actorPersonId?: string) {
-    await this.findOne(hauskreisId, id);
-
-    // Dieselbe Regel wie beim Umbenennen: wer vorbereitet hat, räumt weg.
-    if (actorPersonId) {
-      await this.editRights.assertMayEditTopic(id, actorPersonId);
+    if (
+      !mayDeleteTopic({
+        isAdmin: viewer.isAdmin,
+        personId: viewer.personId,
+        topic: membershipOf(topic),
+      })
+    ) {
+      throw new ForbiddenException('Ein Thema löscht, wem es gehört.');
     }
 
-    // Meetings keep their row; `topic_id` is set to null by the foreign key.
     await this.prisma.topic.delete({ where: { id } });
   }
 
   /**
-   * The topic a newly generated meeting should start with.
+   * Entfernt eine:n Mitarbeiter:in — nur der Owner darf das (Spec 8.3).
    *
-   * CLAUDE.md §5: solange ein Thema läuft, wird der nächste Termin damit
-   * vorbelegt. Where several are running, the one used most recently wins —
-   * that is the thread the group is actually on.
+   * Die Person verliert das Bearbeitungsrecht am ganzen Thema, ab sofort. Was
+   * sie gehalten hat, bleibt stehen: `topic_session_responsible` wird nicht
+   * angefasst. „Wer war damals dabei" ist eine Tatsache und keine Berechtigung
+   * (Spec 8.5).
    */
-  async findCarryOverTopic(hauskreisId: string) {
-    const lastUse = await this.prisma.meeting.findFirst({
-      where: {
-        hauskreisId,
-        topicId: { not: null },
-        topic: { status: TopicStatus.RUNNING },
-      },
-      orderBy: { date: 'desc' },
-      select: { topicId: true },
-    });
-
-    if (lastUse?.topicId) {
-      return lastUse.topicId;
-    }
-
-    // A running topic that has never been on a meeting yet — someone planned
-    // ahead. Picking it up is better than leaving the evening empty.
-    const unused = await this.prisma.topic.findFirst({
-      where: { hauskreisId, status: TopicStatus.RUNNING },
-      orderBy: { createdAt: 'asc' },
-      select: { id: true },
-    });
-
-    return unused?.id ?? null;
-  }
-
-  private async replaceResponsibles(
-    topicId: string,
-    personIds: string[],
-  ): Promise<void> {
-    await this.prisma.$transaction([
-      this.prisma.topicResponsible.deleteMany({
-        where: { topicId, personId: { notIn: personIds } },
-      }),
-      this.prisma.topicResponsible.createMany({
-        data: personIds.map((personId) => ({ topicId, personId })),
-        skipDuplicates: true,
-      }),
-    ]);
-  }
-
-  /**
-   * Guards the multi-tenant boundary: the foreign keys alone would let a topic
-   * point at people from another Hauskreis.
-   */
-  private async assertPeopleBelongToHauskreis(
+  async removeCollaborator(
     hauskreisId: string,
-    personIds: string[],
-  ): Promise<void> {
-    if (personIds.length === 0) {
-      return;
-    }
+    id: string,
+    personId: string,
+    viewer: Viewer,
+  ) {
+    const topic = await this.load(hauskreisId, id);
 
-    const found = await this.prisma.person.count({
-      where: { id: { in: personIds }, hauskreisId },
-    });
-
-    if (found !== new Set(personIds).size) {
-      throw new BadRequestException(
-        'At least one responsible person does not belong to this Hauskreis',
+    if (
+      !mayDeleteTopic({
+        isAdmin: viewer.isAdmin,
+        personId: viewer.personId,
+        topic: membershipOf(topic),
+      })
+    ) {
+      throw new ForbiddenException(
+        'Mitarbeitende verwaltet, wem das Thema gehört.',
       );
     }
+
+    await this.prisma.topicCollaborator.deleteMany({
+      where: { topicId: id, personId },
+    });
+  }
+
+  private async assertMayEdit(
+    hauskreisId: string,
+    id: string,
+    viewer: Viewer,
+  ): Promise<void> {
+    const topic = await this.load(hauskreisId, id);
+
+    if (
+      !mayEditTopic({
+        isAdmin: viewer.isAdmin,
+        personId: viewer.personId,
+        topic: membershipOf(topic),
+      })
+    ) {
+      throw new ForbiddenException('Das Thema benennt, wer daran arbeitet.');
+    }
+  }
+
+  private async load(hauskreisId: string, id: string) {
+    const topic = await this.prisma.topic.findFirst({
+      where: { id, hauskreisId },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        ownerPersonId: true,
+        collaborators: { select: { personId: true } },
+      },
+    });
+
+    if (!topic) {
+      throw new NotFoundException(`Topic ${id} not found`);
+    }
+
+    return topic;
   }
 }
 
-/** 23:59:59.999 UTC, so an inclusive `to` really covers that whole day. */
+/**
+ * Die Suche trifft Titel **und** Zusammenfassung.
+ *
+ * Nur den Titel zu durchsuchen hieß, an einem Thema ohne Titel vorbeizusuchen —
+ * und die gibt es reichlich, der Titel ist ja optional.
+ */
+function buildTopicSearch(search: string) {
+  return {
+    OR: [
+      { title: { contains: search, mode: 'insensitive' as const } },
+      { summaryText: { contains: search, mode: 'insensitive' as const } },
+    ],
+  };
+}
+
+/** 23:59:59.999 UTC, damit ein einschließendes `to` den ganzen Tag abdeckt. */
 function endOfUtcDay(date: Date): Date {
   return new Date(
     Date.UTC(

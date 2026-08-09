@@ -409,10 +409,13 @@ Backend; die Oberfläche bildet es nur ab.
 Dazu drei kleinere Umbauten:
 
 - **Der Titel sitzt am Überschriftstext**, nicht in einem Feld weiter unten.
-  Angezeigt wird die fertige Überschrift (eigener Titel, sonst das Thema, sonst
-  die Terminart); bearbeitet wird aber nur `meeting.title`. Würde der Entwurf
-  mit der Überschrift starten, machte das erste Speichern aus dem geerbten
-  Themen-Titel einen eigenen — und der Termin löste sich still vom Thema ab.
+  Angezeigt wird die fertige Überschrift (eigener Titel, sonst der Titel des
+  Abends im Thema, sonst der des Themas, sonst die Terminart); bearbeitet wird
+  aber nur `meeting.title`. Würde der Entwurf mit der Überschrift starten,
+  machte das erste Speichern aus dem geerbten Themen-Titel einen eigenen — und
+  der Termin löste sich still vom Thema ab. Für alle, die den Inhalt noch nicht
+  sehen dürfen, steht dort die Terminart, und das ist genau richtig: zu sehen
+  gibt es noch nichts.
 - **Der Info-Text steht oben.** Dort steht, was man _vor_ dem Abend wissen muss;
   unten zwischen Zusammenfassung und Actionstep las es niemand rechtzeitig.
 - **„Wer kommt" zeigt, wer kommt.** Vorher ließ sich für jede Person
@@ -426,32 +429,104 @@ Dazu drei kleinere Umbauten:
   einen einzelnen Abend abzusagen: „Bist du dabei?" auf dem Startbildschirm gilt
   nur fürs nächste Treffen, und Abwesenheiten im Profil decken Zeiträume ab.
 
-### Das Thema an einer Stelle
+### Das Thema: zuteilen, dann wählen
 
 Titel, Zusammenfassung und Actionstep lagen über die ganze Seite verteilt: der
 Titel oben in der Überschrift, die Zusammenfassung ganz unten, der Actionstep
 darunter, das Thema selbst als Rollen-Zeile dazwischen. Vier Orte für eine
 Sache, und keiner sagte, dass sie zusammengehören. `topic-card.tsx` fasst sie
-zusammen.
+zusammen — und zeigt seither vier Zustände statt zwei:
 
-**Der Titel hat jetzt einen Vorschlag.** Ohne eigenen Titel steht dort „Thema
-von Niko" — abgeleitet über `topicTitle()` und **nicht** gespeichert. Ein beim
-Anlegen hineingeschriebener Name stünde beim nächsten Rollentausch falsch da,
-und niemand korrigiert einen Titel, den er nie getippt hat. In der
-Kartenüberschrift (`meetingHeadline`) taucht der Vorschlag bewusst _nicht_ auf:
-„Thema von Niko" sagt dort weniger als „Hauskreis-Abend".
+| Zustand                        | Was dasteht                                            |
+| ------------------------------ | ------------------------------------------------------ |
+| Baustein aus                   | die Sektion gibt es nicht                              |
+| niemand zugeteilt              | „Noch kein Zuständiger — trag oben jemanden ein."      |
+| zugeteilt, noch nichts gewählt | wer dran ist: **„Thema wählen"**; alle anderen: nichts |
+| gewählt                        | das Thema, darunter dieser Abend                       |
 
-**Sichtbarkeit und Bearbeitbarkeit sind zwei Fragen:**
+**Der dritte Zustand ist der Punkt.** Vorher gab es ihn nicht: eine Zuteilung
+legte sofort ein leeres Thema an, und der Abend sah aus, als stünde schon etwas
+fest. Jetzt sind es zwei Schritte — `PUT …/topic-responsibles` sagt „du bist
+dran", `POST …/topic-session` sagt „und zwar damit".
 
-|              | vor dem Abend       | ab dem Termintag       |
-| ------------ | ------------------- | ---------------------- |
-| Zuständige   | sehen und schreiben | sehen und schreiben    |
-| alle anderen | sehen **nichts**    | sehen, schreiben nicht |
+Den Knopf sieht **nur, wer an dem Abend zugeteilt ist** — auch kein Admin. Die
+Wahl ist kein Verwaltungsakt, sondern die Aussage „ich bereite das vor". Steht
+schon etwas, heißt er „Anderes Thema wählen" und fragt vorher nach: die bisherige
+Einheit löst sich vom Abend und wartet als Entwurf.
+
+**Die Hierarchie ist der Aufbau.** Oben das Thema, als Überschrift und als Link
+auf seine Seite; darunter, in einem eigenen Rahmen mit „Einheit 2 von 2", dieser
+eine Abend mit Titel, Zusammenfassung und Actionstep. Vorher standen beide Titel
+gleichrangig, und man musste raten, welcher der größere war. Titel und
+Zusammenfassung des **Themas** ändert man nur auf seiner Seite — es steht über
+mehreren Abenden und nicht über diesem einen. Darunter lassen sich die anderen
+Abende desselben Themas ausklappen; geladen werden sie erst dann, über
+`GET …/topics/:id`, wo die Sichtbarkeitsregeln schon stehen.
+
+### Das Wahl-Sheet
+
+`topic-choice-sheet.tsx` sind **vier Schritte in einem Sheet**, nicht vier
+Sheets: `Sheet` rendert ohne Portal auf derselben Ebene und registriert je einen
+eigenen Escape-Handler, gestapelt schließen sie sich gegenseitig.
+
+1. neues Thema · Angefangenes aufnehmen (nach Thema gebündelt) · ein eigenes
+   Thema öffnen
+2. dessen Einheiten mit „gehalten" und „offen" — offene lassen sich direkt
+   nehmen, darunter geht es zu einer neuen
+3. Titel (Pflicht), Actionstep, Zusammenfassung und mit wem zusammen
+4. der Personen-Picker aus der Rollenzuteilung
+
+Schritt 4 ist eine **Abkürzung**: was er einträgt, ist die Rolle „Thema" an
+diesem Abend, und daraus macht der Server die Mitwirkenden. So gibt es genau
+einen Weg, Mitarbeiter:in eines Themas zu werden — und die Regel „wer die Rolle
+verliert, verliert das Schreibrecht" bleibt widerspruchsfrei. Dafür ist der
+Rumpf von `assignment-sheet.tsx` als `assignment-picker.tsx` herausgelöst; das
+Sheet ist seither nur noch die Hülle.
+
+Eine offene Einheit, die an einem **anderen kommenden** Abend hängt, steht
+ebenfalls zur Wahl und bringt ihr Datum mit — sie zu nehmen kostet jenen Abend
+seine Auswahl, deshalb erst die Frage, dann die Tat.
+
+**Sichtbarkeit und Bearbeitbarkeit sind zwei Fragen** — und beide beantwortet
+inzwischen der **Server**, nicht das Frontend:
+
+|              | vor 18 Uhr am Termintag | danach                 |
+| ------------ | ----------------------- | ---------------------- |
+| Zuständige   | sehen und schreiben     | sehen und schreiben    |
+| alle anderen | sehen **nichts**        | sehen, schreiben nicht |
+
+Die Karte liest dafür zwei Felder aus der Antwort: `contentVisible` (sind die
+Textfelder gefüllt oder zurückgehalten?) und `mayEdit` (darf ich schreiben?).
+Beide vom Server, damit die Regel nicht ein zweites Mal aufgeschrieben wird —
+und nicht anders ausgelegt. Ist `contentVisible` falsch, kommen Titel,
+Actionstep und Zusammenfassung als `null` an; sie im Frontend auszublenden hieße,
+sie trotzdem über die Leitung zu schicken.
 
 Das Verstecken davor ist kein Datenschutz, sondern der Sinn der Sache: ein
 Actionstep, den alle eine Woche vorher lesen, ist keiner mehr. Umgekehrt sollen
 die Zuständigen vorbereiten dürfen — vorher verbot der Server das Schreiben bis
 zum Termintag, und zwar genau der Person, die es am ehesten brauchte.
+
+### Lesen ist der Normalfall
+
+Termin-Detail und Themenseite haben unten einen **„Bearbeiten"**-Schalter. Erst
+danach erscheinen die Stifte, die Rollen-Knöpfe, die Bausteine und die
+Löschsymbole. Vorher bot jedes Feld dauerhaft eine Bearbeitung an — auf einer
+Seite, die man zehnmal öffnet, um etwas zu wissen, und einmal, um etwas zu
+ändern.
+
+Es gibt bewusst **kein „Speichern"**: jede Änderung geht sofort raus, der
+Schalter entscheidet nur, ob sie überhaupt angeboten wird. Ein Sammel-Speichern
+hieße, einen zweiten Zustand zu führen, der mit dem Server auseinanderläuft, und
+den Verlust bei einem versehentlichen Zurück in Kauf zu nehmen.
+
+Anwesenheit und Actionstep-Haken bleiben immer bedienbar — das ist Teilnahme,
+keine Bearbeitung. Absagen und Löschen stehen dauerhaft ganz unten: sie sind
+keine Bearbeitung, sondern eine Entscheidung über den Abend als Ganzes.
+
+Umgesetzt ist es ohne neue Mechanik: `InlineEdit` und `RoleRow` blenden ihre
+Bedienelemente schon von selbst aus, wenn der Handler fehlt. Der Schalter setzt
+also nur `editing && berechtigt ? handler : undefined`.
 
 `InlineEdit` hat dafür ein optionales `onSave` bekommen: fehlt es, gibt es
 keinen Stift. Ihn zu zeigen und dann mit `403` zu antworten wäre eine Einladung
@@ -585,28 +660,32 @@ Vergangene Termine bleiben in der Datenbank und tragen weiter die
 Vorschlagslogik — sie haben nur keine eigene Liste mehr. Erreichbar sind sie
 über die Terminliste („Vergangene") und den Kalender.
 
-Ein Themen-Eintrag zeigt jetzt **pro Abend** eine Zeile mit Datum,
-Zusammenfassung und Actionstep. Ein Thema kann sich über mehrere Dienstage
-ziehen, und jeder davon hat seine eigenen; ein zusammengefasster Block würde
-genau die Frage nicht beantworten, die man an ein altes Thema hat. Abende ohne
-Notiz stehen nicht da — eine leere Zeile mit Datum sagt nur, dass niemand etwas
-aufgeschrieben hat.
+Die Themenliste ist eine **Liste**: Titel, Zusammenfassung, wer daran arbeitet,
+wie viele Abende. Die Abende selbst stehen auf der eigenen Seite des Themas
+(`/archiv/themen/[id]`) — ein Thema mit fünf Einheiten machte die Liste sonst zu
+einer Wand.
 
-Die Daten kamen schon fast richtig: `topicResponseSchema` liefert `meetings`
-chronologisch mit, es fehlten nur `summaryText` und `actionstepText` je Termin.
+Gelistet wird, was **gehalten** wurde: ein Thema erscheint, sobald einer seiner
+Abende vorbei ist, und bleibt dann drin — auch für alles, was danach noch
+dazukommt. Der Schalter **„Nur meine Themen"** (`scope=mine`) nimmt zusätzlich
+die eigenen dazu, die noch vor sich haben, gehalten zu werden.
 
-Jede dieser Zeilen ist ein **Link auf den Abend**. Geschrieben werden
+Auf der Themenseite stehen drei Blöcke untereinander: gehaltene Abende, was noch
+bevorsteht, und — nur für Owner und Mitarbeitende — die **Entwürfe** ohne Termin.
+Die liefert der Server für alle anderen gar nicht erst aus; das ist keine
+Ausblendung im UI, sondern eine Entscheidung eine Ebene tiefer.
+
+Jede Abend-Zeile ist ein **Link auf den Abend**. Geschrieben werden
 Zusammenfassung und Actionstep dort, dort gelten die Rechte schon, und dort
 steht das Feld schon; ein zweiter Bearbeitungsweg wäre eine zweite Stelle, an
 der dieselbe Regel stimmen muss.
 
-Das **Thema selbst** lässt sich hier umbenennen und löschen — von seinen
-Zuständigen und von Admins, dieselbe Regel wie auf der Terminseite. Beim
-Löschen bleiben die Abende stehen und verlieren nur ihre Verknüpfung; die
-Rückfrage sagt das. `useRenameTopic` liest den Einzelstand dafür selbst, statt
-ihn wie `useUpdateTopic` im Cache zu erwarten: das Archiv zeigt alle Themen
-nebeneinander, und für jedes vorsorglich einen ETag zu holen wäre teurer als
-einer, wenn wirklich jemand tippt. Dasselbe Muster wie `useSetHostWeight`.
+Umbenennen, Zusammenfassung, Status und Löschen liegen auf der Themenseite. Ob
+die Knöpfe überhaupt erscheinen, sagen `mayEdit` und `mayDelete` aus der
+Antwort — das Frontend rechnet die Regel nicht nach. `useEditTopicSession` liest
+den ETag einer Einheit beim Schreiben selbst: sie steht im Termin-DTO und nicht
+als eigene Ressource, ihr ETag liegt also nirgends im Cache. Dasselbe Muster wie
+`useSetHostWeight`.
 
 **Die Knöpfe eines Lieds erscheinen erst nach langem Druck.** Stift und
 Papierkorb standen an jeder Zeile dauerhaft da — zwei Ziele in einer Liste,

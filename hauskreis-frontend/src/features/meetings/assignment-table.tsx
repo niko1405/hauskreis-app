@@ -89,7 +89,7 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
     return (
       <EmptyState
         title="Für die nächsten Wochen stehen noch keine Termine"
-        hint="Der Terminplaner legt sie im Voraus an — in der Verwaltung lässt er sich auch von Hand anstoßen."
+        hint="Der Terminplaner legt sie im Voraus an."
       />
     );
   }
@@ -200,7 +200,7 @@ function Row({
         }
       : {
           role: 'TOPIC',
-          people: (meeting.topic?.responsibles ?? []).map((r) => r.person),
+          people: meeting.topicResponsibles.map((r) => r.person),
           booked: meeting.hasTopicSlot,
         },
     {

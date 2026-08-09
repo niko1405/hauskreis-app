@@ -5,6 +5,10 @@
  * ohne ihn wäre ein Abend ohne Zuteilung gesperrt, und die Zuteilung damit die
  * Voraussetzung fürs Nachbereiten. Im echten Leben läuft es umgekehrt — erst
  * passiert der Abend, dann schreibt jemand auf, was war.
+ *
+ * Vom Dienst geprüft wird hier nur noch die Liedauswahl. Themenname und
+ * Nachbereitung folgen inzwischen der Zugehörigkeit zum **Thema** statt der
+ * Zuteilung an einem Abend — ihre Tests stehen in `topic-visibility.spec.ts`.
  */
 import { ForbiddenException } from '@nestjs/common';
 import { mayEdit } from './edit-rights';
@@ -46,7 +50,6 @@ const LETZTER_DIENSTAG = new Date('2026-07-28T00:00:00.000Z');
 function setup(options: {
   role?: PersonRole;
   meeting?: Record<string, unknown> | null;
-  topicResponsibles?: string[];
 }) {
   const prisma = {
     person: {
@@ -55,13 +58,6 @@ function setup(options: {
         .mockResolvedValue({ role: options.role ?? PersonRole.MEMBER }),
     },
     meeting: { findUnique: jest.fn().mockResolvedValue(options.meeting) },
-    topicResponsible: {
-      findMany: jest
-        .fn()
-        .mockResolvedValue(
-          (options.topicResponsibles ?? []).map((personId) => ({ personId })),
-        ),
-    },
   };
 
   return new EditRightsService(prisma as unknown as PrismaService);
@@ -73,56 +69,6 @@ beforeAll(() => {
 
 afterAll(() => {
   jest.useRealTimers();
-});
-
-describe('EditRightsService.assertMayEditTopic', () => {
-  it('lässt die Zuständigen des Themas', async () => {
-    const service = setup({ topicResponsibles: ['p1'] });
-
-    await expect(
-      service.assertMayEditTopic('t1', 'p1'),
-    ).resolves.toBeUndefined();
-  });
-
-  it('weist alle anderen ab', async () => {
-    const service = setup({ topicResponsibles: ['p1'] });
-
-    await expect(service.assertMayEditTopic('t1', 'p9')).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
-  });
-});
-
-describe('EditRightsService.assertMayWriteSummary', () => {
-  const abendMit = (responsibles: string[]) => ({
-    date: KOMMENDER_DIENSTAG,
-    topic: { responsibles: responsibles.map((personId) => ({ personId })) },
-  });
-
-  it('lässt die Zuständigen des Themas an diesem Abend', async () => {
-    const service = setup({ meeting: abendMit(['p1']) });
-
-    await expect(
-      service.assertMayWriteSummary('m1', 'p1'),
-    ).resolves.toBeUndefined();
-  });
-
-  it('weist alle anderen ab', async () => {
-    const service = setup({ meeting: abendMit(['p1']) });
-
-    await expect(
-      service.assertMayWriteSummary('m1', 'p9'),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-  });
-
-  /** Ein Abend mit Thema, aber ohne Zuteilung: dann darf jede:r. */
-  it('lässt alle, wenn niemand das Thema vorbereitet', async () => {
-    const service = setup({ meeting: abendMit([]) });
-
-    await expect(
-      service.assertMayWriteSummary('m1', 'p9'),
-    ).resolves.toBeUndefined();
-  });
 });
 
 describe('EditRightsService.assertMayPickSongs', () => {

@@ -78,12 +78,17 @@ grundlegende Vorschläge für Kernentitäten:
 - "Lobpreis/Gebetsabend" hat anstelle eines Themas ein "Testimony" oder garnichts (nur Lieder), diese Termine werden auch automatisch erstellt und ersetzen einen "Standard" Termin immer am letzten Termin vor Monatsende
 - "Custom" ist ein selbst erstellter Termin, welcher keine vorausgesetzten Bedingungen wie bspw Host oder Thema erfüllen muss, allgemein sollte man Termine in ihrer Art bearbeiten können (bspw. von "Standard" zu "Custom" mit Titel "Geburtstag von ...", sozusagen ein special Hauskreis-Treffen, wo wir Geburtstag feiern)
 
-### `topic` (Themen)
-- `id`, `title` (**optional**, nicht jeder trägt vorab einen Titel ein), `responsible_person_ids` (1–2 Personen möglich), `status` ("läuft" / "abgeschlossen")
-- Ein Thema ist **nicht 1:1 an einen Termin gebunden** – kann sich über mehrere Termine ziehen
-- Solange `status = "läuft"`: nächster Termin wird automatisch mit demselben Thema vorbelegt (kein Re-Assign nötig)
-- Nach "abgeschlossen"-Markierung: automatischer Vorschlag für nächstes Thema
+### `topic` (Themen) + `topic_session` (Einheiten)
+- `topic`: `id`, `title` (**optional**, nicht jeder trägt vorab einen ein), `summary_text` (Bogen über alle Abende), `status` ("läuft" / "abgeschlossen"), `owner_person_id`, Mitarbeitende
+- `topic_session`: ein **Abend** eines Themas — `title`, `actionstep_text`, `summary_text`, `meeting_id` (**nullable**, `UNIQUE`)
+- Ein Thema ist **nicht 1:1 an einen Termin gebunden** – es zieht sich über beliebig viele Einheiten
+- Drei Dinge sind getrennt: **Zuständigkeit** (`meeting_topic_responsible`), **Auswahl** (`topic_session.meeting_id`) und **Inhalt**. Dazwischen liegt der Zustand „zugeteilt, aber noch nichts gewählt"
+- `meeting_id = NULL` heißt **unfertig**: vorbereitet, aber an keinem Abend. Wechselt die Rolle, wird entkoppelt statt gelöscht — die Vorbereitung wartet als Entwurf und lässt sich jederzeit wieder aufnehmen
+- Wer zuerst **wählt**, wird Owner (nicht wer zuerst zugeteilt wurde). Wählen darf **nur, wer am Abend zugeteilt ist** — auch kein Admin, und „niemand zugeteilt heißt jede:r darf" gilt hier nicht. Wer eine Einheit hält, wird Mitarbeiter:in und darf am ganzen Thema schreiben; löschen darf nur der Owner. Fällt jemand aus der Zuteilung, verliert er die Einheit dieses Abends — und das Schreibrecht am Thema nur, wenn er sonst nirgends mehr daran hängt
 - Ein mehrteiliges Thema zählt in der Vorschlagslogik wie **ein einzelner Slot** (nicht mehrfach)
+- Ein Thema erscheint im Archiv, sobald einer seiner Abende vorbei ist. Titel, Actionstep und Zusammenfassung einer noch nicht gehaltenen Einheit sind bis **18 Uhr am Termintag** nur für die Zuständigen sichtbar
+- Ein vergangener Abend wird **eingefroren**: seine Einheit bleibt daran hängen, auch wenn die Rolle danach noch wechselt
+- Eine Einheit lässt sich auch **ohne Abend** anlegen — der Ort zum Vorarbeiten. Sie wartet unter „Angefangenes", bis jemand sie an einem Termin auswählt; dort zählt auch eine, die gerade an einem anderen kommenden Abend hängt (sie zieht dann um). Löschen geht nur, solange sie nicht gehalten wurde
 
 ### `host_history` / abgeleitet aus `meetings`
 - `last_hosted_date` + `frequency_factor` pro Person/Location als Datenbasis für Vorschlagslogik
@@ -106,8 +111,10 @@ grundlegende Vorschläge für Kernentitäten:
 2. **Themen-Zuteilung**
    - Dynamisch tauschbar
    - Thema als eigene Entität, optionaler Titel, kann mehrere Termine laufen
-   - Automatische Vorbelegung des nächsten Termins, solange Thema "läuft"
-   - Gleiche Vorschlagslogik wie beim Host (nach "zuletzt Thema gehabt")
+   - Zwei Schritte: erst wird jemand für den Abend **zugeteilt**, dann **wählt** diese Person — neues Thema, ein eigenes fortsetzen, oder eine offene Einheit aufnehmen
+   - Steht schon etwas, ist ein zweites Wählen ein **Wechsel**: die bisherige Einheit löst sich und wartet als Entwurf
+   - Wird der Baustein „Thema" abgeschaltet, fällt die Zuteilung weg (wie bei der Musik); die Einheit wird nur gelöst, nicht geleert
+   - Gleiche Vorschlagslogik wie beim Host (nach "zuletzt Thema gehabt"), gezählt wird die Zuteilung am Termin
 
 3. **Song-Zuteilung**
    - für jeden Termin gibt es mind. 1 Person (auch mehrere möglich), welche für die (alle) Songs zuständig ist
@@ -135,6 +142,7 @@ grundlegende Vorschläge für Kernentitäten:
 
 8. **Archiv**
    - Es gibt ein Archiv, wo vergangene Termine und Themen angezeigt werden
+   - Jedes Thema hat eine eigene Seite mit allen seinen Abenden; ein Filter zeigt zusätzlich die eigenen, noch nicht gehaltenen
    - Auch die Song-Datenbank kann hier eingesehen werden
 
 ## 7. Backlog (nicht priorisiert)

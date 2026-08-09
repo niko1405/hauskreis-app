@@ -35,7 +35,7 @@ export function MeetingCard({
   const attending = meeting.attendances.filter(
     (a) => a.status === 'ATTENDING',
   ).length;
-  const topicPeople = (meeting.topic?.responsibles ?? []).map((r) => r.person);
+  const topicPeople = meeting.topicResponsibles.map((r) => r.person);
   const isWorship = meeting.type === 'LOBPREIS_GEBET';
 
   const myStatus =

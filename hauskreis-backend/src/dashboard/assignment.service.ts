@@ -76,13 +76,12 @@ export class AssignmentService {
           host: { select: personRefSelect },
           testimonyPerson: { select: personRefSelect },
           location: { select: { name: true } },
-          topic: {
-            select: {
-              title: true,
-              responsibles: {
-                select: { person: { select: personRefSelect } },
-              },
-            },
+          topicResponsibles: {
+            select: { person: { select: personRefSelect } },
+            orderBy: { person: { name: 'asc' } },
+          },
+          topicSession: {
+            select: { title: true, topic: { select: { title: true } } },
           },
           songLeaders: {
             select: { person: { select: personRefSelect } },
@@ -139,7 +138,15 @@ export class AssignmentService {
         });
       }
 
-      for (const responsible of meeting.topic?.responsibles ?? []) {
+      // Die Zuteilung, nicht die Einheit: „Lena ist dran" gilt auch, solange
+      // noch offen ist, womit. Als Beschriftung der Titel des Abends, sonst der
+      // des Themas — und sonst nichts, dann steht nur der Name da.
+      const topicLabel =
+        meeting.topicSession?.title ??
+        meeting.topicSession?.topic.title ??
+        null;
+
+      for (const responsible of meeting.topicResponsibles) {
         assignments.push({
           role: 'TOPIC',
           date,
@@ -147,7 +154,7 @@ export class AssignmentService {
           person: responsible.person,
           meetingId: meeting.id,
           groupId: null,
-          label: meeting.topic?.title ?? null,
+          label: topicLabel,
         });
       }
 

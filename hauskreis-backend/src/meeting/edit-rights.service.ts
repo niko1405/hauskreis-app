@@ -5,65 +5,22 @@ import { mayEdit } from './edit-rights';
 import { isPast } from './meeting-schedule';
 
 /**
- * Die Zuständigkeitsregel aus `edit-rights.ts`, angewandt auf die zwei Stellen,
- * an denen sie gilt: der Inhalt eines Themas und die Liedauswahl eines Abends.
+ * Die Zuständigkeitsregel aus `edit-rights.ts`, angewandt auf die Liedauswahl
+ * eines Abends.
  *
- * Eigener Dienst in einem Modul ohne Importe, weil ihn drei Module brauchen —
- * `MeetingModule`, `TopicModule` und `SongModule`. Läge er in einem davon,
- * hätten die anderen beiden eine Kante dorthin, und der Modulgraph hat schon
- * einmal genau daran einen Zyklus bekommen. `PrismaModule` ist `@Global`,
- * dieses Modul importiert deshalb nichts.
+ * Zwei weitere Anwendungen standen einmal hier — Themenname und Nachbereitung.
+ * Beide sind ans Thema gewandert (`topic-visibility.ts`), weil sie inzwischen
+ * einer anderen Frage folgen: nicht „wer ist an diesem Abend zugeteilt", sondern
+ * „wer gehört zu diesem Thema". Ein Thema zieht sich über mehrere Abende, sein
+ * Bearbeitungsrecht deshalb auch.
+ *
+ * Eigener Dienst in einem Modul ohne Importe. `PrismaModule` ist `@Global`,
+ * dieses Modul importiert deshalb nichts — so ist der Zyklus ausgeschlossen, den
+ * der Modulgraph hier schon einmal hatte.
  */
 @Injectable()
 export class EditRightsService {
   constructor(private readonly prisma: PrismaService) {}
-
-  /**
-   * Themenname: die Zuständigen des Themas selbst.
-   *
-   * Ohne Abend, anders als unten — `TopicResponsible` hängt am Thema und nicht
-   * am Termin, und ein Thema kann sich über mehrere Abende ziehen. Wer es
-   * vorbereitet, benennt es.
-   */
-  async assertMayEditTopic(topicId: string, personId: string): Promise<void> {
-    const responsibles = await this.prisma.topicResponsible.findMany({
-      where: { topicId },
-      select: { personId: true },
-    });
-
-    await this.assert(
-      personId,
-      responsibles.map((row) => row.personId),
-      'Das Thema benennt, wer es vorbereitet.',
-    );
-  }
-
-  /**
-   * Zusammenfassung und Actionstep: die Zuständigen des Themas **dieses**
-   * Abends.
-   *
-   * Hat der Abend gar kein Thema, gibt es auch nichts nachzubereiten — das
-   * lehnt aber schon der Baustein ab (`assertSlotsAllow`), bevor es hierher
-   * kommt. Ein Abend mit Thema, aber ohne Zuständige, fällt in den dritten
-   * Fall der Regel: dann darf jede:r.
-   */
-  async assertMayWriteSummary(
-    meetingId: string,
-    personId: string,
-  ): Promise<void> {
-    const meeting = await this.prisma.meeting.findUnique({
-      where: { id: meetingId },
-      select: {
-        topic: { select: { responsibles: { select: { personId: true } } } },
-      },
-    });
-
-    await this.assert(
-      personId,
-      (meeting?.topic?.responsibles ?? []).map((row) => row.personId),
-      'Zusammenfassung und Actionstep trägt ein, wer das Thema vorbereitet.',
-    );
-  }
 
   /**
    * Lieder abhaken: die Musik-Zuständigen — **vor** dem Abend.

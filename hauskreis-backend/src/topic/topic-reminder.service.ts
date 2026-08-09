@@ -18,6 +18,11 @@ import { appPath } from '../notification/app-paths';
  * A topic can run over several meetings, and the reminder follows it — being
  * reminded again for part two is the point, not a repeat. Deduplication is per
  * meeting, so that works without any special case.
+ *
+ * Empfänger sind die **Zuteilung** am Abend, nicht die Leute am Thema. Das ist
+ * seit dem Einheiten-Modell zweierlei, und die Erinnerung meint das erste: sie
+ * geht auch an jemanden, der noch gar nichts gewählt hat — für den ist sie am
+ * nötigsten.
  */
 @Injectable()
 export class TopicReminderService {
@@ -34,11 +39,18 @@ export class TopicReminderService {
     return this.reminders.run(
       NotificationType.TOPIC_REMINDER,
       (meeting) =>
-        (meeting.topic?.responsibles ?? []).map((responsible) => ({
+        meeting.topicResponsibles.map((responsible) => ({
           personId: responsible.personId,
           payload: {
             title: 'Du bist dran mit dem Thema',
-            body: topicReminderBody(meeting.date, meeting.topic?.title ?? null),
+            body: topicReminderBody(
+              meeting.date,
+              // Der Titel des Abends, sonst der des Themas. Steht noch nichts
+              // fest, bleibt es beim Datum — dann gibt es nichts zu nennen.
+              meeting.topicSession?.title ??
+                meeting.topicSession?.topic.title ??
+                null,
+            ),
             url: appPath.meeting(meeting.id),
           },
         })),

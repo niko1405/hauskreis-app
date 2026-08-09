@@ -69,15 +69,30 @@ const SLOT_LABEL: Record<keyof MeetingSlots, string> = {
 };
 
 /**
- * Was an einem Termin hängt, wenn ein Slot abgeschaltet wird.
+ * Was **am Termin selbst** hängt, wenn ein Slot abgeschaltet wird.
  *
  * Die Zuordnung steht hier einmal, damit „was darf man schreiben" und „was
  * wird beim Abschalten weggeräumt" nicht auseinanderlaufen können. Genau das
  * ist die Sorte Fehler, die man erst Wochen später bemerkt: ein Feld, das
  * niemand mehr setzen kann, aber noch einen alten Wert trägt.
+ *
+ * Beim Thema steht hier nichts mehr, und das ist kein Versehen: Zusammenfassung
+ * und Actionstep sind an die Einheit gewandert, und die wird beim Abschalten
+ * **nicht geleert, sondern gelöst** — `MeetingService` ruft dafür
+ * `TopicLinkService.detachIfUpcoming`. Die Vorbereitung bleibt erhalten, nur die
+ * Sektion verschwindet.
+ *
+ * Die **Zuteilung** dagegen fällt, wie bei der Musik. Sie blieb einmal aus
+ * Vorsicht stehen, aber an einem Abend ohne Thema ist sie keine geduldige Notiz,
+ * sondern eine falsche Aussage: `TopicReminderService` fragt nicht nach
+ * `hasTopicSlot` und schickte „Du bist dran mit dem Thema" für einen Abend, an
+ * dem keins ist; `AssignmentService` malte denselben Rollen-Chip auf den
+ * Startbildschirm. Weggeräumt wird sie — wie die Lieder und die Musik-Zuteilung —
+ * in `MeetingService`, weil eine Verknüpfungstabelle kein `data`-Feld hat, das
+ * sich leeren ließe. Deshalb bleibt es hier bei einer leeren Liste.
  */
 export const SLOT_FIELDS = {
-  hasTopicSlot: ['topicId', 'actionstepText', 'summaryText'],
+  hasTopicSlot: [],
   hasSongSlot: [],
   hasTestimonySlot: ['testimonyPersonId'],
 } as const satisfies Record<keyof MeetingSlots, readonly string[]>;

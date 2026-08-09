@@ -23,8 +23,10 @@
  */
 import {
   ArrowLeft,
+  Check,
   CheckCircle2,
   Circle,
+  UserPen,
   ExternalLink,
   MapPin,
   Pencil,
@@ -85,6 +87,7 @@ import {
 import { SongsCard } from './songs-card';
 import { TopicCard } from './topic-card';
 import { useRoleAssignment } from './use-role-assignment';
+import { useTopicSessionActions } from './use-topic-session';
 
 const SLOT_LABEL = Object.fromEntries(
   MEETING_SLOTS.map((slot) => [slot.key, slot.label]),
@@ -100,8 +103,8 @@ const SLOT_LABEL = Object.fromEntries(
 const SLOT_LOSSES: Record<MeetingSlotKey, (meeting: Meeting) => string | null> =
   {
     hasTopicSlot: (meeting) =>
-      meeting.topic || meeting.summaryText || meeting.actionstepText
-        ? 'Thema, Zusammenfassung und Actionstep dieses Abends fallen weg. Das Thema selbst bleibt und läuft weiter.'
+      meeting.topicSession
+        ? 'Der Abend verliert sein Thema. Vorbereitetes geht nicht verloren — es wird nur wieder ein Entwurf, den du jederzeit aufnehmen kannst.'
         : null,
     // Als einziger immer: die Liedvorschläge liegen in einer eigenen Abfrage,
     // dieser Bildschirm sieht von hier aus nicht, ob welche da sind. Und etwas
@@ -121,6 +124,10 @@ const AssignmentSheet = dynamic(() =>
 
 const LocationSheet = dynamic(() =>
   import('@/components/domain/location-sheet').then((m) => m.LocationSheet),
+);
+
+const TopicChoiceSheet = dynamic(() =>
+  import('./topic-choice-sheet').then((m) => m.TopicChoiceSheet),
 );
 
 type SheetRole = Exclude<AssignmentRole, 'PRAYER_BUDDY'>;
@@ -169,11 +176,25 @@ function Loaded({
 }) {
   const [sheet, setSheet] = useState<SheetRole | null>(null);
   const [creatingLocation, setCreatingLocation] = useState(false);
+  const [choosingTopic, setChoosingTopic] = useState(false);
+
+  /**
+   * Der Lesemodus ist der Normalfall.
+   *
+   * Vorher bot jedes Feld dauerhaft einen Stift an, auch beim bloßen
+   * Nachschauen — auf einer Seite, die man zehnmal öffnet, um etwas zu wissen,
+   * und einmal, um etwas zu ändern. Es gibt bewusst **kein** „Speichern": jede
+   * Änderung geht sofort raus, der Schalter entscheidet nur, ob man sie
+   * überhaupt angeboten bekommt. Anwesenheit und Actionstep-Haken bleiben immer
+   * bedienbar — das ist Teilnahme, keine Bearbeitung.
+   */
+  const [editing, setEditing] = useState(false);
 
   const update = useUpdateMeeting(meetingId);
   const locations = useLocations();
   const songLeaders = useSongLeaders(meetingId);
   const roles = useRoleAssignment(meeting);
+  const session = useTopicSessionActions(meeting);
   const confirm = useConfirm();
 
   const cancelled = meeting.status === 'CANCELLED';
@@ -224,6 +245,28 @@ function Loaded({
     setSheet(role);
   };
 
+  /**
+   * Rückfrage, bevor ein bereits gewähltes Thema ersetzt wird.
+   *
+   * Verloren geht nichts — die bisherige Einheit löst sich vom Abend und wartet
+   * als Entwurf. Aber sie verschwindet von dieser Seite, und das darf niemanden
+   * überraschen, der nur nachsehen wollte, was es sonst noch gäbe.
+   */
+  const openTopicChoice = async () => {
+    const bisher = meeting.topicSession;
+
+    if (bisher) {
+      const ok = await confirm({
+        title: 'Anderes Thema wählen?',
+        body: `„${bisher.topic.title ?? 'Das bisherige Thema'}" löst sich von diesem Abend. Was daran vorbereitet ist, bleibt als Entwurf erhalten und lässt sich jederzeit wieder aufnehmen.`,
+        confirmLabel: 'Weiter',
+      });
+      if (!ok) return;
+    }
+
+    setChoosingTopic(true);
+  };
+
   const treffpunkte = (locations.data ?? []).filter(isSelectableWithoutHost);
 
   const me = useMe();
@@ -240,27 +283,24 @@ function Loaded({
     responsibles.length === 0 ||
     (me.me ? responsibles.includes(me.me.id) : false);
 
-  const mayEditTopic = mayDo(roles.topicPeople.map((person) => person.id));
-
   /**
-   * Ob die Thema-Sektion vor dem Abend überhaupt zu sehen ist.
+   * Ob die eigene Person eine Auswahl treffen darf.
    *
-   * **Sehen und Ändern sind zwei Fragen**, und `mayDo` beantwortet nur die
-   * zweite. Sein dritter Fall — „niemand zugeteilt, also darf jede:r" — ist
-   * beim Ändern richtig und beim Sehen falsch: er machte den Actionstep der
-   * nächsten Woche für alle sichtbar, sobald das Thema noch keine Zuständigen
-   * hatte. Und ohne Zuständige ist es genau der Fall, in dem noch gar nichts
-   * feststeht.
+   * Hier gilt die Hausregel **nicht**: kein Admin-Freifahrtschein, und „niemand
+   * zugeteilt heißt jede:r darf" auch nicht. Die Wahl ist kein Verwaltungsakt,
+   * sondern die Aussage „ich bereite das vor" — die kann niemand für einen
+   * anderen treffen. Wer wählen will, trägt sich eine Zeile weiter oben als
+   * zuständig ein. Der Server hält dieselbe Grenze.
    *
-   * Also: vorher nur, wer wirklich zuständig ist (Admins mitgezählt). Ab dem
-   * Termintag alle — da ist er ja gesagt worden.
+   * Was danach am *Thema* geändert werden darf, sagt der Server über `mayEdit`:
+   * ein Thema gehört seinen Leuten und nicht dem Abend.
    */
-  const seesTopic =
-    !ahead ||
-    me.isAdmin ||
-    (me.me
-      ? roles.topicPeople.some((person) => person.id === me.me?.id)
-      : false);
+  const mayChooseTopic =
+    !locked &&
+    Boolean(me.me) &&
+    roles.topicPeople.some((person) => person.id === me.me?.id);
+
+  const mayEditTopic = meeting.topicSession?.mayEdit ?? false;
 
   /**
    * Abhaken darf vor dem Abend, wer die Musik macht — danach jede:r. Nur an
@@ -340,7 +380,7 @@ function Loaded({
           title={meeting.title}
           placeholder={MEETING_TYPE_LABEL[meeting.type]}
           saving={update.isPending}
-          onSave={(next) => patch({ title: next })}
+          onSave={editing ? (next) => patch({ title: next }) : undefined}
         />
         <p className="mt-1 text-sm text-stone-400">
           {/* Bei einem Zeitraum ist das volle Datum die falsche Auskunft: was
@@ -371,7 +411,7 @@ function Loaded({
               value={meeting.infoText}
               emptyLabel="Nichts Besonderes zu beachten"
               saving={update.isPending}
-              onSave={(next) => patch({ infoText: next })}
+              onSave={editing ? (next) => patch({ infoText: next }) : undefined}
             />
           </Card>
         </section>
@@ -379,6 +419,8 @@ function Loaded({
         {/* Ort und Gastgeber stehen an jedem Termin: man trifft sich immer
             irgendwo, auch an einem Geburtstag. Dass niemand eingetragen ist,
             ist ein gültiger Zustand — das Treffen im Schlosspark. */}
+        <section>
+        <SectionTitle>Zuständigkeiten</SectionTitle>
         <Card className="divide-y divide-line">
           <div className="pb-4">
             <p className="mb-1.5 text-[11px] font-semibold text-stone-500">
@@ -395,8 +437,16 @@ function Loaded({
                   unten den Gastgeber heraus.
                 </p>
               </>
-            ) : (
+            ) : editing ? (
               <>
+                <button
+                  type="button"
+                  onClick={() => setCreatingLocation(true)}
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-terracotta-600 hover:underline"
+                >
+                  <Plus size={12} />
+                  Treffpunkt anlegen
+                </button>
                 <Select
                   value={meeting.locationId ?? ''}
                   disabled={update.isPending}
@@ -414,15 +464,11 @@ function Loaded({
                     </option>
                   ))}
                 </Select>
-                <button
-                  type="button"
-                  onClick={() => setCreatingLocation(true)}
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-terracotta-600 hover:underline"
-                >
-                  <Plus size={12} />
-                  Treffpunkt anlegen
-                </button>
               </>
+            ) : (
+              <p className="text-sm font-bold text-stone-800">
+                {meeting.location?.name ?? 'Noch offen'}
+              </p>
             )}
 
             {meeting.location && (
@@ -442,8 +488,16 @@ function Loaded({
           <RoleRow
             label={ROLE_LABEL.HOST}
             people={meeting.host ? [meeting.host] : []}
-            emptyLabel="Noch niemand — dann wird ein Treffpunkt gebraucht"
-            onEdit={cancelled ? undefined : () => openSheet('HOST')}
+            emptyLabel={
+              meeting.locationId && !meeting.host
+                ? 'Kein Host nötig'
+                : !meeting.host && !meeting.locationId
+                  ? 'Host/Treffpunkt notwendig'
+                  : ''
+            }
+            onEdit={cancelled || !editing ? undefined : () => openSheet('HOST')}
+            EditIcon={UserPen}
+            editIconSize={16}
           />
 
           {meeting.hasTopicSlot && (
@@ -451,7 +505,11 @@ function Loaded({
               label={ROLE_LABEL.TOPIC}
               people={roles.topicPeople}
               emptyLabel="Noch niemand"
-              onEdit={cancelled ? undefined : () => openSheet('TOPIC')}
+              onEdit={
+                cancelled || !editing ? undefined : () => openSheet('TOPIC')
+              }
+              EditIcon={UserPen}
+              editIconSize={16}
             />
           )}
 
@@ -459,8 +517,12 @@ function Loaded({
             <RoleRow
               label={ROLE_LABEL.TESTIMONY}
               people={meeting.testimonyPerson ? [meeting.testimonyPerson] : []}
-              emptyLabel="Noch niemand — wer erzählt seine Geschichte?"
-              onEdit={cancelled ? undefined : () => openSheet('TESTIMONY')}
+              emptyLabel="Noch niemand "
+              onEdit={
+                cancelled || !editing ? undefined : () => openSheet('TESTIMONY')
+              }
+              EditIcon={UserPen}
+              editIconSize={16}
             />
           )}
 
@@ -468,11 +530,16 @@ function Loaded({
             <RoleRow
               label={ROLE_LABEL.SONG}
               people={songLeaders.data ?? []}
-              emptyLabel="Noch niemand — oder ein Abend ohne Lieder"
-              onEdit={cancelled ? undefined : () => openSheet('SONG')}
+              emptyLabel="Noch niemand"
+              onEdit={
+                cancelled || !editing ? undefined : () => openSheet('SONG')
+              }
+              EditIcon={UserPen}
+              editIconSize={16}
             />
           )}
         </Card>
+        </section>
 
         {meeting.hasSongSlot && (
           <SongsCard
@@ -484,20 +551,23 @@ function Loaded({
 
         <AttendanceCard meeting={meeting} readOnly={locked} />
 
-        {/* Thema samt Nachbereitung. Ohne Thema gar nicht: was an einem Abend
-            besprochen wurde, ist die Zusammenfassung eines Themas.
-            Vor dem Abend sieht die Sektion nur, wer dafür zuständig ist — der
-            Actionstep der nächsten Woche eine Woche zu früh für alle wäre genau
-            das Gegenteil von dem, wozu ein Actionstep da ist. Ab dem Termintag
-            sehen ihn alle, da ist er ja gesagt worden. */}
-        {meeting.hasTopicSlot && seesTopic && (
+        {/* Thema samt Nachbereitung. Ohne den Baustein gar nicht: was an einem
+            Abend besprochen wurde, ist die Zusammenfassung eines Themas.
+            Wer den Inhalt sehen darf, entscheidet der Server — vor 18 Uhr am
+            Termintag gehört er denen, die ihn vorbereiten. Der Actionstep der
+            nächsten Woche eine Woche zu früh für alle wäre genau das Gegenteil
+            von dem, wozu er da ist. */}
+        {meeting.hasTopicSlot && (
           <TopicCard
             meeting={meeting}
-            editable={mayEditTopic}
-            saving={update.isPending || roles.saving}
-            onTitle={roles.renameTopic}
-            onSummary={(next) => patch({ summaryText: next })}
-            onActionstep={(next) => patch({ actionstepText: next })}
+            responsibles={roles.topicPeople}
+            editable={editing && mayEditTopic}
+            mayChoose={editing && mayChooseTopic}
+            saving={update.isPending || roles.saving || session.saving}
+            onChoose={openTopicChoice}
+            onTitle={(next) => session.patch({ title: next })}
+            onSummary={(next) => session.patch({ summaryText: next })}
+            onActionstep={(next) => session.patch({ actionstepText: next })}
           >
             {/* Abhaken darf jede:r für sich, auch wer den Text nicht ändern
                 darf — es ist der eigene Vorsatz. Erst ab dem Abend: einen
@@ -509,7 +579,7 @@ function Loaded({
         {/* Ganz unten, weil man das einmal beim Anlegen entscheidet und danach
             selten. Aber erreichbar, denn „ach, Lieder hätten wir doch gern"
             fällt einem erst auf der Terminseite ein. */}
-        {!locked && (
+        {!locked && editing && (
           <SlotCard
             slots={meeting}
             disabled={update.isPending}
@@ -517,6 +587,26 @@ function Loaded({
           />
         )}
       </div>
+
+      {/* Der Schalter, nicht ein Speichern-Knopf: geschrieben wird sofort, hier
+          wird nur entschieden, ob überhaupt etwas angeboten wird. Absagen und
+          Löschen stehen bewusst dahinter und dauerhaft da — sie sind keine
+          Bearbeitung, sondern eine Entscheidung über den Abend als Ganzes. */}
+      <Button
+        variant={editing ? 'primary' : 'secondary'}
+        className="w-full"
+        onClick={() => setEditing((current) => !current)}
+      >
+        {editing ? (
+          <>
+            <Check size={16} /> Fertig
+          </>
+        ) : (
+          <>
+            <Pencil size={14} /> Bearbeiten
+          </>
+        )}
+      </Button>
 
       {!cancelled && <CancelMeetingBlock meeting={meeting} past={past} />}
 
@@ -541,6 +631,17 @@ function Loaded({
           open
           onClose={() => setCreatingLocation(false)}
           onCreated={(location) => patch({ locationId: location.id })}
+        />
+      )}
+
+      {choosingTopic && (
+        <TopicChoiceSheet
+          open
+          meetingId={meeting.id}
+          responsibles={roles.topicPeople}
+          hasSession={Boolean(meeting.topicSession)}
+          onUnlink={session.unlink}
+          onClose={() => setChoosingTopic(false)}
         />
       )}
     </div>
@@ -633,7 +734,8 @@ function HeadlineEdit({
   title: string | null;
   placeholder: string;
   saving: boolean;
-  onSave: (next: string | null) => void;
+  /** Fehlt sie, ist die Überschrift nur Anzeige — wie bei `InlineEdit`. */
+  onSave?: (next: string | null) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title ?? '');
@@ -642,7 +744,7 @@ function HeadlineEdit({
     const trimmed = draft.trim();
     setEditing(false);
     const next = trimmed === '' ? null : trimmed;
-    if (next !== title) onSave(next);
+    if (next !== title) onSave?.(next);
   };
 
   if (editing) {
@@ -690,17 +792,19 @@ function HeadlineEdit({
       <h1 className="font-serif text-3xl leading-tight font-bold text-stone-900">
         {headline}
       </h1>
-      <IconButton
-        label="Titel bearbeiten"
-        onClick={() => {
-          setDraft(title ?? '');
-          setEditing(true);
-        }}
-        disabled={saving}
-        className="mt-1 shrink-0"
-      >
-        <Pencil size={15} />
-      </IconButton>
+      {onSave && (
+        <IconButton
+          label="Titel bearbeiten"
+          onClick={() => {
+            setDraft(title ?? '');
+            setEditing(true);
+          }}
+          disabled={saving}
+          className="mt-1 shrink-0"
+        >
+          <Pencil size={15} />
+        </IconButton>
+      )}
     </div>
   );
 }
@@ -717,12 +821,16 @@ function RoleRow({
   people,
   emptyLabel,
   onEdit,
+  EditIcon,
+  editIconSize = 14,
 }: {
   label: string;
   people: PersonRef[];
   emptyLabel: string;
   /** Fehlt an einem abgesagten Abend: dort gibt es nichts mehr einzuteilen. */
   onEdit?: () => void;
+  EditIcon?: React.ComponentType<{ size: number }>;
+  editIconSize?: number;
 }) {
   return (
     <div className="flex items-center gap-3 py-3.5">
@@ -749,7 +857,7 @@ function RoleRow({
 
       {onEdit && (
         <IconButton label={`${label} eintragen`} onClick={onEdit}>
-          <Pencil size={14} />
+          {EditIcon ? <EditIcon size={editIconSize} /> : <Pencil size={editIconSize} />}
         </IconButton>
       )}
     </div>

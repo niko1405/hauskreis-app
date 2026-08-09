@@ -1,11 +1,11 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { AssignmentService } from './assignment.service';
 import { DashboardService } from './dashboard.service';
-import { PersonService } from '../person/person.service';
 import { ListAssignmentsQueryDto } from './dto/assignment.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
-import { CurrentUser } from '../auth/current-user.decorator';
-import type { AuthenticatedUser } from '../auth/auth.types';
+import { CurrentMembership } from '../auth/current-membership.decorator';
+import type { HauskreisMembership } from '../auth/auth.types';
+import { viewerOf } from '../topic/topic-shape';
 import { ApiZodResponse } from '../common/http/api-response.decorator';
 import {
   AssignmentListResponseDto,
@@ -17,7 +17,6 @@ export class DashboardController {
   constructor(
     private readonly assignments: AssignmentService,
     private readonly dashboard: DashboardService,
-    private readonly people: PersonService,
   ) {}
 
   /**
@@ -52,12 +51,10 @@ export class DashboardController {
   @ApiZodResponse(HomeScreenResponseDto, {
     description: 'Der ganze Home-Screen in einem Aufruf',
   })
-  async home(
+  home(
     @Param() params: HauskreisParamsDto,
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentMembership() membership: HauskreisMembership,
   ) {
-    const person = await this.people.resolveForUser(user);
-
-    return this.dashboard.build(params.hauskreisId, person.id);
+    return this.dashboard.build(params.hauskreisId, viewerOf(membership));
   }
 }

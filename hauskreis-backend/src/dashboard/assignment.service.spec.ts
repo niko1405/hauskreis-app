@@ -11,9 +11,12 @@ type MeetingRow = {
   date: Date;
   host?: { id: string; name: string } | null;
   location?: { name: string } | null;
-  topic?: {
+  /** Die Zuteilung am Abend — steht auch ohne gewähltes Thema da. */
+  topicResponsibles?: { person: { id: string; name: string } }[];
+  /** Was gewählt wurde, falls schon etwas gewählt ist. */
+  topicSession?: {
     title: string | null;
-    responsibles: { person: { id: string; name: string } }[];
+    topic: { title: string | null };
   } | null;
   songLeaders?: { person: { id: string; name: string } }[];
 };
@@ -30,7 +33,8 @@ function setup(meetings: MeetingRow[] = [], groups: GroupRow[] = []) {
     meetings.map((meeting) => ({
       host: null,
       location: null,
-      topic: null,
+      topicResponsibles: [],
+      topicSession: null,
       songLeaders: [],
       ...meeting,
     })),
@@ -76,13 +80,11 @@ describe('AssignmentService.findAssignments', () => {
       {
         id: 'm1',
         date: utc('2026-08-04'),
-        topic: {
-          title: 'Vergebung',
-          responsibles: [
-            { person: person('antonia', 'Antonia') },
-            { person: person('reini', 'Reini') },
-          ],
-        },
+        topicResponsibles: [
+          { person: person('antonia', 'Antonia') },
+          { person: person('reini', 'Reini') },
+        ],
+        topicSession: { title: null, topic: { title: 'Vergebung' } },
         songLeaders: [
           { person: person('niko', 'Niko') },
           { person: person('julian', 'Julian') },
@@ -223,10 +225,8 @@ describe('AssignmentService.findAssignments', () => {
         id: 'm1',
         date: utc('2026-08-04'),
         songLeaders: [{ person: person('niko', 'Niko') }],
-        topic: {
-          title: 'Vergebung',
-          responsibles: [{ person: person('antonia', 'Antonia') }],
-        },
+        topicResponsibles: [{ person: person('antonia', 'Antonia') }],
+        topicSession: { title: null, topic: { title: 'Vergebung' } },
         host: person('chris', 'chris'),
       },
     ]);
