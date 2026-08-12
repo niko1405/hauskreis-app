@@ -57,8 +57,18 @@ const nextMeeting = {
 const pastWithActionstep = {
   id: 'm0',
   date: utc('2026-07-28'),
+  hasTopicSlot: true,
+  actionstepText: null,
   topicSession: { actionstepText: 'Jeden Tag 10 Minuten still werden' },
   actionstepDone: [] as { personId: string }[],
+};
+
+/** Derselbe Abend, aber ohne Thema: der Vorsatz steht in der Nachbereitung. */
+const pastWithNotes = {
+  ...pastWithActionstep,
+  hasTopicSlot: false,
+  actionstepText: 'Jeden Tag 10 Minuten still werden',
+  topicSession: null,
 };
 
 function setup(
@@ -67,6 +77,8 @@ function setup(
     actionstep?: {
       id: string;
       date: Date;
+      hasTopicSlot: boolean;
+      actionstepText: string | null;
       topicSession: { actionstepText: string | null } | null;
       actionstepDone: { personId: string }[];
     } | null;
@@ -243,6 +255,22 @@ describe('DashboardService.build', () => {
     expect(home.openActionstep).toBeNull();
   });
 
+  /**
+   * Ein Abend ohne Thema hat seinen Vorsatz in der Nachbereitung. Er gehört
+   * genauso auf den Startbildschirm — sonst wäre die Woche nach einem
+   * Lobpreisabend dort still.
+   */
+  it('nimmt den Actionstep auch aus der Nachbereitung', async () => {
+    const { service } = setup({ actionstep: pastWithNotes });
+
+    const home = await service.build('hk-1', NIKO, { now: NOW });
+
+    expect(home.openActionstep).toMatchObject({
+      text: 'Jeden Tag 10 Minuten still werden',
+      meetingId: 'm0',
+    });
+  });
+
   it('stays quiet about buddies when this person is in no group', async () => {
     const { service } = setup({
       buddies: {
@@ -291,8 +319,12 @@ describe('DashboardService.build', () => {
     // Most recent past evening that has one — not simply the last evening.
     const where = findFirst.mock.calls[1][0].where;
     expect(where.date).toEqual({ lt: utc('2026-07-29') });
-    // Der Actionstep steht an der Einheit, die an dem Abend hing.
-    expect(where.topicSession).toEqual({ actionstepText: { not: null } });
+    // Beide Quellen, wörtlich das Fragment aus `actionstep-source.ts`: die
+    // Einheit eines Themas und die Nachbereitung des Abends.
+    expect(where.OR).toEqual([
+      { topicSession: { actionstepText: { not: null } } },
+      { actionstepText: { not: null } },
+    ]);
     expect(findFirst.mock.calls[1][0].orderBy).toEqual({ date: 'desc' });
   });
 });

@@ -2072,6 +2072,19 @@
               "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
               "type": "string"
             }
+          },
+          {
+            "name": "includeCancelled",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "true",
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
           }
         ],
         "responses": {
@@ -6753,6 +6766,86 @@
         "tags": [
           "Topic"
         ]
+      },
+      "post": {
+        "operationId": "TopicController_create",
+        "parameters": [
+          {
+            "name": "hauskreisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTopicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopicResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Topic"
+        ]
       }
     },
     "/api/hauskreise/{hauskreisId}/topics/reminders": {
@@ -8023,7 +8116,8 @@
                 "MEMBER_LEFT",
                 "CUSTOM_MEETING_CREATED",
                 "CUSTOM_MEETING_REMINDER",
-                "TESTIMONY_REMINDER"
+                "TESTIMONY_REMINDER",
+                "MEETING_TIME_CHANGED"
               ]
             }
           }
@@ -11897,17 +11991,21 @@
           "id",
           "hauskreisId",
           "date",
+          "startTime",
           "endDate",
           "type",
           "status",
           "hasTopicSlot",
           "hasSongSlot",
           "hasTestimonySlot",
+          "hasNotesSlot",
           "locationId",
           "hostPersonId",
           "title",
           "testimonyPersonId",
           "infoText",
+          "summaryText",
+          "actionstepText",
           "createdAt",
           "updatedAt",
           "version",
@@ -12340,6 +12438,9 @@
             "type": "boolean"
           },
           "hasTestimonySlot": {
+            "type": "boolean"
+          },
+          "hasNotesSlot": {
             "type": "boolean"
           }
         }
@@ -12825,6 +12926,7 @@
                       "updatedAt",
                       "version",
                       "responsibles",
+                      "actionstepDone",
                       "held",
                       "contentVisible",
                       "mayEdit"

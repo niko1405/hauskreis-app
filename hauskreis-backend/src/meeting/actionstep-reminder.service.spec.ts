@@ -22,10 +22,16 @@ function setup(
       ? { id: 'meeting-1', actionstepText: 'Jeden Tag 10 Minuten lesen' }
       : options.meeting;
 
+  const ausNachbereitung = options.quelle === 'nachbereitung';
+
   const findFirst = jest.fn().mockResolvedValue(
     abend && {
       id: abend.id,
-      topicSession: { actionstepText: abend.actionstepText },
+      hasTopicSlot: !ausNachbereitung,
+      actionstepText: ausNachbereitung ? abend.actionstepText : null,
+      topicSession: ausNachbereitung
+        ? null
+        : { actionstepText: abend.actionstepText },
     },
   );
 
@@ -168,6 +174,21 @@ describe('ActionstepReminderService.sendDueReminders', () => {
 
     await service.sendDueReminders('hk-1', { now: friday });
 
+    expect(notify.mock.calls[0][0].payload.body).toBe(
+      'Wie läuft es damit? "Jeden Tag 10 Minuten lesen"',
+    );
+  });
+
+  /**
+   * Der Vorsatz eines Lobpreisabends ist derselbe Vorsatz. Er hing nur an keiner
+   * Einheit — und wurde deshalb bis eben gar nicht erinnert.
+   */
+  it('erinnert auch an den Actionstep eines Abends ohne Thema', async () => {
+    const { service, notify } = setup({ quelle: 'nachbereitung' });
+
+    const result = await service.sendDueReminders('hk-1', { now: friday });
+
+    expect(result.meetingId).toBe('meeting-1');
     expect(notify.mock.calls[0][0].payload.body).toBe(
       'Wie läuft es damit? "Jeden Tag 10 Minuten lesen"',
     );

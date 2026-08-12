@@ -44,6 +44,7 @@ import {
   ErrorState,
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
+import { ActionstepCheck } from '@/components/domain/actionstep-check';
 import { errorMessage } from '@/lib/api/errors';
 import {
   useCreateTopicSession,
@@ -490,6 +491,12 @@ function SessionCard({
               saving={edit.isPending}
               onSave={(actionstepText) => patch({ actionstepText })}
             />
+            {abhakbar && (
+              <ActionstepCheck
+                meetingId={session.meeting!.id}
+                done={session.actionstepDone}
+              />
+            )}
           </div>
         </div>
       ) : (
@@ -506,6 +513,16 @@ function SessionCard({
                 Actionstep: {session.actionstepText}
               </p>
             </div>
+          )}
+
+          {/* Abhaken darf jede:r für sich, auch wer den Text nicht ändern
+              darf — es ist der eigene Vorsatz. Deshalb steht der Block in
+              beiden Zweigen. */}
+          {abhakbar && (
+            <ActionstepCheck
+              meetingId={session.meeting!.id}
+              done={session.actionstepDone}
+            />
           )}
 
           {!session.contentVisible && (

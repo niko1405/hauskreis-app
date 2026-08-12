@@ -13,7 +13,7 @@
  * Gastgeber ist kein Baustein: man trifft sich immer irgendwo. Dass an einem
  * Abend niemand gastgebend eingetragen ist, bleibt davon unberührt.
  */
-import type { AssignmentRole, MeetingType } from './api/types';
+import type { AssignmentRole, MeetingStatus, MeetingType } from './api/types';
 
 export const MEETING_TYPE_LABEL: Record<MeetingType, string> = {
   STANDARD: 'Hauskreis-Abend',
@@ -21,21 +21,50 @@ export const MEETING_TYPE_LABEL: Record<MeetingType, string> = {
   CUSTOM: 'Besonderer Termin',
 };
 
-/** Die vier Bausteine, in der Reihenfolge, in der sie auf der Seite stehen. */
+export type MeetingSlotKey =
+  'hasTopicSlot' | 'hasSongSlot' | 'hasTestimonySlot' | 'hasNotesSlot';
+
+/**
+ * Wie jeder Baustein heißt — **alle vier**, auch der, den man nicht anhakt.
+ *
+ * Getrennt von `MEETING_SLOTS`, weil die Rückfrage beim Umschalten benennen
+ * muss, was verlorengeht: wer „Thema" anhakt, verliert die Nachbereitung. Käme
+ * die Beschriftung aus der Liste der sichtbaren Schalter, stünde dort „Thema
+ * statt undefined?".
+ */
+export const SLOT_LABEL: Record<MeetingSlotKey, string> = {
+  hasTopicSlot: 'Thema',
+  hasNotesSlot: 'Nachbereitung',
+  hasSongSlot: 'Lieder',
+  hasTestimonySlot: 'Testimony',
+};
+
+export const MEETING_SLOT_KEYS = Object.keys(SLOT_LABEL) as MeetingSlotKey[];
+
+/**
+ * Die Bausteine, die man beim **Planen** eines Abends anhakt.
+ *
+ * Drei, nicht vier: die **Nachbereitung** steht bewusst nicht dabei. Sie gehört
+ * nicht zur Planung, sondern zu dem, was danach übrig bleibt — hier stand sie
+ * neben Thema und Liedern und fragte damit vor dem Abend nach der
+ * Zusammenfassung von etwas, das noch nicht stattgefunden hatte. Sie kommt
+ * jetzt über einen Hinweis am Abend selbst dazu, und der Server lehnt ein
+ * früheres Anschalten ab.
+ */
 export const MEETING_SLOTS = [
   {
     key: 'hasTopicSlot',
-    label: 'Thema',
+    label: SLOT_LABEL.hasTopicSlot,
     hint: 'Mit Zusammenfassung und Actionstep danach.',
   },
   {
     key: 'hasSongSlot',
-    label: 'Lieder',
+    label: SLOT_LABEL.hasSongSlot,
     hint: 'Vorschläge und wer sie macht.',
   },
   {
     key: 'hasTestimonySlot',
-    label: 'Testimony',
+    label: SLOT_LABEL.hasTestimonySlot,
     hint: 'Statt eines Themas — jemand erzählt.',
   },
 ] as const satisfies readonly {
@@ -43,9 +72,6 @@ export const MEETING_SLOTS = [
   label: string;
   hint: string;
 }[];
-
-export type MeetingSlotKey =
-  'hasTopicSlot' | 'hasSongSlot' | 'hasTestimonySlot';
 
 export type MeetingSlots = Record<MeetingSlotKey, boolean>;
 
@@ -63,6 +89,7 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
       hasTopicSlot: true,
       hasSongSlot: true,
       hasTestimonySlot: false,
+      hasNotesSlot: false,
     };
   }
 
@@ -71,6 +98,7 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
       hasTopicSlot: false,
       hasSongSlot: true,
       hasTestimonySlot: true,
+      hasNotesSlot: false,
     };
   }
 
@@ -78,29 +106,89 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
     hasTopicSlot: false,
     hasSongSlot: false,
     hasTestimonySlot: false,
+    hasNotesSlot: false,
   };
 }
 
 /**
- * Einen Schalter umlegen — und dabei die Regel wahren, dass Thema und
- * Testimony einander ausschließen.
+ * Einen Schalter umlegen — und dabei die Ausschlüsse wahren.
  *
- * Der Server lehnt beides zugleich mit `400` ab. Das Formular soll aber gar
- * nicht erst dorthin führen: wer Testimony anhakt, meint damit ersichtlich
- * „statt eines Themas", und ihn dafür in eine Fehlermeldung laufen zu lassen
- * wäre eine Belehrung über eine Regel, die er gerade befolgt.
+ * Zwei Paare vertragen sich nicht: **Thema und Testimony** (beides ist der
+ * Beitrag, um den sich der Abend dreht) und **Thema und Nachbereitung** (beide
+ * tragen Zusammenfassung und Actionstep). Testimony und Nachbereitung dagegen
+ * schon — das ist der Lobpreisabend, an dem jemand erzählt und die Gruppe sich
+ * danach etwas vornimmt.
+ *
+ * Der Server lehnt eine verbotene Kombination mit `400` ab. Das Formular soll
+ * aber gar nicht erst dorthin führen: wer Testimony anhakt, meint damit
+ * ersichtlich „statt eines Themas", und ihn dafür in eine Fehlermeldung laufen
+ * zu lassen wäre eine Belehrung über eine Regel, die er gerade befolgt.
+ *
+ * **Feld für Feld statt `{ ...slots }`.** Die Detailseite reicht hier den ganzen
+ * Termin herein — er *ist* ein `MeetingSlots`, aber er trägt noch alles andere
+ * mit sich. Ein Spread nahm das mit in den PATCH, und dann stand im Körper auch
+ * `summaryText`, während `hasNotesSlot` gerade auf `false` ging: der Server
+ * antwortete „Dieser Termin hat keine Nachbereitung — schalte das erst dazu",
+ * und das Anhaken von „Thema" tat nichts. Was hier herauskommt, sind genau die
+ * vier Schalter.
  */
 export function applySlotToggle(
   slots: MeetingSlots,
   key: MeetingSlotKey,
   value: boolean,
 ): MeetingSlots {
-  const next = { ...slots, [key]: value };
+  const next: MeetingSlots = {
+    hasTopicSlot: slots.hasTopicSlot,
+    hasSongSlot: slots.hasSongSlot,
+    hasTestimonySlot: slots.hasTestimonySlot,
+    hasNotesSlot: slots.hasNotesSlot,
+  };
+  next[key] = value;
 
-  if (value && key === 'hasTopicSlot') next.hasTestimonySlot = false;
+  if (value && key === 'hasTopicSlot') {
+    next.hasTestimonySlot = false;
+    next.hasNotesSlot = false;
+  }
   if (value && key === 'hasTestimonySlot') next.hasTopicSlot = false;
+  if (value && key === 'hasNotesSlot') next.hasTopicSlot = false;
 
   return next;
+}
+
+/**
+ * Ist an diesem Abend jede Rolle vergeben, die es an ihm gibt?
+ *
+ * Die Frage der Planungstabelle, und ihr Kern ist der Unterschied zwischen
+ * *fehlt* und *gibt es hier nicht*: ein Geburtstagsabend ohne Thema ist nicht
+ * offen, er hat keins. Ein Gastgeber fehlt auch dann nicht, wenn der Ort schon
+ * feststeht und keinen braucht — Schlosspark, Café, Gemeindehaus.
+ *
+ * Ein abgesagter Abend ist nie fertig geplant: an ihm gibt es nichts zu planen.
+ * Grün zu leuchten wäre dort eine Auszeichnung für einen Abend, der ausfällt.
+ */
+export function planningComplete(meeting: {
+  status: MeetingStatus;
+  hostPersonId: string | null;
+  location: { requiresHost: boolean } | null;
+  hasTopicSlot: boolean;
+  hasSongSlot: boolean;
+  hasTestimonySlot: boolean;
+  testimonyPersonId: string | null;
+  topicResponsibles: readonly unknown[];
+  songLeaders: readonly unknown[];
+}): boolean {
+  if (meeting.status === 'CANCELLED') return false;
+
+  const hostGeklärt =
+    meeting.hostPersonId !== null ||
+    (meeting.location !== null && !meeting.location.requiresHost);
+
+  return (
+    hostGeklärt &&
+    (!meeting.hasTopicSlot || meeting.topicResponsibles.length > 0) &&
+    (!meeting.hasSongSlot || meeting.songLeaders.length > 0) &&
+    (!meeting.hasTestimonySlot || meeting.testimonyPersonId !== null)
+  );
 }
 
 /**

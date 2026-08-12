@@ -100,6 +100,7 @@ export class DashboardService {
     private readonly prisma: PrismaService,
     private readonly assignments: AssignmentService,
     private readonly buddies: PrayerBuddyService,
+    private readonly clock: GroupClockService,
   ) {}
 
   async build(
@@ -192,17 +193,23 @@ export class DashboardService {
       ? shapeSessionForMeeting(
           meeting.topicSession,
           meeting.topicSession.topic,
-          { personId, isAdmin, now },
+          {
+            personId,
+            isAdmin,
+            zone: await this.clock.zoneOf(hauskreisId),
+            now,
+          },
         )
       : null;
 
-    const actionstepText = actionstep?.topicSession?.actionstepText;
+    const actionstepText = actionstep && actionstepOf(actionstep);
 
     return {
       nextMeeting: meeting
         ? {
             id: meeting.id,
             date: isoDate(meeting.date),
+            startTime: meeting.startMinutes,
             endDate: meeting.endDate ? isoDate(meeting.endDate) : null,
             type: meeting.type,
             hasTopicSlot: meeting.hasTopicSlot,

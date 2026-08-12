@@ -83,7 +83,7 @@ export function TopicCard({
                 value={session.title}
                 emptyLabel="Noch ohne eigenen Titel"
                 placeholder="Worum geht es an diesem Abend?"
-                className="font-roboto-slab text-2xl font-bold text-stone-900"
+                className="font-serif text-2xl font-bold text-stone-900"
                 saving={saving}
                 onSave={editable ? onTitle : undefined}
               />

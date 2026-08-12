@@ -587,18 +587,19 @@ explizit:
 Alle Typen stehen in [`notification-catalog.ts`](src/notification/notification-catalog.ts),
 jeder mit Label, Begründung und Default-Rhythmus.
 
-| Typ                      | Anlass                                        | Empfänger                     | Default       |
-| ------------------------ | --------------------------------------------- | ----------------------------- | ------------- |
-| `HOST_REMINDER`          | Abend rückt näher                             | der Host                      | 3 Tage vorher |
-| `TOPIC_REMINDER`         | Abend rückt näher                             | Themen-Verantwortliche        | 5 Tage vorher |
-| `SONG_REMINDER`          | Abend rückt näher                             | Musik-Verantwortliche         | 5 Tage vorher |
-| `ACTIONSTEP_REMINDER`    | Actionstep vom letzten Mal                    | alle                          | freitags      |
-| `ROLE_ASSIGNED`          | jemand trägt dich für einen Abend ein         | die eingeteilte Person        | sofort        |
-| `PRAYER_BUDDY_ASSIGNED`  | neue Rotation                                 | alle                          | sofort        |
-| `MEETING_CANCELLED`      | Abend fällt aus — oder findet doch statt      | alle                          | sofort        |
-| `ATTENDANCE_DECLINED`    | jemand sagt ab                                | der Host dieses Abends        | sofort        |
-| `HOST_CAPACITY_UNLOCKED` | genug Absagen, dass eine kleine Wohnung passt | Bewohner:innen dieser Wohnung | sofort        |
-| `MEMBER_LEFT`            | jemand verlässt den Hauskreis                 | alle Verbleibenden            | sofort        |
+| Typ                      | Anlass                                        | Empfänger                                              | Default       |
+| ------------------------ | --------------------------------------------- | ------------------------------------------------------ | ------------- |
+| `HOST_REMINDER`          | Abend rückt näher                             | der Host                                               | 3 Tage vorher |
+| `TOPIC_REMINDER`         | Abend rückt näher                             | Themen-Verantwortliche                                 | 5 Tage vorher |
+| `SONG_REMINDER`          | Abend rückt näher                             | Musik-Verantwortliche                                  | 5 Tage vorher |
+| `ACTIONSTEP_REMINDER`    | Actionstep vom letzten Mal                    | alle                                                   | freitags      |
+| `ROLE_ASSIGNED`          | jemand trägt dich für einen Abend ein         | die eingeteilte Person                                 | sofort        |
+| `PRAYER_BUDDY_ASSIGNED`  | neue Rotation                                 | alle                                                   | sofort        |
+| `MEETING_CANCELLED`      | Abend fällt aus — oder findet doch statt      | alle                                                   | sofort        |
+| `MEETING_TIME_CHANGED`   | der **nächste** Abend fängt anders an         | alle außer der Person, die es geändert hat             | sofort        |
+| `ATTENDANCE_DECLINED`    | jemand sagt ab                                | der Host — und alle, wenn dadurch eine Rolle frei wird | sofort        |
+| `HOST_CAPACITY_UNLOCKED` | genug Absagen, dass eine kleine Wohnung passt | Bewohner:innen dieser Wohnung                          | sofort        |
+| `MEMBER_LEFT`            | jemand verlässt den Hauskreis                 | alle Verbleibenden                                     | sofort        |
 
 Ein Eintrag kann ein optionales `appliesTo(context)` tragen und erscheint dann
 nur bei den Leuten, für die er überhaupt etwas bewirken kann. Bisher genau einer:
@@ -1157,11 +1158,13 @@ unverändert, `null` löscht die Zuordnung.
 Drei Schalter am Termin — `hasTopicSlot`, `hasSongSlot`, `hasTestimonySlot` —
 und die Terminart ist nur noch ihre **Voreinstellung**:
 
-| Typ              | Thema | Lieder | Testimony |
-| ---------------- | ----- | ------ | --------- |
-| `STANDARD`       | ✓     | ✓      | –         |
-| `LOBPREIS_GEBET` | –     | ✓      | ✓         |
-| `CUSTOM`         | –     | –      | –         |
+| Typ              | Thema | Nachbereitung¹ | Lieder | Testimony |
+| ---------------- | ----- | -------------- | ------ | --------- |
+| `STANDARD`       | ✓     | –              | ✓      | –         |
+| `LOBPREIS_GEBET` | –     | –              | ✓      | ✓         |
+| `CUSTOM`         | –     | –              | –      | –         |
+
+¹ überall aus und erst **ab Terminbeginn** anschaltbar — siehe unten.
 
 Vorher war der Typ eine **Behauptung**: er stand in der Antwort, geprüft wurde
 nichts. Man konnte einem Lobpreisabend ein Thema geben und einem Geburtstag ein
@@ -1174,11 +1177,38 @@ Schalter, der nie aus darf, ist keiner. Dass an einem Abend _niemand_
 gastgebend eingetragen ist — das Treffen im Schlosspark — bleibt davon
 unberührt: das ist ein leeres Feld, kein abgeschalteter Baustein.
 
-**Thema und Testimony schließen einander aus.** Beides ist der Beitrag, um den
-sich der Abend dreht, und zwei davon gibt es nicht. `assertSlotsExclusive`
-lehnt beides zugleich mit `400` ab; im Frontend führt das Formular gar nicht
-erst dorthin, weil `applySlotToggle` beim Anhaken des einen das andere
-abschaltet.
+**Die Nachbereitung** ist der jüngste Baustein und der einzige, der niemanden
+einteilt: `summaryText` und `actionstepText` stehen dann am Termin selbst. Sie
+füllt eine Lücke — beides hing bis dahin ausschließlich an der Einheit eines
+Themas, und ein Abend, an dem die Gruppe nur singt und betet, hatte für den
+Vorsatz der Woche keinen Ort. Der Haken darunter braucht dafür nichts Neues:
+`MeetingActionstepDone` hing schon immer am Termin.
+
+Sie ist außerdem der einzige, den man **nicht vorausplant**. Anschalten geht erst
+**ab der Treffpunktzeit** (`assertNotesSlotNotAhead`, dieselbe
+`eveningReached`-Grenze wie beim Abhaken); vorher wäre es die Frage nach der
+Zusammenfassung von etwas, das noch nicht stattgefunden hat. Deshalb steht sie im
+Frontend auch nicht im Bausteinkasten, sondern hinter einem Hinweis am Abend
+selbst. Abschalten geht dagegen jederzeit — wer sich vertut, wäre sonst damit
+eingesperrt.
+
+**Zwei Paare schließen einander aus, ein drittes nicht.** Thema und Testimony,
+weil beides der Beitrag ist, um den sich der Abend dreht. Thema und
+Nachbereitung, weil beide Zusammenfassung und Actionstep tragen — zwei davon
+wären zwei Antworten auf dieselbe Frage, und keine Stelle wüsste, welche auf den
+Startbildschirm gehört. Testimony **und** Nachbereitung dagegen sind erlaubt:
+genau der Lobpreisabend, an dem jemand erzählt und die Gruppe danach etwas
+festhält. `assertSlotsExclusive` lehnt eine verbotene Kombination mit `400` ab;
+im Frontend führt das Formular gar nicht erst dorthin, weil `applySlotToggle`
+beim Anhaken das Ausgeschlossene mit abschaltet.
+
+Was von dort kommt, sind **nur die vier Schalter**. Ein `{ ...meeting }` nahm
+einmal `summaryText` in denselben PATCH mit, in dem `hasNotesSlot` auf `false`
+ging — `assertSlotsAllow` wies das zu Recht ab („Dieser Termin hat keine
+Nachbereitung — schalte das erst dazu"), und das Anhaken von „Thema" tat
+sichtbar nichts. Die Regel war richtig, der Aufruf falsch: wer einen Baustein
+abschaltet, schickt seine Felder nicht mit, sondern überlässt sie
+`clearedByTurningOff`.
 
 Die Regeln stehen als reine Funktionen in
 [`meeting-slots.ts`](src/meeting/meeting-slots.ts) und gelten überall gleich:
@@ -1192,8 +1222,11 @@ Die Regeln stehen als reine Funktionen in
 - Beim **Thema** wird nicht geräumt, sondern **gelöst**: die Einheit verliert
   ihren Termin und bleibt als Entwurf erhalten, die Zuteilung bleibt stehen. Ein
   versehentlich umgelegter Schalter soll keine Vorbereitung kosten, und wer ihn
-  wieder anschaltet, findet wieder vor, wer dran war.
-- Ein Wechsel der **Terminart** setzt alle drei auf deren Voreinstellung
+  wieder anschaltet, findet wieder vor, wer dran war. Der Unterschied zur
+  Nachbereitung ist, wem die Texte gehören: eine Einheit trägt die Vorbereitung
+  einer Person über mehrere Abende, die zwei Felder am Termin gehören diesem
+  einen Abend.
+- Ein Wechsel der **Terminart** setzt alle vier auf deren Voreinstellung
   zurück; ausdrücklich mitgeschickte Schalter gewinnen trotzdem.
 
 Die Fairness-Rechnung zählt Termine mit Musik-Zuteilung und mit Testimony —
@@ -1229,34 +1262,44 @@ niemand sabotiert da etwas —, aber es half auch niemandem. Ein Feld, das alle
 bearbeiten können, bearbeitet am Ende keiner, und wer für den Abend zuständig
 ist, findet seine eigene Vorbereitung unter fremden Händen.
 
-Die Regel steht als drei Zeilen in [`edit-rights.ts`](src/meeting/edit-rights.ts):
-
-```
-darf = ist Admin ∨ ist der Rolle an diesem Abend zugeteilt ∨ es ist niemand zugeteilt
-```
-
-**Der dritte Fall ist der wichtige.** Ohne ihn wäre ein Abend, für den noch
-niemand eingeteilt ist, gesperrt — und die Zuteilung damit die Voraussetzung
-fürs Nachbereiten. Im echten Leben läuft es umgekehrt: erst passiert der Abend,
-dann schreibt jemand auf, was war.
-
 | Was                           | Zuständigkeit                     | Ausnahme                   |
 | ----------------------------- | --------------------------------- | -------------------------- |
 | Lieder abhaken                | die Musik-Zuständigen des Abends  | nach dem Abend darf jede:r |
 | Ein Thema wählen              | die Zuteilung an **diesem** Abend | –                          |
 | Alles am Thema (jede Einheit) | Owner und Mitarbeitende           | –                          |
 | Ein Thema löschen             | nur der Owner                     | –                          |
+| Die Nachbereitung schreiben   | jede:r                            | –                          |
 
 Die Ausnahme bei den Liedern kommt von der Bedeutung: vorher ist das Abhaken
 eine **Entscheidung** („das singen wir"), hinterher ein **Protokoll** („das
-haben wir gesungen"). An das zweite erinnert sich jede:r gleich gut.
+haben wir gesungen"). An das zweite erinnert sich jede:r gleich gut. Die Regel
+steht in [`edit-rights.service.ts`](src/meeting/edit-rights.service.ts).
 
-Die unteren drei Zeilen folgen derselben Form, aber einer anderen Frage: nicht
+„Nach dem Abend" heißt: **am nächsten Tag der Gruppe** — nicht ab der
+Treffpunktzeit. Ein Termin gilt seinen ganzen Tag über als kommend, und das
+„Vorbei"-Abzeichen in der App rechnet genauso. Welcher Tag „heute" ist,
+entscheidet der `GroupClockService`; vorher war es der UTC-Tag, und genau daher
+kam der `403` um halb eins nachts (siehe „`toUtcDate` und `currentDay`").
+
+**Streng, ohne die zwei Ausnahmen, die es einmal gab.** Eine mildere Fassung
+ließ Admins immer und alle, solange niemand zugeteilt war. Beides passt zu
+diesen beiden Zeilen nicht: Musik machen und ein Thema vorbereiten sind keine
+Verwaltungsaufgaben, die ein Admin für andere erledigt, und ein Abend ohne
+Zuteilung ist keiner, an dem jede:r bestimmen darf — er ist einer, an dem noch
+niemand zugeteilt ist. Wer die Auswahl treffen will, trägt sich als zuständig
+ein; das ist eine Zeile und kein Hindernis.
+
+Die **Nachbereitung** ist die Gegenprobe dazu und steht bewusst offen: an ihr
+hängt keine Rolle, sie entsteht während oder nach dem Abend, und es gibt
+niemanden, dem man sie vorenthalten oder für den man sie reservieren würde. Sie
+läuft deshalb über das gewöhnliche `PATCH …/meetings/:id`.
+
+Die drei Themen-Zeilen folgen derselben Form, aber einer anderen Frage: nicht
 „wer ist an diesem Abend zugeteilt", sondern „wer gehört zu diesem Thema". Ein
 Thema zieht sich über mehrere Abende, sein Bearbeitungsrecht deshalb auch — die
-Regel dafür steht in [`topic-visibility.ts`](src/topic/topic-visibility.ts).
-Der dritte Fall gilt dort genauso: ein Thema ohne Owner und ohne Mitarbeitende
-darf jede:r ändern, sonst wäre es für immer eingefroren.
+Regel dafür steht in [`topic-visibility.ts`](src/topic/topic-visibility.ts). Ein
+Thema ohne Owner und ohne Mitarbeitende darf jede:r ändern, sonst wäre es für
+immer eingefroren.
 
 Nicht geprüft wird die **Zuteilung** selbst — wer vorbereitet, wer hostet, wer
 Musik macht, bleibt eine Frage an die Gruppe und läuft weiter über das
@@ -1735,12 +1778,12 @@ zählt `NULL` als verschieden, unfertige Einheiten stören sich also nicht.
 Alle, die in diesem Moment ebenfalls für den Abend zugeteilt sind, kommen als
 Verantwortliche der Einheit mit und werden damit Mitarbeitende des Themas.
 
-**Wählen darf nur, wer an dem Abend zugeteilt ist.** Zwei Zweige der Hausregel
-aus `edit-rights.ts` gelten hier nicht: kein Admin-Freifahrtschein, und „niemand
-zugeteilt heißt jede:r darf" auch nicht. Die Wahl ist kein Verwaltungsakt,
-sondern die Aussage „ich bereite das vor" — die kann niemand für einen anderen
-treffen. Wer sie treffen will, trägt sich vorher über `PUT …/topic-responsibles`
-ein; das prüft absichtlich nichts.
+**Wählen darf nur, wer an dem Abend zugeteilt ist.** Kein
+Admin-Freifahrtschein, und „niemand zugeteilt heißt jede:r darf" gilt hier auch
+nicht. Die Wahl ist kein Verwaltungsakt, sondern die Aussage „ich bereite das
+vor" — die kann niemand für einen anderen treffen. Wer sie treffen will, trägt
+sich vorher über `PUT …/topic-responsibles` ein; das prüft absichtlich nichts.
+Dieselbe strenge Fassung gilt für die Liedauswahl (siehe „Wer eintragen darf").
 
 Hängt am Abend schon eine Einheit, ist das kein Fehler, sondern ein **Wechsel**:
 die bisherige löst sich in derselben Transaktion und wartet als Entwurf. An
@@ -1919,6 +1962,138 @@ ist gültig: nicht jeder Abend hat Lieder, dann braucht es niemanden.
 
 `GET …/meetings/:id/song-leader-suggestions` rankt nur, wer ein Instrument
 spielt — vier der neun. Eingetragen werden darf trotzdem jeder.
+
+### Die beiden Abkürzungen beim Erfassen (Gemini)
+
+Titel, Interpret und Link von Hand zu tippen ist die lästigste Eingabe der App —
+zwei der drei stehen ohnehin auf der Seite, die man gerade offen hat. Deshalb
+zwei Hilfen, beide **auf Knopfdruck** und nie beim Tippen:
+
+| Methode | Pfad                              | Zweck                                        |
+| ------- | --------------------------------- | -------------------------------------------- |
+| `GET`   | `…/songs/lookup/status`           | ob ein Schlüssel hinterlegt ist              |
+| `POST`  | `…/songs/lookup/from-link`        | Link rein, Titel und Interpret raus (~3–4 s) |
+| `POST`  | `…/songs/lookup/link-suggestions` | Titel rein, geprüfte Links raus (~3–5 s)     |
+
+Einrichtung: Schlüssel auf <https://aistudio.google.com/apikey> erzeugen, im
+selben Projekt **die Abrechnung aktivieren** und als `GEMINI_API_KEY` in die
+`.env` legen. Die Abrechnung ist keine Formalie — die Linksuche braucht
+`google_search`-Grounding, und das gibt es im kostenlosen Tarif nicht. **Ohne
+Schlüssel startet der Server normal**, wie bei den VAPID-Keys; im Frontend
+verschwinden dann nur die beiden Knöpfe.
+
+Drei Entscheidungen, die man sonst nachfragen müsste:
+
+**Jede vorgeschlagene URL wird abgerufen, bevor sie zurückgeht — und was zählt,
+ist das Ziel der Weiterleitung.** Das Grounding liefert seine Fundstellen
+nämlich nicht als echte Adressen aus, sondern als Weiterleitungen über
+`vertexaisearch.cloud.google.com`, und die laufen nach einigen Wochen ab.
+Gespeichert würde daraus ein Link, der beim Anlegen funktioniert und im Herbst
+ins Leere zeigt. Der Abruf folgt der Weiterleitung deshalb bis zum Ende und
+behält `response.url`. Erst an dieser aufgelösten Adresse wird geprüft, ob es
+überhaupt eine Songseite ist — vorher weiß niemand, wohin ein Vorschlag zeigt.
+Deshalb steht das Nachsehen **vor** dem Sortieren und Entdoppeln, nicht danach.
+
+Dass ein Sprachmodell auch frei erfundene Adressen aufschreibt, fängt derselbe
+Abruf ab. `403` zählt dabei als „gibt es": Ultimate Guitar sitzt hinter
+Cloudflare und zeigt einem Server-Aufruf mitunter eine Prüfseite — für ein
+unbekanntes Lied käme dort weiterhin `404`.
+
+**Die Linksuche läuft ohne `url_context`.** Beide Werkzeuge zusammen bringen das
+Modell dazu, jede gefundene Seite noch selbst zu lesen; gemessen lief der Aufruf
+dann über zwei Minuten, ohne fertig zu werden. Nachsehen tun wir ohnehin selbst,
+und zwar für alle Kandidaten parallel. **Kein** automatischer zweiter Versuch:
+Der verdoppelte nur die Wartezeit vor einem Knopf, an dem jemand steht, und
+kostete noch einmal dasselbe.
+
+**Der zweite Druck sucht daneben weiter (`more: true`).** Ohne ihn kam beliebig
+oft derselbe Zwischenspeicher-Eintrag zurück — wer einen schlechten Vorschlag
+bekommen hatte, war damit fertig. Mit ihm bleibt das Bekannte stehen, die
+bekannten Adressen gehen als „kennen wir schon" mit in den Prompt, und was
+zurückkommt, wird gegen sie noch einmal gefiltert: das Modell hält sich nicht
+immer daran, und der Erreichbarkeits-Abruf folgt Weiterleitungen, die auf einer
+bekannten Seite landen können.
+
+Zwei Feinheiten, die leicht andersherum ausfielen:
+
+- **`dedupeBySite` gilt nur innerhalb eines Laufs.** Über zwei Läufe hinweg
+  dürfen zwei Ultimate-Guitar-Links nebeneinander stehen — dass die erste Wahl
+  von dort nicht taugte, ist ja der Grund für den zweiten Druck. Zusammengeführt
+  wird deshalb nur über die URL (`mergeByUrl`), und die Gesamtliste hört bei
+  neun auf.
+- **Die Gesamtliste wird nicht neu sortiert.** `rank` läuft je Lauf; danach
+  bleibt die Reihenfolge stehen, sonst verschöbe sich unter dem Finger, was man
+  gerade lesen wollte. Was neu ist, markiert das Frontend selbst — es kennt die
+  vorherige Liste.
+
+Der Zwischenspeicher unterscheidet dabei `undefined` von `[]`: ein gespeichertes
+„nichts gefunden" wird beim **ersten** Druck weiterhin nicht noch einmal
+bezahlt, beim zweiten dagegen immer neu gesucht.
+
+### Warum es billig und schnell ist
+
+Die erste Fassung war beides nicht: Ein paar Entwicklungstage kosteten 0,22 €,
+und die Knöpfe brauchten 5–22 Sekunden. Drei Änderungen, jede vermessen:
+
+**`from-link` schickt nur den Seitenkopf, nicht die Seite.** Wir holen die Seite
+selbst (`GET` mit `Range: bytes=0-32768`), ziehen `<title>`, die `og:`-Angaben
+und die erste Überschrift heraus und geben dem Modell nur das. Der Grund steht
+in einer Zahl: Eine Ultimate-Guitar-Seite wiegt **145 KB ≈ 36.000 Tokens**, und
+`url_context` schob sie vollständig ins Modell, um eine Zeile daraus abzulesen.
+Gemessen sind es jetzt **210–262 Tokens** — rund das Hundertfünfzigfache
+gespart. `url_context` bleibt als **Rückfall** für Seiten, an denen unser Abruf
+scheitert (Cloudflare, oder ein Kopf ohne brauchbare Angaben): Was für uns ein
+`403` ist, ist für Googles Index eine gewöhnliche Seite.
+
+**Das kleinste Modell genügt.** `gemini-3.6-flash` kostet 1,50/7,50 $ je Mio.
+Tokens und denkt von Haus aus auf Stufe „medium" — Denk-Tokens werden als
+Ausgabe abgerechnet. Ablesen und Auswählen ist keine Denkaufgabe, also
+`gemini-3.1-flash-lite` (0,25/1,50 $) mit `thinking_level: 'minimal'`.
+`gemini-2.5-flash-lite` wäre noch einmal deutlich billiger, nimmt aber **keine
+neuen Nutzer mehr an** — ein frischer Schlüssel bekommt dort nur einen 404.
+
+**Was einmal gefragt wurde, wird nicht zweimal bezahlt.** Ein Zwischenspeicher
+im Prozess (24 h, 200 Einträge) hält Antworten fest, **auch leere** — gerade der
+Fall ohne Treffer lädt zum zweiten Druck ein. Im Speicher und nicht in Redis,
+weil der Server ohnehin als genau eine Instanz läuft.
+
+Ergebnis, gemessen an denselben Liedern:
+
+|                    | vorher                   | nachher                |
+| ------------------ | ------------------------ | ---------------------- |
+| Aus Link ausfüllen | 5–8 s, bis 36.000 Tokens | **3–4 s, ~250 Tokens** |
+| Link suchen        | 12–22 s                  | **3–5 s**              |
+| Zweiter Druck      | wie oben                 | **0 ms**               |
+
+Jeder Aufruf schreibt eine Zeile ins Log mit Dauer, Tokens, Denk-Tokens und der
+Zahl der **abgerechneten Suchanfragen** — Letztere steht nirgends sonst und ist
+nicht an der Tokenzahl abzulesen, weil ein Aufruf mehrere Suchen ausführen kann.
+Die Zeitgrenzen (12 s für den Seitenkopf, 20 s für den `url_context`-Rückfall,
+30 s für die Suche) sind großzügig gegenüber diesen Messwerten, damit ein
+langsamer Tag nicht sofort als Fehler endet.
+
+**Die Seitenrangfolge steht als Konstante im Code**
+(`LYRICS_SITE_PREFERENCE` in `song-lookup.service.ts`), nicht in der `.env`.
+Ultimate Guitar zuerst, dann Genius. Sie ändert sich vielleicht einmal im Jahr,
+und dann ist ein Commit ehrlicher als eine stille Einstellung auf dem Server.
+
+**Keine eigene Suchmaschinen-API.** Naheliegend wäre, erst deterministisch zu
+suchen und die KI nur als Rückfall zu nehmen. Googles Custom Search JSON API
+nimmt seit Januar 2026 keine Neuanmeldungen mehr an und wird zum 1.1.2027
+abgeschaltet; Braves freier Tarif fiel im Februar 2026; Ultimate Guitar hat
+keine offizielle API, die npm-Pakete dafür umgehen Cloudflare per Scraping.
+Unabhängig davon meldet eine Websuche nie „nichts gefunden" — sie liefert immer
+zehn Treffer inklusive YouTube-Link und Bestenliste, und die Bedingung „wenn das
+nicht klappt" ließe sich gar nicht formulieren. Der brauchbare Teil der Idee
+steckt jetzt im Prompt: Gemini-Grounding _ist_ Google-Suche.
+
+Wird die Trefferquote bei deutschen Worship-Titeln zu dünn, ist der nächste
+Schritt die kostenlose, offizielle Genius-Suche als zweite Implementierung des
+`LyricsRetriever`-Interfaces — Sortierung, Entdopplung und Erreichbarkeitsprüfung
+liegen bewusst dahinter und blieben unverändert.
+
+Beide `POST`-Routen sind auf 10 Aufrufe pro Minute gedrosselt. Das globale
+Budget (300/min) schützt den Server; hier geht es um eine fremde Rechnung.
 
 ## Erinnerungen vor dem Abend
 

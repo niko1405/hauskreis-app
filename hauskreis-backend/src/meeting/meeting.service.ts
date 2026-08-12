@@ -105,7 +105,7 @@ export class MeetingService {
     query: ListMeetingsQueryDto,
     viewer: Viewer,
   ) {
-    const today = toUtcDate(new Date());
+    const today = await this.clock.today(hauskreisId);
 
     // Jede Bedingung für sich, alle mit UND verknüpft. Vorher war es **ein**
     // `date`-Objekt, in das Bereich und Zeitfenster hineingerechnet wurden —
@@ -487,7 +487,10 @@ export class MeetingService {
     // Abend auch: dort heißt Absagen „es hat nicht stattgefunden", ein
     // Nachtrag fürs Archiv. Eine Benachrichtigung darüber wäre eine Warnung
     // vor etwas, das längst vorbei ist.
-    if (before.status !== MeetingStatus.CANCELLED && !isPast(before.date)) {
+    if (
+      before.status !== MeetingStatus.CANCELLED &&
+      !(await this.clock.isPast(hauskreisId, before.date))
+    ) {
       await this.meetingNotifications.announceCancellation(id);
     }
 
@@ -538,11 +541,31 @@ export class MeetingService {
       notFoundMessage: `Meeting ${id} not found`,
     });
 
-    if (before.status === MeetingStatus.CANCELLED && !isPast(before.date)) {
+    if (
+      before.status === MeetingStatus.CANCELLED &&
+      !(await this.clock.isPast(hauskreisId, before.date))
+    ) {
       await this.meetingNotifications.announceRevival(id);
     }
 
-    return revived;
+    if (before.cancelSource !== MeetingCancelSource.ALL_DECLINED) {
+      return revived;
+    }
+
+    const reset = await this.prisma.meetingAttendance.updateMany({
+      where: {
+        meetingId: id,
+        status: AttendanceStatus.ABSENT,
+        source: AttendanceSource.SELF,
+      },
+      data: { status: AttendanceStatus.UNKNOWN },
+    });
+
+    // Die Antworten stehen in derselben Antwort wie der Termin; ohne das
+    // Nachladen bekäme der Aufrufer einen wiederbelebten Abend mit den alten
+    // Absagen darin. Eine zweite Versionserhöhung braucht es nicht — die des
+    // Zurücknehmens deckt beides ab, es ist ein Schreibvorgang.
+    return reset.count > 0 ? this.findOne(hauskreisId, id, viewer) : revived;
   }
 
   /**
@@ -758,12 +781,11 @@ export class MeetingService {
     done: boolean,
   ) {
     const meeting = await this.loadPlain(hauskreisId, id);
+    const zone = await this.clock.zoneOf(hauskreisId);
 
-    // Einen Actionstep abhaken, den es an einem künftigen Abend noch gar nicht
-    // geben kann, ist immer ein Versehen.
-    if (toUtcDate(meeting.date) > toUtcDate(new Date())) {
+    if (!eveningReached(meeting.date, zone, new Date(), meeting.startMinutes)) {
       throw new BadRequestException(
-        'Dieser Abend liegt noch vor uns — abhaken lässt sich der Actionstep erst danach',
+        'Dieser Abend hat noch nicht angefangen — abhaken lässt sich der Actionstep ab dem Treffen',
       );
     }
 
@@ -997,6 +1019,11 @@ function buildMeetingSearch(search: string | undefined) {
     OR: [
       { title: contains },
       { infoText: contains },
+      // Die Nachbereitung eines Abends ohne Thema. Ohne diese zwei Zeilen fände
+      // die Suche gerade die Abende nicht, die der Baustein überhaupt erst mit
+      // Text füllt.
+      { summaryText: contains },
+      { actionstepText: contains },
       {
         topicSession: {
           OR: [

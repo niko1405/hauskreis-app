@@ -24,6 +24,7 @@ const an = (slots: MeetingSlots) =>
       ['topic', slots.hasTopicSlot],
       ['song', slots.hasSongSlot],
       ['testimony', slots.hasTestimonySlot],
+      ['notes', slots.hasNotesSlot],
     ] as const
   )
     .filter(([, on]) => on)
@@ -48,6 +49,18 @@ describe('slotDefaults', () => {
    */
   it('lässt einen besonderen Termin leer', () => {
     expect(an(slotDefaults(MeetingType.CUSTOM))).toEqual([]);
+  });
+
+  /**
+   * Auch am Lobpreisabend, wo sie am naheliegendsten wäre: die Nachbereitung ist
+   * der einzige Baustein, der nichts vorbereitet und niemanden einteilt. Sie
+   * vorzugeben hieße, jeder Gruppe ein leeres Textfeld hinzustellen und daran zu
+   * erinnern, dass sie es nicht gefüllt hat.
+   */
+  it('gibt die Nachbereitung nirgends vor', () => {
+    for (const type of Object.values(MeetingType)) {
+      expect(slotDefaults(type).hasNotesSlot).toBe(false);
+    }
   });
 });
 
@@ -108,6 +121,30 @@ describe('assertSlotsAllow', () => {
   it('hat für das Thema nichts mehr zu prüfen', () => {
     expect(SLOT_FIELDS.hasTopicSlot).toEqual([]);
   });
+
+  /**
+   * Die Nachbereitung dagegen hat zwei eigene Felder am Termin. Ohne diese Regel
+   * ließe sich an einem Abend mit Thema ein zweiter Actionstep hineinschreiben —
+   * genau das, was der gegenseitige Ausschluss verhindern soll.
+   */
+  it('weist Nachbereitungs-Texte ohne den Baustein ab', () => {
+    expect(() =>
+      assertSlotsAllow(leer, { summaryText: 'Wir haben über …' }),
+    ).toThrow(/keine Nachbereitung/);
+
+    expect(() =>
+      assertSlotsAllow(leer, { actionstepText: 'Jeden Tag zehn Minuten' }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('lässt sie zu, wenn der Baustein an ist', () => {
+    expect(() =>
+      assertSlotsAllow(
+        { ...leer, hasNotesSlot: true },
+        { summaryText: 'Wir haben über …', actionstepText: 'Anrufen' },
+      ),
+    ).not.toThrow();
+  });
 });
 
 describe('clearedByTurningOff', () => {
@@ -134,6 +171,19 @@ describe('clearedByTurningOff', () => {
     const aus = { ...alles, hasTopicSlot: false };
 
     expect(clearedByTurningOff(aus, alles)).toEqual({});
+  });
+
+  /**
+   * Beide Texte, und anders als beim Thema wirklich geleert: sie gehören diesem
+   * einen Abend. Was hier stünde, nachdem der Baustein weg ist, wäre nicht
+   * geduldig, sondern unerreichbar.
+   */
+  it('leert Zusammenfassung und Actionstep des Abends', () => {
+    const mitNotizen = { ...alles, hasTopicSlot: false, hasNotesSlot: true };
+
+    expect(
+      clearedByTurningOff(mitNotizen, { ...mitNotizen, hasNotesSlot: false }),
+    ).toEqual({ summaryText: null, actionstepText: null });
   });
 });
 
@@ -193,8 +243,39 @@ describe('assertSlotsExclusive', () => {
         hasTopicSlot: true,
         hasSongSlot: false,
         hasTestimonySlot: true,
+        hasNotesSlot: false,
       }),
     ).toThrow(BadRequestException);
+  });
+
+  /**
+   * Beide tragen Zusammenfassung und Actionstep. Zwei davon wären zwei Antworten
+   * auf dieselbe Frage — welche stünde dann auf dem Startbildschirm?
+   */
+  it('weist Thema und Nachbereitung am selben Abend ab', () => {
+    expect(() =>
+      assertSlotsExclusive({
+        hasTopicSlot: true,
+        hasSongSlot: true,
+        hasTestimonySlot: false,
+        hasNotesSlot: true,
+      }),
+    ).toThrow(/entweder zum Thema oder zum Abend/);
+  });
+
+  /**
+   * Und genau dieses Paar **nicht**: der Lobpreisabend, an dem jemand erzählt
+   * und die Gruppe sich danach etwas vornimmt, ist der Abend, um den es geht.
+   */
+  it('lässt Testimony und Nachbereitung zusammen zu', () => {
+    expect(() =>
+      assertSlotsExclusive({
+        hasTopicSlot: false,
+        hasSongSlot: true,
+        hasTestimonySlot: true,
+        hasNotesSlot: true,
+      }),
+    ).not.toThrow();
   });
 
   it('lässt jedes von beiden für sich zu', () => {

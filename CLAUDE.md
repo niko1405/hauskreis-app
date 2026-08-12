@@ -92,7 +92,7 @@ grundlegende Vorschläge für Kernentitäten:
 - `meeting_id = NULL` heißt **unfertig**: vorbereitet, aber an keinem Abend. Wechselt die Rolle, wird entkoppelt statt gelöscht — die Vorbereitung wartet als Entwurf und lässt sich jederzeit wieder aufnehmen
 - Wer zuerst **wählt**, wird Owner (nicht wer zuerst zugeteilt wurde) — **oder wer das Thema im Archiv anlegt.** Ein Thema entsteht auf beiden Wegen: beim Wählen an einem Abend, oder im Voraus ohne Termin, um es in Ruhe vorzubereiten. Wählen darf **nur, wer am Abend zugeteilt ist** — auch kein Admin, und „niemand zugeteilt heißt jede:r darf" gilt hier nicht. Wer eine Einheit hält, wird Mitarbeiter:in und darf am ganzen Thema schreiben; löschen darf nur der Owner. Fällt jemand aus der Zuteilung, verliert er die Einheit dieses Abends — und das Schreibrecht am Thema nur, wenn er sonst nirgends mehr daran hängt
 - Ein mehrteiliges Thema zählt in der Vorschlagslogik wie **ein einzelner Slot** (nicht mehrfach)
-- Ein Thema erscheint im Archiv, sobald einer seiner Abende vorbei ist. Titel, Actionstep und Zusammenfassung einer noch nicht gehaltenen Einheit sind bis **18 Uhr am Termintag** nur für die Zuständigen sichtbar
+- Ein Thema erscheint im Archiv, sobald einer seiner Abende vorbei ist. Titel, Actionstep und Zusammenfassung einer noch nicht gehaltenen Einheit sind **bis der Abend anfängt** nur für die Zuständigen sichtbar — maßgeblich ist die Treffpunktzeit dieses Termins, nicht mehr pauschal 18 Uhr
 - Ein vergangener Abend wird **eingefroren**: seine Einheit bleibt daran hängen, auch wenn die Rolle danach noch wechselt
 - Eine Einheit lässt sich auch **ohne Abend** anlegen — der Ort zum Vorarbeiten. Sie wartet unter „Angefangenes", bis jemand sie an einem Termin auswählt; dort zählt auch eine, die gerade an einem anderen kommenden Abend hängt (sie zieht dann um). Löschen geht nur, solange sie nicht gehalten wurde
 
@@ -137,12 +137,22 @@ grundlegende Vorschläge für Kernentitäten:
    - Eintragung von Actionstep + Zusammenfassung nach jedem Treffen
    - Wöchentliche Erinnerung an den Actionstep
    - Zusammenfassung hilft auch Abwesenden, auf dem Laufenden zu bleiben
+   - Beides hängt **entweder** am Thema (an dessen Einheit, wo es einen Rollenwechsel überlebt) **oder** am Abend selbst, über den Baustein „Nachbereitung". Ein Abend ohne Thema — nur Lobpreis, ein besonderer Termin — hatte vorher keinen Ort dafür, obwohl der Vorsatz für die Woche dort genauso entsteht. Die beiden Bausteine schließen einander aus, damit es nie zwei Zusammenfassungen und zwei Actionsteps gibt
+   - Die Nachbereitung ist **optional und wird nicht vorgeplant**: ab Terminbeginn steht an einem Abend ohne Thema ein Hinweis „Nachbereitung hinzufügen?" — ein Klick legt die Sektion an, im Bearbeitungsmodus lässt sie sich wieder ganz entfernen. Nicht jeder Abend braucht eine; eine leere Karte an jedem Termin wäre eine Aufforderung, der man meistens nicht nachkommt
+   - **Auch innerhalb der Karte ist jedes der beiden Stücke einzeln und optional.** Zusammenfassung und Actionstep stehen nur da, wenn etwas drinsteht; im Bearbeitungsmodus legt ein Knopf das fehlende an und öffnet gleich das Eingabefeld. Bleibt es leer, verschwindet es wieder — ein Feld ohne Inhalt gibt es nicht, und manchmal gibt es eben nur einen Vorsatz und nichts zusammenzufassen. Solange gar nichts geschrieben ist, steht außerhalb des Bearbeitungsmodus wieder der Hinweis statt einer leeren Karte
+   - Der **Haken** hängt seit jeher am Termin und gilt pro Person; er funktioniert für beide Quellen unverändert. Setzen lässt er sich erst, **wenn der Abend angefangen hat** — maßgeblich ist die Treffpunktzeit, nicht der Kalendertag: einen Vorsatz für heute Abend hakt man heute früh nicht ab
 
 6. **Song-Vorschläge/Auswahl**
    - Zu jedem Termin können Song-Vorschläge gemacht werden
    - Ein Song besteht aus einem Titel (erforderlich), Artist und einer URL (optional) zu den Lyrics (werden nicht gespeichert, wir greifen hier auf externe Quellen zu)
    - Bereits vorgeschlagene Songs werden abgespeichert und können als Vorschlag angezeigt werden beim eintragen
-   - Man baut sich mit der Zeit also eine Song-Datenbank auf, die sich durchsuchen lässt. Hier können jederzeit neue hinzukommen  
+   - Man baut sich mit der Zeit also eine Song-Datenbank auf, die sich durchsuchen lässt. Hier können jederzeit neue hinzukommen
+   - **Zwei Abkürzungen beim Erfassen, beide per Knopfdruck** (nie beim Tippen — jeder Aufruf dauert Sekunden und kostet etwas): aus einem eingefügten Link Titel und Interpret lesen, und umgekehrt zu Titel und Interpret bis zu drei Links vorschlagen. Umgesetzt mit Gemini; die Suche bevorzugt Ultimate Guitar, dann Genius
+   - **Der zweite Druck sucht daneben weiter.** Vorher kam beliebig oft derselbe Zwischenspeicher zurück — wer einen schlechten Vorschlag bekommen hatte, war damit fertig. Jetzt bleiben die bisherigen stehen (mit „neu" markiert, was dazukam), und die bekannten Adressen gehen als „kennen wir schon" mit in die Anfrage. Ein Vorschlag pro Seite gilt nur **innerhalb** eines Laufs: zwei Ultimate-Guitar-Links nebeneinander sind genau der Sinn der Sache, wenn der erste nicht taugte
+   - Die Hilfe füllt **nur leere Felder**. Steht schon etwas anderes drin, wird es angeboten statt überschrieben — sonst löscht ein Knopfdruck die eigene Korrektur
+   - **Jeder vorgeschlagene Link wird vor der Rückgabe abgerufen, und gespeichert wird das Ziel der Weiterleitung.** Ein Sprachmodell schreibt überzeugende URLs auf, die es nie gab, und die Suche liefert Google-Weiterleitungen, die nach Wochen ablaufen — beides wäre als `lyricsUrl` eine Zeitbombe
+   - **Beim Lesen eines Links geht nur der Seitenkopf ans Modell**, nicht die Seite: Eine Ultimate-Guitar-Seite wiegt 36.000 Tokens, `<title>` und `og:`-Angaben rund 250. Nur wenn der eigene Abruf scheitert (Cloudflare), holt Google die Seite
+   - Ohne `GEMINI_API_KEY` verschwinden nur die beiden Knöpfe, alles andere bleibt wie es ist
 
 7. **Termin Absagen oder Rollen-Tausch**
    - Man soll Termine absagen können und auch angeben können in welchem Zeitraum man abwesend ist --> automatische absagen
@@ -152,6 +162,7 @@ grundlegende Vorschläge für Kernentitäten:
    - Jedes Thema hat eine eigene Seite mit allen seinen Abenden; zwei Register trennen „Eigene" (auch die noch nicht gehaltenen) von „Alle"
    - Hier lassen sich auch neue Themen und Lieder anlegen — der Ort zum Vorarbeiten, ohne auf einen Dienstag zu warten
    - Auch die Song-Datenbank kann hier eingesehen werden
+   - Das Register **„Termine"** steht als letztes, weil man hier meistens ein Thema oder ein Lied sucht und nur manchmal einen Abend. Es zeigt je Abend die Art, den Zeitpunkt samt Uhrzeit und die Nachbereitung — egal ob sie vom Thema oder vom Baustein kommt. Abgesagte Abende blendet eine Checkbox ein; von selbst stehen sie nicht da, weil man nachliest, was war
 
 ## 7. Backlog (nicht priorisiert)
 

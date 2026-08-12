@@ -48,11 +48,12 @@ export const meetingResponseSchema = z.object({
   /// gibt keine Erinnerung dafür, und der Abend zählt in der Fairness-Rechnung
   /// dieser Rolle nicht mit.
   ///
-  /// Thema und Testimony sind nie beide an. Einen Gastgeber-Schalter gibt es
-  /// nicht — man trifft sich immer irgendwo.
+  /// Thema und Testimony sind nie beide an, Thema und Nachbereitung auch nicht.
+  /// Einen Gastgeber-Schalter gibt es nicht — man trifft sich immer irgendwo.
   hasTopicSlot: z.boolean(),
   hasSongSlot: z.boolean(),
   hasTestimonySlot: z.boolean(),
+  hasNotesSlot: z.boolean(),
   locationId: z.uuid().nullable(),
   hostPersonId: z.uuid().nullable(),
   /// Wie der Abend überschrieben ist. Gilt für jede Terminart; bleibt er leer,
@@ -60,7 +61,16 @@ export const meetingResponseSchema = z.object({
   title: z.string().nullable(),
   /// Wer sein Testimony erzählt. Nur bei `hasTestimonySlot`.
   testimonyPersonId: z.uuid().nullable(),
+  /// Was **vor** dem Abend zu wissen ist. Ohne Baustein, immer da.
   infoText: z.string().nullable(),
+  /// Die Nachbereitung des Abends — nur bei `hasNotesSlot` gefüllt.
+  ///
+  /// Anders als beim Thema **nicht** zurückgehalten: an der Nachbereitung hängt
+  /// keine Rolle, sie entsteht während oder nach dem Abend, und es gibt
+  /// niemanden, dem man sie vorher vorenthalten würde. Wer den Actionstep
+  /// abhaken darf, entscheidet dagegen die Uhr — siehe `POST …/actionstep-done`.
+  summaryText: z.string().nullable(),
+  actionstepText: z.string().nullable(),
   createdAt: isoDateTimeOut,
   updatedAt: isoDateTimeOut,
   version: z.number().int().nonnegative(),

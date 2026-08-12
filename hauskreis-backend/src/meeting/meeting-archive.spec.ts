@@ -70,16 +70,23 @@ describe('MeetingService.findAll for the archive', () => {
 
     // Niemand weiß hinterher, ob es in der Zusammenfassung stand, in der
     // Info-Zeile oder im Titel des Themas — also fragt die Suche auch nicht
-    // danach. Zusammenfassung und Actionstep hängen inzwischen an der Einheit,
-    // deshalb der zweite Kranz darunter.
+    // danach. Zusammenfassung und Actionstep gibt es an **zwei** Trägern: am
+    // Abend selbst (Baustein „Nachbereitung") und an der Einheit eines Themas,
+    // daher der zweite Kranz darunter.
     const where = findMany.mock.calls[0][0].where;
     const fields = where.OR.map(
       (clause: Record<string, unknown>) => Object.keys(clause)[0],
     );
 
-    expect(fields).toEqual(['title', 'infoText', 'topicSession']);
+    expect(fields).toEqual([
+      'title',
+      'infoText',
+      'summaryText',
+      'actionstepText',
+      'topicSession',
+    ]);
 
-    const inSession = where.OR[2].topicSession.OR.map(
+    const inSession = where.OR[4].topicSession.OR.map(
       (clause: Record<string, unknown>) => Object.keys(clause)[0],
     );
 

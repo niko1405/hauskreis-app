@@ -1,7 +1,7 @@
 /**
  * Woraus ein Abend besteht.
  *
- * Drei Schalter am Termin, und der Typ ist nur noch ihre Voreinstellung. Vorher
+ * Vier Schalter am Termin, und der Typ ist nur noch ihre Voreinstellung. Vorher
  * war der Typ eine Behauptung: er stand in der Antwort, aber geprüft wurde
  * nichts. Man konnte einem Lobpreisabend ein Thema geben, einem Geburtstag ein
  * Testimony, und ein „Geburtstag von Mira" zählte in der Fairness wie ein ganz
@@ -16,17 +16,33 @@
  * gastgebend eingetragen ist — das Treffen im Schlosspark — bleibt davon
  * unberührt: das ist ein leeres Feld, kein abgeschalteter Baustein.
  *
- * Reine Funktionen, kein Dienst: die Regeln haben keine Abhängigkeiten und
- * lassen sich so an jeder Stelle prüfen, an der sie gelten — im Service, im
- * Generator und im Test.
+ * Reine Funktionen, kein Dienst: die Regeln kennen keine Datenbank und lassen
+ * sich so an jeder Stelle prüfen, an der sie gelten — im Service, im Generator
+ * und im Test. Die einzige Abhängigkeit ist `eveningReached`, selbst eine reine
+ * Funktion; die Uhr kommt als Parameter herein.
  */
 import { BadRequestException } from '@nestjs/common';
 import { MeetingType } from '../../generated/prisma/enums';
+import { eveningReached } from '../common/time/local-evening';
 
 export interface MeetingSlots {
   hasTopicSlot: boolean;
   hasSongSlot: boolean;
   hasTestimonySlot: boolean;
+  /**
+   * Zusammenfassung und Actionstep **ohne** Thema.
+   *
+   * Der Nachzügler unter den Bausteinen, und er füllt eine Lücke: die
+   * Nachbereitung hing bis eben ausschließlich an der Einheit eines Themas. Ein
+   * Lobpreisabend, an dem die Gruppe sich etwas für die Woche vornimmt, hatte
+   * dafür keinen Ort — obwohl der Vorsatz dort genauso entsteht.
+   *
+   * Der einzige Baustein, der **nicht zur Planung** gehört: er lässt sich erst
+   * ab Terminbeginn anschalten (`assertNotesSlotNotAhead`) und steht im Frontend
+   * deshalb auch nicht im Bausteinkasten, sondern hinter einem Hinweis am Abend
+   * selbst.
+   */
+  hasNotesSlot: boolean;
 }
 
 /**
@@ -36,6 +52,12 @@ export interface MeetingSlots {
  * muss nichts erfüllen (CLAUDE.md §5), und ihm Host, Thema und Lieder
  * aufzudrängen hieß bisher, dass ein Geburtstagsabend als unvollständig
  * dastand, solange niemand ein Thema zugeteilt hatte.
+ *
+ * Die **Nachbereitung** steht überall auf `false`, auch am Lobpreisabend, wo sie
+ * am naheliegendsten wäre. Sie ist der einzige Baustein, der nichts vorbereitet
+ * und niemanden einteilt — man schaltet ihn dazu, wenn an dem Abend etwas
+ * festzuhalten war. Ihn vorzugeben hieße, jeder Gruppe ein leeres Textfeld
+ * hinzustellen und daran zu erinnern, dass sie es nicht gefüllt hat.
  */
 export function slotDefaults(type: MeetingType): MeetingSlots {
   switch (type) {
@@ -44,6 +66,7 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
         hasTopicSlot: true,
         hasSongSlot: true,
         hasTestimonySlot: false,
+        hasNotesSlot: false,
       };
     case MeetingType.LOBPREIS_GEBET:
       // Kein Thema, dafür ein Testimony — oder auch nur Lieder (CLAUDE.md §5).
@@ -51,12 +74,14 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
         hasTopicSlot: false,
         hasSongSlot: true,
         hasTestimonySlot: true,
+        hasNotesSlot: false,
       };
     case MeetingType.CUSTOM:
       return {
         hasTopicSlot: false,
         hasSongSlot: false,
         hasTestimonySlot: false,
+        hasNotesSlot: false,
       };
   }
 }
@@ -66,6 +91,7 @@ const SLOT_LABEL: Record<keyof MeetingSlots, string> = {
   hasTopicSlot: 'kein Thema',
   hasSongSlot: 'keine Lieder',
   hasTestimonySlot: 'kein Testimony',
+  hasNotesSlot: 'keine Nachbereitung',
 };
 
 /**
@@ -90,11 +116,20 @@ const SLOT_LABEL: Record<keyof MeetingSlots, string> = {
  * Startbildschirm. Weggeräumt wird sie — wie die Lieder und die Musik-Zuteilung —
  * in `MeetingService`, weil eine Verknüpfungstabelle kein `data`-Feld hat, das
  * sich leeren ließe. Deshalb bleibt es hier bei einer leeren Liste.
+ *
+ * Bei der **Nachbereitung** stehen beide Texte, und anders als beim Thema werden
+ * sie wirklich geleert. Der Unterschied ist, wem sie gehören: die Einheit trägt
+ * die Vorbereitung einer Person über mehrere Abende hinweg und wartet als
+ * Entwurf weiter, diese zwei Felder gehören diesem einen Abend. Was hier
+ * stünde, nachdem der Baustein weg ist, wäre nicht geduldig, sondern
+ * unerreichbar. Die **Haken** darunter räumt `MeetingService` mit weg — sie
+ * liegen in einer eigenen Tabelle.
  */
 export const SLOT_FIELDS = {
   hasTopicSlot: [],
   hasSongSlot: [],
   hasTestimonySlot: ['testimonyPersonId'],
+  hasNotesSlot: ['summaryText', 'actionstepText'],
 } as const satisfies Record<keyof MeetingSlots, readonly string[]>;
 
 /**
@@ -166,16 +201,23 @@ export function resolveSlots(
     hasTopicSlot: dto.hasTopicSlot ?? base.hasTopicSlot,
     hasSongSlot: dto.hasSongSlot ?? base.hasSongSlot,
     hasTestimonySlot: dto.hasTestimonySlot ?? base.hasTestimonySlot,
+    hasNotesSlot: dto.hasNotesSlot ?? base.hasNotesSlot,
   };
 }
 
 /**
- * Thema und Testimony schließen einander aus.
+ * Zwei Paare, die einander ausschließen — und ein drittes, das es nicht tut.
  *
- * Beides ist der Beitrag, um den sich der Abend dreht, und zwei davon gibt es
- * nicht: wer sein Testimony erzählt, bereitet kein Thema vor, und umgekehrt.
- * Bisher ließ sich beides zugleich anschalten — der Abend stand dann mit zwei
- * Rollen da, von denen eine an dem Abend nie stattfinden würde.
+ * **Thema und Testimony**: beides ist der Beitrag, um den sich der Abend dreht,
+ * und zwei davon gibt es nicht. Wer sein Testimony erzählt, bereitet kein Thema
+ * vor, und umgekehrt.
+ *
+ * **Thema und Nachbereitung**: beide tragen Zusammenfassung und Actionstep. Zwei
+ * davon an einem Abend wären zwei Antworten auf dieselbe Frage — welche steht
+ * dann auf dem Startbildschirm, welche erinnert am Donnerstag?
+ *
+ * **Testimony und Nachbereitung** stehen bewusst nicht hier. Das ist gerade der
+ * Abend, um den es geht: jemand erzählt, die Gruppe nimmt sich danach etwas vor.
  *
  * Getrennt von `assertSlotsAllow`: die eine Regel prüft, ob ein **Feld** zu den
  * Bausteinen passt, diese, ob die Bausteine zueinander passen.
@@ -184,6 +226,43 @@ export function assertSlotsExclusive(slots: MeetingSlots): void {
   if (slots.hasTopicSlot && slots.hasTestimonySlot) {
     throw new BadRequestException(
       'Ein Abend hat entweder ein Thema oder ein Testimony — nicht beides',
+    );
+  }
+
+  if (slots.hasTopicSlot && slots.hasNotesSlot) {
+    throw new BadRequestException(
+      'Zusammenfassung und Actionstep gehören entweder zum Thema oder zum Abend — nicht zu beidem',
+    );
+  }
+}
+
+/**
+ * Die Nachbereitung lässt sich erst ab Terminbeginn dazunehmen.
+ *
+ * Sie ist der einzige Baustein, der nicht zur **Planung** eines Abends gehört,
+ * sondern zu dem, was danach übrig bleibt. Vorher anzubieten hieße, nach einer
+ * Zusammenfassung von etwas zu fragen, das noch nicht stattgefunden hat — und im
+ * Bausteinkasten neben Thema, Lieder und Testimony stand sie genau dort.
+ *
+ * Nur der Übergang **aus → an** wird geprüft. Ein PATCH, der den Schalter gar
+ * nicht anfasst, darf nicht daran scheitern, und wegnehmen darf man immer:
+ * hätte man sich vertan, wäre man sonst damit eingesperrt.
+ *
+ * Dieselbe Grenze wie beim Abhaken des Actionsteps (`eveningReached`), und
+ * gemeint ist die Anfangszeit **nach** dem Aufruf — wer Uhrzeit und Baustein in
+ * einem PATCH ändert, meint die neue.
+ */
+export function assertNotesSlotNotAhead(
+  before: MeetingSlots,
+  after: MeetingSlots,
+  evening: { date: Date; startMinutes: number; zone: string },
+  now?: Date,
+): void {
+  if (before.hasNotesSlot || !after.hasNotesSlot) return;
+
+  if (!eveningReached(evening.date, evening.zone, now, evening.startMinutes)) {
+    throw new BadRequestException(
+      'Die Nachbereitung gibt es erst, wenn der Abend angefangen hat',
     );
   }
 }

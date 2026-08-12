@@ -1,0 +1,78 @@
+meta {
+  name: Nachbereitung schreiben
+  type: http
+  seq: 29
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{meetingEtag}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "hasNotesSlot": true,
+    "summaryText": "Wir haben über Dankbarkeit gesprochen und lange gebetet.",
+    "actionstepText": "Jeden Abend drei Dinge aufschreiben, für die ich dankbar bin"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("meetingEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("der Baustein ist an", function () {
+    expect(res.body.hasNotesSlot).to.equal(true);
+  });
+
+  test("beide Texte stehen am Termin", function () {
+    expect(res.body.actionstepText).to.contain("dankbar");
+    expect(res.body.summaryText).to.contain("Dankbarkeit");
+  });
+
+  test("das Thema ist damit aus", function () {
+    expect(res.body.hasTopicSlot).to.equal(false);
+  });
+}
+
+docs {
+  Zusammenfassung und Actionstep **ohne** Thema — der Baustein „Nachbereitung".
+  Er füllt eine Lücke: beides hing bis dahin ausschließlich an der Einheit eines
+  Themas, und ein Abend, an dem die Gruppe nur singt und betet, hatte für den
+  Vorsatz der Woche keinen Ort.
+
+  **Erst ab Terminbeginn.** Steht der Abend noch bevor, scheitert derselbe
+  Aufruf mit `400` — vorher gibt es nichts nachzubereiten. Maßgeblich ist die
+  Treffpunktzeit dieses Termins, dieselbe Grenze wie beim Abhaken des
+  Actionsteps. Zum Ausprobieren: `startTime` über „Uhrzeit verschieben" nach
+  vorn ziehen. **Abschalten** (`"hasNotesSlot": false`) geht dagegen jederzeit.
+
+  **Thema und Nachbereitung schließen einander aus** — beide tragen dieselben
+  zwei Felder, und zwei Antworten auf dieselbe Frage gibt es nicht. Anhaken des
+  einen schaltet das andere ab; schickt man beide Schalter zugleich als `true`,
+  kommt ein `400`. Testimony und Nachbereitung zusammen sind dagegen erlaubt:
+  genau der Lobpreisabend, an dem jemand erzählt und die Gruppe danach etwas
+  festhält.
+
+  Ohne `"hasNotesSlot": true` werden die beiden Texte mit `400` abgewiesen
+  (`assertSlotsAllow`). Und **Abschalten löscht sie** samt der gesetzten Haken —
+  anders als beim Thema, dessen Einheit nur gelöst wird und als Entwurf
+  weiterlebt. Der Unterschied ist, wem sie gehören: eine Einheit trägt die
+  Vorbereitung einer Person über mehrere Abende, diese zwei Felder gehören
+  diesem einen Abend.
+
+  Abgehakt wird der Actionstep wie immer über
+  `PUT …/meetings/{id}/actionstep-done` — die Tabelle dahinter hing schon immer
+  am Termin und nicht am Thema.
+}

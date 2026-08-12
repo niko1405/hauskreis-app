@@ -45,28 +45,33 @@ export function ArchiveScreen() {
   const deferred = useDeferredValue(search).trim();
   const summary = useArchiveSummary();
 
-  // Kein „Termine"-Tab mehr: nebeneinander gestellt sahen Termine und Themen
-  // aus wie zwei Sichten auf dasselbe, und das waren sie fast auch — was man
-  // an einem Abend nachschlägt, ist das Thema. Vergangene Termine bleiben in
-  // der Datenbank und tragen weiter die Vorschlagslogik, sie haben nur keine
-  // eigene Liste mehr; erreichbar sind sie über Kalender und Planungstabelle.
+  // „Termine" gab es einmal nicht, und der Grund war gut: nebeneinander
+  // gestellt sahen Termine und Themen aus wie zwei Sichten auf dasselbe. Seit
+  // es die **Nachbereitung** gibt, stimmt das nicht mehr — ein Abend ohne Thema
+  // trägt eigenen Inhalt, den keine Themenseite zeigt. Es steht trotzdem
+  // hinten: was man hier sucht, ist meistens ein Thema oder ein Lied.
   const tabs: { key: Tab; label: string; count?: number }[] = [
-    { key: 'themen', label: 'Themen', count: summary.data?.totals.topics },
+    // `topicsTotal` und nicht `topics`: die Kachel steht über **beiden**
+    // Registern, und hier stand vorher die Zahl des einen. Über „Eigene (1)"
+    // prangte dann „Themen (0)" — die Kachel zählte nur, was schon gehalten
+    // wurde, und ein eigener Entwurf ist genau das nicht.
+    { key: 'themen', label: 'Themen', count: summary.data?.totals.topicsTotal },
     { key: 'lieder', label: 'Lieder', count: summary.data?.totals.songs },
     // Orte gehören hierher und nicht in die Verwaltung: sie sind Teil dessen,
     // was die Gruppe über sich gesammelt hat, und jede:r darf sie pflegen.
     { key: 'orte', label: 'Orte' },
+    // `totals.meetings` zählt ohne abgesagte — dasselbe, was die Liste in ihrer
+    // Vorgabe zeigt. Eine Zahl, die größer ist als das, was darunter steht,
+    // wirft genau die Frage auf, die sie beantworten soll.
+    { key: 'termine', label: 'Termine', count: summary.data?.totals.meetings },
   ];
 
   return (
     <div>
-      <PageHeader
+      <ScreenHeader
+        screen="archive"
         title="Archiv"
-        subtitle={
-          summary.data?.firstMeetingDate
-            ? `Seit ${formatDay(summary.data.firstMeetingDate)} · ${summary.data.totals.songsPlayed} gesungene Lieder`
-            : undefined
-        }
+        subtitle="Durchsuche vergangene Termine, Themen, Locations und Lieder."
       />
 
       <div className="space-y-4 px-5">

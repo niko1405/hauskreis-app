@@ -380,6 +380,18 @@ Die Karte verschwindet beim Abhaken **nicht**: sonst ließe sich der Haken nicht
 zurücknehmen. Still wird nur die Erinnerung — der Reminder überspringt, wer
 abgehakt hat.
 
+Und sie verschwindet auch nicht, wenn es gar keinen gibt; dann steht dort in
+Grau „Für diese Woche ist keiner geplant." Ein Platz, der mal da ist und mal
+nicht, verschiebt jedes Mal alles darunter — und die Frage „habe ich diese Woche
+etwas vergessen?" bleibt unbeantwortet, statt ein Nein zu bekommen.
+
+Derselbe Haken steht auf der **Themenseite** unter dem Actionstep jeder
+gehaltenen Einheit ([`ActionstepCheck`](src/components/domain/actionstep-check.tsx)).
+Er hängt am Termin (`meeting_actionstep_done`), der Text an der Einheit — wer
+den Text liest, will ihn dort auch abhaken können, statt erst den Abend zu
+suchen. Eine Komponente für beide Stellen, damit „5 von 9" nicht zweimal
+verschieden gezählt wird.
+
 **„Nächstes Treffen" nennt alle drei Rollen** in denselben `RoleChip`s wie die
 Terminkarte. Sonst hieße „noch kein Host" auf zwei Bildschirmen zweierlei. Die
 Chips verlinken aufs Detail, weil dort das „+ Musik eintragen" auch einlösbar
@@ -604,15 +616,53 @@ es ist der eigene Vorsatz.
 gilt dem Vorschlagen und Löschen an einem vergangenen oder abgesagten Abend;
 `mayPick` dem Haken:
 
-- **vor dem Abend** nur die Musik-Zuständigen (oder alle, solange niemand
-  eingeteilt ist) — das Abhaken ist dann eine Entscheidung;
+- **vor dem Abend** nur die Musik-Zuständigen — das Abhaken ist dann eine
+  Entscheidung („das singen wir"), und die trifft, wer die Lieder übt;
 - **danach** jede:r — dann ist es ein Protokoll, und daran erinnert sich jede:r
   gleich gut;
 - **an einem abgesagten Abend** niemand, da gibt es nichts zu protokollieren.
 
+Streng wie beim Wählen eines Themas: kein Admin-Freifahrtschein, und ein Abend
+ohne Musik-Zuteilung ist keiner, an dem alle bestimmen dürfen. Wer die Auswahl
+treffen will, trägt sich eine Zeile weiter oben ein. Der Server hält dieselbe
+Grenze.
+
 Vergangene Abende sind fürs Abhaken damit wieder bedienbar, obwohl sie sonst
 gesperrt bleiben. Das ist Absicht: wer am nächsten Tag nachträgt, was
 tatsächlich dran war, tut der Liederdatenbank einen Gefallen.
+
+„Danach" heißt dabei **am nächsten Tag der Gruppe**, nicht ab der
+Treffpunktzeit — `isPast(day)`, dieselbe Rechnung wie das „Vorbei"-Abzeichen
+daneben. Dass die beiden auseinanderliefen, war der Fehler: die App rechnete in
+der Gerätezone, der Server in UTC, und um halb eins nachts zeigte sie die
+Kästchen frei, während er mit `403` antwortete. Beide rechnen jetzt in der Zone
+der Gruppe.
+
+### Die Nachbereitung entsteht am Abend, nicht davor
+
+Zusammenfassung und Actionstep eines Abends **ohne** Thema hängen am Baustein
+`hasNotesSlot` — dem einzigen, der nicht im Bausteinkasten steht. Dort hätte man
+ihn _vor_ dem Abend angehakt, also als es noch nichts nachzubereiten gab.
+
+Stattdessen ein Ablauf in drei Zuständen, und keiner davon zeigt ein leeres Feld:
+
+| Was dasteht   | Wann                                                 |
+| ------------- | ---------------------------------------------------- |
+| nichts        | vor der Treffpunktzeit, oder der Abend hat ein Thema |
+| `NotesPrompt` | ab Terminbeginn, solange nichts geschrieben ist      |
+| `NotesCard`   | sobald etwas drinsteht — oder im Bearbeitungsmodus   |
+
+Der Hinweis schaltet den Baustein an **und** den Bearbeitungsmodus: er ist die
+Aufforderung, etwas zu schreiben, und eine Karte ohne Eingabemöglichkeit wäre
+die falsche Antwort darauf. Innerhalb der Karte ist jedes der beiden Stücke
+einzeln: ein Knopf legt das fehlende an und öffnet gleich das Feld (`startOpen`
+an `InlineEdit`), bleibt es leer, nimmt `onDiscard` es wieder weg. So gibt es
+kein Feld ohne Inhalt — und manchmal gibt es eben nur einen Vorsatz und nichts
+zusammenzufassen.
+
+Wegnehmen geht im Bearbeitungsmodus über „Nachbereitung entfernen", mit derselben
+Rückfrage wie bei den anderen Bausteinen: gelöscht werden beide Texte und die
+Haken darunter. Danach steht wieder der Hinweis da, als wäre nichts gewesen.
 
 ### Absagen: die eigene und die des ganzen Abends
 
@@ -636,6 +686,14 @@ Personen abgesagt, setzt das Backend den Termin von selbst auf `CANCELLED`;
 sagt danach jemand doch zu, lebt er wieder auf. Beides schickt eine
 Benachrichtigung. Wer noch nicht geantwortet hat, verhindert die Absage — die
 Einzelheiten stehen im Backend-README.
+
+Dafür steht in der „Fällt aus"-Karte ein Knopf **„Ich bin doch dabei"** — für
+alle, nicht nur für Admins. Er fehlte, und damit war die Regel unerreichbar: die
+Karte versprach „sagt jemand doch zu, findet er wieder statt", aber „Wer kommt"
+ist an einem abgesagten Abend schreibgeschützt und die Karten in Liste und
+Kalender blenden ihren Schalter aus. Übrig blieb der Admin-Knopf, der den Status
+drehte und die eigene Antwort auf „nicht dabei" stehen ließ — genau das, was man
+sah. Er nimmt jetzt die selbst gegebenen Absagen mit zurück.
 
 In der Planungstabelle steht ein abgesagter Abend blass da, statt zu
 verschwinden: dass er ausfällt, ist die Antwort auf „was ist am 12. Mai" —
@@ -661,6 +719,17 @@ Terminliste.
 Symbol ohne Beschriftung, das niemand als Link gelesen hat. Jetzt einmal in
 `components/domain/lyrics-link.tsx`: mit Wort, in Terracotta wie alles andere
 Anklickbare, und mit einer Trefferfläche, die auf einem Telefon getroffen wird.
+
+**Der zweite Druck auf „Link suchen" heißt „Weitere suchen".** Vorher kam
+beliebig oft derselbe Zwischenspeicher zurück — wer einen schlechten Vorschlag
+bekommen hatte, war damit fertig. Jetzt geht `more: true` mit, die bisherigen
+bleiben stehen, und was dazukommt, trägt ein „neu". Die Markierung rechnet
+`song-ai-assist.tsx` selbst aus: der Server liefert das Bekannte zuerst, und die
+Komponente kennt die vorherige Liste — ein Feld dafür wäre eine Angabe über den
+Verlauf _dieser_ Sitzung an einer Stelle, die nichts davon weiß.
+
+Kommt nichts Neues, sagt ein Toast das auch. Sonst sähe der zweite Druck aus,
+als hätte er nichts getan.
 
 ## Zuteilen: Sheet und Tabelle
 

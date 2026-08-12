@@ -103,6 +103,11 @@ export function Checkbox({
 /**
  * Ein Feld, das erst beim Antippen zum Eingabefeld wird. `emptyLabel` ist
  * bewusst ein eigener Text: „Noch kein Titel" sagt etwas anderes als „—".
+ *
+ * `startOpen` und `onDiscard` gehören zusammen und sind für Felder da, die es
+ * vorher **gar nicht gab**: In der Nachbereitung legt man Zusammenfassung und
+ * Actionstep einzeln an, und ein gerade angelegtes Feld, das leer bleibt, soll
+ * wieder verschwinden statt als leere Zeile stehenzubleiben.
  */
 export function InlineEdit({
   value,
@@ -113,6 +118,8 @@ export function InlineEdit({
   placeholder,
   saving = false,
   className,
+  startOpen = false,
+  onDiscard,
 }: {
   value: string | null;
   /**
@@ -128,8 +135,16 @@ export function InlineEdit({
   placeholder?: string;
   saving?: boolean;
   className?: string;
+  /** Zeigt gleich das Eingabefeld — ohne den Umweg über den Stift. */
+  startOpen?: boolean;
+  /**
+   * Wird gerufen, wenn das Feld ohne Inhalt geschlossen wird — verworfen oder
+   * leer gespeichert. Wer es gerade erst angelegt hat, nimmt es damit wieder
+   * weg; wer den letzten Satz gelöscht hat, ebenso.
+   */
+  onDiscard?: () => void;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(startOpen);
   const [draft, setDraft] = useState(value ?? '');
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
@@ -141,10 +156,15 @@ export function InlineEdit({
     if (editing) inputRef.current?.focus();
   }, [editing]);
 
+  const close = (next: string | null) => {
+    setEditing(false);
+    if (next === null) onDiscard?.();
+  };
+
   const commit = () => {
     const trimmed = draft.trim();
-    setEditing(false);
     const next = trimmed === '' ? null : trimmed;
+    close(next);
     if (next !== value) onSave?.(next);
   };
 
@@ -157,7 +177,7 @@ export function InlineEdit({
       onKeyDown: (event: React.KeyboardEvent) => {
         if (event.key === 'Escape') {
           setDraft(value ?? '');
-          setEditing(false);
+          close(value);
         }
         if (event.key === 'Enter' && !multiline) commit();
       },
@@ -181,7 +201,7 @@ export function InlineEdit({
             label="Verwerfen"
             onClick={() => {
               setDraft(value ?? '');
-              setEditing(false);
+              close(value);
             }}
           >
             <X size={16} />
@@ -206,7 +226,7 @@ export function InlineEdit({
         className={cn(
           'text-sm leading-relaxed whitespace-pre-line',
           value ? 'text-stone-700' : 'text-stone-400 italic',
-          className
+          className,
         )}
       >
         {value ?? emptyLabel}

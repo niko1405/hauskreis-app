@@ -65,28 +65,24 @@ export class ActionstepReminderService {
     options: { now?: Date } = {},
   ): Promise<ActionstepRunResult> {
     const now = options.now ?? new Date();
-    const today = toUtcDate(now);
+    const today = await this.clock.today(hauskreisId, now);
 
     const meeting = await this.prisma.meeting.findFirst({
       where: {
         hauskreisId,
         date: { lt: today },
         status: { not: MeetingStatus.CANCELLED },
-        // Der Actionstep steht an der Einheit, die an dem Abend hing — nicht
-        // mehr am Abend selbst. Ein leerer Text zählt als keiner: das Feld ist
-        // Freitext, und ein Leerzeichen ist niemanden zu unterbrechen wert.
-        topicSession: { actionstepText: { not: null } },
+        // Aus beiden Quellen: der Einheit eines Themas und der Nachbereitung des
+        // Abends selbst. Welche gilt, entscheidet `actionstepOf`.
+        ...hasActionstep,
       },
       orderBy: { date: 'desc' },
-      select: {
-        id: true,
-        topicSession: { select: { actionstepText: true } },
-      },
+      select: { id: true, ...actionstepSelect },
     });
 
-    const actionstep = meeting?.topicSession?.actionstepText;
+    const actionstep = meeting && actionstepOf(meeting);
 
-    if (!meeting || !actionstep || actionstep.trim() === '') {
+    if (!meeting || !actionstep) {
       return { notified: 0, skipped: 0, meetingId: null };
     }
 

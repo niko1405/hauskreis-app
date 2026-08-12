@@ -292,6 +292,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/meetings/config': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['MeetingController_getSchedule'];
+    put: operations['MeetingController_updateSchedule'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/meetings/custom-meeting-reminders': {
     parameters: {
       query?: never;
@@ -2157,12 +2173,14 @@ export interface components {
       hasTopicSlot?: boolean;
       hasSongSlot?: boolean;
       hasTestimonySlot?: boolean;
+      hasNotesSlot?: boolean;
     };
     UpdateMeetingDto: {
       /** @enum {string} */
       type?: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
       /** Format: date */
       endDate?: string | null;
+      startTime?: string;
       /** Format: uuid */
       locationId?: string | null;
       /** Format: uuid */
@@ -2442,6 +2460,15 @@ export interface components {
       updatedAt: string;
       version: number;
       responsibles: {
+        person: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        };
+      }[];
+      actionstepDone: {
         person: {
           /** Format: uuid */
           id: string;
@@ -3490,13 +3517,9 @@ export interface operations {
       };
     };
   };
-  DashboardController_findAssignments: {
+  ArchiveController_summary: {
     parameters: {
-      query: {
-        from: string;
-        to: string;
-        personId?: string;
-      };
+      query?: never;
       header?: never;
       path: {
         hauskreisId: string;
@@ -3566,13 +3589,13 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Der ganze Home-Screen in einem Aufruf */
+      /** @description Ohne personId die Mehrwochen-Tabelle, mit ihr die eigenen Badges */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['HomeScreenResponseDto'];
+          'application/json': components['schemas']['AssignmentListResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -3671,24 +3694,51 @@ export interface operations {
       };
     };
   };
-  LocationController_findAll: {
+  HeaderImageController_find: {
     parameters: {
       query?: never;
       header?: never;
       path: {
         hauskreisId: string;
+        screen: 'home' | 'prayer' | 'archive' | 'profile';
       };
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      /** @description Alle Orte, nach Namen sortiert */
       200: {
         headers: {
           [name: string]: unknown;
         };
+        content?: never;
+      };
+    };
+  };
+  HeaderImageController_upload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        screen: 'home' | 'prayer' | 'archive' | 'profile';
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'multipart/form-data': {
+          /** Format: binary */
+          file?: string;
+        };
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
         content: {
-          'application/json': components['schemas']['LocationListResponseDto'];
+          'application/json': components['schemas']['HeaderImageResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -4342,6 +4392,7 @@ export interface operations {
         search?: string;
         from?: string;
         to?: string;
+        includeCancelled?: 'true' | 'false';
       };
       header?: never;
       path: {
@@ -4507,6 +4558,143 @@ export interface operations {
       };
       /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeetingController_getSchedule: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MeetingScheduleResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeetingController_updateSchedule: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateMeetingScheduleDto'];
+      };
+    };
+    responses: {
+      /** @description Gilt fuer neue Termine, nicht rueckwirkend */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MeetingScheduleResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Das `If-Match` ist veraltet — jemand anders hat inzwischen gespeichert. Neu laden und erneut versuchen. */
+      412: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Kein `If-Match` mitgeschickt. Den ETag aus dem vorangehenden GET verwenden. */
+      428: {
         headers: {
           [name: string]: unknown;
         };

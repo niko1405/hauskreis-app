@@ -401,6 +401,10 @@ model Meeting {
   hasTopicSlot        Boolean              @default(true) @map("has_topic_slot")
   hasSongSlot         Boolean              @default(true) @map("has_song_slot")
   hasTestimonySlot    Boolean              @default(false) @map("has_testimony_slot")
+  /// Zusammenfassung und Actionstep **ohne** Thema. Bei jeder Terminart
+  /// voreingestellt aus: ein Standard-Abend hat sein Thema, und wo keins ist,
+  /// soll die Karte eine Entscheidung sein und keine Vorgabe.
+  hasNotesSlot        Boolean              @default(false) @map("has_notes_slot")
   locationId          String?              @map("location_id") @db.Uuid
   hostPersonId        String?              @map("host_person_id") @db.Uuid
   /// Wie der Abend überschrieben ist — „Geburtstag von Mira", aber auch ein
@@ -414,11 +418,22 @@ model Meeting {
   /// aufschreibt, sondern jemand, der davon erzählt. Als Textfeld stand es
   /// leer da und niemand wusste, wer es füllen sollte.
   testimonyPersonId   String?              @map("testimony_person_id") @db.Uuid
-  /// Was **über** den Abend dasteht, unabhängig vom Thema. Zusammenfassung und
-  /// Actionstep standen bis eben auch hier und sind an die Einheit gewandert
-  /// (`TopicSession`): sie gehören zu dem, was besprochen wurde, und sollen eine
-  /// Umverteilung der Rolle überleben.
+  /// Was **vor** dem Abend dasteht: „bringt Kuchen mit", „wir fangen später an".
+  /// Unabhängig von jedem Baustein und deshalb immer schreibbar.
   infoText            String?              @map("info_text")
+  /// Was **nach** dem Abend dasteht — nur bei `hasNotesSlot`.
+  ///
+  /// Beide Spalten gab es hier schon einmal und sie sind mit den Einheiten
+  /// weggezogen. Sie kommen zurück, aber mit anderer Bedeutung: an der
+  /// `TopicSession` gehören sie zum **Thema** und überleben einen
+  /// Rollenwechsel, hier gehören sie zum **Abend** und gehen mit ihm. Ein
+  /// Abend hat entweder das eine oder das andere, nie beides.
+  ///
+  /// Der Haken darunter steht weiterhin in `MeetingActionstepDone` — der hing
+  /// noch nie am Thema, sondern immer am Termin. Genau deshalb funktioniert das
+  /// Abhaken hier ohne eine einzige neue Zeile.
+  summaryText         String?              @map("summary_text")
+  actionstepText      String?              @map("actionstep_text")
   /// Wann der Abend abgesagt wurde. `status` allein sagt nur *dass*, und ein
   /// abgesagter Termin, an dem nichts weiter steht, wirft genau die Fragen auf,
   /// die er beantworten sollte.
@@ -669,6 +684,46 @@ model MeetingSong {
   @@unique([meetingId, songId])
   @@index([songId])
   @@map("meeting_song")
+}
+
+/// Wann der Hauskreis regelmäßig zusammenkommt — Wochentag und Uhrzeit.
+///
+/// Beides stand vorher als Konstante im Code (`TUESDAY = 2`, `EVENING_HOUR = 18`)
+/// und war damit eine Aussage über *diese* Gruppe in einer App für Gruppen.
+///
+/// Eine Zeile je Hauskreis, angelegt beim ersten Lesen, und eine eigene Tabelle
+/// statt Spalten am `hauskreis` — aus demselben Grund wie beim Gebets-Rhythmus:
+/// sie hält fest, *wer* den Rhythmus wann geändert hat.
+///
+/// Die Vorgaben sind das bisherige Verhalten. Solange niemand etwas einstellt,
+/// ändert sich nichts.
+model MeetingScheduleConfig {
+  id                String   @id @default(uuid()) @db.Uuid
+  hauskreisId       String   @unique @map("hauskreis_id") @db.Uuid
+  /// 0 = Sonntag … 6 = Samstag, dieselbe Zählung wie `Date.getUTCDay()`.
+  weekday           Int      @default(2)
+  /// Minuten seit Mitternacht Ortszeit, wie `Meeting.startMinutes`. 1080 = 18:00.
+  ///
+  /// Die Vorgabe für neue Abende, keine nachträgliche Regel: ein Wechsel
+  /// verschiebt nichts, was schon im Kalender steht. Sonst verrückte eine
+  /// Einstellung Termine, für die längst jemand zugesagt hat.
+  startMinutes      Int      @default(1080) @map("start_minutes")
+  /// Die Uhr der Gruppe — ein IANA-Name wie `Europe/Berlin`.
+  ///
+  /// `startMinutes` ist ohne sie nicht zu deuten, und „welchen Tag haben wir"
+  /// ebenso wenig: ein Server in UTC hielt den Termin von gestern bis zwei Uhr
+  /// nachts für kommend. Stand als Konstante im Code, bis auffiel, dass das
+  /// dieselbe Aussage zu viel war wie vorher Wochentag und Uhrzeit.
+  timeZone          String   @default("Europe/Berlin") @map("time_zone")
+  updatedByPersonId String?  @map("updated_by_person_id") @db.Uuid
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  /// Optimistic locking counter, see docs/conditional requests.
+  version           Int      @default(0)
+
+  hauskreis Hauskreis @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  updatedBy Person?   @relation("MeetingScheduleEditor", fields: [updatedByPersonId], references: [id], onDelete: SetNull)
+
+  @@map("meeting_schedule_config")
 }
 
 /// How long a prayer buddy assignment lasts. One row per group, created on

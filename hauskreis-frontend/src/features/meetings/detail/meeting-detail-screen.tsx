@@ -41,7 +41,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
-import { InlineEdit, Select, TextInput } from '@/components/ui/field';
+import { InlineEdit, TextInput } from '@/components/ui/field';
 import {
   CardSkeleton,
   ConflictBanner,
@@ -49,11 +49,8 @@ import {
 } from '@/components/ui/states';
 import { cn } from '@/lib/cn';
 import {
-  useLocations,
   useMe,
   useMeeting,
-  usePeople,
-  useSetActionstepDone,
   useSongLeaders,
   useUpdateMeeting,
 } from '@/lib/api/hooks';
@@ -62,19 +59,19 @@ import {
   formatDayRange,
   formatRelativeDay,
   formatWeekday,
-  isFuture,
+  hasStarted,
   isPast,
 } from '@/lib/date';
-import { isSelectableWithoutHost } from '@/lib/location';
 import {
-  MEETING_SLOTS,
+  MEETING_SLOT_KEYS,
   MEETING_TYPE_LABEL,
   ROLE_LABEL,
-  actionstepProgress,
+  SLOT_LABEL,
   applySlotToggle,
   mapsUrl,
   meetingHeadline,
 } from '@/lib/meeting';
+import { ActionstepCheck } from '@/components/domain/actionstep-check';
 import { SlotCard } from '@/components/domain/slot-toggles';
 import type { MeetingSlotKey } from '@/lib/meeting';
 import type { AssignmentRole, Meeting, PersonRef } from '@/lib/api/types';
@@ -84,14 +81,11 @@ import {
   CancelMeetingBlock,
   DeleteMeetingBlock,
 } from './cancellation-card';
+import { NotesCard, NotesPrompt } from './notes-card';
 import { SongsCard } from './songs-card';
 import { TopicCard } from './topic-card';
 import { useRoleAssignment } from './use-role-assignment';
 import { useTopicSessionActions } from './use-topic-session';
-
-const SLOT_LABEL = Object.fromEntries(
-  MEETING_SLOTS.map((slot) => [slot.key, slot.label]),
-) as Record<MeetingSlotKey, string>;
 
 /**
  * Was beim Wegnehmen eines Bausteins verlorengeht — als Satz, oder `null`,
@@ -211,8 +205,15 @@ function Loaded({
 
   const cancelled = meeting.status === 'CANCELLED';
   const past = isPast(meeting.date);
-  /** Der Abend liegt noch vor uns — es gibt noch nichts nachzubereiten. */
-  const ahead = isFuture(meeting.date);
+  /**
+   * Hat der Abend angefangen? Entscheidet, ob sich der Actionstep abhaken lässt.
+   *
+   * Tagesgenau reichte hier nicht: `isFuture` sagt am Termintag „nein, liegt
+   * nicht in der Zukunft", und damit ließ sich der Vorsatz für den Abend um acht
+   * Uhr morgens abhaken. Maßgeblich ist die Treffpunktzeit; der Server hält
+   * dieselbe Grenze.
+   */
+  const started = hasStarted(meeting.date, meeting.startTime);
 
   /**
    * Ein abgesagter Abend ist kein Entwurf mehr. Vorher hing der Schreibschutz
@@ -308,12 +309,73 @@ function Loaded({
   const mayEditTopic = meeting.topicSession?.mayEdit ?? false;
 
   /**
+   * Ob die Nachbereitungs-Karte dasteht — und nicht bloß, ob der Baustein an
+   * ist.
+   *
+   * Eine Karte, in der nichts steht, ist keine Nachbereitung, sondern ein
+   * Formular mit zwei unerledigten Zeilen. Solange nichts geschrieben ist, steht
+   * deshalb der Hinweis da; im **Bearbeitungsmodus** dagegen die Karte, denn
+   * dort legt man die beiden Stücke überhaupt erst an.
+   */
+  const notesContent = Boolean(meeting.summaryText || meeting.actionstepText);
+  const showNotes = meeting.hasNotesSlot && (notesContent || editing);
+
+  /**
+   * Ob der Hinweis „Nachbereitung hinzufügen" dasteht.
+   *
+   * Erst **ab Terminbeginn** — vorher gibt es nichts nachzubereiten, und der
+   * Server lehnt das Anschalten dann auch ab. Nicht an einem Abend mit
+   * **Thema**: dort trägt die Einheit Zusammenfassung und Actionstep, zwei
+   * davon gibt es nicht. Und nicht an einem **abgesagten**: da war nichts.
+   */
+  const mayAddNotes =
+    started && !cancelled && !meeting.hasTopicSlot && !showNotes;
+
+  /**
+   * Der Hinweis führt in den Bearbeitungsmodus — er ist ja die Aufforderung,
+   * etwas zu schreiben, und die Karte erschiene sonst leer und wieder ohne
+   * Eingabemöglichkeit. Den Baustein schaltet er nur an, wenn er aus war: nach
+   * einer Karte, die leer geblieben ist, steht er noch.
+   */
+  const addNotes = () => {
+    if (!meeting.hasNotesSlot) patch({ hasNotesSlot: true });
+    setEditing(true);
+  };
+
+  /**
+   * Die Nachbereitung ganz wegnehmen — danach steht wieder der Hinweis da, als
+   * wäre nichts gewesen. Mit derselben Rückfrage wie beim Wegnehmen eines
+   * Bausteins: gelöscht werden beide Texte und die Haken darunter.
+   */
+  const removeNotes = async () => {
+    const loss = SLOT_LOSSES.hasNotesSlot(meeting);
+
+    if (loss) {
+      const ok = await confirm({
+        title: 'Nachbereitung entfernen?',
+        body: loss,
+        confirmLabel: 'Entfernen',
+        tone: 'danger',
+      });
+      if (!ok) return;
+    }
+
+    patch({ hasNotesSlot: false });
+  };
+
+  /**
    * Abhaken darf vor dem Abend, wer die Musik macht — danach jede:r. Nur an
    * einem **abgesagten** Abend gar niemand: dort gibt es nichts zu protokollieren.
+   *
+   * Streng wie beim Thema: kein Admin-Freifahrtschein, und ein Abend ohne
+   * Musik-Zuteilung ist keiner, an dem alle bestimmen dürfen. Wer die Auswahl
+   * treffen will, trägt sich eine Zeile weiter oben ein. Der Server hält
+   * dieselbe Grenze.
    */
   const mayPickSongs =
     !cancelled &&
-    (past || mayDo((songLeaders.data ?? []).map((person) => person.id)));
+    (past ||
+      (songLeaders.data ?? []).some((person) => person.id === me.me?.id));
 
   /**
    * Einen Baustein dazu- oder wegnehmen.
@@ -324,23 +386,32 @@ function Loaded({
    * Deshalb die Rückfrage, und nur dann, wenn wirklich etwas verlorengeht: bei
    * einem leeren Baustein wäre sie eine Frage ohne Inhalt.
    *
-   * `applySlotToggle` kann **zwei** Schalter zurückgeben: Thema und Testimony
-   * schließen einander aus, und wer das eine anhakt, meint damit ersichtlich
-   * „statt des anderen". Deshalb geht auch dessen Verlust in die Rückfrage ein.
+   * `applySlotToggle` kann **mehrere** Schalter zurückgeben: Thema schließt
+   * Testimony und Nachbereitung aus, und wer eines davon anhakt, meint damit
+   * ersichtlich „statt des anderen". Deshalb gehen auch deren Verluste in die
+   * Rückfrage ein — und die Überschrift nennt, was wirklich weicht, statt eine
+   * Paarung zu raten.
    */
   const toggleSlot = async (key: MeetingSlotKey, value: boolean) => {
     const next = applySlotToggle(meeting, key, value);
 
-    const losses = MEETING_SLOTS.filter(
-      (slot) => meeting[slot.key] && !next[slot.key],
-    )
-      .map((slot) => SLOT_LOSSES[slot.key](meeting))
+    // Über **alle vier** Schlüssel, nicht über die sichtbaren Schalter: die
+    // Nachbereitung ist keiner mehr, fällt beim Anhaken des Themas aber mit —
+    // und genau das muss die Rückfrage sagen.
+    const abgeschaltet = MEETING_SLOT_KEYS.filter(
+      (slot) => meeting[slot] && !next[slot],
+    );
+
+    const losses = abgeschaltet
+      .map((slot) => SLOT_LOSSES[slot](meeting))
       .filter((loss): loss is string => loss !== null);
 
     if (losses.length > 0) {
+      const statt = abgeschaltet.map((slot) => SLOT_LABEL[slot]).join(' und ');
+
       const ok = await confirm({
         title: value
-          ? `${SLOT_LABEL[key]} statt ${SLOT_LABEL[key === 'hasTopicSlot' ? 'hasTestimonySlot' : 'hasTopicSlot']}?`
+          ? `${SLOT_LABEL[key]} statt ${statt}?`
           : `${SLOT_LABEL[key]} wegnehmen?`,
         body: losses.join(' '),
         confirmLabel: value ? 'Umstellen' : 'Wegnehmen',
@@ -441,125 +512,104 @@ function Loaded({
             irgendwo, auch an einem Geburtstag. Dass niemand eingetragen ist,
             ist ein gültiger Zustand — das Treffen im Schlosspark. */}
         <section>
-        <SectionTitle>Zuständigkeiten</SectionTitle>
-        <Card className="divide-y divide-line">
-          <div className="pb-4">
-            <p className="mb-1.5 text-[11px] font-semibold text-stone-500">
-              Ort
-            </p>
-
-            {meeting.host ? (
-              <>
-                <p className="text-sm font-bold text-stone-800">
-                  {meeting.location?.name ?? 'Noch offen'}
-                </p>
-                <p className="mt-0.5 text-[11px] text-stone-400">
-                  Ergibt sich aus dem Gastgeber. Für einen anderen Ort nimm
-                  unten den Gastgeber heraus.
-                </p>
-              </>
-            ) : editing ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setCreatingLocation(true)}
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-terracotta-600 hover:underline"
-                >
-                  <Plus size={12} />
-                  Treffpunkt anlegen
-                </button>
-                <Select
-                  value={meeting.locationId ?? ''}
-                  disabled={update.isPending}
-                  onChange={(event) =>
-                    patch({
-                      locationId:
-                        event.target.value === '' ? null : event.target.value,
-                    })
-                  }
-                >
-                  <option value="">Noch offen</option>
-                  {treffpunkte.map((location) => (
-                    <option key={location.id} value={location.id}>
-                      {location.name}
-                    </option>
-                  ))}
-                </Select>
-              </>
-            ) : (
-              <p className="text-sm font-bold text-stone-800">
-                {meeting.location?.name ?? 'Noch offen'}
+          <SectionTitle>Zuständigkeiten</SectionTitle>
+          <Card className="divide-y divide-line">
+            <div className="w-full pb-4">
+              {/* Titel */}
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-stone-400">
+                Ort & Gastgeber
               </p>
+
+              <div className="flex w-full items-start justify-between gap-4">
+                <div className="flex min-w-0 flex-col">
+                  <div className="flex items-center gap-1.5 text-lg font-bold text-stone-800">
+                    <MapPin
+                      size={20}
+                      className="shrink-0 text-terracotta-600"
+                      fill="currentColor"
+                    />
+                    <span className="truncate font-serif">
+                      {meeting.location?.name ?? 'Noch offen'}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-sm text-stone-500">
+                    {meeting.host
+                      ? 'Ergibt sich aus dem Gastgeber.'
+                      : 'Öffentlicher Treffpunkt'}
+                  </p>
+                </div>
+
+                <a
+                  href={
+                    meeting?.location ? mapsUrl(meeting.location) : undefined
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-disabled={!meeting?.location}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                    meeting?.location
+                      ? 'bg-terracotta-600 text-white hover:bg-[#a8705c]'
+                      : 'pointer-events-none cursor-not-allowed bg-gray-300 text-gray-500'
+                  }`}
+                >
+                  <MapPin size={16} />
+                  In Maps öffnen
+                  <ExternalLink size={14} />
+                </a>
+              </div>
+            </div>
+
+            <RoleRow
+              label={ROLE_LABEL.HOST}
+              people={meeting.host ? [meeting.host] : []}
+              emptyLabel={
+                meeting.locationId && !meeting.host
+                  ? 'Kein Host nötig'
+                  : !meeting.host && !meeting.locationId
+                    ? 'Host/Treffpunkt notwendig'
+                    : ''
+              }
+              onEdit={cancelled ? undefined : openVenue}
+              EditIcon={UserPen}
+              editIconSize={16}
+            />
+
+            {meeting.hasTopicSlot && (
+              <RoleRow
+                label={ROLE_LABEL.TOPIC}
+                people={roles.topicPeople}
+                emptyLabel="Noch niemand"
+                onEdit={cancelled ? undefined : () => openSheet('TOPIC')}
+                EditIcon={UserPen}
+                editIconSize={16}
+              />
             )}
 
-            {meeting.location && (
-              <a
-                href={mapsUrl(meeting.location)}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 flex items-center gap-1 text-xs font-semibold text-terracotta-600 hover:underline"
-              >
-                <MapPin size={12} />
-                In Maps öffnen
-                <ExternalLink size={11} />
-              </a>
+            {meeting.hasTestimonySlot && (
+              <RoleRow
+                label={ROLE_LABEL.TESTIMONY}
+                people={
+                  meeting.testimonyPerson ? [meeting.testimonyPerson] : []
+                }
+                emptyLabel="Noch niemand "
+                onEdit={cancelled ? undefined : () => openSheet('TESTIMONY')}
+                EditIcon={UserPen}
+                editIconSize={16}
+              />
             )}
-          </div>
 
-          <RoleRow
-            label={ROLE_LABEL.HOST}
-            people={meeting.host ? [meeting.host] : []}
-            emptyLabel={
-              meeting.locationId && !meeting.host
-                ? 'Kein Host nötig'
-                : !meeting.host && !meeting.locationId
-                  ? 'Host/Treffpunkt notwendig'
-                  : ''
-            }
-            onEdit={cancelled || !editing ? undefined : () => openSheet('HOST')}
-            EditIcon={UserPen}
-            editIconSize={16}
-          />
-
-          {meeting.hasTopicSlot && (
-            <RoleRow
-              label={ROLE_LABEL.TOPIC}
-              people={roles.topicPeople}
-              emptyLabel="Noch niemand"
-              onEdit={
-                cancelled || !editing ? undefined : () => openSheet('TOPIC')
-              }
-              EditIcon={UserPen}
-              editIconSize={16}
-            />
-          )}
-
-          {meeting.hasTestimonySlot && (
-            <RoleRow
-              label={ROLE_LABEL.TESTIMONY}
-              people={meeting.testimonyPerson ? [meeting.testimonyPerson] : []}
-              emptyLabel="Noch niemand "
-              onEdit={
-                cancelled || !editing ? undefined : () => openSheet('TESTIMONY')
-              }
-              EditIcon={UserPen}
-              editIconSize={16}
-            />
-          )}
-
-          {meeting.hasSongSlot && (
-            <RoleRow
-              label={ROLE_LABEL.SONG}
-              people={songLeaders.data ?? []}
-              emptyLabel="Noch niemand"
-              onEdit={
-                cancelled || !editing ? undefined : () => openSheet('SONG')
-              }
-              EditIcon={UserPen}
-              editIconSize={16}
-            />
-          )}
-        </Card>
+            {meeting.hasSongSlot && (
+              <RoleRow
+                label={ROLE_LABEL.SONG}
+                people={songLeaders.data ?? []}
+                emptyLabel="Noch niemand"
+                onEdit={cancelled ? undefined : () => openSheet('SONG')}
+                EditIcon={UserPen}
+                editIconSize={16}
+              />
+            )}
+          </Card>
         </section>
 
         {meeting.hasSongSlot && (
@@ -591,10 +641,37 @@ function Loaded({
             onActionstep={(next) => session.patch({ actionstepText: next })}
           >
             {/* Abhaken darf jede:r für sich, auch wer den Text nicht ändern
-                darf — es ist der eigene Vorsatz. Erst ab dem Abend: einen
-                Vorsatz für nächste Woche hakt man heute nicht ab. */}
-            {!ahead && <ActionstepDoneBlock meeting={meeting} />}
+                darf — es ist der eigene Vorsatz. Erst ab Abendbeginn: einen
+                Vorsatz für heute Abend hakt man heute früh nicht ab. */}
+            {started && (
+              <ActionstepCheck
+                meetingId={meeting.id}
+                done={meeting.actionstepDone}
+              />
+            )}
           </TopicCard>
+        )}
+
+        {/* Dieselben zwei Felder ohne Thema, jedes einzeln und optional. Beide
+            Bausteine schließen einander aus, es steht also nie beides da. */}
+        {showNotes && (
+          <NotesCard
+            meeting={meeting}
+            editable={editing}
+            started={started}
+            saving={update.isPending}
+            onSummary={(next) => patch({ summaryText: next })}
+            onActionstep={(next) => patch({ actionstepText: next })}
+            onRemove={editing ? removeNotes : undefined}
+          />
+        )}
+
+        {/* Und der Weg dorthin. Er steht auch **außerhalb** des
+            Bearbeitungsmodus: eine Zusammenfassung schreibt man in dem Moment,
+            in dem man vom Abend kommt, nicht nachdem man einen Schalter gefunden
+            hat — der Knopf legt ihn deshalb gleich mit um. */}
+        {mayAddNotes && (
+          <NotesPrompt saving={update.isPending} onAdd={addNotes} />
         )}
 
         {/* Ganz unten, weil man das einmal beim Anlegen entscheidet und danach
@@ -610,9 +687,11 @@ function Loaded({
       </div>
 
       {/* Der Schalter, nicht ein Speichern-Knopf: geschrieben wird sofort, hier
-          wird nur entschieden, ob überhaupt etwas angeboten wird. Absagen und
-          Löschen stehen bewusst dahinter und dauerhaft da — sie sind keine
-          Bearbeitung, sondern eine Entscheidung über den Abend als Ganzes. */}
+          wird nur entschieden, ob überhaupt etwas angeboten wird. Er deckt die
+          Texte und die Bausteine — die Rollen-Zuteilung braucht ihn nicht, die
+          steht immer offen. Absagen und Löschen stehen bewusst dahinter und
+          dauerhaft da: sie sind keine Bearbeitung, sondern eine Entscheidung
+          über den Abend als Ganzes. */}
       <Button
         variant={editing ? 'primary' : 'secondary'}
         className="w-full"
@@ -771,6 +850,78 @@ function HeadlineEdit({
 }
 
 /**
+ * Wann es losgeht — lesen immer, ändern im Bearbeitungsmodus.
+ *
+ * Ein eigener Zustand für das Eingabefeld und nicht direkt `patch` bei jedem
+ * Tastendruck: `<input type="time">` liefert zwischendurch leere und halbe
+ * Werte, während man tippt, und jede davon wäre ein Schreibvorgang samt
+ * Benachrichtigung an die Gruppe.
+ */
+function TimeRow({
+  startTime,
+  saving,
+  onSave,
+}: {
+  startTime: string;
+  saving: boolean;
+  /** Fehlt außerhalb des Bearbeitungsmodus. */
+  onSave?: (next: string) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+
+  if (draft === null) {
+    return (
+      <div className="flex items-center gap-3">
+        <Clock size={18} className="shrink-0 text-terracotta-600" />
+        <span className="flex-1 font-serif text-lg font-bold text-stone-800">
+          {startTime} Uhr
+        </span>
+        {onSave && (
+          <IconButton
+            label="Uhrzeit ändern"
+            onClick={() => setDraft(startTime)}
+            disabled={saving}
+          >
+            <Pencil size={15} />
+          </IconButton>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <TextInput
+        type="time"
+        value={draft}
+        aria-label="Uhrzeit des Termins"
+        onChange={(event) => setDraft(event.target.value)}
+      />
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" size="sm" onClick={() => setDraft(null)}>
+          Abbrechen
+        </Button>
+        <Button
+          size="sm"
+          loading={saving}
+          // Ein leeres Feld hieße „keine Uhrzeit", und die gibt es nicht.
+          disabled={draft === ''}
+          onClick={() => {
+            if (draft !== startTime) onSave?.(draft);
+            setDraft(null);
+          }}
+        >
+          Übernehmen
+        </Button>
+      </div>
+      <p className="text-[11px] leading-relaxed text-stone-400">
+        Ist das der nächste Termin, bekommen die anderen Bescheid.
+      </p>
+    </div>
+  );
+}
+
+/**
  * Eine Rolle als Zeile: Bezeichnung, wer es ist, Stift.
  *
  * Vorher standen die drei als Chips nebeneinander. Die sahen nach Anzeige aus,
@@ -818,7 +969,11 @@ function RoleRow({
 
       {onEdit && (
         <IconButton label={`${label} eintragen`} onClick={onEdit}>
-          {EditIcon ? <EditIcon size={editIconSize} /> : <Pencil size={editIconSize} />}
+          {EditIcon ? (
+            <EditIcon size={editIconSize} />
+          ) : (
+            <Pencil size={editIconSize} />
+          )}
         </IconButton>
       )}
     </div>

@@ -25,6 +25,8 @@ const slotFields = {
   hasTopicSlot: z.boolean().optional(),
   hasSongSlot: z.boolean().optional(),
   hasTestimonySlot: z.boolean().optional(),
+  /// Zusammenfassung und Actionstep ohne Thema. Schließt `hasTopicSlot` aus.
+  hasNotesSlot: z.boolean().optional(),
 };
 
 /**
@@ -113,6 +115,31 @@ export const setActionstepDoneSchema = z.object({
   done: z.boolean(),
 });
 
+/**
+ * Wann sich die Gruppe regelmäßig trifft.
+ *
+ * Alle drei zusammen und nicht einzeln änderbar: es ist **ein** Satz — „wir
+ * treffen uns dienstags um 18 Uhr, und zwar deutscher Zeit". Drei Felder mit je
+ * eigenem Speichern-Knopf machten daraus drei Entscheidungen, von denen man die
+ * letzte vergisst.
+ */
+export const updateMeetingScheduleSchema = z.object({
+  /// 0 = Sonntag … 6 = Samstag, dieselbe Zählung wie `Date.getUTCDay()`.
+  weekday: z.coerce.number().int().min(0).max(6),
+  /// Die Uhrzeit neuer Abende, `"18:00"`. Ändert keinen bestehenden Termin.
+  startTime: wallClockIn,
+  /// Die Zone, in der diese Uhrzeit gilt — und in der „heute" gezählt wird.
+  ///
+  /// Geprüft gegen die Liste, die Node ohnehin mitbringt: eine handgepflegte
+  /// veraltete, und ein freies Textfeld ließe `Europe/Kölln` durch, woran
+  /// später jede Datumsrechnung stumm scheiterte.
+  timeZone: z
+    .string()
+    .refine((zone) => Intl.supportedValuesOf('timeZone').includes(zone), {
+      message: 'Diese Zeitzone kenne ich nicht',
+    }),
+});
+
 export const listMeetingsQuerySchema = paginationSchema.extend({
   /// 'upcoming' (default) hides past meetings; 'past' powers the archive view.
   scope: z.enum(['upcoming', 'past', 'all']).default('upcoming'),
@@ -124,6 +151,17 @@ export const listMeetingsQuerySchema = paginationSchema.extend({
   /// Inclusive date bounds, for narrowing the archive to a year or a stretch.
   from: isoDay.optional(),
   to: isoDay.optional(),
+  /// Ob abgesagte Abende mitkommen. Vorgabe `true` — die Terminliste zeigt sie
+  /// seit jeher, und ein abgesagter Abend ist dort eine Auskunft und kein
+  /// Rauschen. Das Archiv-Register schaltet sie ab: wer nachliest, was war,
+  /// sucht Abende, an denen etwas war.
+  ///
+  /// Als Text und nicht als `z.boolean()`, weil Query-Parameter Text sind —
+  /// gleiche Bauform wie `playedOnly` bei den Liedern.
+  includeCancelled: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
 });
 
 const meetingParamsSchema = z.object({
