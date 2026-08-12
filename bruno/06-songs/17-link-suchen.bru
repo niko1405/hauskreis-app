@@ -1,0 +1,56 @@
+meta {
+  name: Link suchen
+  type: http
+  seq: 17
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/songs/lookup/link-suggestions
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Gott ist gut",
+    "artist": "Outbreakband"
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("höchstens drei Vorschläge, jede Seite nur einmal", function () {
+    const sites = res.body.candidates.map((c) => c.site);
+    expect(sites.length).to.be.at.most(3);
+    expect(new Set(sites).size).to.equal(sites.length);
+  });
+
+  test("merkt sich, was gefunden wurde", function () {
+    bru.setEnvVar(
+      "lookupCandidateCount",
+      String(res.body.candidates.length),
+    );
+  });
+}
+
+docs {
+  Jede zurückgegebene URL wurde vorher abgerufen — was hier steht, existiert.
+  Eine leere Liste heißt „nichts gefunden" und ist kein Fehler.
+
+  Zum Gegenprobieren einen erfundenen Titel schicken (etwa
+  "Halleluja Zwergpinguin"): dann muss `candidates` leer sein. Kommt dort etwas
+  an, greift die Erreichbarkeitsprüfung nicht.
+
+  Gedrosselt auf 10 Aufrufe pro Minute — der elfte gibt 429.
+
+  **Zweimal derselbe Aufruf kostet nur einmal.** Die Antwort liegt danach im
+  Zwischenspeicher; erst `more: true` sucht wieder (siehe „Weitere Links
+  suchen").
+}

@@ -53,134 +53,27 @@ function CreateSheet({
   onClose: () => void;
   onCreated?: (location: Location) => void;
 }) {
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
-  const [existing, setExisting] = useState<Location | null>(null);
-
-  const resolve = useResolveAddress();
-  const create = useCreateLocation();
-  const toast = useToast();
-
-  const close = () => {
-    setName('');
-    setAddress('');
-    setExisting(null);
-    onClose();
-  };
-
-  const submit = () => {
-    const trimmedAddress = address.trim();
-
-    // Erst nachsehen, dann anlegen: der Server würde die doppelte Anschrift
-    // zwar mit 409 abweisen, aber „gibt es schon, meinst du den?" ist eine
-    // Antwort, mit der man etwas anfangen kann.
-    const afterLookup = (found: Location | null) => {
-      if (found) {
-        setExisting(found);
-        return;
-      }
-
-      create.mutate(
-        {
-          name: name.trim(),
-          address: trimmedAddress === '' ? null : trimmedAddress,
-          // Ein Treffpunkt steht außerhalb der Fairness-Rechnung: er ist eine
-          // wetterabhängige Möglichkeit, nicht jemand, der mal wieder dran wäre.
-          requiresHost: false,
-          hostWeight: 0,
-        },
-        {
-          onSuccess: (location) => {
-            toast.success(`${location.name} angelegt.`);
-            onCreated?.(location);
-            close();
-          },
-        },
-      );
-    };
-
-    if (trimmedAddress === '') {
-      afterLookup(null);
-      return;
-    }
-
-    resolve.mutate(trimmedAddress, {
-      onSuccess: (result) => afterLookup(result.location),
-    });
-  };
+  const form = useLocationForm({
+    onCreated: (location) => onCreated?.(location),
+    onDone: onClose,
+  });
 
   return (
     <Sheet
       open={open}
-      onClose={close}
+      onClose={onClose}
       title="Treffpunkt anlegen"
-      subtitle="Für Orte ohne Gastgeber — Park, Café, Gemeindehaus. Ein Zuhause entsteht über das Profil."
+      subtitle="Für Orte ohne Gastgeber — bspw. im Park oder am See. Ein Zuhause entsteht über das Profil."
       footer={
         <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={close}>
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
             Abbrechen
           </Button>
-          <Button
-            className="flex-1"
-            loading={resolve.isPending || create.isPending}
-            disabled={name.trim() === ''}
-            onClick={submit}
-          >
-            Anlegen
-          </Button>
+          {form.submitButton}
         </div>
       }
     >
-      <div className="space-y-4">
-        <Field label="Name">
-          <TextInput
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Schlosspark"
-          />
-        </Field>
-
-        <Field
-          label="Adresse"
-          hint="Optional — daraus entsteht der Link zur Karte."
-        >
-          <TextInput
-            value={address}
-            onChange={(event) => {
-              setAddress(event.target.value);
-              setExisting(null);
-            }}
-            placeholder="Schlossbezirk 10, 76131 Karlsruhe"
-          />
-        </Field>
-
-        {existing && (
-          <div className="rounded-md border border-line bg-shell p-3">
-            <p className="flex items-center gap-2 text-xs font-bold text-stone-700">
-              <MapPin size={14} className="text-terracotta-500" />
-              Diese Anschrift gibt es schon
-            </p>
-            <p className="mt-1 text-xs leading-relaxed text-stone-500">
-              Sie gehört zu <strong>{existing.name}</strong>. Ein zweiter
-              Eintrag für dieselbe Adresse würde die Termine dort auf zwei Orte
-              verteilen.
-            </p>
-            {onCreated && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="mt-3 w-full"
-                onClick={() => {
-                  onCreated(existing);
-                  close();
-                }}
-              >
-                {existing.name} verwenden
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+      {form.fields}
     </Sheet>
   );
 }

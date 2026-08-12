@@ -1,29 +1,16 @@
-# pnpm 11 reads settings from here instead of the "pnpm" field in package.json.
-
-# Install scripts are blocked by default; only these may run.
-# Prisma fetches its query engines, unrs-resolver is oxlint's native resolver.
+# Kein Workspace. Die Datei steht hier, weil pnpm ab Version 11 nur noch an
+# dieser Stelle liest, welche Pakete beim Installieren eigene Skripte ausführen
+# dürfen — ohne eine Antwort bricht jedes `pnpm <befehl>` mit
+# ERR_PNPM_IGNORED_BUILDS ab.
 allowBuilds:
+  # Prisma lädt seine Engines im Installationsskript. Ohne das gibt es keinen
+  # Client und damit keinen Datenbankzugriff.
   '@prisma/engines': true
-  # Ausdrücklich nein: scarf meldet Installationen an einen Analysedienst.
-  # Kommt als transitive Abhängigkeit von @nestjs/swagger mit. Der Eintrag muss
-  # sein, weil pnpm sonst bei jedem Befehl auf eine Entscheidung wartet.
-  '@scarf/scarf': false
   prisma: true
+  # Native Auflösung für oxlint.
   unrs-resolver: true
-
-# Patch transitive dependencies flagged by `pnpm audit`. All three are pulled in
-# by tooling (Prisma CLI, Jest, oxlint) and only need a patch-level bump:
-#   find-my-way     GHSA-… fixed in 9.6.1   (via @prisma/dev)
-#   valibot         GHSA-5qjj-4xww-7phc     (via @prisma/dev)
-#   brace-expansion GHSA-mh99-v99m-4gvg     (via jest/oxlint)
-# Re-check with `pnpm audit` after dependency upgrades and drop entries that
-# are no longer needed.
-overrides:
-  find-my-way: '>=9.7.0'
-  valibot: '>=1.4.2'
-  brace-expansion: '>=5.0.8'
-
-# The registry can be flaky over this connection; be patient before failing.
-fetchRetries: 6
-fetchRetryMaxtimeout: 120000
-fetchTimeout: 300000
+  # Kommen mit `@google/genai` herein und werden nicht gebraucht: das Paket
+  # selbst hat als `preinstall` nur ein `echo`, und `protobufjs` gehört zum
+  # Vertex-AI-Pfad. Wir sprechen mit der Gemini API über HTTP.
+  '@google/genai': false
+  protobufjs: false

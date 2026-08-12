@@ -1,0 +1,40 @@
+meta {
+  name: Aus Link ausfüllen
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/songs/lookup/from-link
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "url": "https://genius.com/Outbreakband-gott-ist-gut-lyrics"
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("liefert beide Felder, notfalls als null", function () {
+    expect(res.body).to.have.property("title");
+    expect(res.body).to.have.property("artist");
+  });
+}
+
+docs {
+  Braucht einen GEMINI_API_KEY, sonst kommen beide Felder als `null` zurück —
+  bewusst kein Fehler: das Formular soll weiterhin von Hand ausfüllbar sein.
+
+  Adressen im eigenen Netz (localhost, 192.168.x, Container-Namen) werden gar
+  nicht erst an das Modell weitergereicht.
+}

@@ -1,0 +1,26 @@
+meta {
+  name: KI-Hilfe verfügbar?
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/songs/lookup/status
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("sagt, ob ein Schlüssel hinterlegt ist", function () {
+    expect(res.body.enabled).to.be.a("boolean");
+  });
+}
+
+docs {
+  `enabled: false` heißt: kein GEMINI_API_KEY in der .env. Der Server läuft
+  dann normal weiter, im Frontend fehlen nur die beiden Knöpfe.
+}

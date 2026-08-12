@@ -90,6 +90,28 @@ export const envSchema = z.object({
   VAPID_PRIVATE_KEY: z.string().min(1).optional(),
   /// Contact address the push service can reach you at, per the VAPID spec.
   VAPID_SUBJECT: z.string().min(1).default('mailto:admin@hauskreis.local'),
+
+  /// Gemini (Google AI Studio) für die beiden Hilfen beim Lied-Anlegen: aus
+  /// einem Link Titel und Interpret lesen, und umgekehrt zu Titel und
+  /// Interpret einen Link suchen.
+  ///
+  /// Optional wie die VAPID-Keys und aus demselben Grund: ohne Schlüssel soll
+  /// der Server starten und die Funktion sich abschalten, statt die ganze App
+  /// an einer Bequemlichkeit scheitern zu lassen.
+  ///
+  /// Der Schlüssel braucht ein Projekt mit **aktivierter Abrechnung**. Die
+  /// Suche nach einem Link läuft über `google_search`-Grounding, und das gibt
+  /// es im kostenlosen Tarif nicht.
+  GEMINI_API_KEY: z.string().min(1).optional(),
+  /// Bewusst das kleinste Modell: Beide Aufgaben sind Ablesen und Auswählen,
+  /// nicht Nachdenken. `gemini-3.6-flash` kostet 1,50/7,50 $ je Mio. Tokens
+  /// und denkt von Haus aus mit; flash-lite liegt bei 0,25/1,50 $ — sechs- bzw.
+  /// fünfmal günstiger, und nebenbei schneller.
+  ///
+  /// Nicht `gemini-2.5-flash-lite`, obwohl das noch einmal deutlich billiger
+  /// wäre: Google nimmt dafür keine neuen Nutzer mehr an, ein frischer
+  /// Schlüssel bekommt dort nur einen 404.
+  GEMINI_MODEL: z.string().min(1).default('gemini-3.1-flash-lite'),
 });
 
 export type Env = z.infer<typeof envSchema>;

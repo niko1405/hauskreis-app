@@ -7,7 +7,8 @@
  * geht es um *diesen Abend*, hier um den Eintrag selbst. Deshalb keine Suche
  * und keine Dubletten-Rückfrage — wer im Archiv steht, weiß, was schon da ist.
  *
- * Der Songtext wird nicht gespeichert, nur verlinkt (CLAUDE.md §6).
+ * Der Songtext wird nicht gespeichert, nur verlinkt (CLAUDE.md §6) — der Link
+ * darf auf ein Akkordblatt zeigen, deshalb heißt das Feld nicht „Songtext".
  */
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,8 @@ import { ConflictBanner } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { useCreateSong, useSong, useUpdateSong } from '@/lib/api/hooks';
 import type { SongListItem } from '@/lib/api/types';
+import { OpenLinkButton } from './lyrics-link';
+import { SongAiAssist } from './song-ai-assist';
 
 export function SongSheet({
   open,
@@ -61,7 +64,7 @@ function SongFields({
         />
       </Field>
 
-      <Field label="Interpret" hint="Optional.">
+      <Field label="Interpret">
         <TextInput
           value={artist}
           onChange={(event) => setArtist(event.target.value)}
@@ -69,18 +72,33 @@ function SongFields({
         />
       </Field>
 
+      {/* Text *oder* Akkorde: bei uns spielen vier Leute, und ein Akkordblatt
+          ist für die genauso der richtige Link. */}
       <Field
-        label="Link zum Songtext"
-        hint="Optional. Der Text selbst wird nicht gespeichert — wir verlinken nach draußen."
+        label="Link zu Text/Chords"
       >
-        <TextInput
-          type="url"
-          inputMode="url"
-          value={lyricsUrl}
-          onChange={(event) => setLyricsUrl(event.target.value)}
-          placeholder="https://…"
-        />
+        {/* Der Knopf daneben, nicht darunter: er gehört zu diesem Feld und
+            erscheint erst, wenn darin etwas steht, das eine Adresse ist. */}
+        <div className="flex items-center gap-2">
+          <TextInput
+            type="url"
+            inputMode="url"
+            value={lyricsUrl}
+            onChange={(event) => setLyricsUrl(event.target.value)}
+            placeholder="https://…"
+          />
+          <OpenLinkButton url={lyricsUrl.trim()} />
+        </div>
       </Field>
+
+      <SongAiAssist
+        draft={{ title, artist, lyricsUrl }}
+        onApply={(patch) => {
+          if (patch.title !== undefined) setTitle(patch.title);
+          if (patch.artist !== undefined) setArtist(patch.artist);
+          if (patch.lyricsUrl !== undefined) setLyricsUrl(patch.lyricsUrl);
+        }}
+      />
     </>
   );
 }

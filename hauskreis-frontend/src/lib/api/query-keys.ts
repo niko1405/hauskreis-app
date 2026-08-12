@@ -94,6 +94,10 @@ export const qk = {
           [...root, 'songs', 'list', params] as const,
         detail: (songId: string) =>
           [...root, 'songs', 'detail', songId] as const,
+        /// Ob die KI-Hilfe beim Anlegen eingerichtet ist. Ändert sich nur, wenn
+        /// jemand den Server neu startet — deshalb ein eigener, sehr träger
+        /// Schlüssel und keiner unter `list`.
+        lookupStatus: [...root, 'songs', 'lookup-status'] as const,
       },
 
       absences: {
@@ -102,6 +106,15 @@ export const qk = {
           [...root, 'absences', 'list', params] as const,
         detail: (absenceId: string) =>
           [...root, 'absences', 'detail', absenceId] as const,
+      },
+
+      headerImages: {
+        all: [...root, 'header-images'] as const,
+        list: [...root, 'header-images', 'list'] as const,
+        /// Die Datei selbst. Der Zeitstempel steckt im Schlüssel: ein neues
+        /// Bild ist ein neuer Schlüssel, der alte Eintrag verfällt von selbst.
+        file: (screen: string, updatedAt: string) =>
+          [...root, 'header-images', screen, updatedAt] as const,
       },
 
       prayerBuddies: {

@@ -18,7 +18,8 @@ import {
   useSetMeetingSongSelected,
   useSongSearch,
 } from '@/lib/api/hooks';
-import { LyricsLink } from '@/components/domain/lyrics-link';
+import { LyricsLink, OpenLinkButton } from '@/components/domain/lyrics-link';
+import { SongAiAssist } from '@/components/domain/song-ai-assist';
 import { SongPickerSheet } from '@/components/domain/song-picker-sheet';
 import { cn } from '@/lib/cn';
 import { formatRelativeDay } from '@/lib/date';
@@ -275,17 +276,30 @@ function AddSongForm({ meetingId }: { meetingId: string }) {
         aria-label="Interpret"
       />
 
-      <TextInput
-        type="url"
-        inputMode="url"
-        value={lyricsUrl}
-        onChange={(event) => setLyricsUrl(event.target.value)}
-        placeholder="Link zum Songtext (optional)"
-        aria-label="Link zum Songtext"
-      />
+      {/* Der Knopf daneben erscheint erst, wenn im Feld eine Adresse steht —
+          gerade beim KI-Vorschlag ist „einmal draufsehen" die nächste Frage. */}
+      <div className="flex items-center gap-2">
+        <TextInput
+          type="url"
+          inputMode="url"
+          value={lyricsUrl}
+          onChange={(event) => setLyricsUrl(event.target.value)}
+          placeholder="Link zu Text/Akkorden (optional)"
+          aria-label="Link zu Text/Akkorden"
+        />
+        <OpenLinkButton url={lyricsUrl.trim()} />
+      </div>
 
-      {/* Der Text selbst wird nicht gespeichert — wir verlinken nach draußen
-          (CLAUDE.md §6). */}
+      {/* Gespeichert wird nur der Link, nie der Text selbst (CLAUDE.md §6). */}
+
+      <SongAiAssist
+        draft={{ title, artist, lyricsUrl }}
+        onApply={(patch) => {
+          if (patch.title !== undefined) setTitle(patch.title);
+          if (patch.artist !== undefined) setArtist(patch.artist);
+          if (patch.lyricsUrl !== undefined) setLyricsUrl(patch.lyricsUrl);
+        }}
+      />
 
       {confirming ? (
         <div className="space-y-2 rounded-md border border-topic-line bg-topic-bg p-3">

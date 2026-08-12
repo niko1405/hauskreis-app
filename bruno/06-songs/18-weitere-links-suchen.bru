@@ -1,0 +1,61 @@
+meta {
+  name: Weitere Links suchen
+  type: http
+  seq: 18
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/songs/lookup/link-suggestions
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Gott ist gut",
+    "artist": "Outbreakband",
+    "more": true
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("wirft nichts weg, was schon dastand", function () {
+    const vorher = Number(bru.getEnvVar("lookupCandidateCount") ?? 0);
+    expect(res.body.candidates.length).to.be.at.least(vorher);
+  });
+
+  test("jede Adresse nur einmal", function () {
+    const urls = res.body.candidates.map((c) => c.url);
+    expect(new Set(urls).size).to.equal(urls.length);
+  });
+}
+
+docs {
+  Der **zweite Druck** auf denselben Knopf. Erst „Link suchen" laufen lassen,
+  dann diesen hier.
+
+  Ohne `more` käme beliebig oft derselbe Zwischenspeicher-Eintrag zurück — wer
+  einen schlechten Vorschlag bekommen hatte, war damit fertig. Mit `more: true`
+  bleibt das Bekannte stehen, und daneben wird gezielt weitergesucht: die
+  bekannten Adressen gehen als „kennen wir schon" mit in die Anfrage und werden
+  aus dem Ergebnis noch einmal herausgefiltert — das Modell hält sich nicht
+  immer daran, und die Erreichbarkeitsprüfung folgt Weiterleitungen, die auf
+  einer bekannten Seite landen können.
+
+  **Ein Vorschlag pro Seite gilt nur innerhalb eines Laufs.** Über zwei Läufe
+  hinweg dürfen zwei Ultimate-Guitar-Links nebeneinander stehen — dass die
+  erste Wahl von dort nicht taugte, ist ja der Grund für den zweiten Druck.
+  Insgesamt wächst die Liste auf höchstens neun.
+
+  Kostet jedes Mal einen Aufruf beim Anbieter, und das ist so gemeint: es ist
+  eine ausdrückliche Handlung, kein Nachladen im Hintergrund. Dieselbe Drossel,
+  10 pro Minute.
+}

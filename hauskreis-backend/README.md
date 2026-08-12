@@ -1892,9 +1892,17 @@ jemand neu wählen müsste.
 | `PATCH`  | `…/topic-sessions/:id`                          | Owner/Mitarbeit (`If-Match`)    |
 | `DELETE` | `…/topic-sessions/:id`                          | Owner/Mitarbeit, nicht gehalten |
 
-Es gibt **kein** `POST …/topics`: ein Thema entsteht beim Wählen an einem Abend.
-Eines ohne Anlass wäre ein leerer Datensatz — genau der, von dem das alte Modell
-nicht loskam.
+Ein Thema entsteht auf **zwei** Wegen: beim Wählen an einem Abend, oder über
+`POST …/topics` im Voraus. Lange gab es nur den ersten, mit dem Argument, ein
+Thema ohne Anlass wäre ein leerer Datensatz — genau der, von dem das alte Modell
+nicht loskam. Das stimmte, solange der Inhalt ausschließlich an Terminen hing.
+Seit es Einheiten ohne Abend gibt, ist das Vorarbeiten selbst der Anlass: wer im
+Zug eine Idee hat, legt das Thema an und füllt es, und der Dienstag findet sich
+später. Der Titel ist dabei **Pflicht** (beim Wählen ist er es nicht — dort
+steht das Thema unter seinem Termin und ist auch namenlos auffindbar).
+
+Damit bekommt „wer zuerst **wählt**, wird Owner" einen Zusatz: **oder wer es
+anlegt.** Dieselbe Regel einen Schritt früher.
 
 Eine **Einheit** entsteht ebenfalls ohne Abend: `POST …/topics/:id/sessions`
 ist der Ort zum Vorarbeiten. Vorher ging nur der umgekehrte Weg — erst einen

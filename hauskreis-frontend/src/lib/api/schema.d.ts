@@ -893,7 +893,7 @@ export interface paths {
     };
     get: operations['TopicController_findAll'];
     put?: never;
-    post?: never;
+    post: operations['TopicController_create'];
     delete?: never;
     options?: never;
     head?: never;
