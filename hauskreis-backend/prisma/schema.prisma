@@ -203,7 +203,21 @@ model Person {
   /// Browser für immer dasselbe Bild. So hängt er als Query-Parameter an der
   /// URL und das Zwischenspeichern erledigt sich von selbst.
   photoUpdatedAt  DateTime?  @map("photo_updated_at")
-  email           String
+  /// `null` heißt **anonymisiert** — jemand hat sein Konto gelöscht.
+  ///
+  /// Nullable, damit die Zeile bleiben kann, wenn die Person geht. Ein hartes
+  /// `delete` nähme zwei verschiedene Dinge mit: die Zuschreibung steht auf
+  /// `SetNull` (der Abend verlöre seinen Gastgeber), die Mitgliedschaft auf
+  /// `Cascade` (wer welche Einheit gehalten hat, wäre weg). Das Archiv wäre
+  /// danach nicht anonym, sondern löchrig.
+  ///
+  /// Der zusammengesetzte Index trägt beliebig viele davon: in Postgres ist
+  /// `NULL` in einem eindeutigen Index von jedem anderen `NULL` verschieden —
+  /// dieselbe Eigenschaft, auf der schon `topic_session.meeting_id` steht.
+  email           String?
+  /// Wann das Konto gelöscht wurde. Neben `active = false` nötig, weil ein
+  /// **Austritt** den Namen im Archiv behält und ein Löschen nicht.
+  anonymizedAt    DateTime?  @map("anonymized_at")
   /// Gilt nur hier. Siehe `PersonRole`.
   role            PersonRole @default(MEMBER)
   birthdate       DateTime?  @db.Date

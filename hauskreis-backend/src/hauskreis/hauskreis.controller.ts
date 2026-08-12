@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -22,6 +23,7 @@ import {
 } from './dto/hauskreis.dto';
 import { ApiZodResponse } from '../common/http/api-response.decorator';
 import {
+  AccountDeletedResponseDto,
   HauskreisListResponseDto,
   HauskreisResponseDto,
   LeaveResultResponseDto,
@@ -86,5 +88,33 @@ export class HauskreisController {
     @CurrentMembership() membership: HauskreisMembership,
   ) {
     return this.memberships.leave(params.hauskreisId, membership.id, dto);
+  }
+
+  /**
+   * Löscht das Konto: derselbe Austritt, danach Name, Adresse und Geburtstag
+   * weg und das Keycloak-Konto dazu.
+   *
+   * Die Zeile bleibt trotzdem stehen — anonym. Löschte man sie, verlöre jeder
+   * vergangene Abend seinen Gastgeber und jede Einheit ihre Gehalten-von-Zeile
+   * (siehe `MembershipService.deleteAccount`).
+   *
+   * Dieselbe Nachfolgeregelung wie beim Austritt: wer als einzige Admin-Person
+   * geht, benennt jemanden.
+   */
+  @Delete(':hauskreisId/account')
+  @ApiZodResponse(AccountDeletedResponseDto, {
+    description: 'Die Zeile bleibt fürs Archiv, ohne die Person darin',
+  })
+  @HttpCode(HttpStatus.OK)
+  deleteAccount(
+    @Param() params: HauskreisParamsDto,
+    @Body() dto: LeaveHauskreisDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.memberships.deleteAccount(
+      params.hauskreisId,
+      membership.id,
+      dto,
+    );
   }
 }

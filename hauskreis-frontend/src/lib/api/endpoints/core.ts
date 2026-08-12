@@ -13,6 +13,7 @@ import {
 } from '../client';
 import { hkPath } from './paths';
 import type {
+  AccountDeleted,
   ChangedEmail,
   CreateHauskreisInput,
   Hauskreis,
@@ -134,6 +135,21 @@ export function leaveHauskreis(
   input: LeaveHauskreisInput,
 ): Promise<LeaveResult> {
   return apiPost<LeaveResult>(hkPath(hauskreisId, '/leave'), input);
+}
+
+/**
+ * Konto löschen: derselbe Austritt, danach Name, Adresse und Geburtstag weg
+ * und das Keycloak-Konto dazu.
+ *
+ * Die Zeile bleibt anonym stehen — sonst verlöre jeder vergangene Abend seinen
+ * Gastgeber und jede Einheit ihre Gehalten-von-Zeile. Dieselbe
+ * Nachfolgeregelung wie beim Verlassen.
+ */
+export function deleteAccount(
+  hauskreisId: string,
+  input: LeaveHauskreisInput,
+): Promise<AccountDeleted> {
+  return apiDelete<AccountDeleted>(hkPath(hauskreisId, '/account'), input);
 }
 
 /** Offene Einladungen in andere Hauskreise — auch ohne eigene Person. */

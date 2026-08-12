@@ -367,6 +367,37 @@ Nachfolge erfährt im selben Text, dass sie übernimmt; ein eigener Schalter daf
 wäre ein Eintrag mehr in den Einstellungen für einen Fall, den man ein- oder
 zweimal im Jahr erlebt.
 
+### Konto löschen heißt anonymisieren
+
+`DELETE …/hauskreise/:id/account` ist der Austritt plus alles, was danach noch
+auf die Person zeigt: Name, E-Mail und Geburtstag fallen weg, das Bild ist über
+`leave` schon gelöscht, `anonymizedAt` wird gesetzt, und das Keycloak-Konto
+verschwindet — nach demselben Nachzählen wie bei einer zurückgezogenen
+Einladung, damit niemand seinen Zugang zu einem _anderen_ Hauskreis verliert.
+
+**Die Zeile bleibt.** Ein `person.delete` sähe sauberer aus und wäre es nicht,
+weil die Fremdschlüssel zwei verschiedene Dinge ausdrücken:
+
+| Beziehung                                                                   | `onDelete` | Was ein `DELETE` anrichtete                                |
+| --------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------- |
+| Gastgeber, Themen-Owner, wer ein Lied eingetragen hat                       | `SetNull`  | Der Abend verlöre seinen Gastgeber, das Thema seinen Owner |
+| `TopicSessionResponsible`, Anwesenheiten, Actionstep-Haken, Musik-Zuteilung | `Cascade`  | „Wer hat welche Einheit gehalten" wäre ersatzlos weg       |
+
+Das Archiv wäre danach nicht anonym, sondern löchrig. So steht dort
+„Ehemaliges Mitglied" — die Erinnerung der anderen bleibt vollständig, die
+Person darin ist es nicht mehr.
+
+`Person.email` ist dafür nullable geworden. Der Index `@@unique([hauskreisId,
+email])` bleibt und trägt beliebig viele anonymisierte Zeilen: in Postgres ist
+`NULL` in einem eindeutigen Index von jedem anderen `NULL` verschieden —
+dieselbe Eigenschaft, auf der schon `topic_session.meeting_id` steht.
+
+Der Austritt wird **aufgerufen**, nicht nachgebaut: Nachfolgeregelung,
+Rollenfreigabe, Gebetsbuddys und `MEMBER_LEFT` sind dort schon richtig, und zwei
+Fassungen davon liefen mit der Zeit auseinander. Wer als letzte Person geht,
+nimmt den Hauskreis mit — dann gibt es keine Zeile mehr zu anonymisieren, nur
+noch das Konto wegzuräumen.
+
 ### Mehrere offene Einladungen
 
 `resolveForUser` verknüpft beim ersten Anmelden automatisch — aber nur, wenn es

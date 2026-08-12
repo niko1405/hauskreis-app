@@ -196,6 +196,19 @@ export function useLeaveHauskreis(hauskreisId: string) {
   );
 }
 
+/**
+ * Konto löschen. Wie das Verlassen, plus: Name, Adresse und Geburtstag fallen
+ * weg und das Keycloak-Konto dazu — danach gibt es keine Anmeldung mehr.
+ */
+export function useDeleteAccount(hauskreisId: string) {
+  const queryClient = useQueryClient();
+
+  return useApiMutation(
+    (input: LeaveHauskreisInput) => coreApi.deleteAccount(hauskreisId, input),
+    { onSuccess: () => queryClient.clear() },
+  );
+}
+
 /** Annehmen heißt: den bisherigen Hauskreis im selben Zug verlassen. */
 export function useAcceptInvitation() {
   const queryClient = useQueryClient();

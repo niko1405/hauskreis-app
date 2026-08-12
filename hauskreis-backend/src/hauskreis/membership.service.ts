@@ -186,6 +186,89 @@ export class MembershipService {
   }
 
   /**
+   * Konto löschen — der Austritt plus alles, was danach noch auf die Person
+   * zeigt.
+   *
+   * **Anonymisieren statt löschen.** Die Fremdschlüssel stehen bewusst
+   * zweigeteilt: `SetNull` für die Zuschreibung (Gastgeber, Themen-Owner, wer
+   * ein Lied eingetragen hat), `Cascade` für die Mitgliedschaft (wer welche
+   * Einheit gehalten hat, Anwesenheiten, Actionstep-Haken). Ein `person.delete`
+   * nähme **beides** mit — der Abend verlöre seinen Gastgeber *und* die Einheit
+   * ihre Gehalten-von-Zeile. Das Archiv wäre danach nicht anonym, sondern
+   * löchrig. Die Zeile bleibt also, ohne die Person darin.
+   *
+   * Der Austritt selbst wird nicht nachgebaut, sondern aufgerufen: Nachfolge,
+   * Rollenfreigabe, Gebetsbuddys und die Nachricht an die anderen sind dort
+   * schon richtig, und zwei Fassungen davon liefen mit der Zeit auseinander.
+   */
+  async deleteAccount(
+    hauskreisId: string,
+    personId: string,
+    dto: LeaveHauskreisDto,
+  ): Promise<{ hauskreisDeleted: boolean }> {
+    // Vor dem Austritt merken: der gibt die Keycloak-Id gleich frei, und danach
+    // wüsste niemand mehr, welches Konto gemeint war.
+    const before = await this.prisma.person.findFirst({
+      where: { id: personId, hauskreisId, active: true },
+      select: { keycloakUserId: true, email: true },
+    });
+
+    if (!before) {
+      throw new NotFoundException('Du gehörst nicht zu diesem Hauskreis');
+    }
+
+    const { hauskreisDeleted } = await this.leave(hauskreisId, personId, dto);
+
+    // War es die letzte Person, ist der ganze Hauskreis samt Zeile weg — dann
+    // gibt es nichts mehr zu anonymisieren, nur noch das Konto wegzuräumen.
+    if (!hauskreisDeleted) {
+      await this.prisma.person.update({
+        where: { id: personId },
+        data: {
+          name: 'Ehemaliges Mitglied',
+          email: null,
+          birthdate: null,
+          anonymizedAt: new Date(),
+          version: { increment: 1 },
+        },
+      });
+
+      // Was rein persönlich ist und keinen Archivwert hat. Es hängt an
+      // `Cascade`, aber das feuert nur beim Löschen der Zeile — und die bleibt
+      // hier gerade stehen.
+      await this.prisma.$transaction([
+        this.prisma.pushSubscription.deleteMany({ where: { personId } }),
+        this.prisma.notificationPreference.deleteMany({ where: { personId } }),
+        this.prisma.notificationLog.deleteMany({ where: { personId } }),
+        this.prisma.absencePeriod.deleteMany({ where: { personId } }),
+      ]);
+    }
+
+    // Zuletzt, außerhalb jeder Transaktion — und **ohne** daran zu scheitern.
+    //
+    // Bis hierher sind Name, Adresse und Geburtstag weg; das ist der Teil, um
+    // den es geht, und er ist nicht zurückzunehmen. Läuft Keycloak gerade
+    // nicht, wäre ein Fehler jetzt die schlechteste aller Antworten: die
+    // Löschung ist passiert, ein zweiter Versuch fände die Zeile nicht mehr,
+    // und die Person stünde vor einer Fehlermeldung für etwas, das geklappt
+    // hat. Zurück bleibt ein Konto, mit dem sich niemand mehr irgendwo
+    // anmelden kann — das räumt ein Mensch weg, kein Neuversuch.
+    //
+    // Das Nachzählen steckt in `discardInvitationAccount`: wer die App noch in
+    // einem anderen Hauskreis benutzt, verliert seinen Zugang nicht.
+    try {
+      await this.people.discardInvitationAccount(before.email);
+    } catch (error) {
+      this.logger.error(
+        `Konto ${personId} anonymisiert, aber das Keycloak-Konto blieb stehen`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
+    return { hauskreisDeleted };
+  }
+
+  /**
    * Sagt den Verbleibenden Bescheid.
    *
    * Bis hierher passierte ein Austritt lautlos: `active` fiel auf `false`, und

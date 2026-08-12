@@ -23,7 +23,9 @@ export const personResponseSchema = z.object({
   /// Der Name, mit dem man sich anmeldet. `null`, solange sich die Person noch
   /// nie angemeldet hat: gewählt wird er beim Aktivieren des Kontos.
   username: z.string().nullable(),
-  email: z.email(),
+  /// `null` heißt: das Konto wurde gelöscht. Die Zeile bleibt fürs Archiv
+  /// stehen, die Person dahinter ist es nicht mehr.
+  email: z.email().nullable(),
   /// Nur der Tag, ohne Uhrzeit — ein Geburtstag hat keine.
   birthdate: isoDateOut.nullable(),
   playsInstrument: z.boolean(),

@@ -27,6 +27,18 @@ export const leaveResultSchema = z.object({
 });
 
 /**
+ * Nach dem Löschen des Kontos.
+ *
+ * Ohne `successorPersonId`: wer sein Konto löscht, sieht danach nichts mehr von
+ * dieser Gruppe — wem die Verwaltung zufällt, ist die Nachricht an die anderen,
+ * nicht an ihn.
+ */
+export const accountDeletedSchema = z.object({
+  /// Wahr, wenn die letzte Person gegangen ist und der Hauskreis mitging.
+  hauskreisDeleted: z.boolean(),
+});
+
+/**
  * Eine offene Einladung: eine Person-Zeile mit der eigenen Adresse, die noch
  * niemandem gehört. Sie nimmt der bestehenden Mitgliedschaft nichts weg, bis
  * man sie annimmt.
@@ -43,6 +55,9 @@ export class HauskreisResponseDto extends createZodDto(
   hauskreisResponseSchema,
 ) {}
 export class LeaveResultResponseDto extends createZodDto(leaveResultSchema) {}
+export class AccountDeletedResponseDto extends createZodDto(
+  accountDeletedSchema,
+) {}
 export class InvitationListResponseDto extends createZodDto(
   z.array(invitationResponseSchema),
 ) {}

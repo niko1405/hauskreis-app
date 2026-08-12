@@ -376,8 +376,13 @@ export class PersonService {
    * ein aufgelöster Hauskreis).
    *
    * Aufzurufen **nach** dem Löschen der Zeile, sonst zählt sie sich selbst mit.
+   *
+   * `null` ist kein Fehler, sondern eine anonymisierte Zeile: die hat kein
+   * Konto mehr, das sich wegräumen ließe.
    */
-  async discardInvitationAccount(email: string): Promise<void> {
+  async discardInvitationAccount(email: string | null): Promise<void> {
+    if (!email) return;
+
     const elsewhere = await this.prisma.person.count({ where: { email } });
 
     if (elsewhere === 0) {
@@ -505,6 +510,16 @@ export class PersonService {
     if (person.acceptedAt !== null) {
       throw new BadRequestException(
         `${person.name} ist schon da — eine zweite Einladung würde nichts ändern`,
+      );
+    }
+
+    // Unerreichbar, aber nicht wegzulassen: ohne Adresse gibt es kein Konto,
+    // an das sich etwas schicken ließe. Eine offene Einladung hat immer eine —
+    // `null` steht dort erst, wenn jemand sein Konto gelöscht hat, und dazu
+    // muss er erst einmal angekommen sein.
+    if (!person.email) {
+      throw new BadRequestException(
+        `${person.name} hat keine Adresse mehr, an die sich einladen ließe`,
       );
     }
 
@@ -637,9 +652,15 @@ export class PersonService {
         data: { email, version: { increment: 1 } },
       });
     } catch (error) {
-      await this.keycloakAdmin
-        .changeEmail(person.keycloakUserId, person.email)
-        .catch(() => undefined);
+      // Zurückdrehen, damit Keycloak und Datenbank nicht auf zwei Adressen
+      // zeigen. Ohne alte Adresse gibt es nichts zurückzudrehen — den Fall
+      // gibt es nur bei einer anonymisierten Zeile, und die kommt hier nicht
+      // an: `resolveForUser` findet sie nicht mehr.
+      if (person.email) {
+        await this.keycloakAdmin
+          .changeEmail(person.keycloakUserId, person.email)
+          .catch(() => undefined);
+      }
       throw error;
     }
 

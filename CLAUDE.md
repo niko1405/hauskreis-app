@@ -64,6 +64,7 @@ grundlegende Vorschläge für Kernentitäten:
 ### `user`
 - zB `id`, `name`, `plays_instrument: bool`, `active: bool`, `birthdate`
 - Man sollte als User einstellen können, ob man gerade generell überhaupt hosten kann, was bei den Vorschlägen für die Zuteilung berücksichtigt werden kann
+- **Konto löschen heißt anonymisieren, nicht löschen.** Die Zeile bleibt, Name, E-Mail und Geburtsdatum fallen weg, das Anmelde-Konto auch. Ein hartes Löschen nähme die Zuschreibung (Gastgeber, Themen-Owner) *und* die Mitgliedschaft (wer welche Einheit gehalten hat, Anwesenheiten) mit — das Archiv wäre danach nicht anonym, sondern löchrig. Im Archiv steht dann „Ehemaliges Mitglied"
 
 ### `locations`
 - zB `id`, `name`, `frequency_factor` (Gewichtung: 3 Haupt-Locations häufiger, weitere seltener, abhängig von Stadt-Lage)

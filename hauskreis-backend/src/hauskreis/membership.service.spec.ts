@@ -63,10 +63,19 @@ function setup(
       create: personCreate,
     },
     hauskreis: { delete: hauskreisDelete, create: hauskreisCreate },
+    // Was beim Löschen des Kontos mitgeht: rein Persönliches ohne Archivwert.
+    // Es hängt an `Cascade`, aber das feuert nur beim Löschen der Zeile — und
+    // die bleibt hier gerade stehen.
+    pushSubscription: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    notificationPreference: {
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
+    notificationLog: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    absencePeriod: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     // Die Transaktion reicht denselben Client durch; hier zählt nur, was
-    // geschrieben werden wollte.
-    $transaction: jest.fn((run: (tx: unknown) => unknown) =>
-      typeof run === 'function' ? run(prisma) : run,
+    // geschrieben werden wollte. Beide Formen: Callback und Array.
+    $transaction: jest.fn((run: ((tx: unknown) => unknown) | unknown[]) =>
+      typeof run === 'function' ? run(prisma) : Promise.all(run as unknown[]),
     ),
   } as unknown as PrismaService;
 
@@ -440,5 +449,111 @@ describe('MembershipService.leave', () => {
       where: { id: 'p3' },
       data: { role: PersonRole.ADMIN },
     });
+  });
+});
+
+/**
+ * Konto löschen — der Austritt plus alles, was danach noch auf die Person zeigt.
+ *
+ * Die eine Entscheidung, die hier hängt: **anonymisieren statt löschen**. Die
+ * Fremdschlüssel stehen zweigeteilt (`SetNull` für die Zuschreibung, `Cascade`
+ * für die Mitgliedschaft), ein `person.delete` nähme also beides mit — der
+ * Abend verlöre seinen Gastgeber *und* die Einheit ihre Gehalten-von-Zeile.
+ */
+describe('deleteAccount', () => {
+  const bleibt = [other(PersonRole.ADMIN)];
+
+  it('räumt die Person aus der Zeile, ohne die Zeile zu löschen', async () => {
+    const { service, personUpdate } = setup({ me: member, others: bleibt });
+
+    await expect(service.deleteAccount('hk-1', 'p1', {})).resolves.toEqual({
+      hauskreisDeleted: false,
+    });
+
+    const anonymisiert = personUpdate.mock.calls.find(
+      (call) => call[0].data.anonymizedAt !== undefined,
+    );
+
+    expect(anonymisiert?.[0]).toMatchObject({
+      where: { id: 'p1' },
+      data: { name: 'Ehemaliges Mitglied', email: null, birthdate: null },
+    });
+  });
+
+  it('löscht das Keycloak-Konto — aber erst nach dem Austritt', async () => {
+    const { service, discardInvitationAccount } = setup({
+      me: { ...member, keycloakUserId: 'kc-1', email: 'niko@example.com' },
+      others: bleibt,
+    });
+
+    await service.deleteAccount('hk-1', 'p1', {});
+
+    // Die Adresse muss **vorher** gelesen werden: der Austritt räumt die
+    // Keycloak-Id weg, und danach wüsste niemand mehr, welches Konto gemeint
+    // war. `discardInvitationAccount` zählt selbst nach, ob die Person die App
+    // noch woanders benutzt.
+    expect(discardInvitationAccount).toHaveBeenCalledWith('niko@example.com');
+  });
+
+  it('anonymisiert nichts mehr, wenn der Hauskreis mitging', async () => {
+    // Letzte Person: `leave` löscht den ganzen Hauskreis samt Zeile. Ein
+    // `update` darauf liefe ins Leere — übrig bleibt nur das Konto.
+    const { service, personUpdate, discardInvitationAccount } = setup({
+      me: { ...admin, email: 'niko@example.com' },
+      others: [],
+    });
+
+    await expect(service.deleteAccount('hk-1', 'p1', {})).resolves.toEqual({
+      hauskreisDeleted: true,
+    });
+
+    expect(
+      personUpdate.mock.calls.some(
+        (call) => call[0].data.anonymizedAt !== undefined,
+      ),
+    ).toBe(false);
+    expect(discardInvitationAccount).toHaveBeenCalledWith('niko@example.com');
+  });
+
+  it('verlangt eine Nachfolge wie der Austritt', async () => {
+    const { service } = setup({
+      me: admin,
+      others: [other(PersonRole.MEMBER)],
+    });
+
+    // Nicht nachgebaut, sondern durchgereicht: zwei Fassungen derselben Regel
+    // liefen mit der Zeit auseinander.
+    await expect(service.deleteAccount('hk-1', 'p1', {})).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+});
+
+/**
+ * Der Teil, der schiefgehen darf.
+ *
+ * Bis zum Keycloak-Aufruf sind Name, Adresse und Geburtstag weg — nicht
+ * zurückzunehmen. Ein Fehler wäre jetzt die schlechteste aller Antworten: die
+ * Löschung ist passiert, ein zweiter Versuch fände die Zeile nicht mehr, und
+ * die Person stünde vor einer Fehlermeldung für etwas, das geklappt hat.
+ */
+describe('deleteAccount, wenn Keycloak nicht antwortet', () => {
+  it('meldet trotzdem Erfolg und schreibt es ins Log', async () => {
+    const { service, discardInvitationAccount, personUpdate } = setup({
+      me: { ...member, email: 'niko@example.com' },
+      others: [other(PersonRole.ADMIN)],
+    });
+    discardInvitationAccount.mockRejectedValue(new Error('ECONNREFUSED'));
+
+    await expect(service.deleteAccount('hk-1', 'p1', {})).resolves.toEqual({
+      hauskreisDeleted: false,
+    });
+
+    // Die Zeile ist trotzdem anonymisiert — das ist der Teil, um den es geht.
+    expect(
+      personUpdate.mock.calls.some(
+        (call) => call[0].data.anonymizedAt !== undefined,
+      ),
+    ).toBe(true);
   });
 });

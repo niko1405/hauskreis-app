@@ -84,6 +84,22 @@ export interface paths {
     patch: operations['AbsenceController_update'];
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/account': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: operations['HauskreisController_deleteAccount'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/archive': {
     parameters: {
       query?: never;
@@ -1106,6 +1122,9 @@ export interface components {
       /** Format: uuid */
       successorPersonId: string | null;
     };
+    AccountDeletedResponseDto: {
+      hauskreisDeleted: boolean;
+    };
     InvitationListResponseDto: {
       /** Format: uuid */
       personId: string;
@@ -1127,7 +1146,7 @@ export interface components {
       name: string;
       username: string | null;
       /** Format: email */
-      email: string;
+      email: string | null;
       /** Format: date */
       birthdate: string | null;
       playsInstrument: boolean;
@@ -1154,7 +1173,7 @@ export interface components {
       name: string;
       username: string | null;
       /** Format: email */
-      email: string;
+      email: string | null;
       /** Format: date */
       birthdate: string | null;
       playsInstrument: boolean;
@@ -1182,7 +1201,7 @@ export interface components {
       name: string;
       username: string | null;
       /** Format: email */
-      email: string;
+      email: string | null;
       /** Format: date */
       birthdate: string | null;
       playsInstrument: boolean;
@@ -1233,7 +1252,7 @@ export interface components {
       name: string;
       username: string | null;
       /** Format: email */
-      email: string;
+      email: string | null;
       /** Format: date */
       birthdate: string | null;
       playsInstrument: boolean;
@@ -1315,7 +1334,7 @@ export interface components {
       name: string;
       username: string | null;
       /** Format: email */
-      email: string;
+      email: string | null;
       /** Format: date */
       birthdate: string | null;
       playsInstrument: boolean;
@@ -3224,7 +3243,7 @@ export interface operations {
       };
     };
   };
-  ArchiveController_summary: {
+  HauskreisController_deleteAccount: {
     parameters: {
       query?: never;
       header?: never;
@@ -3233,14 +3252,19 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LeaveHauskreisDto'];
+      };
+    };
     responses: {
+      /** @description Die Zeile bleibt fürs Archiv, ohne die Person darin */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ArchiveSummaryResponseDto'];
+          'application/json': components['schemas']['AccountDeletedResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */

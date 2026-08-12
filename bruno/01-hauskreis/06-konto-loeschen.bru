@@ -1,0 +1,52 @@
+meta {
+  name: Konto löschen
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/account
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("verlangt eine Nachfolge von der einzigen Admin-Person", function () {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
+docs {
+  Der Austritt aus `04-hauskreis-verlassen` **plus** alles, was danach noch auf
+  die Person zeigt: Name, E-Mail und Geburtstag fallen weg, `anonymizedAt` wird
+  gesetzt, und das Keycloak-Konto verschwindet. Danach gibt es keine Anmeldung
+  mehr.
+
+  **Die Zeile bleibt trotzdem stehen.** Ein `person.delete` sähe sauberer aus
+  und wäre es nicht: die Fremdschlüssel drücken zwei verschiedene Dinge aus.
+  `SetNull` trägt die Zuschreibung (Gastgeber, Themen-Owner, wer ein Lied
+  eingetragen hat), `Cascade` die Mitgliedschaft (wer welche Einheit gehalten
+  hat, Anwesenheiten, Actionstep-Haken). Ein Löschen nähme **beides** mit — der
+  Abend verlöre seinen Gastgeber *und* die Einheit ihre Gehalten-von-Zeile. Das
+  Archiv wäre danach nicht anonym, sondern löchrig. Im Archiv steht deshalb
+  „Ehemaliges Mitglied".
+
+  Mit weg sind, weil rein persönlich und ohne Archivwert: Push-Anmeldungen,
+  Benachrichtigungs-Einstellungen, das Log und die Abwesenheitszeiträume.
+
+  Die Nachfolgeregelung ist dieselbe wie beim Verlassen — der Austritt wird
+  aufgerufen, nicht nachgebaut. Als letzte Person nimmt man den Hauskreis mit;
+  dann gibt es keine Zeile mehr zu anonymisieren, nur noch das Konto.
+
+  Das Keycloak-Konto fällt **nur**, wenn es keine andere Person-Zeile mit
+  dieser Adresse mehr gibt: wer die App noch in einem anderen Hauskreis
+  benutzt, verliert seinen Zugang nicht.
+}

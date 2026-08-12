@@ -24,6 +24,7 @@ import { useToast } from '@/components/ui/toast';
 import { isStatus } from '@/lib/api/errors';
 import {
   useAcceptInvitation,
+  useDeleteAccount,
   useInvitations,
   useLeaveHauskreis,
   useMe,
@@ -55,8 +56,10 @@ export function HauskreisCard() {
         </div>
 
         <p className="text-[11px] leading-relaxed text-stone-400">
-          Ein Mensch gehört zu einem Hauskreis. Für einen Wechsel verlässt du
-          diesen zuerst — was du beigetragen hast, bleibt im Archiv stehen.
+          Um einem anderen Hauskreis beizutreten, musst du zunächst diesen
+          Hauskreis verlassen — was du beigetragen hast, bleibt im Archiv
+          stehen. Du kannst in diesen Hauskreis jederzeit wieder eingeladen
+          werden.
         </p>
 
         <Button
@@ -75,6 +78,7 @@ export function HauskreisCard() {
         <LeaveSheet
           hauskreisId={hauskreisId}
           name={hauskreis?.name ?? 'diesen Hauskreis'}
+          mode="leave"
           onClose={() => setLeaving(false)}
         />
       )}
@@ -156,19 +160,32 @@ function PendingInvitations({ currentName }: { currentName?: string }) {
   );
 }
 
-function LeaveSheet({
+/**
+ * Gehen oder ganz weg — zwei Wege, ein Sheet.
+ *
+ * Die Nachfolgeregelung ist bei beiden dieselbe, und sie ist der ganze
+ * unangenehme Teil: als einzige Admin-Person darf man nicht einfach
+ * verschwinden. Sie zweimal zu schreiben hieße, sie beim nächsten Mal einmal
+ * zu ändern.
+ */
+export function LeaveSheet({
   hauskreisId,
   name,
+  mode,
   onClose,
 }: {
   hauskreisId: string;
   name: string;
+  mode: 'leave' | 'delete';
   onClose: () => void;
 }) {
   const leave = useLeaveHauskreis(hauskreisId);
+  const remove = useDeleteAccount(hauskreisId);
   const people = usePeople();
   const { me } = useMe();
   const toast = useToast();
+
+  const action = mode === 'delete' ? remove : leave;
 
   /**
    * Erst nach dem ersten Versuch. Ob eine Nachfolge nötig ist, weiß nur der
@@ -183,17 +200,19 @@ function LeaveSheet({
   );
 
   const submit = () =>
-    leave.mutate(
+    action.mutate(
       { successorPersonId: successor === '' ? undefined : successor },
       {
         onSuccess: (result) => {
           toast.success(
-            result.hauskreisDeleted
-              ? `„${name}" ist damit aufgelöst.`
-              : `Du bist raus aus „${name}".`,
+            mode === 'delete'
+              ? 'Dein Konto ist gelöscht.'
+              : result.hauskreisDeleted
+                ? `„${name}" ist damit aufgelöst.`
+                : `Du bist raus aus „${name}".`,
           );
-          // Der Cache ist beim Verlassen ohnehin geleert; ein Neuladen bringt
-          // die App auf dem kürzesten Weg zum Einstiegsbildschirm.
+          // Der Cache ist ohnehin geleert; ein Neuladen bringt die App auf dem
+          // kürzesten Weg zum Einstiegsbildschirm.
           window.location.assign('/');
         },
         onError: (error) => {
@@ -207,8 +226,12 @@ function LeaveSheet({
     <Sheet
       open
       onClose={onClose}
-      title={`„${name}" verlassen?`}
-      subtitle="Deine Einträge bleiben im Archiv stehen"
+      title={mode === 'delete' ? 'Konto löschen?' : `„${name}" verlassen?`}
+      subtitle={
+        mode === 'delete'
+          ? 'Das lässt sich nicht rückgängig machen'
+          : 'Deine Einträge bleiben im Archiv stehen'
+      }
       footer={
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1" onClick={onClose}>
@@ -218,15 +241,32 @@ function LeaveSheet({
             variant="danger"
             className="flex-1"
             disabled={successorNeeded && successor === ''}
-            loading={leave.isPending}
+            loading={action.isPending}
             onClick={submit}
           >
-            Verlassen
+            {mode === 'delete' ? 'Endgültig löschen' : 'Verlassen'}
           </Button>
         </div>
       }
     >
       <div className="space-y-4">
+        {mode === 'delete' && (
+          <div className="space-y-3 text-xs leading-relaxed text-stone-500">
+            <p>
+              <strong className="text-stone-700">Weg sind</strong> dein Name,
+              deine E-Mail-Adresse, dein Geburtstag, dein Bild und deine
+              Anmeldung. Danach kommst du hier nicht mehr herein.
+            </p>
+            <p>
+              <strong className="text-stone-700">Bleiben</strong> die
+              vergangenen Abende, so wie sie waren — als Gastgeber, in einem
+              Thema oder unter einem Actionstep stehst du dort dann als
+              „Ehemaliges Mitglied". Sie ganz zu löschen hieße, die Erinnerung
+              der anderen mit wegzunehmen.
+            </p>
+          </div>
+        )}
+
         {successorNeeded && (
           <div className="space-y-2 rounded-md border border-topic-line bg-topic-bg p-3">
             <p className="text-xs leading-relaxed text-topic">
