@@ -350,6 +350,37 @@ eines, für das noch niemand einen festgelegt hat. Ein Lobpreisabend hat gar kei
 Thema. Solche Zustände bekommen ihren eigenen Text — nicht `—` und nicht die
 Fehlerdarstellung.
 
+## Der Kopfbereich mit Bild
+
+`components/layout/screen-header.tsx` trägt vier Bildschirme: Heute, Gebet,
+Archiv, Profil. **Termine bewusst nicht** — dort liest man eine Liste über
+Wochen und sucht eine Zeile, ein Foto darüber wäre nur Weg bis zur ersten. Für
+Termine und die Verwaltung bleibt der schlichte `PageHeader` aus `app-shell.tsx`.
+
+Drei Schichten, von unten nach oben:
+
+1. **Das Bild**, als `background` und nicht als `<img>`: es hat keinen Inhalt,
+   den jemand vorgelesen bekommen müsste. Ohne eigenes Bild steht ein Verlauf
+   da — je Bildschirm ein anderer, damit man beim Umschalten sieht, wo man ist.
+   Ein Verlauf und kein Stockfoto: ehrlicher, und er zeigt dasselbe Layout.
+2. **Der Schleier**, `from-canvas via-canvas/85 to-canvas/25` nach oben. Er ist
+   der Grund, warum die Überschrift auf **jedem** Foto lesbar bleibt — auch auf
+   einem dunklen, auch auf einem unruhigen — und warum der Übergang in die
+   Leinwand keine Kante hat.
+3. **Titel und Untertitel**, Wort für Wort wie in `PageHeader`.
+
+Das `-mt-2` am `<header>` frisst das `pt-2`, das `AppShell` seinem `<main>`
+gibt: sonst bliebe über dem Bild ein Streifen Leinwand stehen.
+
+Das Bild gilt für die **ganze Gruppe**, und jede:r darf es tauschen. Der Knopf
+oben rechts öffnet `header-image-sheet.tsx` — ein Sheet und nicht direkt der
+Dateidialog, weil es zwei Sachen sind: auswählen und wieder wegnehmen. Dass es
+für alle gilt, steht als Untertitel dabei.
+
+Geladen wird wie ein Profilbild (`useHeaderImage`): eine Liste der Zeitstempel,
+und der Zeitstempel wandert in den Schlüssel der Datei-Abfrage. Ein neues Bild
+ist damit ein neuer Schlüssel, und der alte Eintrag verfällt von selbst.
+
 ## Der Startbildschirm
 
 Ein Aufruf (`…/home`), vier Blöcke. Zwei Entscheidungen darin sind es wert,

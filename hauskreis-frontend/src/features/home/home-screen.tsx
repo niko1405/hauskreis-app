@@ -7,17 +7,24 @@
  */
 import {
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Circle,
-  ExternalLink,
+  Clock,
+  Map,
   MapPin,
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
-import { ROLE_ICON, ROLE_STYLE, RoleChip } from '@/components/domain/role-badge';
+import {
+  ROLE_ICON,
+  ROLE_STYLE,
+  RoleChip,
+} from '@/components/domain/role-badge';
 import {
   useHome,
   useMe,
@@ -38,6 +45,8 @@ import {
   meetingHeadline,
 } from '@/lib/meeting';
 import { firstName } from '@/lib/person';
+import { ScreenHeader } from '@/components/layout/screen-header';
+import { greetingOf } from './greeting';
 import type {
   Assignment,
   AssignmentRole,
@@ -68,68 +77,73 @@ export function HomeScreen() {
 
   const { nextMeeting, myRoles, openActionstep, prayerBuddies } = home.data;
 
+  // Wechselt täglich und passt zur Tageszeit. Die Personen-Id geht mit ein,
+  // damit nicht alle neun am selben Tag denselben Satz lesen.
+  const jetzt = groupNow();
+  const gruß = greetingOf(
+    jetzt.day,
+    jetzt.minutes,
+    me.me?.id ?? '',
+    me.me ? firstName(me.me.name) : '',
+  );
+
   return (
-    <div className="space-y-6 px-5 pt-6">
-      <header>
-        <h1 className="font-serif text-3xl leading-tight font-bold text-stone-900">
-          Hallo {me.me ? firstName(me.me.name) : ''}!
-        </h1>
-        <p className="mt-0.5 text-sm text-stone-400">
-          Schön, dass du da bist. Das steht bei dir an.
-        </p>
-      </header>
+    <div>
+      <ScreenHeader screen="home" title={gruß.hallo} subtitle={gruß.zeile} />
 
-      {openActionstep && <ActionstepCard step={openActionstep} />}
+      <div className="space-y-6 px-5">
+        <ActionstepCard step={openActionstep} />
 
-      {prayerBuddies && (
-        <Link href="/gebet" className="block">
-          <Card className="transition-colors hover:border-line-strong">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">
-                  Deine Gebetsbuddys
-                </p>
-                <p className="text-[15px] font-bold text-stone-800">
-                  {prayerBuddies.withNames.join(' & ')}
-                </p>
-                <p className="mt-1 text-[11px] font-medium text-stone-500">
-                  noch bis {formatDayMonth(prayerBuddies.until)}
-                </p>
+        {prayerBuddies && (
+          <Link href="/gebet" className="block">
+            <Card className="transition-colors hover:border-line-strong">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">
+                    Deine Gebetsbuddys
+                  </p>
+                  <p className="text-[15px] font-bold text-stone-800">
+                    {prayerBuddies.withNames.join(' & ')}
+                  </p>
+                  <p className="mt-1 text-[11px] font-medium text-stone-500">
+                    noch bis {formatDayMonth(prayerBuddies.until)}
+                  </p>
+                </div>
+                <Users size={20} className="shrink-0 text-terracotta-500" />
               </div>
-              <Users size={20} className="shrink-0 text-terracotta-500" />
-            </div>
-          </Card>
-        </Link>
-      )}
-
-      <section>
-        <SectionTitle>Deine Rollen</SectionTitle>
-        <MyRoles roles={myRoles} nextMeetingId={nextMeeting?.id ?? null} />
-      </section>
-
-      <section>
-        <SectionTitle
-          action={
-            <Link
-              href="/termine"
-              className="flex items-center gap-0.5 text-xs font-bold text-terracotta-500 hover:underline"
-            >
-              Alle Termine <ChevronRight size={14} />
-            </Link>
-          }
-        >
-          Nächstes Treffen
-        </SectionTitle>
-        {nextMeeting ? (
-          <NextMeetingCard meeting={nextMeeting} />
-        ) : (
-          <Card>
-            <p className="text-sm text-stone-400 italic">
-              Gerade ist kein Termin geplant.
-            </p>
-          </Card>
+            </Card>
+          </Link>
         )}
-      </section>
+
+        <section>
+          <SectionTitle>Deine Rollen</SectionTitle>
+          <MyRoles roles={myRoles} nextMeetingId={nextMeeting?.id ?? null} />
+        </section>
+
+        <section>
+          <SectionTitle
+            action={
+              <Link
+                href="/termine"
+                className="flex items-center gap-0.5 text-xs font-bold text-terracotta-500 hover:underline"
+              >
+                Alle Termine <ChevronRight size={14} />
+              </Link>
+            }
+          >
+            Nächstes Treffen
+          </SectionTitle>
+          {nextMeeting ? (
+            <NextMeetingCard meeting={nextMeeting} />
+          ) : (
+            <Card>
+              <p className="text-sm text-stone-400 italic">
+                Gerade ist kein Termin geplant.
+              </p>
+            </Card>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
@@ -141,8 +155,37 @@ export function HomeScreen() {
  * dann nicht zurücknehmen, zweitens ist „geschafft" auch eine Nachricht — und
  * daneben steht, wie es der Gruppe damit geht. Still wird es nur bei der
  * Erinnerung: der Reminder überspringt, wer abgehakt hat.
+ *
+ * Und sie verschwindet auch nicht, wenn es gar keinen gibt. Ein Platz, der mal
+ * da ist und mal nicht, verschiebt jedes Mal alles darunter — und die Frage
+ * „habe ich diese Woche etwas vergessen?" bleibt unbeantwortet, statt ein Nein
+ * zu bekommen.
  */
-function ActionstepCard({ step }: { step: HomeActionstep }) {
+function ActionstepCard({ step }: { step: HomeActionstep | null }) {
+  if (!step) {
+    return (
+      <Card className="border-dashed bg-transparent shadow-none">
+        <div className="flex items-center gap-4">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-canvas text-stone-300">
+            <Circle size={22} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">
+              Actionstep der Woche
+            </p>
+            <p className="text-sm leading-snug font-medium text-stone-400">
+              Für diese Woche ist keiner geplant.
+            </p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  return <OpenActionstepCard step={step} />;
+}
+
+function OpenActionstepCard({ step }: { step: HomeActionstep }) {
   const setDone = useSetActionstepDone(step.meetingId);
 
   return (
@@ -202,18 +245,22 @@ const CATEGORIES: Exclude<AssignmentRole, 'PRAYER_BUDDY'>[] = [
 ];
 
 /**
- * Die eigenen Aufgaben, in zwei Stufen.
+ * Die eigenen Aufgaben — **eine** Karte, zwei Stufen.
  *
- * **Beim nächsten Treffen** sind die Rollen an genau dem Abend, der als
- * Nächstes ansteht — nicht die der laufenden Kalenderwoche. Der Hauskreis ist
- * dienstags: ab Mittwoch wäre eine Kalenderwoche fast immer leer, und der
- * Abend, um den es tatsächlich geht, stünde unter „Weitere". Der Bezugspunkt
- * ist deshalb der Termin, nicht der Wochenwechsel.
+ * **Oben** stehen die Rollen an genau dem Abend, der als Nächstes ansteht —
+ * nicht die der laufenden Kalenderwoche. Der Hauskreis ist dienstags: ab
+ * Mittwoch wäre eine Kalenderwoche fast immer leer, und der Abend, um den es
+ * tatsächlich geht, stünde unter „Weitere". Der Bezugspunkt ist deshalb der
+ * Termin, nicht der Wochenwechsel.
  *
  * **Weitere** ist bewusst kein vollständiger Kalender, sondern je Kategorie die
  * *nächste* danach. Wer dreimal in acht Wochen hostet, muss das hier nicht
  * dreimal lesen — die zweite und dritte Zeile ändern an nichts, was man heute
  * tun kann. Der ganze Vorlauf steht in der Planungstabelle.
+ *
+ * Eingeklappt, weil es sonst zwei Listen wären, die gleich aussehen und
+ * verschieden dringend sind. Was zählt, ist der nächste Dienstag; der Rest ist
+ * zum Nachsehen da, nicht zum Lesen.
  *
  * Steht nichts an, ist das eine gute Nachricht und wird auch so formuliert.
  */
@@ -224,6 +271,8 @@ function MyRoles({
   roles: Assignment[];
   nextMeetingId: string | null;
 }) {
+  const [showRest, setShowRest] = useState(false);
+
   // Der Vergleich nur mit gesetztem `nextMeetingId`: sonst würde `null === null`
   // eine terminlose Rolle zur Rolle „am nächsten Treffen" machen.
   const atNextMeeting = nextMeetingId
@@ -247,43 +296,58 @@ function MyRoles({
   }
 
   return (
-    <div className="space-y-4">
-      {atNextMeeting.length > 0 && (
-        <RoleGroup title="Beim nächsten Treffen" roles={atNextMeeting} urgent />
+    <Card className="overflow-hidden p-0">
+      {atNextMeeting.length > 0 ? (
+        <ul className="divide-y divide-line">
+          {atNextMeeting.map((role) => (
+            <li key={roleKey(role)}>
+              <RoleRow role={role} urgent />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="px-4 py-3.5 text-sm text-stone-400">
+          Beim nächsten Treffen bist du nicht eingeteilt.
+        </p>
       )}
-      {later.length > 0 && <RoleGroup title="Weitere" roles={later} />}
-    </div>
+
+      {later.length > 0 && (
+        <>
+          <button
+            type="button"
+            aria-expanded={showRest}
+            onClick={() => setShowRest((current) => !current)}
+            className="flex w-full items-center justify-between gap-3 border-t border-line bg-canvas px-4 py-2.5 text-left transition-colors hover:bg-stone-100"
+          >
+            <span className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">
+              Weitere ({later.length})
+            </span>
+            <ChevronDown
+              className={cn(
+                'size-4 shrink-0 text-stone-400 transition-transform',
+                showRest && 'rotate-180',
+              )}
+            />
+          </button>
+
+          {showRest && (
+            <ul className="divide-y divide-line border-t border-line">
+              {later.map((role) => (
+                <li key={roleKey(role)}>
+                  <RoleRow role={role} urgent={false} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </Card>
   );
 }
 
-function RoleGroup({
-  title,
-  roles,
-  urgent = false,
-}: {
-  title: string;
-  roles: Assignment[];
-  urgent?: boolean;
-}) {
-  return (
-    <div>
-      <h3
-        className={cn(
-          'mb-2 px-1 text-[10px] font-bold tracking-widest uppercase',
-          urgent ? 'text-terracotta-500' : 'text-stone-400',
-        )}
-      >
-        {title}
-      </h3>
-      <ul className="space-y-2">
-        {roles.map((role) => (
-          <li key={`${role.role}-${role.date}-${role.meetingId}`}>
-            <RoleRow role={role} urgent={urgent} />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+/** Rolle *und* Abend: dieselbe Rolle kann an mehreren Terminen dranstehen. */
+function roleKey(role: Assignment): string {
+  return `${role.role}-${role.date}-${role.meetingId}`;
 }
 
 function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
@@ -296,7 +360,7 @@ function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
         <span
           className={cn(
             'flex h-9 w-9 shrink-0 items-center justify-center rounded-md',
-            Style
+            Style,
           )}
         >
           <Icon size={20} />
@@ -324,19 +388,16 @@ function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
     </span>
   );
 
+  // Die Zeile trägt ihren eigenen Rand nicht mehr — sie liegt jetzt *in* einer
+  // Karte, und ein Rahmen im Rahmen war genau das Unruhige daran.
   if (!role.meetingId) {
-    return (
-      <div className="rounded-md border border-line bg-card p-3">{content}</div>
-    );
+    return <div className="px-4 py-3.5">{content}</div>;
   }
 
   return (
     <Link
       href={`/termine/${role.meetingId}`}
-      className={cn(
-        'block rounded-md border bg-card p-3 transition-colors hover:border-line-strong',
-        urgent ? 'border-terracotta-100' : 'border-line',
-      )}
+      className="block px-4 py-3.5 transition-colors hover:bg-canvas"
     >
       {content}
     </Link>
