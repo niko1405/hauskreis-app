@@ -20,7 +20,7 @@
  */
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { CalendarX, RotateCcw, Trash2 } from 'lucide-react';
+import { CalendarX, Check, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
@@ -30,18 +30,33 @@ import {
   useCancelMeeting,
   useDeleteMeeting,
   useMe,
+  useSetAttendance,
   useUncancelMeeting,
 } from '@/lib/api/hooks';
-import { formatTimestamp } from '@/lib/date';
+import { formatTimestamp, isPast } from '@/lib/date';
 import { meetingHeadline } from '@/lib/meeting';
 import type { Meeting } from '@/lib/api/types';
 
 export function CancelledNotice({ meeting }: { meeting: Meeting }) {
-  const { isAdmin } = useMe();
+  const { isAdmin, me } = useMe();
   const uncancel = useUncancelMeeting(meeting.id);
+  const attend = useSetAttendance(meeting.id);
   const toast = useToast();
 
   const automatic = meeting.cancelSource === 'ALL_DECLINED';
+
+  /**
+   * „Sagt jemand doch zu, findet er wieder statt" — der Satz darunter stand hier
+   * schon, aber es gab keinen Weg, ihn einzulösen: „Wer kommt" ist an einem
+   * abgesagten Abend schreibgeschützt, und die Karten in Liste und Kalender
+   * blenden ihren Schalter aus. Übrig blieb der Admin-Knopf daneben, der nur den
+   * Status dreht und die eigene Antwort auf „nicht dabei" stehen ließ.
+   *
+   * Deshalb hier, für alle und nicht nur für Admins: eine Zusage genügt. Der
+   * Server erkennt beim Abgleich, dass nicht mehr alle abgesagt haben, und holt
+   * den Abend von selbst zurück.
+   */
+  const mayAttend = automatic && me && !isPast(meeting.date);
 
   return (
     <Card className="space-y-3 border-alert-line bg-alert-bg">
@@ -64,6 +79,27 @@ export function CancelledNotice({ meeting }: { meeting: Meeting }) {
         <p className="rounded-md bg-card/70 px-3 py-2 text-sm leading-relaxed text-stone-700">
           {meeting.cancelReason}
         </p>
+      )}
+
+      {mayAttend && (
+        <Button
+          className="w-full"
+          loading={attend.isPending}
+          onClick={() =>
+            attend.mutate(
+              { personId: me.id, status: 'ATTENDING' },
+              {
+                onSuccess: () =>
+                  toast.success(
+                    'Der Abend findet wieder statt — du bist dabei.',
+                  ),
+              },
+            )
+          }
+        >
+          <Check size={15} />
+          Ich bin doch dabei
+        </Button>
       )}
 
       {isAdmin && (
@@ -223,7 +259,7 @@ export function DeleteMeetingBlock({ meeting }: { meeting: Meeting }) {
         Termin löschen
       </Button>
       <p className="mt-2 text-center text-[11px] text-stone-400">
-        Weg ist weg — und niemand bekommt eine Nachricht.
+        Niemand bekommt eine Nachricht.
       </p>
     </div>
   );

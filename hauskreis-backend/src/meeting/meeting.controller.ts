@@ -79,20 +79,56 @@ export class MeetingController {
     return this.meetingService.findAll(
       params.hauskreisId,
       query,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
+    );
+  }
+
+  /**
+   * Wann sich die Gruppe regelmäßig trifft — Wochentag und Uhrzeit.
+   *
+   * **Muss vor `@Get(':id')` stehen.** Nest nimmt die erste passende Route, und
+   * `:id` fängt sonst das Wort „config" ab — es scheiterte dann an der
+   * UUID-Prüfung, was nach einem kaputten Termin aussieht und keiner ist.
+   *
+   * Lesen darf jede:r: dass der Hauskreis dienstags um 18 Uhr ist, muss auf
+   * jedem Bildschirm stehen können. Ändern nur Admins.
+   */
+  @Get('config')
+  @ApiZodResponse(MeetingScheduleResponseDto)
+  getSchedule(@Param() params: HauskreisParamsDto) {
+    return this.schedule.getConfig(params.hauskreisId);
+  }
+
+  @Put('config')
+  @ApiZodResponse(MeetingScheduleResponseDto, {
+    description: 'Gilt fuer neue Termine, nicht rueckwirkend',
+  })
+  @ApiConditionalWrite()
+  @HauskreisAdmin()
+  updateSchedule(
+    @Param() params: HauskreisParamsDto,
+    @Body() dto: UpdateMeetingScheduleDto,
+    @CurrentMembership() membership: HauskreisMembership,
+    @IfMatch() ifMatch?: IfMatchCondition,
+  ) {
+    return this.schedule.updateConfig(
+      params.hauskreisId,
+      dto,
+      membership.id,
+      ifMatch,
     );
   }
 
   @Get(':id')
   @ApiZodResponse(MeetingResponseDto)
-  findOne(
+  async findOne(
     @Param() params: MeetingParamsDto,
     @CurrentMembership() membership: HauskreisMembership,
   ) {
     return this.meetingService.findOne(
       params.hauskreisId,
       params.id,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
     );
   }
 
@@ -139,14 +175,14 @@ export class MeetingController {
     return this.meetingService.create(
       params.hauskreisId,
       dto,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
     );
   }
 
   @Patch(':id')
   @ApiZodResponse(MeetingResponseDto)
   @ApiConditionalWrite()
-  update(
+  async update(
     @Param() params: MeetingParamsDto,
     @Body() dto: UpdateMeetingDto,
     @CurrentMembership() membership: HauskreisMembership,
@@ -157,7 +193,7 @@ export class MeetingController {
       params.hauskreisId,
       params.id,
       dto,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
       ifMatch,
     );
   }
@@ -201,7 +237,7 @@ export class MeetingController {
   })
   @ApiConditionalWrite()
   @HttpCode(HttpStatus.OK)
-  uncancel(
+  async uncancel(
     @Param() params: MeetingParamsDto,
     @CurrentMembership() membership: HauskreisMembership,
     @IfMatch() ifMatch?: IfMatchCondition,

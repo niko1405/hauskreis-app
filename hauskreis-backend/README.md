@@ -1155,8 +1155,8 @@ unverändert, `null` löscht die Zuordnung.
 
 ### Woraus ein Abend besteht
 
-Drei Schalter am Termin — `hasTopicSlot`, `hasSongSlot`, `hasTestimonySlot` —
-und die Terminart ist nur noch ihre **Voreinstellung**:
+Vier Schalter am Termin — `hasTopicSlot`, `hasNotesSlot`, `hasSongSlot`,
+`hasTestimonySlot` — und die Terminart ist nur noch ihre **Voreinstellung**:
 
 | Typ              | Thema | Nachbereitung¹ | Lieder | Testimony |
 | ---------------- | ----- | -------------- | ------ | --------- |
@@ -1414,6 +1414,26 @@ Schalter für die Rücknahme wäre eine Einstellung für einen Sonderfall. Damit
 räumt `announceStatusChange` die `NotificationLog`-Zeilen zu
 `(MEETING_CANCELLED, meetingId)` vor jedem Wechsel weg — einmal je
 Richtungswechsel, nicht einmal je Termin.
+
+**Der Weg zurück war lange eine Sackgasse.** Die Regel oben verlangt eine
+Zusage, aber alle vier Stellen im Frontend blendeten den Zusage-Schalter aus,
+sobald der Abend abgesagt war — übrig blieb der Admin-Knopf „Absage
+zurücknehmen", und `uncancel` fasste `MeetingAttendance` nicht an. Der Abend
+stand danach wieder, die eigene Antwort weiterhin auf „nicht dabei". Zwei
+Änderungen:
+
+- In der „Fällt aus"-Karte steht bei `ALL_DECLINED` ein Knopf **für alle**:
+  „Ich bin doch dabei" schreibt die eigene Zusage, `reconcile` holt den Abend
+  von selbst zurück. Das ist der Weg, den der Text darunter seit jeher
+  verspricht.
+- `uncancel` setzt bei `ALL_DECLINED` die `ABSENT`-Zeilen mit `source = SELF`
+  auf `UNKNOWN` zurück. Sonst stünde ein „findet statt" mit null von neun
+  Zusagen da — ein Zustand, den der nächste `reconcile`-Auslöser (ein Austritt,
+  der nächtliche Abgleich) sofort wieder in eine Absage übersetzt. Nur die
+  selbst gegebenen: eine aus einem Urlaub abgeleitete Absage ist keine Meinung
+  über diesen Abend, und sie zurückzusetzen hieße, sie beim nächsten Lauf erneut
+  herzuleiten. Bei `MANUAL` bleibt alles stehen — dort wurden die Antworten
+  unabhängig von der Absage gegeben.
 
 Ein Nebeneffekt, der leicht zu übersehen ist: `AbsenceSyncService` filtert nicht
 mehr auf `status: PLANNED`. Seit die Absage eine **Folge** dieser Zeilen ist und
@@ -1841,8 +1861,10 @@ Funktionen getrennt:
   wurde, steht es im Archiv, und alles, was danach dazukommt, ist sofort
   mitzusehen.
 - **Inhalt sichtbar** — die Frage des einzelnen Abends. Titel, Actionstep und
-  Zusammenfassung gehören bis **18 Uhr am Termintag** (`common/time/local-evening.ts`)
-  denen, die sie vorbereiten. Danach allen.
+  Zusammenfassung gehören denen, die sie vorbereiten, **bis der Abend anfängt**
+  — also bis `meeting.startMinutes` Ortszeit (`common/time/local-evening.ts`,
+  Rückfall 18 Uhr). Danach allen. Eine Gruppe, die sich um 20 Uhr trifft, gab
+  ihren Actionstep sonst zwei Stunden zu früh frei.
 
 Zurückgehalten wird im Backend: die Felder gehen als `null` raus und
 `contentVisible` sagt, dass da etwas ist. Sie im Frontend auszublenden hieße,
@@ -1871,7 +1893,7 @@ Es gibt **kein** `POST …/topics`: ein Thema entsteht beim Wählen an einem Abe
 Eines ohne Anlass wäre ein leerer Datensatz — genau der, von dem das alte Modell
 nicht loskam.
 
-Eine **Einheit** dagegen entsteht auch ohne Abend: `POST …/topics/:id/sessions`
+Eine **Einheit** entsteht ebenfalls ohne Abend: `POST …/topics/:id/sessions`
 ist der Ort zum Vorarbeiten. Vorher ging nur der umgekehrte Weg — erst einen
 Termin belegen, dann dort schreiben. Der Titel ist dort **Pflicht**: ein Entwurf
 ohne Abend hat nichts als seinen Titel. Wer anlegt, wird seine Verantwortliche,
@@ -1894,9 +1916,9 @@ entfernen darf sie nur der Owner, und wer entfernt wird, bleibt an den Abenden
 stehen, die er gehalten hat — das ist Geschichte und kein Recht.
 
 Ein Thema ohne Owner und ohne Mitarbeitende (aus der Zeit vor diesem Modell,
-oder weil der Owner den Hauskreis verlassen hat) fällt in den dritten Zweig der
-Hausregel aus `edit-rights.ts`: dann darf jede:r. Sonst wäre es für immer
-eingefroren.
+oder weil der Owner den Hauskreis verlassen hat) darf jede:r ändern
+(`isOrphaned` in [`topic-visibility.ts`](src/topic/topic-visibility.ts)). Sonst
+wäre es für immer eingefroren.
 
 ### Fairness
 
@@ -2131,6 +2153,16 @@ aufzuwärmen.
 Ein leerer String zählt als „keiner": das Feld ist Freitext, und Leerzeichen sind
 nichts, wofür man neun Leute unterbricht.
 
+**Zwei Quellen, eine Antwort.** Der Text steht entweder an der Einheit eines
+Themas oder — beim Baustein „Nachbereitung" — am Abend selbst. Welche gilt,
+entscheidet [`actionstep-source.ts`](src/meeting/actionstep-source.ts) am
+Baustein und nicht am ersten Feld, das gefüllt ist: ein vergangener Abend behält
+seine Einheit auch dann, wenn `hasTopicSlot` danach abgeschaltet wurde, und ein
+`??` spielte dort den Text eines Themas aus, das nicht mehr dazugehört. Dieselbe
+Datei benutzt der Startbildschirm — zwei Stellen, die dieselbe Frage verschieden
+beantworten, wären ein Fehler, den niemand meldet, weil beide Seiten für sich
+plausibel aussehen.
+
 Manuell über `POST …/meetings/actionstep-reminders`. Der Knopf hält sich an den
 eingestellten Wochentag und meldet an anderen Tagen `notified: 0` — er dient dazu,
 den Job zu prüfen, nicht dazu, die Einstellung zu übergehen.
@@ -2157,6 +2189,15 @@ deshalb in der `UNCONDITIONAL`-Liste des Frontend-Clients.
 
 **Kein `personId` im Body**, anders als bei der Teilnahme: einen Vorsatz hakt
 man für sich ab, nicht füreinander. Wer gemeint ist, steht im Token.
+
+**Erst ab Abendbeginn**, sonst `400`. Die Grenze war einmal der Kalendertag, und
+damit ließ sich der Vorsatz für die kommende Woche am Termintag um acht Uhr
+morgens abhaken — zehn Stunden bevor die Gruppe ihn ausgesprochen hatte.
+Maßgeblich ist die Treffpunktzeit **dieses** Abends
+(`eveningReached(date, now, startMinutes)`), derselbe Helfer, der auch
+entscheidet, wann der Inhalt einer Einheit allen gehört. Zwei Rechnungen für
+„hat der Abend angefangen" wären eine zu viel; eine Gruppe, die sich um 20 Uhr
+trifft, gibt entsprechend zwei Stunden später frei als eine mit 18 Uhr.
 
 Idempotent in beide Richtungen. Nochmal abhaken behält den ursprünglichen
 `doneAt` (das Feld heißt „seit wann", nicht „zuletzt angetippt"), und ein

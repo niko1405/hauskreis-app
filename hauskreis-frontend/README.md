@@ -775,11 +775,35 @@ an dem noch niemand steht, erzeugt dort also nichts und fehlte in der Tabelle;
 genau der ist aber der, den man dort sucht. Die Terminliste bringt Gastgeber,
 Thema, Testimony und Musik ohnehin mit, es kostet also keine zweite Abfrage.
 
-Die mittlere Spalte folgt dem Abend: „Thema" oder „Testimony", nie beides —
-sie schließen einander aus, zwei Spalten wären also immer eine davon leer. Und
-eine Zelle ohne Baustein zeigt „–" statt „offen". Der Unterschied zwischen
-_fehlt_ und _gibt es hier nicht_ ist die ganze Frage, die man an so eine
-Tabelle stellt.
+**Thema und Testimony haben eigene Spalten**, obwohl sie einander ausschließen.
+Zusammengelegt sparte das eine Spalte und kostete die Auskunft: unter der
+Überschrift „Thema" stand dann ein Name, der zum Testimony gehörte. Getrennt
+sagt der Strich in der einen Spalte, was für ein Abend das ist.
+
+Die Reihenfolge ist **Host, Thema, Musik, Testimony**: die Musik wird an fast
+jedem Abend zugeteilt, ein Testimony einmal im Monat. Was öfter gebraucht wird,
+steht näher am Datum — auf dem Telefon entscheidet das darüber, was man ohne
+Wischen sieht. Sie steht an zwei Stellen, die nur positionell zusammenhängen
+(Kopfzeile und `cells` in `Row`); wer eine ändert, ändert beide.
+
+Eine leere Zelle hat drei Bedeutungen, und sie sehen verschieden aus:
+
+| Was steht da | Was es heißt                                             |
+| ------------ | -------------------------------------------------------- |
+| _offen_      | Hier fehlt jemand                                        |
+| `–`          | Der Baustein ist an diesem Abend abgeschaltet            |
+| nichts       | Kein Host nötig — der Ort steht schon und braucht keinen |
+
+Der Unterschied zwischen _fehlt_ und _gibt es hier nicht_ ist die ganze Frage,
+die man an so eine Tabelle stellt. Die dritte Zeile kam dazu, weil ein
+Schlosspark-Abend vorher „offen" zeigte: nichts war offen, es war geklärt.
+Anklickbar bleibt die Zelle trotzdem — wer doch bei sich einlädt, trägt sich
+dort ein, und der Ort zieht mit.
+
+**Ort und Gastgeber öffnen dasselbe Sheet.** Die Host-Spalte führt auf
+[`VenueSheet`](src/components/domain/venue-sheet.tsx) mit zwei Registern,
+„Zuhause" und „Treffpunkte". Vorher war der Ort aus der Tabelle gar nicht
+erreichbar: man konnte jemanden eintragen, aber nicht sagen „wir sind draußen".
 
 ## Das Archiv zeigt Themen
 
@@ -797,20 +821,39 @@ wie viele Abende. Die Abende selbst stehen auf der eigenen Seite des Themas
 (`/archiv/themen/[id]`) — ein Thema mit fünf Einheiten machte die Liste sonst zu
 einer Wand.
 
-Gelistet wird, was **gehalten** wurde: ein Thema erscheint, sobald einer seiner
+Zwei Register, **„Eigene Themen (n)" und „Alle Themen (n)"**, unterstrichen und
+nicht als Pillen: darüber steht schon eine Pillen-Leiste (Themen/Lieder/Orte),
+und zwei gleich aussehende Leisten übereinander liest man als eine.
+
+„Alle" ist, was **gehalten** wurde: ein Thema erscheint, sobald einer seiner
 Abende vorbei ist, und bleibt dann drin — auch für alles, was danach noch
-dazukommt. Der Schalter **„Nur meine Themen"** (`scope=mine`) nimmt zusätzlich
-die eigenen dazu, die noch vor sich haben, gehalten zu werden.
+dazukommt. „Eigene" (`scope=mine`) nimmt zusätzlich die dazu, die noch vor sich
+haben, gehalten zu werden; die Zahl daneben ist deshalb **keine** Teilmenge der
+anderen. Sie kommt aus `…/archive` und nicht aus einer zweiten Listenabfrage.
+
+Die Pille darüber zeigt `totals.topicsTotal`, die **Vereinigung** beider
+Register. Vorher stand dort `topics`, also die Zahl des einen — über „Eigene
+(1)" prangte dann „Themen (0)", weil ein selbst angelegter Entwurf noch keinen
+Abend hatte. Die Summe wäre auch falsch: ein eigenes, gehaltenes Thema steht in
+beiden Registern.
+
+Darunter ein **„Neues Thema"**-Knopf — Titel und optional der Bogen darüber,
+danach landet man direkt auf der Themenseite und legt dort die Einheiten an.
+Vorher entstand ein Thema ausschließlich beim Wählen an einem Abend; wer eines
+vorbereiten wollte, musste erst auf einen Dienstag warten. Der Lieder-Tab hat
+denselben Knopf an derselben Stelle, statt eines Plus-Symbols am Rand, das man
+suchen musste.
 
 Auf der Themenseite stehen drei Blöcke untereinander: gehaltene Abende, was noch
 bevorsteht, und — nur für Owner und Mitarbeitende — die **Entwürfe** ohne Termin.
 Die liefert der Server für alle anderen gar nicht erst aus; das ist keine
 Ausblendung im UI, sondern eine Entscheidung eine Ebene tiefer.
 
-Jede Abend-Zeile ist ein **Link auf den Abend**. Geschrieben werden
-Zusammenfassung und Actionstep dort, dort gelten die Rechte schon, und dort
-steht das Feld schon; ein zweiter Bearbeitungsweg wäre eine zweite Stelle, an
-der dieselbe Regel stimmen muss.
+Jede Abend-Zeile trägt einen **Link auf ihren Abend** — und lässt sich seit dem
+Bearbeiten-Modus auch hier ändern und löschen. Der frühere Einwand („ein
+zweiter Bearbeitungsweg wäre eine zweite Stelle, an der dieselbe Regel stimmen
+muss") ist damit erledigt: das Recht kommt vom Server über `session.mayEdit`,
+es gibt keine zweite Regel. Gelöscht wird nur, was noch nicht war.
 
 Umbenennen, Zusammenfassung, Status und Löschen liegen auf der Themenseite. Ob
 die Knöpfe überhaupt erscheinen, sagen `mayEdit` und `mayDelete` aus der
