@@ -100,10 +100,7 @@ export class MeetingSongService {
    * eine Entscheidung („das singen wir"), und die trifft, wer die Musik macht.
    * Danach darf jede:r — dann ist es ein Protokoll („das haben wir gesungen"),
    * und daran erinnert sich jede:r gleich gut. Ist niemand zugeteilt, darf
-   * ebenfalls jede:r; die Regel steht in `edit-rights.ts`.
-   *
-   * Bis hierher prüfte diese Methode **nur** die Zugehörigkeit zum Hauskreis
-   * und löste die aufrufende Person nicht einmal auf.
+   * vorher **niemand**; die Regel steht in `edit-rights.service.ts`.
    */
   async setSelected(
     hauskreisId: string,

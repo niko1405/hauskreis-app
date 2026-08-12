@@ -60,7 +60,12 @@ function setup(options: {
     meeting: { findUnique: jest.fn().mockResolvedValue(options.meeting) },
   };
 
-  return new EditRightsService(prisma as unknown as PrismaService);
+  return withClock(new EditRightsService(prisma as unknown as PrismaService));
+}
+
+/** Wie der Termin aus der Datenbank kommt — die Zone hängt am Hauskreis. */
+function abend(date: Date, songLeaders: { personId: string }[]) {
+  return { hauskreisId: 'hk-1', date, songLeaders };
 }
 
 beforeAll(() => {
@@ -74,10 +79,7 @@ afterAll(() => {
 describe('EditRightsService.assertMayPickSongs', () => {
   it('lässt vor dem Abend nur die Musik-Zuständigen', async () => {
     const service = setup({
-      meeting: {
-        date: KOMMENDER_DIENSTAG,
-        songLeaders: [{ personId: 'p1' }],
-      },
+      meeting: abend(KOMMENDER_DIENSTAG, [{ personId: 'p1' }]),
     });
 
     await expect(service.assertMayPickSongs('m1', 'p9')).rejects.toBeInstanceOf(
@@ -94,7 +96,7 @@ describe('EditRightsService.assertMayPickSongs', () => {
    */
   it('lässt nach dem Abend jede:n nachtragen', async () => {
     const service = setup({
-      meeting: { date: LETZTER_DIENSTAG, songLeaders: [{ personId: 'p1' }] },
+      meeting: abend(LETZTER_DIENSTAG, [{ personId: 'p1' }]),
     });
 
     await expect(
@@ -105,14 +107,95 @@ describe('EditRightsService.assertMayPickSongs', () => {
   /** Der Termintag selbst zählt noch als kommend — der Abend steht ja bevor. */
   it('gilt am Termintag noch als vorher', async () => {
     const service = setup({
-      meeting: {
-        date: new Date('2026-08-05T00:00:00.000Z'),
-        songLeaders: [{ personId: 'p1' }],
-      },
+      meeting: abend(new Date('2026-08-05T00:00:00.000Z'), [
+        { personId: 'p1' },
+      ]),
     });
 
     await expect(service.assertMayPickSongs('m1', 'p9')).rejects.toBeInstanceOf(
       ForbiddenException,
     );
+  });
+
+  /**
+   * Musik machen ist keine Verwaltungsaufgabe. Ein Admin, der die Auswahl
+   * treffen will, trägt sich als zuständig ein wie alle anderen.
+   */
+  it('lässt auch Admins nicht an fremder Musik', async () => {
+    const service = setup({
+      role: PersonRole.ADMIN,
+      meeting: abend(KOMMENDER_DIENSTAG, [{ personId: 'p1' }]),
+    });
+
+    await expect(service.assertMayPickSongs('m1', 'p9')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  /**
+   * Der Fall, der die alte Fassung von dieser unterscheidet: ohne Zuteilung
+   * durfte einmal jede:r. Ein Abend, an dem noch niemand für die Musik
+   * eingetragen ist, ist aber keiner, an dem alle bestimmen — er ist einer, an
+   * dem noch niemand eingetragen ist.
+   */
+  it('lässt bei leerer Zuteilung vor dem Abend niemanden', async () => {
+    const service = setup({
+      meeting: abend(KOMMENDER_DIENSTAG, []),
+    });
+
+    await expect(service.assertMayPickSongs('m1', 'p1')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  /** Danach schon: nachtragen, was gesungen wurde, darf jede:r. */
+  it('lässt bei leerer Zuteilung nach dem Abend jede:n', async () => {
+    const service = setup({
+      meeting: abend(LETZTER_DIENSTAG, []),
+    });
+
+    await expect(
+      service.assertMayPickSongs('m1', 'p1'),
+    ).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * Der gemeldete Fehler, und der Grund für den ganzen Zeitzonen-Umbau.
+ *
+ * „Vorbei" wurde über den **UTC**-Kalendertag entschieden. Um halb eins nachts
+ * war in UTC noch der Vortag, der Abend von gestern galt also als kommend — und
+ * wer nicht die Musik gemacht hatte, bekam beim Abhaken einen 403, während die
+ * App die Kästchen längst freigegeben hatte.
+ */
+describe('EditRightsService.assertMayPickSongs nach Mitternacht', () => {
+  const gesternAbend = new Date('2026-08-11T00:00:00.000Z');
+
+  it('lässt um halb eins in der Nacht danach jede:n', async () => {
+    jest.setSystemTime(new Date('2026-08-11T22:30:00.000Z')); // 00:30 in Berlin
+
+    const service = setup({
+      meeting: abend(gesternAbend, [{ personId: 'p1' }]),
+    });
+
+    await expect(
+      service.assertMayPickSongs('m1', 'p9'),
+    ).resolves.toBeUndefined();
+
+    jest.setSystemTime(HEUTE);
+  });
+
+  it('am Abend selbst um 23 Uhr aber noch nicht', async () => {
+    jest.setSystemTime(new Date('2026-08-11T21:00:00.000Z')); // 23:00 in Berlin
+
+    const service = setup({
+      meeting: abend(gesternAbend, [{ personId: 'p1' }]),
+    });
+
+    await expect(service.assertMayPickSongs('m1', 'p9')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+
+    jest.setSystemTime(HEUTE);
   });
 });

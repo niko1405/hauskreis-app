@@ -284,13 +284,14 @@ export class TopicSessionService {
 
     const assigned = meeting.topicResponsibles.map((row) => row.personId);
 
-    // Zwei Zweige der Hausregel aus `edit-rights.ts` gelten hier nicht. Kein
-    // Admin-Freifahrtschein, weil die Wahl kein Verwaltungsakt ist, sondern die
-    // Aussage „ich bereite das vor" — die kann niemand für einen anderen
-    // treffen. Und „niemand zugeteilt heißt jede:r darf" auch nicht: dort ging
-    // es ums Nachtragen eines Abends, der schon war, hier ums Belegen eines
-    // Abends, der kommt. Wer wählen will, trägt sich vorher als zuständig ein;
-    // das ist eine Zeile und kein Hindernis.
+    // Streng: kein Admin-Freifahrtschein, weil die Wahl kein Verwaltungsakt
+    // ist, sondern die Aussage „ich bereite das vor" — die kann niemand für
+    // einen anderen treffen. Und „niemand zugeteilt heißt jede:r darf" gilt
+    // hier auch nicht: das wäre eine Regel fürs Nachtragen eines Abends, der
+    // schon war, nicht fürs Belegen eines Abends, der kommt. Wer wählen will,
+    // trägt sich vorher als zuständig ein; das ist eine Zeile und kein
+    // Hindernis. Dieselbe Fassung gilt für die Liedauswahl
+    // (`EditRightsService.assertMayPickSongs`).
     if (!assigned.includes(viewer.personId)) {
       throw new ForbiddenException(
         'Das Thema wählt, wer an dem Abend dafür zugeteilt ist — trag dich erst als zuständig ein.',

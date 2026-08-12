@@ -191,10 +191,10 @@ describe('choose — A) neues Thema', () => {
   });
 
   /**
-   * Die Hausregel aus `edit-rights.ts` hat einen dritten Zweig — „ist niemand
-   * zugeteilt, darf jede:r" — und der gilt hier bewusst **nicht**. Dort ging es
-   * ums Nachtragen eines Abends, der schon war; hier ums Belegen eines Abends,
-   * der kommt. Wer wählen will, trägt sich vorher als zuständig ein.
+   * „Ist niemand zugeteilt, darf jede:r" gilt hier bewusst **nicht** — und
+   * inzwischen nirgends mehr, wo etwas *belegt* wird. Wer wählen will, trägt
+   * sich vorher als zuständig ein; dieselbe Grenze hält die Liedauswahl
+   * (`EditRightsService.assertMayPickSongs`).
    */
   it('lässt bei leerer Zuteilung niemanden wählen', async () => {
     const { service } = setup({ assigned: [] });

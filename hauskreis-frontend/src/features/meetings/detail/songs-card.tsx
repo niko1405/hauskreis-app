@@ -37,8 +37,8 @@ export function SongsCard({
   /**
    * Ob die eigene Person die Auswahl treffen darf.
    *
-   * Vor dem Abend nur die Musik-Zuständigen (oder alle, solange niemand
-   * eingeteilt ist): das Abhaken ist dann eine Entscheidung, „das singen wir".
+   * Vor dem Abend nur, wer an dem Abend die Musik macht: das Abhaken ist dann
+   * eine Entscheidung, „das singen wir", und die trifft, wer die Lieder übt.
    * Danach darf jede:r — dann ist es ein Protokoll, „das haben wir gesungen",
    * und daran erinnert sich jede:r gleich gut. Genau deshalb hängt es **nicht**
    * an `readOnly`: an einem vergangenen Abend ist das Abhaken erwünscht.
@@ -131,6 +131,15 @@ export function SongsCard({
             </li>
           ))}
         </ul>
+
+        {/* Ein toter Haken ohne Erklärung ist ein Fehler, kein Hinweis — und
+            seit die Regel streng ist, trifft er auch einen Abend, an dem für
+            die Musik noch niemand eingetragen ist. */}
+        {!mayPick && !readOnly && (songs.data ?? []).length > 0 && (
+          <p className="text-[11px] text-stone-400">
+            Abhaken darf, wer an dem Abend die Musik macht.
+          </p>
+        )}
 
         {!readOnly && (
           <div className="space-y-3 border-t border-line pt-4">

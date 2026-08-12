@@ -144,7 +144,8 @@ grundlegende Vorschläge für Kernentitäten:
 
 6. **Song-Vorschläge/Auswahl**
    - Zu jedem Termin können Song-Vorschläge gemacht werden
-   - Ein Song besteht aus einem Titel (erforderlich), Artist und einer URL (optional) zu den Lyrics (werden nicht gespeichert, wir greifen hier auf externe Quellen zu)
+   - Ein Song besteht aus einem Titel (erforderlich), Artist und einer URL (optional). Die URL zeigt auf **Text oder Akkorde** — bei 4 Instrumentalist:innen ist ein Akkordblatt genauso der richtige Link. Der Inhalt wird nie gespeichert, wir verlinken nach draußen
+   - Neben dem Link-Feld steht ein Knopf, der ihn **öffnet** — gerade beim KI-Vorschlag ist „stimmt der überhaupt" die nächste Frage, und bisher hieß das: markieren, kopieren, woanders einfügen. Er erscheint erst, wenn im Feld eine echte `http(s)`-Adresse steht
    - Bereits vorgeschlagene Songs werden abgespeichert und können als Vorschlag angezeigt werden beim eintragen
    - Man baut sich mit der Zeit also eine Song-Datenbank auf, die sich durchsuchen lässt. Hier können jederzeit neue hinzukommen
    - **Zwei Abkürzungen beim Erfassen, beide per Knopfdruck** (nie beim Tippen — jeder Aufruf dauert Sekunden und kostet etwas): aus einem eingefügten Link Titel und Interpret lesen, und umgekehrt zu Titel und Interpret bis zu drei Links vorschlagen. Umgesetzt mit Gemini; die Suche bevorzugt Ultimate Guitar, dann Genius
@@ -156,6 +157,13 @@ grundlegende Vorschläge für Kernentitäten:
 
 7. **Termin Absagen oder Rollen-Tausch**
    - Man soll Termine absagen können und auch angeben können in welchem Zeitraum man abwesend ist --> automatische absagen
+   - Sagen **alle** ab, fällt der Abend von selbst aus. Der Weg zurück ist eine Zusage, kein Admin-Eingriff: in der „Fällt aus"-Meldung steht dafür ein Knopf, für jede:n
+
+9. **Termin-Rhythmus (Verwaltung)**
+   - Wochentag, Uhrzeit und **Zeitzone** der automatisch erzeugten Termine sind einstellbar (Vorgabe Dienstag 18 Uhr, `Europe/Berlin`)
+   - Tag und Uhrzeit gelten für neue Termine, nicht rückwirkend — was schon steht, hat schon Zusagen
+   - Die Zeitzone gilt sofort und überall: in ihr wird die Uhrzeit gelesen **und** gezählt, welchen Tag wir haben. Geprüft wird gegen die Liste, die die Laufzeit ohnehin mitbringt (`Intl.supportedValuesOf`), damit kein Tippfehler still danebengeht
+   - Ändert sich die Uhrzeit des **nächsten** Termins, bekommen die anderen eine Benachrichtigung
 
 8. **Archiv**
    - Es gibt ein Archiv, wo vergangene Termine und Themen angezeigt werden

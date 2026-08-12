@@ -1217,8 +1217,11 @@ Die Regeln stehen als reine Funktionen in
   Ordnung (ein PATCH mit dem Info-Text darf nicht an einem fremden Feld
   scheitern), ein ausdrückliches `null` auch — aufräumen darf man immer.
 - Einen Baustein abschalten **räumt auf**: Liedvorschläge samt Musik-Zuteilung,
-  die Testimony-Zuteilung. Ein Feld, das niemand mehr setzen kann und trotzdem
-  einen Wert trägt, ist die Sorte Fehler, die man erst Wochen später bemerkt.
+  die Testimony-Zuteilung, bei der Nachbereitung beide Texte **und** die Haken
+  dazu. Ein Feld, das niemand mehr setzen kann und trotzdem einen Wert trägt,
+  ist die Sorte Fehler, die man erst Wochen später bemerkt — und ein Haken an
+  einem Actionstep, den es nicht mehr gibt, taucht wieder auf, sobald jemand
+  einen neuen schreibt.
 - Beim **Thema** wird nicht geräumt, sondern **gelöst**: die Einheit verliert
   ihren Termin und bleibt als Entwurf erhalten, die Zuteilung bleibt stehen. Ein
   versehentlich umgelegter Schalter soll keine Vorbereitung kosten, und wer ihn
