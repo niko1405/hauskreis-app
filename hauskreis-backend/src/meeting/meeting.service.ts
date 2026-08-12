@@ -135,6 +135,15 @@ export class MeetingService {
     const where = {
       hauskreisId,
       ...(windows.length > 0 ? { AND: windows } : {}),
+      // Wer nachliest, was war, sucht Abende, an denen etwas war. In der
+      // Terminliste bleiben sie drin: dort ist „fällt aus" die Auskunft.
+      //
+      // Auf `=== false` und nicht auf falsy: die Vorgabe ist „mitnehmen", und
+      // ein Aufruf ohne dieses Feld — aus einem anderen Dienst, aus einem
+      // Test — soll die Vorgabe bekommen und nicht ihr Gegenteil.
+      ...(query.includeCancelled === false
+        ? { status: { not: MeetingStatus.CANCELLED } }
+        : {}),
       ...buildMeetingSearch(query.search),
     };
 

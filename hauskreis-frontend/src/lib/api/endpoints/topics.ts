@@ -6,9 +6,10 @@
  * — Titel, Actionstep, Zusammenfassung — sitzt an der Einheit, damit er einen
  * Rollenwechsel überlebt.
  *
- * Angelegt wird ein Thema **nicht** hier, sondern beim Wählen an einem Abend
- * (`endpoints/meeting-topics.ts`). Ein Thema ohne Anlass wäre ein leerer
- * Datensatz.
+ * Angelegt wird ein Thema auf **zwei** Wegen: beim Wählen an einem Abend
+ * (`endpoints/meeting-topics.ts`) oder hier, im Voraus und ohne Termin. Der
+ * zweite kam dazu, als Einheiten ohne Abend möglich wurden — seitdem ist das
+ * Vorarbeiten selbst der Anlass.
  */
 import {
   apiDelete,
@@ -21,6 +22,7 @@ import {
 import { hkPath } from './paths';
 import type { TopicListParams } from '../params';
 import type {
+  CreateTopicInput,
   CreateTopicSessionInput,
   Page,
   ReminderRunResult,
@@ -44,6 +46,14 @@ export function listTopics(
     query: { ...params },
     signal,
   });
+}
+
+/** Wer anlegt, wird Owner. Einheiten kommen danach auf der Themenseite dazu. */
+export function createTopic(
+  hauskreisId: string,
+  input: CreateTopicInput,
+): Promise<Topic> {
+  return apiPost<Topic>(base(hauskreisId), input);
 }
 
 export function getTopic(

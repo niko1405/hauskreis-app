@@ -19,6 +19,13 @@ export interface MeetingListParams extends PageParams {
   /** Kalendertag `YYYY-MM-DD`, kein Zeitstempel. */
   from?: string;
   to?: string;
+  /**
+   * Ob abgesagte Abende mitkommen. Vorgabe des Servers ist `'true'`.
+   *
+   * String-Enum, kein Boolean — wie `playedOnly`: die API erwartet `"true"`
+   * bzw. `"false"`, weil Query-Parameter Text sind.
+   */
+  includeCancelled?: 'true' | 'false';
 }
 
 export interface TopicListParams extends PageParams {

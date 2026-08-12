@@ -3,6 +3,8 @@ import { ArchiveService } from './archive.service';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { ApiZodResponse } from '../common/http/api-response.decorator';
 import { ArchiveSummaryResponseDto } from './dto/archive-response.dto';
+import { CurrentMembership } from '../auth/current-membership.decorator';
+import type { HauskreisMembership } from '../auth/auth.types';
 
 @Controller('hauskreise/:hauskreisId/archive')
 export class ArchiveController {
@@ -16,7 +18,10 @@ export class ArchiveController {
    */
   @Get()
   @ApiZodResponse(ArchiveSummaryResponseDto)
-  summary(@Param() params: HauskreisParamsDto) {
-    return this.archive.summarise(params.hauskreisId);
+  summary(
+    @Param() params: HauskreisParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.archive.summarise(params.hauskreisId, membership.id);
   }
 }

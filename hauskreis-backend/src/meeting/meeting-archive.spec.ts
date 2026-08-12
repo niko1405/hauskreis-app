@@ -162,4 +162,54 @@ describe('MeetingService.findAll for the archive', () => {
 
     expect(findMany.mock.calls[0][0].where.AND).toBeUndefined();
   });
+
+  /**
+   * Abgesagte Abende sind in der Terminliste eine Auskunft („fällt aus") und im
+   * Archiv Rauschen — wer nachliest, was war, sucht Abende, an denen etwas war.
+   * Deshalb ein Schalter und keine feste Regel.
+   */
+  it('nimmt abgesagte Abende mit, solange niemand widerspricht', async () => {
+    const { service, findMany } = setup();
+
+    await service.findAll('hk-1', query);
+
+    expect(findMany.mock.calls[0][0].where.status).toBeUndefined();
+  });
+
+  it('lässt sie auf Wunsch weg', async () => {
+    const { service, findMany } = setup();
+
+    await service.findAll('hk-1', { ...query, includeCancelled: false });
+
+    expect(findMany.mock.calls[0][0].where.status).toEqual({
+      not: 'CANCELLED',
+    });
+  });
+});
+
+/**
+ * Der gemeldete Fehler: um halb eins nachts stand der Abend von gestern noch
+ * unter „Kommende". „Heute" kam aus den UTC-Feldern eines Zeitpunkts, und in
+ * UTC war es noch der Vortag.
+ */
+describe('MeetingService.findAll nach Mitternacht', () => {
+  const halbEins = new Date('2026-08-11T22:30:00.000Z'); // 00:30 in Berlin
+
+  it('zählt den Abend von gestern zu den vergangenen', async () => {
+    jest.setSystemTime(halbEins);
+    const { service, findMany } = setup();
+
+    await service.findAll('hk-1', query);
+
+    expect(windows(findMany)).toContainEqual(vorbeiSeit(utc('2026-08-12')));
+  });
+
+  it('und nicht mehr zu den kommenden', async () => {
+    jest.setSystemTime(halbEins);
+    const { service, findMany } = setup();
+
+    await service.findAll('hk-1', { ...query, scope: 'upcoming' as const });
+
+    expect(windows(findMany)).toContainEqual(endetNichtVor(utc('2026-08-12')));
+  });
 });

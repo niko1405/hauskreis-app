@@ -14,6 +14,23 @@ export interface ArchiveSummary {
   totals: {
     meetings: number;
     topics: number;
+    /**
+     * Die eigenen — Owner oder Mitarbeit, auch die noch nicht gehaltenen.
+     *
+     * Zählt also **nicht** eine Teilmenge von `topics`: ein eigenes Thema, von
+     * dem noch kein Abend war, steht hier drin und dort nicht. Genau das ist
+     * der Unterschied zwischen den beiden Registern.
+     */
+    topicsMine: number;
+    /**
+     * Die Vereinigung der beiden Register — was die Kachel „Themen" zeigt.
+     *
+     * Nicht `topics + topicsMine`: ein eigenes, schon gehaltenes Thema steht in
+     * beiden und wäre doppelt gezählt. Und nicht `topics` allein, was vorher
+     * dort stand — darüber konnte „Themen (0)" stehen, während das Register
+     * darunter „Eigene (1)" meldete.
+     */
+    topicsTotal: number;
     songs: number;
     /** Songs the group actually sang, as opposed to only suggested. */
     songsPlayed: number;
@@ -87,6 +104,8 @@ export class ArchiveService {
       totals: {
         meetings: dates.length,
         topics,
+        topicsMine,
+        topicsTotal,
         songs,
         songsPlayed,
       },

@@ -1,0 +1,42 @@
+meta {
+  name: Vergangene ohne Abgesagte
+  type: http
+  seq: 30
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings?scope=past&includeCancelled=false&take=10
+  body: none
+  auth: inherit
+}
+
+params:query {
+  scope: past
+  includeCancelled: false
+  take: 10
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("kein abgesagter Abend ist dabei", function () {
+    const abgesagte = res.body.items.filter(
+      (meeting) => meeting.status === "CANCELLED",
+    );
+    expect(abgesagte).to.have.lengthOf(0);
+  });
+}
+
+docs {
+  Was das Archiv-Register „Termine" abfragt. Die Vorgabe ist `true` — die
+  Terminliste im Termin-Screen zeigt abgesagte Abende, dort ist „fällt aus" die
+  Auskunft. Im Archiv sind sie Rauschen: wer nachliest, was war, sucht Abende,
+  an denen etwas war. Eine Checkbox holt sie zurück, „wann ist der Hauskreis
+  eigentlich ausgefallen" ist eine echte Frage.
+
+  Als **Text** und nicht als Boolean (`includeCancelled=false`, nicht
+  `includeCancelled: false`): Query-Parameter sind Strings. Gleiche Bauform wie
+  `playedOnly` bei den Liedern.
+}

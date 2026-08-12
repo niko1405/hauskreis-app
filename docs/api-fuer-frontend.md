@@ -148,6 +148,12 @@ verzweigt man, und selbst ausgerechnet ist es die Stelle für Off-by-one-Fehler.
 Einträge sind; bei `assignments`, weil die Zeitspanne bereits auf ein Jahr
 begrenzt ist.
 
+**Boolesche Filter kommen als Text.** Query-Parameter sind Strings, also
+erwarten die Routen `"true"`/`"false"` und nicht `true`/`false`:
+`…/meetings?includeCancelled=false` (Vorgabe `true` — die Terminliste zeigt
+abgesagte Abende, das Archiv-Register blendet sie aus) und
+`…/songs?playedOnly=true`.
+
 ---
 
 ## 6. Datumsfelder

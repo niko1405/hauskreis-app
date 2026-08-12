@@ -26,8 +26,11 @@ import { useLongPress } from '@/components/ui/use-long-press';
 import { LyricsLink } from '@/components/domain/lyrics-link';
 import { SongSheet } from '@/components/domain/song-sheet';
 import { LocationsCard } from './locations-card';
+import { MeetingsArchive } from './meetings-archive';
+import { errorMessage } from '@/lib/api/errors';
 import {
   useArchiveSummary,
+  useCreateTopic,
   useDeleteSong,
   useSongList,
   useTopicList,
@@ -37,7 +40,7 @@ import { formatDay, formatRelativeDay } from '@/lib/date';
 import type { SongListParams } from '@/lib/api/params';
 import type { SongListItem, TopicListItem } from '@/lib/api/types';
 
-type Tab = 'themen' | 'lieder' | 'orte';
+type Tab = 'themen' | 'lieder' | 'orte' | 'termine';
 
 export function ArchiveScreen() {
   const [tab, setTab] = useState<Tab>('themen');
@@ -114,6 +117,7 @@ export function ArchiveScreen() {
         {tab === 'themen' && <TopicArchive search={deferred} />}
         {tab === 'lieder' && <SongLibrary search={deferred} />}
         {tab === 'orte' && <LocationsCard />}
+        {tab === 'termine' && <MeetingsArchive search={deferred} />}
       </div>
     </div>
   );
@@ -132,6 +136,8 @@ export function ArchiveScreen() {
  */
 function TopicArchive({ search }: { search: string }) {
   const [nurEigene, setNurEigene] = useState(false);
+  const [anlegen, setAnlegen] = useState(false);
+  const summary = useArchiveSummary();
 
   const query = useTopicList({
     scope: nurEigene ? 'mine' : 'public',
@@ -140,18 +146,48 @@ function TopicArchive({ search }: { search: string }) {
 
   return (
     <div className="space-y-3">
-      <label className="flex items-center gap-2 text-xs font-medium text-stone-500">
-        <input
-          type="checkbox"
-          checked={nurEigene}
-          onChange={(event) => setNurEigene(event.target.checked)}
-          className="size-3.5 accent-terracotta-500"
-        />
-        Nur meine Themen
-        <span className="text-stone-400">
-          — auch die, die noch niemand gesehen hat
-        </span>
-      </label>
+      {/* Unterstrichene Register statt Pillen: darüber steht schon eine
+          Pillen-Leiste (Themen/Lieder/Orte), und zwei gleich aussehende
+          Leisten übereinander liest man als eine. */}
+      <div
+        role="tablist"
+        aria-label="Themen filtern"
+        className="flex border-b border-line"
+      >
+        <TopicTab
+          active={nurEigene}
+          count={summary.data?.totals.topicsMine}
+          onSelect={() => setNurEigene(true)}
+        >
+          Eigene Themen
+        </TopicTab>
+        <TopicTab
+          active={!nurEigene}
+          count={summary.data?.totals.topics}
+          onSelect={() => setNurEigene(false)}
+        >
+          Alle Themen
+        </TopicTab>
+      </div>
+
+      <p className="px-1 text-[11px] text-stone-400">
+        {nurEigene
+          ? '— auch die, die noch niemand gesehen hat'
+          : '— alles, wovon schon ein Abend war'}
+      </p>
+
+      {/* Ein Thema entstand lange nur beim Wählen an einem Abend. Wer eines
+          vorbereiten wollte, musste also erst auf einen Dienstag warten. */}
+      <Button
+        variant="secondary"
+        className="w-full"
+        onClick={() => setAnlegen(true)}
+      >
+        <Plus size={14} />
+        Neues Thema
+      </Button>
+
+      <NewTopicSheet open={anlegen} onClose={() => setAnlegen(false)} />
 
       {query.isLoading && <CardSkeleton />}
       {query.error && <ErrorState error={query.error} />}
@@ -183,9 +219,128 @@ function TopicArchive({ search }: { search: string }) {
   );
 }
 
+function TopicTab({
+  active,
+  count,
+  onSelect,
+  children,
+}: {
+  active: boolean;
+  count: number | undefined;
+  onSelect: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onSelect}
+      className={cn(
+        'flex-1 border-b-2 pb-2.5 text-sm font-semibold transition-colors',
+        active
+          ? 'border-terracotta-500 text-terracotta-600'
+          : 'border-transparent text-stone-400 hover:text-stone-600',
+      )}
+    >
+      {children}
+      {count !== undefined && (
+        <span className="ml-1.5 text-xs opacity-60">({count})</span>
+      )}
+    </button>
+  );
+}
+
+/**
+ * Ein Thema anlegen, ohne dass ein Abend dafür feststeht.
+ *
+ * Nur der Titel und der Bogen darüber — die Einheiten kommen auf der Themenseite
+ * dazu, und dorthin führt der Weg direkt nach dem Anlegen. Beides in ein
+ * Formular zu packen hieße, das Anlegen einer Einheit zweimal zu schreiben.
+ */
+function NewTopicSheet({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const toast = useToast();
+  const create = useCreateTopic();
+
+  const [title, setTitle] = useState('');
+  const [summary, setSummary] = useState('');
+
+  const trimmed = title.trim();
+
+  const close = () => {
+    setTitle('');
+    setSummary('');
+    onClose();
+  };
+
+  return (
+    <Sheet
+      open={open}
+      onClose={close}
+      title="Neues Thema"
+      subtitle="Erstelle ein neues Thema, — einzelne Einheiten für Abende können danach hinzugefügt werden."
+      footer={
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={close}>
+            Abbrechen
+          </Button>
+          <Button
+            className="flex-1"
+            loading={create.isPending}
+            disabled={trimmed.length === 0}
+            onClick={() =>
+              create.mutate(
+                {
+                  title: trimmed,
+                  summaryText: summary.trim() || null,
+                },
+                {
+                  onSuccess: (topic) => {
+                    toast.success('Angelegt — jetzt die Einheiten.');
+                    close();
+                    router.push(`/archiv/themen/${topic.id}`);
+                  },
+                  onError: (error) => toast.error(errorMessage(error)),
+                },
+              )
+            }
+          >
+            Erstellen
+          </Button>
+        </div>
+      }
+    >
+      <Field label="Titel">
+        <TextInput
+          value={title}
+          placeholder="Worum geht es?"
+          onChange={(event) => setTitle(event.target.value)}
+        />
+      </Field>
+
+      <Field
+        label="Zusammenfassung"
+        hint="Fasst das Überblickende zusammen. Kann auch später kommen."
+      >
+        <TextArea
+          rows={3}
+          value={summary}
+          onChange={(event) => setSummary(event.target.value)}
+        />
+      </Field>
+    </Sheet>
+  );
+}
+
 /** Eine Zeile in der Liste — der Weg hinein führt auf die Themenseite. */
 function TopicEntry({ topic }: { topic: TopicListItem }) {
-  const gehalten = topic.sessions.filter((session) => session.held);
   const leute = [
     ...(topic.owner ? [topic.owner] : []),
     ...topic.collaborators.map((c) => c.person),
@@ -214,7 +369,9 @@ function TopicEntry({ topic }: { topic: TopicListItem }) {
         <div className="mt-3 flex items-center justify-between gap-3">
           <AvatarStack people={leute} size="xs" />
           <span className="text-[11px] text-stone-400">
-            {topic.sessions.length === 1 ? '1 Einheit' : `${topic.sessions.length} Einheiten`}
+            {topic.sessions.length === 1
+              ? '1 Einheit'
+              : `${topic.sessions.length} Einheiten`}
           </span>
         </div>
       </Card>
@@ -237,33 +394,38 @@ function SongLibrary({ search }: { search: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="flex flex-1 gap-2">
-          {sorts.map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setSort(key)}
-              aria-pressed={sort === key}
-              className={cn(
-                'rounded-full px-3 py-1 text-[11px] font-semibold transition-colors',
-                sort === key
-                  ? 'bg-stone-800 text-white'
-                  : 'bg-stone-100 text-stone-500 hover:bg-stone-200',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Bisher wuchs die Liederliste nur über die Vorschläge an einem Abend.
-            Ein Lied, das man kennt und erst nächsten Monat singen will, hatte
-            keinen Weg hinein. */}
-        <IconButton label="Lied hinzufügen" onClick={() => setAdding(true)}>
-          <Plus size={16} />
-        </IconButton>
+      <div className="flex gap-2">
+        {sorts.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setSort(key)}
+            aria-pressed={sort === key}
+            className={cn(
+              'rounded-full px-3 py-1 text-[11px] font-semibold transition-colors',
+              sort === key
+                ? 'bg-stone-800 text-white'
+                : 'bg-stone-100 text-stone-500 hover:bg-stone-200',
+            )}
+          >
+            {label}
+          </button>
+        ))}
       </div>
+
+      {/* Bisher wuchs die Liederliste nur über die Vorschläge an einem Abend.
+          Ein Lied, das man kennt und erst nächsten Monat singen will, hatte
+          keinen Weg hinein — und der Weg, den es dann bekam, war ein
+          Plus-Symbol am Rand, das man suchen musste. Jetzt derselbe Knopf an
+          derselben Stelle wie „Neues Thema" nebenan. */}
+      <Button
+        variant="secondary"
+        className="w-full"
+        onClick={() => setAdding(true)}
+      >
+        <Plus size={14} />
+        Neues Lied
+      </Button>
 
       <SongSheet open={adding} onClose={() => setAdding(false)} />
 
@@ -370,7 +532,7 @@ function SongRow({ song, rank }: { song: SongListItem; rank?: number }) {
       {song.createdBy && !revealed && (
         <Avatar person={song.createdBy} size="xs" />
       )}
-      <LyricsLink url={song.lyricsUrl} title={song.title} />
+      {!revealed && <LyricsLink url={song.lyricsUrl} title={song.title} />}
 
       {revealed && (
         <>

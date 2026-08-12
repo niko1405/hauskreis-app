@@ -14,6 +14,7 @@ import { TopicService } from './topic.service';
 import { TopicSessionService } from './topic-session.service';
 import { TopicReminderService } from './topic-reminder.service';
 import {
+  CreateTopicDto,
   CreateTopicSessionDto,
   ListTopicsQueryDto,
   TopicCollaboratorParamsDto,

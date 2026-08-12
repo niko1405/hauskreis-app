@@ -53,6 +53,15 @@ type Step =
   | { name: 'create'; topicId: string; title: string | null }
   | { name: 'people'; topicId: string; title: string | null };
 
+/** Was im Anlege-Formular steht, solange es noch nicht abgeschickt wurde. */
+interface Entwurf {
+  title: string;
+  actionstep: string;
+  summary: string;
+}
+
+const LEERER_ENTWURF: Entwurf = { title: '', actionstep: '', summary: '' };
+
 export function TopicChoiceSheet({
   meetingId,
   open,
@@ -72,6 +81,13 @@ export function TopicChoiceSheet({
 }) {
   const [step, setStep] = useState<Step>({ name: 'root' });
 
+  // Der Entwurf liegt **hier** und nicht in `CreateStep`: die Schritte lösen
+  // einander an derselben Stelle im Baum ab, ein Wechsel ist also ein Unmount.
+  // Wer zu den Mitwirkenden abbog und zurückkam, fand sein Formular vorher leer
+  // vor. Ein `key` hilft dagegen nicht — es gibt keine gemeinsame Position, an
+  // der die Felder gemountet bleiben könnten.
+  const [entwurf, setEntwurf] = useState(LEERER_ENTWURF);
+
   const choices = useTopicChoices(meetingId, open);
   const choose = useChooseTopicSession(meetingId);
   const toast = useToast();
@@ -79,7 +95,14 @@ export function TopicChoiceSheet({
 
   const schliessen = () => {
     setStep({ name: 'root' });
+    setEntwurf(LEERER_ENTWURF);
     onClose();
+  };
+
+  /** Ein anderes Thema öffnen heißt: der Entwurf gehörte zum vorigen. */
+  const themaOeffnen = (topicId: string, title: string | null) => {
+    setEntwurf(LEERER_ENTWURF);
+    setStep({ name: 'topic', topicId, title });
   };
 
   const waehlen = (input: ChooseTopicSessionInput, erfolg: string) => {
@@ -130,9 +153,10 @@ export function TopicChoiceSheet({
   if (step.name === 'create') {
     return (
       <CreateStep
-        meetingId={meetingId}
         topicTitle={step.title}
         responsibles={responsibles}
+        entwurf={entwurf}
+        onChange={setEntwurf}
         saving={choose.isPending}
         onPeople={() =>
           setStep({ name: 'people', topicId: step.topicId, title: step.title })
@@ -140,9 +164,15 @@ export function TopicChoiceSheet({
         onBack={() =>
           setStep({ name: 'topic', topicId: step.topicId, title: step.title })
         }
-        onCreate={(felder) =>
+        onCreate={() =>
           waehlen(
-            { mode: 'existing', topicId: step.topicId, ...felder },
+            {
+              mode: 'existing',
+              topicId: step.topicId,
+              title: entwurf.title.trim(),
+              actionstepText: entwurf.actionstep.trim() || null,
+              summaryText: entwurf.summary.trim() || null,
+            },
             'Angelegt — die Einheit hängt am Abend.',
           )
         }
@@ -221,13 +251,7 @@ export function TopicChoiceSheet({
                 <ChoiceRow
                   title={topic.title ?? 'Thema ohne Titel'}
                   hint={topicHint(topic)}
-                  onSelect={() =>
-                    setStep({
-                      name: 'topic',
-                      topicId: topic.id,
-                      title: topic.title,
-                    })
-                  }
+                  onSelect={() => themaOeffnen(topic.id, topic.title)}
                 />
               </li>
             ))}
@@ -428,30 +452,26 @@ function SessionRow({
 
 /** Mockup 1. Der Titel ist das einzige Pflichtfeld — ohne ihn kein Wiedererkennen. */
 function CreateStep({
-  meetingId,
   topicTitle,
   responsibles,
+  entwurf,
+  onChange,
   saving,
   onPeople,
   onBack,
   onCreate,
 }: {
-  meetingId: string;
   topicTitle: string | null;
   responsibles: PersonRef[];
+  /** Liegt eine Ebene höher, damit der Umweg zu den Mitwirkenden ihn nicht frisst. */
+  entwurf: Entwurf;
+  onChange: (entwurf: Entwurf) => void;
   saving: boolean;
   onPeople: () => void;
   onBack: () => void;
-  onCreate: (felder: {
-    title: string;
-    actionstepText: string | null;
-    summaryText: string | null;
-  }) => void;
+  onCreate: () => void;
 }) {
-  const [title, setTitle] = useState('');
-  const [actionstep, setActionstep] = useState('');
-  const [summary, setSummary] = useState('');
-
+  const { title, actionstep, summary } = entwurf;
   const trimmed = title.trim();
 
   return (
@@ -469,13 +489,7 @@ function CreateStep({
             className="flex-1"
             loading={saving}
             disabled={trimmed.length === 0}
-            onClick={() =>
-              onCreate({
-                title: trimmed,
-                actionstepText: actionstep.trim() || null,
-                summaryText: summary.trim() || null,
-              })
-            }
+            onClick={onCreate}
           >
             Anlegen
           </Button>
@@ -487,7 +501,9 @@ function CreateStep({
           aria-label="Titel der Einheit"
           value={title}
           placeholder="Worum geht es an diesem Abend?"
-          onChange={(event) => setTitle(event.target.value)}
+          onChange={(event) =>
+            onChange({ ...entwurf, title: event.target.value })
+          }
         />
       </Labelled>
 
@@ -497,7 +513,9 @@ function CreateStep({
           rows={2}
           value={actionstep}
           placeholder="Was nimmt die Gruppe mit in die Woche?"
-          onChange={(event) => setActionstep(event.target.value)}
+          onChange={(event) =>
+            onChange({ ...entwurf, actionstep: event.target.value })
+          }
         />
       </Labelled>
 
@@ -507,7 +525,9 @@ function CreateStep({
           rows={3}
           value={summary}
           placeholder="Kann auch nach dem Abend kommen."
-          onChange={(event) => setSummary(event.target.value)}
+          onChange={(event) =>
+            onChange({ ...entwurf, summary: event.target.value })
+          }
         />
       </Labelled>
 
@@ -527,10 +547,6 @@ function CreateStep({
           ab dann am ganzen Thema schreiben.
         </p>
       </Labelled>
-
-      {/* Das Meeting wird erst im Picker gebraucht; hier nur, damit die Kette
-          nicht abreißt, wenn jemand direkt „Anlegen" drückt. */}
-      <input type="hidden" value={meetingId} readOnly />
     </Sheet>
   );
 }

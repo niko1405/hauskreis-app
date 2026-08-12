@@ -169,6 +169,12 @@ export type MeetingSong = S['MeetingSongResponseDto'];
 export type AddMeetingSongInput = S['AddMeetingSongDto'];
 export type SetSongLeadersInput = S['SetSongLeadersDto'];
 
+/** Titel und Interpret, wie sie auf einer verlinkten Seite stehen. */
+export type SongMetadata = S['SongMetadataResponseDto'];
+/** Ein gefundener Link. `site` ist die Seite, von der er stammt. */
+export type LyricsLinkCandidate =
+  S['LyricsLinkCandidatesResponseDto']['candidates'][number];
+
 // ── Gebetsbuddys ────────────────────────────────────────────────────────────
 
 export type PrayerBuddyRound = S['CurrentPrayerBuddyResponseDto'];

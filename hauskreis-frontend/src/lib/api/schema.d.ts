@@ -2373,6 +2373,7 @@ export interface components {
           id: string;
           /** Format: date */
           date: string;
+          startTime: string;
           /** @enum {string} */
           status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
           title: string | null;

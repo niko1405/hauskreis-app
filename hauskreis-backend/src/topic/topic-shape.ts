@@ -28,12 +28,28 @@ import {
 export interface Viewer {
   personId: string;
   isAdmin: boolean;
+  /**
+   * Die Zeitzone der Gruppe.
+   *
+   * Gehört hierher, weil ein Blick auf ein Thema zwei Fragen stellt: *wer*
+   * schaut, und *von welcher Uhr aus*. „Hat der Abend angefangen" hängt an
+   * beidem — und ein Vorgabewert wäre hier eine stille Falle, deshalb ein
+   * Pflichtfeld.
+   */
+  zone: string;
   /** Nur für Tests — sonst die Uhr. */
   now?: Date;
 }
 
-export function viewerOf(membership: HauskreisMembership): Viewer {
-  return { personId: membership.id, isAdmin: membership.role === 'ADMIN' };
+export function viewerOf(
+  membership: HauskreisMembership,
+  zone: string,
+): Viewer {
+  return {
+    personId: membership.id,
+    isAdmin: membership.role === 'ADMIN',
+    zone,
+  };
 }
 
 /**
@@ -253,7 +269,12 @@ export function shapeSession(
     updatedAt: session.updatedAt,
     version: session.version,
     responsibles: session.responsibles,
-    held: isHeld(session.meeting),
+    // Ohne Vorbehalt: wer abgehakt hat, ist keine Aussage über den Inhalt, und
+    // vor dem Abend ist die Liste ohnehin leer. An einer Einheit ohne Abend
+    // gibt es nichts abzuhaken — daher ein leeres Feld, nicht `null`: die Zahl
+    // „0 von 9" stimmt dort genauso.
+    actionstepDone: session.meeting?.actionstepDone ?? [],
+    held: isHeld(session.meeting, viewer.zone),
     contentVisible: visible,
     mayEdit: mayEditTopic({
       isAdmin: viewer.isAdmin,
@@ -292,7 +313,7 @@ export function shapeTopic(topic: FullTopicRow, viewer: Viewer) {
       // Das Thema steht schon darüber — in der Einheit wäre es doppelt.
       omitTopic(shapeSession(session, topic, viewer)),
     ),
-    publiclyVisible: isPubliclyVisible(topic.sessions),
+    publiclyVisible: isPubliclyVisible(topic.sessions, viewer.zone),
     mine,
     mayEdit: mayEditTopic({
       isAdmin: viewer.isAdmin,

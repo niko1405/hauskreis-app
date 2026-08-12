@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
@@ -55,7 +56,11 @@ export class TopicService {
 
     const where = {
       hauskreisId,
-      ...topicScopeWhere(query.scope, viewer.personId),
+      ...topicScopeWhere(
+        query.scope,
+        viewer.personId,
+        await this.clock.today(hauskreisId),
+      ),
       ...(query.status ? { status: query.status } : {}),
       ...(query.search ? buildTopicSearch(query.search) : {}),
       ...(Object.keys(createdAt).length > 0 ? { createdAt } : {}),
@@ -79,6 +84,30 @@ export class TopicService {
       total,
       query,
     );
+  }
+
+  /**
+   * Ein leeres Thema, ohne dass ein Abend feststeht.
+   *
+   * Der Titel ist **Pflicht** — anders als beim Wählen an einem Abend, wo die
+   * Einheit unter ihrem Termin steht und auch namenlos auffindbar ist. Ein
+   * Thema, das an nichts hängt, hat nichts als seinen Titel.
+   *
+   * Einheiten kommen danach über `POST …/topics/:id/sessions` dazu. Zwei Wege in
+   * einem Formular zusammenzulegen hieße, das Anlegen zweimal zu schreiben.
+   */
+  async create(hauskreisId: string, dto: CreateTopicDto, viewer: Viewer) {
+    const topic = await this.prisma.topic.create({
+      data: {
+        hauskreisId,
+        title: dto.title,
+        summaryText: dto.summaryText ?? null,
+        ownerPersonId: viewer.personId,
+      },
+      include: topicInclude,
+    });
+
+    return shapeTopic(topic, viewer);
   }
 
   /**
@@ -109,6 +138,10 @@ export class TopicService {
    * Anders als früher gilt das auch für `status` — „wir sind damit durch" ist
    * eine Aussage über die eigene Arbeit, und seit die nächtliche Übernahme weg
    * ist, stößt sie auch nichts mehr an, das die ganze Gruppe betrifft.
+   *
+   * Die Termine, an denen Einheiten dieses Themas hängen, altern mit: der
+   * Themen-Titel steht in ihrer Antwort („Zugehöriges Thema"), und ohne den
+   * Sprung zeigt der Abend nach dem Umbenennen weiter den alten.
    */
   async update(
     hauskreisId: string,
@@ -122,14 +155,20 @@ export class TopicService {
     return updateWithVersionCheck({
       condition,
       update: (versionConstraint) =>
-        this.prisma.topic.updateMany({
-          where: { id, hauskreisId, ...versionConstraint },
-          data: {
-            title: dto.title,
-            summaryText: dto.summaryText,
-            status: dto.status,
-            version: { increment: 1 },
-          },
+        this.prisma.$transaction(async (tx) => {
+          const result = await tx.topic.updateMany({
+            where: { id, hauskreisId, ...versionConstraint },
+            data: {
+              title: dto.title,
+              summaryText: dto.summaryText,
+              status: dto.status,
+              version: { increment: 1 },
+            },
+          });
+
+          if (result.count > 0) await bumpMeetingsOfTopic(tx, id);
+
+          return result;
         }),
       exists: () => this.prisma.topic.findFirst({ where: { id, hauskreisId } }),
       reload: () => this.findOne(hauskreisId, id, viewer),
@@ -160,7 +199,12 @@ export class TopicService {
       throw new ForbiddenException('Ein Thema löscht, wem es gehört.');
     }
 
-    await this.prisma.topic.delete({ where: { id } });
+    await this.prisma.$transaction(async (tx) => {
+      // Vor dem Löschen einsammeln: danach gibt es die Einheiten nicht mehr,
+      // die auf ihre Abende zeigen.
+      await bumpMeetingsOfTopic(tx, id);
+      await tx.topic.delete({ where: { id } });
+    });
   }
 
   /**
@@ -191,8 +235,14 @@ export class TopicService {
       );
     }
 
-    await this.prisma.topicCollaborator.deleteMany({
-      where: { topicId: id, personId },
+    await this.prisma.$transaction(async (tx) => {
+      const result = await tx.topicCollaborator.deleteMany({
+        where: { topicId: id, personId },
+      });
+
+      // Die Mitarbeitenden stehen in der Antwort des Themas — ohne den Sprung
+      // steht die entfernte Person dort weiter, bis jemand neu lädt.
+      if (result.count > 0) await touchTopic(tx, id);
     });
   }
 
@@ -231,6 +281,28 @@ export class TopicService {
     }
 
     return topic;
+  }
+}
+
+/**
+ * Lässt jeden Abend altern, an dem eine Einheit dieses Themas hängt.
+ *
+ * Der Termin trägt Titel und Auswahl des Themas in seiner eigenen Antwort. Ihr
+ * ETag kommt aber allein aus `meeting.version` — wer das Thema ändert, ohne
+ * diese Spalte anzufassen, bekommt vom Server ein `304` und sieht auf dem Abend
+ * weiter den alten Stand.
+ */
+async function bumpMeetingsOfTopic(
+  db: Prisma.TransactionClient,
+  topicId: string,
+): Promise<void> {
+  const sessions = await db.topicSession.findMany({
+    where: { topicId, meetingId: { not: null } },
+    select: { meetingId: true },
+  });
+
+  for (const session of sessions) {
+    await touchMeeting(db, session.meetingId);
   }
 }
 

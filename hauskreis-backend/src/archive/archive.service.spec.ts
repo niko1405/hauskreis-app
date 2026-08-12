@@ -33,7 +33,7 @@ describe('ArchiveService.summarise', () => {
       '2026-03-03',
     ]);
 
-    const summary = await service.summarise('hk-1');
+    const summary = await service.summarise('hk-1', 'niko');
 
     expect(summary.years).toEqual([
       { year: 2026, meetings: 3 },
@@ -44,21 +44,33 @@ describe('ArchiveService.summarise', () => {
   it('reports the totals and when the group first met', async () => {
     const { service } = setup(['2025-11-04', '2026-01-06']);
 
-    const summary = await service.summarise('hk-1');
+    const summary = await service.summarise('hk-1', 'niko');
 
     expect(summary.totals).toEqual({
       meetings: 2,
       topics: 3,
+      topicsMine: 2,
+      topicsTotal: 4,
       songs: 20,
       songsPlayed: 12,
     });
     expect(summary.firstMeetingDate).toBe('2025-11-04');
   });
 
+  it('zählt für die Kachel die Vereinigung, nicht die Summe', async () => {
+    // Ein eigenes, schon gehaltenes Thema steht in beiden Registern. Vorher
+    // zeigte die Kachel `topics` — über „Eigene (1)" stand dann „Themen (0)".
+    const { service, topicCount } = setup([]);
+
+    await service.summarise('hk-1', 'niko');
+
+    expect(topicCount.mock.calls[2][0].where.OR).toHaveLength(2);
+  });
+
   it('leaves out cancelled evenings and everything still ahead', async () => {
     const { service, findMany } = setup([]);
 
-    await service.summarise('hk-1');
+    await service.summarise('hk-1', 'niko');
 
     // An evening that was called off is not part of what the group did, and a
     // future one is not archive material yet.
@@ -68,9 +80,15 @@ describe('ArchiveService.summarise', () => {
   });
 
   it('copes with a group that has never met', async () => {
-    const { service } = setup([], { topics: 0, songs: 0, played: 0 });
+    const { service } = setup([], {
+      topics: 0,
+      mine: 0,
+      total: 0,
+      songs: 0,
+      played: 0,
+    });
 
-    const summary = await service.summarise('hk-1');
+    const summary = await service.summarise('hk-1', 'niko');
 
     expect(summary.years).toEqual([]);
     expect(summary.firstMeetingDate).toBeNull();

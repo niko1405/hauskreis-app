@@ -7,12 +7,23 @@ import { isoDay } from '../../common/dto/iso-day';
 const topicStatus = z.enum(TopicStatus);
 
 /**
+ * Ein Thema anlegen, ohne dass ein Abend dafür feststeht.
+ *
+ * Der Titel ist hier **Pflicht** — anders als beim Wählen an einem Abend
+ * (`POST …/meetings/:id/topic-session`), wo das Thema unter seinem Termin steht
+ * und auch namenlos auffindbar ist. Ein Thema, das an nichts hängt, hat nichts
+ * als seinen Titel.
+ */
+export const createTopicSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  summaryText: z.string().trim().min(1).max(5000).nullish(),
+});
+
+/**
  * Der Titel ist optional — CLAUDE.md §5: nicht jeder trägt vorab einen ein.
  *
- * Angelegt wird ein Thema **nicht** über eine eigene Route, sondern indem jemand
- * für einen Abend zugeteilt ist und sich für „neues Thema" entscheidet
- * (`POST …/meetings/:id/topic-session`). Ein Thema, das an keinem Abend hängt und
- * keinen Owner hat, wäre ein Datensatz ohne Anlass.
+ * Beim **Anlegen** ist er dagegen Pflicht, siehe `createTopicSchema`: ein Thema
+ * darf seinen Titel später verlieren, aber nicht ohne ihn entstehen.
  */
 export const updateTopicSchema = z.object({
   title: z.string().trim().min(1).max(200).nullish(),
@@ -140,6 +151,7 @@ const meetingTopicParamsSchema = z.object({
   meetingId: z.uuid(),
 });
 
+export class CreateTopicDto extends createZodDto(createTopicSchema) {}
 export class UpdateTopicDto extends createZodDto(updateTopicSchema) {}
 export class ListTopicsQueryDto extends createZodDto(listTopicsQuerySchema) {}
 export class UpdateTopicSessionDto extends createZodDto(

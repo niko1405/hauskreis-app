@@ -19,7 +19,14 @@ export const archiveSummarySchema = z.object({
   ),
   totals: z.object({
     meetings: z.number().int().nonnegative(),
+    /// Themen, von denen mindestens ein Abend war — was im Register „Alle" steht.
     topics: z.number().int().nonnegative(),
+    /// Die eigenen, auch die noch nicht gehaltenen. **Keine** Teilmenge von
+    /// `topics`: ein eigener Entwurf steht hier drin und dort nicht.
+    topicsMine: z.number().int().nonnegative(),
+    /// Die Vereinigung beider Register — was die Kachel „Themen" zeigt. Nicht
+    /// die Summe: ein eigenes, gehaltenes Thema steht in beiden.
+    topicsTotal: z.number().int().nonnegative(),
     /// Alle je vorgeschlagenen Lieder.
     songs: z.number().int().nonnegative(),
     /// Davon die, die auch wirklich gesungen wurden.

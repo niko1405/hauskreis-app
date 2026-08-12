@@ -1,0 +1,62 @@
+meta {
+  name: Thema anlegen
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/topics
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Bruno-Thema ohne Anlass",
+    "summaryText": "Der Bogen über alle Abende — kann auch später kommen."
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("topicId", res.body.id);
+}
+
+tests {
+  test("antwortet mit 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("wer anlegt, wird Owner", function () {
+    expect(res.body.owner).to.not.equal(null);
+    expect(res.body.mayDelete).to.equal(true);
+  });
+
+  test("hat noch keine Einheiten", function () {
+    expect(res.body.sessions).to.have.lengthOf(0);
+  });
+}
+
+docs {
+  Ein Thema, ohne dass ein Abend dafür feststeht.
+
+  Lange gab es diese Route **nicht**, mit dem Argument, ein Thema ohne Anlass
+  wäre ein leerer Datensatz — genau der, von dem das alte Modell nicht loskam.
+  Das stimmte, solange der Inhalt ausschließlich an Terminen hing. Seit es
+  Einheiten ohne Abend gibt, ist das Vorarbeiten selbst der Anlass: wer im Zug
+  eine Idee hat, legt das Thema an und füllt es, und der Dienstag findet sich
+  später.
+
+  Der Titel ist hier **Pflicht**. Beim Wählen an einem Abend
+  (`06-thema-waehlen`) ist er es nicht: dort steht das Thema unter seinem
+  Termin und ist auch namenlos auffindbar.
+
+  Damit bekommt „wer zuerst **wählt**, wird Owner" einen Zusatz: **oder wer es
+  anlegt.** Dieselbe Regel einen Schritt früher.
+
+  Einheiten kommen danach über `12-einheit-vorbereiten` dazu — oder indem
+  jemand das Thema an einem Abend fortsetzt.
+}

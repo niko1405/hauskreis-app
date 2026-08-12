@@ -55,7 +55,7 @@ import {
   useTopic,
   useUpdateTopic,
 } from '@/lib/api/hooks';
-import { formatDay } from '@/lib/date';
+import { formatDay, hasStarted } from '@/lib/date';
 import { namesOf } from '@/lib/person';
 import type { Topic, TopicSessionInTopic } from '@/lib/api/types';
 
@@ -162,16 +162,6 @@ function Loaded({ topic }: { topic: Topic }) {
             )}
           </div>
         </div>
-
-        {editing && topic.mayDelete && (
-          <IconButton
-            label="Thema löschen"
-            disabled={remove.isPending}
-            onClick={deleteTopic}
-          >
-            <Trash2 size={14} />
-          </IconButton>
-        )}
       </header>
 
       <section>
@@ -247,6 +237,18 @@ function Loaded({ topic }: { topic: Topic }) {
               <Pencil size={14} /> Bearbeiten
             </>
           )}
+        </Button>
+      )}
+
+      {topic.mayDelete && (
+        <Button
+          variant="ghost"
+          className="w-full text-alert"
+          loading={remove.isPending}
+          onClick={deleteTopic}
+        >
+          <Trash2 size={15} />
+          Thema löschen
         </Button>
       )}
 

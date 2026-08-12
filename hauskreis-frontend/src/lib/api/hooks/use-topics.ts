@@ -4,6 +4,7 @@ import { STALE } from '../cache';
 import { topicsApi } from '../endpoints';
 import type { TopicListParams } from '../params';
 import type {
+  CreateTopicInput,
   CreateTopicSessionInput,
   Topic,
   TopicSession,
@@ -28,6 +29,22 @@ export function useTopicList(params: TopicListParams = {}) {
     enabled,
     staleTime: STALE.archive,
   });
+}
+
+/**
+ * Ein Thema anlegen, ohne dass ein Abend dafür feststeht.
+ *
+ * Nur `topics.all`: ein Thema ohne Einheiten steht an keinem Termin und ändert
+ * dort nichts. Die Einheiten kommen einzeln dazu, und *die* fassen auch die
+ * Termine an.
+ */
+export function useCreateTopic() {
+  const { hauskreisId, keys } = useHk();
+
+  return useApiMutation(
+    (input: CreateTopicInput) => topicsApi.createTopic(hauskreisId, input),
+    { invalidateKeys: [keys.topics.all, keys.archive] },
+  );
 }
 
 export function useTopic(topicId: string | undefined) {
