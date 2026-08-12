@@ -22,9 +22,9 @@
  * je zugeteilter Person. Ein Abend, an dem noch niemand steht, erzeugt dort
  * also nichts — und fehlte hier. Genau der Abend ist aber der, den man in einer
  * Planungstabelle sucht. Die Terminliste liefert ohnehin schon Gastgeber,
- * Thema, Testimony und Musik mit, es kostet also keine zweite Abfrage.
+ * Thema, Musik und Testimony mit, es kostet also keine zweite Abfrage.
  */
-import { Minus, Plus } from 'lucide-react';
+import { CheckCircle2, Minus, Plus } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
@@ -33,7 +33,7 @@ import { IconButton } from '@/components/ui/button';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import { useMeeting, useMeetingList, useSongLeaders } from '@/lib/api/hooks';
 import { addDays, formatDay, formatRelativeDay, today } from '@/lib/date';
-import { ROLE_LABEL } from '@/lib/meeting';
+import { ROLE_LABEL, planningComplete } from '@/lib/meeting';
 import { cn } from '@/lib/cn';
 import type {
   AssignmentRole,
@@ -44,6 +44,10 @@ import { useRoleAssignment } from './detail/use-role-assignment';
 
 const AssignmentSheet = dynamic(() =>
   import('@/components/domain/assignment-sheet').then((m) => m.AssignmentSheet),
+);
+
+const VenueSheet = dynamic(() =>
+  import('@/components/domain/venue-sheet').then((m) => m.VenueSheet),
 );
 
 type Column = Exclude<AssignmentRole, 'PRAYER_BUDDY'>;
@@ -65,7 +69,21 @@ const ZOOM_STEPS = [1, 0.85, 0.7] as const;
 interface Cell {
   role: Column;
   people: PersonRef[];
-  booked: boolean;
+  /**
+   * Warum die Zelle leer ist, wenn niemand darin steht.
+   *
+   * `null` heißt **offen** — hier fehlt jemand. Die beiden anderen heißen, dass
+   * nichts fehlt, und sehen deshalb verschieden aus:
+   *
+   * - `slot-off`: der Baustein ist an diesem Abend abgeschaltet. Ein Strich,
+   *   damit die Spalte trotzdem erkennbar bleibt und man sieht, was für ein
+   *   Abend das ist — an einem Lobpreisabend steht unter „Thema" ein Strich und
+   *   unter „Testimony" ein Name.
+   * - `not-needed`: der Gastgeber-Platz, wenn der Ort schon feststeht und keinen
+   *   braucht. Da ist nichts abgeschaltet und nichts offen, es ist geklärt —
+   *   also ein leeres Feld, kein Zeichen.
+   */
+  absent: 'slot-off' | 'not-needed' | null;
 }
 
 export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
@@ -100,7 +118,7 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
         <p className="text-[11px] text-stone-400">
-          Antippen zum Eintragen · seitlich wischbar
+          Antippen zum Eintragen · grün heißt fertig geplant
         </p>
         <div className="flex items-center gap-1">
           <IconButton
@@ -135,17 +153,16 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
             marginBottom: `${(scale - 1) * 100}px`,
           }}
         >
-          <table className="w-full min-w-[34rem] border-separate border-spacing-y-2">
+          <table className="w-full min-w-[42rem] border-separate border-spacing-y-2">
             <thead>
               <tr>
                 <th className="w-32 px-3 pb-1 text-left text-[10px] font-bold tracking-widest text-stone-400 uppercase">
                   Termin
                 </th>
-                {/* Die mittlere Spalte hat keinen festen Namen: Thema und
-                    Testimony schließen einander aus, es steht an einem Abend
-                    also immer nur eines davon. Zwei Spalten wären eine davon
-                    immer leer. */}
-                {['Host', 'Thema', 'Musik'].map((label) => (
+                {/* Musik vor Testimony: die Musik wird an fast jedem Abend
+                    zugeteilt, ein Testimony nur einmal im Monat. Was öfter
+                    gebraucht wird, steht näher am Datum. */}
+                {['Host', 'Thema', 'Musik', 'Testimony'].map((label) => (
                   <th
                     key={label}
                     className="px-3 pb-1 text-left text-[10px] font-bold tracking-widest text-stone-400 uppercase"
@@ -187,26 +204,42 @@ function Row({
   onEdit: (role: Column) => void;
 }) {
   const cancelled = meeting.status === 'CANCELLED';
+  /**
+   * Jede Rolle vergeben, die es an diesem Abend gibt.
+   *
+   * Genau die Frage, für die man diese Tabelle aufmacht — und sie war bisher
+   * nur zu beantworten, indem man vier Zellen einzeln absuchte. Die Bedingungen
+   * stehen in `planningComplete`, weil sie dieselben sind, nach denen unten die
+   * einzelnen Zellen entscheiden, ob sie „offen" sagen.
+   */
+  const fertig = planningComplete(meeting);
 
   const cells: Cell[] = [
-    { role: 'HOST', people: meeting.host ? [meeting.host] : [], booked: true },
-    // Thema **oder** Testimony, nie beides — der Baustein entscheidet, was
-    // hier steht.
-    meeting.hasTestimonySlot
-      ? {
-          role: 'TESTIMONY',
-          people: meeting.testimonyPerson ? [meeting.testimonyPerson] : [],
-          booked: true,
-        }
-      : {
-          role: 'TOPIC',
-          people: meeting.topicResponsibles.map((r) => r.person),
-          booked: meeting.hasTopicSlot,
-        },
+    {
+      role: 'HOST',
+      people: meeting.host ? [meeting.host] : [],
+      // Steht der Ort schon fest und braucht keinen Gastgeber — Schlosspark,
+      // Café, Gemeindehaus —, dann fehlt hier niemand. „offen" hätte jede Woche
+      // an eine Lücke erinnert, die es nicht gibt.
+      absent:
+        meeting.location && !meeting.location.requiresHost
+          ? 'not-needed'
+          : null,
+    },
+    {
+      role: 'TOPIC',
+      people: meeting.topicResponsibles.map((r) => r.person),
+      absent: meeting.hasTopicSlot ? null : 'slot-off',
+    },
     {
       role: 'SONG',
       people: meeting.songLeaders.map((leader) => leader.person),
-      booked: meeting.hasSongSlot,
+      absent: meeting.hasSongSlot ? null : 'slot-off',
+    },
+    {
+      role: 'TESTIMONY',
+      people: meeting.testimonyPerson ? [meeting.testimonyPerson] : [],
+      absent: meeting.hasTestimonySlot ? null : 'slot-off',
     },
   ];
 
@@ -218,18 +251,34 @@ function Row({
           Abend es geht. */}
       <th
         scope="row"
-        className="rounded-l-md border-y border-l border-line bg-card px-3 py-2.5 text-left font-normal"
+        className={cn(
+          'rounded-l-md border-y border-l px-3 py-2.5 text-left font-normal',
+          fertig ? 'border-music-line bg-music-bg/40' : 'border-line bg-card',
+        )}
       >
         <Link
           href={`/termine/${meeting.id}`}
           // Der sichtbare Text steht in zwei `span`s, und die statische
           // Prüfung sieht darin keinen Namen. Ausgesprochen ist er ohnehin
           // besser als „11. Aug. in 3 Tagen" am Stück.
-          aria-label={`Termin am ${formatDay(meeting.date)} öffnen`}
+          aria-label={
+            fertig
+              ? `Termin am ${formatDay(meeting.date)} öffnen — fertig geplant`
+              : `Termin am ${formatDay(meeting.date)} öffnen`
+          }
           className="block hover:underline"
         >
-          <span className="block text-sm font-bold text-stone-800">
+          <span className="flex items-center gap-1.5 text-sm font-bold text-stone-800">
             {formatDay(meeting.date)}
+            {/* Nicht nur die Farbe: wer sie nicht unterscheidet, sieht das
+                Zeichen. Der Titel sagt dasselbe noch einmal in Worten. */}
+            {fertig && (
+              <CheckCircle2
+                size={13}
+                className="shrink-0 text-music"
+                aria-hidden
+              />
+            )}
           </span>
           <span className="block text-[10px] text-stone-400">
             {cancelled ? 'Fällt aus' : formatRelativeDay(meeting.date)}
@@ -241,7 +290,8 @@ function Row({
         <td
           key={cell.role}
           className={cn(
-            'border-y border-line bg-card p-1',
+            'border-y p-1',
+            fertig ? 'border-music-line bg-music-bg/40' : 'border-line bg-card',
             index === cells.length - 1 && 'rounded-r-md border-r',
           )}
         >
@@ -271,7 +321,7 @@ function CellButton({
   onEdit?: () => void;
   label: string;
 }) {
-  if (!cell.booked) {
+  if (cell.absent === 'slot-off') {
     return (
       <span
         className="flex px-2 py-1.5 text-[11px] text-stone-200"
@@ -279,6 +329,17 @@ function CellButton({
       >
         –
       </span>
+    );
+  }
+
+  // Kein Zeichen, nicht einmal ein Strich: der Ort steht, es fehlt niemand.
+  // Anklickbar bleibt die Zelle trotzdem — wer doch bei sich einlädt, trägt
+  // sich hier ein, und der Ort zieht dann mit.
+  if (cell.absent === 'not-needed' && cell.people.length === 0) {
+    return (
+      <MaybeButton onEdit={onEdit} label={`${label}: kein Host nötig`}>
+        <span className="text-[11px] text-transparent select-none">–</span>
+      </MaybeButton>
     );
   }
 
@@ -295,18 +356,38 @@ function CellButton({
       </span>
     );
 
+  return (
+    <MaybeButton
+      onEdit={onEdit}
+      label={`${label}: ${cell.people.map((p) => p.name).join(', ') || 'offen'}`}
+    >
+      {content}
+    </MaybeButton>
+  );
+}
+
+/** Anklickbar, wenn es etwas zu ändern gibt — sonst nur ein Feld. */
+function MaybeButton({
+  onEdit,
+  label,
+  children,
+}: {
+  onEdit?: () => void;
+  label: string;
+  children: React.ReactNode;
+}) {
   if (!onEdit) {
-    return <span className="flex px-2 py-1.5">{content}</span>;
+    return <span className="flex px-2 py-1.5">{children}</span>;
   }
 
   return (
     <button
       type="button"
       onClick={onEdit}
-      aria-label={`${label}: ${cell.people.map((p) => p.name).join(', ') || 'offen'} — antippen zum Eintragen`}
+      aria-label={`${label} — antippen zum Eintragen`}
       className="flex w-full items-center rounded-sm px-2 py-1.5 transition-colors hover:bg-terracotta-50 focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none"
     >
-      {content}
+      {children}
     </button>
   );
 }
@@ -353,27 +434,37 @@ function LoadedCellSheet({
   const roles = useRoleAssignment(meeting);
   const songLeaders = useSongLeaders(meeting.id);
 
+  // Der Gastgeber führt aufs Ort-Sheet: er *ist* der Ort. Bisher war der von
+  // hier aus gar nicht erreichbar — man konnte in der Tabelle jemanden
+  // eintragen, aber nicht sagen „wir sind draußen".
+  if (role === 'HOST') {
+    return (
+      <VenueSheet
+        open
+        onClose={onClose}
+        meetingId={meeting.id}
+        hostPersonId={meeting.hostPersonId}
+        locationId={meeting.locationId}
+        onSubmit={roles.assignVenue}
+      />
+    );
+  }
+
   const selectedIds =
-    role === 'HOST'
-      ? meeting.hostPersonId
-        ? [meeting.hostPersonId]
+    role === 'TESTIMONY'
+      ? meeting.testimonyPersonId
+        ? [meeting.testimonyPersonId]
         : []
-      : role === 'TESTIMONY'
-        ? meeting.testimonyPersonId
-          ? [meeting.testimonyPersonId]
-          : []
-        : role === 'TOPIC'
-          ? roles.topicPeople.map((p) => p.id)
-          : (songLeaders.data ?? []).map((p) => p.id);
+      : role === 'TOPIC'
+        ? roles.topicPeople.map((p) => p.id)
+        : (songLeaders.data ?? []).map((p) => p.id);
 
   const onSubmit =
-    role === 'HOST'
-      ? roles.assignHost
-      : role === 'TESTIMONY'
-        ? roles.assignTestimony
-        : role === 'TOPIC'
-          ? roles.assignTopicResponsibles
-          : roles.assignSongLeaders;
+    role === 'TESTIMONY'
+      ? roles.assignTestimony
+      : role === 'TOPIC'
+        ? roles.assignTopicResponsibles
+        : roles.assignSongLeaders;
 
   return (
     <AssignmentSheet
@@ -382,7 +473,7 @@ function LoadedCellSheet({
       kind={role}
       meetingId={meeting.id}
       selectedIds={selectedIds}
-      multiple={role !== 'HOST' && role !== 'TESTIMONY'}
+      multiple={role !== 'TESTIMONY'}
       onSubmit={onSubmit}
       saving={roles.saving}
     />

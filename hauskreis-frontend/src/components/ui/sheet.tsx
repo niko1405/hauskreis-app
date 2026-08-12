@@ -32,11 +32,26 @@ export function Sheet({
 }) {
   const panel = useRef<HTMLDivElement>(null);
 
+  // `onClose` über eine Ref und **nicht** über die Abhängigkeiten: der Effekt
+  // zieht den Fokus ins Panel, und er lief bisher jedes Mal neu, wenn der
+  // Aufrufer einen frischen Pfeil übergab. Die meisten tun das — ein `close`,
+  // das erst Felder leert und dann schließt, entsteht bei jedem Render neu.
+  // Also sprang der Fokus bei **jedem getippten Buchstaben** vom Eingabefeld
+  // weg. Nicht bei den Aufrufern reparieren: das wären zwölf `useCallback` für
+  // einen Fehler, und der dreizehnte vergisst es.
+  const latestClose = useRef(onClose);
+
+  // Vor dem Effekt darunter, weil Effekte in der Reihenfolge ihrer Deklaration
+  // laufen: bis Escape gedrückt wird, steht hier längst der aktuelle Wert.
+  useEffect(() => {
+    latestClose.current = onClose;
+  });
+
   useEffect(() => {
     if (!open) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') latestClose.current();
     };
     document.addEventListener('keydown', onKeyDown);
 
@@ -48,7 +63,7 @@ export function Sheet({
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return (
     <AnimatePresence>

@@ -15,19 +15,13 @@
  * Übrig bleiben zwei Felder: Name und Anschrift. Kapazität und Gewicht sind
  * hier weg — warum, steht bei `EditSheet`.
  */
-import { MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import { ConflictBanner } from '@/components/ui/states';
-import { useToast } from '@/components/ui/toast';
-import {
-  useCreateLocation,
-  useLocation,
-  useResolveAddress,
-  useUpdateLocation,
-} from '@/lib/api/hooks';
+import { useLocation, useUpdateLocation } from '@/lib/api/hooks';
+import { useLocationForm } from './location-form';
 import type { Location } from '@/lib/api/types';
 
 export function LocationSheet({

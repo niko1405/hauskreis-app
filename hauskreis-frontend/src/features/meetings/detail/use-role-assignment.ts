@@ -4,7 +4,8 @@
  * Rollen eintragen — die vier Rollen sitzen an zwei Stellen der API, was im UI
  * niemand sehen soll:
  *
- * - **Host** ist ein Feld am Termin (`hostPersonId`).
+ * - **Host** ist ein Feld am Termin (`hostPersonId`) — und untrennbar mit dem
+ *   Ort verbunden, weshalb es hier `assignVenue` heißt und beides schickt.
  * - **Testimony** ebenso (`testimonyPersonId`). Anders als das Thema hängt es
  *   am Abend und nicht an einer eigenen Entität: eine Geschichte zieht sich
  *   nicht über drei Dienstage.
@@ -24,6 +25,7 @@ import {
   useSetTopicResponsibles,
   useUpdateMeeting,
 } from '@/lib/api/hooks';
+import type { VenueChoice } from '@/components/domain/venue-sheet';
 import type { Meeting, PersonRef } from '@/lib/api/types';
 
 export function useRoleAssignment(meeting: Meeting) {
@@ -38,12 +40,17 @@ export function useRoleAssignment(meeting: Meeting) {
     [toast],
   );
 
-  const assignHost = useCallback(
-    (personIds: string[]) => {
-      updateMeeting.mutate(
-        { hostPersonId: personIds[0] ?? null },
-        { onError: fail },
-      );
+  /**
+   * Ort und Gastgeber zusammen — sie sind **eine** Entscheidung.
+   *
+   * `resolveVenue` im Backend erzwingt das: ein Ort neben einem Gastgeber wird
+   * abgewiesen, ein Treffpunkt geht nur, wenn gleichzeitig der Gastgeber
+   * herausfällt. Was das Sheet schickt, ist deshalb schon die ganze Antwort —
+   * hier wird nichts mehr zusammengesetzt.
+   */
+  const assignVenue = useCallback(
+    (choice: VenueChoice) => {
+      updateMeeting.mutate(choice, { onError: fail });
     },
     [updateMeeting, fail],
   );
@@ -77,7 +84,7 @@ export function useRoleAssignment(meeting: Meeting) {
   );
 
   return {
-    assignHost,
+    assignVenue,
     assignTestimony,
     assignTopicResponsibles,
     assignSongLeaders,

@@ -390,13 +390,46 @@ diesen einen Abend.
 
 Zwei Regeln prägen den Aufbau, beide inhaltlich und nicht kosmetisch.
 
-**Ort und Gastgeber sind eine Entscheidung.** Solange ein Gastgeber eingetragen
-ist, gibt es keine Ortsauswahl — der Ort steht einfach da. Ohne Gastgeber wird
-er wählbar, aber nur unter den Treffpunkten ohne Gastgeber
-(`isSelectableWithoutHost`), plus „Treffpunkt anlegen" über das
-`LocationSheet`. Ein Zuhause taucht dort nie auf: es kommt über seine
-Bewohner:innen an den Termin, nie über eine Liste. Durchgesetzt wird das im
-Backend; die Oberfläche bildet es nur ab.
+**Ganz oben steht die Uhrzeit.** Die erste Frage an einen Termin ist „wann", und
+sie war bisher nur halb beantwortet: es gab ein Datum und keine Uhrzeit, „wir
+fangen heute später an" lief über WhatsApp. Jetzt trägt jeder Abend eine
+(`meeting.startTime`, `"19:30"`), geändert wird sie im Bearbeitungsmodus.
+
+Das Eingabefeld hat einen eigenen Zustand und einen „Übernehmen"-Knopf, statt
+bei jedem Tastendruck zu speichern: `<input type="time">` liefert zwischendurch
+leere und halbe Werte, und jeder davon wäre ein `PATCH` samt Benachrichtigung an
+die Gruppe. Leeren lässt sich das Feld nicht — ein Abend ohne Uhrzeit ist kein
+Zustand, den es geben soll.
+
+Die Zeit steht **nur hier**, nicht auf den Terminkarten, im Kalender oder in der
+Planungstabelle: bei wöchentlich gleicher Zeit stünde dieselbe Zahl fünfzehnmal
+untereinander. Die Vorgabe für neue Abende kommt aus `…/meetings/config` und
+lässt sich in der Verwaltung zusammen mit dem Wochentag umstellen; das
+Anlege-Formular belegt sein Feld damit vor, damit niemand jede Woche dasselbe
+tippt.
+
+**Ort und Gastgeber sind eine Entscheidung** — und haben deshalb **ein**
+Bedienelement: [`VenueSheet`](src/components/domain/venue-sheet.tsx), mit zwei
+Registern. Die Ort-Zeile auf der Seite ist reine Anzeige.
+
+| Register        | Was drinsteht                                      | Was geschickt wird                                              |
+| --------------- | -------------------------------------------------- | --------------------------------------------------------------- |
+| **Zuhause**     | der `AssignmentPicker` mit dem Host-Ranking        | `{ hostPersonId }` — den Ort setzt der Server aus ihrer Wohnung |
+| **Treffpunkte** | Orte mit `isSelectableWithoutHost`, plus „anlegen" | `{ hostPersonId: null, locationId }` — **beides**, sonst 400    |
+| darunter        | „Noch offen"                                       | `{ hostPersonId: null, locationId: null }`                      |
+
+Vorher waren es zwei Stellen: ein Auswahlfeld für den Treffpunkt und daneben das
+Personen-Sheet. Die Kopplung konnte sich dann nur als Fehlermeldung äußern
+(„nimm erst den Gastgeber heraus, dann lässt sich ein Treffpunkt wählen"). Jetzt
+schickt jede Wahl beide Felder auf einmal, und die Regel ist das Register, in
+dem man steht. Durchgesetzt wird sie weiterhin im Backend (`resolveVenue`).
+
+Ein Zuhause taucht unter „Treffpunkte" nie auf: es kommt über seine
+Bewohner:innen an den Termin, nie über eine Liste. „Treffpunkt anlegen" ist ein
+**Schritt im selben Sheet**, kein zweites — aus demselben Grund wie beim
+Wahl-Sheet. Der Formularrumpf dafür ist als
+[`useLocationForm`](src/components/domain/location-form.tsx) herausgelöst, wie
+`AssignmentPicker` aus `AssignmentSheet`.
 
 **Ein vergangener Abend ist ein eigener Zustand**, kein ausgegrauter kommender:
 
@@ -486,6 +519,25 @@ Sheet ist seither nur noch die Hülle.
 Eine offene Einheit, die an einem **anderen kommenden** Abend hängt, steht
 ebenfalls zur Wahl und bringt ihr Datum mit — sie zu nehmen kostet jenen Abend
 seine Auswahl, deshalb erst die Frage, dann die Tat.
+
+Der Entwurf aus Schritt 3 liegt **im Sheet**, nicht in `CreateStep`. Die
+Schritte lösen einander an derselben Stelle im Baum ab, ein Wechsel ist also ein
+Unmount: wer zu den Mitwirkenden abbog und zurückkam, fand sein Formular vorher
+leer vor. Ein `key` hilft dagegen nicht, es gibt keine gemeinsame Position, an
+der die Felder gemountet bleiben könnten.
+
+### Warum `Sheet` seinen Fokus nur beim Öffnen setzt
+
+Ein Fehler, der wie ein Tastatur-Problem aussah: in „Treffpunkt anlegen" und
+„Lied anlegen" sprang der Fokus nach **jedem getippten Buchstaben** aus dem
+Feld. Ursache war der Effekt in `sheet.tsx`, der `onClose` in den Abhängigkeiten
+hatte **und** `panel.focus()` rief. Die meisten Aufrufer übergeben dort einen
+frischen Pfeil — ein `close`, das erst Felder leert und dann schließt, entsteht
+bei jedem Render neu —, also lief der Effekt bei jedem Tastendruck erneut.
+
+`onClose` liegt jetzt in einer Ref, der Effekt hängt nur noch an `[open]`. Zwölf
+Aufrufstellen mit `useCallback` zu reparieren wäre zwölfmal derselbe Fehler
+gewesen, und der dreizehnte hätte es vergessen.
 
 **Sichtbarkeit und Bearbeitbarkeit sind zwei Fragen** — und beide beantwortet
 inzwischen der **Server**, nicht das Frontend:

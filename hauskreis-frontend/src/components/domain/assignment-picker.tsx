@@ -74,7 +74,12 @@ export function AssignmentPicker({
   selectedIds: string[];
   withoutSuggestions?: boolean;
   onToggle: (personId: string) => void;
-  onClear: () => void;
+  /**
+   * „Niemand (leer lassen)". Fehlt er, bleibt der Knopf weg — im Ort-Sheet
+   * steht „noch offen" einmal unter beiden Registern, weil es dort dasselbe
+   * heißt: kein Gastgeber *und* kein Treffpunkt.
+   */
+  onClear?: () => void;
 }) {
   const people = usePeople();
   const suggestions = useSuggestions(
@@ -216,23 +221,25 @@ export function AssignmentPicker({
         </section>
       )}
 
-      <button
-        type="button"
-        onClick={onClear}
-        className="flex w-full items-center gap-4 rounded-md border-2 border-dashed border-terracotta-100 bg-terracotta-50/30 p-4 text-left transition-colors hover:bg-terracotta-50"
-      >
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-card text-stone-400 shadow-sm">
-          <X size={18} />
-        </span>
-        <span>
-          <span className="block font-bold text-terracotta-700">
-            Niemand (leer lassen)
+      {onClear && (
+        <button
+          type="button"
+          onClick={onClear}
+          className="flex w-full items-center gap-4 rounded-md border-2 border-dashed border-terracotta-100 bg-terracotta-50/30 p-4 text-left transition-colors hover:bg-terracotta-50"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-card text-stone-400 shadow-sm">
+            <X size={18} />
           </span>
-          <span className="block text-[11px] text-stone-400">
-            Offen für die Gruppe — ein gültiger Zustand, kein Versäumnis
+          <span>
+            <span className="block font-bold text-terracotta-700">
+              Niemand (leer lassen)
+            </span>
+            <span className="block text-[11px] text-stone-400">
+              Offen für die Gruppe — ein gültiger Zustand, kein Versäumnis
+            </span>
           </span>
-        </span>
-      </button>
+        </button>
+      )}
     </>
   );
 }

@@ -11,10 +11,12 @@
  * Zwei Dinge prägen den Aufbau:
  *
  * **Ort und Gastgeber sind eine Entscheidung.** Wer hostet, hostet bei sich.
- * Deshalb gibt es keine freie Ortsauswahl, solange ein Gastgeber eingetragen
- * ist — der Ort steht dann einfach da. Ohne Gastgeber wird er wählbar, aber
- * nur unter den Treffpunkten ohne Gastgeber. Durchgesetzt wird das im Backend
- * (`MeetingService.resolveVenue`); hier steht nur, was man davon sieht.
+ * Deshalb gibt es dafür auch nur **ein** Bedienelement: `VenueSheet` mit zwei
+ * Registern, „Zuhause" und „Treffpunkte". Die Ort-Zeile hier ist reine Anzeige.
+ * Vorher waren es zwei Stellen — ein Auswahlfeld für den Treffpunkt und
+ * daneben das Personen-Sheet —, und die Kopplung konnte sich nur als
+ * Fehlermeldung äußern („nimm erst den Gastgeber heraus"). Durchgesetzt wird
+ * sie weiterhin im Backend (`MeetingService.resolveVenue`).
  *
  * **Ein vergangener Abend ist ein eigener Zustand**, nicht ein ausgegrauter
  * kommender. Nachtragen geht, aber mit Rückfrage und ohne Vorschläge; Lieder
@@ -116,21 +118,28 @@ const SLOT_LOSSES: Record<MeetingSlotKey, (meeting: Meeting) => string | null> =
       meeting.testimonyPerson
         ? `${meeting.testimonyPerson.name} erzählt an dem Abend dann nichts mehr.`
         : null,
+    // Hier wird wirklich gelöscht, anders als beim Thema: die beiden Texte
+    // gehören diesem einen Abend und warten nirgends als Entwurf.
+    hasNotesSlot: (meeting) =>
+      meeting.summaryText || meeting.actionstepText
+        ? 'Zusammenfassung und Actionstep dieses Abends werden gelöscht, die Haken dazu auch.'
+        : null,
   };
 
 const AssignmentSheet = dynamic(() =>
   import('@/components/domain/assignment-sheet').then((m) => m.AssignmentSheet),
 );
 
-const LocationSheet = dynamic(() =>
-  import('@/components/domain/location-sheet').then((m) => m.LocationSheet),
+const VenueSheet = dynamic(() =>
+  import('@/components/domain/venue-sheet').then((m) => m.VenueSheet),
 );
 
 const TopicChoiceSheet = dynamic(() =>
   import('./topic-choice-sheet').then((m) => m.TopicChoiceSheet),
 );
 
-type SheetRole = Exclude<AssignmentRole, 'PRAYER_BUDDY'>;
+/** Der Host fehlt: er steckt im Ort-Sheet, weil er dieselbe Frage beantwortet. */
+type SheetRole = Exclude<AssignmentRole, 'PRAYER_BUDDY' | 'HOST'>;
 
 export function MeetingDetailScreen({ meetingId }: { meetingId: string }) {
   const router = useRouter();
@@ -175,23 +184,28 @@ function Loaded({
   meeting: NonNullable<ReturnType<typeof useMeeting>['data']>['data'];
 }) {
   const [sheet, setSheet] = useState<SheetRole | null>(null);
-  const [creatingLocation, setCreatingLocation] = useState(false);
+  const [choosingVenue, setChoosingVenue] = useState(false);
   const [choosingTopic, setChoosingTopic] = useState(false);
 
   /**
-   * Der Lesemodus ist der Normalfall.
+   * Der Lesemodus ist der Normalfall — für die **Texte**.
    *
    * Vorher bot jedes Feld dauerhaft einen Stift an, auch beim bloßen
    * Nachschauen — auf einer Seite, die man zehnmal öffnet, um etwas zu wissen,
    * und einmal, um etwas zu ändern. Es gibt bewusst **kein** „Speichern": jede
    * Änderung geht sofort raus, der Schalter entscheidet nur, ob man sie
-   * überhaupt angeboten bekommt. Anwesenheit und Actionstep-Haken bleiben immer
-   * bedienbar — das ist Teilnahme, keine Bearbeitung.
+   * überhaupt angeboten bekommt.
+   *
+   * Was der Schalter **nicht** deckt: die Rollen-Zuteilung. Sie ist der Grund,
+   * aus dem man diese Seite überhaupt aufmacht — „wer hostet nächste Woche"
+   * trägt man im Vorbeigehen ein, nicht nach dem Umlegen eines Schalters. Sie
+   * hängt an einem Sheet, kann also nicht versehentlich passieren, und sie
+   * bleibt wie Anwesenheit und Actionstep-Haken immer erreichbar. Gesperrt ist
+   * sie nur an einem abgesagten Abend, an dem es nichts einzuteilen gibt.
    */
   const [editing, setEditing] = useState(false);
 
   const update = useUpdateMeeting(meetingId);
-  const locations = useLocations();
   const songLeaders = useSongLeaders(meetingId);
   const roles = useRoleAssignment(meeting);
   const session = useTopicSessionActions(meeting);
@@ -233,16 +247,26 @@ function Loaded({
    * fast immer ein Fehlgriff aus dem Archiv heraus — und in den seltenen
    * Fällen, in denen es keiner ist, kostet ein Klick nichts.
    */
+  const nachtragenErlaubt = async (was: string) => {
+    if (!past) return true;
+
+    return confirm({
+      title: 'Dieser Abend ist vorbei',
+      body: `Möchtest du wirklich nachtragen, ${was}?`,
+      confirmLabel: 'Nachtragen',
+    });
+  };
+
   const openSheet = async (role: SheetRole) => {
-    if (past) {
-      const ok = await confirm({
-        title: 'Dieser Abend ist vorbei',
-        body: `Möchtest du wirklich nachtragen, wer ${ROLE_LABEL[role].toLowerCase()} war?`,
-        confirmLabel: 'Nachtragen',
-      });
-      if (!ok) return;
-    }
-    setSheet(role);
+    const ok = await nachtragenErlaubt(
+      `wer ${ROLE_LABEL[role].toLowerCase()} war`,
+    );
+    if (ok) setSheet(role);
+  };
+
+  const openVenue = async () => {
+    const ok = await nachtragenErlaubt('wo ihr wart');
+    if (ok) setChoosingVenue(true);
   };
 
   /**
@@ -619,18 +643,22 @@ function Loaded({
           kind={sheet}
           meetingId={meetingId}
           selectedIds={selectedFor(sheet)}
-          multiple={sheet !== 'HOST' && sheet !== 'TESTIMONY'}
+          multiple={sheet !== 'TESTIMONY'}
           withoutSuggestions={past}
           onSubmit={submitFor(sheet)}
           saving={roles.saving}
         />
       )}
 
-      {creatingLocation && (
-        <LocationSheet
+      {choosingVenue && (
+        <VenueSheet
           open
-          onClose={() => setCreatingLocation(false)}
-          onCreated={(location) => patch({ locationId: location.id })}
+          onClose={() => setChoosingVenue(false)}
+          meetingId={meetingId}
+          hostPersonId={meeting.hostPersonId}
+          locationId={meeting.locationId}
+          withoutSuggestions={past}
+          onSubmit={roles.assignVenue}
         />
       )}
 
