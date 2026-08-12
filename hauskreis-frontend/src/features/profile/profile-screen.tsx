@@ -11,7 +11,7 @@ import { HauskreisCard } from './hauskreis-card';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAuth } from 'react-oidc-context';
-import { PageHeader } from '@/components/layout/app-shell';
+import { ScreenHeader } from '@/components/layout/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
@@ -119,7 +119,11 @@ function Loaded({ personId }: { personId: string }) {
 
   return (
     <div>
-      <PageHeader title="Profil" subtitle={hauskreis.hauskreis?.name} />
+      <ScreenHeader
+        screen="profile"
+        title="Profil"
+        subtitle={hauskreis.hauskreis?.name}
+      />
 
       <div className="space-y-6 px-5">
         {update.conflict && (

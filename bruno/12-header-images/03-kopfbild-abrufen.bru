@@ -1,0 +1,36 @@
+meta {
+  name: Kopfbild abrufen
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/header-images/home
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200 und WebP", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getHeader("content-type")).to.contain("image/webp");
+  });
+
+  test("trägt einen ETag und bleibt privat", function () {
+    expect(res.getHeader("etag")).to.be.a("string");
+    expect(res.getHeader("cache-control")).to.contain("private");
+  });
+}
+
+docs {
+  Die Datei selbst. `private` im Cache-Control, weil Fotos einer Gruppe nichts
+  sind, was ein Zwischenspeicher unterwegs vorhalten soll; eine Stunde reicht,
+  weil die App den Zeitstempel ohnehin an die URL hängt.
+
+  Ohne gesetztes Bild `404` — und das ist in der App kein Fehler, sondern der
+  Normalfall „es steht der Verlauf da".
+
+  Fehlt die **Datei**, obwohl die Zeile steht (Volume weg, Backup zurückgespielt),
+  räumt der Server die Zeile weg und antwortet `404`. Beim nächsten Laden ist
+  der Verlauf zurück, statt dass eine kaputte Kopfzeile stehen bliebe.
+}

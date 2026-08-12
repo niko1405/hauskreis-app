@@ -1,0 +1,25 @@
+meta {
+  name: Kopfbild entfernen
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/header-images/home
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 204", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Zurück zum mitgelieferten Verlauf: Datei weg, Zeile weg.
+
+  Idempotent — zweimal löschen gibt zweimal `204`. Es gibt nichts, was ein
+  `404` an dieser Stelle beantworten würde: der gewünschte Zustand ist danach
+  hergestellt.
+}

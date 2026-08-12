@@ -1,0 +1,38 @@
+meta {
+  name: Kopfbilder auflisten
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/header-images
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("nennt nur Bildschirme, für die es ein Bild gibt", function () {
+    const erlaubt = ["home", "prayer", "archive", "profile"];
+    res.body.forEach((row) => {
+      expect(erlaubt).to.include(row.screen);
+      expect(row.updatedAt).to.be.a("string");
+    });
+  });
+}
+
+docs {
+  Ein Aufruf für alle vier. Was hier **fehlt**, hat kein eigenes Bild — dort
+  steht in der App der mitgelieferte Verlauf. Es gibt also keinen Zustand
+  „ausdrücklich abgewählt", den man von „noch keins" unterscheiden müsste.
+
+  Die App baut aus `updatedAt` den Schlüssel, unter dem sie die Datei
+  zwischenspeichert: ein neues Bild ist ein neuer Schlüssel, der alte Eintrag
+  verfällt von selbst.
+
+  „Termine" fehlt mit Absicht — dort liest man eine Liste über Wochen hinweg,
+  und ein Foto darüber wäre nur Weg bis zur ersten Zeile.
+}

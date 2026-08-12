@@ -386,12 +386,29 @@ ist damit ein neuer Schlüssel, und der alte Eintrag verfällt von selbst.
 Ein Aufruf (`…/home`), vier Blöcke. Zwei Entscheidungen darin sind es wert,
 aufgeschrieben zu werden.
 
-**„Deine Rollen" zeigt zwei Stufen, nicht acht Wochen am Stück.**
+**Die Begrüßung wechselt.** „Hallo Niko! Schön, dass du da bist." stand dort
+jeden Tag, und einen Satz, den man jeden Tag liest, liest man irgendwann nicht
+mehr. `features/home/greeting.ts` hält eine Handvoll — hochdeutsch,
+österreichisch, schwäbisch, fränkisch —, jede in drei Tageszeiten.
 
-|                           |                                                              |
-| ------------------------- | ------------------------------------------------------------ |
-| **Beim nächsten Treffen** | alle eigenen Rollen an genau diesem Abend                    |
-| **Weitere**               | je Kategorie (Host, Thema, Musik) nur die **nächste** danach |
+Welche es ist, kommt aus `hash(tag + personId)`, nicht aus `Math.random`: sie
+soll pro Tag feststehen und nicht bei jeder Query-Aktualisierung unter dem
+Daumen wegspringen. Die Personen-Id geht mit ein, damit nicht alle neun am
+selben Tag denselben Satz lesen. Tag und Uhrzeit kommen aus `groupNow()` —
+dieselbe Uhr wie überall.
+
+**„Deine Rollen" ist eine Karte mit zwei Stufen, nicht acht Wochen am Stück.**
+
+|                          |                                                              |
+| ------------------------ | ------------------------------------------------------------ |
+| **oben, immer sichtbar** | alle eigenen Rollen am nächsten Abend                        |
+| **„Weitere (n)", zu**    | je Kategorie (Host, Thema, Musik) nur die **nächste** danach |
+
+Eine Karte, nicht zwei: die zweite Stufe klappt in derselben aus, unter einem
+grauen Balken mit der Zahl. Vorher standen beide Gruppen als eigene Listen
+untereinander, jede Zeile mit eigenem Rahmen — zwei Blöcke, die gleich aussehen
+und verschieden dringend sind. Was zählt, ist der nächste Dienstag; der Rest ist
+zum Nachsehen da, nicht zum Lesen.
 
 Der Bezugspunkt der ersten Gruppe ist der **Termin**, nicht die Kalenderwoche.
 Der Hauskreis ist dienstags: ab Mittwoch wäre eine Kalenderwoche fast immer

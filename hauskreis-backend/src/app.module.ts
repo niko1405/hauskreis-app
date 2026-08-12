@@ -24,6 +24,7 @@ import { NotificationModule } from './notification/notification.module';
 import { AbsenceModule } from './absence/absence.module';
 import { ArchiveModule } from './archive/archive.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { HeaderImageModule } from './header-image/header-image.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     AbsenceModule,
     ArchiveModule,
     DashboardModule,
+    HeaderImageModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -1,0 +1,44 @@
+meta {
+  name: Kopfbild setzen
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/header-images/home
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  file: @file(bild.jpg)
+}
+
+tests {
+  test("antwortet mit 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("gibt Bildschirm und Zeitstempel zurück", function () {
+    expect(res.body.screen).to.equal("home");
+    expect(res.body.updatedAt).to.be.a("string");
+  });
+}
+
+docs {
+  Multipart und nicht JSON: ein Bild als Base64 wäre ein Drittel größer und
+  liefe gegen das 128-kB-Limit des JSON-Parsers.
+
+  **Kein Admin-Recht nötig.** Bei neun Leuten, die sich kennen, ist das
+  Hintergrundbild keine Verwaltungsangelegenheit — jede:r darf es tauschen, und
+  es gilt für alle.
+
+  Der Server dreht nach EXIF, schneidet mittig auf 1280×640 und speichert als
+  WebP. Bis 10 MB nimmt er an; darüber `413`. Was kein Bild ist, gibt `400`
+  („Damit kann ich nichts anfangen").
+
+  `screen` ist einer von `home`, `prayer`, `archive`, `profile` —
+  kleingeschrieben, weil eine Adresse so gelesen wird. Alles andere gibt `400`.
+
+  Zum Ausprobieren eine Datei `bild.jpg` neben diese `.bru` legen.
+}

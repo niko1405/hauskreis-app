@@ -1,5 +1,6 @@
 export * from './use-absences';
 export * from './use-dashboard';
+export * from './use-header-images';
 export * from './use-hk';
 export * from './use-locations';
 export * from './use-me';

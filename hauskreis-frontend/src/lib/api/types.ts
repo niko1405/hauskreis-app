@@ -80,6 +80,11 @@ export type VerificationSent = S['VerificationSentResponseDto'];
 /** Der neue Zeitstempel des Profilbilds — er **ist** die Bild-URL. */
 export type PhotoUploaded = S['PhotoResponseDto'];
 
+/** Welcher Bildschirm ein Kopfbild hat — „Termine" fehlt mit Absicht. */
+export type HeaderScreen = S['HeaderImageResponseDto']['screen'];
+/** Wann das Bild dieses Bildschirms zuletzt gesetzt wurde. */
+export type HeaderImage = S['HeaderImageResponseDto'];
+
 // ── Termine ─────────────────────────────────────────────────────────────────
 
 export type Meeting = S['MeetingResponseDto'];

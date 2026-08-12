@@ -7,14 +7,16 @@
  */
 import { Music, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useDeferredValue, useState } from 'react';
-import { PageHeader } from '@/components/layout/app-shell';
+import { ScreenHeader } from '@/components/layout/screen-header';
 import { Avatar, AvatarStack } from '@/components/ui/avatar';
-import { IconButton } from '@/components/ui/button';
+import { Button, IconButton } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
-import { TextInput } from '@/components/ui/field';
+import { Field, TextArea, TextInput } from '@/components/ui/field';
+import { Sheet } from '@/components/ui/sheet';
 import {
   CardSkeleton,
   EmptyState,
