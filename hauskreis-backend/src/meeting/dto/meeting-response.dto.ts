@@ -13,6 +13,7 @@ import {
   pageSchema,
   personRefSchema,
 } from '../../common/dto/response';
+import { wallClockOut } from '../../common/dto/wall-clock';
 import { locationResponseSchema } from '../../location/dto/location-response.dto';
 import { topicSessionInMeetingSchema } from '../../topic/dto/topic-response.dto';
 
@@ -27,9 +28,14 @@ import { topicSessionInMeetingSchema } from '../../topic/dto/topic-response.dto'
 export const meetingResponseSchema = z.object({
   id: z.uuid(),
   hauskreisId: z.uuid(),
-  /// Der Abend selbst — nur der Tag, `2026-08-11`, ohne Uhrzeit und ohne
-  /// Zeitzone. Der Hauskreis ist dienstags, eine Uhrzeit gibt es nicht.
+  /// Der Tag, `2026-08-11` — ohne Uhrzeit und ohne Zeitzone. Wann es losgeht,
+  /// steht daneben in `startTime`; getrennt, weil der Tag eine Kalenderangabe
+  /// ist und die Uhrzeit eine Wanduhr, und beides zusammen einen Zeitpunkt
+  /// ergäbe, der über Zeitzonen hinweg wandert.
   date: isoDateOut,
+  /// Wann ihr euch trefft, `"19:30"`, Ortszeit. Jeder Abend hat eine; erzeugte
+  /// bekommen die der Gruppe (`…/meetings/config`).
+  startTime: wallClockOut,
   /// Letzter Tag, wenn sich der Termin über mehrere zieht (eine Freizeit von
   /// Freitag bis Sonntag). `null` heißt: ein Tag, der Normalfall.
   endDate: isoDateOut.nullable(),
@@ -140,6 +146,32 @@ export const attendanceResponseSchema = z.object({
 });
 
 /**
+ * Wann sich die Gruppe regelmäßig trifft.
+ *
+ * Die Vorgabe für **neue** Abende, keine nachträgliche Regel: was schon im
+ * Kalender steht, behält seinen Tag und seine Zeit. Sonst verrückte eine
+ * Einstellung Termine, für die längst jemand zugesagt hat.
+ */
+export const meetingScheduleSchema = z.object({
+  id: z.uuid(),
+  hauskreisId: z.uuid(),
+  /// 0 = Sonntag … 6 = Samstag.
+  weekday: z.number().int().min(0).max(6),
+  /// `"18:00"` — dieselbe Schreibweise wie `meeting.startTime`.
+  startTime: wallClockOut,
+  /// Die Zone, in der diese Uhrzeit gilt — `"Europe/Berlin"`.
+  ///
+  /// Steht hier, obwohl sie kaum jemand liest: die App rechnet ihre Tage damit
+  /// (`setGroupZone` im Frontend), sonst zeigte ein Gerät in einer anderen Zone
+  /// „Vorbei" an einem Abend, den der Server noch als kommend führt.
+  timeZone: z.string(),
+  updatedByPersonId: z.uuid().nullable(),
+  updatedAt: isoDateTimeOut,
+  version: z.number().int().nonnegative(),
+  updatedBy: personRefSchema.nullable(),
+});
+
+/**
  * Was der Termin-Generator bewirkt hat.
  *
  * `skipped` sind die Daten, an denen schon ein Termin stand — der Lauf ist
@@ -176,6 +208,9 @@ export class AttendanceResponseDto extends createZodDto(
 ) {}
 export class ActionstepDoneResponseDto extends createZodDto(
   actionstepDoneResponseSchema,
+) {}
+export class MeetingScheduleResponseDto extends createZodDto(
+  meetingScheduleSchema,
 ) {}
 export class GenerationResultResponseDto extends createZodDto(
   generationResultSchema,

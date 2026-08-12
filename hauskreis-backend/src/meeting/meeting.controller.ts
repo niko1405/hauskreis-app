@@ -25,6 +25,7 @@ import {
   SetActionstepDoneDto,
   SetAttendanceDto,
   UpdateMeetingDto,
+  UpdateMeetingScheduleDto,
 } from './dto/meeting.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { HauskreisAdmin } from '../auth/hauskreis-admin.decorator';
@@ -45,6 +46,7 @@ import {
   GenerationResultResponseDto,
   MeetingPageResponseDto,
   MeetingResponseDto,
+  MeetingScheduleResponseDto,
   ReminderRunResultResponseDto,
 } from './dto/meeting-response.dto';
 import {
@@ -61,13 +63,15 @@ export class MeetingController {
     private readonly actionstepReminders: ActionstepReminderService,
     private readonly customMeetingNotifications: CustomMeetingNotificationService,
     private readonly testimonyReminders: TestimonyReminderService,
+    private readonly schedule: MeetingScheduleConfigService,
+    private readonly clock: GroupClockService,
   ) {}
 
   @Get()
   @ApiZodResponse(MeetingPageResponseDto, {
     description: 'Paginiert. `scope=upcoming|past` engt zusätzlich ein.',
   })
-  findAll(
+  async findAll(
     @Param() params: HauskreisParamsDto,
     @Query() query: ListMeetingsQueryDto,
     @CurrentMembership() membership: HauskreisMembership,
@@ -126,7 +130,7 @@ export class MeetingController {
 
   @Post()
   @ApiZodResponse(MeetingResponseDto, { status: 201 })
-  create(
+  async create(
     @Param() params: HauskreisParamsDto,
     @Body() dto: CreateMeetingDto,
     @CurrentMembership() membership: HauskreisMembership,
@@ -174,7 +178,7 @@ export class MeetingController {
   @ApiConditionalWrite()
   // Returns the updated meeting rather than creating anything, so 200 not 201.
   @HttpCode(HttpStatus.OK)
-  cancel(
+  async cancel(
     @Param() params: MeetingParamsDto,
     @Body() dto: CancelMeetingDto,
     @CurrentMembership() membership: HauskreisMembership,

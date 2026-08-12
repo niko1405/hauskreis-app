@@ -542,10 +542,14 @@ gewesen, und der dreizehnte hätte es vergessen.
 **Sichtbarkeit und Bearbeitbarkeit sind zwei Fragen** — und beide beantwortet
 inzwischen der **Server**, nicht das Frontend:
 
-|              | vor 18 Uhr am Termintag | danach                 |
-| ------------ | ----------------------- | ---------------------- |
-| Zuständige   | sehen und schreiben     | sehen und schreiben    |
-| alle anderen | sehen **nichts**        | sehen, schreiben nicht |
+|              | vor Beginn des Abends | danach                 |
+| ------------ | --------------------- | ---------------------- |
+| Zuständige   | sehen und schreiben   | sehen und schreiben    |
+| alle anderen | sehen **nichts**      | sehen, schreiben nicht |
+
+„Beginn des Abends" ist die Uhrzeit **dieses** Termins (`meeting.startTime`),
+nicht mehr pauschal 18 Uhr: eine Gruppe, die sich um 20 Uhr trifft, gab ihren
+Actionstep sonst zwei Stunden vorher frei.
 
 Die Karte liest dafür zwei Felder aus der Antwort: `contentVisible` (sind die
 Textfelder gefüllt oder zurückgehalten?) und `mayEdit` (darf ich schreiben?).
@@ -562,19 +566,26 @@ zum Termintag, und zwar genau der Person, die es am ehesten brauchte.
 ### Lesen ist der Normalfall
 
 Termin-Detail und Themenseite haben unten einen **„Bearbeiten"**-Schalter. Erst
-danach erscheinen die Stifte, die Rollen-Knöpfe, die Bausteine und die
-Löschsymbole. Vorher bot jedes Feld dauerhaft eine Bearbeitung an — auf einer
-Seite, die man zehnmal öffnet, um etwas zu wissen, und einmal, um etwas zu
-ändern.
+danach erscheinen die Stifte an den Texten, die Bausteine und die Löschsymbole.
+Vorher bot jedes Feld dauerhaft eine Bearbeitung an — auf einer Seite, die man
+zehnmal öffnet, um etwas zu wissen, und einmal, um etwas zu ändern.
+
+**Die Rollen-Zuteilung liegt außerhalb.** Ihre Stifte stehen immer da. Sie ist
+der Grund, aus dem man diese Seite überhaupt aufmacht — „wer hostet nächste
+Woche" trägt man im Vorbeigehen ein, nicht nach dem Umlegen eines Schalters.
+Versehentlich passieren kann dabei nichts: jede Zuteilung geht über ein Sheet,
+in dem man ausdrücklich bestätigt. Gesperrt ist sie nur an einem abgesagten
+Abend, an dem es nichts einzuteilen gibt. Ein Thema zu **wählen** bleibt dagegen
+im Bearbeitungsmodus — das ist Inhalt, keine Zuteilung.
 
 Es gibt bewusst **kein „Speichern"**: jede Änderung geht sofort raus, der
 Schalter entscheidet nur, ob sie überhaupt angeboten wird. Ein Sammel-Speichern
 hieße, einen zweiten Zustand zu führen, der mit dem Server auseinanderläuft, und
 den Verlust bei einem versehentlichen Zurück in Kauf zu nehmen.
 
-Anwesenheit und Actionstep-Haken bleiben immer bedienbar — das ist Teilnahme,
-keine Bearbeitung. Absagen und Löschen stehen dauerhaft ganz unten: sie sind
-keine Bearbeitung, sondern eine Entscheidung über den Abend als Ganzes.
+Anwesenheit und Actionstep-Haken bleiben ebenfalls immer bedienbar — das ist
+Teilnahme, keine Bearbeitung. Absagen und Löschen stehen dauerhaft ganz unten:
+sie sind keine Bearbeitung, sondern eine Entscheidung über den Abend als Ganzes.
 
 Umgesetzt ist es ohne neue Mechanik: `InlineEdit` und `RoleRow` blenden ihre
 Bedienelemente schon von selbst aus, wenn der Handler fehlt. Der Schalter setzt

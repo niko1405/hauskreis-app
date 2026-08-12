@@ -16,7 +16,11 @@ import { Field, Select, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast';
 import { SlotToggles } from '@/components/domain/slot-toggles';
-import { useCreateMeeting, useLocations } from '@/lib/api/hooks';
+import {
+  useCreateMeeting,
+  useLocations,
+  useMeetingSchedule,
+} from '@/lib/api/hooks';
 import {
   MEETING_TYPE_LABEL,
   applySlotToggle,
@@ -37,6 +41,12 @@ export function CreateMeetingSheet({
 }) {
   const [date, setDate] = useState(() => addDays(today(), 7));
   const [endDate, setEndDate] = useState('');
+  /**
+   * Leer heißt „die Zeit der Gruppe" — den Wert setzt das Feld unten ein, sobald
+   * der Rhythmus geladen ist. Ein eigener Zustand, damit eine eingetippte Zeit
+   * nicht wieder überschrieben wird, wenn die Abfrage nachlädt.
+   */
+  const [startTime, setStartTime] = useState('');
   const [type, setType] = useState<MeetingType>('CUSTOM');
   const [title, setTitle] = useState('');
   const [locationId, setLocationId] = useState('');
@@ -45,8 +55,12 @@ export function CreateMeetingSheet({
   );
 
   const locations = useLocations();
+  const schedule = useMeetingSchedule();
   const create = useCreateMeeting();
   const toast = useToast();
+
+  const gruppenzeit = schedule.data?.data.startTime ?? '18:00';
+  const zeit = startTime || gruppenzeit;
 
   // Die Art wechseln heißt: von vorn mit dem, was dazugehört. Wer danach noch
   // etwas dazu- oder wegnimmt, behält das — deshalb der eigene Zustand statt
@@ -68,6 +82,7 @@ export function CreateMeetingSheet({
       {
         date,
         endDate: endDate === '' ? null : endDate,
+        startTime: zeit,
         type,
         title: title.trim() === '' ? null : title.trim(),
         locationId: locationId === '' ? null : locationId,
@@ -78,6 +93,7 @@ export function CreateMeetingSheet({
           toast.success('Termin angelegt.');
           setTitle('');
           setEndDate('');
+          setStartTime('');
           onClose();
         },
       },
@@ -108,6 +124,19 @@ export function CreateMeetingSheet({
           />
         </Field>
 
+        {/* Vorbelegt mit der Zeit der Gruppe und nicht leerbar: ein Abend ohne
+            Uhrzeit ist kein Zustand, den es geben soll. Wer eine andere will,
+            überschreibt sie hier. */}
+        <Field label="Uhrzeit">
+          <TextInput
+            type="time"
+            value={zeit}
+            onChange={(event) =>
+              setStartTime(event.target.value || gruppenzeit)
+            }
+          />
+        </Field>
+
         {/* Nur beim besonderen Termin: an einem Hauskreis-Abend wäre ein
             Enddatum kein Zeitraum, sondern ein Tippfehler mit Folgen — die
             Tage dazwischen bleiben für den Terminplaner gesperrt. */}
@@ -127,7 +156,7 @@ export function CreateMeetingSheet({
 
         <Field
           label="Titel"
-          hint="Optional — etwa „Geburtstag von Mira“. Bleibt er leer, steht die Art des Termins da."
+          hint="Optional — bspw „Geburtstagsfeier“. Bleibt er leer, steht die Art des Termins da."
         >
           <TextInput
             value={title}

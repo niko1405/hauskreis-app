@@ -1,0 +1,61 @@
+meta {
+  name: Termin-Rhythmus ändern (admin)
+  type: http
+  seq: 27
+}
+
+put {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/config
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{meetingScheduleEtag}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "weekday": 2,
+    "startTime": "18:00",
+    "timeZone": "Europe/Berlin"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("meetingScheduleEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("gibt die Uhrzeit als HH:MM zurück", function () {
+    expect(res.body.startTime).to.equal("18:00");
+  });
+
+  test("nimmt nur Zeitzonen, die es gibt", function () {
+    expect(res.body.timeZone).to.equal("Europe/Berlin");
+  });
+}
+
+docs {
+  `weekday` zählt wie `Date.getUTCDay()`: 0 = Sonntag … 6 = Samstag.
+
+  Gilt für Termine, die der Generator ab jetzt anlegt — **nicht rückwirkend**.
+  Wer den Wochentag umstellt, verschiebt nichts, was schon im Kalender steht:
+  dafür haben Leute zugesagt und ein Thema vorbereitet. Die alten Termine
+  laufen aus, der neue Tag wird aufgefüllt.
+
+  `timeZone` ist die **Uhr der Gruppe** und gilt sofort für alles: in ihr wird
+  `startTime` gelesen, und in ihr wird gezählt, welchen Tag wir haben. Vorher
+  stand sie als Konstante im Code, und ein Server in UTC hielt den Termin von
+  gestern bis zwei Uhr nachts für kommend — die Terminliste zeigte ihn unter
+  „Kommende", während die App ihn schon mit „Vorbei" auswies.
+
+  Geprüft gegen `Intl.supportedValuesOf('timeZone')`; `Europe/Kölln` gibt 400.
+  Zum Ausprobieren `Pacific/Auckland` schicken und danach die Terminliste
+  ansehen — der Tageswechsel springt mit.
+}

@@ -384,6 +384,20 @@ function SessionCard({
   const darf = editing && session.mayEdit;
   const leute = session.responsibles.map((r) => r.person);
 
+  // Erst ab Abendbeginn: einen Vorsatz für heute Abend hakt man heute früh
+  // nicht ab, und ein Entwurf hat gar keinen Abend, an dem der Haken hinge.
+  //
+  // Nicht mehr `session.held` — das ist tagesgenau und hätte den Haken hier
+  // erst am **Tag darauf** freigegeben, während er auf der Terminseite schon
+  // am Abend selbst dasteht. Zweimal derselbe Vorsatz, zweimal derselbe Haken;
+  // dann auch zweimal dieselbe Grenze. Ein abgesagter Abend hat keine.
+  const abhakbar = Boolean(
+    session.meeting &&
+    session.meeting.status !== 'CANCELLED' &&
+    hasStarted(session.meeting.date, session.meeting.startTime) &&
+    session.actionstepText,
+  );
+
   const patch = (input: Parameters<typeof edit.mutate>[0]['input']) =>
     edit.mutate(
       { sessionId: session.id, input },

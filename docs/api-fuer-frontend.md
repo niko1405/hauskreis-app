@@ -158,9 +158,12 @@ Zwei Sorten, sauber getrennt — man erkennt sie am Namen:
 | ------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Tag**, ohne Zeit | `2026-08-11`               | `meeting.date`, `absence.startDate`/`endDate`, `person.birthdate`, Gebetsbuddy-Zeiträume, `/home`, `/assignments`, `song.lastPlayedAt`, die Fakten der Vorschläge |
 | **Zeitpunkt**, mit | `2026-07-31T21:46:43.444Z` | ausschließlich `createdAt`, `updatedAt`, `sentAt`                                                                                                                 |
+| **Uhrzeit**, ohne Tag | `19:30` | `meeting.startTime`, `…/meetings/config`.`startTime` |
 
-In OpenAPI stehen sie als `format: date` und `format: date-time` — daran kann
-ein erzeugter Client sie unterscheiden.
+In OpenAPI stehen die ersten beiden als `format: date` und `format: date-time` —
+daran kann ein erzeugter Client sie unterscheiden. Die Uhrzeit ist ein `string`
+mit `pattern`, weil sie keins von beidem ist: eine Wanduhrzeit hat keinen Tag und
+keine Zeitzone. `<input type="time">` liefert und erwartet genau diese Form.
 
 **Ein Tag ist kein Zeitpunkt, und `new Date('2026-08-11')` macht einen daraus:**
 JavaScript liest die Kurzform als UTC-Mitternacht, und lokal formatiert wird

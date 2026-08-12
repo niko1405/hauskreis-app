@@ -7,6 +7,7 @@ import {
   pageSchema,
   personRefSchema,
 } from '../../common/dto/response';
+import { wallClockOut } from '../../common/dto/wall-clock';
 
 /** Das Thema, auf das Nötigste — als Kopfzeile über einer Einheit. */
 export const topicRefSchema = z.object({
@@ -33,12 +34,15 @@ export const topicSessionResponseSchema = z.object({
   /// Das Thema darüber. Fehlt, wo die Einheit ohnehin unter ihrem Thema steht.
   topic: topicRefSchema,
   meetingId: z.uuid().nullable(),
-  /// Der Abend, an dem sie hängt. Bewusst nur die vier Felder, die eine
+  /// Der Abend, an dem sie hängt. Bewusst nur die fünf Felder, die eine
   /// Zeile in der Einheiten-Liste braucht — der volle Termin steht anderswo.
   meeting: z
     .object({
       id: z.uuid(),
       date: isoDateOut,
+      /// `"19:30"` — nicht zum Anzeigen, sondern damit die Themenseite weiß, ab
+      /// wann sich der Actionstep abhaken lässt. Dieselbe Grenze wie am Termin.
+      startTime: wallClockOut,
       status: z.enum(MeetingStatus),
       title: z.string().nullable(),
     })
@@ -52,6 +56,13 @@ export const topicSessionResponseSchema = z.object({
   /// Wer diese Einheit hält oder gehalten hat. Historisch: wer später als
   /// Mitarbeiter:in entfernt wird, bleibt hier stehen — er war ja dabei.
   responsibles: z.array(z.object({ person: personRefSchema })),
+  /// Wer den Actionstep dieses Abends für sich abgehakt hat. Leer, solange die
+  /// Einheit an keinem Abend hängt — abhaken lässt sich nur, was war.
+  ///
+  /// Der Haken sitzt am Termin (`meeting_actionstep_done`), der Text an der
+  /// Einheit. Er steht hier mit, damit die Themenseite ihn nicht über einen
+  /// zweiten Aufruf pro Einheit nachladen muss.
+  actionstepDone: z.array(z.object({ person: personRefSchema })),
   /// Hat der Abend stattgefunden? Rein zeitlich, kein Häkchen: verknüpft, in der
   /// Vergangenheit, nicht abgesagt.
   held: z.boolean(),
@@ -78,7 +89,9 @@ export const topicSessionInTopicSchema = topicSessionResponseSchema.omit({
  * zweiter Weg, sie falsch zu beantworten.
  */
 export const topicSessionInMeetingSchema = topicSessionResponseSchema
-  .omit({ meeting: true })
+  // `actionstepDone` fällt mit dem Termin weg: der steht hier darüber und trägt
+  // dieselbe Liste schon.
+  .omit({ meeting: true, actionstepDone: true })
   .extend({
     /// Die wievielte Einheit des Themas dieser Abend ist, 1-basiert.
     sessionIndex: z.number().int().positive(),

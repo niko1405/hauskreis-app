@@ -128,6 +128,10 @@ describe('DashboardService.build', () => {
     expect(home.nextMeeting).toMatchObject({
       id: 'm1',
       date: '2026-08-04',
+      // Als Zahl — das Antwort-Schema macht daraus `"18:00"`. Ohne sie musste
+      // man den Termin öffnen, um eine Uhrzeit zu sehen, die sich einstellen
+      // lässt.
+      startTime: 1080,
       host: { name: 'chris' },
     });
     // Alle drei Rollen mit Personen: das Thema hat oft keinen Titel, dann ist
@@ -227,7 +231,9 @@ describe('DashboardService.build', () => {
       actionstep: {
         id: 'm0',
         date: utc('2026-07-28'),
-        actionstepText: '  ',
+        hasTopicSlot: true,
+        actionstepText: null,
+        topicSession: { actionstepText: '  ' },
         actionstepDone: [],
       },
     });

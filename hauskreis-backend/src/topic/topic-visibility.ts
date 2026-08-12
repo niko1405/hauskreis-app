@@ -12,18 +12,31 @@
  * - **Inhalt sichtbar** ist die Frage des einzelnen Abends: der Actionstep für
  *   nächste Woche gehört bis 18 Uhr denen, die ihn vorbereiten.
  *
- * Rechte kommen dazu und folgen der Hausregel aus `edit-rights.ts`, nur eine
- * Ebene höher: dort ist es die Zuteilung an einem Abend, hier die Zugehörigkeit
- * zum Thema.
+ * Rechte kommen dazu, und sie hängen hier am **Thema** und nicht an der
+ * Zuteilung eines einzelnen Abends: ein Thema zieht sich über mehrere Abende,
+ * sein Bearbeitungsrecht deshalb auch. Wer zugeteilt ist, entscheidet nur, wer
+ * an einem Abend *wählen* darf (`TopicSessionService.choose`).
  */
 import { MeetingStatus } from '../../generated/prisma/enums';
 import { eveningReached } from '../common/time/local-evening';
 import { isPast } from '../meeting/meeting-schedule';
 
-/** Was von einem Termin für diese Fragen zählt. */
+/** Was von einem Termin zählt für „hat er stattgefunden". */
 export interface SessionMeeting {
   date: Date;
   status: MeetingStatus;
+}
+
+/**
+ * Dazu die Anfangszeit.
+ *
+ * Ein eigener Typ und nicht ein optionales Feld am oberen: nur die
+ * Sichtbarkeitsgrenze braucht die Uhrzeit, und wäre sie überall optional, fiele
+ * eine Ladestelle, die sie vergisst, still auf 18 Uhr zurück statt aufzufallen.
+ */
+export interface TimedSessionMeeting extends SessionMeeting {
+  /** Minuten seit Mitternacht Ortszeit — ab wann der Inhalt allen gehört. */
+  startMinutes: number;
 }
 
 /** Wer zu einem Thema gehört. */
@@ -114,10 +127,14 @@ export function mayDeleteTopic(options: {
 /**
  * Darf diese Person Titel, Actionstep und Zusammenfassung dieser Einheit *sehen*?
  *
- * Die alte Abendregel, nur genauer: bis 18 Uhr am Termintag gehört der Inhalt
+ * Die alte Abendregel, nur genauer: bis der Abend anfängt, gehört der Inhalt
  * denen, die ihn vorbereiten. Danach — und für jeden vergangenen Abend — allen.
  * Einen Actionstep eine Woche zu früh zu verteilen wäre das Gegenteil von dem,
  * wozu er da ist.
+ *
+ * „Wenn der Abend anfängt" heißt die Uhrzeit **dieses** Termins und nicht mehr
+ * pauschal 18 Uhr: eine Gruppe, die sich um 20 Uhr trifft, gab ihren Actionstep
+ * sonst zwei Stunden vorher frei.
  *
  * Das Backend liefert die Felder dann gar nicht erst aus. Es im Frontend
  * auszublenden hieße, sie trotzdem übers Netz zu schicken.
@@ -141,7 +158,12 @@ export function isContentVisible(options: {
   if (options.meeting.status === MeetingStatus.CANCELLED) return false;
 
   // Ein „liegt der Tag zurück" braucht es daneben nicht: bei einem vergangenen
-  // Abend ist auch dessen 18 Uhr vorbei. Eine Prüfung weniger heißt auch eine
-  // Stelle weniger, die an der Systemuhr statt an `now` hängt.
-  return eveningReached(options.meeting.date, options.now);
+  // Abend ist auch dessen Anfangszeit vorbei. Eine Prüfung weniger heißt auch
+  // eine Stelle weniger, die an der Systemuhr statt an `now` hängt.
+  return eveningReached(
+    options.meeting.date,
+    options.zone,
+    options.now,
+    options.meeting.startMinutes,
+  );
 }

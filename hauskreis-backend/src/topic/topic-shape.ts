@@ -14,7 +14,6 @@ import { personRefSelect } from '../common/dto/response';
 import { Prisma } from '../../generated/prisma/client';
 import { MeetingStatus } from '../../generated/prisma/enums';
 import type { HauskreisMembership } from '../auth/auth.types';
-import { toUtcDate } from '../meeting/meeting-schedule';
 import {
   belongsTo,
   isContentVisible,
@@ -48,9 +47,20 @@ export function viewerOf(membership: HauskreisMembership): Viewer {
 const sessionMeetingSelect = {
   id: true,
   date: true,
+  // Nicht fürs Anzeigen, sondern für die Sichtbarkeitsgrenze: der Inhalt einer
+  // Einheit wird frei, wenn der Abend anfängt — und der fängt an, wann die
+  // Gruppe sich trifft, nicht um 18 Uhr.
+  startMinutes: true,
   status: true,
   title: true,
   topicResponsibles: { select: { personId: true } },
+  // Wer den Actionstep dieses Abends schon abgehakt hat. Der Haken sitzt am
+  // Termin, der Text an der Einheit — und wer den Text auf der Themenseite
+  // liest, will ihn dort auch abhaken können, statt erst den Abend zu suchen.
+  actionstepDone: {
+    select: { person: { select: personRefSelect } },
+    orderBy: { person: { name: 'asc' } },
+  },
 } satisfies Prisma.MeetingSelect;
 
 /**
@@ -142,9 +152,11 @@ type SessionRow = {
   meeting: {
     id: string;
     date: Date;
+    startMinutes: number;
     status: MeetingStatus;
     title: string | null;
     topicResponsibles: { personId: string }[];
+    actionstepDone: { person: unknown }[];
   } | null;
   responsibles: { person: unknown }[];
 };
@@ -225,6 +237,11 @@ export function shapeSession(
       ? {
           id: session.meeting.id,
           date: session.meeting.date,
+          // Die Zahl wurde schon immer gelesen (sie trägt die
+          // Sichtbarkeitsgrenze), ging aber nie hinaus. Die Themenseite braucht
+          // sie: dort hängt das Abhaken des Actionsteps an derselben Uhrzeit wie
+          // auf der Terminseite, und ohne sie wäre es dort ein Tag später.
+          startTime: session.meeting.startMinutes,
           status: session.meeting.status,
           title: session.meeting.title,
         }
@@ -333,7 +350,15 @@ export function shapeSessionForMeeting(
   topic: TopicRow & { sessions: SiblingRow[] },
   viewer: Viewer,
 ) {
-  const { meeting: _weg, ...rest } = shapeSession(session, topic, viewer);
+  // `actionstepDone` fällt hier weg wie der Termin selbst: der Abend steht
+  // darüber und trägt dieselbe Liste schon. Zweimal ausgeliefert wäre sie zwei
+  // Stände, die auseinanderlaufen können.
+  const {
+    meeting: _weg,
+    actionstepDone: _auchWeg,
+    ...rest
+  } = shapeSession(session, topic, viewer);
+
   return { ...rest, ...sessionPosition(session.id, topic.sessions) };
 }
 
@@ -358,7 +383,7 @@ export function topicScopeWhere(scope: 'public' | 'mine', personId: string) {
     sessions: {
       some: {
         meeting: {
-          date: { lt: toUtcDate(new Date()) },
+          date: { lt: today },
           status: { not: MeetingStatus.CANCELLED },
         },
       },

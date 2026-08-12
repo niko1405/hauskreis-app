@@ -71,8 +71,13 @@ grundlegende Vorschläge für Kernentitäten:
 - Sonderfall: manche Termine haben **keinen Host** (z. B. Treffen im Schlosspark/draußen) → Feld bleibt leer, keine Rolle nötig, kein Fehlerzustand
 
 ### `meeting` (Termine)
-- zB `id`, `date`, `location_id` (nullable), `host_person_id` (nullable), `topic_id` (nullable), `actionstep_text`, `summary_text`, `info_text`, `person[]`
-- Termine finden jeden Dienstag in der Woche statt
+- zB `id`, `date`, `start_minutes`, `location_id` (nullable), `host_person_id` (nullable), `topic_id` (nullable), `actionstep_text`, `summary_text`, `info_text`, `person[]`
+- **Vier Bausteine** sagen, woraus ein Abend besteht: `has_topic_slot`, `has_notes_slot`, `has_song_slot`, `has_testimony_slot`. Die Terminart ist nur ihre Voreinstellung. Thema schließt Testimony aus und Nachbereitung ebenfalls — Testimony und Nachbereitung zusammen sind dagegen erlaubt
+- **Drei davon plant man, den vierten nicht.** Die Nachbereitung steht nicht im Bausteinkasten: dort hätte man sie *vor* dem Abend angehakt, also als es noch nichts nachzubereiten gab. Sie lässt sich erst **ab der Treffpunktzeit** anschalten, kommt über einen Hinweis am Abend selbst dazu und lässt sich genauso wieder ganz entfernen — danach steht wieder der Hinweis da
+- `summary_text` und `actionstep_text` gehören zum Baustein **Nachbereitung** und damit dem Abend. Hat er ein Thema, stehen beide stattdessen an dessen Einheit und gehören dort dem Thema
+- Termine finden wöchentlich statt. **Wochentag, Uhrzeit und Zeitzone stellt die Gruppe selbst ein** (`meeting_schedule_config`, Vorgabe Dienstag 18 Uhr, `Europe/Berlin`) — vorher standen alle drei als Konstante im Code, was für eine App für Hauskreise eine Aussage zu viel war. Ein Wechsel von Tag oder Zeit gilt für neu erzeugte Termine; was schon im Kalender steht, behält seinen Tag und seine Zeit. Die **Zone** gilt dagegen sofort für alles: sie sagt nicht nur, was `start_minutes` bedeutet, sondern auch, **welchen Tag wir gerade haben**
+- Jeder Termin trägt eine **Treffpunktzeit** (`start_minutes`, Minuten seit Mitternacht Ortszeit). Ein Pflichtfeld: erzeugte Abende bekommen die Zeit der Gruppe, das Anlege-Formular ist damit vorbelegt. Ändert sie sich am **nächsten** Termin, bekommen die anderen eine Benachrichtigung
+- **„Heute" ist der Kalendertag der Gruppe, nie der von UTC.** Das klingt nach einer Kleinigkeit und war ein handfester Fehler: „heute" wurde aus den UTC-Feldern eines Zeitpunkts gelesen, und zwischen Mitternacht und zwei Uhr Ortszeit war das noch gestern. Der Termin von gestern stand damit jede Nacht unter „Kommende", während die Detailseite ihn schon als „Vorbei" auswies — und seine Lieder ließen sich in diesem Fenster nicht abhaken. Ein Termin gilt weiterhin seinen ganzen Tag über als kommend; nur wird jetzt richtig gezählt, welcher Tag das ist. Frontend und Backend rechnen dafür in derselben Zone
 - Ein Termin ohne Host ist ein valider Zustand (z. B. Outdoor-Treffen im Park)
 - Folgende Terminarten gibt es: "Standard", "Lobreis/Gebetsabend", "Custom"
 - Es gibt "Standard" Termine, welche vom Backend automatisch erstellt werden im Vorhinein, sodass immer mind. 7 Termine im Vorhinein zuteilbar sind, Standard Termine haben ein Thema
@@ -85,7 +90,7 @@ grundlegende Vorschläge für Kernentitäten:
 - Ein Thema ist **nicht 1:1 an einen Termin gebunden** – es zieht sich über beliebig viele Einheiten
 - Drei Dinge sind getrennt: **Zuständigkeit** (`meeting_topic_responsible`), **Auswahl** (`topic_session.meeting_id`) und **Inhalt**. Dazwischen liegt der Zustand „zugeteilt, aber noch nichts gewählt"
 - `meeting_id = NULL` heißt **unfertig**: vorbereitet, aber an keinem Abend. Wechselt die Rolle, wird entkoppelt statt gelöscht — die Vorbereitung wartet als Entwurf und lässt sich jederzeit wieder aufnehmen
-- Wer zuerst **wählt**, wird Owner (nicht wer zuerst zugeteilt wurde). Wählen darf **nur, wer am Abend zugeteilt ist** — auch kein Admin, und „niemand zugeteilt heißt jede:r darf" gilt hier nicht. Wer eine Einheit hält, wird Mitarbeiter:in und darf am ganzen Thema schreiben; löschen darf nur der Owner. Fällt jemand aus der Zuteilung, verliert er die Einheit dieses Abends — und das Schreibrecht am Thema nur, wenn er sonst nirgends mehr daran hängt
+- Wer zuerst **wählt**, wird Owner (nicht wer zuerst zugeteilt wurde) — **oder wer das Thema im Archiv anlegt.** Ein Thema entsteht auf beiden Wegen: beim Wählen an einem Abend, oder im Voraus ohne Termin, um es in Ruhe vorzubereiten. Wählen darf **nur, wer am Abend zugeteilt ist** — auch kein Admin, und „niemand zugeteilt heißt jede:r darf" gilt hier nicht. Wer eine Einheit hält, wird Mitarbeiter:in und darf am ganzen Thema schreiben; löschen darf nur der Owner. Fällt jemand aus der Zuteilung, verliert er die Einheit dieses Abends — und das Schreibrecht am Thema nur, wenn er sonst nirgends mehr daran hängt
 - Ein mehrteiliges Thema zählt in der Vorschlagslogik wie **ein einzelner Slot** (nicht mehrfach)
 - Ein Thema erscheint im Archiv, sobald einer seiner Abende vorbei ist. Titel, Actionstep und Zusammenfassung einer noch nicht gehaltenen Einheit sind bis **18 Uhr am Termintag** nur für die Zuständigen sichtbar
 - Ein vergangener Abend wird **eingefroren**: seine Einheit bleibt daran hängen, auch wenn die Rolle danach noch wechselt
@@ -121,6 +126,7 @@ grundlegende Vorschläge für Kernentitäten:
    - für jeden Termin gibt es mind. 1 Person (auch mehrere möglich), welche für die (alle) Songs zuständig ist
    - es gibt auch Termine ohne Songs, dann wird auch keine Person benötigt
    - zu beachten gilt: nicht jede Person kann ein Instrument spielen, die Zuteilung soll aber auch manuell mit intelligenten Vorschlägen erfolgen
+   - **Lieder abhaken darf vor dem Abend nur, wer an dem Abend die Musik macht** — kein Admin-Freifahrtschein, und „niemand zugeteilt heißt jede:r darf" gilt hier nicht. Vorher ist das Abhaken eine Entscheidung („das singen wir"), und die trifft, wer die Lieder übt. **Ist der Termin vorbei, darf jede:r** — dann ist es ein Protokoll („das haben wir gesungen")
 
 4. **Gebetsbuddys**
    - Rotierendes System, alle 2 Wochen neue Zuteilung
@@ -143,7 +149,8 @@ grundlegende Vorschläge für Kernentitäten:
 
 8. **Archiv**
    - Es gibt ein Archiv, wo vergangene Termine und Themen angezeigt werden
-   - Jedes Thema hat eine eigene Seite mit allen seinen Abenden; ein Filter zeigt zusätzlich die eigenen, noch nicht gehaltenen
+   - Jedes Thema hat eine eigene Seite mit allen seinen Abenden; zwei Register trennen „Eigene" (auch die noch nicht gehaltenen) von „Alle"
+   - Hier lassen sich auch neue Themen und Lieder anlegen — der Ort zum Vorarbeiten, ohne auf einen Dienstag zu warten
    - Auch die Song-Datenbank kann hier eingesehen werden
 
 ## 7. Backlog (nicht priorisiert)

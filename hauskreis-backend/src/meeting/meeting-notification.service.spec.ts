@@ -126,6 +126,12 @@ describe('announceCancellation', () => {
   });
 });
 
+/** Was `announceReleasedRoles` an die anderen geschickt hat — nicht an den Host. */
+const anAlle = (notify: jest.Mock) =>
+  notify.mock.calls
+    .map((call) => call[0])
+    .find((entry) => entry.payload.title === 'Da ist etwas offen');
+
 describe('handleDecline', () => {
   it('tells the host who dropped out', async () => {
     const { service, notify } = setup();
@@ -210,5 +216,57 @@ describe('handleDecline', () => {
     await service.handleDecline('meeting-1', 'antonia');
 
     expect(findHomesUnlockedByAbsences).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Der Zweig an **alle** — nicht nur an den Gastgeber. Er ist die einzige
+   * Absage, die etwas zu tun übrig lässt.
+   */
+  describe('was frei geworden ist', () => {
+    const nichts = {
+      host: false,
+      song: false,
+      testimony: false,
+      topic: false,
+    };
+
+    it('sagt es auch, wenn nur das Thema frei wurde', async () => {
+      // Der Fall, der vorher stumm blieb: `describeReleased` zählte Gastgeber,
+      // Musik und Testimony auf, aber nicht das Thema. Wer nur dafür zugeteilt
+      // war und absagte, ließ `what` auf `null` fallen — und dieser ganze
+      // Zweig schwieg.
+      const { service, notify } = setup();
+
+      await service.handleDecline('meeting-1', 'antonia', {
+        ...nichts,
+        topic: true,
+      });
+
+      expect(anAlle(notify)?.payload.body).toBe(
+        'Antonia kann am 4. August nicht. Das Thema ist wieder frei.',
+      );
+    });
+
+    it('zählt mehrere ohne Artikel auf', async () => {
+      const { service, notify } = setup();
+
+      await service.handleDecline('meeting-1', 'antonia', {
+        ...nichts,
+        host: true,
+        topic: true,
+      });
+
+      expect(anAlle(notify)?.payload.body).toBe(
+        'Antonia kann am 4. August nicht. Gastgeber-Platz und Thema sind wieder frei.',
+      );
+    });
+
+    it('schweigt, wenn nichts frei wurde', async () => {
+      const { service, notify } = setup();
+
+      await service.handleDecline('meeting-1', 'antonia', nichts);
+
+      expect(anAlle(notify)).toBeUndefined();
+    });
   });
 });

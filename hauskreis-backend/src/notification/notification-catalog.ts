@@ -185,10 +185,25 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     defaultEnabled: true,
   },
   {
+    type: NotificationType.MEETING_TIME_CHANGED,
+    label: 'Der nächste Abend fängt anders an',
+    // Nur der nächste, und deshalb steht das auch in der Beschreibung: eine
+    // verschobene Uhrzeit in fünf Wochen liest man, wenn man hinschaut. Beim
+    // nächsten Abend steht man sonst vor der Tür.
+    description:
+      'Wenn sich die Uhrzeit des nächsten Treffens ändert — die eine Änderung, von der man vorher wissen muss.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
     type: NotificationType.ATTENDANCE_DECLINED,
     label: 'Jemand sagt ab',
+    // Zwei Nachrichten, ein Schalter — beschrieben werden deshalb auch beide.
+    // Die zweite geht an alle und ist die einzige Absage, die etwas zu tun
+    // übrig lässt; ein eigener Eintrag dafür machte die Liste länger und die
+    // Entscheidung nicht klarer (siehe `announceReleasedRoles`).
     description:
-      'Wenn jemand für einen Abend absagt, den du hostest — damit du beim Einkaufen Bescheid weißt.',
+      'Wenn jemand für einen Abend absagt, den du hostest — und wenn dadurch eine Rolle frei wird, etwa das Thema oder die Musik.',
     schedule: { kind: 'EVENT' },
     defaultEnabled: true,
   },

@@ -132,6 +132,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/header-images': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['HeaderImageController_findAll'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/header-images/{screen}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['HeaderImageController_find'];
+    put?: never;
+    post: operations['HeaderImageController_upload'];
+    delete: operations['HeaderImageController_remove'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/home': {
     parameters: {
       query?: never;
@@ -734,6 +766,54 @@ export interface paths {
     get: operations['SongController_findAll'];
     put?: never;
     post: operations['SongController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/songs/lookup/from-link': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['SongLookupController_fromLink'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/songs/lookup/link-suggestions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['SongLookupController_linkSuggestions'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/songs/lookup/status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['SongLookupController_status'];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -1545,7 +1625,8 @@ export interface components {
         | 'MEMBER_LEFT'
         | 'CUSTOM_MEETING_CREATED'
         | 'CUSTOM_MEETING_REMINDER'
-        | 'TESTIMONY_REMINDER';
+        | 'TESTIMONY_REMINDER'
+        | 'MEETING_TIME_CHANGED';
       label: string;
       description: string;
       schedule:
@@ -1590,7 +1671,8 @@ export interface components {
         | 'MEMBER_LEFT'
         | 'CUSTOM_MEETING_CREATED'
         | 'CUSTOM_MEETING_REMINDER'
-        | 'TESTIMONY_REMINDER';
+        | 'TESTIMONY_REMINDER'
+        | 'MEETING_TIME_CHANGED';
       label: string;
       description: string;
       schedule:
@@ -1662,6 +1744,7 @@ export interface components {
         hauskreisId: string;
         /** Format: date */
         date: string;
+        startTime: string;
         /** Format: date */
         endDate: string | null;
         /** @enum {string} */
@@ -1671,6 +1754,7 @@ export interface components {
         hasTopicSlot: boolean;
         hasSongSlot: boolean;
         hasTestimonySlot: boolean;
+        hasNotesSlot: boolean;
         /** Format: uuid */
         locationId: string | null;
         /** Format: uuid */
@@ -1679,6 +1763,8 @@ export interface components {
         /** Format: uuid */
         testimonyPersonId: string | null;
         infoText: string | null;
+        summaryText: string | null;
+        actionstepText: string | null;
         /** Format: date-time */
         createdAt: string;
         /** Format: date-time */
@@ -1810,6 +1896,32 @@ export interface components {
       skip: number;
       hasMore: boolean;
     };
+    MeetingScheduleResponseDto: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      hauskreisId: string;
+      weekday: number;
+      startTime: string;
+      timeZone: string;
+      /** Format: uuid */
+      updatedByPersonId: string | null;
+      /** Format: date-time */
+      updatedAt: string;
+      version: number;
+      updatedBy: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      } | null;
+    };
+    UpdateMeetingScheduleDto: {
+      weekday: number;
+      startTime: string;
+      timeZone: string;
+    };
     MeetingResponseDto: {
       /** Format: uuid */
       id: string;
@@ -1817,6 +1929,7 @@ export interface components {
       hauskreisId: string;
       /** Format: date */
       date: string;
+      startTime: string;
       /** Format: date */
       endDate: string | null;
       /** @enum {string} */
@@ -1826,6 +1939,7 @@ export interface components {
       hasTopicSlot: boolean;
       hasSongSlot: boolean;
       hasTestimonySlot: boolean;
+      hasNotesSlot: boolean;
       /** Format: uuid */
       locationId: string | null;
       /** Format: uuid */
@@ -1834,6 +1948,8 @@ export interface components {
       /** Format: uuid */
       testimonyPersonId: string | null;
       infoText: string | null;
+      summaryText: string | null;
+      actionstepText: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -2024,6 +2140,7 @@ export interface components {
       date: string;
       /** Format: date */
       endDate?: string | null;
+      startTime?: string;
       /**
        * @default CUSTOM
        * @enum {string}
@@ -2054,9 +2171,12 @@ export interface components {
       /** Format: uuid */
       testimonyPersonId?: string | null;
       infoText?: string | null;
+      summaryText?: string | null;
+      actionstepText?: string | null;
       hasTopicSlot?: boolean;
       hasSongSlot?: boolean;
       hasTestimonySlot?: boolean;
+      hasNotesSlot?: boolean;
     };
     CancelMeetingDto: {
       reason?: string | null;
@@ -2148,6 +2268,7 @@ export interface components {
             id: string;
             /** Format: date */
             date: string;
+            startTime: string;
             /** @enum {string} */
             status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
             title: string | null;
@@ -2161,6 +2282,15 @@ export interface components {
           updatedAt: string;
           version: number;
           responsibles: {
+            person: {
+              /** Format: uuid */
+              id: string;
+              name: string;
+              /** Format: date-time */
+              photoUpdatedAt: string | null;
+            };
+          }[];
+          actionstepDone: {
             person: {
               /** Format: uuid */
               id: string;
@@ -2246,6 +2376,15 @@ export interface components {
             photoUpdatedAt: string | null;
           };
         }[];
+        actionstepDone: {
+          person: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: date-time */
+            photoUpdatedAt: string | null;
+          };
+        }[];
         held: boolean;
         contentVisible: boolean;
         mayEdit: boolean;
@@ -2254,6 +2393,10 @@ export interface components {
       mine: boolean;
       mayEdit: boolean;
       mayDelete: boolean;
+    };
+    CreateTopicDto: {
+      title: string;
+      summaryText?: string | null;
     };
     UpdateTopicDto: {
       title?: string | null;
@@ -2285,6 +2428,7 @@ export interface components {
         id: string;
         /** Format: date */
         date: string;
+        startTime: string;
         /** @enum {string} */
         status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
         title: string | null;
@@ -2499,6 +2643,32 @@ export interface components {
     SetSongLeadersDto: {
       personIds: string[];
     };
+    SongLookupStatusResponseDto: {
+      enabled: boolean;
+    };
+    MetadataFromLinkDto: {
+      /** Format: uri */
+      url: string;
+    };
+    SongMetadataResponseDto: {
+      title: string | null;
+      artist: string | null;
+    };
+    LyricsLinkSearchDto: {
+      title: string;
+      artist?: string | null;
+      /** @default false */
+      more: boolean;
+    };
+    LyricsLinkCandidatesResponseDto: {
+      candidates: {
+        /** Format: uri */
+        url: string;
+        title: string | null;
+        artist: string | null;
+        site: string;
+      }[];
+    };
     AbsencePageResponseDto: {
       items: {
         /** Format: uuid */
@@ -2579,6 +2749,8 @@ export interface components {
       totals: {
         meetings: number;
         topics: number;
+        topicsMine: number;
+        topicsTotal: number;
         songs: number;
         songsPlayed: number;
       };
@@ -2613,6 +2785,7 @@ export interface components {
         id: string;
         /** Format: date */
         date: string;
+        startTime: string;
         /** Format: date */
         endDate: string | null;
         /** @enum {string} */
@@ -2693,6 +2866,18 @@ export interface components {
         until: string;
         withNames: string[];
       } | null;
+    };
+    HeaderImageListResponseDto: {
+      /** @enum {string} */
+      screen: 'home' | 'prayer' | 'archive' | 'profile';
+      /** Format: date-time */
+      updatedAt: string;
+    }[];
+    HeaderImageResponseDto: {
+      /** @enum {string} */
+      screen: 'home' | 'prayer' | 'archive' | 'profile';
+      /** Format: date-time */
+      updatedAt: string;
     };
   };
   responses: never;
@@ -3320,13 +3505,12 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Ohne personId die Mehrwochen-Tabelle, mit ihr die eigenen Badges */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['AssignmentListResponseDto'];
+          'application/json': components['schemas']['ArchiveSummaryResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -3357,6 +3541,232 @@ export interface operations {
         };
       };
       /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  DashboardController_findAssignments: {
+    parameters: {
+      query: {
+        from: string;
+        to: string;
+        personId?: string;
+      };
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Der ganze Home-Screen in einem Aufruf */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HomeScreenResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  HeaderImageController_findAll: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Fuer welche Bildschirme ein eigenes Bild gesetzt ist, samt Zeitstempel */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HeaderImageListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  LocationController_findAll: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Alle Orte, nach Namen sortiert */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LocationListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  HeaderImageController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        screen: 'home' | 'prayer' | 'archive' | 'profile';
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Gelöscht, kein Inhalt */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nicht angemeldet */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden */
       404: {
         headers: {
           [name: string]: unknown;
@@ -6624,6 +7034,182 @@ export interface operations {
       };
     };
   };
+  SongLookupController_fromLink: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MetadataFromLinkDto'];
+      };
+    };
+    responses: {
+      /** @description Titel und Interpret von der verlinkten Seite; beide null, wenn dort nichts Eindeutiges steht */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SongMetadataResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  SongLookupController_linkSuggestions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LyricsLinkSearchDto'];
+      };
+    };
+    responses: {
+      /** @description Geprueft erreichbare Links, bevorzugte Seiten zuerst; leer heisst nichts gefunden. Mit more=true kommen die bisherigen plus neue dazu. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LyricsLinkCandidatesResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  SongLookupController_status: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ob ein Gemini-Schluessel hinterlegt ist */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SongLookupStatusResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
   SongController_runReminders: {
     parameters: {
       query?: never;
@@ -7078,6 +7664,67 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['TopicPageResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  TopicController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateTopicDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TopicResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -8158,7 +8805,8 @@ export interface operations {
           | 'MEMBER_LEFT'
           | 'CUSTOM_MEETING_CREATED'
           | 'CUSTOM_MEETING_REMINDER'
-          | 'TESTIMONY_REMINDER';
+          | 'TESTIMONY_REMINDER'
+          | 'MEETING_TIME_CHANGED';
       };
       cookie?: never;
     };

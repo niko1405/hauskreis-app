@@ -26,13 +26,11 @@
 import {
   ArrowLeft,
   Check,
-  CheckCircle2,
-  Circle,
+  Clock,
   UserPen,
   ExternalLink,
   MapPin,
   Pencil,
-  Plus,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -227,8 +225,6 @@ function Loaded({
     update.mutate(input);
 
   const selectedFor = (role: SheetRole): string[] => {
-    if (role === 'HOST')
-      return meeting.hostPersonId ? [meeting.hostPersonId] : [];
     if (role === 'TESTIMONY')
       return meeting.testimonyPersonId ? [meeting.testimonyPersonId] : [];
     if (role === 'TOPIC') return roles.topicPeople.map((p) => p.id);
@@ -236,7 +232,6 @@ function Loaded({
   };
 
   const submitFor = (role: SheetRole) => {
-    if (role === 'HOST') return roles.assignHost;
     if (role === 'TESTIMONY') return roles.assignTestimony;
     if (role === 'TOPIC') return roles.assignTopicResponsibles;
     return roles.assignSongLeaders;
@@ -291,21 +286,7 @@ function Loaded({
     setChoosingTopic(true);
   };
 
-  const treffpunkte = (locations.data ?? []).filter(isSelectableWithoutHost);
-
   const me = useMe();
-
-  /**
-   * Ob die eigene Person am Thema dieses Abends schreiben darf.
-   *
-   * Dieselbe Regel wie im Backend (`edit-rights.ts`), hier nur, um den Stift
-   * gar nicht erst anzubieten. Durchgesetzt wird sie dort — eine
-   * Bedienoberfläche ist keine Sicherheitsgrenze.
-   */
-  const mayDo = (responsibles: readonly string[]) =>
-    me.isAdmin ||
-    responsibles.length === 0 ||
-    (me.me ? responsibles.includes(me.me.id) : false);
 
   /**
    * Ob die eigene Person eine Auswahl treffen darf.
@@ -423,6 +404,22 @@ function Loaded({
       {/* Gedämpft, aber nicht versteckt: was an dem Abend geplant war, bleibt
           lesbar — es ist bloß nichts mehr, worauf man hinarbeitet. */}
       <div className={cn('space-y-6', cancelled && 'opacity-55')}>
+        {/* Die erste Frage an einen Termin ist „wann". Sie stand bisher nur im
+            Datum, und eine Uhrzeit gab es gar nicht — „wir fangen heute später
+            an" lief über WhatsApp. */}
+        <section>
+          <SectionTitle>Uhrzeit</SectionTitle>
+          <Card>
+            <TimeRow
+              startTime={meeting.startTime}
+              saving={update.isPending}
+              onSave={
+                editing ? (next) => patch({ startTime: next }) : undefined
+              }
+            />
+          </Card>
+        </section>
+
         {/* Ganz oben, weil hier steht, was man vor dem Abend wissen muss —
           „bringt Kuchen mit", „wir fangen später an". Unten zwischen
           Zusammenfassung und Actionstep las es niemand rechtzeitig. */}
@@ -687,70 +684,6 @@ function Loaded({
  * geerbten Themen-Titel einen eigenen — und der Termin löste sich still vom
  * Thema ab.
  */
-/**
- * Der eigene Haken plus die Namen der anderen.
- *
- * Namen statt nur einer Zahl: „5 von 9" sagt, wie es der Gruppe geht, die
- * Namen sagen, wen man fragen kann, wie es lief. Für neun Leute passt beides
- * nebeneinander.
- *
- * Auch an einem vergangenen Abend abhakbar — hier ist „vorbei" gerade kein
- * Grund zu sperren: der Actionstep gilt _nach_ dem Abend, das Nachtragen ist
- * der Normalfall und nicht der Fehlgriff. Der Block erscheint deshalb ab dem
- * Termintag und danach für immer; nur davor gibt es nichts abzuhaken.
- */
-function ActionstepDoneBlock({ meeting }: { meeting: Meeting }) {
-  const me = useMe();
-  const people = usePeople();
-  const setDone = useSetActionstepDone(meeting.id);
-
-  const doneByMe = meeting.actionstepDone.some(
-    (row) => row.person.id === me.me?.id,
-  );
-  const activeCount = (people.data ?? []).filter((p) => p.active).length;
-  const others = meeting.actionstepDone
-    .map((row) => row.person)
-    .filter((person) => person.id !== me.me?.id);
-
-  return (
-    <div className="space-y-3 border-t border-line pt-4">
-      <button
-        type="button"
-        aria-pressed={doneByMe}
-        disabled={!me.me}
-        onClick={() => setDone.mutate(!doneByMe)}
-        className={cn(
-          'flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors disabled:opacity-50',
-          'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
-          doneByMe
-            ? 'border-music-line bg-music-bg/40 text-music'
-            : 'border-line text-stone-500 hover:border-line-strong',
-        )}
-      >
-        {doneByMe ? <CheckCircle2 size={17} /> : <Circle size={17} />}
-        <span className="text-sm font-bold">
-          {doneByMe ? 'Du hast es geschafft' : 'Für mich abhaken'}
-        </span>
-      </button>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-semibold text-stone-400">
-          {actionstepProgress(meeting.actionstepDone.length, activeCount)}
-        </span>
-        {others.length > 0 && (
-          <span className="flex items-center gap-1.5">
-            {others.map((person) => (
-              <span key={person.id} title={person.name}>
-                <Avatar person={person} size="xs" />
-              </span>
-            ))}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function HeadlineEdit({
   headline,
   title,

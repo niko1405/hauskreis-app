@@ -2,6 +2,7 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import { AttendanceStatus, MeetingType } from '../../../generated/prisma/enums';
 import { isoDateOut, personRefSchema } from '../../common/dto/response';
+import { wallClockOut } from '../../common/dto/wall-clock';
 
 /**
  * Eine Zuteilung — für alle vier Rollenarten dieselbe Form.
@@ -38,6 +39,8 @@ export const homeScreenSchema = z.object({
       /// Hier nur der Tag: der Dienst schneidet ihn selbst zu, anders als bei
       /// `…/meetings`.
       date: isoDateOut,
+      /// Wann es losgeht, `"19:30"` — dieselbe Schreibweise wie am Termin.
+      startTime: wallClockOut,
       /// Gesetzt, wenn sich der Termin über mehrere Tage zieht.
       endDate: isoDateOut.nullable(),
       type: z.enum(MeetingType),

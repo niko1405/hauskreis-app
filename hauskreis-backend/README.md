@@ -477,6 +477,23 @@ Dass damit auch ausstehende `If-Match`-Token ungültig werden, ist kein
 Nebenschaden, sondern derselbe Satz von der anderen Seite: wer den Termin vor
 einer Themenänderung gelesen hat, schreibt gegen ein veraltetes Bild.
 
+**Die Regel gilt in beide Richtungen**, und das war die Lücke, die beim ersten
+Mal übrig blieb. Nicht nur „Thema ändert sich → Termin altern lassen":
+
+| Was sich ändert        | Was mit altern muss                     | Warum                                      |
+| ---------------------- | --------------------------------------- | ------------------------------------------ |
+| Titel einer Einheit    | Termin **und** Thema                    | Der Termin zeigt sie, das Thema listet sie |
+| Titel eines Themas     | jeder Termin mit einer seiner Einheiten | Dort steht er als „Zugehöriges Thema"      |
+| Mitarbeitende entfernt | Thema                                   | Sie stehen in seiner Antwort               |
+| Thema gelöscht         | seine bisherigen Termine                | Die stehen danach ohne Thema da            |
+
+Der Weg dahin ist immer derselbe: **wer ein Feld ändert, das in der Antwort
+einer anderen Ressource steht, hebt deren Version mit an.** Ein Wächter je Pfad
+steht in
+[`topic-version-guard.spec.ts`](src/topic/topic-version-guard.spec.ts) — die
+Regression ist sonst nicht zu bemerken, weil das Symptom ein _veralteter_
+Bildschirm ist und kein Fehler.
+
 ### Für neue Endpunkte
 
 1. Entität im Prisma-Schema mit `version Int @default(0)` versehen.
@@ -1051,8 +1068,20 @@ Prisma-Pakete und oxlints Resolver (`allowBuilds`).
 Alle Pfade sind relativ zu `/api/hauskreise/:hauskreisId`.
 
 Der `MeetingGeneratorService` läuft täglich um 3 Uhr und sorgt dafür, dass immer
-die nächsten **7 Dienstage** als Termin existieren. Der jeweils letzte Dienstag
-eines Monats wird als `LOBPREIS_GEBET` angelegt, alle anderen als `STANDARD`.
+die nächsten **7 Abende** als Termin existieren. Der jeweils letzte eines Monats
+wird als `LOBPREIS_GEBET` angelegt, alle anderen als `STANDARD`.
+
+**Wochentag, Uhrzeit und Zeitzone kommen aus `MeetingScheduleConfig`**
+(`GET`/`PUT …/meetings/config`), Vorgabe Dienstag 18 Uhr, `Europe/Berlin`. Alle
+drei standen vorher als Konstante im Code — `TUESDAY = 2`, `EVENING_HOUR = 18`
+und `TIME_ZONE = 'Europe/Berlin'` —, was für die eine Gruppe stimmte, für die es
+geschrieben wurde. `isLastOfMonth` rechnet ohnehin wochentagsunabhängig
+(„+7 Tage, anderer Monat?"), nur der Name behauptete etwas anderes.
+
+Ein Wechsel des Wochentags **verschiebt nichts.** Der Lauf legt nur an, was
+fehlt; bestehende Dienstage bleiben stehen und laufen aus. Alles andere hieße,
+dass eine Einstellung Termine verrückt, für die längst jemand zugesagt und ein
+Thema vorbereitet hat.
 
 Der Lauf ist **idempotent**: ein Datum, an dem bereits _irgendein_ Termin liegt,
 bleibt unangetastet — unabhängig vom Typ. Genau das schützt selbst angelegte
@@ -1063,6 +1092,61 @@ Unique-Index auf `(hauskreis_id, date)`.
 Die Datumslogik liegt bewusst als reine Funktionen in
 [`meeting-schedule.ts`](src/meeting/meeting-schedule.ts) (UTC-Mitternacht, damit
 Kalendertage nicht über Zeitzonen verrutschen) und ist dort direkt getestet.
+
+### `toUtcDate` und `currentDay` beantworten zwei verschiedene Fragen
+
+Lange beantwortete `toUtcDate` beide, und nur eine davon richtig.
+
+| Frage                                               | Antwort                                                                      |
+| --------------------------------------------------- | ---------------------------------------------------------------------------- |
+| „Welcher Kalendertag ist dieser gespeicherte Wert?" | `toUtcDate(date)` — schneidet eine Zeit ab, die `@db.Date` gar nicht hat     |
+| „Welchen Tag haben wir gerade?"                     | `currentDay(zone, now?)` — braucht eine Zone, weil `now` ein _Zeitpunkt_ ist |
+
+`toUtcDate(new Date())` war die zweite Frage mit dem Werkzeug für die erste: es
+las die **UTC**-Felder eines Zeitpunkts. Um 00:30 Berliner Zeit ist in UTC noch
+gestern, also galt der Termin von gestern noch als kommend. Das Fenster war
+00:00–02:00 im Sommer und 00:00–01:00 im Winter, **jede Nacht** — und es traf
+rund fünfundzwanzig Stellen auf einmal:
+
+- die Terminliste zeigte den Abend von gestern unter „Kommende", während die
+  Detailseite ihn schon mit „Vorbei" auswies;
+- `assertMayPickSongs` antwortete in demselben Fenster mit `403`, obwohl an
+  einem vergangenen Abend jede:r abhaken darf — die App hatte die Kästchen
+  längst freigegeben;
+- Dashboard, Archiv, Gebetsbuddy-Rotation und die nächtlichen Läufe erbten
+  dieselbe Verschiebung, nur fiel sie dort weniger auf.
+
+**Die Zone ist in `currentDay` und `isPast` ein Pflichtargument, kein
+Vorgabewert.** Ein Standard wäre genau die Falle, die hier zugegangen ist: eine
+vergessene Stelle rechnete still in Berlin weiter, und niemand merkte es. So
+zeigt der Typprüfer jede.
+
+Wo die Zone herkommt, weiß **`GroupClockService`**
+([`group-clock.service.ts`](src/meeting/group-clock.service.ts)): er liest
+`MeetingScheduleConfig.timeZone` und hält sie im Speicher, weil ein einziger
+Aufruf der Terminliste sonst für jeden Vergleich dieselbe Zeile abfragte. Der
+Server läuft als genau eine Instanz — es gibt also keinen zweiten Prozess, mit
+dem etwas abzugleichen wäre —, und der einzige Schreibweg räumt den Speicher
+selbst ab (`forget`, gerufen von `MeetingScheduleConfigService.updateConfig`).
+
+Er steckt in einem `@Global()`-Modul, obwohl er neben dem Terminplan liegt:
+Dashboard, Archiv, Themen, Lieder und die Benachrichtigungen brauchen ihn alle,
+und über einen Import auf `MeetingModule` zöge sich das zu Kreisen zusammen.
+
+Die Regel für Aufrufer lautet: **einmal pro Vorgang auflösen**
+(`await this.clock.zoneOf(hauskreisId)`), danach die reinen Funktionen
+benutzen. Ein `await` in einer Schleife holt immer dieselbe Antwort. Wer genau
+einen Vergleich braucht, nimmt `clock.isPast(hauskreisId, date)`.
+
+Nächtliche Läufe, die **alle** Gruppen abdecken, gehen Gruppe für Gruppe
+(`closePastMeetings`) oder ziehen ihr Vorauswahl-Fenster einen Tag weiter als
+nötig und entscheiden danach je Termin (`MeetingReminderService.run`). „Gestern"
+fängt in Auckland zwölf Stunden früher an als in Berlin, und ein gemeinsames
+`updateMany` müsste sich für eine der beiden entscheiden.
+
+Im Frontend gilt dieselbe Zone: `lib/date.ts` hat ein `setGroupZone`, gesetzt
+beim Booten aus derselben Konfiguration. Sonst könnte ein Gerät in einer anderen
+Zone „Vorbei" anzeigen, wo der Server noch „kommend" meint.
 
 Ein Termin **ohne** Host, Location oder Thema ist ein gültiger Zustand, kein
 unvollständiger Datensatz. Beim Bearbeiten gilt: ein weggelassenes Feld bleibt
@@ -1730,6 +1814,7 @@ jemand neu wählen müsste.
 | Methode  | Pfad                                            | Rechte                          |
 | -------- | ----------------------------------------------- | ------------------------------- |
 | `GET`    | `…/topics?scope=public\|mine&search=&from=&to=` | eingeloggt (paginiert)          |
+| `POST`   | `…/topics`                                      | eingeloggt (wird Owner)         |
 | `GET`    | `…/topics/:id`                                  | eingeloggt                      |
 | `PATCH`  | `…/topics/:id`                                  | Owner/Mitarbeit (`If-Match`)    |
 | `DELETE` | `…/topics/:id`                                  | Owner oder `admin`              |
@@ -1915,7 +2000,7 @@ Angezeigt wird er an drei Stellen, mit verschiedener Auflösung:
 
 ## Wenn sich etwas ändert
 
-Drei Benachrichtigungen hängen nicht am Kalender, sondern an einer Änderung.
+Vier Benachrichtigungen hängen nicht am Kalender, sondern an einer Änderung.
 Sie werden aus `MeetingService` heraus ausgelöst, **nachdem** geschrieben wurde —
 eine Absage-Meldung zu einem Speichern, das dann fehlschlägt, wäre schlimmer als
 eine späte.
@@ -1927,10 +2012,34 @@ sollen sich gleich verhalten. Ein bereits abgesagter Abend bleibt still, ein
 vergangener auch — dass Dienstag vor drei Wochen nicht stattgefunden hat, ist
 Buchhaltung und keine Nachricht.
 
-**`ATTENDANCE_DECLINED`** geht an den Host dieses Abends, der schließlich
-einkauft. Nur beim Übergang nach „abwesend" — dieselbe Antwort nochmal zu
-speichern löst nichts aus, und dass man selbst abgesagt hat, muss einem niemand
-mitteilen.
+**`ATTENDANCE_DECLINED`** sind **zwei** Nachrichten unter einem Schalter. Die
+erste geht an den Host dieses Abends, der schließlich einkauft. Nur beim
+Übergang nach „abwesend" — dieselbe Antwort nochmal zu speichern löst nichts
+aus, und dass man selbst abgesagt hat, muss einem niemand mitteilen.
+
+Die zweite geht an **alle anderen**, wenn die Absage eine Rolle freigemacht hat:
+„Antonia kann am 4. August nicht. Das Thema ist wieder frei." Das ist die
+einzige Absage, die etwas zu tun übrig lässt, und deshalb kein eigener Schalter
+— wer „jemand sagt ab" abonniert hat, will gerade diese erfahren.
+
+Aufgezählt wird, was `RoleReleaseService` zurückgemeldet hat, und **das Thema
+gehört dazu**. Es fehlte in `describeReleased`, obwohl es längst freigegeben
+wurde: wer nur dafür zugeteilt war und absagte, ließ den Satz auf `null` fallen
+und der ganze Zweig schwieg. Ein Fehler, den man nur daran merkt, dass nichts
+passiert.
+
+**`MEETING_TIME_CHANGED`** geht raus, wenn sich `startMinutes` ändert — aber
+**nur beim nächsten** geplanten Abend der Gruppe (dieselbe Abfrage wie der
+Startbildschirm). Eine Uhrzeit in fünf Wochen zu verschieben ändert für heute
+nichts; man liest es, wenn man ohnehin hinschaut. Der nächste dagegen ist der,
+vor dessen Tür man sonst zur falschen Zeit steht.
+
+Im Text stehen **beide** Zeiten — „fängt jetzt um 19:30 an, nicht um 18:00" —,
+weil „wir fangen um 19:30 an" allein offenlässt, ob sich überhaupt etwas
+verschoben hat. Nicht an die Person, die es geändert hat: sie hat es gerade
+getippt. Der `notificationLog`-Merkposten wird vorher weggeräumt, sonst
+verschluckt `hasBeenSent` die zweite Verschiebung als Dublette der ersten —
+dieselbe Überlegung wie bei Absage und Wiederbelebung.
 
 **`HOST_CAPACITY_UNLOCKED`** ist die Umkehrung der Kapazitätsregel weiter oben:
 sagen genug Leute ab, passt der Abend plötzlich auch in eine kleine Wohnung, und
@@ -2599,6 +2708,8 @@ beide aus derselben Variable ab.
 | `PUT`                   | `…/meetings/:id/attendance`                  | eingeloggt                                   |
 | `PUT`                   | `…/meetings/:id/actionstep-done`             | eingeloggt (ohne If-Match, für sich selbst)  |
 | `DELETE`                | `…/meetings/:id`                             | `admin`                                      |
+| `GET`                   | `…/meetings/config`                          | eingeloggt (Wochentag + Uhrzeit der Gruppe)  |
+| `PUT`                   | `…/meetings/config`                          | `admin` (`If-Match`), gilt für neue Termine  |
 | `POST`                  | `…/meetings/generate`                        | `admin` (manueller Generator-Trigger)        |
 | `POST`                  | `…/meetings/host-reminders`                  | `admin` (manueller Reminder-Trigger)         |
 | `POST`                  | `…/meetings/actionstep-reminders`            | `admin` (manueller Reminder-Trigger)         |
@@ -2738,6 +2849,39 @@ Zwei Dinge, die man dabei leicht übersieht:
 - **Ein `<img src>` schickt kein Bearer-Token.** Die App holt das Bild deshalb
   über den Fetch-Wrapper und macht daraus eine Data-URL. Der Umweg ist der
   Preis dafür, dass es keine Cookie-Sitzung gibt — und die will man hier nicht.
+
+### Kopfbilder der Bildschirme
+
+Dieselbe Mechanik wie bei den Profilbildern, nur eine Ebene höher: Startbildschirm,
+Gebet, Archiv und Profil tragen im Kopfbereich ein Hintergrundbild. **Termine
+bewusst nicht** — dort liest man eine Liste über Wochen und sucht eine Zeile.
+
+|           |                                                                                 |
+| --------- | ------------------------------------------------------------------------------- |
+| Ablage    | `UPLOAD_DIR/headers/{hauskreisId}-{screen}.webp`, mittig auf 1280×640 (`sharp`) |
+| Auflisten | `GET …/header-images` — `[{ screen, updatedAt }]`, ein Aufruf für alle vier     |
+| Abrufen   | `GET …/header-images/:screen` — `image/webp`, `ETag`, `private, max-age=3600`   |
+| Hochladen | `POST …/header-images/:screen`, Multipart, Feld `file`, max. **10 MB**          |
+| Entfernen | `DELETE …/header-images/:screen`                                                |
+
+Drei Unterschiede zum Profilbild, jeder mit einem Grund:
+
+- **Ein Bild gilt für die ganze Gruppe, und jede:r darf es tauschen.** Kein
+  `@HauskreisAdmin()`: bei neun Leuten, die sich kennen, ist das Hintergrundbild
+  keine Verwaltungsangelegenheit — und ein Knopf, der für die meisten nur eine
+  Fehlermeldung erzeugt, wäre schlimmer als keiner.
+- **Zehn Megabyte statt fünf.** Beim Profilbild schneidet man einen Kopf aus,
+  hier lädt jemand ein Landschaftsfoto vom Handy hoch, und das sprengt fünf
+  regelmäßig. Verkleinert wird ohnehin serverseitig.
+- **Keine Zeile heißt „Vorgabe".** Entfernen löscht die Zeile, statt ein Feld
+  auf `null` zu setzen: es gibt keinen Zustand „ausdrücklich abgewählt", der
+  sich von „noch keins" sinnvoll unterscheiden ließe. In der App steht dann ein
+  Verlauf, je Bildschirm ein eigener.
+
+Die Selbstheilung aus `PhotoService` ist mitgenommen: fehlt die **Datei**,
+obwohl die Zeile steht (Volume weg, Backup zurückgespielt), verschwindet die
+Zeile und der Verlauf ist zurück — statt dass ein `404` auf ein versprochenes
+Bild für immer stehen bliebe.
 
 ### Nutzername und Anzeigename
 

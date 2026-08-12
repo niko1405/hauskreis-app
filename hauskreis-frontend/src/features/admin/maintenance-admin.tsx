@@ -8,12 +8,13 @@
 import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { Field, TextInput } from '@/components/ui/field';
+import { Field, Select, TextInput } from '@/components/ui/field';
 import { ConflictBanner } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
 import {
   useGenerateMeetings,
+  useMeetingSchedule,
   usePlanPrayerBuddyRounds,
   usePrayerBuddyConfig,
   usePurgeAbandonedLocations,
@@ -24,6 +25,7 @@ import {
   useRunSongReminders,
   useRunTopicReminders,
   useSyncAbsences,
+  useUpdateMeetingSchedule,
   useUpdatePrayerBuddyConfig,
 } from '@/lib/api/hooks';
 import { useState } from 'react';
@@ -31,9 +33,167 @@ import { useState } from 'react';
 export function MaintenanceAdmin() {
   return (
     <>
+      <MeetingScheduleCard />
       <PrayerBuddyConfigCard />
       <JobsCard />
     </>
+  );
+}
+
+/** 0 = Sonntag … 6 = Samstag, wie `Date.getUTCDay()` es zählt. */
+const WEEKDAYS = [
+  'Sonntag',
+  'Montag',
+  'Dienstag',
+  'Mittwoch',
+  'Donnerstag',
+  'Freitag',
+  'Samstag',
+];
+
+/**
+ * Alle Zeitzonen, die die Laufzeit kennt — dieselbe Liste, gegen die der Server
+ * prüft.
+ *
+ * Bewusst keine handverlesene Auswahl: die veraltet, und die eine Gruppe, deren
+ * Zone fehlt, kann dann gar nichts einstellen. `supportedValuesOf` gibt es seit
+ * ES2022 in jedem Browser, der diese App überhaupt lädt; die Verzweigung ist
+ * nur da, weil TypeScript sie sonst nicht kennt.
+ */
+const ZONES: string[] = Intl.supportedValuesOf?.('timeZone') ?? [
+  'Europe/Berlin',
+];
+
+/**
+ * Wann sich die Gruppe trifft.
+ *
+ * Beides in einem Formular und mit einem Speichern-Knopf, weil es ein Satz ist:
+ * „wir treffen uns dienstags um 18 Uhr". Getrennt wären es zwei Entscheidungen,
+ * von denen man die zweite vergisst.
+ *
+ * Wochentag und Uhrzeit standen bis eben als Konstanten im Backend — für die
+ * eine Gruppe, für die das geschrieben wurde, stimmten sie.
+ */
+function MeetingScheduleCard() {
+  const schedule = useMeetingSchedule();
+  const update = useUpdateMeetingSchedule();
+  const toast = useToast();
+  const [entwurf, setEntwurf] = useState<{
+    weekday: string;
+    startTime: string;
+    timeZone: string;
+  } | null>(null);
+
+  const current = schedule.data?.data;
+  const wert = entwurf ?? {
+    weekday: String(current?.weekday ?? 2),
+    startTime: current?.startTime ?? '18:00',
+    timeZone: current?.timeZone ?? 'Europe/Berlin',
+  };
+
+  const unverändert =
+    Number(wert.weekday) === current?.weekday &&
+    wert.startTime === current?.startTime &&
+    wert.timeZone === current?.timeZone;
+
+  return (
+    <section>
+      <SectionTitle>Termin-Rhythmus</SectionTitle>
+      <Card className="space-y-4">
+        {update.conflict && (
+          <ConflictBanner
+            onReload={() => void schedule.refetch()}
+            onDismiss={update.dismissConflict}
+          />
+        )}
+
+        <Field label="Wochentag">
+          <Select
+            value={wert.weekday}
+            onChange={(event) =>
+              setEntwurf({ ...wert, weekday: event.target.value })
+            }
+          >
+            {WEEKDAYS.map((name, index) => (
+              <option key={name} value={index}>
+                {name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field
+          label="Uhrzeit"
+          hint="Ab wann der Inhalt eines Themas allen gehört, richtet sich danach."
+        >
+          <TextInput
+            type="time"
+            value={wert.startTime}
+            onChange={(event) =>
+              setEntwurf({ ...wert, startTime: event.target.value })
+            }
+          />
+        </Field>
+
+        {/* Die dritte Angabe desselben Satzes: „dienstags um 18 Uhr" ist ohne
+            sie nicht zu deuten — und „welchen Tag haben wir" ebenso wenig. Ein
+            Server in UTC hielt den Termin von gestern bis zwei Uhr nachts für
+            kommend. */}
+        <Field
+          label="Zeitzone"
+          hint="In dieser Zone gilt die Uhrzeit — und in ihr zählt die App die Tage."
+        >
+          <Select
+            value={wert.timeZone}
+            onChange={(event) =>
+              setEntwurf({ ...wert, timeZone: event.target.value })
+            }
+          >
+            {ZONES.map((zone) => (
+              <option key={zone} value={zone}>
+                {zone}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Button
+          variant="secondary"
+          className="w-full"
+          loading={update.isPending}
+          disabled={unverändert}
+          onClick={() =>
+            update.mutate(
+              {
+                weekday: Number(wert.weekday),
+                startTime: wert.startTime,
+                timeZone: wert.timeZone,
+              },
+              {
+                onSuccess: () => {
+                  setEntwurf(null);
+                  toast.success('Rhythmus gespeichert.');
+                },
+              },
+            )
+          }
+        >
+          Speichern
+        </Button>
+
+        <p className="text-[11px] leading-relaxed text-stone-400">
+          Gilt für Termine, die der Zeitplaner ab jetzt anlegt. Was schon im
+          Kalender steht, behält seinen Tag und seine Zeit — dafür hat längst
+          jemand zugesagt.
+        </p>
+
+        {current?.updatedBy && (
+          <p className="text-[11px] text-stone-400">
+            Zuletzt geändert von {current.updatedBy.name}.
+          </p>
+        )}
+      </Card>
+    </section>
   );
 }
 

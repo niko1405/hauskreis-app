@@ -90,6 +90,28 @@ export function isToday(day: CalendarDay): boolean {
   return day === today();
 }
 
+/**
+ * Hat der Abend dieses Termins **angefangen**?
+ *
+ * Der einzige Helfer hier, der einen Tag mit einer Uhrzeit verrechnet — und
+ * deshalb bewusst nicht `isPast`/`isFuture` heißt: die beiden sind tagesgenau
+ * und antworten am Termintag „weder noch". Für den Actionstep reicht das nicht.
+ * Er ließ sich sonst am Termintag um acht Uhr morgens abhaken, also zehn Stunden
+ * bevor die Gruppe ihn ausgesprochen hatte.
+ *
+ * `startTime` ist `"19:30"`, wie es aus der API kommt. Gerechnet wird in der
+ * **Zone der Gruppe**, genau wie im Backend — vorher war es die des Geräts, und
+ * damit sah jemand im Urlaub einen Abend als begonnen, den der Server noch
+ * nicht freigegeben hatte.
+ */
+export function hasStarted(day: CalendarDay, startTime: string): boolean {
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const start = (hours ?? 0) * 60 + (minutes ?? 0);
+  const now = groupNow();
+
+  return now.day > day || (now.day === day && now.minutes >= start);
+}
+
 /** Montag der Woche, in der `day` liegt. */
 export function startOfWeek(day: CalendarDay): CalendarDay {
   const date = parseDay(day);

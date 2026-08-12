@@ -19,6 +19,15 @@ export interface HomeScreen {
   nextMeeting: {
     id: string;
     date: string;
+    /**
+     * Minuten seit Mitternacht — das Antwort-Schema macht `"19:30"` daraus,
+     * genau wie bei `meeting.startTime`.
+     *
+     * „Wann treffen wir uns" ist die zweite Frage nach „wann", und sie stand auf
+     * dem Startbildschirm bisher gar nicht: man musste den Termin öffnen, um
+     * eine Uhrzeit zu sehen, die sich inzwischen einstellen lässt.
+     */
+    startTime: number;
     endDate: string | null;
     type: string;
     /** Ob der Abend überhaupt ein Thema bzw. Lieder vorsieht. */
@@ -114,6 +123,7 @@ export class DashboardService {
           select: {
             id: true,
             date: true,
+            startMinutes: true,
             endDate: true,
             type: true,
             hasTopicSlot: true,
@@ -215,7 +225,7 @@ export class DashboardService {
         : null,
       myRoles: myRoles.filter((role) => role.role !== 'PRAYER_BUDDY'),
       openActionstep:
-        actionstep && actionstepText?.trim()
+        actionstep && actionstepText
           ? {
               text: actionstepText,
               meetingId: actionstep.id,

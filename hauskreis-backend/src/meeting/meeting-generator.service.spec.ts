@@ -6,14 +6,27 @@ import {
 // leaves handles open and drags the suite out.
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
+import type { MeetingScheduleConfigService } from './meeting-schedule-config.service';
 import { MeetingType } from '../../generated/prisma/enums';
+import { withClock } from './group-clock.testing';
 
 type CreateManyArgs = {
-  data: { hauskreisId: string; date: Date; type: string }[];
+  data: {
+    hauskreisId: string;
+    date: Date;
+    type: string;
+    startMinutes: number;
+  }[];
   skipDuplicates?: boolean;
 };
 
-function setup(existingDates: Date[] = []) {
+/** Dienstag, 18 Uhr — die Vorgabe, mit der die Gruppe bisher gelebt hat. */
+const TUESDAY_AT_SIX = { weekday: 2, startMinutes: 18 * 60 };
+
+function setup(
+  existingDates: Date[] = [],
+  rhythm: { weekday: number; startMinutes: number } = TUESDAY_AT_SIX,
+) {
   const createMany = jest.fn(
     (args: CreateManyArgs): Promise<{ count: number }> =>
       Promise.resolve({ count: args.data.length }),
@@ -29,14 +42,19 @@ function setup(existingDates: Date[] = []) {
   };
   const autoAttendance = { apply: jest.fn().mockResolvedValue(0) };
 
-  const service = new MeetingGeneratorService(
-    { meeting, hauskreis } as unknown as PrismaService,
-    // Füllt sonst die Zusagen derer nach, die grundsätzlich dabei sind. Was
-    // dabei herauskommt, prüft `auto-attendance.service.spec.ts`.
-    autoAttendance as unknown as AutoAttendanceService,
+  const schedule = { getRhythm: jest.fn().mockResolvedValue(rhythm) };
+
+  const service = withClock(
+    new MeetingGeneratorService(
+      { meeting, hauskreis } as unknown as PrismaService,
+      // Füllt sonst die Zusagen derer nach, die grundsätzlich dabei sind. Was
+      // dabei herauskommt, prüft `auto-attendance.service.spec.ts`.
+      autoAttendance as unknown as AutoAttendanceService,
+      schedule as unknown as MeetingScheduleConfigService,
+    ),
   );
 
-  return { service, meeting, hauskreis, createMany };
+  return { service, meeting, hauskreis, createMany, schedule };
 }
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
@@ -111,6 +129,42 @@ describe('MeetingGeneratorService.generateFor', () => {
     expect(dates).toHaveLength(MEETINGS_AHEAD - 1);
   });
 
+  it('gibt jedem Abend die Uhrzeit der Gruppe mit', async () => {
+    // Ausdrücklich gesetzt und nicht dem Spalten-Default überlassen: der
+    // stimmt nur für eine Gruppe, die sich um 18 Uhr trifft.
+    const { service, createMany } = setup([], {
+      weekday: 2,
+      startMinutes: 1170,
+    });
+
+    await service.generateFor('hk-1', MONDAY);
+
+    for (const created of createMany.mock.calls[0][0].data) {
+      expect(created.startMinutes).toBe(1170);
+    }
+  });
+
+  it('folgt dem eingestellten Wochentag', async () => {
+    // Donnerstags statt dienstags — der Wochentag stand einmal als Konstante
+    // im Terminplaner und war damit eine Aussage über *eine* Gruppe.
+    const { service, createMany } = setup([], {
+      weekday: 4,
+      startMinutes: 1080,
+    });
+
+    await service.generateFor('hk-1', MONDAY);
+
+    expect(createMany.mock.calls[0][0].data.map((m) => isoOf(m.date))).toEqual([
+      '2026-07-30',
+      '2026-08-06',
+      '2026-08-13',
+      '2026-08-20',
+      '2026-08-27',
+      '2026-09-03',
+      '2026-09-10',
+    ]);
+  });
+
   it('guards against a concurrent run', async () => {
     const { service, createMany } = setup();
 
@@ -134,9 +188,21 @@ describe('MeetingGeneratorService.generateForAllHauskreise', () => {
 describe('MeetingGeneratorService.closePastMeetings', () => {
   it('marks evenings that have been and gone as completed', async () => {
     const updateMany = jest.fn().mockResolvedValue({ count: 3 });
-    const service = new MeetingGeneratorService(
-      { meeting: { updateMany } } as unknown as PrismaService,
-      { apply: jest.fn() } as unknown as AutoAttendanceService,
+    const service = withClock(
+      new MeetingGeneratorService(
+        {
+          meeting: { updateMany },
+          // Der Lauf geht Gruppe für Gruppe, seit jede ihre eigene Zeitzone
+          // hat — „gestern" fängt anderswo früher an.
+          hauskreis: {
+            findMany: jest.fn().mockResolvedValue([{ id: 'hk-1' }]),
+          },
+        } as unknown as PrismaService,
+        { apply: jest.fn() } as unknown as AutoAttendanceService,
+        {
+          getRhythm: jest.fn(),
+        } as unknown as MeetingScheduleConfigService,
+      ),
     );
 
     await expect(
@@ -146,6 +212,7 @@ describe('MeetingGeneratorService.closePastMeetings', () => {
     // Cancelled ones keep their status: "fiel aus" is a different fact from
     // "hat stattgefunden", and the archive should tell them apart.
     expect(updateMany.mock.calls[0][0].where).toEqual({
+      hauskreisId: 'hk-1',
       date: { lt: new Date('2026-07-29T00:00:00.000Z') },
       status: 'PLANNED',
     });

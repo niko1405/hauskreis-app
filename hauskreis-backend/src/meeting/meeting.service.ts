@@ -96,6 +96,8 @@ export class MeetingService {
     private readonly autoAttendance: AutoAttendanceService,
     private readonly customMeetingNotifications: CustomMeetingNotificationService,
     private readonly topicLinks: TopicLinkService,
+    private readonly schedule: MeetingScheduleConfigService,
+    private readonly clock: GroupClockService,
   ) {}
 
   async findAll(
@@ -149,7 +151,7 @@ export class MeetingService {
     ]);
 
     return toPage(
-      items.map((meeting) => withTopicSession(meeting, viewer)),
+      items.map((meeting) => shapeMeeting(meeting, viewer)),
       total,
       query,
     );
@@ -165,7 +167,7 @@ export class MeetingService {
       throw new NotFoundException(`Meeting ${id} not found`);
     }
 
-    return withTopicSession(meeting, viewer);
+    return shapeMeeting(meeting, viewer);
   }
 
   async create(
@@ -190,6 +192,19 @@ export class MeetingService {
     assertSlotsAllow(slots, dto);
     assertSlotsExclusive(slots);
 
+    // Ohne Angabe die Zeit der Gruppe — dieselbe, die gleich geschrieben wird.
+    const startMinutes =
+      dto.startTime ??
+      (await this.schedule.getRhythm(hauskreisId)).startMinutes;
+
+    // Auch beim Anlegen: die API ist aus Bruno und aus jedem Skript erreichbar,
+    // und ein rückdatierter Termin passiert die Regel korrekt.
+    assertNotesSlotNotAhead(slotDefaults(dto.type), slots, {
+      date,
+      startMinutes,
+      zone: await this.clock.zoneOf(hauskreisId),
+    });
+
     const venue = await this.resolveVenue(hauskreisId, dto, {
       hostPersonId: null,
       location: null,
@@ -201,6 +216,7 @@ export class MeetingService {
         date,
         endDate,
         type: dto.type,
+        startMinutes,
         ...slots,
         locationId: venue.locationId ?? null,
         hostPersonId: venue.hostPersonId ?? null,
@@ -242,6 +258,13 @@ export class MeetingService {
     const slots = resolveSlots(before, dto);
     assertSlotsAllow(slots, dto);
     assertSlotsExclusive(slots);
+    // Die Anfangszeit **nach** diesem Aufruf: wer Uhrzeit und Baustein zugleich
+    // ändert, meint die neue.
+    assertNotesSlotNotAhead(before, slots, {
+      date: before.date,
+      startMinutes: dto.startTime ?? before.startTime,
+      zone: await this.clock.zoneOf(hauskreisId),
+    });
     const cleared = clearedByTurningOff(before, slots);
 
     const type = dto.type ?? before.type;
@@ -274,6 +297,7 @@ export class MeetingService {
           data: {
             type: dto.type,
             endDate,
+            startMinutes: dto.startTime,
             ...slots,
             // `undefined` leaves a field alone, `null` clears it — that
             // distinction is what lets a host or location be un-assigned.
@@ -282,6 +306,8 @@ export class MeetingService {
             title: dto.title,
             testimonyPersonId: dto.testimonyPersonId,
             infoText: dto.infoText,
+            summaryText: dto.summaryText,
+            actionstepText: dto.actionstepText,
             // Zuletzt, damit es gewinnt: ein abgeschalteter Baustein räumt
             // seine Felder weg, auch wenn oben noch alte Werte stünden.
             ...cleared,
@@ -338,6 +364,17 @@ export class MeetingService {
         id,
         AssignmentRole.HOST,
         [updated.hostPersonId],
+        viewer.personId,
+      );
+    }
+
+    // Eine verschobene Uhrzeit ist die eine Änderung an einem Abend, die man
+    // erfahren muss, ohne die App zu öffnen: wer um 18 Uhr vor der Tür steht,
+    // während die anderen um 19:30 kommen, hat davon nichts gelesen.
+    if (updated.startTime !== before.startTime) {
+      await this.meetingNotifications.announceTimeChange(
+        id,
+        before.startTime,
         viewer.personId,
       );
     }
@@ -460,6 +497,18 @@ export class MeetingService {
   /**
    * Nimmt eine Absage zurück — auch eine automatische, falls jemand den Abend
    * trotz lauter Absagen stattfinden lassen will.
+   *
+   * Bei einer automatischen zieht das die eigenen Absagen mit. Sonst stünde der
+   * Abend als „findet statt" da, während alle neun auf „nicht dabei" stehen —
+   * ein Zustand, den der nächste `reconcile` (ein Austritt, der nächtliche
+   * Abwesenheits-Abgleich) sofort wieder in eine Absage übersetzt. Wer den
+   * Abend zurückholt, sagt damit „wir versuchen es nochmal", und darauf gehört
+   * eine neue Antwort.
+   *
+   * Nur die selbst gegebenen Antworten: eine aus einem Abwesenheitszeitraum
+   * abgeleitete Absage ist keine Meinung über diesen Abend, sondern die
+   * Tatsache, dass jemand verreist ist — die zurückzusetzen hieße, sie beim
+   * nächsten Lauf erneut herzuleiten.
    */
   async uncancel(
     hauskreisId: string,
@@ -565,7 +614,15 @@ export class MeetingService {
   private async loadPlain(hauskreisId: string, id: string) {
     const meeting = await this.prisma.meeting.findFirst({
       where: { id, hauskreisId },
-      select: { id: true, date: true, type: true, status: true },
+      // `startMinutes` ist dabei, weil das Abhaken des Actionsteps an der
+      // Treffpunktzeit hängt und nicht am Kalendertag.
+      select: {
+        id: true,
+        date: true,
+        startMinutes: true,
+        type: true,
+        status: true,
+      },
     });
 
     if (!meeting) {
@@ -685,6 +742,14 @@ export class MeetingService {
    * Idempotent in beide Richtungen: nochmal abhaken behält den ursprünglichen
    * Zeitpunkt (`doneAt` ist „seit wann", nicht „zuletzt angetippt"), und ein
    * Haken, den es nicht gibt, lässt sich folgenlos entfernen.
+   *
+   * **Erst ab Abendbeginn.** Die Grenze war einmal der Kalendertag, und damit
+   * ließ sich der Vorsatz für die kommende Woche am Termintag um acht Uhr
+   * morgens abhaken — zehn Stunden bevor die Gruppe ihn überhaupt ausgesprochen
+   * hatte. Maßgeblich ist deshalb die Treffpunktzeit dieses Abends, geprüft mit
+   * demselben `eveningReached`, das auch entscheidet, wann der Inhalt einer
+   * Einheit allen gehört. Zwei Rechnungen für „hat der Abend angefangen" wären
+   * eine zu viel.
    */
   async setActionstepDone(
     hauskreisId: string,
@@ -874,15 +939,21 @@ export class MeetingService {
 }
 
 /**
- * Der Termin mit seiner Einheit in Antwortform.
+ * Der Termin in Antwortform — die einzige Stelle, die einen Abend umformt.
  *
- * Der einzige Teil eines Abends, der davon abhängt, **wer** fragt: bis 18 Uhr am
- * Termintag gehören Titel, Actionstep und Zusammenfassung denen, die sie
- * vorbereiten. `shapeSessionForMeeting` setzt sie für alle anderen auf `null` —
- * hier und nicht im Frontend, sonst gingen sie trotzdem über die Leitung.
+ * Zweierlei passiert hier. Die **Einheit** ist der einzige Teil eines Abends,
+ * der davon abhängt, *wer* fragt: bis der Abend beginnt, gehören Titel,
+ * Actionstep und Zusammenfassung denen, die sie vorbereiten.
+ * `shapeSessionForMeeting` setzt sie für alle anderen auf `null` — hier und
+ * nicht im Frontend, sonst gingen sie trotzdem über die Leitung.
+ *
+ * Und die **Uhrzeit** wird aus Minuten wieder eine Uhrzeit. Gerechnet wird mit
+ * `startMinutes`, gelesen wird `"19:30"`; das Antwort-Schema lässt die Zahl
+ * dann von selbst weg.
  */
-function withTopicSession<
+function shapeMeeting<
   T extends {
+    startMinutes: number;
     topicSession:
       | (Parameters<typeof shapeSessionForMeeting>[0] & {
           topic: Parameters<typeof shapeSessionForMeeting>[1];
@@ -892,6 +963,7 @@ function withTopicSession<
 >(meeting: T, viewer: Viewer) {
   return {
     ...meeting,
+    startTime: meeting.startMinutes,
     topicSession: meeting.topicSession
       ? shapeSessionForMeeting(
           meeting.topicSession,

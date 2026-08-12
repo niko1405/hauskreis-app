@@ -7,7 +7,8 @@ import {
   formatShortDate,
 } from '../notification/reminder-copy';
 import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
-import { toUtcDate } from './meeting-schedule';
+import { formatWallClock } from '../common/time/wall-clock';
+import { GroupClockService } from './group-clock.service';
 import { appPath } from '../notification/app-paths';
 import type { ReleasedRoles } from './role-release.service';
 
@@ -61,6 +62,91 @@ export class MeetingNotificationService {
       title: 'Findet doch statt',
       body: `${what} am ${formatMeetingDate(date)} ist wieder dabei — jemand hat doch zugesagt.`,
     }));
+  }
+
+  /**
+   * „Wir fangen jetzt um 19:30 an."
+   *
+   * Nur für den **nächsten** Abend. Eine Uhrzeit in fünf Wochen zu verschieben
+   * ändert für heute nichts — man liest es, wenn man ohnehin hinschaut. Der
+   * nächste dagegen ist der, vor dessen Tür man sonst zur falschen Zeit steht,
+   * und genau dafür ist eine Push-Nachricht da.
+   *
+   * Nicht an die Person, die es geändert hat: sie hat es gerade getippt.
+   */
+  async announceTimeChange(
+    meetingId: string,
+    previousMinutes: number,
+    actorPersonId: string,
+  ): Promise<number> {
+    const meeting = await this.prisma.meeting.findUnique({
+      where: { id: meetingId },
+      select: {
+        id: true,
+        hauskreisId: true,
+        date: true,
+        title: true,
+        status: true,
+        startMinutes: true,
+      },
+    });
+
+    if (
+      !meeting ||
+      meeting.status !== MeetingStatus.PLANNED ||
+      (await this.clock.isPast(meeting.hauskreisId, meeting.date))
+    ) {
+      return 0;
+    }
+
+    // Dieselbe Frage wie auf dem Startbildschirm: welcher Abend steht als
+    // nächster an. Zwei Formulierungen davon wären zwei Gelegenheiten, sie
+    // verschieden zu beantworten.
+    const next = await this.prisma.meeting.findFirst({
+      where: {
+        hauskreisId: meeting.hauskreisId,
+        date: { gte: await this.clock.today(meeting.hauskreisId) },
+        status: MeetingStatus.PLANNED,
+      },
+      orderBy: { date: 'asc' },
+      select: { id: true },
+    });
+
+    if (next?.id !== meeting.id) {
+      return 0;
+    }
+
+    // Beide Richtungen laufen über dieselbe Art, und `hasBeenSent` verschluckte
+    // die zweite Verschiebung sonst als Dublette der ersten — dieselbe
+    // Überlegung wie bei Absage und Wiederbelebung.
+    await this.prisma.notificationLog.deleteMany({
+      where: {
+        type: NotificationType.MEETING_TIME_CHANGED,
+        relatedMeetingId: meeting.id,
+      },
+    });
+
+    const people = await this.prisma.person.findMany({
+      where: {
+        hauskreisId: meeting.hauskreisId,
+        active: true,
+        id: { not: actorPersonId },
+      },
+      select: { id: true },
+    });
+
+    return this.sendAll(
+      people.map((person) => ({
+        personId: person.id,
+        type: NotificationType.MEETING_TIME_CHANGED,
+        relatedMeetingId: meeting.id,
+        payload: {
+          title: 'Neue Uhrzeit',
+          body: `${meeting.title ?? 'Der Hauskreis'} am ${formatShortDate(meeting.date)} fängt jetzt um ${formatWallClock(meeting.startMinutes)} an, nicht um ${formatWallClock(previousMinutes)}.`,
+          url: appPath.meeting(meeting.id),
+        },
+      })),
+    );
   }
 
   private async announceStatusChange(
@@ -302,12 +388,16 @@ export class MeetingNotificationService {
  * „Gastgeber und Musik sind wieder frei." — oder nichts, wenn nichts frei wurde.
  *
  * Als Liste und nicht als geschachtelte Bedingung: bei zwei Rollen ließ sich
- * das noch mit einem Dreifach-Fragezeichen schreiben, bei dreien wären es acht
- * Zweige für einen Satz. Dieselbe Form wie `describeOpenRoles` beim Austritt.
+ * das noch mit einem Dreifach-Fragezeichen schreiben, bei vieren wären es
+ * sechzehn Zweige für einen Satz. Dieselbe Form wie `describeOpenRoles` beim
+ * Austritt — und aus demselben Grund vollständig: **das Thema fehlte hier**,
+ * obwohl `RoleReleaseService` es längst freigibt. Wer nur dafür zugeteilt war
+ * und absagte, ließ `what` auf `null` fallen, und dieser ganze Zweig schwieg.
  */
 function describeReleased(released: ReleasedRoles): string | null {
   const free = [
     released.host && 'Der Gastgeber-Platz',
+    released.topic && 'Das Thema',
     released.song && 'Die Musik',
     released.testimony && 'Das Testimony',
   ].filter((entry): entry is string => typeof entry === 'string');

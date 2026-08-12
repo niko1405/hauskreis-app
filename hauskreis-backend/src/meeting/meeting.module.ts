@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MeetingController } from './meeting.controller';
 import { MeetingService } from './meeting.service';
 import { MeetingGeneratorService } from './meeting-generator.service';
+import { MeetingScheduleConfigService } from './meeting-schedule-config.service';
 import { HostReminderService } from './host-reminder.service';
 import { ActionstepReminderService } from './actionstep-reminder.service';
 import { TestimonyReminderService } from './testimony-reminder.service';
@@ -33,6 +34,7 @@ import { TopicLinkModule } from '../topic/topic-link.module';
   providers: [
     MeetingService,
     MeetingGeneratorService,
+    MeetingScheduleConfigService,
     HostReminderService,
     ActionstepReminderService,
     TestimonyReminderService,

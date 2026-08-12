@@ -131,6 +131,8 @@ export type UpcomingCommitment = SuggestionFacts['upcomingCommitments'][number];
 export type Topic = S['TopicResponseDto'];
 export type TopicListItem = S['TopicPageResponseDto']['items'][number];
 export type TopicStatus = Topic['status'];
+/** Ein Thema anlegen, ohne dass ein Abend dafür feststeht. Titel ist Pflicht. */
+export type CreateTopicInput = S['CreateTopicDto'];
 export type UpdateTopicInput = S['UpdateTopicDto'];
 
 /** Ein Abend eines Themas — hier sitzt der Inhalt, nicht am Termin. */

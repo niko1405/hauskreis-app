@@ -19,7 +19,20 @@ import type { RoleReleaseService } from './role-release.service';
 import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import type { TopicLinkService } from '../topic/topic-link.service';
 import type { CustomMeetingNotificationService } from './custom-meeting-notification.service';
+import type { MeetingScheduleConfigService } from './meeting-schedule-config.service';
 import { MeetingType } from '../../generated/prisma/enums';
+import { withClock } from './group-clock.testing';
+
+/** Die Zone der Gruppe — in den Tests immer dieselbe. */
+const BERLIN = 'Europe/Berlin';
+
+/**
+ * Dienstag, 18 Uhr — die Uhrzeit, die ein Termin ohne eigene Angabe bekommt.
+ * Hier steht sie nur im Weg; geprüft wird sie in `meeting-start-time.spec.ts`.
+ */
+const SCHEDULE = {
+  getRhythm: jest.fn().mockResolvedValue({ weekday: 2, startMinutes: 1080 }),
+} as unknown as MeetingScheduleConfigService;
 
 /** Was `findFirst` auf die Überschneidungsfrage antwortet. */
 function setup(clash: { date: Date } | null = null) {

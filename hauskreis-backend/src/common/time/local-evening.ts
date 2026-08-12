@@ -49,23 +49,28 @@ function zoneOffsetMinutes(instant: Date): number {
 /**
  * Der Moment, in dem der Abend dieses Kalendertags beginnt.
  *
+ * `startMinutes` sind Minuten seit Mitternacht Ortszeit, wie sie am Termin
+ * stehen. Ohne Angabe gilt `EVENING_HOUR`.
+ *
  * Zwei Durchgänge, weil der Versatz selbst vom Zeitpunkt abhängt: der erste
  * Versuch rechnet mit dem Versatz zur falschen Stunde, der zweite mit dem zur
- * fast richtigen. Ein dritter brächte nichts — die Umstellung passiert nachts um
- * zwei, und 18 Uhr ist von beiden Rändern weit genug weg.
+ * fast richtigen. Ein dritter brächte nichts, solange die Anfangszeit nicht in
+ * der Umstellungsstunde selbst liegt — die ist nachts um zwei, und dann trifft
+ * sich kein Hauskreis.
  */
-export function eveningOf(date: Date): Date {
-  const wallClock = Date.UTC(
-    date.getUTCFullYear(),
-    date.getUTCMonth(),
-    date.getUTCDate(),
-    EVENING_HOUR,
-  );
+export function eveningOf(
+  date: Date,
+  zone: string,
+  startMinutes: number = EVENING_HOUR * 60,
+): Date {
+  const wallClock =
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) +
+    startMinutes * 60_000;
 
   const guess = new Date(
-    wallClock - zoneOffsetMinutes(new Date(wallClock)) * 60_000,
+    wallClock - zoneOffsetMinutes(new Date(wallClock), zone) * 60_000,
   );
-  return new Date(wallClock - zoneOffsetMinutes(guess) * 60_000);
+  return new Date(wallClock - zoneOffsetMinutes(guess, zone) * 60_000);
 }
 
 /**
@@ -74,6 +79,11 @@ export function eveningOf(date: Date): Date {
  * `now` ist ein Parameter und keine versteckte `new Date()`, damit die Tests
  * nicht an der Systemuhr hängen.
  */
-export function eveningReached(date: Date, now: Date = new Date()): boolean {
-  return now.getTime() >= eveningOf(date).getTime();
+export function eveningReached(
+  date: Date,
+  zone: string,
+  now: Date = new Date(),
+  startMinutes?: number,
+): boolean {
+  return now.getTime() >= eveningOf(date, zone, startMinutes).getTime();
 }

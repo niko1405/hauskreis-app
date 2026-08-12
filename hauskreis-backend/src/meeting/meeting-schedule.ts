@@ -22,20 +22,28 @@ export function addDays(date: Date, days: number): Date {
 }
 
 /**
- * The first Tuesday strictly after `from`. Passing a Tuesday returns the
- * following week, so a meeting is never generated for a day that is already
- * under way.
+ * Der erste `weekday` **echt nach** `from`. Fällt `from` selbst darauf, kommt
+ * die Folgewoche — so entsteht nie ein Termin für einen Tag, der schon läuft.
+ *
+ * `weekday` zählt wie `Date.getUTCDay()`: 0 = Sonntag … 6 = Samstag. Er stand
+ * hier als `const TUESDAY = 2` und im Namen der Funktion, was für die eine
+ * Gruppe stimmte, für die das geschrieben wurde. Jetzt kommt er aus
+ * `MeetingScheduleConfig`.
  */
-export function nextTuesdayAfter(from: Date): Date {
+export function nextWeekdayAfter(from: Date, weekday: number): Date {
   const base = toUtcDate(from);
-  const daysUntilTuesday = (TUESDAY - base.getUTCDay() + 7) % 7 || 7;
-  return addDays(base, daysUntilTuesday);
+  const daysUntil = (weekday - base.getUTCDay() + 7) % 7 || 7;
+  return addDays(base, daysUntil);
 }
 
-/** The next `count` Tuesdays, starting with the first one after `from`. */
-export function upcomingTuesdays(from: Date, count: number): Date[] {
+/** Die nächsten `count` Termine dieses Wochentags, ab dem ersten nach `from`. */
+export function upcomingWeekdays(
+  from: Date,
+  weekday: number,
+  count: number,
+): Date[] {
   const dates: Date[] = [];
-  let cursor = nextTuesdayAfter(from);
+  let cursor = nextWeekdayAfter(from, weekday);
 
   for (let i = 0; i < count; i += 1) {
     dates.push(cursor);
@@ -46,10 +54,14 @@ export function upcomingTuesdays(from: Date, count: number): Date[] {
 }
 
 /**
- * True when no further Tuesday falls in the same month — i.e. this is the last
- * regular meeting before the month ends, which is the Lobpreis/Gebet slot.
+ * True when no further meeting of the same weekday falls in the same month —
+ * i.e. this is the last regular evening before the month ends, which is the
+ * Lobpreis/Gebet slot.
+ *
+ * War schon immer wochentagsunabhängig gerechnet („+7 Tage, anderer Monat?"),
+ * nur der Name behauptete etwas anderes.
  */
-export function isLastTuesdayOfMonth(date: Date): boolean {
+export function isLastOfMonth(date: Date): boolean {
   const base = toUtcDate(date);
   return addDays(base, 7).getUTCMonth() !== base.getUTCMonth();
 }

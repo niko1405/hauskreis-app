@@ -1,0 +1,50 @@
+meta {
+  name: Uhrzeit verschieben
+  type: http
+  seq: 28
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{meetingEtag}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "startTime": "19:30"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("meetingEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("die neue Zeit steht am Termin", function () {
+    expect(res.body.startTime).to.equal("19:30");
+  });
+}
+
+docs {
+  Änderbar, aber **nicht leerbar** — genau das heißt „Pflichtfeld" in einem
+  PATCH. `"startTime": null` wird abgelehnt: einen Abend ohne Uhrzeit soll es
+  nicht geben.
+
+  Ist das der **nächste** geplante Abend der Gruppe, geht eine
+  `MEETING_TIME_CHANGED`-Benachrichtigung an alle außer die schreibende Person.
+  Bei einem Abend weiter hinten passiert nichts — das liest man, wenn man
+  ohnehin hinschaut.
+
+  Die Uhrzeit entscheidet außerdem, ab wann der Inhalt einer noch nicht
+  gehaltenen Einheit allen gehört (vorher pauschal 18 Uhr).
+}

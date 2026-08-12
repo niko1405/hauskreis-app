@@ -33,6 +33,9 @@ export const ADMIN_ONLY_ROUTES = [
   'POST   /hauskreise/{id}/meetings/{meetingId}/cancel',
   'POST   /hauskreise/{id}/meetings/{meetingId}/uncancel',
   'POST   /hauskreise/{id}/meetings/generate',
+  // Lesen darf jede:r — wann sich die Gruppe trifft, gehört auf jeden
+  // Bildschirm. Nur das Verstellen ist Admin-Sache.
+  'PUT    /hauskreise/{id}/meetings/config',
   'POST   /hauskreise/{id}/meetings/host-reminders',
   'POST   /hauskreise/{id}/meetings/actionstep-reminders',
   'POST   /hauskreise/{id}/topics/reminders',

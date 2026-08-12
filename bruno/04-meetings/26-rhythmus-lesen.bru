@@ -1,0 +1,34 @@
+meta {
+  name: Termin-Rhythmus lesen
+  type: http
+  seq: 26
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/config
+  body: none
+  auth: inherit
+}
+
+script:post-response {
+  bru.setEnvVar("meetingScheduleEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Vorgabe ist Dienstag um 18 Uhr", function () {
+    expect(res.body.weekday).to.be.a("number");
+    expect(res.body.startTime).to.match(/^\d{2}:\d{2}$/);
+  });
+}
+
+docs {
+  Lesen darf jede:r — dass der Hauskreis dienstags um 18 Uhr ist, gehört auf
+  jeden Bildschirm. Die Zeile wird beim ersten Lesen angelegt.
+
+  `config` steht im Controller **vor** `:id`, sonst fängt der UUID-Parameter
+  das Wort ab und die Antwort wäre ein 400 auf einen Termin, den es nicht gibt.
+}

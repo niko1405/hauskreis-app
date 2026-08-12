@@ -3,11 +3,9 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { MeetingStatus, MeetingType } from '../../generated/prisma/enums';
-import {
-  isLastTuesdayOfMonth,
-  toUtcDate,
-  upcomingTuesdays,
-} from './meeting-schedule';
+import { isLastOfMonth, upcomingWeekdays } from './meeting-schedule';
+import { GroupClockService } from './group-clock.service';
+import { MeetingScheduleConfigService } from './meeting-schedule-config.service';
 import { slotDefaults } from './meeting-slots';
 
 /** How many future meetings should always be available for planning. */
@@ -25,6 +23,8 @@ export class MeetingGeneratorService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly autoAttendance: AutoAttendanceService,
+    private readonly schedule: MeetingScheduleConfigService,
+    private readonly clock: GroupClockService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM, { name: 'generate-meetings' })
@@ -84,7 +84,13 @@ export class MeetingGeneratorService {
   }
 
   /**
-   * Makes sure the next `MEETINGS_AHEAD` Tuesdays exist as meetings.
+   * Makes sure the next `MEETINGS_AHEAD` evenings exist as meetings.
+   *
+   * Wochentag und Uhrzeit kommen aus `MeetingScheduleConfig` — hier stand
+   * beides einmal als Konstante, und eine App, die nur Dienstage kennt, ist
+   * keine App für Hauskreise. Ein Wechsel des Wochentags verschiebt nichts,
+   * was schon steht: der Lauf legt nur an, was fehlt, und die alten Termine
+   * laufen aus.
    *
    * Idempotent by design: a date that already has *any* meeting is left
    * untouched, whatever its type. That is what protects a CUSTOM meeting the
@@ -92,14 +98,19 @@ export class MeetingGeneratorService {
    * generated standard one.
    *
    * Seit ein besonderer Termin mehrere Tage dauern kann, reicht der Vergleich
-   * auf das Startdatum nicht mehr: liegt der Dienstag **mitten** in einer
+   * auf das Startdatum nicht mehr: liegt der Abend **mitten** in einer
    * Freizeit, stünde sonst ein Hauskreis-Abend im Zeltlager.
    */
   async generateFor(
     hauskreisId: string,
     now = new Date(),
   ): Promise<GenerationResult> {
-    const dates = upcomingTuesdays(now, MEETINGS_AHEAD);
+    const rhythm = await this.schedule.getRhythm(hauskreisId);
+    // Der Kalendertag der Gruppe, nicht der rohe Zeitpunkt: der Lauf startet um
+    // drei Uhr nachts, und in UTC ist das noch der Vortag — `upcomingWeekdays`
+    // hätte dann einen Termin für **heute** angelegt statt für nächste Woche.
+    const today = await this.clock.today(hauskreisId, now);
+    const dates = upcomingWeekdays(today, rhythm.weekday, MEETINGS_AHEAD);
     const last = dates.at(-1) as Date;
 
     const existing = await this.prisma.meeting.findMany({
@@ -128,15 +139,21 @@ export class MeetingGeneratorService {
 
     const result = await this.prisma.meeting.createMany({
       data: missing.map((date) => {
-        const type = isLastTuesdayOfMonth(date)
+        const type = isLastOfMonth(date)
           ? MeetingType.LOBPREIS_GEBET
           : MeetingType.STANDARD;
 
-        // Die Bausteine kommen aus der Terminart und werden hier ausdrücklich
-        // gesetzt statt den Spalten-Defaults überlassen: die stimmen nur für
-        // STANDARD, und ein Lobpreisabend mit Themen-Slot wäre genau der
-        // Zustand, den die Slots abschaffen sollten.
-        return { hauskreisId, date, type, ...slotDefaults(type) };
+        // Bausteine und Uhrzeit kommen aus Terminart und Rhythmus und werden
+        // hier ausdrücklich gesetzt statt den Spalten-Defaults überlassen: die
+        // stimmen nur für STANDARD um 18 Uhr, und ein Lobpreisabend mit
+        // Themen-Slot wäre genau der Zustand, den die Slots abschaffen sollten.
+        return {
+          hauskreisId,
+          date,
+          type,
+          startMinutes: rhythm.startMinutes,
+          ...slotDefaults(type),
+        };
       }),
       // Belt and braces against a concurrent run: the unique index on
       // (hauskreis_id, date) is the real guarantee.

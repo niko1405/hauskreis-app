@@ -17,9 +17,11 @@ import type {
   HomeScreen,
   Meeting,
   MeetingListItem,
+  MeetingSchedule,
   Page,
   SetAttendanceInput,
   UpdateMeetingInput,
+  UpdateMeetingScheduleInput,
 } from '../types';
 import { useHk } from './use-hk';
 import { useMe } from './use-me';
@@ -222,6 +224,10 @@ export function useSetActionstepDone(meetingId: string) {
       invalidateKeys: [
         keys.meetings.detail(meetingId),
         keys.meetings.all,
+        // Auch die Themen: derselbe Haken steht unter dem Actionstep der
+        // Einheit auf der Themenseite. Ohne das hakt man dort ab und die Zahl
+        // daneben bleibt stehen.
+        keys.topics.all,
         ...derived,
       ],
       optimistic: async (done, patch) => {
@@ -323,6 +329,39 @@ export function useTestimonySuggestions(
       meetingsApi.getTestimonySuggestions(hauskreisId, meetingId!, signal),
     enabled: enabled && Boolean(meetingId) && active,
     staleTime: STALE.suggestions,
+  });
+}
+
+// ── Termin-Rhythmus ─────────────────────────────────────────────────────────
+
+/**
+ * Wochentag und Uhrzeit der Gruppe.
+ *
+ * Nicht nur für die Verwaltung: das Anlege-Formular belegt sein Zeitfeld damit
+ * vor, damit niemand jede Woche dieselbe Uhrzeit tippt.
+ */
+export function useMeetingSchedule() {
+  const { hauskreisId, enabled, keys } = useHk();
+
+  return useResource<MeetingSchedule>(
+    keys.meetings.schedule,
+    ({ previous, signal }) =>
+      meetingsApi.getMeetingSchedule(hauskreisId, { previous, signal }),
+    { enabled, staleTime: STALE.reference },
+  );
+}
+
+/** Nur Admin. Verlangt `If-Match`. */
+export function useUpdateMeetingSchedule() {
+  const { hauskreisId, keys } = useHk();
+
+  return useResourceUpdate<MeetingSchedule, UpdateMeetingScheduleInput>({
+    queryKey: keys.meetings.schedule,
+    update: (input, etag) =>
+      meetingsApi.updateMeetingSchedule(hauskreisId, input, etag),
+    // Bestehende Termine bleiben, wie sie sind — der Rhythmus gilt für neue.
+    // Zu invalidieren gibt es also nichts außer der Einstellung selbst.
+    invalidateKeys: [],
   });
 }
 

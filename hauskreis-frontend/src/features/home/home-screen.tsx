@@ -349,33 +349,57 @@ function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
 
   return (
     <Card className="space-y-4">
-      <Link href={`/termine/${meeting.id}`} className="block">
-        <span className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
-          {formatDay(meeting.date)} · {formatRelativeDay(meeting.date)}
-        </span>
-        <h3 className="mt-0.5 font-serif text-lg font-bold text-stone-900">
-          {meetingHeadline(meeting)}
-        </h3>
-      </Link>
-
-      <div className="text-xs font-medium text-stone-500">
-        {meeting.location ? (
-          <a
-            href={mapsUrl(meeting.location)}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 hover:text-terracotta-600"
+      {/* Die Uhrzeit steht nur hier — auf dieser einen Karte geht man auf einen
+          Abend zu. In den Terminlisten liest man quer über Wochen, dort wäre sie
+          an jeder Zeile Rauschen. Seit sich die Zeit einstellen lässt, ist
+          „18 Uhr wie immer" keine sichere Annahme mehr. */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-xs font-medium text-stone-500">
+          <Link
+            href={`/termine/${meeting.id}`}
+            className="block min-w-0 flex-1 mb-3"
           >
-            <MapPin size={12} className="text-stone-400" />
-            {meeting.location.name}
-            <ExternalLink size={11} className="text-stone-300" />
-          </a>
-        ) : (
-          <span className="inline-flex items-center gap-1">
-            <MapPin size={12} className="text-stone-400" />
-            Ort noch offen
+            <span className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
+              {formatDay(meeting.date)} · {formatRelativeDay(meeting.date)}
+            </span>
+            <h3 className="mt-0.5 font-serif text-lg font-bold text-stone-900">
+              {meetingHeadline(meeting)}
+            </h3>
+          </Link>
+          {meeting.location ? (
+            <a
+              href={mapsUrl(meeting.location)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 hover:text-terracotta-600"
+            >
+              <MapPin size={12} className="text-stone-400" />
+              {meeting.location.name}
+            </a>
+          ) : (
+            <span className="inline-flex items-center gap-1">
+              <MapPin size={12} className="text-stone-400" />
+              Ort noch offen
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-col shrink-0 items-center justify-center gap-3">
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-canvas px-2.5 py-1 text-xs font-bold text-stone-600">
+            <Clock size={13} className="text-terracotta-500" />
+            {meeting.startTime} Uhr
           </span>
-        )}
+          {meeting.location && (
+            <a
+              href={mapsUrl(meeting.location)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center p-3 bg-terracotta-600 rounded-full"
+            >
+              <Map size={19} className="text-stone-400" color="white" />
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Alle drei Rollen, in derselben Form wie auf der Terminkarte — sonst

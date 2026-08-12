@@ -71,6 +71,8 @@ export const qk = {
           [...root, 'meetings', meetingId, 'topic-responsibles'] as const,
         topicChoices: (meetingId: string) =>
           [...root, 'meetings', meetingId, 'topic-choices'] as const,
+        /** Wochentag und Uhrzeit der Gruppe. */
+        schedule: [...root, 'meetings', 'config'] as const,
       },
 
       topics: {

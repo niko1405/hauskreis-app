@@ -21,11 +21,13 @@ import type {
   HostSuggestion,
   Meeting,
   MeetingPage,
+  MeetingSchedule,
   ReminderRunResult,
   RoleSuggestion,
   CancelMeetingInput,
   SetAttendanceInput,
   UpdateMeetingInput,
+  UpdateMeetingScheduleInput,
 } from '../types';
 
 const base = (hauskreisId: string) => hkPath(hauskreisId, '/meetings');
@@ -173,6 +175,38 @@ export function getTestimonySuggestions(
     `${base(hauskreisId)}/${meetingId}/testimony-suggestions`,
     { signal },
   );
+}
+
+// ── Termin-Rhythmus ─────────────────────────────────────────────────────────
+
+/**
+ * Wochentag und Uhrzeit der Gruppe.
+ *
+ * Lesen darf jede:r — dass der Hauskreis dienstags um 18 Uhr ist, gehört auf
+ * jeden Bildschirm, und das Anlege-Formular belegt sein Zeitfeld damit vor.
+ */
+export function getMeetingSchedule(
+  hauskreisId: string,
+  options: {
+    previous?: Resource<MeetingSchedule>;
+    signal?: AbortSignal;
+  } = {},
+): Promise<Resource<MeetingSchedule>> {
+  return apiGetResource<MeetingSchedule>(
+    `${base(hauskreisId)}/config`,
+    options,
+  );
+}
+
+/** Nur Admin. Verlangt `If-Match`. Gilt für neue Termine, nicht rückwirkend. */
+export function updateMeetingSchedule(
+  hauskreisId: string,
+  input: UpdateMeetingScheduleInput,
+  etag: string | undefined,
+): Promise<Resource<MeetingSchedule>> {
+  return apiPut<MeetingSchedule>(`${base(hauskreisId)}/config`, input, {
+    etag,
+  });
 }
 
 // ── Admin-Läufe ─────────────────────────────────────────────────────────────

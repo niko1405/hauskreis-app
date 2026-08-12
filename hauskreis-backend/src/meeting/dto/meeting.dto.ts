@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AttendanceStatus, MeetingType } from '../../../generated/prisma/enums';
 import { paginationSchema } from '../../common/http/pagination';
 import { isoDay } from '../../common/dto/iso-day';
+import { wallClockIn } from '../../common/dto/wall-clock';
 
 // Deriving the schemas from Prisma's generated enums keeps the API and the
 // database in sync — adding a value in schema.prisma is enough.
@@ -10,13 +11,13 @@ const meetingType = z.enum(MeetingType);
 const attendanceStatus = z.enum(AttendanceStatus);
 
 /**
- * Woraus der Abend besteht — drei Schalter, überall optional.
+ * Woraus der Abend besteht — vier Schalter, überall optional.
  *
  * Weggelassen heißt beim Anlegen „nimm die Voreinstellung der Terminart" und
  * beim Ändern „lass es, wie es ist". Deshalb hier **kein** `.default()`: das
  * würde die Felder auch im PATCH zu Pflichtangaben machen (Zod-Vorgaben
  * überleben `.partial()`, siehe `types.ts` im Frontend), und dann müsste jeder,
- * der nur den Titel ändert, drei Schalter mitschicken.
+ * der nur den Titel ändert, vier Schalter mitschicken.
  *
  * Einen Gastgeber-Schalter gibt es nicht: man trifft sich immer irgendwo.
  */
@@ -37,6 +38,11 @@ export const createMeetingSchema = z.object({
   /// hinter `date` liegen — beides prüft der Service, weil beides den Blick auf
   /// ein zweites Feld braucht.
   endDate: z.iso.date().nullish(),
+  /// Wann es losgeht, `"19:30"`. Weggelassen heißt „die Zeit der Gruppe" — die
+  /// steht in `MeetingScheduleConfig`, und sie in jeden Aufrufer zu kopieren
+  /// wäre eine zweite Stelle, an der sie veralten kann. Nicht `nullish`: ein
+  /// Abend ohne Uhrzeit ist kein Zustand, den es geben soll.
+  startTime: wallClockIn.optional(),
   type: meetingType.default(MeetingType.CUSTOM),
   locationId: z.uuid().nullish(),
   hostPersonId: z.uuid().nullish(),
@@ -59,15 +65,25 @@ export const createMeetingSchema = z.object({
 export const updateMeetingSchema = z.object({
   type: meetingType.optional(),
   endDate: z.iso.date().nullish(),
+  /// Änderbar, aber nicht leerbar — genau das heißt „Pflichtfeld" in einem
+  /// PATCH. Ändert sie sich am nächsten Abend, erfahren es die anderen
+  /// (`MEETING_TIME_CHANGED`).
+  startTime: wallClockIn.optional(),
   locationId: z.uuid().nullish(),
   hostPersonId: z.uuid().nullish(),
   title: z.string().trim().min(1).max(200).nullish(),
   /// Wer sein Testimony erzählt. Nur bei `hasTestimonySlot`.
   testimonyPersonId: z.uuid().nullish(),
-  /// Zusammenfassung und Actionstep stehen nicht mehr hier, sondern an der
-  /// Einheit (`PATCH …/topic-sessions/:id`): sie gehören zu dem, was besprochen
-  /// wurde, und sollen einen Rollenwechsel überleben.
   infoText: z.string().trim().max(2000).nullish(),
+  /// Die Nachbereitung des Abends — nur bei `hasNotesSlot`, sonst weist
+  /// `assertSlotsAllow` sie ab. Hat der Abend ein **Thema**, stehen beide an
+  /// dessen Einheit (`PATCH …/topic-sessions/:id`): dort gehören sie zu dem,
+  /// was besprochen wurde, und überleben einen Rollenwechsel.
+  ///
+  /// Dieselben Grenzen wie dort — es ist derselbe Text, nur an einem anderen
+  /// Träger.
+  summaryText: z.string().trim().min(1).max(5000).nullish(),
+  actionstepText: z.string().trim().min(1).max(2000).nullish(),
   ...slotFields,
 });
 
@@ -121,6 +137,9 @@ export class CancelMeetingDto extends createZodDto(cancelMeetingSchema) {}
 export class SetAttendanceDto extends createZodDto(setAttendanceSchema) {}
 export class SetActionstepDoneDto extends createZodDto(
   setActionstepDoneSchema,
+) {}
+export class UpdateMeetingScheduleDto extends createZodDto(
+  updateMeetingScheduleSchema,
 ) {}
 export class ListMeetingsQueryDto extends createZodDto(
   listMeetingsQuerySchema,
