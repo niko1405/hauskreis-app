@@ -117,3 +117,57 @@ describe('toUtcDate / addDays', () => {
     expect(iso(addDays(utc('2026-03-01'), -1))).toBe('2026-02-28');
   });
 });
+
+/**
+ * Der Fehler, der das hier ausgelöst hat: „heute" wurde aus den **UTC**-Feldern
+ * eines Zeitpunkts gelesen. Zwischen Mitternacht und zwei Uhr Ortszeit war das
+ * noch gestern — und der Termin von gestern stand deshalb unter „Kommende",
+ * während die App ihn schon als „Vorbei" auswies.
+ */
+describe('currentDay', () => {
+  it('ist nach Mitternacht schon der neue Tag (Sommerzeit)', () => {
+    // 00:30 in Berlin, 22:30 UTC am Vortag.
+    expect(iso(currentDay(BERLIN, new Date('2026-08-11T22:30:00.000Z')))).toBe(
+      '2026-08-12',
+    );
+  });
+
+  it('genauso in der Winterzeit, wo der Versatz eine Stunde ist', () => {
+    expect(iso(currentDay(BERLIN, new Date('2026-01-11T23:30:00.000Z')))).toBe(
+      '2026-01-12',
+    );
+  });
+
+  it('kurz vor Mitternacht noch der alte', () => {
+    // 23:59 Ortszeit.
+    expect(iso(currentDay(BERLIN, new Date('2026-08-11T21:59:00.000Z')))).toBe(
+      '2026-08-11',
+    );
+  });
+
+  it('folgt der Zone, die hereingereicht wird', () => {
+    // Derselbe Zeitpunkt, drei Uhren: in Auckland ist längst der 12., in
+    // Berlin noch der 11., und in Honolulu erst der 10.
+    const moment = new Date('2026-08-11T21:00:00.000Z');
+
+    expect(iso(currentDay('Pacific/Auckland', moment))).toBe('2026-08-12');
+    expect(iso(currentDay(BERLIN, moment))).toBe('2026-08-11');
+    expect(iso(currentDay('Pacific/Honolulu', moment))).toBe('2026-08-11');
+  });
+});
+
+describe('isPast', () => {
+  const abend = utc('2026-08-11');
+
+  it('am Abend selbst nicht — ein Termin gilt seinen ganzen Tag als kommend', () => {
+    expect(isPast(abend, BERLIN, new Date('2026-08-11T20:00:00.000Z'))).toBe(
+      false,
+    );
+  });
+
+  it('um halb eins in der Nacht danach schon', () => {
+    expect(isPast(abend, BERLIN, new Date('2026-08-11T22:30:00.000Z'))).toBe(
+      true,
+    );
+  });
+});

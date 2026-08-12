@@ -4,7 +4,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationService } from '../notification/notification.service';
 import { NotificationPreferenceService } from '../notification/notification-preference.service';
 import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
-import { toUtcDate } from './meeting-schedule';
+import { GroupClockService } from './group-clock.service';
+import {
+  actionstepOf,
+  actionstepSelect,
+  hasActionstep,
+} from './actionstep-source';
 import { appPath } from '../notification/app-paths';
 
 export interface ActionstepRunResult {
@@ -47,6 +52,7 @@ export class ActionstepReminderService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationService,
     private readonly preferences: NotificationPreferenceService,
+    private readonly clock: GroupClockService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_9AM, { name: 'actionstep-reminders' })

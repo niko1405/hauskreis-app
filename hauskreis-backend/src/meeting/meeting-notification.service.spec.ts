@@ -4,6 +4,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { NotificationService } from '../notification/notification.service';
 import type { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
 import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
+import { withClock } from './group-clock.testing';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -63,14 +64,16 @@ function setup(
   // zweite Nachricht als Dublette der ersten.
   const logDeleteMany = jest.fn().mockResolvedValue({ count: 0 });
 
-  const service = new MeetingNotificationService(
-    {
-      meeting: { findUnique: meetingFindUnique },
-      person: { findMany: personFindMany, findUnique: personFindUnique },
-      notificationLog: { deleteMany: logDeleteMany },
-    } as unknown as PrismaService,
-    { notify } as unknown as NotificationService,
-    { findHomesUnlockedByAbsences } as unknown as RoleSuggestionService,
+  const service = withClock(
+    new MeetingNotificationService(
+      {
+        meeting: { findUnique: meetingFindUnique },
+        person: { findMany: personFindMany, findUnique: personFindUnique },
+        notificationLog: { deleteMany: logDeleteMany },
+      } as unknown as PrismaService,
+      { notify } as unknown as NotificationService,
+      { findHomesUnlockedByAbsences } as unknown as RoleSuggestionService,
+    ),
   );
 
   return { service, notify, findHomesUnlockedByAbsences, logDeleteMany };

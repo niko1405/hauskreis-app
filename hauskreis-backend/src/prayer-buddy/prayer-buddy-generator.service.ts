@@ -6,7 +6,8 @@ import { appPath } from '../notification/app-paths';
 import { PrayerBuddyService, type Assignment } from './prayer-buddy.service';
 import { buildGroups, repairGroups } from './grouping';
 import { NotificationType } from '../../generated/prisma/enums';
-import { addDays, toUtcDate } from '../meeting/meeting-schedule';
+import { addDays } from '../meeting/meeting-schedule';
+import { GroupClockService } from '../meeting/group-clock.service';
 
 /**
  * How many rounds should always be planned, the running one included.
@@ -56,6 +57,7 @@ export class PrayerBuddyGeneratorService {
     private readonly prisma: PrismaService,
     private readonly buddies: PrayerBuddyService,
     private readonly notifications: NotificationService,
+    private readonly clock: GroupClockService,
   ) {}
 
   /**
@@ -105,7 +107,7 @@ export class PrayerBuddyGeneratorService {
     hauskreisId: string,
     now = new Date(),
   ): Promise<PlanningResult> {
-    const today = toUtcDate(now);
+    const today = await this.clock.today(hauskreisId, now);
     let created = 0;
 
     for (let attempt = 0; attempt < ROUNDS_AHEAD; attempt += 1) {
@@ -173,7 +175,7 @@ export class PrayerBuddyGeneratorService {
     options: { now?: Date; notify?: boolean } = {},
   ): Promise<ReplanResult> {
     const now = options.now ?? new Date();
-    const today = toUtcDate(now);
+    const today = await this.clock.today(hauskreisId, now);
 
     const repair = await this.repairRunningRound(hauskreisId, today, {
       notify: options.notify ?? true,
@@ -360,7 +362,7 @@ export class PrayerBuddyGeneratorService {
     hauskreisId: string,
     options: { notify?: boolean; now?: Date } = {},
   ): Promise<RotationResult> {
-    const today = toUtcDate(options.now ?? new Date());
+    const today = await this.clock.today(hauskreisId, options.now);
 
     await this.closeRunningRound(hauskreisId, today);
 

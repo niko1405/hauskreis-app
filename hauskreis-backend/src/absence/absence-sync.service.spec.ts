@@ -9,6 +9,7 @@ import {
   AttendanceSource,
   AttendanceStatus,
 } from '../../generated/prisma/enums';
+import { withClock } from '../meeting/group-clock.testing';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const NOW = utc('2026-08-01');
@@ -41,16 +42,18 @@ function setup(options: {
   const autoAttendanceApply = jest.fn().mockResolvedValue(0);
   const releaseFor = jest.fn().mockResolvedValue({ host: false, song: false });
 
-  const service = new AbsenceSyncService(
-    {
-      absencePeriod: { findMany: absenceFindMany },
-      meeting: { findMany: meetingFindMany },
-      meetingAttendance: { createMany, deleteMany },
-    } as unknown as PrismaService,
-    { handleDecline } as unknown as MeetingNotificationService,
-    { reconcile } as unknown as MeetingCancellationService,
-    { releaseFor } as unknown as RoleReleaseService,
-    { apply: autoAttendanceApply } as unknown as AutoAttendanceService,
+  const service = withClock(
+    new AbsenceSyncService(
+      {
+        absencePeriod: { findMany: absenceFindMany },
+        meeting: { findMany: meetingFindMany },
+        meetingAttendance: { createMany, deleteMany },
+      } as unknown as PrismaService,
+      { handleDecline } as unknown as MeetingNotificationService,
+      { reconcile } as unknown as MeetingCancellationService,
+      { releaseFor } as unknown as RoleReleaseService,
+      { apply: autoAttendanceApply } as unknown as AutoAttendanceService,
+    ),
   );
 
   return {

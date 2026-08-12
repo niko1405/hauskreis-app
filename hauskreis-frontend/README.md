@@ -325,6 +325,24 @@ liest ihn als UTC-Mitternacht; lokal formatiert wird daraus westlich von UTC der
 `createdAt`/`updatedAt`/`sentAt` — die einzigen echten Zeitstempel — gibt es
 `formatTimestamp`.
 
+**„Heute" ist der Tag der Gruppe, nicht der des Geräts.** `today()` und
+`hasStarted()` rechnen über `groupNow()` in der Zeitzone aus der
+Termin-Konfiguration — derselben, in der der Server rechnet. Vorher war es die
+Gerätezone, und wer aus dem Urlaub hereinschaute, sah einen Abend als begonnen,
+den der Server noch nicht freigegeben hatte.
+
+Die Zone steht als **Modulvariable** in `lib/date.ts` (`setGroupZone`), nicht in
+einem Kontext: `today()` und `isPast(day)` werden an über zwanzig Stellen mitten
+im Rendern aufgerufen, und ein Hook daraus zu machen hieße, jede davon
+anzufassen. Dasselbe Muster wie `handleUnauthorized` in `api/client.ts`.
+
+Gesetzt wird sie in `AuthGate`, zusammen mit `useMe` und dem Hauskreis — und die
+App wartet darauf. Eine Sekunde Warten ist besser als eine Terminliste, die
+gleich danach umspringt.
+
+`parseDay`/`toDay` bleiben absichtlich gerätelokal: `addDays`, `daysBetween` und
+`startOfWeek` sind symmetrisch und rechnen dadurch in jeder Zone richtig.
+
 ### Leere Felder
 
 Ein Termin ohne Host ist ein Treffen im Schlosspark. Ein Thema ohne Titel ist

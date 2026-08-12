@@ -237,6 +237,7 @@ export function shapeSession(
     assigned: (session.meeting?.topicResponsibles ?? []).map(
       (row) => row.personId,
     ),
+    zone: viewer.zone,
     now: viewer.now,
   });
 
@@ -390,7 +391,12 @@ export function shapeSessionForMeeting(
  * abgesagt. Dieselbe Bedingung wie `isHeld`, nur in SQL: sie hier auszurechnen
  * hieße, jedes Thema des Hauskreises zu laden, um die Hälfte wegzuwerfen.
  */
-export function topicScopeWhere(scope: 'public' | 'mine', personId: string) {
+export function topicScopeWhere(
+  scope: 'public' | 'mine',
+  personId: string,
+  /** Der heutige Tag der Gruppe — nur für `public` gebraucht. */
+  today: Date,
+) {
   if (scope === 'mine') {
     return {
       OR: [

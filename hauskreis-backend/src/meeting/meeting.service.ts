@@ -23,23 +23,26 @@ import {
   type Viewer,
 } from '../topic/topic-shape';
 import { MeetingCancellationService } from './meeting-cancellation.service';
+import { MeetingScheduleConfigService } from './meeting-schedule-config.service';
+import { GroupClockService } from './group-clock.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { RoleReleaseService } from './role-release.service';
 import { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
+import { eveningReached } from '../common/time/local-evening';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
 import type { IfMatchCondition } from '../common/http/etag';
 import {
   finishedBefore,
-  isPast,
   notFinishedBefore,
   overlapping,
   toUtcDate,
 } from './meeting-schedule';
 import { touchMeeting } from './meeting-version';
 import {
+  assertNotesSlotNotAhead,
   assertSlotsAllow,
   assertSlotsExclusive,
   clearedByTurningOff,
@@ -357,6 +360,18 @@ export class MeetingService {
       await this.prisma.$transaction(async (tx) => {
         await tx.meetingSong.deleteMany({ where: { meetingId: id } });
         await tx.meetingSongLeader.deleteMany({ where: { meetingId: id } });
+        await touchMeeting(tx, id);
+      });
+    }
+
+    // Dasselbe für die Haken unter dem Actionstep: die beiden Texte hat
+    // `clearedByTurningOff` schon geleert, die Haken stehen in einer eigenen
+    // Tabelle. Stehenzulassen wäre nicht bloß Unordnung — wer den Baustein
+    // später wieder anschaltet und etwas Neues hineinschreibt, fände es
+    // rätselhaft schon abgehakt vor.
+    if (before.hasNotesSlot && !slots.hasNotesSlot) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.meetingActionstepDone.deleteMany({ where: { meetingId: id } });
         await touchMeeting(tx, id);
       });
     }

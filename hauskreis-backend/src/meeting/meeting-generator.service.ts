@@ -54,14 +54,32 @@ export class MeetingGeneratorService {
    *
    * Cancelled ones keep their status: "fiel aus" is a different fact from "hat
    * stattgefunden", and the archive should be able to tell them apart.
+   *
+   * Gruppe für Gruppe und nicht in einem Rutsch, seit jede ihre eigene Zeitzone
+   * hat: „gestern" fängt in Auckland zwölf Stunden früher an als in Berlin, und
+   * ein gemeinsames `updateMany` müsste sich für eine der beiden entscheiden.
    */
   async closePastMeetings(now = new Date()): Promise<number> {
-    const result = await this.prisma.meeting.updateMany({
-      where: { date: { lt: toUtcDate(now) }, status: MeetingStatus.PLANNED },
-      data: { status: MeetingStatus.COMPLETED },
+    const hauskreise = await this.prisma.hauskreis.findMany({
+      select: { id: true },
     });
 
-    return result.count;
+    const counts = await Promise.all(
+      hauskreise.map(async ({ id }) => {
+        const result = await this.prisma.meeting.updateMany({
+          where: {
+            hauskreisId: id,
+            date: { lt: await this.clock.today(id, now) },
+            status: MeetingStatus.PLANNED,
+          },
+          data: { status: MeetingStatus.COMPLETED },
+        });
+
+        return result.count;
+      }),
+    );
+
+    return counts.reduce((total, count) => total + count, 0);
   }
 
   async generateForAllHauskreise(now = new Date()): Promise<GenerationResult> {

@@ -27,6 +27,7 @@ import {
   TopicSessionResponseDto,
 } from './dto/topic-response.dto';
 import { viewerOf } from './topic-shape';
+import { GroupClockService } from '../meeting/group-clock.service';
 
 /**
  * Die Rolle „Thema" an einem einzelnen Abend.
@@ -37,7 +38,10 @@ import { viewerOf } from './topic-shape';
  */
 @Controller('hauskreise/:hauskreisId/meetings/:meetingId')
 export class MeetingTopicController {
-  constructor(private readonly sessions: TopicSessionService) {}
+  constructor(
+    private readonly sessions: TopicSessionService,
+    private readonly clock: GroupClockService,
+  ) {}
 
   @Get('topic-responsibles')
   @ApiZodResponse(TopicResponsiblesResponseDto)
@@ -92,7 +96,7 @@ export class MeetingTopicController {
     status: 201,
     description: '409, wenn jemand im selben Moment schneller war',
   })
-  choose(
+  async choose(
     @Param() params: MeetingTopicParamsDto,
     @Body() dto: ChooseTopicSessionDto,
     @CurrentMembership() membership: HauskreisMembership,
@@ -101,7 +105,7 @@ export class MeetingTopicController {
       params.hauskreisId,
       params.meetingId,
       dto,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
     );
   }
 
@@ -112,14 +116,14 @@ export class MeetingTopicController {
   @Delete('topic-session')
   @ApiZodNoContent()
   @HttpCode(HttpStatus.NO_CONTENT)
-  unlink(
+  async unlink(
     @Param() params: MeetingTopicParamsDto,
     @CurrentMembership() membership: HauskreisMembership,
   ) {
     return this.sessions.unlink(
       params.hauskreisId,
       params.meetingId,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
     );
   }
 }

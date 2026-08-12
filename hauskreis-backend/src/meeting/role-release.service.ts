@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
 import { TopicLinkService } from '../topic/topic-link.service';
-import { toUtcDate } from './meeting-schedule';
+import { GroupClockService } from './group-clock.service';
 import { touchMeeting } from './meeting-version';
 
 /**
@@ -38,6 +38,7 @@ export class RoleReleaseService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly topicLinks: TopicLinkService,
+    private readonly clock: GroupClockService,
   ) {}
 
   /**
@@ -55,6 +56,9 @@ export class RoleReleaseService {
       where: { id: meetingId },
       select: {
         id: true,
+        // Nur für die Zone der Gruppe: ob dieser Abend vorbei ist, hängt an
+        // ihrem Kalendertag, nicht an dem des Servers.
+        hauskreisId: true,
         date: true,
         status: true,
         hostPersonId: true,
@@ -67,7 +71,7 @@ export class RoleReleaseService {
     if (
       !meeting ||
       meeting.status === MeetingStatus.CANCELLED ||
-      toUtcDate(meeting.date) < toUtcDate(new Date())
+      (await this.clock.isPast(meeting.hauskreisId, meeting.date))
     ) {
       return { host: false, song: false, testimony: false, topic: false };
     }
@@ -157,7 +161,7 @@ export class RoleReleaseService {
     hauskreisId: string,
     personId: string,
   ): Promise<LeftoverRoles> {
-    const today = toUtcDate(new Date());
+    const today = await this.clock.today(hauskreisId);
 
     const meetings = await this.prisma.meeting.findMany({
       where: { hauskreisId, date: { gte: today } },

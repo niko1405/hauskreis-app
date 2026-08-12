@@ -56,10 +56,13 @@ export interface TopicMembership {
  * Behandlung. Die Einheit bleibt am Termin hängen; sie ist nur so lange nicht
  * gehalten, wie er abgesagt ist.
  */
-export function isHeld(meeting: SessionMeeting | null | undefined): boolean {
+export function isHeld(
+  meeting: SessionMeeting | null | undefined,
+  zone: string,
+): boolean {
   if (!meeting) return false;
   if (meeting.status === MeetingStatus.CANCELLED) return false;
-  return isPast(meeting.date);
+  return isPast(meeting.date, zone);
 }
 
 /**
@@ -72,8 +75,9 @@ export function isHeld(meeting: SessionMeeting | null | undefined): boolean {
  */
 export function isPubliclyVisible(
   sessions: readonly { meeting: SessionMeeting | null }[],
+  zone: string,
 ): boolean {
-  return sessions.some((session) => isHeld(session.meeting));
+  return sessions.some((session) => isHeld(session.meeting, zone));
 }
 
 /** Gehört mir das Thema — als Owner oder als Mitarbeiter:in? */
@@ -143,9 +147,11 @@ export function isContentVisible(options: {
   isAdmin: boolean;
   personId: string;
   topic: TopicMembership;
-  meeting: SessionMeeting | null;
+  meeting: TimedSessionMeeting | null;
   /** Wer an dem Abend der Rolle „Thema" zugeteilt ist. */
   assigned: readonly string[];
+  /** Die Zeitzone der Gruppe — „hat der Abend angefangen" braucht sie. */
+  zone: string;
   now?: Date;
 }): boolean {
   if (options.isAdmin) return true;

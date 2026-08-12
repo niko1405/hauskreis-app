@@ -8,6 +8,7 @@ import type { NotificationService } from './notification.service';
 import type { NotificationPreferenceService } from './notification-preference.service';
 import { NotificationType } from '../../generated/prisma/enums';
 import { notificationDefinition } from './notification-catalog';
+import { withClock } from '../meeting/group-clock.testing';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -47,10 +48,12 @@ function setup(
     );
   });
 
-  const service = new MeetingReminderService(
-    { meeting: { findMany } } as unknown as PrismaService,
-    { notify } as unknown as NotificationService,
-    { resolveMany } as unknown as NotificationPreferenceService,
+  const service = withClock(
+    new MeetingReminderService(
+      { meeting: { findMany } } as unknown as PrismaService,
+      { notify } as unknown as NotificationService,
+      { resolveMany } as unknown as NotificationPreferenceService,
+    ),
   );
 
   return { service, findMany, notify };
@@ -83,11 +86,15 @@ describe('MeetingReminderService.run', () => {
 
     // Not the default lead time: somebody may have set theirs to the maximum,
     // and a window built on the default would never see their meeting.
+    //
+    // Je einen Tag zu weit in beide Richtungen: der Lauf deckt alle Gruppen ab,
+    // und in einer anderen Zeitzone ist schon morgen oder noch gestern. Welcher
+    // Abend wirklich fällig ist, entscheidet danach der Tag seiner Gruppe.
     const { gte, lte } = findMany.mock.calls[0][0].where.date;
-    expect(gte).toEqual(utc('2026-07-25'));
+    expect(gte).toEqual(utc('2026-07-24'));
     expect(
       Math.round((lte.getTime() - gte.getTime()) / (24 * 60 * 60 * 1000)),
-    ).toBe(14);
+    ).toBe(16);
   });
 
   it('holds a reminder back until the person asked for it', async () => {

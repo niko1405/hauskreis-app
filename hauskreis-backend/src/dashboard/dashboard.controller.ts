@@ -6,6 +6,7 @@ import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { CurrentMembership } from '../auth/current-membership.decorator';
 import type { HauskreisMembership } from '../auth/auth.types';
 import { viewerOf } from '../topic/topic-shape';
+import { GroupClockService } from '../meeting/group-clock.service';
 import { ApiZodResponse } from '../common/http/api-response.decorator';
 import {
   AssignmentListResponseDto,
@@ -17,6 +18,7 @@ export class DashboardController {
   constructor(
     private readonly assignments: AssignmentService,
     private readonly dashboard: DashboardService,
+    private readonly clock: GroupClockService,
   ) {}
 
   /**
@@ -51,10 +53,13 @@ export class DashboardController {
   @ApiZodResponse(HomeScreenResponseDto, {
     description: 'Der ganze Home-Screen in einem Aufruf',
   })
-  home(
+  async home(
     @Param() params: HauskreisParamsDto,
     @CurrentMembership() membership: HauskreisMembership,
   ) {
-    return this.dashboard.build(params.hauskreisId, viewerOf(membership));
+    return this.dashboard.build(
+      params.hauskreisId,
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
+    );
   }
 }

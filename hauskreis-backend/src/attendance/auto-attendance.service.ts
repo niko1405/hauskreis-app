@@ -4,7 +4,7 @@ import {
   AttendanceSource,
   AttendanceStatus,
 } from '../../generated/prisma/enums';
-import { toUtcDate } from '../meeting/meeting-schedule';
+import { GroupClockService } from '../meeting/group-clock.service';
 
 /**
  * „Ich bin grundsätzlich dabei."
@@ -32,7 +32,10 @@ import { toUtcDate } from '../meeting/meeting-schedule';
 export class AutoAttendanceService {
   private readonly logger = new Logger(AutoAttendanceService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clock: GroupClockService,
+  ) {}
 
   /**
    * Schließt die Lücken — für den ganzen Hauskreis oder für eine Person.
@@ -45,7 +48,7 @@ export class AutoAttendanceService {
     hauskreisId: string,
     options: { personId?: string; now?: Date } = {},
   ): Promise<number> {
-    const today = toUtcDate(options.now ?? new Date());
+    const today = await this.clock.today(hauskreisId, options.now);
 
     const [people, meetings] = await Promise.all([
       this.prisma.person.findMany({

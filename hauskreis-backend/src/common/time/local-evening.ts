@@ -1,28 +1,71 @@
 /**
- * Wann ein Abend anfängt.
+ * Die Zeitzone der Gruppe — und wann ein Abend anfängt.
  *
  * Der Rest des Systems rechnet in Kalendertagen: `meeting.date` ist `@db.Date`,
- * und `isPast` in `meeting-schedule.ts` schneidet beide Seiten auf Mitternacht
- * UTC. Für „ist der Abend vorbei" ist das genau richtig — ein Termin soll den
- * ganzen Tag über als kommend gelten.
+ * und `isPast` in `meeting-schedule.ts` vergleicht Tag mit Tag. Für „ist der
+ * Abend vorbei" ist das genau richtig — ein Termin soll den ganzen Tag über als
+ * kommend gelten.
  *
- * Für eine Sache reicht der Tag aber nicht: **wann andere den Inhalt eines
- * Themas sehen dürfen**. Der Actionstep der Woche gehört nicht am Morgen des
- * Termintags allen, sondern ab dem Moment, in dem er ausgesprochen wurde. Dafür
- * braucht es eine Uhrzeit, und eine Uhrzeit braucht eine Zeitzone.
+ * Für zwei Dinge reicht der Tag als Zahl aber nicht:
  *
- * Deshalb steht das hier und nicht bei den Kalendertagen: es ist bewusst der
- * einzige Ort im Backend, an dem eine Wanduhr vorkommt.
+ * 1. **Welchen Tag haben wir überhaupt.** „Jetzt" ist ein Zeitpunkt, und
+ *    welcher Kalendertag das ist, hängt davon ab, wo man steht. Das rechnet
+ *    `currentDay` in `meeting-schedule.ts` — mit dem Versatz von hier.
+ * 2. **Wann andere den Inhalt eines Themas sehen dürfen.** Der Actionstep der
+ *    Woche gehört nicht am Morgen des Termintags allen, sondern ab dem Moment,
+ *    in dem er ausgesprochen wurde.
+ *
+ * Deshalb ist das hier der einzige Ort im Backend, der `Intl` nach einem
+ * Zeitzonen-Versatz fragt. Wer eine Wanduhr in einen Zeitpunkt übersetzt, kommt
+ * über diese Datei.
+ *
+ * Zwei Angaben kommen von außen und stehen nicht mehr im Code: die Uhrzeit vom
+ * Termin (`meeting.startMinutes`) und die **Zone von der Gruppe**
+ * (`MeetingScheduleConfig.timeZone`, aufgelöst über `GroupClockService`). Beide
+ * standen einmal als Konstante hier, und beide waren eine Aussage zu viel für
+ * eine App, die mehr als einen Hauskreis kennt.
  */
 
-/** Wann der Hauskreis anfängt. Eine Gruppe, ein Termin, eine Uhrzeit. */
+/**
+ * Der Rückfall, wenn keine Zeit dabeisteht: 18 Uhr.
+ *
+ * War die feste Anfangszeit des Hauskreises, ist jetzt nur noch die Vorgabe von
+ * `MeetingScheduleConfig` und die Antwort auf „und wenn doch mal nichts
+ * dasteht".
+ */
 export const EVENING_HOUR = 18;
 
 /**
- * Fest verdrahtet und nicht aus der Umgebung gelesen: die Gruppe trifft sich in
- * Deutschland. Ein Server in einer anderen Zone soll denselben Abend meinen.
+ * Die Vorgabe, wenn eine Gruppe nichts anderes eingestellt hat.
+ *
+ * Stand hier als `TIME_ZONE` fest verdrahtet, mit der Begründung „die Gruppe
+ * trifft sich in Deutschland" — dieselbe Aussage zu viel, die vorher schon bei
+ * Wochentag und Uhrzeit fiel. Die Zone steht jetzt in `MeetingScheduleConfig`
+ * und wird von dort hereingereicht; das hier ist nur noch der Anfangswert.
  */
-export const TIME_ZONE = 'Europe/Berlin';
+export const DEFAULT_TIME_ZONE = 'Europe/Berlin';
+
+/**
+ * Ein Formatierer je Zone, einmal gebaut.
+ *
+ * `Intl.DateTimeFormat` ist nicht billig, und seit der Kalendertag über
+ * `currentDay` durch dieselbe Rechnung läuft, passiert das pro Anfrage mehrfach.
+ */
+const formatters = new Map<string, Intl.DateTimeFormat>();
+
+function offsetFormatter(zone: string): Intl.DateTimeFormat {
+  let formatter = formatters.get(zone);
+
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone,
+      timeZoneName: 'longOffset',
+    });
+    formatters.set(zone, formatter);
+  }
+
+  return formatter;
+}
 
 /**
  * Der Versatz der Zone zu UTC in Minuten, zu diesem Zeitpunkt.
@@ -30,11 +73,8 @@ export const TIME_ZONE = 'Europe/Berlin';
  * Über `Intl` statt über eine Bibliothek: Node bringt die Zeitzonendaten schon
  * mit, und eine zweite Quelle für „wann ist Sommerzeit" wäre eine Quelle zu viel.
  */
-function zoneOffsetMinutes(instant: Date): number {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: TIME_ZONE,
-    timeZoneName: 'longOffset',
-  }).formatToParts(instant);
+export function zoneOffsetMinutes(instant: Date, zone: string): number {
+  const parts = offsetFormatter(zone).formatToParts(instant);
 
   const name = parts.find((part) => part.type === 'timeZoneName')?.value ?? '';
   const match = /GMT([+-])(\d{2}):(\d{2})/.exec(name);

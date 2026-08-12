@@ -8,6 +8,9 @@ import {
   mayEditTopic,
 } from './topic-visibility';
 
+/** Die Zone der Gruppe — die Fälle unten sind in Ortszeit gedacht. */
+const BERLIN = 'Europe/Berlin';
+
 const OWNER = 'owner-id';
 const COLLAB = 'collab-id';
 const FREMD = 'fremd-id';
@@ -32,36 +35,39 @@ const verwaist = { ownerPersonId: null, collaboratorIds: [] };
 
 describe('isHeld', () => {
   it('ohne Termin nie — eine unfertige Einheit ist kein Abend', () => {
-    expect(isHeld(null)).toBe(false);
+    expect(isHeld(null, BERLIN)).toBe(false);
   });
 
   it('nicht, solange der Termin bevorsteht', () => {
-    expect(isHeld(meeting(1))).toBe(false);
+    expect(isHeld(meeting(1), BERLIN)).toBe(false);
   });
 
   it('am Termintag selbst noch nicht', () => {
-    expect(isHeld(meeting(0))).toBe(false);
+    expect(isHeld(meeting(0), BERLIN)).toBe(false);
   });
 
   it('sobald der Tag vorbei ist', () => {
-    expect(isHeld(meeting(-1))).toBe(true);
+    expect(isHeld(meeting(-1), BERLIN)).toBe(true);
   });
 
   it('nicht bei einem abgesagten Abend, auch wenn er vorbei ist', () => {
-    expect(isHeld(meeting(-1, MeetingStatus.CANCELLED))).toBe(false);
+    expect(isHeld(meeting(-1, MeetingStatus.CANCELLED), BERLIN)).toBe(false);
   });
 });
 
 describe('isPubliclyVisible', () => {
   it('nein, solange keine Einheit gehalten wurde', () => {
     expect(
-      isPubliclyVisible([{ meeting: meeting(3) }, { meeting: null }]),
+      isPubliclyVisible([{ meeting: meeting(3) }, { meeting: null }], BERLIN),
     ).toBe(false);
   });
 
   it('ja, sobald eine einzige gehalten wurde', () => {
     expect(
-      isPubliclyVisible([{ meeting: meeting(-7) }, { meeting: meeting(3) }]),
+      isPubliclyVisible(
+        [{ meeting: meeting(-7) }, { meeting: meeting(3) }],
+        BERLIN,
+      ),
     ).toBe(true);
   });
 
@@ -69,12 +75,12 @@ describe('isPubliclyVisible', () => {
   // eines schon öffentlichen Themas ist sofort für alle da.
   it('bleibt öffentlich, wenn eine neue Einheit dazukommt', () => {
     expect(
-      isPubliclyVisible([{ meeting: meeting(-7) }, { meeting: null }]),
+      isPubliclyVisible([{ meeting: meeting(-7) }, { meeting: null }], BERLIN),
     ).toBe(true);
   });
 
   it('nein bei einem Thema ganz ohne Einheiten', () => {
-    expect(isPubliclyVisible([])).toBe(false);
+    expect(isPubliclyVisible([], BERLIN)).toBe(false);
   });
 });
 
@@ -142,6 +148,7 @@ describe('isContentVisible', () => {
     personId: FREMD,
     topic: thema,
     assigned: [] as string[],
+    zone: BERLIN,
   };
 
   it('Fremde sehen den Actionstep vor dem Abend nicht', () => {

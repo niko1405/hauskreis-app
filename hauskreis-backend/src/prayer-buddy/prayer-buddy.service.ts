@@ -4,7 +4,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { toPage } from '../common/http/pagination';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import type { IfMatchCondition } from '../common/http/etag';
-import { addDays, toUtcDate } from '../meeting/meeting-schedule';
+import { addDays } from '../meeting/meeting-schedule';
+import { GroupClockService } from '../meeting/group-clock.service';
 import type {
   ListPrayerBuddiesQueryDto,
   UpdateCycleConfigDto,
@@ -28,7 +29,10 @@ export interface Assignment {
 
 @Injectable()
 export class PrayerBuddyService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clock: GroupClockService,
+  ) {}
 
   /**
    * The cycle settings, created on first read.
@@ -91,7 +95,7 @@ export class PrayerBuddyService {
     hauskreisId: string,
     on = new Date(),
   ): Promise<Assignment | null> {
-    const today = toUtcDate(on);
+    const today = await this.clock.today(hauskreisId, on);
 
     const groups = await this.prisma.prayerBuddyGroup.findMany({
       where: {
@@ -116,7 +120,7 @@ export class PrayerBuddyService {
    * other archive. `all` keeps the archive direction.
    */
   async findAll(hauskreisId: string, query: ListPrayerBuddiesQueryDto) {
-    const today = toUtcDate(new Date());
+    const today = await this.clock.today(hauskreisId);
     const scopeWhere =
       query.scope === 'past'
         ? { periodEnd: { lt: today } }

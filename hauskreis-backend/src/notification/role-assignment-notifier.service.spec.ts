@@ -6,6 +6,7 @@ import { RoleAssignmentNotifier } from './role-assignment-notifier.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { NotificationService } from './notification.service';
 import { AssignmentRole, MeetingStatus } from '../../generated/prisma/enums';
+import { withClock } from '../meeting/group-clock.testing';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const HEUTE = utc('2026-08-04');
@@ -38,9 +39,11 @@ function setup(meeting: Record<string, unknown> | null = null) {
     },
   } as unknown as PrismaService;
 
-  const service = new RoleAssignmentNotifier(prisma, {
-    notify,
-  } as unknown as NotificationService);
+  const service = withClock(
+    new RoleAssignmentNotifier(prisma, {
+      notify,
+    } as unknown as NotificationService),
+  );
 
   return { service, notify };
 }
@@ -71,6 +74,33 @@ describe('RoleAssignmentNotifier.announce', () => {
     expect(notify.mock.calls[0][0].payload.body).toBe(
       'Am Dienstag, 11. August ist der Hauskreis bei dir (Bei Niko).',
     );
+  });
+
+  /**
+   * Der Text muss zur Rolle passen — und tat es beim Testimony nicht.
+   *
+   * Der Rumpf war ein Ternär mit zwei Zweigen für vier Rollen: alles, was nicht
+   * `HOST` und nicht `TOPIC` war, bekam „machst du die Musik", während der
+   * Titel darüber „Du erzählst dein Testimony" sagte. Erreichbar war das
+   * bisher nicht, weil eine Testimony-Zuteilung `announce` gar nicht anstößt —
+   * aber genau deshalb hätte es beim Nachrüsten niemand bemerkt.
+   */
+  it.each([
+    [
+      AssignmentRole.TOPIC,
+      'Am Dienstag, 11. August bist du mit dem Thema dran.',
+    ],
+    [
+      AssignmentRole.TESTIMONY,
+      'Am Dienstag, 11. August erzählst du deine Geschichte.',
+    ],
+    [AssignmentRole.SONG, 'Am Dienstag, 11. August machst du die Musik.'],
+  ])('sagt bei %s das Richtige', async (role, expected) => {
+    const { service, notify } = setup();
+
+    await service.announce('m1', role, ['niko']);
+
+    expect(notify.mock.calls[0][0].payload.body).toBe(expected);
   });
 
   /** Eine Nachricht an sich selbst ist nur Lärm. */

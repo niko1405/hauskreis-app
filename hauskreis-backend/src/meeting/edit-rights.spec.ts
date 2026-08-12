@@ -1,47 +1,18 @@
 /**
- * Wer an einem Abend was eintragen darf.
+ * Wer die Liedauswahl eines Abends trifft.
  *
- * Die Regel ist drei Zeilen lang, und der dritte Fall ist der, um den es geht:
- * ohne ihn wäre ein Abend ohne Zuteilung gesperrt, und die Zuteilung damit die
- * Voraussetzung fürs Nachbereiten. Im echten Leben läuft es umgekehrt — erst
- * passiert der Abend, dann schreibt jemand auf, was war.
+ * Die Regel bricht am Abend: vorher ist das Abhaken eine Entscheidung und gehört
+ * denen, die die Musik machen; nachher ist es ein Protokoll und gehört allen.
  *
- * Vom Dienst geprüft wird hier nur noch die Liedauswahl. Themenname und
- * Nachbereitung folgen inzwischen der Zugehörigkeit zum **Thema** statt der
- * Zuteilung an einem Abend — ihre Tests stehen in `topic-visibility.spec.ts`.
+ * Die beiden Ausnahmen der alten Hausregel sind weg, und genau das prüfen die
+ * letzten zwei Fälle: ein Admin ohne Musik-Zuteilung darf vorher **nicht**, und
+ * ein Abend ohne jede Zuteilung ist keiner, an dem alle dürfen.
  */
 import { ForbiddenException } from '@nestjs/common';
-import { mayEdit } from './edit-rights';
 import { EditRightsService } from './edit-rights.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import { PersonRole } from '../../generated/prisma/enums';
-
-describe('mayEdit', () => {
-  it('lässt die Zuständigen', () => {
-    expect(
-      mayEdit({ isAdmin: false, personId: 'p1', responsibles: ['p1', 'p2'] }),
-    ).toBe(true);
-  });
-
-  it('weist ab, wer nicht zugeteilt ist', () => {
-    expect(
-      mayEdit({ isAdmin: false, personId: 'p3', responsibles: ['p1', 'p2'] }),
-    ).toBe(false);
-  });
-
-  /** Der Kern: sonst hinge das Nachbereiten an einer Zuteilung. */
-  it('lässt alle, solange niemand zugeteilt ist', () => {
-    expect(mayEdit({ isAdmin: false, personId: 'p3', responsibles: [] })).toBe(
-      true,
-    );
-  });
-
-  it('lässt Admins auch dann', () => {
-    expect(
-      mayEdit({ isAdmin: true, personId: 'p3', responsibles: ['p1'] }),
-    ).toBe(true);
-  });
-});
+import { withClock } from './group-clock.testing';
 
 const HEUTE = new Date('2026-08-05T12:00:00.000Z');
 const KOMMENDER_DIENSTAG = new Date('2026-08-11T00:00:00.000Z');

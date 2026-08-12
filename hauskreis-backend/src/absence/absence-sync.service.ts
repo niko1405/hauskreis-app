@@ -11,7 +11,7 @@ import {
   AttendanceStatus,
 } from '../../generated/prisma/enums';
 import { AbsenceCalendar } from './absence-window';
-import { toUtcDate } from '../meeting/meeting-schedule';
+import { GroupClockService } from '../meeting/group-clock.service';
 
 export interface SyncResult {
   /** Evenings newly marked as "not coming" on the person's behalf. */
@@ -47,6 +47,7 @@ export class AbsenceSyncService {
     private readonly cancellations: MeetingCancellationService,
     private readonly roleRelease: RoleReleaseService,
     private readonly autoAttendance: AutoAttendanceService,
+    private readonly clock: GroupClockService,
   ) {}
 
   /**
@@ -62,7 +63,7 @@ export class AbsenceSyncService {
     personId: string,
     options: { now?: Date; notify?: boolean } = {},
   ): Promise<SyncResult> {
-    const today = toUtcDate(options.now ?? new Date());
+    const today = await this.clock.today(hauskreisId, options.now);
 
     const [periods, meetings] = await Promise.all([
       this.prisma.absencePeriod.findMany({

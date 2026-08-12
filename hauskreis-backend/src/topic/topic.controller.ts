@@ -41,6 +41,7 @@ import {
 } from './dto/topic-response.dto';
 import { ReminderRunResultResponseDto } from '../meeting/dto/meeting-response.dto';
 import { viewerOf } from './topic-shape';
+import { GroupClockService } from '../meeting/group-clock.service';
 
 @Controller('hauskreise/:hauskreisId')
 export class TopicController {
@@ -48,6 +49,7 @@ export class TopicController {
     private readonly topics: TopicService,
     private readonly sessions: TopicSessionService,
     private readonly reminders: TopicReminderService,
+    private readonly clock: GroupClockService,
   ) {}
 
   /**
@@ -56,24 +58,49 @@ export class TopicController {
    */
   @Get('topics')
   @ApiZodResponse(TopicPageResponseDto)
-  findAll(
+  async findAll(
     @Param() params: HauskreisParamsDto,
     @Query() query: ListTopicsQueryDto,
     @CurrentMembership() membership: HauskreisMembership,
   ) {
-    return this.topics.findAll(params.hauskreisId, query, viewerOf(membership));
+    return this.topics.findAll(
+      params.hauskreisId,
+      query,
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
+    );
   }
 
   @Get('topics/:id')
   @ApiZodResponse(TopicResponseDto)
-  findOne(
+  async findOne(
     @Param() params: TopicParamsDto,
     @CurrentMembership() membership: HauskreisMembership,
   ) {
     return this.topics.findOne(
       params.hauskreisId,
       params.id,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
+    );
+  }
+
+  /**
+   * Ein Thema anlegen, ohne dass ein Abend dafür feststeht.
+   *
+   * Wer anlegt, wird Owner. Einheiten kommen danach über
+   * `POST …/topics/:id/sessions` dazu — oder indem jemand das Thema an einem
+   * Abend fortsetzt.
+   */
+  @Post('topics')
+  @ApiZodResponse(TopicResponseDto, { status: HttpStatus.CREATED })
+  async create(
+    @Param() params: HauskreisParamsDto,
+    @Body() dto: CreateTopicDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.topics.create(
+      params.hauskreisId,
+      dto,
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
     );
   }
 
@@ -92,7 +119,7 @@ export class TopicController {
   @Patch('topics/:id')
   @ApiZodResponse(TopicResponseDto)
   @ApiConditionalWrite()
-  update(
+  async update(
     @Param() params: TopicParamsDto,
     @Body() dto: UpdateTopicDto,
     @CurrentMembership() membership: HauskreisMembership,
@@ -102,7 +129,7 @@ export class TopicController {
       params.hauskreisId,
       params.id,
       dto,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
       ifMatch,
     );
   }
@@ -115,14 +142,14 @@ export class TopicController {
   @Delete('topics/:id')
   @ApiZodNoContent()
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(
+  async remove(
     @Param() params: TopicParamsDto,
     @CurrentMembership() membership: HauskreisMembership,
   ) {
     return this.topics.remove(
       params.hauskreisId,
       params.id,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
     );
   }
 
@@ -133,7 +160,7 @@ export class TopicController {
   @Delete('topics/:id/collaborators/:personId')
   @ApiZodNoContent()
   @HttpCode(HttpStatus.NO_CONTENT)
-  removeCollaborator(
+  async removeCollaborator(
     @Param() params: TopicCollaboratorParamsDto,
     @CurrentMembership() membership: HauskreisMembership,
   ) {
@@ -141,7 +168,7 @@ export class TopicController {
       params.hauskreisId,
       params.id,
       params.personId,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
     );
   }
 
@@ -153,7 +180,7 @@ export class TopicController {
    */
   @Post('topics/:id/sessions')
   @ApiZodResponse(TopicSessionResponseDto, { status: HttpStatus.CREATED })
-  createSession(
+  async createSession(
     @Param() params: TopicParamsDto,
     @Body() dto: CreateTopicSessionDto,
     @CurrentMembership() membership: HauskreisMembership,
@@ -162,20 +189,20 @@ export class TopicController {
       params.hauskreisId,
       params.id,
       dto,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
     );
   }
 
   @Get('topic-sessions/:sessionId')
   @ApiZodResponse(TopicSessionResponseDto)
-  findSession(
+  async findSession(
     @Param() params: TopicSessionParamsDto,
     @CurrentMembership() membership: HauskreisMembership,
   ) {
     return this.sessions.findSession(
       params.hauskreisId,
       params.sessionId,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
     );
   }
 
@@ -183,7 +210,7 @@ export class TopicController {
   @Patch('topic-sessions/:sessionId')
   @ApiZodResponse(TopicSessionResponseDto)
   @ApiConditionalWrite()
-  updateSession(
+  async updateSession(
     @Param() params: TopicSessionParamsDto,
     @Body() dto: UpdateTopicSessionDto,
     @CurrentMembership() membership: HauskreisMembership,
@@ -193,7 +220,7 @@ export class TopicController {
       params.hauskreisId,
       params.sessionId,
       dto,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
       ifMatch,
     );
   }
@@ -205,14 +232,14 @@ export class TopicController {
   @Delete('topic-sessions/:sessionId')
   @ApiZodNoContent()
   @HttpCode(HttpStatus.NO_CONTENT)
-  removeSession(
+  async removeSession(
     @Param() params: TopicSessionParamsDto,
     @CurrentMembership() membership: HauskreisMembership,
   ) {
     return this.sessions.removeSession(
       params.hauskreisId,
       params.sessionId,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
     );
   }
 }

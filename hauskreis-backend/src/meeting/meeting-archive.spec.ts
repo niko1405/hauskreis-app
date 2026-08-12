@@ -3,6 +3,7 @@ import { MeetingService } from './meeting.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
 import type { MeetingNotificationService } from './meeting-notification.service';
+import { withClock } from './group-clock.testing';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const TODAY = utc('2026-07-29');
@@ -18,12 +19,14 @@ afterEach(() => {
 function setup() {
   const findMany = jest.fn().mockResolvedValue([]);
 
-  const service = new MeetingService(
-    {
-      meeting: { findMany, count: jest.fn().mockResolvedValue(0) },
-    } as unknown as PrismaService,
-    {} as unknown as RoleSuggestionService,
-    {} as unknown as MeetingNotificationService,
+  const service = withClock(
+    new MeetingService(
+      {
+        meeting: { findMany, count: jest.fn().mockResolvedValue(0) },
+      } as unknown as PrismaService,
+      {} as unknown as RoleSuggestionService,
+      {} as unknown as MeetingNotificationService,
+    ),
   );
 
   return { service, findMany };

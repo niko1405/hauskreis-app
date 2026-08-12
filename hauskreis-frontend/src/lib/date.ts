@@ -51,8 +51,63 @@ export function toDay(date: Date): CalendarDay {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Die Zeitzone der Gruppe — dieselbe, in der der Server rechnet.
+ *
+ * Eine Modulvariable und kein Kontext: `today()` und `isPast(day)` stehen an
+ * über zwanzig Stellen mitten im Rendern, und ein Hook daraus zu machen hieße,
+ * jede davon anzufassen. Dasselbe Muster wie `handleUnauthorized` in
+ * `api/client.ts`.
+ *
+ * Gesetzt wird sie beim Booten aus der Termin-Konfiguration (`setGroupZone` in
+ * `AuthGate`). Bis dahin gilt `Europe/Berlin` — für die allermeisten Gruppen
+ * also von Anfang an der richtige Wert.
+ */
+let groupZone = 'Europe/Berlin';
+
+export function setGroupZone(zone: string): void {
+  if (zone === groupZone) return;
+  groupZone = zone;
+  stamp = null;
+}
+
+/** Wird neu gebaut, sobald sich die Zone ändert — `Intl` ist nicht billig. */
+let stamp: Intl.DateTimeFormat | null = null;
+
+function stampFormatter(): Intl.DateTimeFormat {
+  return (stamp ??= new Intl.DateTimeFormat('en-CA', {
+    timeZone: groupZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    // Nicht `hour12: false`: das liefert in manchen ICU-Fassungen „24" für
+    // Mitternacht, und daraus wird eine Minutenzahl von 1440.
+    hourCycle: 'h23',
+  }));
+}
+
+/**
+ * Jetzt, in der Zone der Gruppe: Kalendertag und Minuten seit Mitternacht.
+ *
+ * Der einzige Ort hier, der eine Zeitzone kennt. `parseDay`/`toDay` bleiben
+ * gerätelokal — `addDays`, `daysBetween` und `startOfWeek` sind symmetrisch und
+ * rechnen dadurch in jeder Zone richtig.
+ */
+export function groupNow(): { day: CalendarDay; minutes: number } {
+  const parts = stampFormatter().formatToParts(new Date());
+  const of = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '00';
+
+  return {
+    day: `${of('year')}-${of('month')}-${of('day')}`,
+    minutes: Number(of('hour')) * 60 + Number(of('minute')),
+  };
+}
+
 export function today(): CalendarDay {
-  return toDay(new Date());
+  return groupNow().day;
 }
 
 export function addDays(day: CalendarDay, amount: number): CalendarDay {

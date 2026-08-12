@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AttendanceStatus } from '../../generated/prisma/enums';
 import { AbsenceCalendar } from '../absence/absence-window';
+import { GroupClockService } from '../meeting/group-clock.service';
 
 /**
  * Wer an einem Abend da ist — und wer deshalb eine Rolle übernehmen kann.
@@ -25,7 +26,10 @@ import { AbsenceCalendar } from '../absence/absence-window';
  */
 @Injectable()
 export class AvailabilityService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clock: GroupClockService,
+  ) {}
 
   /**
    * Wirft `400`, sobald jemand aus der Liste an diesem Abend nicht da ist.
@@ -80,7 +84,7 @@ export class AvailabilityService {
     meetingId: string,
     personIds: readonly string[],
   ): Promise<{ id: string; name: string }[]> {
-    if (isPastDay(date)) return [];
+    if (await this.clock.isPast(hauskreisId, date)) return [];
 
     const [declined, periods, people] = await Promise.all([
       this.prisma.meetingAttendance.findMany({
@@ -124,18 +128,4 @@ export class AvailabilityService {
 
     return new Set(rows.map((row) => row.personId));
   }
-}
-
-function isPastDay(date: Date): boolean {
-  const now = new Date();
-  const today = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate(),
-  );
-
-  return (
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) <
-    today
-  );
 }

@@ -14,6 +14,7 @@ import { PrayerBuddyGeneratorService } from './prayer-buddy-generator.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { PrayerBuddyService } from './prayer-buddy.service';
 import type { NotificationService } from '../notification/notification.service';
+import { withClock } from '../meeting/group-clock.testing';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const iso = (date: Date) => date.toISOString().slice(0, 10);
@@ -208,9 +209,11 @@ function setup(options: {
     .fn()
     .mockResolvedValue({ delivered: 1, pruned: 0, failed: 0, skipped: 0 });
 
-  const service = new PrayerBuddyGeneratorService(prisma, buddies, {
-    notify,
-  } as unknown as NotificationService);
+  const service = withClock(
+    new PrayerBuddyGeneratorService(prisma, buddies, {
+      notify,
+    } as unknown as NotificationService),
+  );
 
   /** Die Besetzung der laufenden Runde, jede Gruppe sortiert. */
   const runningNow = () =>

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
-import { isPast } from '../meeting/meeting-schedule';
+import { GroupClockService } from '../meeting/group-clock.service';
 import { touchMeeting } from '../meeting/meeting-version';
 import { belongsTo } from './topic-visibility';
 import { touchTopic } from './topic-version';
@@ -15,8 +15,8 @@ import { touchTopic } from './topic-version';
  * (`RoleReleaseService` im `MeetingModule`) und das Abschalten des Bausteins
  * (`MeetingService`). Läge er in einem davon, hätten die anderen beiden eine
  * Kante dorthin — genau der Zyklus, den `EditRightsModule` schon einmal
- * aufgelöst hat. `PrismaModule` ist `@Global`, dieses Modul importiert deshalb
- * nichts.
+ * aufgelöst hat. `PrismaModule` und `ClockModule` sind `@Global`, dieses Modul
+ * importiert deshalb nichts.
  *
  * Eine Regel trägt alles hier: **entkoppelt wird nur, was noch bevorsteht.** Ein
  * vergangener Abend ist das Protokoll dessen, was war; ihn nachträglich von
@@ -27,7 +27,10 @@ import { touchTopic } from './topic-version';
 export class TopicLinkService {
   private readonly logger = new Logger(TopicLinkService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clock: GroupClockService,
+  ) {}
 
   /**
    * Was aus der gewählten Einheit wird, nachdem sich die Zuteilung geändert hat.
@@ -57,6 +60,7 @@ export class TopicLinkService {
     const meeting = await tx.meeting.findUnique({
       where: { id: meetingId },
       select: {
+        hauskreisId: true,
         date: true,
         topicSession: {
           select: {
@@ -85,7 +89,7 @@ export class TopicLinkService {
     // Abend hängen — und er nimmt niemandem nachträglich die Zeile, die
     // festhält, dass er diesen Abend gehalten hat. Wer damals dabei war, war
     // dabei; eine Rollenkorrektur von heute ändert daran nichts (Spec 8.5).
-    if (isPast(meeting.date)) return;
+    if (await this.clock.isPast(meeting.hauskreisId, meeting.date)) return;
 
     const membership = {
       ownerPersonId: session.topic.ownerPersonId,
@@ -223,6 +227,7 @@ export class TopicLinkService {
     const meeting = await this.prisma.meeting.findUnique({
       where: { id: meetingId },
       select: {
+        hauskreisId: true,
         date: true,
         topicSession: { select: { id: true, topicId: true } },
       },
@@ -230,7 +235,9 @@ export class TopicLinkService {
 
     const session = meeting?.topicSession;
     if (!meeting || !session) return false;
-    if (isPast(meeting.date)) return false;
+    if (await this.clock.isPast(meeting.hauskreisId, meeting.date)) {
+      return false;
+    }
 
     await this.prisma.$transaction(async (tx) => {
       await tx.topicSession.update({

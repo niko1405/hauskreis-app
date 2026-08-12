@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
-import { toUtcDate } from '../meeting/meeting-schedule';
+import { GroupClockService } from '../meeting/group-clock.service';
+import { topicScopeWhere } from '../topic/topic-shape';
 
 export interface ArchiveYear {
   year: number;
@@ -53,42 +54,61 @@ export interface ArchiveSummary {
  */
 @Injectable()
 export class ArchiveService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clock: GroupClockService,
+  ) {}
 
-  async summarise(hauskreisId: string): Promise<ArchiveSummary> {
-    const today = toUtcDate(new Date());
+  async summarise(
+    hauskreisId: string,
+    /** Für „Eigene Themen (n)" — dieselbe Bedingung wie `scope=mine`. */
+    personId: string,
+  ): Promise<ArchiveSummary> {
+    const today = await this.clock.today(hauskreisId);
     const past = {
       hauskreisId,
       date: { lt: today },
       status: { not: MeetingStatus.CANCELLED },
     };
 
+    /** Was im Register „Alle" steht: mindestens ein Abend war schon. */
+    const held = { sessions: { some: { meeting: past } } };
+    /** Was im Register „Eigene" steht — dasselbe Fragment wie die Liste. */
+    const mine = topicScopeWhere('mine', personId, today);
+
     // Just the dates, folded into years here. Postgres could group by
     // `date_part`, but Prisma cannot express that without a raw query — and at
     // roughly fifty evenings a year the whole column is a handful of kilobytes.
     // It also saves a second query for the count and the first date.
-    const [dates, topics, songs, songsPlayed] = await Promise.all([
-      this.prisma.meeting.findMany({
-        where: past,
-        orderBy: { date: 'asc' },
-        select: { date: true },
-      }),
-      // Nur was auch im Archiv steht: ein Thema wird öffentlich, sobald eine
-      // seiner Einheiten gehalten wurde. Alle zu zählen hieße, eine Zahl über
-      // die Karte zu schreiben, die größer ist als die Liste darunter.
-      this.prisma.topic.count({
-        where: { hauskreisId, sessions: { some: { meeting: past } } },
-      }),
-      this.prisma.song.count({ where: { hauskreisId } }),
-      this.prisma.song.count({
-        where: {
-          hauskreisId,
-          pickedIn: {
-            some: { isSelected: true, meeting: { date: { lt: today } } },
+    const [dates, topics, topicsMine, topicsTotal, songs, songsPlayed] =
+      await Promise.all([
+        this.prisma.meeting.findMany({
+          where: past,
+          orderBy: { date: 'asc' },
+          select: { date: true },
+        }),
+        // Nur was auch im Archiv steht: ein Thema wird öffentlich, sobald eine
+        // seiner Einheiten gehalten wurde. Alle zu zählen hieße, eine Zahl über
+        // die Karte zu schreiben, die größer ist als die Liste darunter.
+        this.prisma.topic.count({ where: { hauskreisId, ...held } }),
+        // Zwei Formulierungen derselben Frage wären zwei Gelegenheiten, sie
+        // verschieden zu beantworten.
+        this.prisma.topic.count({ where: { hauskreisId, ...mine } }),
+        // Die Vereinigung, nicht die Summe: ein eigenes gehaltenes Thema steht
+        // in beiden Registern und darf trotzdem nur einmal zählen.
+        this.prisma.topic.count({
+          where: { hauskreisId, OR: [held, mine] },
+        }),
+        this.prisma.song.count({ where: { hauskreisId } }),
+        this.prisma.song.count({
+          where: {
+            hauskreisId,
+            pickedIn: {
+              some: { isSelected: true, meeting: { date: { lt: today } } },
+            },
           },
-        },
-      }),
-    ]);
+        }),
+      ]);
 
     const byYear = new Map<number, number>();
 

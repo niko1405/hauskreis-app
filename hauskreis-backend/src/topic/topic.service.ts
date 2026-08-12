@@ -16,18 +16,33 @@ import {
   type Viewer,
 } from './topic-shape';
 import { mayDeleteTopic, mayEditTopic } from './topic-visibility';
-import type { ListTopicsQueryDto, UpdateTopicDto } from './dto/topic.dto';
+import { touchMeeting } from '../meeting/meeting-version';
+import { GroupClockService } from '../meeting/group-clock.service';
+import { touchTopic } from './topic-version';
+import type {
+  CreateTopicDto,
+  ListTopicsQueryDto,
+  UpdateTopicDto,
+} from './dto/topic.dto';
 
 /**
- * Themen lesen, benennen und wegräumen.
+ * Themen anlegen, lesen, benennen und wegräumen.
  *
- * Angelegt werden sie hier nicht — das passiert beim Wählen an einem Abend
- * (`TopicSessionService`). Ein Thema ohne Anlass wäre ein leerer Datensatz, und
- * genau davon kam das alte Modell nicht los.
+ * Lange entstanden sie **nur** beim Wählen an einem Abend, mit dem Argument, ein
+ * Thema ohne Anlass wäre ein leerer Datensatz. Das stimmte, solange der Inhalt
+ * ausschließlich an Terminen hing. Seit es Einheiten ohne Abend gibt, ist das
+ * Vorarbeiten selbst der Anlass: wer im Zug eine Idee hat, legt das Thema an und
+ * füllt es, und der Dienstag findet sich später.
+ *
+ * Wer anlegt, wird Owner — dieselbe Regel wie beim Wählen, nur ein Schritt
+ * früher.
  */
 @Injectable()
 export class TopicService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clock: GroupClockService,
+  ) {}
 
   /**
    * Die Archivliste.

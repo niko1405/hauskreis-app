@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
+import { GroupClockService } from '../meeting/group-clock.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
 import type { IfMatchCondition } from '../common/http/etag';
@@ -26,7 +27,10 @@ const songSelect = {
 
 @Injectable()
 export class SongService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clock: GroupClockService,
+  ) {}
 
   /**
    * The song database, searchable by title or artist.
@@ -39,7 +43,15 @@ export class SongService {
     // Only evenings the song was actually picked for count as sung. A
     // suggestion that did not make the list says something about one person's
     // wish, not about the group's repertoire.
-    const played = { isSelected: true, meeting: { date: { lte: new Date() } } };
+    //
+    // `lte` auf den **Kalendertag** der Gruppe, nicht auf den Zeitpunkt: die
+    // Spalte ist ein Datum, und ein Lied, das für heute Abend auf der Liste
+    // steht, zählt zum Repertoire. Vorher stand hier `new Date()`, was in der
+    // Nacht nach dem Abend noch den Vortag meinte.
+    const played = {
+      isSelected: true,
+      meeting: { date: { lte: await this.clock.today(hauskreisId) } },
+    };
 
     const where = {
       hauskreisId,

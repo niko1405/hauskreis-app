@@ -7,6 +7,7 @@ import type { LocationService } from '../location/location.service';
 import type { ModuleRef } from '@nestjs/core';
 import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import { withClock } from '../meeting/group-clock.testing';
 
 type PersonDelegate = {
   findUnique: jest.Mock;
@@ -45,12 +46,14 @@ function setup() {
     notified: 0,
   });
   const moduleRef = { get: jest.fn(() => ({ replanAfterMembershipChange })) };
-  const service = new PersonService(
-    { person } as unknown as PrismaService,
-    keycloakAdmin as unknown as KeycloakAdminService,
-    locations as unknown as LocationService,
-    autoAttendance as unknown as AutoAttendanceService,
-    moduleRef as unknown as ModuleRef,
+  const service = withClock(
+    new PersonService(
+      { person } as unknown as PrismaService,
+      keycloakAdmin as unknown as KeycloakAdminService,
+      locations as unknown as LocationService,
+      autoAttendance as unknown as AutoAttendanceService,
+      moduleRef as unknown as ModuleRef,
+    ),
   );
   return {
     service,

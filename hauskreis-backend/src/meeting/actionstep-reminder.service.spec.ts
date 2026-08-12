@@ -4,13 +4,19 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { NotificationService } from '../notification/notification.service';
 import type { NotificationPreferenceService } from '../notification/notification-preference.service';
 import { NotificationType } from '../../generated/prisma/enums';
+import { withClock } from './group-clock.testing';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
 function setup(
   options: {
     meeting?: { id: string; actionstepText: string | null } | null;
-    /* Der Actionstep steht an der Einheit, die an dem Abend hing. */
+    /**
+     * Woher der Actionstep kommt: von der Einheit eines Themas (Vorgabe) oder
+     * aus der Nachbereitung des Abends selbst. Beides muss dieselbe Erinnerung
+     * auslösen — der Vorsatz ist derselbe, nur der Träger ist ein anderer.
+     */
+    quelle?: 'thema' | 'nachbereitung';
     people?: string[];
     weekdaysByPerson?: Record<string, number[]>;
     /** Wer den Actionstep schon abgehakt hat. */
@@ -60,14 +66,16 @@ function setup(
     .fn()
     .mockResolvedValue((options.done ?? []).map((personId) => ({ personId })));
 
-  const service = new ActionstepReminderService(
-    {
-      meeting: { findFirst },
-      person: { findMany: findManyPeople },
-      meetingActionstepDone: { findMany: findManyDone },
-    } as unknown as PrismaService,
-    { notify } as unknown as NotificationService,
-    { resolveMany } as unknown as NotificationPreferenceService,
+  const service = withClock(
+    new ActionstepReminderService(
+      {
+        meeting: { findFirst },
+        person: { findMany: findManyPeople },
+        meetingActionstepDone: { findMany: findManyDone },
+      } as unknown as PrismaService,
+      { notify } as unknown as NotificationService,
+      { resolveMany } as unknown as NotificationPreferenceService,
+    ),
   );
 
   return { service, findFirst, notify };

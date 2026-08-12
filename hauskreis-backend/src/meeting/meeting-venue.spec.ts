@@ -17,13 +17,17 @@ import type { AutoAttendanceService } from '../attendance/auto-attendance.servic
 import type { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import type { TopicLinkService } from '../topic/topic-link.service';
 import type { IfMatchCondition } from '../common/http/etag';
+import { withClock } from './group-clock.testing';
+
+/** Die Zone der Gruppe — in den Tests immer dieselbe. */
+const BERLIN = 'Europe/Berlin';
 
 /** Diese Endpunkte verlangen eine Vorbedingung; hier interessiert sie nicht. */
 const EGAL: IfMatchCondition = { kind: 'any' };
 
 /** Wer gerade schreibt. Für diese Tests immer dieselbe Person, kein Admin. */
-const ICH = { personId: 'p-ich', isAdmin: false };
-const ADMIN = { personId: 'admin', isAdmin: true };
+const ICH = { personId: 'p-ich', isAdmin: false, zone: BERLIN };
+const ADMIN = { personId: 'admin', isAdmin: true, zone: BERLIN };
 
 const HEUTE = new Date('2026-08-03T00:00:00.000Z');
 const KOMMENDER_DIENSTAG = new Date('2026-08-11T00:00:00.000Z');
@@ -94,17 +98,19 @@ function setup(before = meeting()) {
     detachIfUpcoming: jest.fn().mockResolvedValue(false),
   };
 
-  const service = new MeetingService(
-    prisma as unknown as PrismaService,
-    {} as unknown as RoleSuggestionService,
-    notifications as unknown as MeetingNotificationService,
-    cancellations as unknown as MeetingCancellationService,
-    roleAssignments as unknown as RoleAssignmentNotifier,
-    availability as unknown as AvailabilityService,
-    roleRelease as unknown as RoleReleaseService,
-    {} as unknown as AutoAttendanceService,
-    {} as unknown as CustomMeetingNotificationService,
-    topicLinks as unknown as TopicLinkService,
+  const service = withClock(
+    new MeetingService(
+      prisma as unknown as PrismaService,
+      {} as unknown as RoleSuggestionService,
+      notifications as unknown as MeetingNotificationService,
+      cancellations as unknown as MeetingCancellationService,
+      roleAssignments as unknown as RoleAssignmentNotifier,
+      availability as unknown as AvailabilityService,
+      roleRelease as unknown as RoleReleaseService,
+      {} as unknown as AutoAttendanceService,
+      {} as unknown as CustomMeetingNotificationService,
+      topicLinks as unknown as TopicLinkService,
+    ),
   );
 
   return {

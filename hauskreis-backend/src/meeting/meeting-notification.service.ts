@@ -29,6 +29,7 @@ export class MeetingNotificationService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationService,
     private readonly roleSuggestions: RoleSuggestionService,
+    private readonly clock: GroupClockService,
   ) {}
 
   /**
@@ -158,7 +159,10 @@ export class MeetingNotificationService {
       select: { id: true, hauskreisId: true, date: true, title: true },
     });
 
-    if (!meeting || meeting.date < toUtcDate(new Date())) {
+    if (
+      !meeting ||
+      (await this.clock.isPast(meeting.hauskreisId, meeting.date))
+    ) {
       return 0;
     }
 
@@ -229,7 +233,7 @@ export class MeetingNotificationService {
     if (
       !meeting ||
       meeting.status !== MeetingStatus.PLANNED ||
-      meeting.date < toUtcDate(new Date())
+      (await this.clock.isPast(meeting.hauskreisId, meeting.date))
     ) {
       return;
     }

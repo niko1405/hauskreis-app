@@ -17,6 +17,8 @@ import { HostReminderService } from './host-reminder.service';
 import { ActionstepReminderService } from './actionstep-reminder.service';
 import { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import { TestimonyReminderService } from './testimony-reminder.service';
+import { MeetingScheduleConfigService } from './meeting-schedule-config.service';
+import { GroupClockService } from './group-clock.service';
 import {
   CancelMeetingDto,
   CreateMeetingDto,
@@ -224,7 +226,7 @@ export class MeetingController {
       params.hauskreisId,
       params.id,
       dto,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
       ifMatch,
     );
   }
@@ -245,7 +247,7 @@ export class MeetingController {
     return this.meetingService.uncancel(
       params.hauskreisId,
       params.id,
-      viewerOf(membership),
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
       ifMatch,
     );
   }

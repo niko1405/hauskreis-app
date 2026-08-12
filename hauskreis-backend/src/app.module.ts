@@ -6,6 +6,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { AppConfigModule } from './config/config.module';
 import { AppConfigService } from './config/config.service';
 import { PrismaModule } from './prisma/prisma.module';
+import { ClockModule } from './meeting/group-clock.service';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { ZodValidationPipe } from './common/pipes/zod-validation.pipe';
 import { EtagInterceptor } from './common/http/etag.interceptor';
@@ -52,6 +53,9 @@ import { DashboardModule } from './dashboard/dashboard.module';
     // quota anybody should ever notice.
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 300 }]),
     PrismaModule,
+    // Global wie Prisma: „welchen Tag hat diese Gruppe gerade" fragt fast jedes
+    // Modul, und keines soll dafür den Terminplan importieren müssen.
+    ClockModule,
     AuthModule,
     HauskreisModule,
     PersonModule,

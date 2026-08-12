@@ -3,15 +3,36 @@
  *
  * Everything works on UTC midnight so a calendar date never drifts across a
  * timezone boundary — Prisma stores these as `@db.Date`, which has no time part.
+ *
+ * **Ein gespeicherter Tag und der heutige Tag sind zwei verschiedene Fragen**,
+ * und lange beantwortete `toUtcDate` beide. Die erste beantwortet sie richtig;
+ * für die zweite gibt es jetzt `currentDay`.
  */
-
-/** Tuesday, as returned by `Date.getUTCDay()`. */
-const TUESDAY = 2;
+import { zoneOffsetMinutes } from '../common/time/local-evening';
 
 /** Strips the time part, keeping the calendar date in UTC. */
 export function toUtcDate(date: Date): Date {
   return new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+}
+
+/**
+ * Welchen Tag haben wir — in der Zone der Gruppe, als UTC-Mitternacht.
+ *
+ * `toUtcDate(new Date())` beantwortete das bisher, und zwar falsch: es las die
+ * UTC-Felder eines *Zeitpunkts*. Um halb eins nachts ist in UTC noch gestern,
+ * also galt der Termin von gestern noch als kommend, während die App ihn schon
+ * als „Vorbei" auswies. Dasselbe Fenster verbot jede Nacht zwischen null und
+ * zwei das Abhaken der Lieder vom Vorabend.
+ *
+ * Die Zone ist ein **Pflichtargument**. Ein Vorgabewert wäre genau die Falle,
+ * die hier zugeht: eine vergessene Stelle rechnete still in Berlin weiter, und
+ * niemand merkte es.
+ */
+export function currentDay(zone: string, now: Date = new Date()): Date {
+  return toUtcDate(
+    new Date(now.getTime() + zoneOffsetMinutes(now, zone) * 60_000),
   );
 }
 
@@ -69,15 +90,23 @@ export function isLastOfMonth(date: Date): boolean {
 /**
  * Liegt der Abend hinter uns?
  *
- * Beide Seiten auf Mitternacht UTC geschnitten, weil `meeting.date` ein
- * Kalendertag ist: der heutige Abend zählt bis zum Ende des Tages als kommend,
- * sonst wäre ein Termin ab 00:01 „vergangen" und jede Absage stumm.
+ * Tag gegen Tag, weil `meeting.date` ein Kalendertag ist: der heutige Abend
+ * zählt bis zum Ende des Tages als kommend, sonst wäre ein Termin ab 00:01
+ * „vergangen" und jede Absage stumm.
+ *
+ * Welcher Tag „heute" ist, entscheidet `currentDay` — und dafür braucht es die
+ * Zone der Gruppe. Wer hier nur einen Termin in der Hand hat, holt sie über
+ * `GroupClockService`.
  *
  * Stand als Modulfunktion in `meeting.service.ts`, bis die Rechteprüfung sie
  * ebenfalls brauchte — sie ist reine Datumslogik und gehört zum Rest davon.
  */
-export function isPast(date: Date): boolean {
-  return toUtcDate(date) < toUtcDate(new Date());
+export function isPast(
+  date: Date,
+  zone: string,
+  now: Date = new Date(),
+): boolean {
+  return toUtcDate(date) < currentDay(zone, now);
 }
 
 /**

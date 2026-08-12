@@ -6,6 +6,7 @@ import {
 import type { PrismaService } from '../prisma/prisma.service';
 import type { PrayerBuddyService } from './prayer-buddy.service';
 import type { NotificationService } from '../notification/notification.service';
+import { withClock } from '../meeting/group-clock.testing';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const TODAY = utc('2026-07-29');
@@ -168,9 +169,11 @@ function setup(initial: Partial<Row>[] = [], people = PEOPLE) {
     .fn()
     .mockResolvedValue({ delivered: 1, pruned: 0, failed: 0, skipped: 0 });
 
-  const service = new PrayerBuddyGeneratorService(prisma, buddies, {
-    notify,
-  } as unknown as NotificationService);
+  const service = withClock(
+    new PrayerBuddyGeneratorService(prisma, buddies, {
+      notify,
+    } as unknown as NotificationService),
+  );
 
   /** Die Zeiträume, die noch laufen oder kommen — in Reihenfolge. */
   const upcoming = () =>

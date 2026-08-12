@@ -5,6 +5,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { NotificationService } from '../notification/notification.service';
 import type { NotificationPreferenceService } from '../notification/notification-preference.service';
 import { NotificationType } from '../../generated/prisma/enums';
+import { withClock } from './group-clock.testing';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -39,10 +40,12 @@ function setup(meetings: MeetingRow[] = []) {
   );
 
   const service = new HostReminderService(
-    new MeetingReminderService(
-      { meeting: { findMany } } as unknown as PrismaService,
-      { notify } as unknown as NotificationService,
-      { resolveMany } as unknown as NotificationPreferenceService,
+    withClock(
+      new MeetingReminderService(
+        { meeting: { findMany } } as unknown as PrismaService,
+        { notify } as unknown as NotificationService,
+        { resolveMany } as unknown as NotificationPreferenceService,
+      ),
     ),
   );
 

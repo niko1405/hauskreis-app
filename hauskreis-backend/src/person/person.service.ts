@@ -8,7 +8,7 @@ import {
 import { ModuleRef } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { PersonRole } from '../../generated/prisma/enums';
-import { toUtcDate } from '../meeting/meeting-schedule';
+import { GroupClockService } from '../meeting/group-clock.service';
 import { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import { LocationService } from '../location/location.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
@@ -60,6 +60,7 @@ export class PersonService {
     private readonly locations: LocationService,
     private readonly autoAttendance: AutoAttendanceService,
     private readonly moduleRef: ModuleRef,
+    private readonly clock: GroupClockService,
   ) {}
 
   /**
@@ -125,7 +126,7 @@ export class PersonService {
    * wäre dieselbe.
    */
   async findAll(hauskreisId: string) {
-    const today = toUtcDate(new Date());
+    const today = await this.clock.today(hauskreisId);
 
     const [people, away] = await Promise.all([
       this.prisma.person.findMany({

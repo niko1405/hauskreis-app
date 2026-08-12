@@ -9,11 +9,16 @@
  */
 import { LogIn, MailCheck } from 'lucide-react';
 import { useAuth } from 'react-oidc-context';
-import { useMe, useResendVerification } from '@/lib/api/hooks';
+import {
+  useMe,
+  useMeetingSchedule,
+  useResendVerification,
+} from '@/lib/api/hooks';
 import { isEmailUnverified } from '@/lib/api/errors';
 import { useSessionRestore } from '@/lib/auth/use-session-restore';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { useSlow } from '@/lib/use-slow';
+import { setGroupZone } from '@/lib/date';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -24,6 +29,14 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const restore = useSessionRestore();
   const me = useMe();
   const hauskreis = useHauskreis();
+  // Die Uhr der Gruppe. Sie gehört in den Boot-Satz, weil ohne sie nicht
+  // feststeht, welchen Tag wir haben — und daran hängen „Kommende" gegen
+  // „Vergangene", das „Vorbei"-Abzeichen und jedes Abhaken. Solange sie nicht
+  // da ist, wird nichts gezeigt: eine Sekunde Warten ist besser als eine
+  // Terminliste, die gleich danach umspringt.
+  const schedule = useMeetingSchedule();
+
+  if (schedule.data) setGroupZone(schedule.data.data.timeZone);
 
   const starting =
     auth.isLoading || Boolean(auth.activeNavigator) || restore !== 'settled';
@@ -111,6 +124,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!hauskreis.hauskreisId) {
     return <NoHauskreisScreen email={auth.user?.profile.email} />;
+  }
+
+  if (schedule.isLoading) {
+    return (
+      <FullScreenHint
+        text="Einen Moment …"
+        slowHint="Der Server antwortet nicht. Mit Netz hilft ein neuer Versuch."
+      />
+    );
   }
 
   return <>{children}</>;

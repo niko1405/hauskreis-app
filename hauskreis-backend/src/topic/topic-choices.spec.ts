@@ -12,6 +12,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { TopicLinkService } from './topic-link.service';
 import type { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import type { AvailabilityService } from '../role-suggestion/availability.service';
+import { withClock } from '../meeting/group-clock.testing';
 
 const utc = (tag: string) => new Date(`2026-08-${tag}T00:00:00.000Z`);
 
@@ -43,11 +44,13 @@ function setup(offene: Record<string, unknown>[]) {
     topicSession: { findMany: sessionFind },
   };
 
-  const service = new TopicSessionService(
-    prisma as unknown as PrismaService,
-    { announce: jest.fn() } as unknown as RoleAssignmentNotifier,
-    { assertAvailable: jest.fn() } as unknown as AvailabilityService,
-    { join: jest.fn() } as unknown as TopicLinkService,
+  const service = withClock(
+    new TopicSessionService(
+      prisma as unknown as PrismaService,
+      { announce: jest.fn() } as unknown as RoleAssignmentNotifier,
+      { assertAvailable: jest.fn() } as unknown as AvailabilityService,
+      { join: jest.fn() } as unknown as TopicLinkService,
+    ),
   );
 
   return { service, sessionFind };

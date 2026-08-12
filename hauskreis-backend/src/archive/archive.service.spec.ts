@@ -1,27 +1,40 @@
 import { ArchiveService } from './archive.service';
 // Type-only import keeps Jest from loading the real PrismaClient.
 import type { PrismaService } from '../prisma/prisma.service';
+import { withClock } from '../meeting/group-clock.testing';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
-function setup(dates: string[], counts = { topics: 3, songs: 20, played: 12 }) {
+function setup(
+  dates: string[],
+  counts = { topics: 3, mine: 2, total: 4, songs: 20, played: 12 },
+) {
   const findMany = jest
     .fn()
     .mockResolvedValue(dates.map((date) => ({ date: utc(date) })));
 
-  const count = jest
+  // Je Tabelle ein eigener Zähler. Vorher teilten sich Themen und Lieder einen
+  // mit `mockResolvedValueOnce`, und die Reihenfolge im `Promise.all` war damit
+  // Teil des Tests — eine vierte Zahl verschob alle anderen.
+  const topicCount = jest
     .fn()
     .mockResolvedValueOnce(counts.topics)
+    .mockResolvedValueOnce(counts.mine)
+    .mockResolvedValueOnce(counts.total);
+  const songCount = jest
+    .fn()
     .mockResolvedValueOnce(counts.songs)
     .mockResolvedValueOnce(counts.played);
 
-  const service = new ArchiveService({
-    meeting: { findMany },
-    topic: { count },
-    song: { count },
-  } as unknown as PrismaService);
+  const service = withClock(
+    new ArchiveService({
+      meeting: { findMany },
+      topic: { count: topicCount },
+      song: { count: songCount },
+    } as unknown as PrismaService),
+  );
 
-  return { service, findMany };
+  return { service, findMany, topicCount };
 }
 
 describe('ArchiveService.summarise', () => {

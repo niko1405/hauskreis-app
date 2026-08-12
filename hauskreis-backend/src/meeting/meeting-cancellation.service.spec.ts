@@ -12,6 +12,7 @@ import {
   MeetingCancelSource,
   MeetingStatus,
 } from '../../generated/prisma/enums';
+import { withClock } from './group-clock.testing';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const HEUTE = utc('2026-08-04');
@@ -59,9 +60,11 @@ function setup(options: {
     announceRevival: jest.fn(),
   };
 
-  const service = new MeetingCancellationService(
-    prisma,
-    notifications as unknown as MeetingNotificationService,
+  const service = withClock(
+    new MeetingCancellationService(
+      prisma,
+      notifications as unknown as MeetingNotificationService,
+    ),
   );
 
   return { service, update, notifications };

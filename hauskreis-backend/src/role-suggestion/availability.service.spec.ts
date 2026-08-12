@@ -11,6 +11,7 @@ import { AvailabilityService } from './availability.service';
 import { RoleReleaseService } from '../meeting/role-release.service';
 import type { TopicLinkService } from '../topic/topic-link.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import { withClock } from '../meeting/group-clock.testing';
 
 const HEUTE = new Date('2026-08-04T00:00:00.000Z');
 const NAECHSTER_DIENSTAG = new Date('2026-08-11T00:00:00.000Z');
@@ -56,7 +57,9 @@ function setupAvailability(
   };
 
   return {
-    service: new AvailabilityService(prisma as unknown as PrismaService),
+    service: withClock(
+      new AvailabilityService(prisma as unknown as PrismaService),
+    ),
     prisma,
   };
 }
@@ -170,9 +173,11 @@ function setupRelease(
   const topicLinks = { releaseFor: jest.fn().mockResolvedValue(false) };
 
   return {
-    service: new RoleReleaseService(
-      prisma as unknown as PrismaService,
-      topicLinks as unknown as TopicLinkService,
+    service: withClock(
+      new RoleReleaseService(
+        prisma as unknown as PrismaService,
+        topicLinks as unknown as TopicLinkService,
+      ),
     ),
     prisma: db,
     topicLinks,
@@ -376,9 +381,11 @@ function setupLeaving(
   };
 
   return {
-    service: new RoleReleaseService(
-      prisma as unknown as PrismaService,
-      { releaseFor: jest.fn() } as unknown as TopicLinkService,
+    service: withClock(
+      new RoleReleaseService(
+        prisma as unknown as PrismaService,
+        { releaseFor: jest.fn() } as unknown as TopicLinkService,
+      ),
     ),
     meetingUpdate,
     meetingTouch,

@@ -6,7 +6,7 @@ import {
   MeetingStatus,
 } from '../../generated/prisma/enums';
 import { MeetingNotificationService } from './meeting-notification.service';
-import { toUtcDate } from './meeting-schedule';
+import { GroupClockService } from './group-clock.service';
 
 /**
  * Der Abend, den niemand absagt und der trotzdem ausfällt.
@@ -33,6 +33,7 @@ export class MeetingCancellationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: MeetingNotificationService,
+    private readonly clock: GroupClockService,
   ) {}
 
   /**
@@ -56,7 +57,12 @@ export class MeetingCancellationService {
     // Vergangene Abende in Ruhe lassen: dort ist „abgesagt" ein Vermerk fürs
     // Archiv, keine Vorhersage, und nachträgliche Anwesenheit ist genau das
     // Nachtragen, das den Vermerk nicht umstoßen soll.
-    if (!meeting || meeting.date < toUtcDate(new Date())) return;
+    if (
+      !meeting ||
+      (await this.clock.isPast(meeting.hauskreisId, meeting.date))
+    ) {
+      return;
+    }
 
     const [active, declined] = await Promise.all([
       this.prisma.person.count({

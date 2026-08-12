@@ -7,6 +7,7 @@
 import { AutoAttendanceService } from './auto-attendance.service';
 // Type-only: keeps Jest from loading the real PrismaClient.
 import type { PrismaService } from '../prisma/prisma.service';
+import { withClock } from '../meeting/group-clock.testing';
 
 const TODAY = new Date('2026-08-05T09:00:00.000Z');
 
@@ -19,11 +20,13 @@ function setup(options: { people?: string[]; meetings?: string[] } = {}) {
     .fn()
     .mockResolvedValue((options.meetings ?? ['m1']).map((id) => ({ id })));
 
-  const service = new AutoAttendanceService({
-    person: { findMany: personFindMany },
-    meeting: { findMany: meetingFindMany },
-    meetingAttendance: { createMany },
-  } as unknown as PrismaService);
+  const service = withClock(
+    new AutoAttendanceService({
+      person: { findMany: personFindMany },
+      meeting: { findMany: meetingFindMany },
+      meetingAttendance: { createMany },
+    } as unknown as PrismaService),
+  );
 
   return { service, createMany, personFindMany, meetingFindMany };
 }

@@ -25,7 +25,12 @@ import {
   useSetAttendance,
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import { formatDay, formatDayMonth, formatRelativeDay } from '@/lib/date';
+import {
+  formatDay,
+  formatDayMonth,
+  formatRelativeDay,
+  groupNow,
+} from '@/lib/date';
 import {
   ROLE_LABEL,
   actionstepProgress,

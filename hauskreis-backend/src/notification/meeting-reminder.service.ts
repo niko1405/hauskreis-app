@@ -13,7 +13,9 @@ import {
 } from '../../generated/prisma/enums';
 // Pure date helpers, no Nest provider involved — importing them across module
 // folders costs nothing and beats a second implementation of "same day in UTC".
-import { addDays, toUtcDate } from '../meeting/meeting-schedule';
+import { addDays, currentDay } from '../meeting/meeting-schedule';
+import { DEFAULT_TIME_ZONE } from '../common/time/local-evening';
+import { GroupClockService } from '../meeting/group-clock.service';
 
 /** What every lead-time reminder gets to look at when picking recipients. */
 export interface ReminderMeeting {
@@ -84,6 +86,7 @@ export class MeetingReminderService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationService,
     private readonly preferences: NotificationPreferenceService,
+    private readonly clock: GroupClockService,
   ) {}
 
   async run(
@@ -99,12 +102,19 @@ export class MeetingReminderService {
       throw new Error(`${type} is not a lead-time reminder`);
     }
 
-    const today = toUtcDate(options.now ?? new Date());
-    const horizon = addDays(today, schedule.maxLeadDays);
+    const now = options.now ?? new Date();
+
+    // Der Lauf deckt alle Gruppen ab, und jede hat ihre eigene Zeitzone — auf
+    // die Stunde genau kann dieses Fenster deshalb nicht sein. Es ist bewusst
+    // **einen Tag zu weit** in beide Richtungen und nur die Vorauswahl; welcher
+    // Abend wirklich fällig ist, entscheidet unten der Tag seiner Gruppe.
+    const base = currentDay(DEFAULT_TIME_ZONE, now);
+    const from = addDays(base, -1);
+    const horizon = addDays(base, schedule.maxLeadDays + 1);
 
     const meetings = await this.prisma.meeting.findMany({
       where: {
-        date: { gte: today, lte: horizon },
+        date: { gte: from, lte: horizon },
         status: MeetingStatus.PLANNED,
         // The cron run covers every group; the manual trigger is scoped.
         ...(options.hauskreisId ? { hauskreisId: options.hauskreisId } : {}),
@@ -151,6 +161,14 @@ export class MeetingReminderService {
       type,
     );
 
+    // Ein „heute" je Gruppe, vor dem Filtern aufgelöst: `filter` kennt kein
+    // `await`, und dreimal dieselbe Zone nachzuschlagen wäre ohnehin dreimal
+    // dieselbe Antwort.
+    const todayOf = new Map<string, Date>();
+    for (const hauskreisId of new Set(due.map((e) => e.meeting.hauskreisId))) {
+      todayOf.set(hauskreisId, await this.clock.today(hauskreisId, now));
+    }
+
     const results = await Promise.all(
       due
         .filter(({ meeting, recipient }) => {
@@ -160,7 +178,15 @@ export class MeetingReminderService {
             // was given. Falling back to the default is safer than skipping.
             schedule.defaultLeadDays;
 
-          return daysBetween(today, meeting.date) <= leadDays;
+          const days = daysBetween(
+            todayOf.get(meeting.hauskreisId) as Date,
+            meeting.date,
+          );
+
+          // `days >= 0` trägt das weiter gefasste Fenster: gestern liegt darin,
+          // ist aber nie fällig — eine Erinnerung an einen Abend, der schon
+          // war, wäre schlimmer als gar keine.
+          return days >= 0 && days <= leadDays;
         })
         .map(({ meeting, recipient }) =>
           this.notifications.notify({
@@ -190,7 +216,5 @@ export class MeetingReminderService {
 
 /** Whole days from `from` to `to`; `from` is already midnight UTC. */
 function daysBetween(from: Date, to: Date): number {
-  return Math.round(
-    (toUtcDate(to).getTime() - from.getTime()) / (24 * 60 * 60 * 1000),
-  );
+  return Math.round((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000));
 }

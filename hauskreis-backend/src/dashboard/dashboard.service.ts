@@ -4,7 +4,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PrayerBuddyService } from '../prayer-buddy/prayer-buddy.service';
 import { AssignmentService, type Assignment } from './assignment.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
-import { addDays, toUtcDate } from '../meeting/meeting-schedule';
+import { addDays } from '../meeting/meeting-schedule';
+import { GroupClockService } from '../meeting/group-clock.service';
+import {
+  actionstepOf,
+  actionstepSelect,
+  hasActionstep,
+} from '../meeting/actionstep-source';
 import {
   sessionSelectWithTopic,
   shapeSessionForMeeting,
@@ -110,7 +116,7 @@ export class DashboardService {
   ): Promise<HomeScreen> {
     const { personId, isAdmin } = viewer;
     const now = options.now ?? new Date();
-    const today = toUtcDate(now);
+    const today = await this.clock.today(hauskreisId, now);
 
     const [meeting, actionstep, myRoles, buddies, peopleCount] =
       await Promise.all([
@@ -160,14 +166,14 @@ export class DashboardService {
             hauskreisId,
             date: { lt: today },
             status: { not: MeetingStatus.CANCELLED },
-            // Der Actionstep steht an der Einheit, die an dem Abend hing.
-            topicSession: { actionstepText: { not: null } },
+            // Aus beiden Quellen — Einheit oder Nachbereitung des Abends.
+            ...hasActionstep,
           },
           orderBy: { date: 'desc' },
           select: {
             id: true,
             date: true,
-            topicSession: { select: { actionstepText: true } },
+            ...actionstepSelect,
             // Nur die Ids: der Startbildschirm zeigt eine Zahl und den eigenen
             // Haken, die Namen stehen auf der Detailseite.
             actionstepDone: { select: { personId: true } },

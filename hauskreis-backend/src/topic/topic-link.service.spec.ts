@@ -10,6 +10,7 @@
 import { TopicLinkService } from './topic-link.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '../../generated/prisma/client';
+import { withClock } from '../meeting/group-clock.testing';
 
 const HEUTE = new Date('2026-08-05T12:00:00.000Z');
 const KOMMENDER_DIENSTAG = new Date('2026-08-11T00:00:00.000Z');
@@ -82,7 +83,9 @@ function setup(options: {
     },
   };
 
-  const service = new TopicLinkService({} as unknown as PrismaService);
+  const service = withClock(
+    new TopicLinkService({} as unknown as PrismaService),
+  );
 
   return {
     service,

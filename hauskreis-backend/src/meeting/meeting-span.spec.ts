@@ -57,28 +57,31 @@ function setup(clash: { date: Date } | null = null) {
     topic: { findFirst: jest.fn() },
   };
 
-  const service = new MeetingService(
-    prisma as unknown as PrismaService,
-    {} as unknown as RoleSuggestionService,
-    {} as unknown as MeetingNotificationService,
-    {} as unknown as MeetingCancellationService,
-    {} as unknown as RoleAssignmentNotifier,
-    { assertAvailable: jest.fn() } as unknown as AvailabilityService,
-    {} as unknown as RoleReleaseService,
-    { apply: jest.fn() } as unknown as AutoAttendanceService,
-    // Ein neuer besonderer Termin kündigt sich der Gruppe an. Hier zählt nur,
-    // dass es passiert; was drinsteht, prüft `custom-meeting-notification`.
-    {
-      announceCreation,
-    } as unknown as CustomMeetingNotificationService,
-    { detachIfUpcoming: jest.fn() } as unknown as TopicLinkService,
+  const service = withClock(
+    new MeetingService(
+      prisma as unknown as PrismaService,
+      {} as unknown as RoleSuggestionService,
+      {} as unknown as MeetingNotificationService,
+      {} as unknown as MeetingCancellationService,
+      {} as unknown as RoleAssignmentNotifier,
+      { assertAvailable: jest.fn() } as unknown as AvailabilityService,
+      {} as unknown as RoleReleaseService,
+      { apply: jest.fn() } as unknown as AutoAttendanceService,
+      // Ein neuer besonderer Termin kündigt sich der Gruppe an. Hier zählt nur,
+      // dass es passiert; was drinsteht, prüft `custom-meeting-notification`.
+      {
+        announceCreation,
+      } as unknown as CustomMeetingNotificationService,
+      { detachIfUpcoming: jest.fn() } as unknown as TopicLinkService,
+      SCHEDULE,
+    ),
   );
 
   return { service, prisma, create, announceCreation };
 }
 
 /** Wer anlegt. Für diese Tests egal, aber der Dienst will es wissen. */
-const ICH = { personId: 'p-ich', isAdmin: false };
+const ICH = { personId: 'p-ich', isAdmin: false, zone: BERLIN };
 
 const FREIZEIT = {
   date: '2026-08-14',
@@ -179,17 +182,20 @@ function setupRemove(type: MeetingType) {
     },
   };
 
-  const service = new MeetingService(
-    prisma as unknown as PrismaService,
-    {} as unknown as RoleSuggestionService,
-    {} as unknown as MeetingNotificationService,
-    {} as unknown as MeetingCancellationService,
-    {} as unknown as RoleAssignmentNotifier,
-    {} as unknown as AvailabilityService,
-    {} as unknown as RoleReleaseService,
-    {} as unknown as AutoAttendanceService,
-    {} as unknown as CustomMeetingNotificationService,
-    { detachIfUpcoming: jest.fn() } as unknown as TopicLinkService,
+  const service = withClock(
+    new MeetingService(
+      prisma as unknown as PrismaService,
+      {} as unknown as RoleSuggestionService,
+      {} as unknown as MeetingNotificationService,
+      {} as unknown as MeetingCancellationService,
+      {} as unknown as RoleAssignmentNotifier,
+      {} as unknown as AvailabilityService,
+      {} as unknown as RoleReleaseService,
+      {} as unknown as AutoAttendanceService,
+      {} as unknown as CustomMeetingNotificationService,
+      { detachIfUpcoming: jest.fn() } as unknown as TopicLinkService,
+      SCHEDULE,
+    ),
   );
 
   return { service, del };

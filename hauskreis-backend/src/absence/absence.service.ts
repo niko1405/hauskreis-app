@@ -9,6 +9,7 @@ import { AbsenceSyncService } from './absence-sync.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { toPage } from '../common/http/pagination';
 import { toUtcDate } from '../meeting/meeting-schedule';
+import { GroupClockService } from '../meeting/group-clock.service';
 import type { HauskreisMembership } from '../auth/auth.types';
 import { PersonRole } from '../../generated/prisma/enums';
 import type { IfMatchCondition } from '../common/http/etag';
@@ -35,6 +36,7 @@ export class AbsenceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly sync: AbsenceSyncService,
+    private readonly clock: GroupClockService,
   ) {}
 
   /**
@@ -42,14 +44,14 @@ export class AbsenceService {
    * group needs when planning an evening.
    */
   async findAll(hauskreisId: string, query: ListAbsencesQueryDto) {
+    const today = await this.clock.today(hauskreisId);
+
     const where = {
       hauskreisId,
       ...(query.personId ? { personId: query.personId } : {}),
       // "upcoming" keeps anything that has not fully passed, including a period
       // that started last week and still runs.
-      ...(query.scope === 'upcoming'
-        ? { endDate: { gte: toUtcDate(new Date()) } }
-        : {}),
+      ...(query.scope === 'upcoming' ? { endDate: { gte: today } } : {}),
     };
 
     const [items, total] = await Promise.all([

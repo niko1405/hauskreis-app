@@ -17,9 +17,10 @@ import type { IfMatchCondition } from '../common/http/etag';
 import {
   isPast,
   notFinishedBefore,
-  toUtcDate,
+  currentDay,
 } from '../meeting/meeting-schedule';
 import { touchMeeting } from '../meeting/meeting-version';
+import { GroupClockService } from '../meeting/group-clock.service';
 import {
   membershipOf,
   sessionSelectWithTopic,
@@ -66,6 +67,7 @@ export class TopicSessionService {
     private readonly roleAssignments: RoleAssignmentNotifier,
     private readonly availability: AvailabilityService,
     private readonly links: TopicLinkService,
+    private readonly clock: GroupClockService,
   ) {}
 
   // ---------------------------------------------------------------- Zuteilung
@@ -172,7 +174,8 @@ export class TopicSessionService {
   async choices(hauskreisId: string, meetingId: string, personId: string) {
     await this.loadMeeting(hauskreisId, meetingId);
 
-    const heute = toUtcDate(new Date());
+    const zone = await this.clock.zoneOf(hauskreisId);
+    const heute = currentDay(zone);
 
     const [topics, offene] = await Promise.all([
       this.prisma.topic.findMany({
@@ -244,7 +247,7 @@ export class TopicSessionService {
         title: topic.title,
         status: topic.status,
         sessionCount: topic.sessions.length,
-        lastHeldAt: lastHeldDate(topic.sessions),
+        lastHeldAt: lastHeldDate(topic.sessions, zone),
       })),
       openSessions: groupByTopic(offene),
     };
@@ -300,7 +303,7 @@ export class TopicSessionService {
 
     const bisher = meeting.topicSession;
 
-    if (bisher && isPast(meeting.date)) {
+    if (bisher && isPast(meeting.date, viewer.zone)) {
       throw new BadRequestException(ABEND_WAR_SCHON);
     }
 
@@ -495,7 +498,7 @@ export class TopicSessionService {
 
     if (session.meetingId === meetingId) return sessionId;
 
-    if (session.meeting && isPast(session.meeting.date)) {
+    if (session.meeting && isPast(session.meeting.date, viewer.zone)) {
       throw new BadRequestException(
         'Diese Einheit gehört zu einem Abend, der schon war — die lässt sich nicht mehr umhängen.',
       );
@@ -555,7 +558,7 @@ export class TopicSessionService {
       throw new NotFoundException('An diesem Abend hängt kein Thema');
     }
 
-    if (isPast(meeting.date)) {
+    if (isPast(meeting.date, viewer.zone)) {
       throw new BadRequestException(ABEND_WAR_SCHON);
     }
 
@@ -674,7 +677,7 @@ export class TopicSessionService {
       throw new NotFoundException(`Topic session ${sessionId} not found`);
     }
 
-    if (isHeld(session.meeting)) {
+    if (isHeld(session.meeting, viewer.zone)) {
       throw new BadRequestException(ABEND_WAR_SCHON);
     }
 
@@ -733,6 +736,7 @@ export class TopicSessionService {
       select: {
         id: true,
         meetingId: true,
+        topicId: true,
         topic: { select: topicMembershipSelect },
       },
     });
@@ -768,8 +772,16 @@ export class TopicSessionService {
           });
 
           // Nur bei einem Treffer: ein an der Version gescheiterter Schreibversuch
-          // hat nichts geändert und darf den Termin nicht veralten lassen.
-          if (result.count > 0) await touchMeeting(tx, session.meetingId);
+          // hat nichts geändert und darf weder Termin noch Thema veralten lassen.
+          //
+          // Das Thema muss mit, obwohl sich an ihm selbst nichts ändert: seine
+          // Antwort trägt die Einheiten, und ihr ETag kommt aus `topic.version`.
+          // Ohne den Sprung antwortet die Themenseite nach dem Umbenennen mit
+          // `304` und zeigt den alten Titel.
+          if (result.count > 0) {
+            await touchMeeting(tx, session.meetingId);
+            await touchTopic(tx, session.topicId);
+          }
 
           return result;
         }),
@@ -861,10 +873,11 @@ function groupByTopic(sessions: OffeneEinheit[]) {
 /** Der jüngste Abend, an dem eine Einheit dieses Themas hing. */
 function lastHeldDate(
   sessions: { meeting: { date: Date } | null }[],
+  zone: string,
 ): Date | null {
   const daten = sessions
     .map((session) => session.meeting?.date)
-    .filter((date): date is Date => date !== undefined && isPast(date));
+    .filter((date): date is Date => date !== undefined && isPast(date, zone));
 
   if (daten.length === 0) return null;
 

@@ -8,6 +8,7 @@ import {
   AttendanceSource,
   AttendanceStatus,
 } from '../../generated/prisma/enums';
+import { withClock } from './group-clock.testing';
 
 /**
  * Guards the boundary between "ich habe geantwortet" and "das kam aus einem
@@ -45,11 +46,13 @@ function setup() {
 
   const reconcile = jest.fn();
 
-  const service = new MeetingService(
-    prisma,
-    {} as unknown as RoleSuggestionService,
-    { handleDecline: jest.fn() } as unknown as MeetingNotificationService,
-    { reconcile } as unknown as MeetingCancellationService,
+  const service = withClock(
+    new MeetingService(
+      prisma,
+      {} as unknown as RoleSuggestionService,
+      { handleDecline: jest.fn() } as unknown as MeetingNotificationService,
+      { reconcile } as unknown as MeetingCancellationService,
+    ),
   );
 
   return { service, upsert, reconcile };

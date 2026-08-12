@@ -3,18 +3,23 @@ import { DashboardService } from './dashboard.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AssignmentService } from './assignment.service';
 import type { PrayerBuddyService } from '../prayer-buddy/prayer-buddy.service';
+import { withClock } from '../meeting/group-clock.testing';
+
+/** Die Zone der Gruppe — in den Tests immer dieselbe. */
+const BERLIN = 'Europe/Berlin';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const NOW = utc('2026-07-29');
 
 /** Wer den Startbildschirm aufmacht. Niko ist nicht fürs Thema zugeteilt. */
-const NIKO = { personId: 'niko', isAdmin: false };
+const NIKO = { personId: 'niko', isAdmin: false, zone: BERLIN };
 /** Antonia schon — sie sieht den Titel auch vor dem Abend. */
-const ANTONIA = { personId: 'antonia', isAdmin: false };
+const ANTONIA = { personId: 'antonia', isAdmin: false, zone: BERLIN };
 
 const nextMeeting = {
   id: 'm1',
   date: utc('2026-08-04'),
+  startMinutes: 1080,
   type: 'STANDARD',
   title: null,
   location: { id: 'loc-chris', name: 'Bei Chris', requiresHost: true },
@@ -119,13 +124,17 @@ function setup(
       : options.buddies,
   );
 
-  const service = new DashboardService(
-    {
-      meeting: { findFirst },
-      person: { count: jest.fn().mockResolvedValue(options.peopleCount ?? 9) },
-    } as unknown as PrismaService,
-    { findAssignments } as unknown as AssignmentService,
-    { findCurrent } as unknown as PrayerBuddyService,
+  const service = withClock(
+    new DashboardService(
+      {
+        meeting: { findFirst },
+        person: {
+          count: jest.fn().mockResolvedValue(options.peopleCount ?? 9),
+        },
+      } as unknown as PrismaService,
+      { findAssignments } as unknown as AssignmentService,
+      { findCurrent } as unknown as PrayerBuddyService,
+    ),
   );
 
   return { service, findFirst, findAssignments };

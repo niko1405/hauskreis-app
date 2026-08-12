@@ -1,6 +1,7 @@
 import { SongService } from './song.service';
 // Type-only import keeps Jest from loading the real PrismaClient.
 import type { PrismaService } from '../prisma/prisma.service';
+import { withClock } from '../meeting/group-clock.testing';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -23,9 +24,11 @@ function setup(rows: Row[]) {
     })),
   );
 
-  const service = new SongService({
-    song: { findMany, count: jest.fn().mockResolvedValue(rows.length) },
-  } as unknown as PrismaService);
+  const service = withClock(
+    new SongService({
+      song: { findMany, count: jest.fn().mockResolvedValue(rows.length) },
+    } as unknown as PrismaService),
+  );
 
   return { service, findMany };
 }

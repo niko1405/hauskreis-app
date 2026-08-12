@@ -8,7 +8,7 @@ import {
 } from '../../generated/prisma/enums';
 import { formatMeetingDate } from './reminder-copy';
 import { appPath } from './app-paths';
-import { toUtcDate } from '../meeting/meeting-schedule';
+import { GroupClockService } from '../meeting/group-clock.service';
 
 const TITLE: Record<AssignmentRole, string> = {
   HOST: 'Du hostest',
@@ -45,6 +45,7 @@ export class RoleAssignmentNotifier {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationService,
+    private readonly clock: GroupClockService,
   ) {}
 
   /**
@@ -62,11 +63,17 @@ export class RoleAssignmentNotifier {
 
     const meeting = await this.prisma.meeting.findUnique({
       where: { id: meetingId },
-      select: { id: true, date: true, status: true, location: true },
+      select: {
+        id: true,
+        hauskreisId: true,
+        date: true,
+        status: true,
+        location: true,
+      },
     });
 
     if (!meeting || meeting.status === MeetingStatus.CANCELLED) return 0;
-    if (meeting.date < toUtcDate(new Date())) return 0;
+    if (await this.clock.isPast(meeting.hauskreisId, meeting.date)) return 0;
 
     const results = await Promise.all(
       recipients.map((personId) =>
@@ -107,13 +114,20 @@ function assignmentBody(
 ): string {
   const when = formatMeetingDate(date);
 
-  if (role === AssignmentRole.HOST) {
-    return locationName
-      ? `Am ${when} ist der Hauskreis bei dir (${locationName}).`
-      : `Am ${when} ist der Hauskreis bei dir.`;
+  // Ein `switch` und kein Ternär: der hatte zwei Zweige für vier Rollen, und
+  // `TESTIMONY` fiel in den Musik-Zweig — Titel „Du erzählst dein Testimony",
+  // Text „Am … machst du die Musik." Mit `switch` fällt die nächste Rolle beim
+  // Übersetzen auf, statt still in den letzten Zweig zu rutschen.
+  switch (role) {
+    case AssignmentRole.HOST:
+      return locationName
+        ? `Am ${when} ist der Hauskreis bei dir (${locationName}).`
+        : `Am ${when} ist der Hauskreis bei dir.`;
+    case AssignmentRole.TOPIC:
+      return `Am ${when} bist du mit dem Thema dran.`;
+    case AssignmentRole.TESTIMONY:
+      return `Am ${when} erzählst du deine Geschichte.`;
+    default:
+      return `Am ${when} machst du die Musik.`;
   }
-
-  return role === AssignmentRole.TOPIC
-    ? `Am ${when} bist du mit dem Thema dran.`
-    : `Am ${when} machst du die Musik.`;
 }

@@ -18,6 +18,10 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { TopicLinkService } from './topic-link.service';
 import type { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import type { AvailabilityService } from '../role-suggestion/availability.service';
+import { withClock } from '../meeting/group-clock.testing';
+
+/** Die Zone der Gruppe — in den Tests immer dieselbe. */
+const BERLIN = 'Europe/Berlin';
 
 const KOMMENDER_DIENSTAG = new Date('2026-08-11T00:00:00.000Z');
 const LETZTER_DIENSTAG = new Date('2026-07-28T00:00:00.000Z');
@@ -131,11 +135,13 @@ function setup(
 
   const links = { join: jest.fn(), reconcile: jest.fn() };
 
-  const service = new TopicSessionService(
-    prisma as unknown as PrismaService,
-    { announce: jest.fn() } as unknown as RoleAssignmentNotifier,
-    { assertAvailable: jest.fn() } as unknown as AvailabilityService,
-    links as unknown as TopicLinkService,
+  const service = withClock(
+    new TopicSessionService(
+      prisma as unknown as PrismaService,
+      { announce: jest.fn() } as unknown as RoleAssignmentNotifier,
+      { assertAvailable: jest.fn() } as unknown as AvailabilityService,
+      links as unknown as TopicLinkService,
+    ),
   );
 
   return {
@@ -152,8 +158,8 @@ function setup(
   };
 }
 
-const ICH = { personId: 'p1', isAdmin: false };
-const FREMD = { personId: 'p9', isAdmin: false };
+const ICH = { personId: 'p1', isAdmin: false, zone: BERLIN };
+const FREMD = { personId: 'p9', isAdmin: false, zone: BERLIN };
 
 describe('choose — A) neues Thema', () => {
   it('macht die handelnde Person zum Owner', async () => {
