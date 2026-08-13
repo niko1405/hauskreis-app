@@ -46,14 +46,30 @@ RUN pnpm install --prod --frozen-lockfile
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/generated ./generated
 
+# Der Einhängepunkt des Uploads-Volumes, angelegt **bevor** der Benutzer wechselt.
+#
+# Ohne diese Zeile gibt es den Pfad im Image nicht, und Docker legt ihn beim
+# Einhängen selbst an — als `root:root 0755`. Der Prozess läuft aber als `node`,
+# und `PhotoService.store()` beginnt mit `mkdir(dir, { recursive: true })`:
+# jeder Bild-Upload endete mit `EACCES`, obwohl an der Anwendung nichts falsch
+# war. Existiert das Verzeichnis dagegen im Image, übernimmt das leere Volume
+# beim ersten Start dessen Eigentümer und Rechte.
+#
+# Der Pfad ist derselbe wie `UPLOAD_DIR` in docker-compose.prod.yml. Läuft der
+# Container ohne diese Variable, schreibt die Anwendung nach `./uploads` unter
+# dem WORKDIR und dieses Verzeichnis bleibt unbenutzt — dann sind die Bilder
+# allerdings beim nächsten `up` weg.
+RUN mkdir -p /data/uploads && chown node:node /data/uploads
+
 # Das Image bringt einen `node`-Benutzer mit; als root zu laufen wäre unnötig.
 #
 # Kein `chown -R /app`: Ebenen sind unveränderlich, ein rekursives chown schreibt
 # jede Datei neu und legt damit eine vollständige Kopie des node_modules-Baums
 # als zusätzliche Ebene an — hier waren das 423 MB obendrauf, während das
 # Original darunter liegen bleibt. Nötig ist es ohnehin nicht: die Dateien
-# gehören root und sind für alle lesbar, und die Anwendung schreibt nirgends
-# ins Dateisystem (Logs gehen nach stdout).
+# gehören root und sind für alle lesbar, und alles, was die Anwendung schreibt,
+# geht entweder nach stdout (Logs) oder ins Volume oben (Bilder) — nie in den
+# Anwendungsbaum selbst.
 USER node
 
 EXPOSE 3000
