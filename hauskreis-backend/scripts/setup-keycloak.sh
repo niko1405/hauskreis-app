@@ -44,7 +44,12 @@ FRONTEND_CLIENT_ID="${KEYCLOAK_FRONTEND_CLIENT_ID:-hauskreis-app}"
 FRONTEND_URL="${FRONTEND_URL:-http://localhost:3001}"
 # What the API insists on finding in the token's `aud`.
 API_AUDIENCE="${KEYCLOAK_AUDIENCE:-hauskreis-backend}"
-KC_ADMIN="${KEYCLOAK_ADMIN:-admin}"
+# Zwei Namen für dasselbe Konto. `KEYCLOAK_ADMIN_USER` ist der, den
+# docker-compose.prod.yml an `KC_BOOTSTRAP_ADMIN_USERNAME` weitergibt — wer ihn
+# in .env.prod setzt und nur ihn, bekam hier stillschweigend `admin` und scheiterte
+# am Anmelden. Der Compose-Name gewinnt deshalb; der alte bleibt gültig, damit
+# bestehende lokale .env-Dateien weiterlaufen.
+KC_ADMIN="${KEYCLOAK_ADMIN_USER:-${KEYCLOAK_ADMIN:-admin}}"
 KC_ADMIN_PASSWORD="${KEYCLOAK_ADMIN_PASSWORD:-admin}"
 # 'mailpit' is the compose service name — Keycloak reaches it on the shared network.
 SMTP_HOST="${SMTP_HOST:-mailpit}"
@@ -176,6 +181,11 @@ curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}" "${auth[@]}" -d "{
     \"registrationEmailAsUsername\": false,
     \"loginWithEmailAllowed\": true,
     \"verifyEmail\": true,
+    \"bruteForceProtected\": true,
+    \"permanentLockout\": false,
+    \"failureFactor\": 10,
+    \"waitIncrementSeconds\": 60,
+    \"maxFailureWaitSeconds\": 900,
     \"internationalizationEnabled\": true,
     \"supportedLocales\": [\"de\"],
     \"defaultLocale\": \"de\"
@@ -188,6 +198,11 @@ echo "    Themes: 'hauskreis' für Login und Mail, Sprache de"
 # das zeigt die Einladung zwar UPDATE_PROFILE, aber nur Vor- und Nachname —
 # der Nutzername bliebe die E-Mail-Adresse aus dem Anlegen.
 echo "    Nutzername: selbst wählbar"
+# Die Anmeldeseite steht öffentlich im Netz, sobald sie nicht mehr auf localhost
+# läuft. Nach 10 Fehlversuchen wächst die Wartezeit, gedeckelt bei 15 Minuten —
+# kein dauerhaftes Aussperren, sonst genügt der Nutzername eines Mitglieds, um
+# es aus der App zu werfen.
+echo "    Brute-Force-Erkennung: an (10 Versuche, max. 15 min Sperre)"
 # Ohne resetPasswordAllowed ist ein vergessenes Passwort eine Sackgasse.
 echo "    Passwort vergessen: möglich"
 # registrationAllowed: man kann sich selbst ein Konto anlegen und landet danach
@@ -258,6 +273,18 @@ ensure_audience_mapper() {
 # drives the Admin API for invitations. Rolling both jobs into one client would
 # mean either shipping the secret to the browser or handing the browser client a
 # service account with realm-admin.
+#
+# **Direct Access Grants nur außerhalb der Produktion.** Der Flow tauscht
+# Nutzername und Passwort direkt gegen ein Token — genau das, was die lokalen
+# Skripte und die Bruno-Collection brauchen, und genau das, was an einem Client
+# mit Realm-Admin-Rechten produktiv nichts zu suchen hat. Er stand hier bisher
+# fest auf `true`, auch mit `--production`, obwohl das README das Gegenteil sagt.
+if [ "${PRODUCTION}" = "1" ]; then
+  DIRECT_GRANTS="false"
+else
+  DIRECT_GRANTS="true"
+fi
+
 echo "==> Ensuring backend client '${CLIENT_ID}' (Admin API, no browser flow)"
 EXISTING=$(client_uuid "${CLIENT_ID}")
 
@@ -270,13 +297,21 @@ if [ -z "${EXISTING}" ]; then
       \"secret\": \"${CLIENT_SECRET}\",
       \"serviceAccountsEnabled\": true,
       \"standardFlowEnabled\": false,
-      \"directAccessGrantsEnabled\": true
+      \"directAccessGrantsEnabled\": ${DIRECT_GRANTS}
     }" >/dev/null
   echo "    created"
   EXISTING=$(client_uuid "${CLIENT_ID}")
 else
+  # Auch am bestehenden Client nachziehen: Wer lokal entwickelt und später
+  # `--production` auf denselben Realm laufen lässt, hätte den Flow sonst weiter
+  # offen — und niemand sähe es, weil das Skript „already exists" meldet.
+  curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}/clients/${EXISTING}" "${auth[@]}" -d "{
+      \"clientId\": \"${CLIENT_ID}\",
+      \"directAccessGrantsEnabled\": ${DIRECT_GRANTS}
+    }" >/dev/null
   echo "    already exists (${EXISTING})"
 fi
+echo "    Direct Access Grants: ${DIRECT_GRANTS}"
 
 ensure_audience_mapper "${EXISTING}"
 
@@ -299,8 +334,19 @@ if [ -z "${FRONTEND_UUID}" ]; then
   echo "    created"
   FRONTEND_UUID=$(client_uuid "${FRONTEND_CLIENT_ID}")
 else
+  # Redirect-URI und Web-Origin standen bisher nur im Anlege-Zweig. Beim Umzug
+  # von `localhost:3001` auf die echte Domain lief das Skript deshalb durch,
+  # meldete Erfolg und änderte nichts — der Fehler kam erst beim ersten
+  # Anmeldeversuch als `invalid_redirect_uri` zurück, und zwar bei allen neun.
+  curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}/clients/${FRONTEND_UUID}" "${auth[@]}" -d "{
+      \"clientId\": \"${FRONTEND_CLIENT_ID}\",
+      \"redirectUris\": [\"${FRONTEND_URL}/*\"],
+      \"webOrigins\": [\"${FRONTEND_URL}\"],
+      \"attributes\": { \"pkce.code.challenge.method\": \"S256\" }
+    }" >/dev/null
   echo "    already exists (${FRONTEND_UUID})"
 fi
+echo "    Redirect-URI: ${FRONTEND_URL}/*"
 
 ensure_audience_mapper "${FRONTEND_UUID}"
 
