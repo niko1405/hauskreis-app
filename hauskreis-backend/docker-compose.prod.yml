@@ -4,6 +4,23 @@
 # Differs from the development compose in the ways that matter: Keycloak runs
 # in production mode, nothing is published to the outside world except through
 # a reverse proxy, and no credential is written down in this file.
+#
+# Der Server baut nichts. Das API-Image kommt fertig aus der CI
+# (.github/workflows/backend.yml → GHCR); hier wird nur noch gezogen. Auf einem
+# kleinen VPS neben Keycloak und zwei Postgres zu bauen ist eng, und ein Deploy
+# soll nicht am Arbeitsspeicher scheitern. Wer doch lokal bauen will, hängt
+# `--build` an und ergänzt `build: { context: ., target: runtime }`.
+
+# Docker schreibt json-file-Logs unbegrenzt weiter. Ein Dienst, der monatelang
+# durchläuft und pro Anfrage eine Zeile schreibt, füllt damit irgendwann die
+# Platte — und das äußert sich zuerst als Datenbank, die nicht mehr schreiben
+# kann. 3 × 10 MB pro Dienst reichen für die Fehlersuche und haben eine Obergrenze.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+
 services:
   # Applies pending migrations and exits, before the API is allowed to start.
   #
@@ -15,25 +32,30 @@ services:
   #
   # `migrate deploy` only applies what is already in prisma/migrations and never
   # generates or resets anything, so a restart is harmless.
+  #
+  # **Dasselbe Image wie `api`, nur ein anderes `command`.** Es war einmal ein
+  # eigenes, weil `prisma` als devDependency im Runtime-Image fehlte; seit beide
+  # unter `dependencies` stehen (siehe Dockerfile), gibt es nichts mehr zu
+  # trennen — und die CI muss nur eines bauen und pushen.
   migrate:
-    build:
-      context: .
-      target: build
-    image: hauskreis-backend-migrate:latest
-    command: pnpm exec prisma migrate deploy
+    image: ${API_IMAGE:-ghcr.io/niko1405/hauskreis-backend}:${IMAGE_TAG:-latest}
+    # Direkt der Binary, nicht `pnpm exec`: Im Image ist corepack zwar
+    # eingeschaltet, aber pnpm selbst nicht entpackt — der erste `pnpm`-Aufruf
+    # lädt es von registry.npmjs.org nach. Bei jedem Deploy. Ein Netzzugriff,
+    # der nichts beiträgt und an dem Abend fehlschlägt, an dem npm hakt.
+    command: node_modules/.bin/prisma migrate deploy
     environment:
       DATABASE_URL: postgresql://hauskreis:${POSTGRES_PASSWORD}@postgres:5432/hauskreis?schema=public
     depends_on:
       postgres:
         condition: service_healthy
     restart: 'no'
+    logging: *logging
 
   api:
-    build:
-      context: .
-      target: runtime
-    image: hauskreis-backend:latest
+    image: ${API_IMAGE:-ghcr.io/niko1405/hauskreis-backend}:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    logging: *logging
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -60,7 +82,14 @@ services:
       UPLOAD_DIR: /data/uploads
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
-      VAPID_SUBJECT: ${VAPID_SUBJECT}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@hauskreis.local}
+      # Die beiden Knöpfe beim Lied-Anlegen (Link lesen, Link suchen). Sie
+      # fehlten hier, und das Ergebnis war kein Fehler, sondern etwas
+      # Schlimmeres: die Knöpfe waren produktiv einfach nicht da, genau wie bei
+      # jemandem, der bewusst keinen Schlüssel hinterlegt hat. Leer lassen ist
+      # weiterhin ein gültiger Zustand.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
       # Never in production: it would let the CSV seed overwrite real data.
       SEED_ENABLED: 'false'
     # Bound to loopback — a reverse proxy terminates TLS and forwards. Exposing
@@ -84,14 +113,29 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_USER: hauskreis
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: hauskreis
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    # No published port at all: only the API talks to it, over the compose
-    # network.
+    # An den Loopback des Servers, nicht ans Netz. Im Alltag spricht nur die API
+    # über das Compose-Netz mit der Datenbank; diese Zeile ist allein für den
+    # SSH-Tunnel da, mit dem man von außen nachsieht:
+    #
+    #   ssh -N -L 5433:127.0.0.1:5432 <user>@<vps>
+    #
+    # Danach hängt lokal psql, DBeaver oder `prisma studio` auf 5433. Das ist
+    # der Ersatz für ein pgAdmin: kein zweiter Dienst, kein zweites Login, kein
+    # offener Port.
+    #
+    # Die Bindung an 127.0.0.1 ist der ganze Schutz und muss stehenbleiben.
+    # Docker schreibt für veröffentlichte Ports eigene iptables-Regeln und geht
+    # dabei an ufw vorbei — aus '5432:5432' würde eine im Internet erreichbare
+    # Datenbank, ohne dass die Firewall es meldet.
+    ports:
+      - '127.0.0.1:5432:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U hauskreis -d hauskreis']
       interval: 10s
@@ -101,6 +145,7 @@ services:
   keycloak-db:
     image: postgres:17-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_USER: keycloak
       POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
@@ -116,9 +161,22 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.4
     restart: unless-stopped
+    logging: *logging
     # `start`, not `start-dev`: enforces the hostname, expects a proxy in front
     # and refuses the shortcuts the dev mode allows.
-    command: start --optimized
+    #
+    # **Ohne `--optimized`**, obwohl das hier einmal stand. Der Flag verspricht
+    # Keycloak, dass die Bauphase (`kc.sh build`) schon gelaufen ist — beim
+    # allerersten Start ist sie das nicht, und Keycloak verweigert den Dienst mit
+    # „The '--optimized' flag was used for first ever server start". Der
+    # Container lief dann in einer Neustartschleife, und zwar genau einmal: beim
+    # Aufsetzen. Ihn richtig zu nutzen hieße, ein eigenes Keycloak-Image zu bauen
+    # und zu pflegen — für ein paar Sekunden Startzeit bei einem Dienst, der
+    # monatelang durchläuft.
+    #
+    # Am Theme ändert das nichts: `kc.sh build` kümmert sich um Provider,
+    # Datenbank und Features, Themes liest der Server zur Laufzeit.
+    command: start
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
