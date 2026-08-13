@@ -1,0 +1,27 @@
+# Cache-Regeln für Cloudflare Pages. Die Datei wird mit `public/` nach `out/`
+# kopiert und dort vom Rand gelesen; ins Bundle geht sie nicht ein.
+#
+# Der Service Worker ist der Grund, warum es sie überhaupt gibt. Cachte ihn ein
+# CDN, könnte eine installierte PWA ihren eigenen Worker nicht mehr erneuern —
+# sie hinge an einer alten Version fest, und zwar auf einem Gerät, auf dem
+# niemand die Entwicklerwerkzeuge öffnet, um sie abzumelden. Ein Fehler, der
+# sich nicht durch ein Deploy beheben lässt, weil das Deploy nicht ankommt.
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+# Alles unter `_next/static` trägt einen Hash im Namen. Ändert sich der Inhalt,
+# ändert sich der Name — die Datei darf also für immer im Zwischenspeicher
+# bleiben.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Die App gehört einer Gruppe von neun Leuten. Hinter der Anmeldung liegt
+# ohnehin alles, aber die Adresse muss deshalb noch lange nicht in einem Index
+# stehen.
+/*
+  X-Robots-Tag: noindex
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

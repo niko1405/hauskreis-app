@@ -3,6 +3,23 @@ import withSerwistInit from '@serwist/next';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  /**
+   * Statischer Export nach `out/`, von dort liefert Cloudflare Pages aus.
+   *
+   * Das ist keine Sparmaßnahme, sondern das, was diese App ohnehin ist: Es gibt
+   * keinen Route Handler, keine Server Action, kein `next/headers`, keine
+   * Middleware und kein ISR. Daten holt durchweg der Browser, weil das Token
+   * dort lebt — serverseitig vorzuladen hieße, es dorthin zu reichen. Next ist
+   * hier Anwendungsgerüst und Router, und ein Router braucht zur Laufzeit
+   * keinen Server.
+   *
+   * Was der Export verlangt hat: Termin- und Themen-Detailseite tragen ihre Id
+   * in der Query (`/termin?id=…`), nicht im Pfad. Ein Pfadsegment `[id]`
+   * bräuchte `generateStaticParams` — eine zur Bauzeit bekannte Liste aller
+   * Adressen. Die gibt es nicht, die Ids entstehen im Betrieb.
+   */
+  output: 'export',
 };
 
 /**

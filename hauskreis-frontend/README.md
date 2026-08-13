@@ -979,6 +979,51 @@ vorformulierten Satz, aber ohne Nummer — man landete also in WhatsApps
 Kontaktauswahl und suchte dort die Person, die auf dem Bildschirm daneben
 stand. Wer seine Gebetsbuddys anschreiben will, hat den Chat ohnehin offen.
 
+## Ausgeliefert wird ein statischer Export
+
+`pnpm build` schreibt nach `out/`, und von dort liefert Cloudflare Pages aus —
+kein Node-Prozess, kein Adapter, kein Runtime.
+
+Das ist keine Sparmaßnahme, sondern das, was diese App ohnehin ist: Es gibt
+keinen Route Handler, keine Server Action, kein `next/headers`, keine
+`middleware.ts` und kein ISR. Daten holt durchweg der Browser, weil das Token
+dort lebt. Next ist Anwendungsgerüst und Router, und ein Router braucht zur
+Laufzeit keinen Server.
+
+**Was der Export verlangt hat: die beiden Detailseiten tragen ihre Id in der
+Query.** `/termin?id=<uuid>` statt `/termine/<uuid>`, `/thema?id=<uuid>` statt
+`/archiv/themen/<uuid>`. Ein Pfadsegment `[id]` braucht beim Export
+`generateStaticParams` — eine zur Bauzeit bekannte Liste aller Adressen. Die gibt
+es nicht: Ids entstehen im Betrieb und liegen hinter einem Token, das der
+Bauprozess nicht hat.
+
+Beide Seiten lesen die Id mit `useSearchParams` und nicht aus
+`window.location.search`. Von einem Termin führt ein Link auf einen anderen (die
+Themen-Karte zeigt auf den vorigen Abend desselben Themas); dabei wechselt die
+Query, ohne dass die Seite neu montiert wird, und ein einmal ausgelesener Wert
+bliebe auf der alten Id stehen. Das `<Suspense>` darum verlangt Next: zur Bauzeit
+hat `useSearchParams` noch keine Antwort, also steht der Fallback im HTML.
+
+Das Backend kennt diese Pfade an genau einer Stelle —
+`src/notification/app-paths.ts` —, weil Push-Benachrichtigungen dorthin springen.
+
+**Drei Variablen setzt Cloudflare zur Bauzeit** (Settings → Environment
+Variables): `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_OIDC_AUTHORITY`,
+`NEXT_PUBLIC_OIDC_CLIENT_ID`. Fehlt eine, greifen die Vorgaben im Code, und die
+zeigen auf `localhost` — kein Fehler beim Bauen, kein Fehler beim Laden, nur eine
+App, die nichts anzeigt.
+
+Als Build-Kommando gehört dort `pnpm build` hinterlegt, nicht `next build`: Im
+Skript steckt `--webpack`, und ohne das bricht der Bau ab (siehe unten).
+
+[`public/_headers`](public/_headers) reist mit nach `out/` und regelt das
+Caching am Rand. Der Grund dafür ist `sw.js`: Cachte ein CDN den Service Worker,
+könnte eine installierte PWA ihren eigenen Worker nicht mehr erneuern — ein
+Fehler, der sich nicht durch ein Deploy beheben lässt, weil das Deploy nicht
+ankommt.
+
+Der ganze Ablauf steht im [Betriebs-Handbuch](../deploy/README.md).
+
 ## PWA und Push
 
 Der Service Worker entsteht aus `src/app/sw.ts` (Serwist) und landet in
