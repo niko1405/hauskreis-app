@@ -14,3 +14,10 @@ allowBuilds:
   # Vertex-AI-Pfad. Wir sprechen mit der Gemini API über HTTP.
   '@google/genai': false
   protobufjs: false
+  # Prismas Telemetrie-Ping. Sichtbar wurde er, als `prisma` von den
+  # devDependencies zu den dependencies wanderte (damit `prisma migrate deploy`
+  # im Produktions-Image läuft) — vorher wurde die Produktionsinstallation nie
+  # danach gefragt, und `pnpm install --prod` brach dort mit
+  # ERR_PNPM_IGNORED_BUILDS ab. Ausdrücklich `false`: das Skript meldet eine
+  # Installation nach draußen, und dafür gibt es hier keinen Grund.
+  '@scarf/scarf': false

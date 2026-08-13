@@ -28,14 +28,19 @@ RUN pnpm exec prisma generate && pnpm exec nest build
 # ---------------------------------------------------------------------------
 # Runtime. Production dependencies only.
 #
-# The Prisma CLI still lands here despite `--prod`: it is an optional peer of
-# `@prisma/client`, and the peer resolution is baked into the lockfile entry.
-# That is worth knowing, not worth fighting — but the app never invokes it.
-# Migrations are a separate, ordered step; see the `migrate` service in
-# docker-compose.prod.yml.
+# **Diese Stufe ist auch das Migrations-Image.** Sie war es einmal nicht: der
+# `migrate`-Service lief aus der `build`-Stufe, weil `prisma` und `dotenv` als
+# devDependencies geführt wurden und `--prod` sie hier wegließ. Solange auf dem
+# Server gebaut wurde, kostete das nichts. Sobald das Image aus der CI kommt,
+# hieße es zwei Images bauen, pushen und ziehen — für einen Aufruf, der einmal
+# pro Deploy läuft. Deshalb stehen beide jetzt unter `dependencies`, und der
+# `migrate`-Service ist nur noch ein anderes `command:` auf demselben Image.
 #
-# Der Löwenanteil sind Prismas Query-Engines. Für eine selbst gehostete Gruppe
-# von neun Leuten klein genug — der Build muss sich dafür nicht verbiegen.
+# Dafür braucht die Stufe zweierlei mehr: die Migrationen selbst und
+# `prisma.config.ts`, aus der der CLI Schema-Pfad und `DATABASE_URL` liest.
+#
+# Der Löwenanteil der Größe sind Prismas Engines. Für eine selbst gehostete
+# Gruppe von neun Leuten klein genug — der Build muss sich dafür nicht verbiegen.
 # ---------------------------------------------------------------------------
 FROM base AS runtime
 ENV NODE_ENV=production
@@ -45,6 +50,10 @@ RUN pnpm install --prod --frozen-lockfile
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/generated ./generated
+
+# Nur für `prisma migrate deploy`. Die Anwendung selbst rührt beides nie an.
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/prisma.config.ts ./
 
 # Der Einhängepunkt des Uploads-Volumes, angelegt **bevor** der Benutzer wechselt.
 #
