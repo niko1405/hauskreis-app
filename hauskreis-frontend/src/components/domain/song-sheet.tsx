@@ -74,9 +74,7 @@ function SongFields({
 
       {/* Text *oder* Akkorde: bei uns spielen vier Leute, und ein Akkordblatt
           ist für die genauso der richtige Link. */}
-      <Field
-        label="Link zu Text/Chords"
-      >
+      <Field label="Link zu Text/Chords">
         {/* Der Knopf daneben, nicht darunter: er gehört zu diesem Feld und
             erscheint erst, wenn darin etwas steht, das eine Adresse ist. */}
         <div className="flex items-center gap-2">

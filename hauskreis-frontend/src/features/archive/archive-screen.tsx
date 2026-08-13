@@ -38,7 +38,7 @@ import {
   useTopicList,
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import { formatDay, formatRelativeDay } from '@/lib/date';
+import { formatRelativeDay } from '@/lib/date';
 import type { SongListParams } from '@/lib/api/params';
 import type { SongListItem, TopicListItem } from '@/lib/api/types';
 
