@@ -396,7 +396,7 @@ function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
 
   return (
     <Link
-      href={`/termine/${role.meetingId}`}
+      href={`/termin?id=${role.meetingId}`}
       className="block px-4 py-3.5 transition-colors hover:bg-canvas"
     >
       {content}
@@ -422,7 +422,7 @@ function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
       <div className="flex items-start justify-between gap-3">
         <div className="text-xs font-medium text-stone-500">
           <Link
-            href={`/termine/${meeting.id}`}
+            href={`/termin?id=${meeting.id}`}
             className="block min-w-0 flex-1 mb-3"
           >
             <span className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
@@ -472,7 +472,7 @@ function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
           heißt „noch kein Host" auf zwei Bildschirmen zweierlei. Der Link führt
           aufs Detail, weil dort das „+ … eintragen" auch einlösbar ist. */}
       <Link
-        href={`/termine/${meeting.id}`}
+        href={`/termin?id=${meeting.id}`}
         className="flex flex-wrap items-center gap-2"
       >
         <RoleChip

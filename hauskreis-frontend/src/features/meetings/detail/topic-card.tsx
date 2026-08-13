@@ -143,7 +143,7 @@ function TopicHeading({
     <div>
       <FieldLabel>Zugehöriges Thema</FieldLabel>
       <Link
-        href={`/archiv/themen/${session.topic.id}`}
+        href={`/thema?id=${session.topic.id}`}
         className="inline-flex items-baseline gap-1 font-serif text-xl font-bold text-stone-900 hover:text-terracotta-600"
       >
         {session.topic.title ?? 'Thema ohne Titel'}
@@ -214,7 +214,7 @@ function OtherSessions({
 function OtherSessionRow({ session }: { session: TopicSessionInTopic }) {
   return (
     <Link
-      href={`/termine/${session.meeting?.id}`}
+      href={`/termin?id=${session.meeting?.id}`}
       className="block rounded-md p-2 transition-colors hover:bg-canvas"
     >
       <div className="flex items-baseline justify-between gap-3">

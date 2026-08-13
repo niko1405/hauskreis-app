@@ -307,7 +307,7 @@ function NewTopicSheet({
                   onSuccess: (topic) => {
                     toast.success('Angelegt — jetzt die Einheiten.');
                     close();
-                    router.push(`/archiv/themen/${topic.id}`);
+                    router.push(`/thema?id=${topic.id}`);
                   },
                   onError: (error) => toast.error(errorMessage(error)),
                 },
@@ -349,7 +349,7 @@ function TopicEntry({ topic }: { topic: TopicListItem }) {
   ];
 
   return (
-    <Link href={`/archiv/themen/${topic.id}`} className="block">
+    <Link href={`/thema?id=${topic.id}`} className="block">
       <Card className="transition-colors hover:border-line-strong">
         <div className="flex items-start justify-between gap-3">
           <h3 className="font-serif text-base font-bold text-stone-900">

@@ -106,7 +106,7 @@ function MeetingEntry({ meeting }: { meeting: MeetingListItem }) {
   const actionstep = session ? session.actionstepText : meeting.actionstepText;
 
   return (
-    <Link href={`/termine/${meeting.id}`} className="block">
+    <Link href={`/termin?id=${meeting.id}`} className="block">
       <Card
         className={cn(
           'transition-colors hover:border-line-strong',

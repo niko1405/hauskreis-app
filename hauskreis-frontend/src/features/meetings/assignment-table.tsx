@@ -257,7 +257,7 @@ function Row({
         )}
       >
         <Link
-          href={`/termine/${meeting.id}`}
+          href={`/termin?id=${meeting.id}`}
           // Der sichtbare Text steht in zwei `span`s, und die statische
           // Prüfung sieht darin keinen Namen. Ausgesprochen ist er ohnehin
           // besser als „11. Aug. in 3 Tagen" am Stück.

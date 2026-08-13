@@ -445,7 +445,7 @@ function SessionCard({
         <div className="flex shrink-0 items-center gap-1">
           {session.meeting && (
             <Link
-              href={`/termine/${session.meeting.id}`}
+              href={`/termin?id=${session.meeting.id}`}
               className="inline-flex items-center gap-1 text-[10px] font-bold tracking-widest text-stone-400 uppercase hover:text-terracotta-600"
             >
               {formatDay(session.meeting.date)}

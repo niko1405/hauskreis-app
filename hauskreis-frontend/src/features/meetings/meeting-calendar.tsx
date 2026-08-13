@@ -133,7 +133,7 @@ export function MeetingCalendar() {
             return span ? (
               <Link
                 key={day}
-                href={`/termine/${span.id}`}
+                href={`/termin?id=${span.id}`}
                 aria-label={`${formatDay(day)}: ${meetingHeadline(span)}`}
                 className="transition-colors hover:bg-stone-50"
               >
@@ -175,7 +175,7 @@ function MonthRow({ meeting }: { meeting: MeetingListItem }) {
   return (
     <li>
       <Link
-        href={`/termine/${meeting.id}`}
+        href={`/termin?id=${meeting.id}`}
         className={cn(
           'flex items-center justify-between gap-3 rounded-md border border-line bg-card p-3 transition-colors hover:border-line-strong',
           // Wie auf der Terminkarte: der Punkt im Raster oben war schon

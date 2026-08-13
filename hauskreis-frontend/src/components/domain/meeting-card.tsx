@@ -45,7 +45,7 @@ export function MeetingCard({
 
   return (
     <Link
-      href={`/termine/${meeting.id}`}
+      href={`/termin?id=${meeting.id}`}
       onMouseEnter={() => onPrefetch?.(meeting.id)}
       onTouchStart={() => onPrefetch?.(meeting.id)}
       className={cn(
