@@ -9,6 +9,29 @@ import { z } from 'zod';
  */
 const httpUrl = z.url({ protocol: /^https?$/ });
 
+/**
+ * Ein Wert, den es geben darf und nicht geben muss — und bei dem „gibt es
+ * nicht" auch dann gilt, wenn die Zeile dasteht und leer bleibt.
+ *
+ * `.optional()` allein reicht dafür nicht, und das ist kein Detail: In einer
+ * `.env`-Datei ist `GEMINI_API_KEY=` die naheliegende Art, „habe ich nicht"
+ * auszudrücken, und Compose reicht jedes `${FOO}` ohnehin als leere
+ * Zeichenkette weiter, wenn `FOO` nicht gesetzt ist. Beides kommt hier als `''`
+ * an, nicht als `undefined` — und scheiterte an `.min(1)`.
+ *
+ * Der Effekt war das Gegenteil dessen, was diese Felder versprechen: Statt
+ * einer abgeschalteten Funktion gab es einen Server, der gar nicht erst
+ * hochkam. Beim ersten Start in Produktion ist das die unfreundlichste Art,
+ * „kein Push-Schlüssel hinterlegt" zu sagen.
+ *
+ * Dieselbe Behandlung wie bei `KEYCLOAK_INTERNAL_URL` und `APP_URL`, nur für
+ * Zeichenketten ohne Format.
+ */
+const optionalValue = z
+  .union([z.string().min(1), z.literal('')])
+  .optional()
+  .transform((value) => value || undefined);
+
 export const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
@@ -86,8 +109,8 @@ export const envSchema = z.object({
   // Web Push (VAPID). Generate a pair with `npx web-push generate-vapid-keys`.
   // Optional so the app still boots without them — push is then disabled and
   // logged once, rather than taking the whole server down.
-  VAPID_PUBLIC_KEY: z.string().min(1).optional(),
-  VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+  VAPID_PUBLIC_KEY: optionalValue,
+  VAPID_PRIVATE_KEY: optionalValue,
   /// Contact address the push service can reach you at, per the VAPID spec.
   VAPID_SUBJECT: z.string().min(1).default('mailto:admin@hauskreis.local'),
 
@@ -102,7 +125,7 @@ export const envSchema = z.object({
   /// Der Schlüssel braucht ein Projekt mit **aktivierter Abrechnung**. Die
   /// Suche nach einem Link läuft über `google_search`-Grounding, und das gibt
   /// es im kostenlosen Tarif nicht.
-  GEMINI_API_KEY: z.string().min(1).optional(),
+  GEMINI_API_KEY: optionalValue,
   /// Bewusst das kleinste Modell: Beide Aufgaben sind Ablesen und Auswählen,
   /// nicht Nachdenken. `gemini-3.6-flash` kostet 1,50/7,50 $ je Mio. Tokens
   /// und denkt von Haus aus mit; flash-lite liegt bei 0,25/1,50 $ — sechs- bzw.
