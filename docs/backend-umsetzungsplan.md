@@ -1,4 +1,4 @@
-# Hauskreis-App – Backend-Umsetzungsplan
+# Acts2 – Backend-Umsetzungsplan
 
 > **Historisch, vollständig umgesetzt (Phase 0–10).** Was tatsächlich gebaut
 > wurde, steht im [Backend-README](../hauskreis-backend/README.md) — das ist die

@@ -16,7 +16,7 @@ import type { OpenAPIObject } from '@nestjs/swagger';
  */
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
-    .setTitle('Hauskreis API')
+    .setTitle('Acts2 API')
     .setDescription(
       [
         'Organisation eines Hauskreises: Termine, Hosts, Themen, Songs,',

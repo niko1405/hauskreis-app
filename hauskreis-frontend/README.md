@@ -1,4 +1,4 @@
-# Hauskreis Frontend
+# Acts2 Frontend
 
 Next.js 16 (App Router) + React 19, TanStack Query, Tailwind 4, Keycloak über
 PKCE, PWA mit Web Push. Was die App fachlich leisten soll, steht in

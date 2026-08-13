@@ -126,7 +126,7 @@ export class NotificationController {
     const person = await this.people.resolveForUser(user);
 
     return this.notifications.sendToPerson(person.id, {
-      title: 'Hauskreis',
+      title: 'Acts2',
       body: `Hi ${person.name}, deine Benachrichtigungen funktionieren.`,
       url: appPath.home(),
     });

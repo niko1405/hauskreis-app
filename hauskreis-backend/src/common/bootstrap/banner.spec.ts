@@ -25,7 +25,7 @@ describe('renderBanner', () => {
   it('names the pieces you would otherwise go looking for', () => {
     const banner = renderBanner(info, false);
 
-    expect(banner).toContain('Hauskreis API  ·  v1.2.3  ·  development');
+    expect(banner).toContain('Acts2 API  ·  v1.2.3  ·  development');
     expect(banner).toContain('http://localhost:3000/api/health');
     expect(banner).toContain('Realm hauskreis');
     expect(banner).toContain('http://localhost:3001');

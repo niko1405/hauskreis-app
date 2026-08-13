@@ -41,12 +41,12 @@ self.addEventListener('push', (event) => {
   const payload = readPayload(event.data);
 
   event.waitUntil(
-    self.registration.showNotification(payload.title ?? 'Hauskreis', {
+    self.registration.showNotification(payload.title ?? 'Acts2', {
       body: payload.body,
       icon: '/icons/icon-192.png',
       badge: '/icons/badge-72.png',
       // Gleiche Nachricht zweimal soll nicht zweimal aufpoppen.
-      tag: payload.url ?? 'hauskreis',
+      tag: payload.url ?? 'acts2',
       data: { url: payload.url ?? '/' },
     }),
   );

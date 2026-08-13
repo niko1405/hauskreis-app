@@ -8597,7 +8597,7 @@
     }
   },
   "info": {
-    "title": "Hauskreis API",
+    "title": "Acts2 API",
     "description": "Organisation eines Hauskreises: Termine, Hosts, Themen, Songs,\nGebetsbuddys, Actionsteps.\n\nZwei Dinge, die man beim Schreiben wissen muss und die sich hier\nschlecht ausdrücken lassen:\n\n1. **Jedes `PATCH`/`PUT` verlangt `If-Match`** mit dem ETag aus dem\n   vorangehenden `GET`. Ohne kommt `428`, mit veraltetem `412`.\n2. **Auth ist Keycloak (OIDC)**, im Browser der öffentliche Client\n   `hauskreis-app` mit PKCE. Das Token gehört als Bearer in jeden\n   Request außer `/api/health`.\n\nAusführlich in `docs/api-fuer-frontend.md`.",
     "version": "0.0.1",
     "contact": {}

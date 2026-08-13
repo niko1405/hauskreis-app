@@ -1,6 +1,6 @@
-# Hauskreis Backend
+# Acts2 Backend
 
-NestJS + Prisma + Keycloak Backend für die Hauskreis-App.
+NestJS + Prisma + Keycloak Backend für Acts2.
 Fachlicher Kontext und Gesamtplan: siehe [`../CLAUDE.md`](../CLAUDE.md).
 
 ## Stack

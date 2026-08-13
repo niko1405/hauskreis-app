@@ -166,7 +166,7 @@ curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}" "${auth[@]}" -d "{
       \"host\": \"${SMTP_HOST}\",
       \"port\": \"${SMTP_PORT}\",
       \"from\": \"${SMTP_FROM}\",
-      \"fromDisplayName\": \"Hauskreis App\",
+      \"fromDisplayName\": \"Acts2\",
       \"ssl\": \"${SMTP_SSL}\",
       \"starttls\": \"${SMTP_STARTTLS}\",
       \"auth\": \"${SMTP_AUTH}\",

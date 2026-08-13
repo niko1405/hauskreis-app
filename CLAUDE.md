@@ -1,4 +1,4 @@
-# CLAUDE.md – Hauskreis-App (Backend-Kontext)
+# CLAUDE.md – Acts2 (Backend-Kontext)
 
 Diese Datei fasst alle bisherigen Überlegungen zusammen und dient als Kontext-/Steuerdatei für Claude Code bei der Backend-Entwicklung dieses Projekts. Bitte diese Datei vor größeren Änderungen am Datenmodell oder an der Business-Logik konsultieren.
 
@@ -23,18 +23,18 @@ Ziel ist eine **PWA**, die die Organisation des Hauskreises übernimmt – einfa
 
 ## 3. Tech-Stack
 
-| Bereich | Wahl |
-|---|---|
-| Medium | PWA (kein natives App-Store-Release nötig) |
-| Frontend | Next.js 16 (App Router) + React 19, TanStack Query, Tailwind 4, PWA über Serwist (`@serwist/next`) |
-| Backend | NestJS 11 (TypeScript, Express-Adapter) |
-| Datenbank / ORM | PostgreSQL 17 + Prisma 7 (Driver Adapter `@prisma/adapter-pg`) |
-| Auth | Keycloak 26 (OIDC), Token-Prüfung via JWKS (`jose`); Rollen als Realm-Rollen |
-| Validierung | Zod 4 über `nestjs-zod` (global registrierte Pipe) |
-| Paketmanager | pnpm |
-| Lint/Format | oxlint + Prettier |
-| Jobs | `@nestjs/schedule` (in-process, da dauerhaft laufender Server) |
-| Hosting Backend | dedizierter Node-Host (Keycloak braucht einen laufenden Prozess) |
+| Bereich         | Wahl                                                                                               |
+| --------------- | -------------------------------------------------------------------------------------------------- |
+| Medium          | PWA (kein natives App-Store-Release nötig)                                                         |
+| Frontend        | Next.js 16 (App Router) + React 19, TanStack Query, Tailwind 4, PWA über Serwist (`@serwist/next`) |
+| Backend         | NestJS 11 (TypeScript, Express-Adapter)                                                            |
+| Datenbank / ORM | PostgreSQL 17 + Prisma 7 (Driver Adapter `@prisma/adapter-pg`)                                     |
+| Auth            | Keycloak 26 (OIDC), Token-Prüfung via JWKS (`jose`); Rollen als Realm-Rollen                       |
+| Validierung     | Zod 4 über `nestjs-zod` (global registrierte Pipe)                                                 |
+| Paketmanager    | pnpm                                                                                               |
+| Lint/Format     | oxlint + Prettier                                                                                  |
+| Jobs            | `@nestjs/schedule` (in-process, da dauerhaft laufender Server)                                     |
+| Hosting Backend | dedizierter Node-Host (Keycloak braucht einen laufenden Prozess)                                   |
 
 Das Backend liegt in [`hauskreis-backend/`](hauskreis-backend/) – Setup, Konventionen
 und API-Übersicht stehen im dortigen [README](hauskreis-backend/README.md).
@@ -62,18 +62,21 @@ Mehrere Features (Host, Thema) folgen demselben Muster – bitte konsistent im B
 grundlegende Vorschläge für Kernentitäten:
 
 ### `user`
+
 - zB `id`, `name`, `plays_instrument: bool`, `active: bool`, `birthdate`
 - Man sollte als User einstellen können, ob man gerade generell überhaupt hosten kann, was bei den Vorschlägen für die Zuteilung berücksichtigt werden kann
-- **Konto löschen heißt anonymisieren, nicht löschen.** Die Zeile bleibt, Name, E-Mail und Geburtsdatum fallen weg, das Anmelde-Konto auch. Ein hartes Löschen nähme die Zuschreibung (Gastgeber, Themen-Owner) *und* die Mitgliedschaft (wer welche Einheit gehalten hat, Anwesenheiten) mit — das Archiv wäre danach nicht anonym, sondern löchrig. Im Archiv steht dann „Ehemaliges Mitglied"
+- **Konto löschen heißt anonymisieren, nicht löschen.** Die Zeile bleibt, Name, E-Mail und Geburtsdatum fallen weg, das Anmelde-Konto auch. Ein hartes Löschen nähme die Zuschreibung (Gastgeber, Themen-Owner) _und_ die Mitgliedschaft (wer welche Einheit gehalten hat, Anwesenheiten) mit — das Archiv wäre danach nicht anonym, sondern löchrig. Im Archiv steht dann „Ehemaliges Mitglied"
 
 ### `locations`
+
 - zB `id`, `name`, `frequency_factor` (Gewichtung: 3 Haupt-Locations häufiger, weitere seltener, abhängig von Stadt-Lage)
 - Sonderfall: manche Termine haben **keinen Host** (z. B. Treffen im Schlosspark/draußen) → Feld bleibt leer, keine Rolle nötig, kein Fehlerzustand
 
 ### `meeting` (Termine)
+
 - zB `id`, `date`, `start_minutes`, `location_id` (nullable), `host_person_id` (nullable), `topic_id` (nullable), `actionstep_text`, `summary_text`, `info_text`, `person[]`
 - **Vier Bausteine** sagen, woraus ein Abend besteht: `has_topic_slot`, `has_notes_slot`, `has_song_slot`, `has_testimony_slot`. Die Terminart ist nur ihre Voreinstellung. Thema schließt Testimony aus und Nachbereitung ebenfalls — Testimony und Nachbereitung zusammen sind dagegen erlaubt
-- **Drei davon plant man, den vierten nicht.** Die Nachbereitung steht nicht im Bausteinkasten: dort hätte man sie *vor* dem Abend angehakt, also als es noch nichts nachzubereiten gab. Sie lässt sich erst **ab der Treffpunktzeit** anschalten, kommt über einen Hinweis am Abend selbst dazu und lässt sich genauso wieder ganz entfernen — danach steht wieder der Hinweis da
+- **Drei davon plant man, den vierten nicht.** Die Nachbereitung steht nicht im Bausteinkasten: dort hätte man sie _vor_ dem Abend angehakt, also als es noch nichts nachzubereiten gab. Sie lässt sich erst **ab der Treffpunktzeit** anschalten, kommt über einen Hinweis am Abend selbst dazu und lässt sich genauso wieder ganz entfernen — danach steht wieder der Hinweis da
 - `summary_text` und `actionstep_text` gehören zum Baustein **Nachbereitung** und damit dem Abend. Hat er ein Thema, stehen beide stattdessen an dessen Einheit und gehören dort dem Thema
 - Termine finden wöchentlich statt. **Wochentag, Uhrzeit und Zeitzone stellt die Gruppe selbst ein** (`meeting_schedule_config`, Vorgabe Dienstag 18 Uhr, `Europe/Berlin`) — vorher standen alle drei als Konstante im Code, was für eine App für Hauskreise eine Aussage zu viel war. Ein Wechsel von Tag oder Zeit gilt für neu erzeugte Termine; was schon im Kalender steht, behält seinen Tag und seine Zeit. Die **Zone** gilt dagegen sofort für alles: sie sagt nicht nur, was `start_minutes` bedeutet, sondern auch, **welchen Tag wir gerade haben**
 - Jeder Termin trägt eine **Treffpunktzeit** (`start_minutes`, Minuten seit Mitternacht Ortszeit). Ein Pflichtfeld: erzeugte Abende bekommen die Zeit der Gruppe, das Anlege-Formular ist damit vorbelegt. Ändert sie sich am **nächsten** Termin, bekommen die anderen eine Benachrichtigung
@@ -85,6 +88,7 @@ grundlegende Vorschläge für Kernentitäten:
 - "Custom" ist ein selbst erstellter Termin, welcher keine vorausgesetzten Bedingungen wie bspw Host oder Thema erfüllen muss, allgemein sollte man Termine in ihrer Art bearbeiten können (bspw. von "Standard" zu "Custom" mit Titel "Geburtstag von ...", sozusagen ein special Hauskreis-Treffen, wo wir Geburtstag feiern)
 
 ### `topic` (Themen) + `topic_session` (Einheiten)
+
 - `topic`: `id`, `title` (**optional**, nicht jeder trägt vorab einen ein), `summary_text` (Bogen über alle Abende), `status` ("läuft" / "abgeschlossen"), `owner_person_id`, Mitarbeitende
 - `topic_session`: ein **Abend** eines Themas — `title`, `actionstep_text`, `summary_text`, `meeting_id` (**nullable**, `UNIQUE`)
 - Ein Thema ist **nicht 1:1 an einen Termin gebunden** – es zieht sich über beliebig viele Einheiten
@@ -97,9 +101,11 @@ grundlegende Vorschläge für Kernentitäten:
 - Eine Einheit lässt sich auch **ohne Abend** anlegen — der Ort zum Vorarbeiten. Sie wartet unter „Angefangenes", bis jemand sie an einem Termin auswählt; dort zählt auch eine, die gerade an einem anderen kommenden Abend hängt (sie zieht dann um). Löschen geht nur, solange sie nicht gehalten wurde
 
 ### `host_history` / abgeleitet aus `meetings`
+
 - `last_hosted_date` + `frequency_factor` pro Person/Location als Datenbasis für Vorschlagslogik
 
 ### `prayer_buddy_groups` (Gebetsbuddys)
+
 - Rotation alle 2 Wochen
 - 9 Personen → Gruppen zu 2 oder 3 (nicht alle Gruppen gleich groß)
 - `id`, `period_start`, `period_end`, `member_person_ids[]`
@@ -159,13 +165,13 @@ grundlegende Vorschläge für Kernentitäten:
    - Man soll Termine absagen können und auch angeben können in welchem Zeitraum man abwesend ist --> automatische absagen
    - Sagen **alle** ab, fällt der Abend von selbst aus. Der Weg zurück ist eine Zusage, kein Admin-Eingriff: in der „Fällt aus"-Meldung steht dafür ein Knopf, für jede:n
 
-9. **Termin-Rhythmus (Verwaltung)**
+8. **Termin-Rhythmus (Verwaltung)**
    - Wochentag, Uhrzeit und **Zeitzone** der automatisch erzeugten Termine sind einstellbar (Vorgabe Dienstag 18 Uhr, `Europe/Berlin`)
    - Tag und Uhrzeit gelten für neue Termine, nicht rückwirkend — was schon steht, hat schon Zusagen
    - Die Zeitzone gilt sofort und überall: in ihr wird die Uhrzeit gelesen **und** gezählt, welchen Tag wir haben. Geprüft wird gegen die Liste, die die Laufzeit ohnehin mitbringt (`Intl.supportedValuesOf`), damit kein Tippfehler still danebengeht
    - Ändert sich die Uhrzeit des **nächsten** Termins, bekommen die anderen eine Benachrichtigung
 
-8. **Archiv**
+9. **Archiv**
    - Es gibt ein Archiv, wo vergangene Termine und Themen angezeigt werden
    - Jedes Thema hat eine eigene Seite mit allen seinen Abenden; zwei Register trennen „Eigene" (auch die noch nicht gehaltenen) von „Alle"
    - Hier lassen sich auch neue Themen und Lieder anlegen — der Ort zum Vorarbeiten, ohne auf einen Dienstag zu warten

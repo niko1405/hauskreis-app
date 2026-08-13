@@ -38,7 +38,7 @@ export function renderBanner(info: BannerInfo, colors: boolean): string {
   const label = (text: string) => dim(text.padEnd(10));
 
   const base = `http://${displayHost(info.host)}:${info.port}${info.globalPrefix}`;
-  const title = `Hauskreis API  ·  v${info.version}  ·  ${info.environment}`;
+  const title = `Acts2 API  ·  v${info.version}  ·  ${info.environment}`;
   const border = '─'.repeat(title.length + 4);
 
   const lines = [

@@ -1,4 +1,4 @@
-# hauskreis-app
+# Acts2
 
 Organisation für einen neunköpfigen Hauskreis — Termine, Hosts, Themen, Songs,
 Gebetsbuddys, Actionsteps. Was die App fachlich leisten soll, steht in
@@ -13,6 +13,30 @@ Ein Repo, zwei eigenständige Anwendungen:
 | [`bruno/`](bruno/)                           | API-Collection für beide — 82 Requests, läuft von oben nach unten durch | fertig               |
 | [`deploy/`](deploy/)                         | nginx, Backups, [Betriebs-Handbuch](deploy/README.md)                   | —                    |
 | [`docs/`](docs/)                             | [API fürs Frontend](docs/api-fuer-frontend.md), Entwurfsdokumente       | —                    |
+
+## Acts2 heißt die App, Hauskreis heißt die Gruppe
+
+Beides steht im Quelltext, und es ist nicht dasselbe. **Acts2** ist der
+Produktname: er steht im Manifest, im Browser-Tab, auf der Anmeldeseite, in den
+Einladungsmails und im Startbanner der API. **Hauskreis** ist der Fachbegriff
+für die Gruppe von neun Leuten: die Entität heißt so, die Endpunkte heißen
+`/api/hauskreise/…`, und in der Oberfläche gründet man einen Hauskreis.
+
+Man gründet also einen Hauskreis _in_ Acts2. Wer den Namen weiter ausrollen
+will, ändert das eine, nicht das andere — ein `sed` über „Hauskreis" bricht das
+Datenmodell.
+
+Die Verzeichnisse (`hauskreis-backend/`, `hauskreis-frontend/`), der
+Keycloak-Realm, die Client-Ids und der Image-Name behalten bewusst den alten
+Namen: Sie sind nirgends sichtbar, und ein Realm umzubenennen heißt, den Issuer
+zu ändern und damit jede bestehende Anmeldung zu verwerfen.
+
+Das Logo liegt als
+[`hauskreis-frontend/scripts/acts2-logo.png`](hauskreis-frontend/scripts/acts2-logo.png),
+neben dem Skript, das es liest. Alle Symbole — PWA, Apple-Touch,
+Benachrichtigungs-Abzeichen, Keycloak-Anmeldeseite — entstehen daraus mit
+`node scripts/make-icons.mjs` und sind eingecheckt; zur Bauzeit läuft das
+Skript nicht.
 
 **Zwei Ziele, ein Repo.** Das Backend läuft als Docker-Stack auf einem eigenen
 Server (nginx davor, Postgres und Keycloak daneben), das Frontend als statischer

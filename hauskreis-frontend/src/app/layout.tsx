@@ -30,13 +30,15 @@ const robotoSlab = Roboto_Slab({
 });
 
 export const metadata: Metadata = {
-  title: 'Hauskreis',
+  title: 'Acts2',
   description:
     'Termine, Hosts, Themen, Songs, Gebetsbuddys und Actionsteps für einen Hauskreis — an einem Ort.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
-    title: 'Hauskreis',
+    // Steht unter dem Symbol auf dem Home-Bildschirm. Kurz halten: iOS kürzt
+    // ab etwa zwölf Zeichen mit Auslassungspunkten.
+    title: 'Acts2',
     statusBarStyle: 'default',
   },
   icons: {
