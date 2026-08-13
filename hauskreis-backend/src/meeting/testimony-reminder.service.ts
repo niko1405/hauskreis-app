@@ -8,6 +8,7 @@ import {
 import { testimonyReminderBody } from '../notification/reminder-copy';
 import { NotificationType } from '../../generated/prisma/enums';
 import { appPath } from '../notification/app-paths';
+import { CRON_TIME_ZONE } from '../common/time/local-evening';
 
 /**
  * Erinnert die Person, die an einem Abend ihr Testimony erzählt.
@@ -20,7 +21,10 @@ import { appPath } from '../notification/app-paths';
 export class TestimonyReminderService {
   constructor(private readonly reminders: MeetingReminderService) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_9AM, { name: 'testimony-reminders' })
+  @Cron(CronExpression.EVERY_DAY_AT_9AM, {
+    name: 'testimony-reminders',
+    timeZone: CRON_TIME_ZONE,
+  })
   async handleCron(): Promise<void> {
     await this.sendDueReminders();
   }

@@ -11,6 +11,7 @@ import {
   hasActionstep,
 } from './actionstep-source';
 import { appPath } from '../notification/app-paths';
+import { CRON_TIME_ZONE } from '../common/time/local-evening';
 
 export interface ActionstepRunResult {
   /** People who got a fresh nudge. */
@@ -55,7 +56,10 @@ export class ActionstepReminderService {
     private readonly clock: GroupClockService,
   ) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_9AM, { name: 'actionstep-reminders' })
+  @Cron(CronExpression.EVERY_DAY_AT_9AM, {
+    name: 'actionstep-reminders',
+    timeZone: CRON_TIME_ZONE,
+  })
   async handleCron(): Promise<void> {
     const hauskreise = await this.prisma.hauskreis.findMany({
       select: { id: true },

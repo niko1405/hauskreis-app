@@ -8,6 +8,7 @@ import {
 import { songReminderBody } from '../notification/reminder-copy';
 import { NotificationType } from '../../generated/prisma/enums';
 import { appPath } from '../notification/app-paths';
+import { CRON_TIME_ZONE } from '../common/time/local-evening';
 
 /**
  * Reminds whoever leads the songs, a few days before the evening.
@@ -20,7 +21,10 @@ import { appPath } from '../notification/app-paths';
 export class SongReminderService {
   constructor(private readonly reminders: MeetingReminderService) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_9AM, { name: 'song-reminders' })
+  @Cron(CronExpression.EVERY_DAY_AT_9AM, {
+    name: 'song-reminders',
+    timeZone: CRON_TIME_ZONE,
+  })
   async handleCron(): Promise<void> {
     await this.sendDueReminders();
   }

@@ -7,6 +7,7 @@ import { isLastOfMonth, upcomingWeekdays } from './meeting-schedule';
 import { GroupClockService } from './group-clock.service';
 import { MeetingScheduleConfigService } from './meeting-schedule-config.service';
 import { slotDefaults } from './meeting-slots';
+import { CRON_TIME_ZONE } from '../common/time/local-evening';
 
 /** How many future meetings should always be available for planning. */
 export const MEETINGS_AHEAD = 7;
@@ -27,7 +28,10 @@ export class MeetingGeneratorService {
     private readonly clock: GroupClockService,
   ) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_3AM, { name: 'generate-meetings' })
+  @Cron(CronExpression.EVERY_DAY_AT_3AM, {
+    name: 'generate-meetings',
+    timeZone: CRON_TIME_ZONE,
+  })
   async handleCron(): Promise<void> {
     const [result, closed] = await Promise.all([
       this.generateForAllHauskreise(),

@@ -12,6 +12,7 @@ import {
 } from '../../generated/prisma/enums';
 import { AbsenceCalendar } from './absence-window';
 import { GroupClockService } from '../meeting/group-clock.service';
+import { CRON_TIME_ZONE } from '../common/time/local-evening';
 
 export interface SyncResult {
   /** Evenings newly marked as "not coming" on the person's behalf. */
@@ -206,7 +207,10 @@ export class AbsenceSyncService {
    * also self-healing, in the same spirit as the prayer buddy rotation — it
    * asks rather than assumes.
    */
-  @Cron('30 3 * * *', { name: 'sync-absences' })
+  @Cron('30 3 * * *', {
+    name: 'sync-absences',
+    timeZone: CRON_TIME_ZONE,
+  })
   async handleCron(): Promise<void> {
     const hauskreise = await this.prisma.hauskreis.findMany({
       select: { id: true },

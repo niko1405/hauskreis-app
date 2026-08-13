@@ -13,6 +13,7 @@ import {
 } from '../notification/reminder-copy';
 import { appPath } from '../notification/app-paths';
 import { MeetingType, NotificationType } from '../../generated/prisma/enums';
+import { CRON_TIME_ZONE } from '../common/time/local-evening';
 
 /**
  * Die zwei Nachrichten, die es nur für besondere Termine gibt.
@@ -85,7 +86,10 @@ export class CustomMeetingNotificationService {
     return results.filter((result) => result.skipped === 0).length;
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_9AM, { name: 'custom-meeting-reminders' })
+  @Cron(CronExpression.EVERY_DAY_AT_9AM, {
+    name: 'custom-meeting-reminders',
+    timeZone: CRON_TIME_ZONE,
+  })
   async handleCron(): Promise<void> {
     await this.sendDueReminders();
   }

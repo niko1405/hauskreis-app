@@ -8,6 +8,7 @@ import { buildGroups, repairGroups } from './grouping';
 import { NotificationType } from '../../generated/prisma/enums';
 import { addDays } from '../meeting/meeting-schedule';
 import { GroupClockService } from '../meeting/group-clock.service';
+import { CRON_TIME_ZONE } from '../common/time/local-evening';
 
 /**
  * How many rounds should always be planned, the running one included.
@@ -67,7 +68,10 @@ export class PrayerBuddyGeneratorService {
    * to be down that morning. Asking "are five rounds planned" every day is
    * self-healing and costs one query when the answer is yes.
    */
-  @Cron(CronExpression.EVERY_DAY_AT_4AM, { name: 'rotate-prayer-buddies' })
+  @Cron(CronExpression.EVERY_DAY_AT_4AM, {
+    name: 'rotate-prayer-buddies',
+    timeZone: CRON_TIME_ZONE,
+  })
   async handleCron(): Promise<void> {
     const hauskreise = await this.prisma.hauskreis.findMany({
       select: { id: true },

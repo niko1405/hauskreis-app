@@ -46,6 +46,25 @@ export const EVENING_HOUR = 18;
 export const DEFAULT_TIME_ZONE = 'Europe/Berlin';
 
 /**
+ * Die Zone, in der die täglichen Läufe feuern.
+ *
+ * Sie ist bewusst ein **anderer Begriff** als `DEFAULT_TIME_ZONE`, auch wenn
+ * beide denselben Wert tragen: ein Cron braucht *eine* Wanduhr, Gruppen können
+ * aber verschiedene Zonen haben, und der Prozess kann nicht in allen
+ * gleichzeitig um neun Uhr aufwachen. Das hier ist deshalb die Uhr des Servers.
+ * Was *innerhalb* eines Laufs „heute" heißt, rechnet weiterhin
+ * `GroupClockService` je Gruppe — die Läufe gehen ohnehin über alle Hauskreise.
+ *
+ * **Ohne diese Angabe nimmt `@nestjs/schedule` die Zeitzone des Prozesses**, und
+ * die ist im Container UTC: die Neun-Uhr-Erinnerungen kämen im Sommer um elf und
+ * im Winter um zehn. Der Weg über ein `TZ=Europe/Berlin` am Container wäre der
+ * größere Eingriff — er verschöbe die Uhr für alles, auch für den pg-Treiber und
+ * dessen `@db.Date`-Spalten. Der Parameter am Cron verschiebt nur, wann gefeuert
+ * wird.
+ */
+export const CRON_TIME_ZONE = DEFAULT_TIME_ZONE;
+
+/**
  * Ein Formatierer je Zone, einmal gebaut.
  *
  * `Intl.DateTimeFormat` ist nicht billig, und seit der Kalendertag über
