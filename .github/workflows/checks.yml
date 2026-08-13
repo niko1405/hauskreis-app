@@ -1,0 +1,79 @@
+# Lint, Format, Typen und Tests — für beide Teilprojekte getrennt.
+#
+# Getrennte Jobs, weil es zwei unabhängige pnpm-Projekte sind: kein
+# Workspace-Root, zwei Lockfiles. Das hat für die CI eine Folge, die man einmal
+# gestolpert sein muss: `pnpm/action-setup` sucht die pnpm-Version standardmäßig
+# in einer `package.json` im Repo-Wurzelverzeichnis — die es hier bewusst nicht
+# gibt (siehe Wurzel-README). Ohne `package_json_file` bricht der Job ab, bevor
+# irgendetwas installiert ist.
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hauskreis-backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: hauskreis-backend/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: hauskreis-backend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      # Muss vor dem Typecheck laufen: der Quelltext importiert aus
+      # `generated/prisma`, und das Verzeichnis ist nicht eingecheckt.
+      - run: pnpm db:generate
+
+      - run: pnpm check
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hauskreis-frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: hauskreis-frontend/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: hauskreis-frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm check
+
+      # Der Export ist die eigentliche Frage: Cloudflare baut mit demselben
+      # Befehl, und ein Fehler dort fällt sonst erst beim Deploy auf. Die drei
+      # NEXT_PUBLIC-Werte sind Platzhalter — es geht nur darum, dass der Build
+      # durchläuft, nicht um das Bundle.
+      - run: pnpm build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: https://api.invalid/api
+          NEXT_PUBLIC_OIDC_AUTHORITY: https://auth.invalid/realms/hauskreis
+          NEXT_PUBLIC_OIDC_CLIENT_ID: hauskreis-app
