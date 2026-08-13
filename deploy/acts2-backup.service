@@ -1,0 +1,23 @@
+# sudo cp deploy/acts2-backup.{service,timer} /etc/systemd/system/
+# sudo systemctl daemon-reload && sudo systemctl enable --now acts2-backup.timer
+#
+# Einstellungen kommen aus /etc/acts2-backup.env (RCLONE_REMOTE,
+# AGE_RECIPIENT, KEEP_DAYS …). Die Datei gehört root und ist 600 — in ihr steht
+# der Pfad zum Off-Site-Speicher.
+[Unit]
+Description=Hauskreis-Backup (Datenbanken + Bilder)
+# Ohne laufende Container gibt es nichts zu sichern; pg_dump geht durch sie
+# hindurch.
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/acts2-backup.env
+ExecStart=/srv/acts2/deploy/backup.sh
+
+# Ein fehlgeschlagener Lauf soll auffallen und nicht in den Logs versickern.
+# `journalctl -u acts2-backup` zeigt ihn; wer eine Benachrichtigung will,
+# hängt hier ein OnFailure= an eine eigene Unit.
+Nice=10
+IOSchedulingClass=idle

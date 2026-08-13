@@ -6,12 +6,19 @@ Gebetsbuddys, Actionsteps. Was die App fachlich leisten soll, steht in
 
 Ein Repo, zwei eigenständige Anwendungen:
 
-| Ordner                                       | Was                                                                     | Stand                    |
-| -------------------------------------------- | ----------------------------------------------------------------------- | ------------------------ |
-| [`hauskreis-backend/`](hauskreis-backend/)   | NestJS 11 + Prisma 7 + Postgres 17, Auth über Keycloak                  | fertig, 73 Endpunkte     |
-| [`hauskreis-frontend/`](hauskreis-frontend/) | Next.js 16 + React 19 + TanStack Query, PWA mit Web Push               | steht                    |
-| [`bruno/`](bruno/)                           | API-Collection für beide — 82 Requests, läuft von oben nach unten durch | fertig                   |
-| [`docs/`](docs/)                             | [API fürs Frontend](docs/api-fuer-frontend.md), Entwurfsdokumente       | —                        |
+| Ordner                                       | Was                                                                     | Stand                |
+| -------------------------------------------- | ----------------------------------------------------------------------- | -------------------- |
+| [`hauskreis-backend/`](hauskreis-backend/)   | NestJS 11 + Prisma 7 + Postgres 17, Auth über Keycloak                  | fertig, 73 Endpunkte |
+| [`hauskreis-frontend/`](hauskreis-frontend/) | Next.js 16 + React 19 + TanStack Query, PWA mit Web Push                | steht                |
+| [`bruno/`](bruno/)                           | API-Collection für beide — 82 Requests, läuft von oben nach unten durch | fertig               |
+| [`deploy/`](deploy/)                         | nginx, Backups, [Betriebs-Handbuch](deploy/README.md)                   | —                    |
+| [`docs/`](docs/)                             | [API fürs Frontend](docs/api-fuer-frontend.md), Entwurfsdokumente       | —                    |
+
+**Zwei Ziele, ein Repo.** Das Backend läuft als Docker-Stack auf einem eigenen
+Server (nginx davor, Postgres und Keycloak daneben), das Frontend als statischer
+Export bei Cloudflare Pages. Wie beides hochkommt und wie man es im Betrieb
+anfasst — Backups, Restore, der Weg in die Datenbank — steht im
+[Betriebs-Handbuch](deploy/README.md).
 
 ## Warum kein pnpm-Workspace
 

@@ -1,0 +1,16 @@
+[Unit]
+Description=Tägliches Hauskreis-Backup
+
+[Timer]
+# Nachts um halb drei: nach den Cron-Läufen der App (3 und 4 Uhr wären mitten
+# im Terminegenerator) und lange vor dem Morgen, an dem jemand hineinschaut.
+OnCalendar=*-*-* 02:30:00
+# Der Server läuft durch, aber ein Neustart zur falschen Zeit soll keinen Tag
+# überspringen.
+Persistent=true
+# Damit nicht jede Maschine der Welt um Punkt halb drei dasselbe tut — hier
+# vor allem, damit Timer und Datenbank-Autovacuum sich nicht dauerhaft treffen.
+RandomizedDelaySec=15m
+
+[Install]
+WantedBy=timers.target
