@@ -1038,7 +1038,23 @@ Verifiziert mit einem korrekt signierten Token eines fremden Realm-Clients —
 | `hauskreis-backend` | confidential, Service Account | Admin-API (Einladungen) |
 
 `directAccessGrantsEnabled` bleibt am Backend-Client für lokale Skripte und die
-Bruno-Collection — **in der Produktion gehört es aus**.
+Bruno-Collection — **in der Produktion ist es aus**. Das stand hier lange als
+Vorsatz und war im Skript nicht umgesetzt: `--production` legte den Client
+trotzdem mit `true` an. Jetzt richtet sich der Wert nach dem Modus, und zwar auch
+an einem **bestehenden** Client — wer lokal entwickelt und später `--production`
+auf denselben Realm laufen lässt, hätte den Flow sonst weiter offen, und niemand
+sähe es, weil das Skript „already exists" meldet.
+
+Aus demselben Grund zieht `--production` auch `redirectUris` und `webOrigins` am
+bestehenden Frontend-Client nach. Beim Umzug von `localhost:3001` auf die echte
+Domain lief das Skript vorher durch, meldete Erfolg und änderte nichts — der
+Fehler kam erst beim ersten Anmeldeversuch als `invalid_redirect_uri`, und zwar
+bei allen neun gleichzeitig.
+
+**Brute-Force-Erkennung** ist am Realm eingeschaltet (10 Versuche, danach
+wachsende Wartezeit bis 15 Minuten, kein dauerhaftes Aussperren — sonst genügt
+der Nutzername eines Mitglieds, um es aus der App zu werfen). Für den
+`master`-Realm muss man sie in der Konsole selbst setzen.
 
 **Rate-Limiting.** 300/Minute, absichtlich großzügig: es geht um `/api/health`,
 das ohne Token erreichbar ist und pro Aufruf eine Datenbankabfrage macht, und um
@@ -2130,6 +2146,19 @@ Budget (300/min) schützt den Server; hier geht es um eine fremde Rechnung.
 
 ## Erinnerungen vor dem Abend
 
+> **Neun Uhr heißt neun Uhr hier.** Alle `@Cron`-Dekoratoren bekommen
+> `timeZone: CRON_TIME_ZONE` aus
+> [`local-evening.ts`](src/common/time/local-evening.ts). Ohne die Angabe nimmt
+> `@nestjs/schedule` die Zeitzone des Prozesses, und die ist im Container UTC —
+> die Neun-Uhr-Erinnerungen kamen im Sommer um elf und im Winter um zehn.
+>
+> Bewusst nicht über ein `TZ=Europe/Berlin` am Container: das verschöbe die Uhr
+> für alles, auch für den pg-Treiber und dessen `@db.Date`-Spalten. Der Parameter
+> am Cron verschiebt nur, wann gefeuert wird. Was _innerhalb_ eines Laufs „heute"
+> heißt, rechnet weiterhin `GroupClockService` je Gruppe — die Läufe gehen über
+> alle Hauskreise, und ein Prozess kann nicht in mehreren Zonen gleichzeitig um
+> neun Uhr aufwachen.
+
 Drei Erinnerungen laufen täglich um 9 Uhr und unterscheiden sich in genau zwei
 Dingen — wer gemeint ist und was drinsteht:
 
@@ -2746,13 +2775,67 @@ stattgefunden", und das Archiv soll beides unterscheiden können.
 ## Produktion: Docker
 
 ```bash
+cp .env.prod.example .env.prod && chmod 600 .env.prod   # ausfüllen
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 ./scripts/setup-keycloak.sh --production
 ```
 
+Alles, was **außerhalb** der Container liegt — Server härten, nginx, TLS,
+Backups, Restore, der Weg in die Datenbank —, steht im
+[Betriebs-Handbuch](../deploy/README.md). Hier steht nur, was der Stack selbst
+tut.
+
+[`.env.prod.example`](.env.prod.example) ist die Liste aller Schlüssel an einer
+Stelle. Sie ist getrennt von `.env.example`: die dort beschreibt die
+Entwicklung und nur das, was der Nest-Prozess selbst liest. Produktiv kommen die
+Werte für Compose (Datenbank-Passwörter, Keycloaks Bootstrap-Konto) und für
+`setup-keycloak.sh` (`FRONTEND_URL`, `SMTP_*`) dazu — sie lagen vorher an drei
+Stellen verstreut, und welche zusammen ein lauffähiges System ergeben, stand
+nirgends.
+
 Das [Dockerfile](Dockerfile) ist mehrstufig. `prisma generate` muss **vor**
 `nest build` laufen, sonst fehlen die Typen aus `generated/prisma`. Der Container
 läuft als `node`, nicht als root, und hat einen `HEALTHCHECK` auf `/api/health`.
+
+**Der Server baut nichts.** Das Image kommt aus
+[`.github/workflows/backend.yml`](../.github/workflows/backend.yml) und liegt in
+der GHCR; auf dem VPS wird nur gezogen. Neben Keycloak und zwei Postgres einen
+Node-Build mit vollem Abhängigkeitsbaum laufen zu lassen geht meist gut und
+scheitert dann an dem Abend, an dem man es eilig hat. Zu jedem Build gibt es
+einen sha-Tag, ein Rollback ist deshalb `IMAGE_TAG=<sha> … up -d`.
+
+### Das Verzeichnis für Bilder gehört ins Image
+
+`UPLOAD_DIR` zeigt im Container auf `/data/uploads`, und dort hängt ein Volume.
+Den Pfad legt seit Kurzem das Dockerfile an — vorher tat es Docker beim
+Einhängen, und zwar als `root:root`. Der Prozess läuft als `node`, und
+`PhotoService.store()` beginnt mit einem `mkdir`:
+
+```
+drwxr-xr-x 2 root root /data/uploads
+mkdir: can't create directory '/data/uploads/people': Permission denied
+```
+
+**Jeder Bild-Upload wäre in Produktion mit einem 500er gescheitert**, ohne dass
+an der Anwendung etwas falsch gewesen wäre. Existiert das Verzeichnis dagegen im
+Image, übernimmt das leere Volume beim ersten Start dessen Eigentümer. Nachsehen:
+
+```bash
+docker compose exec api ls -ld /data/uploads    # muss `node` gehören
+```
+
+### Leere Variablen sind keine gesetzten
+
+`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` und `GEMINI_API_KEY` sind optional — ohne
+sie startet der Server und schaltet die jeweilige Funktion ab. Das galt aber nur,
+solange die Zeile **fehlte**. Eine Zeile `GEMINI_API_KEY=` in der `.env` kommt
+als leerer String an, nicht als `undefined`, und Compose reicht jedes `${FOO}`
+ohnehin als leeren String weiter, wenn `FOO` nicht gesetzt ist — beides scheiterte
+an `.min(1)`, und der Server kam gar nicht erst hoch. Statt einer abgeschalteten
+Funktion gab es einen Bootfehler.
+
+`optionalValue` in [`env.schema.ts`](src/config/env.schema.ts) behandelt jetzt
+beides gleich, wie es `KEYCLOAK_INTERNAL_URL` und `APP_URL` schon taten.
 
 ### Was im Container anders ist
 
@@ -2782,31 +2865,60 @@ baut neu.
 **Migrationen sind ein eigener, vorgelagerter Service** (`migrate` im
 Prod-Compose), nicht etwas, das die App beim Start tut: das macht die Reihenfolge
 sichtbar, scheitert für sich statt mitten im Boot-Log, und falls je mehr als eine
-Instanz läuft gibt es kein Rennen. Er läuft aus der `build`-Stufe, die den
-Prisma-CLI hat.
+Instanz läuft gibt es kein Rennen.
+
+Er benutzt **dasselbe Image** wie die API, nur mit anderem `command`. Das ging
+lange nicht: `prisma` und `dotenv` standen unter `devDependencies`, `--prod` ließ
+sie weg, und der Service lief deshalb aus der `build`-Stufe. Solange auf dem
+Server gebaut wurde, kostete das nichts — sobald das Image aus der CI kommt,
+hieße es zwei Images bauen, pushen und ziehen, für einen Aufruf, der einmal pro
+Deploy läuft. Beide stehen jetzt unter `dependencies`, und die Laufzeitstufe
+bringt `prisma/` und `prisma.config.ts` mit.
+
+Aufgerufen wird `node_modules/.bin/prisma`, nicht `pnpm exec prisma`: Im Image
+ist corepack zwar eingeschaltet, pnpm selbst aber nicht entpackt — der erste
+`pnpm`-Aufruf lädt es von registry.npmjs.org nach, bei jedem Deploy.
 
 Zwei Dinge, die man wissen sollte:
 
 - **Eine Instanz, nicht mehr.** Die Cron-Jobs (`@nestjs/schedule`) laufen
   in-process. Mit zwei Instanzen feuern Terminegenerator,
   Gebetsbuddy-Rotation und alle Reminder doppelt. Für neun Leute ist eine
-  Instanz richtig — aber es muss dastehen.
-- **1,25 GB**, das meiste Prismas Query-Engines. Der Prisma-CLI landet trotz
-  `--prod` im Image, weil er optionaler Peer von `@prisma/client` ist und die
-  Peer-Auflösung im Lockfile steckt. Wissenswert, nicht bekämpfenswert.
+  Instanz richtig — aber es muss dastehen. Ein Reverse Proxy davor verteilt
+  deshalb keine Last, er terminiert nur TLS.
+- **1,38 GB**, das meiste Prismas Engines. Davon gehen rund 130 MB auf den
+  Prisma-CLI, der seit dem Umzug nach `dependencies` bewusst mit im Image liegt
+  — der Preis dafür, dass es nur noch ein Image gibt statt zwei.
 
   Es waren einmal 1,78 GB, wegen eines abschließenden `RUN chown -R node:node
 /app`. Ebenen sind unveränderlich: ein rekursives `chown` schreibt jede Datei
   neu und legt damit eine vollständige Kopie des `node_modules`-Baums als
   eigene Ebene an — 423 MB obendrauf, während das Original darunter liegen
   bleibt. Der `chown` ist ersatzlos gestrichen. Nötig war er nie: die Dateien
-  gehören root und sind mit `755`/`644` für alle lesbar, und die Anwendung
-  schreibt nirgends ins Dateisystem. Der Prozess läuft weiterhin als
-  `uid=1000(node)`.
+  gehören root und sind mit `755`/`644` für alle lesbar, und alles, was die
+  Anwendung schreibt, geht nach stdout oder ins Uploads-Volume — nie in den
+  Anwendungsbaum. Der Prozess läuft weiterhin als `uid=1000(node)`.
 
 Im Prod-Compose läuft Keycloak in `start` statt `start-dev`, Ports hängen an
 `127.0.0.1` statt an allen Interfaces, und keine Zugangsdaten stehen in der
 Datei.
+
+**`start`, aber ohne `--optimized`** — der Flag stand hier und ließ den ersten
+Start scheitern: er verspricht Keycloak, dass `kc.sh build` schon gelaufen ist,
+und beim allerersten Mal ist er das nicht („The '--optimized' flag was used for
+first ever server start"). Der Container lief dann in einer Neustartschleife,
+und zwar genau einmal — beim Aufsetzen, wo man es am wenigsten gebrauchen kann.
+Ihn richtig zu nutzen hieße, ein eigenes Keycloak-Image zu bauen und zu pflegen;
+für ein paar Sekunden Startzeit bei einem Dienst, der monatelang durchläuft, ist
+das nicht der Mühe wert. Am Theme-Caching ändert es nichts.
+
+**Logrotation** steht an allen Diensten (`json-file`, 3 × 10 MB). Ohne sie
+schreibt Docker unbegrenzt weiter, und eine volle Platte äußert sich zuerst als
+Datenbank, die nicht mehr schreiben kann.
+
+**Postgres hängt an `127.0.0.1:5432`** — nicht für den Betrieb (die API spricht
+über das Compose-Netz), sondern damit man per SSH-Tunnel hineinsehen kann. Wie,
+steht im [Betriebs-Handbuch](../deploy/README.md#in-die-datenbank-sehen).
 
 ### Wie der erste Mensch hineinkommt
 
