@@ -14,7 +14,7 @@ After=docker.service
 [Service]
 Type=oneshot
 EnvironmentFile=-/etc/acts2-backup.env
-ExecStart=hauskreis-app/deploy/backup.sh
+ExecStart=/root/hauskreis-app/deploy/backup.sh
 
 # Ein fehlgeschlagener Lauf soll auffallen und nicht in den Logs versickern.
 # `journalctl -u acts2-backup` zeigt ihn; wer eine Benachrichtigung will,
