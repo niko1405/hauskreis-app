@@ -70,3 +70,51 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
+
+  # ---------------------------------------------------------------------------
+  # Ausrollen. Läuft erst, wenn das Image wirklich in der Registry liegt —
+  # `needs: build` ist hier keine Kosmetik, sondern verhindert ein `pull` auf
+  # einen Tag, den es noch nicht gibt.
+  #
+  # Der Server holt sich **die Sha dieses Laufs**, nicht `latest`. Zwei Pushes
+  # kurz hintereinander würden sich sonst überholen und der zweite Deploy könnte
+  # das Image des ersten ausrollen.
+  #
+  # Was hier an Zugang nötig ist, ist bewusst wenig: Der Schlüssel in
+  # `DEPLOY_SSH_KEY` ist auf dem Server mit `command="…/deploy.sh"` gefesselt und
+  # kann nichts anderes tun — auch wer ihn aus den Secrets zöge, bekäme keine
+  # Shell. Einrichtung: deploy/README.md, „Automatisch ausrollen".
+  # ---------------------------------------------------------------------------
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # Nur der echte Zweig, nie ein manueller Lauf auf einem anderen Stand.
+    if: github.ref == 'refs/heads/main'
+    # Trägt man in den Repository-Einstellungen unter Environments einen
+    # Reviewer ein, wird aus dem automatischen Deploy einer auf Knopfdruck —
+    # ohne dass hier etwas geändert werden muss.
+    environment: produktion
+
+    steps:
+      - name: Schlüssel und bekannten Host hinterlegen
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Der Fingerabdruck steht im Secret, statt bei jedem Lauf frisch
+          # geholt zu werden. `ssh-keyscan` würde jeden Host akzeptieren, der
+          # gerade unter dem Namen antwortet — und damit genau die Prüfung
+          # aushebeln, für die es known_hosts gibt.
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Ausrollen
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" "${{ github.sha }}"

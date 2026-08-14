@@ -17,7 +17,11 @@
 # jede Nacht irgendwohin kopiert wird).
 set -euo pipefail
 
-STACK_DIR="${STACK_DIR:-/srv/acts2}"
+# Das Verzeichnis mit der Compose-Datei, nicht die Wurzel des Auscheckens —
+# `docker-compose.prod.yml` liegt eine Ebene tiefer, und aus dem Namen dieses
+# Verzeichnisses leitet Compose außerdem den Projektnamen und damit die
+# Volume-Namen ab.
+COMPOSE_DIR="${COMPOSE_DIR:-/srv/acts2/hauskreis-backend}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-.env.prod}"
 BACKUP_ROOT="${BACKUP_ROOT:-/var/backups/acts2}"
@@ -37,8 +41,23 @@ DEST="${BACKUP_ROOT}/${STAMP}"
 
 log() { printf '[backup] %s\n' "$*"; }
 
-cd "${STACK_DIR}"
+cd "${COMPOSE_DIR}"
 compose() { docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" "$@"; }
+
+# Vorab prüfen, was für das Off-Site gebraucht wird. Ohne das liefe der Lauf bis
+# zum Ende durch, die lokale Sicherung stünde — und erst die letzte Zeile
+# scheiterte an einem fehlenden Programm. Ein Backup, das zur Hälfte gelingt,
+# meldet sich in `systemctl status` als rot und sieht im Verzeichnis aus wie
+# Erfolg; das ist die unangenehmste Sorte Fehler.
+if [ -n "${RCLONE_REMOTE}" ]; then
+  for tool in age rclone; do
+    if ! command -v "${tool}" >/dev/null; then
+      echo "[backup] '${tool}' fehlt, wird aber für RCLONE_REMOTE gebraucht." >&2
+      echo "[backup]   sudo apt install -y age rclone" >&2
+      exit 2
+    fi
+  done
+fi
 
 mkdir -p "${DEST}"
 

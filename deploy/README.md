@@ -315,26 +315,120 @@ Es gibt kein Bootstrap-Skript. Der Weg hinein ist derselbe, den alle gehen:
 
 ### 9. Backups scharf schalten
 
+Vier Teile: ein Schlüsselpaar, ein Eimer, eine Einstellungsdatei, ein Timer.
+
+**a) Verschlüsselung.** Das Schlüsselpaar entsteht **auf deinem Rechner**, nicht
+auf dem Server:
+
+```bash
+age-keygen -o acts2-backup.key
+# Public key: age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+```
+
+Auf den Server kommt nur der **öffentliche** Schlüssel. Der private gehört in
+deinen Passwortspeicher — und nirgendwo sonst hin. Läge er auf dem VPS, hätte
+jemand, der den Server übernimmt, damit auch alle Sicherungen, und das Off-Site
+wäre nur noch eine zweite Kopie am selben Schloss.
+
+Ohne diesen Schlüssel im Passwortspeicher ist die Sicherung wertlos. Schreib
+dazu, wozu er gehört; in zwei Jahren ist „age1ql3…" sonst eine Zeichenkette
+ohne Geschichte.
+
+**b) Ein Eimer bei Cloudflare R2.** Ihr seid ohnehin dort, und das freie
+Kontingent reicht für Dumps dieser Größe um Größenordnungen.
+
+Im Dashboard unter R2 einen Bucket `acts2-backups` anlegen, dann ein API-Token
+mit **Object Read & Write** nur auf diesen Bucket. Danach auf dem Server:
+
+```bash
+sudo apt install -y age rclone
+rclone config
+#   n) New remote   name: r2
+#   Storage: s3   →   provider: Cloudflare
+#   access_key_id / secret_access_key aus dem R2-Token
+#   endpoint: https://<account-id>.r2.cloudflarestorage.com
+#   region: auto
+rclone lsd r2:                      # muss den Bucket zeigen
+```
+
+**c) Einstellungen und Timer.**
+
 ```bash
 sudo cp /srv/acts2/deploy/acts2-backup.{service,timer} /etc/systemd/system/
 sudo tee /etc/acts2-backup.env >/dev/null <<'EOF'
 RCLONE_REMOTE=r2:acts2-backups
-AGE_RECIPIENT=age1...
+AGE_RECIPIENT=age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+KEEP_DAYS=14
 EOF
 sudo chmod 600 /etc/acts2-backup.env
+
 sudo systemctl daemon-reload
 sudo systemctl enable --now acts2-backup.timer
-sudo systemctl start acts2-backup.service   # einmal sofort
-journalctl -u acts2-backup -n 30
+sudo systemctl list-timers acts2-backup.timer     # nächster Lauf: 02:30
 ```
 
-Ohne `AGE_RECIPIENT` lädt das Skript **nichts** hoch, auch wenn ein Remote
-gesetzt ist. In den Dumps stehen Namen, E-Mail-Adressen, Geburtsdaten und
-Gebetsanliegen von neun realen Menschen; lieber gar kein Off-Site als ein
-offenes.
+**d) Einmal von Hand und nachsehen.**
+
+```bash
+sudo systemctl start acts2-backup.service
+journalctl -u acts2-backup -n 40 --no-pager
+ls -la /var/backups/acts2/
+rclone ls r2:acts2-backups
+```
+
+Erwartet: ein Ordner mit `hauskreis.dump`, `keycloak.dump`, `uploads.tgz` und
+zwei kleinen Textdateien, dazu eine `.tar.age` im Eimer.
+
+**Läuft es ohne `RCLONE_REMOTE`,** sichert das Skript nur lokal — gut, um
+loszulegen, aber eine Sicherung auf derselben Platte hilft gegen einen
+Fehlgriff und nicht gegen einen kaputten Server. Ist ein Remote gesetzt, aber
+`AGE_RECIPIENT` fehlt, wird bewusst **nichts** hochgeladen: lieber gar kein
+Off-Site als ein offenes. In den Dumps stehen Namen, E-Mail-Adressen,
+Geburtsdaten und Gebetsanliegen von neun realen Menschen.
 
 Dazu die Snapshots des VPS-Anbieters als zweite, unabhängige Ebene: die retten
 den ganzen Server, die Dumps retten die Daten.
+
+**Und dann der Teil, den alle überspringen:** [den Restore einmal
+durchspielen](#restore), bevor die Gruppe die App benutzt. Ein Backup, das nie
+zurückgespielt wurde, ist eine Vermutung.
+
+### 9a. Was passiert, wenn etwas abstürzt
+
+Alle vier Dienste stehen auf `restart: unless-stopped`. Das deckt zwei Fälle ab
+und einen dritten nicht:
+
+| Fall                                 | Was passiert                                                                                |
+| ------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Container stirbt (Exit ≠ 0)          | Docker startet ihn neu, mit wachsender Wartezeit zwischen den Versuchen                     |
+| VPS startet neu                      | Der Docker-Daemon fährt hoch und startet alles wieder, was nicht von Hand gestoppt wurde    |
+| Container **hängt**, ohne zu sterben | Nichts. Der `HEALTHCHECK` schreibt `unhealthy` in den Zustand — mehr tut Docker damit nicht |
+
+Zum zweiten Fall gehört eine Voraussetzung, die man einmal prüfen sollte:
+
+```bash
+systemctl is-enabled docker      # muss `enabled` sagen
+```
+
+Zwei Feinheiten, die beim ersten Neustart überraschen können:
+
+- **`unless-stopped` heißt wörtlich das.** Ein `docker compose stop api` von
+  Hand überlebt den Neustart — der Container bleibt unten, bis du ihn selbst
+  wieder startest. Das ist gewollt (sonst käme nach jedem Reboot zurück, was du
+  bewusst abgeschaltet hast), fühlt sich aber falsch an, wenn man es nicht weiß.
+- **`depends_on` gilt nur für `docker compose up`, nicht für den Neustart des
+  Daemons.** Nach einem Reboot startet die API womöglich, bevor Postgres bereit
+  ist, scheitert an der ersten Verbindung und wird neu gestartet — bis es passt.
+  Im Log sieht das nach einem Fehler aus und ist Selbstheilung. Der
+  `migrate`-Service läuft dabei **nicht** erneut (`restart: 'no'`), und das ist
+  richtig so: das Schema ist schon da.
+
+Der dritte Fall — ein Prozess, der lebt, aber nicht mehr antwortet — ist der
+einzige, gegen den hier nichts eingebaut ist. Für eine Node-Anwendung ist er
+selten (sie stirbt eher, als dass sie hängt), und der externe Monitor aus
+Schritt 10 meldet ihn. Wer ihn trotzdem automatisch abfangen will, hängt einen
+`autoheal`-Container daneben, der `unhealthy`-Container neu startet — ein
+weiterer Dienst mit Zugriff auf den Docker-Socket, also nicht umsonst zu haben.
 
 ### 10. Erreichbarkeit beobachten
 
@@ -343,11 +437,118 @@ macht eine echte Datenbankabfrage, antwortet `{"status":"ok","database":"up"}`).
 Intervall mindestens eine Minute — der Throttler erlaubt 300 pro Minute, und der
 Endpunkt kostet jedes Mal eine Abfrage.
 
+Das ist zugleich das Netz für den einen Fall, den `restart: unless-stopped`
+nicht abdeckt: einen Prozess, der lebt und nicht mehr antwortet.
+
+### Checkliste bis zum ersten Menschen
+
+Was **blockiert**, solange es fehlt:
+
+- [ ] **SMTP für `acts2.de`** in `.env.prod`, dann `setup-keycloak.sh --production`
+      erneut. Ohne funktionierenden Mailversand kommt niemand herein, auch du
+      nicht: der Realm verlangt eine bestätigte Adresse, und der `AuthGuard`
+      weist jedes Token ohne sie ab. Das Skript bricht deshalb ab, solange
+      `SMTP_HOST`/`SMTP_FROM` auf den Entwicklungswerten stehen.
+- [ ] **Cloudflare Pages** angelegt, die drei `NEXT_PUBLIC_*` gesetzt, `acts2.de`
+      als Custom Domain verbunden (Schritt 7).
+- [ ] **`CORS_ORIGINS`, `APP_URL` und `FRONTEND_URL`** stehen alle drei auf
+      `https://acts2.de`. Weicht eine ab, ist der Fehler CORS oder
+      `invalid_redirect_uri`.
+
+Was **nicht blockiert**, aber vor dem Einladen der anderen acht erledigt sein
+sollte:
+
+- [ ] **VAPID-Schlüssel** erzeugen (`npx web-push generate-vapid-keys`) und in
+      `.env.prod` eintragen — sonst gibt es keine Erinnerungen, und das ist eine
+      der Funktionen, wegen der die App überhaupt existiert.
+- [ ] **Persönliches Keycloak-Admin-Konto mit OTP**, Bootstrap-Konto abschalten,
+      `KEYCLOAK_ADMIN_USER`/`KEYCLOAK_ADMIN_PASSWORD` aus `.env.prod` entfernen.
+- [ ] **Brute-Force-Erkennung im `master`-Realm** einschalten (im `hauskreis`-Realm
+      hat das Setup-Skript sie gesetzt).
+- [ ] **`unattended-upgrades`** aktiv (`systemctl status unattended-upgrades`).
+- [ ] **Restore einmal durchgespielt** — siehe unten.
+- [ ] **Gemini-Schlüssel**, falls die beiden Knöpfe beim Lied-Anlegen da sein
+      sollen. Ohne ihn verschwinden sie, sonst ändert sich nichts.
+
+Danach: registrieren, Mail bestätigen, „Hauskreis gründen", die anderen acht
+einladen.
+
 ---
 
 ## Im Alltag
 
-### Deploy
+### Automatisch ausrollen
+
+Nach jedem Push nach `main` baut die CI das Image und rollt es aus. Der
+`deploy`-Job hängt an `needs: build`, greift also nie auf einen Tag zu, den es
+noch nicht gibt, und rollt **die Sha dieses Laufs** aus statt `latest` — zwei
+Pushes kurz hintereinander würden sich sonst überholen.
+
+Einzurichten ist das einmal, und der Kern davon ist, dass der Zugang, den man
+GitHub gibt, so klein wie möglich bleibt.
+
+**a) Ein eigener Schlüssel, nur dafür.** Auf deinem Rechner:
+
+```bash
+ssh-keygen -t ed25519 -f acts2-deploy -C 'github-actions' -N ''
+```
+
+**b) Auf dem Server eintragen — mit Fessel.** Der öffentliche Teil kommt in die
+`authorized_keys` des Deploy-Benutzers, aber nicht nackt:
+
+```bash
+# eine Zeile, <PUBKEY> ist der Inhalt von acts2-deploy.pub
+command="/srv/acts2/deploy/deploy.sh",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding <PUBKEY>
+```
+
+Das `command=` ist der ganze Punkt. Ein Deploy-Schlüssel in einem
+GitHub-Secret ist ein Schlüssel, den jeder mit Schreibrechten am Repository
+benutzen kann — und ohne diese Zeile hätte er eine Shell auf deinem Server.
+Mit ihr kann er genau eines: dieses Skript aufrufen. Was die Gegenseite sich
+wünscht, landet in `SSH_ORIGINAL_COMMAND`, und
+[`deploy.sh`](deploy.sh) behandelt es als Datum, nicht als Befehl — erlaubt sind
+eine 40-stellige Commit-Sha oder `latest`, sonst bricht es ab.
+
+```bash
+chmod +x /srv/acts2/deploy/deploy.sh
+```
+
+**c) Vier Secrets im Repository** (Settings → Secrets and variables → Actions):
+
+| Secret               | Inhalt                                                              |
+| -------------------- | ------------------------------------------------------------------- |
+| `DEPLOY_SSH_KEY`     | der **private** Teil, also `acts2-deploy` komplett                  |
+| `DEPLOY_HOST`        | `api.acts2.de` oder die IP                                          |
+| `DEPLOY_USER`        | der Benutzer auf dem VPS                                            |
+| `DEPLOY_KNOWN_HOSTS` | Ausgabe von `ssh-keyscan api.acts2.de` (einmal, von deinem Rechner) |
+
+`DEPLOY_KNOWN_HOSTS` fest zu hinterlegen statt bei jedem Lauf frisch zu holen,
+ist der Unterschied zwischen „ich kenne diesen Server" und „ich rede mit dem,
+der gerade unter dem Namen antwortet".
+
+**d) Ausprobieren**, bevor man sich darauf verlässt:
+
+```bash
+ssh -i acts2-deploy <user>@api.acts2.de "$(git rev-parse HEAD)"
+```
+
+Das muss durchlaufen und mit `healthy` enden. Ein `ssh -i acts2-deploy … ls`
+muss dagegen **denselben** Deploy starten und kein `ls` ausführen — genau daran
+erkennt man, dass die Fessel sitzt.
+
+Der Job wartet nach dem Start, bis die API `healthy` meldet, und wird sonst rot.
+Ohne das wäre jeder Deploy grün, sobald Docker den Container angelegt hat — auch
+der, bei dem die Anwendung zwei Sekunden später an einer fehlenden Variable
+stirbt.
+
+**Lieber auf Knopfdruck als automatisch?** Der Job läuft im Environment
+`produktion`. Trägt man dort unter Settings → Environments einen Required
+reviewer ein, wartet jeder Deploy auf eine Bestätigung — ohne dass am Workflow
+etwas zu ändern wäre.
+
+### Von Hand ausrollen
+
+Geht weiterhin, und ist der Weg, wenn die CI klemmt:
 
 ```bash
 cd /srv/acts2 && git pull
@@ -360,6 +561,13 @@ docker image prune -f
 Der Server baut nichts — das Image kommt fertig aus der CI. `git pull` ist nur
 für Compose-Datei und Skripte nötig. Der `migrate`-Service läuft bei jedem `up`
 vorweg und wartet, bis Postgres gesund ist; die API startet erst danach.
+
+> Nach einem automatischen Deploy steht das Auscheckwerk auf einem **losgelösten
+> HEAD** — `deploy.sh` holt genau den Commit, aus dem das Image gebaut wurde,
+> damit Compose-Datei und Image zusammenpassen. `git status` meldet dann
+> „HEAD detached"; das ist kein Schaden, sondern die Aussage, dass der Server
+> einen Stand spiegelt und nicht selbst entwickelt. Ein `git checkout main`
+> bringt ihn zurück auf den Zweig.
 
 Rollback auf einen früheren Stand:
 
