@@ -1,4 +1,5 @@
 import { MeetingStatus } from '../../generated/prisma/enums';
+import { addDays, currentDay } from '../meeting/meeting-schedule';
 import {
   belongsTo,
   isContentVisible,
@@ -15,15 +16,23 @@ const OWNER = 'owner-id';
 const COLLAB = 'collab-id';
 const FREMD = 'fremd-id';
 
-/** Ein Kalendertag, wie Prisma ihn liefert. */
+/**
+ * Ein Kalendertag, wie Prisma ihn liefert — gezählt **in der Zone der Gruppe**.
+ *
+ * Stand hier einmal als `Date.UTC(base.getUTCFullYear(), …)`, also aus den
+ * UTC-Feldern eines Zeitpunkts. Das ist genau der Fehler, den `currentDay` im
+ * Produktionscode behoben hat, und er ist hier auf demselben Weg
+ * zurückgekommen: Zwischen Mitternacht und zwei Uhr Berliner Zeit ist in UTC
+ * noch gestern. `day(0)` lieferte dann den gestrigen Tag, während `isHeld` mit
+ * dem heutigen verglich — „am Termintag selbst noch nicht" schlug fehl, aber
+ * nur wenn die Tests in diesem Zwei-Stunden-Fenster liefen.
+ *
+ * Ein Test, der nachts anders ausgeht als mittags, ist schlimmer als einer, der
+ * immer scheitert: er hält die CI für kaputt statt den Code, und man sucht ihn
+ * beim nächsten Mal wieder von vorn. Deshalb dieselbe Rechnung wie im Code.
+ */
 function day(offsetDays: number): Date {
-  const base = new Date();
-  const utc = Date.UTC(
-    base.getUTCFullYear(),
-    base.getUTCMonth(),
-    base.getUTCDate() + offsetDays,
-  );
-  return new Date(utc);
+  return addDays(currentDay(BERLIN), offsetDays);
 }
 
 function meeting(offsetDays: number, status = MeetingStatus.PLANNED) {
