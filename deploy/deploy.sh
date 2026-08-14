@@ -3,7 +3,7 @@
 # Rollt eine Image-Version aus. Aufgerufen wird das Skript **nicht** von Hand,
 # sondern von GitHub Actions über einen SSH-Schlüssel, der nichts anderes darf:
 #
-#   command="/srv/acts2/deploy/deploy.sh",no-agent-forwarding,no-port-forwarding,
+#   command="/root/hauskreis-app/deploy/deploy.sh",no-agent-forwarding,no-port-forwarding,
 #   no-pty,no-user-rc,no-X11-forwarding ssh-ed25519 AAAA… github-deploy
 #
 # Das `command=` ist der Kern der Sache. Ein Deploy-Schlüssel in einem
@@ -15,7 +15,7 @@
 # Von Hand deployen geht weiterhin über das Handbuch (docker compose pull && up).
 set -euo pipefail
 
-STACK_DIR="${STACK_DIR:-/srv/acts2}"
+STACK_DIR="${STACK_DIR:-/root/hauskreis-app}"
 COMPOSE_DIR="${STACK_DIR}/hauskreis-backend"
 COMPOSE_FILE=docker-compose.prod.yml
 ENV_FILE=.env.prod

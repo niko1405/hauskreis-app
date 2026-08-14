@@ -189,9 +189,9 @@ ablesen ließe.
 ### 3. Stack ablegen
 
 ```bash
-sudo mkdir -p /srv/acts2 && sudo chown "$USER" /srv/acts2
-git clone https://github.com/niko1405/hauskreis-app.git /srv/acts2
-cd /srv/acts2/hauskreis-backend
+sudo mkdir -p /root/hauskreis-app && sudo chown "$USER" /root/hauskreis-app
+git clone https://github.com/niko1405/hauskreis-app.git /root/hauskreis-app
+cd /root/hauskreis-app/hauskreis-backend
 
 cp .env.prod.example .env.prod
 chmod 600 .env.prod
@@ -221,8 +221,8 @@ fest auf `false`.
 ```bash
 sudo apt install -y nginx certbot python3-certbot-nginx
 
-sudo cp /srv/acts2/deploy/nginx/api.conf  /etc/nginx/sites-available/acts2-api
-sudo cp /srv/acts2/deploy/nginx/auth.conf /etc/nginx/sites-available/acts2-auth
+sudo cp /root/hauskreis-app/deploy/nginx/api.conf  /etc/nginx/sites-available/acts2-api
+sudo cp /root/hauskreis-app/deploy/nginx/auth.conf /etc/nginx/sites-available/acts2-auth
 sudo ln -s /etc/nginx/sites-available/acts2-api  /etc/nginx/sites-enabled/
 sudo ln -s /etc/nginx/sites-available/acts2-auth /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
@@ -354,7 +354,7 @@ rclone lsd r2:                      # muss den Bucket zeigen
 **c) Einstellungen und Timer.**
 
 ```bash
-sudo cp /srv/acts2/deploy/acts2-backup.{service,timer} /etc/systemd/system/
+sudo cp /root/hauskreis-app/deploy/acts2-backup.{service,timer} /etc/systemd/system/
 sudo tee /etc/acts2-backup.env >/dev/null <<'EOF'
 RCLONE_REMOTE=r2:acts2-backups
 AGE_RECIPIENT=age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
@@ -498,7 +498,7 @@ ssh-keygen -t ed25519 -f acts2-deploy -C 'github-actions' -N ''
 
 ```bash
 # eine Zeile, <PUBKEY> ist der Inhalt von acts2-deploy.pub
-command="/srv/acts2/deploy/deploy.sh",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding <PUBKEY>
+command="/root/hauskreis-app/deploy/deploy.sh",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding <PUBKEY>
 ```
 
 Das `command=` ist der ganze Punkt. Ein Deploy-Schlüssel in einem
@@ -510,7 +510,7 @@ wünscht, landet in `SSH_ORIGINAL_COMMAND`, und
 eine 40-stellige Commit-Sha oder `latest`, sonst bricht es ab.
 
 ```bash
-chmod +x /srv/acts2/deploy/deploy.sh
+chmod +x /root/hauskreis-app/deploy/deploy.sh
 ```
 
 **c) Vier Secrets im Repository** (Settings → Secrets and variables → Actions):
@@ -551,7 +551,7 @@ etwas zu ändern wäre.
 Geht weiterhin, und ist der Weg, wenn die CI klemmt:
 
 ```bash
-cd /srv/acts2 && git pull
+cd /root/hauskreis-app && git pull
 cd hauskreis-backend
 docker compose -f docker-compose.prod.yml --env-file .env.prod pull
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
@@ -609,7 +609,7 @@ Für „Termin löschen", „Reminder-Lauf anstoßen", „Gewichtung ändern" gi
 ### Restore
 
 ```bash
-cd /srv/acts2/hauskreis-backend
+cd /root/hauskreis-app/hauskreis-backend
 BACKUP=/var/backups/acts2/2026-08-13T02-30-11Z
 
 docker compose -f docker-compose.prod.yml --env-file .env.prod down
