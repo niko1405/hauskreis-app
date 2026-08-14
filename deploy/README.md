@@ -661,3 +661,47 @@ Für beides gilt: Release Notes lesen, Backup ziehen, dann den Tag im Compose
 | Erinnerungen kommen zur falschen Stunde      | `CRON_TIME_ZONE` in `src/common/time/local-evening.ts`                                                                                                             |
 | `413 Request Entity Too Large` beim Kopfbild | `client_max_body_size` in `api.conf` (10 MB erlaubt die App, 12 MB steht dort)                                                                                     |
 | Platte voll                                  | `docker system df`. Alte Images (`docker image prune -f`) oder Logs — die Rotation steht im Compose                                                                |
+| Registrierung klappt, aber keine Mail        | Der Realm kennt kein echtes SMTP. Werte in `.env.prod` allein reichen nicht — siehe „Mailversand nachziehen" unten                                                 |
+| iOS zeigt auf dem Home-Bildschirm kein Logo  | Fast immer Safaris Symbol-Zwischenspeicher, nicht die Auslieferung. Erst nachmessen (`curl -I https://acts2.de/icons/apple-touch-icon.png` → `200`, `image/png`)   |
+
+### Mailversand nachziehen
+
+Keycloak liest SMTP **aus dem Realm**, nicht aus der Umgebung. `.env.prod` ist
+nur die Quelle, aus der `setup-keycloak.sh` schöpft — wer dort etwas ändert und
+das Skript nicht erneut laufen lässt, ändert nichts am laufenden Betrieb.
+
+Nachsehen, was der Realm gerade glaubt:
+
+```bash
+TOKEN=$(curl -s https://auth.acts2.de/realms/master/protocol/openid-connect/token \
+  -d grant_type=password -d client_id=admin-cli \
+  -d "username=${KEYCLOAK_ADMIN_USER}" -d "password=${KEYCLOAK_ADMIN_PASSWORD}" \
+  | jq -r .access_token)
+
+curl -s -H "Authorization: Bearer ${TOKEN}" \
+  https://auth.acts2.de/admin/realms/hauskreis | jq .smtpServer
+```
+
+Steht dort `"host": "mailpit"`, lief das Setup ohne `--production` — diesen
+Rechner gibt es hier nicht, und jede Mail scheitert still. Richtigstellen:
+
+```bash
+cd hauskreis-backend
+set -a && source /pfad/zur/.env.prod && set +a
+./scripts/setup-keycloak.sh --production
+```
+
+Danach in der Admin-Konsole unter **Realm settings → Email** einmal
+**Test connection** drücken. Das ist die einzige Stelle, die den Mailweg prüft,
+ohne dass jemand ein Konto anlegen muss.
+
+Wer sich vor der Reparatur registriert hat, sitzt auf einem unbestätigten Konto:
+Die Mail von damals wurde nie verschickt und kommt nicht nach. In der Konsole
+unter **Users → Konto → Credentials/Details** neu anstoßen, oder in der App über
+`POST /api/me/resend-verification`.
+
+Zwei Dinge, an denen es danach noch hängen kann, beide beim Mailanbieter und
+nicht hier: Die Domain in `SMTP_FROM` muss verifiziert sein, und ein
+Sandkasten-Absender (bei Resend `onboarding@resend.dev`) darf nur an die eigene
+Kontoadresse schicken. Was der Anbieter ablehnt, steht in
+`docker compose -f docker-compose.prod.yml --env-file .env.prod logs keycloak | grep -i mail`.
