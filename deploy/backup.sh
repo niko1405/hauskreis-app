@@ -21,7 +21,7 @@ set -euo pipefail
 # `docker-compose.prod.yml` liegt eine Ebene tiefer, und aus dem Namen dieses
 # Verzeichnisses leitet Compose außerdem den Projektnamen und damit die
 # Volume-Namen ab.
-COMPOSE_DIR="${COMPOSE_DIR:-/srv/acts2/hauskreis-backend}"
+COMPOSE_DIR="${COMPOSE_DIR:-/root/hauskreis-app/hauskreis-backend}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-.env.prod}"
 BACKUP_ROOT="${BACKUP_ROOT:-/var/backups/acts2}"
