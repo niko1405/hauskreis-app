@@ -78,7 +78,7 @@ export function AccountCard({
                 toast.success(
                   result.verificationEmailSent
                     ? 'Geändert — die Bestätigung ist unterwegs.'
-                    : 'Geändert. (Keine Bestätigungsmail: dieser Keycloak kennt keinen Mailserver.)',
+                    : 'Geändert. (Keine Bestätigungsmail: Es ist ein Fehler aufgetreten.)',
                 );
               },
             })
