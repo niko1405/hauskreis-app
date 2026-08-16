@@ -112,7 +112,13 @@ export class PersonController {
   @ApiZodNoContent()
   @HauskreisAdmin()
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param() params: PersonParamsDto) {
-    return this.personService.remove(params.hauskreisId, params.id);
+  remove(
+    @Param() params: PersonParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    // Die Mitgliedschaft geht mit, weil die Route allein nicht ausreicht:
+    // „Admin" darf jede Zeile entfernen, nur die eigene nicht. Wer gehen will,
+    // nimmt „Hauskreis verlassen" im Profil — dort wird die Nachfolge geklärt.
+    return this.personService.remove(params.hauskreisId, params.id, membership);
   }
 }

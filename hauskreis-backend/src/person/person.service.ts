@@ -342,8 +342,24 @@ export class PersonService {
    *
    * Bei jemandem, der schon da war, bleibt das Konto: es gehört einem Menschen
    * und nicht dieser Gruppe.
+   *
+   * **Sich selbst entfernt hier niemand.** Nicht, weil es technisch nicht ginge,
+   * sondern weil dieser Weg die falschen Fragen nicht stellt: Er löscht die
+   * Zeile hart, während das Verlassen im Profil die Nachfolge klärt (wer
+   * übernimmt die Admin-Rechte?) und den Beitrag im Archiv stehen lässt. Wer
+   * sich hier selbst herausnähme, bekäme das Sackgassen-Ergebnis, das
+   * `assertMayChangeRole` und `leave` an ihren Stellen gerade verhindern — im
+   * schlimmsten Fall eine Gruppe ohne Admin, die sich nicht mehr helfen kann.
+   *
+   * Es gibt also eine Tür, sie liegt nur woanders — und der Satz unten sagt, wo.
    */
-  async remove(hauskreisId: string, id: string) {
+  async remove(hauskreisId: string, id: string, actor: HauskreisMembership) {
+    if (actor.id === id) {
+      throw new BadRequestException(
+        'Dich selbst kannst du hier nicht entfernen. Wenn du gehen möchtest, geht das im Profil über „Hauskreis verlassen" — dort wird auch geklärt, wer die Admin-Rechte übernimmt.',
+      );
+    }
+
     const person = await this.prisma.person.findFirst({
       where: { id, hauskreisId },
       select: {

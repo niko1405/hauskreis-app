@@ -32,6 +32,7 @@ import { ConflictError, errorMessage } from '@/lib/api/errors';
 import {
   useDeletePerson,
   useInvitePerson,
+  useMe,
   usePeople,
   useResendInvitation,
   useSetPersonRole,
@@ -40,6 +41,7 @@ import type { PersonListEntry } from '@/lib/api/types';
 
 export function PeopleAdmin() {
   const people = usePeople();
+  const me = useMe();
   const remove = useDeletePerson();
   const resend = useResendInvitation();
   const toast = useToast();
@@ -103,48 +105,61 @@ export function PeopleAdmin() {
 
               {person.active && <RoleToggle person={person} />}
 
-              <IconButton
-                label={
-                  person.acceptedAt === null
-                    ? `Einladung an ${person.name} zurückziehen`
-                    : `${person.name} entfernen`
-                }
-                onClick={async () => {
-                  const pending = person.acceptedAt === null;
+              {/* Die eigene Zeile trägt keinen Papierkorb.
 
-                  const ok = await confirm(
-                    pending
-                      ? {
-                          title: `Einladung an ${person.name} zurückziehen?`,
-                          body: 'Das Konto wird mit gelöscht, die Adresse ist danach wieder frei.',
-                          confirmLabel: 'Zurückziehen',
-                          tone: 'danger',
-                        }
-                      : {
-                          title: `${person.name} entfernen?`,
-                          body: 'Vergangene Abende zeigen weiter, wer gehostet hat — die Person kommt aber aus allen kommenden Planungen heraus.',
-                          confirmLabel: 'Entfernen',
-                          tone: 'danger',
-                        },
-                  );
-                  if (!ok) return;
+                  Anders als bei der Rolle ist das keine Regel über den
+                  Augenblick, sondern über die Person: Sie kann nie zutreffen,
+                  und ein Knopf, der ausnahmslos in einer Fehlermeldung endet,
+                  ist eine Einladung ins Leere. Der Server lehnt es trotzdem ab
+                  — er ist die verbindliche Stelle, das hier ist die höfliche.
 
-                  remove.mutate(person.id, {
-                    onSuccess: () =>
-                      toast.success(
-                        pending
-                          ? `Einladung an ${person.name} zurückgezogen.`
-                          : `${person.name} entfernt.`,
-                      ),
-                  });
-                }}
-              >
-                {person.acceptedAt === null ? (
-                  <X size={15} />
-                ) : (
-                  <Trash2 size={15} />
-                )}
-              </IconButton>
+                  Wer gehen will, nimmt „Hauskreis verlassen" im Profil. Dort
+                  wird die Nachfolge geklärt und der eigene Beitrag bleibt im
+                  Archiv stehen; dieser Weg hier löscht die Zeile hart. */}
+              {person.id !== me.me?.id && (
+                <IconButton
+                  label={
+                    person.acceptedAt === null
+                      ? `Einladung an ${person.name} zurückziehen`
+                      : `${person.name} entfernen`
+                  }
+                  onClick={async () => {
+                    const pending = person.acceptedAt === null;
+
+                    const ok = await confirm(
+                      pending
+                        ? {
+                            title: `Einladung an ${person.name} zurückziehen?`,
+                            body: 'Das Konto wird mit gelöscht, die Adresse ist danach wieder frei.',
+                            confirmLabel: 'Zurückziehen',
+                            tone: 'danger',
+                          }
+                        : {
+                            title: `${person.name} entfernen?`,
+                            body: 'Vergangene Abende zeigen weiter, wer gehostet hat — die Person kommt aber aus allen kommenden Planungen heraus.',
+                            confirmLabel: 'Entfernen',
+                            tone: 'danger',
+                          },
+                    );
+                    if (!ok) return;
+
+                    remove.mutate(person.id, {
+                      onSuccess: () =>
+                        toast.success(
+                          pending
+                            ? `Einladung an ${person.name} zurückgezogen.`
+                            : `${person.name} entfernt.`,
+                        ),
+                    });
+                  }}
+                >
+                  {person.acceptedAt === null ? (
+                    <X size={15} />
+                  ) : (
+                    <Trash2 size={15} />
+                  )}
+                </IconButton>
+              )}
             </li>
           ))}
         </ul>

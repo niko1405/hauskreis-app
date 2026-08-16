@@ -16,6 +16,7 @@ type PersonDelegate = {
   update: jest.Mock;
   create: jest.Mock;
   count: jest.Mock;
+  delete: jest.Mock;
 };
 
 function setup() {
@@ -26,6 +27,7 @@ function setup() {
     update: jest.fn(),
     create: jest.fn(),
     count: jest.fn().mockResolvedValue(2),
+    delete: jest.fn(),
   };
   const keycloakAdmin = {
     inviteUser: jest.fn(),
@@ -508,5 +510,44 @@ describe('PersonService und die Admin-Rechte', () => {
         .update('hk-1', 'p1', { role: 'ADMIN' }, asAdmin)
         .catch(() => 'ok'),
     ).resolves.toBeDefined();
+  });
+});
+
+describe('PersonService.remove', () => {
+  const asAdmin = { id: 'p9', hauskreisId: 'hk-1', role: 'ADMIN' as const };
+
+  /**
+   * Der Weg hier löscht die Zeile hart. Das Verlassen im Profil klärt dagegen
+   * die Nachfolge — wer sich selbst herausnähme, käme an dieser Frage vorbei
+   * und könnte eine Gruppe ohne Admin zurücklassen.
+   */
+  it('lässt einen Admin sich nicht selbst entfernen', async () => {
+    const { service, person } = setup();
+
+    await expect(service.remove('hk-1', 'p9', asAdmin)).rejects.toThrow(
+      /Dich selbst kannst du hier nicht entfernen/,
+    );
+
+    // Die Regel greift, bevor irgendetwas gelesen oder geschrieben wird —
+    // sonst hinge sie an der Reihenfolge der Aufrufe darunter.
+    expect(person.findFirst).not.toHaveBeenCalled();
+    expect(person.delete).not.toHaveBeenCalled();
+  });
+
+  it('entfernt jemand anderen weiterhin', async () => {
+    const { service, person, keycloakAdmin } = setup();
+    person.findFirst.mockResolvedValue({
+      id: 'p1',
+      email: 'mo@example.com',
+      locationId: null,
+      acceptedAt: new Date('2026-01-06'),
+    });
+
+    await service.remove('hk-1', 'p1', asAdmin);
+
+    expect(person.delete).toHaveBeenCalledWith({ where: { id: 'p1' } });
+    // Wer schon da war, behält sein Konto: es gehört einem Menschen und nicht
+    // dieser Gruppe.
+    expect(keycloakAdmin.deleteUserByEmail).not.toHaveBeenCalled();
   });
 });
