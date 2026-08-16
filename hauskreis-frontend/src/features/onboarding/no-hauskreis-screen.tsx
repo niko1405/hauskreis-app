@@ -12,16 +12,18 @@
  * entscheidet ein Mensch, welche gilt.
  */
 import { useState } from 'react';
-import { HousePlus, LogOut, Mail } from 'lucide-react';
+import { HousePlus, LogOut, Mail, Trash2 } from 'lucide-react';
 import { useAuth } from 'react-oidc-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Field, TextInput } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
 import { Skeleton } from '@/components/ui/states';
 import {
   useAcceptInvitation,
   useCreateHauskreis,
+  useDeleteOrphanedAccount,
   useInvitations,
 } from '@/lib/api/hooks';
 import type { Invitation } from '@/lib/api/types';
@@ -73,8 +75,59 @@ export function NoHauskreisScreen({ email }: { email?: string }) {
           <LogOut size={14} />
           Abmelden
         </Button>
+
+        <DeleteAccountButton />
       </div>
     </div>
+  );
+}
+
+/**
+ * Der Ausgang für alle, die gar nicht erst ankommen wollen.
+ *
+ * „Konto löschen" hing bisher im Profil und damit an einer Mitgliedschaft —
+ * wer sich registrierte und nirgends landete, saß auf einem Konto, das er
+ * selbst nicht mehr loswurde. Ausgerechnet die, die am wenigsten von der App
+ * haben, hatten also keine Tür.
+ *
+ * Steht unter dem Abmelden und in Grau: Es ist der seltenere und der
+ * endgültige Weg, und keiner von beiden gehört nach oben.
+ */
+function DeleteAccountButton() {
+  const auth = useAuth();
+  const remove = useDeleteOrphanedAccount();
+  const confirm = useConfirm();
+  const toast = useToast();
+
+  return (
+    <Button
+      variant="ghost"
+      className="w-full text-stone-400"
+      loading={remove.isPending}
+      onClick={async () => {
+        const ok = await confirm({
+          title: 'Konto löschen?',
+          body: 'Weg sind dein Name, deine E-Mail-Adresse, dein Geburtstag und deine Anmeldung — danach kommst du hier nicht mehr herein. Warst du früher schon einmal in einem Hauskreis, bleiben die vergangenen Abende so stehen, wie sie waren; du stehst dort dann als „Ehemaliges Mitglied".',
+          confirmLabel: 'Endgültig löschen',
+          tone: 'danger',
+        });
+        if (!ok) return;
+
+        remove.mutate(undefined, {
+          onSuccess: () => {
+            toast.success('Dein Konto ist gelöscht.');
+            // Kein `signoutRedirect`: Das Konto gibt es nicht mehr, und
+            // Keycloak hat mit ihm die Sitzung weggeräumt. Ein Abmeldeversuch
+            // liefe auf eine Fehlerseite zu. Das Token hier wegzuwerfen und
+            // neu zu laden führt auf dem kürzesten Weg zur Anmeldung.
+            void auth.removeUser().finally(() => window.location.assign('/'));
+          },
+        });
+      }}
+    >
+      <Trash2 size={14} />
+      Konto löschen
+    </Button>
   );
 }
 
@@ -94,7 +147,7 @@ function CreateHauskreisCard() {
       <Field label="Name">
         <TextInput
           value={name}
-          placeholder="Hauskreis Nord"
+          placeholder="Mein Hauskreis"
           onChange={(event) => setName(event.target.value)}
           onKeyDown={(event) =>
             event.key === 'Enter' && trimmed !== '' && submit()

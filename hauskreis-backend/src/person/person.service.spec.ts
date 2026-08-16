@@ -17,7 +17,18 @@ type PersonDelegate = {
   create: jest.Mock;
   count: jest.Mock;
   delete: jest.Mock;
+  updateMany: jest.Mock;
 };
+
+/** Was beim Konto-Löschen mit abgeräumt wird — rein persönlich, kein Archiv. */
+function sideTables() {
+  return {
+    pushSubscription: { deleteMany: jest.fn() },
+    notificationPreference: { deleteMany: jest.fn() },
+    notificationLog: { deleteMany: jest.fn() },
+    absencePeriod: { deleteMany: jest.fn() },
+  };
+}
 
 function setup() {
   const person: PersonDelegate = {
@@ -28,6 +39,17 @@ function setup() {
     create: jest.fn(),
     count: jest.fn().mockResolvedValue(2),
     delete: jest.fn(),
+    updateMany: jest.fn(),
+  };
+  const side = sideTables();
+  const prisma = {
+    person,
+    ...side,
+    // Nimmt hier nur die Liste der Aufrufe entgegen; was darin steht, prüfen
+    // die Tests einzeln.
+    $transaction: jest.fn((ops: unknown) =>
+      Array.isArray(ops) ? Promise.all(ops) : Promise.resolve(),
+    ),
   };
   const keycloakAdmin = {
     inviteUser: jest.fn(),
@@ -50,7 +72,7 @@ function setup() {
   const moduleRef = { get: jest.fn(() => ({ replanAfterMembershipChange })) };
   const service = withClock(
     new PersonService(
-      { person } as unknown as PrismaService,
+      prisma as unknown as PrismaService,
       keycloakAdmin as unknown as KeycloakAdminService,
       locations as unknown as LocationService,
       autoAttendance as unknown as AutoAttendanceService,
@@ -60,6 +82,7 @@ function setup() {
   return {
     service,
     person,
+    side,
     keycloakAdmin,
     locations,
     replanAfterMembershipChange,
@@ -549,5 +572,80 @@ describe('PersonService.remove', () => {
     // Wer schon da war, behält sein Konto: es gehört einem Menschen und nicht
     // dieser Gruppe.
     expect(keycloakAdmin.deleteUserByEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe('PersonService.deleteOrphanedAccount', () => {
+  it('verweist auf den anderen Weg, solange man noch dazugehört', async () => {
+    const { service, person, keycloakAdmin } = setup();
+    person.findUnique.mockResolvedValue({ id: 'p1' });
+
+    await expect(service.deleteOrphanedAccount(user)).rejects.toThrow(
+      /gehörst noch zu einem Hauskreis/,
+    );
+
+    // Dort hängt die Nachfolgefrage dran; hier darf nichts vorbeigehen.
+    expect(person.updateMany).not.toHaveBeenCalled();
+    expect(keycloakAdmin.deleteUser).not.toHaveBeenCalled();
+  });
+
+  it('anonymisiert vergangene Mitgliedschaften und löscht das Konto', async () => {
+    const { service, person, side, keycloakAdmin } = setup();
+    person.findUnique.mockResolvedValue(null);
+    person.findMany.mockResolvedValue([
+      { id: 'p1', hauskreisId: 'hk-1', locationId: null, active: false },
+    ]);
+
+    await service.deleteOrphanedAccount(user);
+
+    // Die Zeile bleibt stehen — sonst verlöre jeder vergangene Abend seinen
+    // Gastgeber (CLAUDE.md §5).
+    expect(person.delete).not.toHaveBeenCalled();
+    expect(person.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: 'Ehemaliges Mitglied',
+          email: null,
+          birthdate: null,
+        }),
+      }),
+    );
+    expect(side.pushSubscription.deleteMany).toHaveBeenCalled();
+    expect(keycloakAdmin.deleteUser).toHaveBeenCalledWith('kc-123');
+  });
+
+  it('entfernt offene Einladungen ganz — sie tragen keine Geschichte', async () => {
+    const { service, person, keycloakAdmin, replanAfterMembershipChange } =
+      setup();
+    person.findUnique.mockResolvedValue(null);
+    person.findMany.mockResolvedValue([
+      { id: 'p2', hauskreisId: 'hk-2', locationId: null, active: true },
+    ]);
+
+    await service.deleteOrphanedAccount(user);
+
+    expect(person.delete).toHaveBeenCalledWith({ where: { id: 'p2' } });
+    expect(person.updateMany).not.toHaveBeenCalled();
+    // Eingeladene stehen schon in der Rotation; ohne das bliebe ihr Gegenüber
+    // zwei Wochen allein.
+    expect(replanAfterMembershipChange).toHaveBeenCalledWith('hk-2');
+    expect(keycloakAdmin.deleteUser).toHaveBeenCalledWith('kc-123');
+  });
+
+  /**
+   * Bis hierher sind Name, Adresse und Geburtstag weg. Ein Fehler jetzt hieße,
+   * jemandem eine Panne zu melden für etwas, das passiert ist — und ein
+   * zweiter Versuch fände nichts mehr vor.
+   */
+  it('scheitert nicht daran, dass Keycloak gerade klemmt', async () => {
+    const { service, person, keycloakAdmin } = setup();
+    person.findUnique.mockResolvedValue(null);
+    person.findMany.mockResolvedValue([
+      { id: 'p1', hauskreisId: 'hk-1', locationId: null, active: false },
+    ]);
+    keycloakAdmin.deleteUser.mockRejectedValue(new Error('Keycloak ist weg'));
+
+    await expect(service.deleteOrphanedAccount(user)).resolves.toBeUndefined();
+    expect(person.updateMany).toHaveBeenCalled();
   });
 });

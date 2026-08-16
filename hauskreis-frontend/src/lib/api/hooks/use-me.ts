@@ -209,6 +209,21 @@ export function useDeleteAccount(hauskreisId: string) {
   );
 }
 
+/**
+ * Konto löschen vom Einstiegsbildschirm aus — ohne Hauskreis, ohne Nachfolge.
+ *
+ * Der Cache wird geleert wie beim Verlassen; danach schickt der Bildschirm
+ * selbst zur Abmeldung, denn das Token in der Hand gehört zu einem Konto, das
+ * es nicht mehr gibt.
+ */
+export function useDeleteOrphanedAccount() {
+  const queryClient = useQueryClient();
+
+  return useApiMutation(() => coreApi.deleteOrphanedAccount(), {
+    onSuccess: () => queryClient.clear(),
+  });
+}
+
 /** Annehmen heißt: den bisherigen Hauskreis im selben Zug verlassen. */
 export function useAcceptInvitation() {
   const queryClient = useQueryClient();

@@ -152,6 +152,17 @@ export function deleteAccount(
   return apiDelete<AccountDeleted>(hkPath(hauskreisId, '/account'), input);
 }
 
+/**
+ * Konto löschen, solange man zu **keinem** Hauskreis gehört.
+ *
+ * Ohne `hauskreisId`, anders als bei `deleteAccount`: Wer diesen Weg braucht,
+ * hat keine — er steht auf dem Einstiegsbildschirm. Auch keine Nachfolge, aus
+ * demselben Grund. Gehört man doch noch dazu, antwortet der Server mit `409`.
+ */
+export function deleteOrphanedAccount(): Promise<void> {
+  return apiDelete('/me');
+}
+
 /** Offene Einladungen in andere Hauskreise — auch ohne eigene Person. */
 export function listInvitations(signal?: AbortSignal): Promise<Invitation[]> {
   return apiGet<Invitation[]>('/me/invitations', { signal });

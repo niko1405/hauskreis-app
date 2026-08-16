@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
@@ -54,6 +55,8 @@ const personSelect = {
 
 @Injectable()
 export class PersonService {
+  private readonly logger = new Logger(PersonService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly keycloakAdmin: KeycloakAdminService,
@@ -380,6 +383,114 @@ export class PersonService {
 
     if (person.acceptedAt === null) {
       await this.discardInvitationAccount(person.email);
+    }
+  }
+
+  /**
+   * Konto löschen, wenn man zu **keinem** Hauskreis gehört.
+   *
+   * Bis hierher gab es diesen Weg nicht: „Konto löschen" hing im Profil und
+   * damit an einer Mitgliedschaft. Wer sich registrierte und nie irgendwo
+   * ankam — oder seinen Hauskreis verließ und dann aufhören wollte —, saß auf
+   * einem Konto, das er selbst nicht mehr loswurde. Genau die Menschen, die
+   * am wenigsten von der App haben, hatten also keinen Ausgang.
+   *
+   * Der andere Weg (`MembershipService.deleteAccount`) bleibt für alle, die
+   * noch dabei sind: dort hängt die Nachfolge dran, und die kann hier nicht
+   * aufkommen. Wer trotzdem noch verknüpft ist, wird dorthin verwiesen statt
+   * still an der Frage vorbeigelassen.
+   *
+   * Aufgeräumt wird in drei Schritten, und die Reihenfolge ist Absicht — der
+   * unwiderrufliche Teil (Keycloak) kommt zuletzt:
+   *
+   * 1. **Vergangene Mitgliedschaften** werden anonymisiert, nicht gelöscht.
+   *    Dieselbe Regel wie überall (CLAUDE.md §5): Die Zeile trägt, wer damals
+   *    gehostet hat. Was verschwindet, sind Name, Adresse und Geburtstag.
+   * 2. **Offene Einladungen** werden ganz entfernt. Sie tragen keine
+   *    Geschichte — niemand war je da —, und stehen zu lassen hieße, die
+   *    Adresse eines gelöschten Kontos in einer fremden Liste zu behalten.
+   * 3. **Das Keycloak-Konto**, und daran scheitert der Rest nicht: Bis dahin
+   *    sind die persönlichen Angaben weg, und das ist der Teil, um den es
+   *    geht. Ein Fehler jetzt hieße, jemandem eine Panne zu melden für etwas,
+   *    das passiert ist.
+   */
+  async deleteOrphanedAccount(user: AuthenticatedUser): Promise<void> {
+    const linked = await this.prisma.person.findUnique({
+      where: { keycloakUserId: user.keycloakUserId },
+      select: { id: true },
+    });
+
+    if (linked) {
+      throw new ConflictException(
+        'Du gehörst noch zu einem Hauskreis. Verlasse ihn zuerst — im Profil steht dafür „Konto löschen", und dort wird auch geklärt, wer die Admin-Rechte übernimmt.',
+      );
+    }
+
+    // Ohne Adresse gibt es hier nichts zuzuordnen; das Konto selbst kann
+    // trotzdem weg.
+    const rows = user.email
+      ? await this.prisma.person.findMany({
+          where: { email: user.email, keycloakUserId: null },
+          select: {
+            id: true,
+            hauskreisId: true,
+            locationId: true,
+            active: true,
+          },
+        })
+      : [];
+
+    const past = rows.filter((row) => !row.active);
+    const invitations = rows.filter((row) => row.active);
+
+    if (past.length > 0) {
+      const ids = past.map((row) => row.id);
+
+      await this.prisma.person.updateMany({
+        where: { id: { in: ids } },
+        data: {
+          name: 'Ehemaliges Mitglied',
+          email: null,
+          birthdate: null,
+          anonymizedAt: new Date(),
+          version: { increment: 1 },
+        },
+      });
+
+      // Was rein persönlich ist und keinen Archivwert hat. Es hängt an
+      // `Cascade`, aber das feuert nur beim Löschen der Zeile — und die bleibt
+      // hier gerade stehen.
+      await this.prisma.$transaction([
+        this.prisma.pushSubscription.deleteMany({
+          where: { personId: { in: ids } },
+        }),
+        this.prisma.notificationPreference.deleteMany({
+          where: { personId: { in: ids } },
+        }),
+        this.prisma.notificationLog.deleteMany({
+          where: { personId: { in: ids } },
+        }),
+        this.prisma.absencePeriod.deleteMany({
+          where: { personId: { in: ids } },
+        }),
+      ]);
+    }
+
+    for (const invitation of invitations) {
+      await this.prisma.person.delete({ where: { id: invitation.id } });
+      await this.syncHomes(invitation.locationId);
+      // Eine Eingeladene steht schon in der Rotation (siehe `invite`) — ohne
+      // das bliebe ihr Gegenüber zwei Wochen allein.
+      await this.replanPrayerBuddies(invitation.hauskreisId);
+    }
+
+    try {
+      await this.keycloakAdmin.deleteUser(user.keycloakUserId);
+    } catch (error) {
+      this.logger.error(
+        `Konto ${user.keycloakUserId} anonymisiert, aber das Keycloak-Konto blieb stehen`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
   }
 

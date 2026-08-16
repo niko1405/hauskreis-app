@@ -62,6 +62,22 @@ export class MeController {
     return this.personService.setHome(user, dto);
   }
 
+  /**
+   * Konto löschen, solange man zu keinem Hauskreis gehört.
+   *
+   * Bewusst **ohne** `hauskreisId` in der Route, anders als
+   * `DELETE /hauskreise/:id/me`: Wer diesen Weg braucht, hat keine. Gehört man
+   * doch noch dazu, antwortet der Service mit `409` und verweist auf den
+   * anderen Weg — dort hängt die Nachfolgefrage dran, die hier nicht
+   * aufkommen kann.
+   */
+  @Delete()
+  @ApiZodNoContent()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteAccount(@CurrentUser() user: AuthenticatedUser) {
+    return this.personService.deleteOrphanedAccount(user);
+  }
+
   /** „Ich bringe keine Wohnung mit" — gültiger Zustand, kein Fehler. */
   @Delete('home')
   @ApiZodNoContent()
