@@ -7,7 +7,7 @@
  * angemeldet aber unbekannt (`/api/me` → 404: der Mensch hat ein
  * Keycloak-Konto, aber keine Person im Hauskreis) und angemeldet und bekannt.
  */
-import { LogIn, MailCheck } from 'lucide-react';
+import { LogIn, MailCheck, WifiOff } from 'lucide-react';
 import { useAuth } from 'react-oidc-context';
 import {
   useMe,
@@ -17,6 +17,7 @@ import {
 import { isEmailUnverified } from '@/lib/api/errors';
 import { useSessionRestore } from '@/lib/auth/use-session-restore';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
+import { useOnline } from '@/lib/use-online';
 import { useSlow } from '@/lib/use-slow';
 import { setGroupZone } from '@/lib/date';
 import { Button } from '@/components/ui/button';
@@ -159,6 +160,40 @@ function FullScreenHint({
   slowHint?: string;
 }) {
   const slow = useSlow(true);
+  const online = useOnline();
+
+  /**
+   * Offline ist kein „dauert länger" — es dauert nicht länger, es kommt nichts.
+   * Deshalb sofort und nicht erst nach den zwölf Sekunden von `useSlow`.
+   *
+   * Dass dieser Bildschirm überhaupt erscheint, ist neu: Vorher installierte
+   * sich der Service Worker nie (ein `404` in der Precache-Liste), also lag
+   * ohne Netz nicht einmal das HTML vor und man sah eine leere Seite. Jetzt
+   * kommt die App aus dem Zwischenspeicher hoch, findet den Server nicht — und
+   * kann das endlich sagen.
+   *
+   * Kein Knopf: Serwist lädt die Seite von selbst neu, sobald das Netz
+   * zurückkommt (`reloadOnOnline`).
+   */
+  if (!online) {
+    return (
+      <FullScreen>
+        <div className="rounded-card border border-line bg-card p-8 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-stone-100 text-stone-500">
+            <WifiOff size={22} />
+          </div>
+          <h1 className="mt-4 font-serif text-2xl font-bold text-stone-900">
+            Keine Verbindung
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-stone-500">
+            Acts2 holt Termine, Themen und Lieder vom Server — dafür brauchst du
+            Internet. Sobald du wieder online bist, geht es hier von selbst
+            weiter.
+          </p>
+        </div>
+      </FullScreen>
+    );
+  }
 
   return (
     <FullScreen>
