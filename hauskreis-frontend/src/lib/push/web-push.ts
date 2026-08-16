@@ -43,13 +43,58 @@ export function urlBase64ToUint8Array(base64UrlKey: string): Uint8Array {
   return output;
 }
 
-async function registration(): Promise<ServiceWorkerRegistration> {
-  return navigator.serviceWorker.ready;
+/**
+ * Der Service Worker dieser Seite — **mit Frist**.
+ *
+ * `navigator.serviceWorker.ready` ist ein Versprechen ohne Ausweg: Es wird
+ * erfüllt, sobald ein Worker die Seite übernimmt, und sonst nie. Es lehnt nicht
+ * ab, es läuft nicht ab, es sagt nichts. Genau das ist auf iOS passiert — die
+ * installierte App hat einen eigenen Speicher, getrennt von Safari, und
+ * solange dort kein Worker aktiv war, kam der Aufruf nicht zurück.
+ *
+ * Weil die Einstellungskarte ihren Ladezustand daran hängte, stand dort ein
+ * Balken, der nie fertig wurde: weder ließ sich Push einschalten noch testen,
+ * und es gab keinen Fehler, den man hätte lesen können. Ein Ladezustand ohne
+ * Ende ist der schlechteste Fehlerzustand — dieselbe Überlegung wie bei
+ * `FullScreenHint` im AuthGate.
+ *
+ * Deshalb ein Wettrennen gegen die Uhr. `null` heißt „noch keiner da" und ist
+ * eine Antwort, mit der die Oberfläche weiterarbeiten kann.
+ */
+async function registration(
+  timeoutMs: number,
+): Promise<ServiceWorkerRegistration | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
+
+/**
+ * Kurz, weil die Antwort nur einen Knopf beschriftet: Wer noch kein Abo hat,
+ * sieht „einschalten" — und das ist auch die richtige Anzeige, solange wir es
+ * nicht wissen.
+ */
+const READY_TIMEOUT_QUERY_MS = 3000;
+
+/**
+ * Länger, weil hier jemand geklickt hat und wartet. Der Worker darf sich in
+ * dieser Zeit noch fertig einrichten, bevor wir aufgeben.
+ */
+const READY_TIMEOUT_SUBSCRIBE_MS = 15_000;
 
 export async function getExistingSubscription(): Promise<PushSubscription | null> {
   if (!isPushSupported()) return null;
-  const reg = await registration();
+  const reg = await registration(READY_TIMEOUT_QUERY_MS);
+  if (!reg) return null;
   return reg.pushManager.getSubscription();
 }
 
@@ -65,7 +110,17 @@ export async function subscribeToPush(
     throw new Error('Ohne Erlaubnis für Benachrichtigungen geht es nicht.');
   }
 
-  const reg = await registration();
+  const reg = await registration(READY_TIMEOUT_SUBSCRIBE_MS);
+  if (!reg) {
+    // Ohne aktiven Worker gibt es niemanden, der die Nachricht später empfängt
+    // — `subscribe()` würde hier ohnehin scheitern. Der Satz sagt, was hilft:
+    // auf iOS richtet sich der Worker erst im installierten Zustand ein, und
+    // ein vollständiger Neustart der App ist der Weg dorthin.
+    throw new Error(
+      'Der Hintergrunddienst ist noch nicht bereit. Schließe die App einmal ganz und öffne sie neu.',
+    );
+  }
+
   const existing = await reg.pushManager.getSubscription();
   if (existing) return existing.toJSON();
 

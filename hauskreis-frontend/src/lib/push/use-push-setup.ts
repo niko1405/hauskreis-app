@@ -40,9 +40,12 @@ export function usePushSetup() {
       return;
     }
     setPermission(Notification.permission);
-    void getExistingSubscription().then((sub) =>
-      setSubscribedHere(Boolean(sub)),
-    );
+    void getExistingSubscription()
+      .then((sub) => setSubscribedHere(Boolean(sub)))
+      // Ein Fehlschlag heißt hier „kein Abo", nicht „weiter warten". Ohne
+      // diesen Zweig bliebe `subscribedHere` auf `null`, und daran hängt
+      // `isLoading` — die Karte käme nie aus dem Ladebalken heraus.
+      .catch(() => setSubscribedHere(false));
 
     // Browser erneuern Abos gelegentlich von sich aus. Der Service Worker
     // meldet das hierher, weil nur die App ein Token zum Nachtragen hat.
