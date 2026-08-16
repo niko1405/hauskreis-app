@@ -184,6 +184,7 @@ export function LeaveSheet({
   const people = usePeople();
   const { me } = useMe();
   const toast = useToast();
+  const confirm = useConfirm();
 
   const action = mode === 'delete' ? remove : leave;
 
@@ -199,7 +200,44 @@ export function LeaveSheet({
     (person) => person.active && person.id !== me?.id,
   );
 
-  const submit = () =>
+  /**
+   * Ob dieser Schritt den ganzen Hauskreis mitnimmt.
+   *
+   * Dieselbe Rechnung wie im Server (`membership.service.ts`): Es zählt nicht,
+   * wer noch aktiv in der Liste steht, sondern wer schon **einmal da war**.
+   * Offene Einladungen und eingesäte Zeilen sind Menschen, die diesen
+   * Hauskreis nie gesehen haben — sie können ihn nicht weiterführen, und der
+   * Server löst deshalb trotzdem auf.
+   *
+   * Die Prüfung auf `people.data` ist nicht Zierde: `every` auf einer leeren
+   * Liste ist `true`, und solange noch geladen wird, ist die Liste leer. Ohne
+   * sie stünde die Auflösungswarnung eine Sekunde lang vor jedem — auch vor
+   * dem, der in einer Gruppe von neun ist.
+   */
+  const dissolves =
+    people.data !== undefined &&
+    others.every((person) => person.acceptedAt === null);
+
+  /**
+   * Die zweite Rückfrage, und sie stellt eine andere Frage als die erste.
+   *
+   * „Verlassen?" heißt sonst: du bist raus, die anderen machen weiter. Ist man
+   * der letzte Mensch hier, heißt derselbe Knopf etwas ganz anderes — dann
+   * verschwinden Termine, Themen, Lieder und das Archiv mit. Das erfuhr man
+   * bisher erst danach, aus dem Toast („… ist damit aufgelöst"), also zu einem
+   * Zeitpunkt, an dem nichts mehr zu entscheiden war.
+   */
+  const submit = async () => {
+    if (dissolves) {
+      const ok = await confirm({
+        title: `„${name}" wird damit aufgelöst`,
+        body: 'Du bist die letzte Person, die hier war. Mit diesem Schritt verschwindet der Hauskreis selbst — Termine, Themen, Lieder und das ganze Archiv. Das lässt sich nicht rückgängig machen.',
+        confirmLabel: 'Auflösen',
+        tone: 'danger',
+      });
+      if (!ok) return;
+    }
+
     action.mutate(
       { successorPersonId: successor === '' ? undefined : successor },
       {
@@ -221,6 +259,7 @@ export function LeaveSheet({
         },
       },
     );
+  };
 
   return (
     <Sheet
@@ -242,7 +281,7 @@ export function LeaveSheet({
             className="flex-1"
             disabled={successorNeeded && successor === ''}
             loading={action.isPending}
-            onClick={submit}
+            onClick={() => void submit()}
           >
             {mode === 'delete' ? 'Endgültig löschen' : 'Verlassen'}
           </Button>
