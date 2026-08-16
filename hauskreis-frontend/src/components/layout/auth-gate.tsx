@@ -266,13 +266,35 @@ function LoginScreen() {
 
   return (
     <FullScreen>
+      {/* Dieselbe Marke wie auf dem Home-Bildschirm und über Keycloaks
+          Anmeldeseite. Sie steht über der Karte statt darin, weil das der
+          einzige Bildschirm ohne Kopfbereich ist: ohne sie fängt die App mit
+          einem weißen Kasten an, auf dem „Willkommen" steht, und man sieht
+          erst im Fließtext, wo man gelandet ist.
+
+          `icon-192.png` bringt seinen Grund schon mit, deshalb die runden
+          Ecken — ein Quadrat säße sonst als heller Fleck auf der Leinwand. Als
+          `<img>` und nicht über `next/image`: der Export kennt keinen
+          Bild-Server, und die Datei liegt ohnehin fertig in `public/` — in der
+          Größe, in der sie hier steht. Es gäbe nichts zu optimieren. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/icons/icon-192.png"
+        alt="Acts2"
+        width={80}
+        height={80}
+        className="mx-auto mb-5 size-20 rounded-2xl shadow-sm"
+      />
       <div className="rounded-card border border-line bg-card p-8 text-center">
         <h1 className="font-serif text-3xl font-bold text-stone-900">
-          Hauskreis
+          Willkommen
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-stone-500">
-          Termine, Themen, Songs und Gebetsbuddys — an einem Ort statt in
-          fünfzehn WhatsApp-Nachrichten.
+          Schön, dass du da bist! Inspiriert von der allerersten christlichen
+          Gemeinschaft aus Apostelgeschichte 2 (Acts 2), steht bei uns das
+          Miteinander im Mittelpunkt. Acts2 ist eine Hauskreis-App, die deine
+          Kleingruppe mithilfe von coolen Features auf ein neues Level bringt.
+          Probier es aus und leg los!
         </p>
         <Button
           size="lg"
