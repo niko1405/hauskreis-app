@@ -174,5 +174,28 @@ export function errorMessage(e: unknown): string {
   if (isApiError(e)) {
     return e.payload?.message ?? `Fehler ${e.status}`;
   }
+
+  /**
+   * Alles, was nicht vom Server kam.
+   *
+   * Hier stand nur „Unerwarteter Fehler." — und damit war jede Aussage weg,
+   * die der Fehler mitbrachte. Das fiel dort auf, wo man am wenigsten
+   * nachsehen kann: Beim Einschalten der Benachrichtigungen auf dem iPhone
+   * scheiterte `pushManager.subscribe()`, und übrig blieben zwei Wörter, aus
+   * denen sich nicht einmal ableiten ließ, ob es am Gerät, an der Erlaubnis
+   * oder am Schlüssel lag. Auf einem Telefon gibt es keine Konsole, in die man
+   * ersatzweise schauen könnte.
+   *
+   * Ein `DOMException` kommt vom Browser, ist englisch und technisch — der
+   * bekommt einen Rahmen, damit er nicht wie unser eigener Text aussieht.
+   * Alles andere ist ein `throw` aus diesem Projekt, und die Sätze dort sind
+   * für Menschen geschrieben; die stehen für sich.
+   */
+  if (typeof DOMException !== 'undefined' && e instanceof DOMException) {
+    return `Unerwarteter Fehler: ${e.name} — ${e.message}`;
+  }
+  if (e instanceof Error && e.message !== '') {
+    return e.message;
+  }
   return 'Unerwarteter Fehler.';
 }
