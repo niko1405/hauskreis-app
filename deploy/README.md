@@ -650,6 +650,33 @@ sie **nicht** von selbst auf eine neue Hauptversion — das ist gewollt:
 Für beides gilt: Release Notes lesen, Backup ziehen, dann den Tag im Compose
 ändern.
 
+### Änderungen an Keycloaks Anmeldeseiten
+
+Der Auto-Deploy rollt das Backend aus. An Keycloak kommt er nicht — dort liegen
+Anmeldeseiten und Realm-Einstellungen, und beide brauchen einen eigenen
+Handgriff. **Beides wirkt sonst nicht, ohne dass etwas fehlschlägt.**
+
+| Was sich geändert hat                                                | Was danach nötig ist                                                        |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `keycloak/themes/hauskreis/**` (Texte, CSS, Logo, `info.ftl`)        | `docker compose … restart keycloak` — der Server hält Themes im Speicher    |
+| Alles, was `setup-keycloak.sh` schreibt (Realm, Clients, SMTP)       | Skript erneut laufen lassen, siehe „Mailversand nachziehen"                  |
+
+Die Themes hängen als Bind-Mount im Container, sie kommen also mit dem
+Auschecken auf dem Server und nicht über das Image — ein `git pull` allein
+genügt trotzdem nicht, der Neustart gehört dazu.
+
+Nach einer Änderung an den Texten lohnt ein Blick auf **doppelte Schlüssel**.
+Java liest die Datei von oben nach unten, und bei zwei Zeilen mit demselben
+Namen gewinnt wortlos die untere — genau so stand einmal ein anderer Name über
+der Anmeldekarte, als dort „Acts2" stehen sollte:
+
+```bash
+grep -v '^\s*#' hauskreis-backend/keycloak/themes/hauskreis/login/messages/messages_de.properties \
+  | grep '=' | cut -d= -f1 | sort | uniq -d
+```
+
+Keine Ausgabe heißt: in Ordnung.
+
 ### Wenn etwas klemmt
 
 | Symptom                                      | Zuerst nachsehen                                                                                                                                                   |

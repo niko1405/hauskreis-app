@@ -329,6 +329,7 @@ if [ -z "${FRONTEND_UUID}" ]; then
       \"standardFlowEnabled\": true,
       \"redirectUris\": [\"${FRONTEND_URL}/*\"],
       \"webOrigins\": [\"${FRONTEND_URL}\"],
+      \"baseUrl\": \"${FRONTEND_URL}\",
       \"attributes\": { \"pkce.code.challenge.method\": \"S256\" }
     }" >/dev/null
   echo "    created"
@@ -342,11 +343,18 @@ else
       \"clientId\": \"${FRONTEND_CLIENT_ID}\",
       \"redirectUris\": [\"${FRONTEND_URL}/*\"],
       \"webOrigins\": [\"${FRONTEND_URL}\"],
+      \"baseUrl\": \"${FRONTEND_URL}\",
       \"attributes\": { \"pkce.code.challenge.method\": \"S256\" }
     }" >/dev/null
   echo "    already exists (${FRONTEND_UUID})"
 fi
 echo "    Redirect-URI: ${FRONTEND_URL}/*"
+# `baseUrl` ist nicht Zierde, sondern der einzige Weg zurück. Keycloaks
+# `info.ftl` zeigt „Zurück zu Acts2" genau dann, wenn der Client eine kennt —
+# ohne sie endet jede Bestätigung („Adresse bestätigt", „Passwort steht") auf
+# einer Seite ohne Ausgang, und wer dort steht, muss die Adresse von Hand
+# eintippen. Der Text dazu steht seit jeher im Theme (`backToApplication`); es
+# fehlte nur die Bedingung, unter der Keycloak ihn überhaupt anzeigt.
 
 ensure_audience_mapper "${FRONTEND_UUID}"
 
