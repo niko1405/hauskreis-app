@@ -700,8 +700,52 @@ Die Mail von damals wurde nie verschickt und kommt nicht nach. In der Konsole
 unter **Users → Konto → Credentials/Details** neu anstoßen, oder in der App über
 `POST /api/me/resend-verification`.
 
-Zwei Dinge, an denen es danach noch hängen kann, beide beim Mailanbieter und
-nicht hier: Die Domain in `SMTP_FROM` muss verifiziert sein, und ein
-Sandkasten-Absender (bei Resend `onboarding@resend.dev`) darf nur an die eigene
-Kontoadresse schicken. Was der Anbieter ablehnt, steht in
-`docker compose -f docker-compose.prod.yml --env-file .env.prod logs keycloak | grep -i mail`.
+### Der Realm stimmt und es kommt trotzdem nichts
+
+Dann liegt es unterhalb der Konfiguration. Die Reihenfolge ist wichtig, weil der
+erste Schritt die beiden Hälften des Problems trennt:
+
+**1. Ins Protokoll des Mailanbieters sehen.** Bei Resend unter „Emails". Steht
+dort ein Eintrag, hat Keycloak den Server erreicht — dann ist es eine Absage des
+Anbieters (Absender-Domain nicht verifiziert, Empfänger abgelehnt), und der
+Grund steht daneben. Steht dort **gar nichts**, ist die Mail nie angekommen, und
+alles Weitere spielt auf dem Server.
+
+**2. Keycloak fragen, woran es scheiterte.** Es meldet das, aber nur im Log —
+nach außen sieht eine Registrierung geglückt aus:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod \
+  logs keycloak --since 1h | grep -iE 'mail|smtp|ConnectException|AuthenticationFailed'
+```
+
+`Connection timed out` heißt: der Port ist zu (Schritt 3).
+`AuthenticationFailedException` heißt: Benutzername oder Passwort — bei Resend
+ist der Benutzername wörtlich `resend` und das Passwort der API-Key.
+Eine Zahl wie `550` oder `553` heißt: der Anbieter hat abgelehnt.
+
+**3. Ausgehenden Port prüfen — aus dem Container heraus, nicht vom Host.**
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod \
+  exec keycloak curl -sv --max-time 8 smtp://smtp.resend.com:587
+```
+
+Ein `220 … ESMTP` ist gut, eine Zeitüberschreitung ist der Befund.
+
+**Bei netcup ist das der wahrscheinlichste Fall.** Dort liegt in der Voreinstellung
+eine Sperre für ausgehenden Mail-Verkehr, und sie sitzt **außerhalb** des
+Servers: in der Firewall des Server Control Panels. `ufw` auf der Maschine sagt
+nichts dazu, `docker` auch nicht, und im Log steht nur eine Zeitüberschreitung —
+es sieht aus wie ein Konfigurationsfehler, ist aber keiner. Zu lösen im SCP
+unter Firewall, oder per Ticket an `mail@netcup.de`. Resend hört zusätzlich auf
+**2587** (STARTTLS) und **2465** (SSL); genau dafür gibt es diese Ports, wenn 587
+und 465 gesperrt sind.
+
+**4. Erst dann der Test-Knopf.** In der Admin-Konsole unter
+**Realm settings → Email** gibt es **Test connection**. Er schickt an die Adresse
+des **gerade angemeldeten Admin-Kontos** — hat das keine hinterlegt, scheitert er
+mit einer Meldung, die nach einem SMTP-Fehler aussieht und keiner ist.
+
+Und die banale Möglichkeit zuletzt, weil sie wirklich vorkommt: Eine erste Mail
+von einer frisch verifizierten Domain landet gern im Spam-Ordner.

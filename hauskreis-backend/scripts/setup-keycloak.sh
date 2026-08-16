@@ -93,7 +93,7 @@ echo "==> Requesting admin token from ${KC_URL}"
 TOKEN=$(curl -sf -X POST "${KC_URL}/realms/master/protocol/openid-connect/token" \
   -d "client_id=admin-cli" \
   -d "username=${KC_ADMIN}" \
-  -d "password=${KC_ADMIN_PASSWORD}" \
+  --data-urlencode "password=${KC_ADMIN_PASSWORD}" \
   -d "grant_type=password" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).access_token')
 
 auth=(-H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json")
