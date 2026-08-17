@@ -7,6 +7,7 @@
 import { Archive, CalendarDays, Home, Settings, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useUnreadRelease } from '@/features/releases/use-unread-release';
 import { cn } from '@/lib/cn';
 
 export const NAV_ITEMS = [
@@ -17,14 +18,59 @@ export const NAV_ITEMS = [
   { href: '/profil', label: 'Profil', icon: Settings },
 ] as const;
 
+/**
+ * Wo Neues wohnt.
+ *
+ * Der Punkt hängt an dieser Konstante und nicht an einem Feld in `NAV_ITEMS` —
+ * dort stünde bei vier von fünf Zielen ein `false`, das nie etwas bedeutet.
+ * Kommt einmal ein zweiter Punkt dazu, ist das der Moment, das Tupel zu
+ * erweitern; für einen ist es Ballast.
+ */
+const UNREAD_HREF = '/profil';
+
 function useIsActive() {
   const pathname = usePathname();
   return (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href);
 }
 
+/**
+ * Das Symbol mit dem Punkt daneben, wenn es etwas Neues zu sehen gibt.
+ *
+ * Der Ring in Leinwandfarbe ist kein Zierrat: Er hebt den Punkt vom Symbol ab,
+ * über dem er sitzt, und zwar hell wie dunkel. Ohne ihn verschwimmt er bei
+ * aktivem Ziel mit der Terracotta-Farbe darunter.
+ *
+ * `sr-only`: Für alle, die nicht hinsehen, ist ein farbiger Kreis nichts. Der
+ * Punkt steht dort, wo er ausgesprochen gehört — im Ziel, nicht daneben.
+ */
+function NavIcon({
+  icon: Icon,
+  size,
+  strokeWidth,
+  unread,
+}: {
+  icon: (typeof NAV_ITEMS)[number]['icon'];
+  size: number;
+  strokeWidth?: number;
+  unread: boolean;
+}) {
+  return (
+    <span className="relative">
+      <Icon size={size} strokeWidth={strokeWidth} />
+      {unread && (
+        <>
+          <span className="absolute -top-0.5 -right-1 size-2 rounded-full bg-terracotta-500 ring-2 ring-canvas" />
+          <span className="sr-only">(Neues)</span>
+        </>
+      )}
+    </span>
+  );
+}
+
 export function TabBar() {
   const isActive = useIsActive();
+  const { unread } = useUnreadRelease();
 
   return (
     <nav
@@ -44,7 +90,12 @@ export function TabBar() {
                   active ? 'text-terracotta-500' : 'text-stone-400',
                 )}
               >
-                <Icon size={20} strokeWidth={active ? 2.4 : 1.8} />
+                <NavIcon
+                  icon={Icon}
+                  size={20}
+                  strokeWidth={active ? 2.4 : 1.8}
+                  unread={unread && href === UNREAD_HREF}
+                />
                 {label}
               </Link>
             </li>
@@ -57,11 +108,15 @@ export function TabBar() {
 
 export function Sidebar() {
   const isActive = useIsActive();
+  const { unread } = useUnreadRelease();
 
   return (
     <nav
       aria-label="Hauptnavigation"
-      className="hidden w-56 shrink-0 border-r border-line px-4 py-8 md:block"
+      // Der sichere Rand kommt zum vorhandenen Abstand dazu: Auf dem iPad vom
+      // Home-Bildschirm reicht die App bis unter die Statusleiste, und dort
+      // stünde sonst „Hauskreis" unter der Uhr.
+      className="hidden w-56 shrink-0 border-r border-line px-4 pt-[calc(env(safe-area-inset-top)+2rem)] pb-8 md:block"
     >
       <p className="mb-6 px-3 font-serif text-2xl font-bold text-stone-900">
         Hauskreis
@@ -81,7 +136,11 @@ export function Sidebar() {
                     : 'text-stone-500 hover:bg-stone-100',
                 )}
               >
-                <Icon size={18} />
+                <NavIcon
+                  icon={Icon}
+                  size={18}
+                  unread={unread && href === UNREAD_HREF}
+                />
                 {label}
               </Link>
             </li>

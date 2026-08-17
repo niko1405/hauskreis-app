@@ -10,23 +10,27 @@
  * Wegklicken merkt sich das Gerät, nicht das Konto ([[release-storage]]) — und
  * das Öffnen der Seite zählt als gesehen. Ein „Verstanden"-Knopf wäre Arbeit
  * für etwas, das das Lesen schon beantwortet.
+ *
+ * **„Später" ist hier etwas anderes als „gelesen".** Es schiebt diesen Kasten
+ * weg und sonst nichts: Der Punkt an der Profil-Leiste bleibt stehen, bis man
+ * tatsächlich nachgesehen hat. Vorher hat „Später" beides erledigt — was heißt,
+ * dass man das Neue wegklicken konnte, ohne es je zu sehen.
  */
 import { ArrowRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useReleases } from '@/lib/api/hooks';
-import { useSeenRelease } from '@/lib/release-storage';
+import { useDismissedRelease } from '@/lib/release-storage';
+import { useUnreadRelease } from './use-unread-release';
 
 export function ReleaseBanner() {
   const releases = useReleases();
-  const { seen, markSeen } = useSeenRelease();
+  const { unread } = useUnreadRelease();
+  const { dismissed, markDismissed } = useDismissedRelease();
 
   const newest = releases.data?.[0];
 
-  // `seen === null` heißt entweder „noch nie etwas gesehen" oder „wird gerade
-  // serverseitig gerendert". Beide Male ist Zeigen richtig: Beim allerersten
-  // Start ist ja tatsächlich alles neu.
-  if (!newest || seen === newest.version) return null;
+  if (!newest || !unread || dismissed === newest.version) return null;
 
   return (
     <div className="rounded-card border border-terracotta-400 bg-terracotta-50 p-4">
@@ -47,7 +51,7 @@ export function ReleaseBanner() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => markSeen(newest.version)}
+          onClick={() => markDismissed(newest.version)}
         >
           Später
         </Button>
