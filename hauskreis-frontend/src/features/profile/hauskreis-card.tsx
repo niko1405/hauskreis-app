@@ -32,6 +32,31 @@ import {
 } from '@/lib/api/hooks';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 
+/**
+ * Ob mein Weggehen den ganzen Hauskreis mitnähme.
+ *
+ * Dieselbe Rechnung wie im Server (`membership.service.ts`): Es zählt nicht,
+ * wer noch aktiv in der Liste steht, sondern wer schon **einmal da war**.
+ * Offene Einladungen und eingesäte Zeilen sind Menschen, die diesen Hauskreis
+ * nie gesehen haben — sie können ihn nicht weiterführen, und der Server löst
+ * deshalb trotzdem auf.
+ *
+ * `undefined` heißt „weiß ich noch nicht": `every` auf einer leeren Liste ist
+ * `true`, und solange geladen wird, ist die Liste leer. Ein `false` daraus zu
+ * machen wäre bequem und ergäbe eine Warnung, die manchmal fehlt; wer diesen
+ * Wert benutzt, muss den dritten Zustand aushalten.
+ */
+export function useDissolvesOnLeave(): boolean | undefined {
+  const people = usePeople();
+  const { me } = useMe();
+
+  if (people.data === undefined) return undefined;
+
+  return people.data
+    .filter((person) => person.active && person.id !== me?.id)
+    .every((person) => person.acceptedAt === null);
+}
+
 export function HauskreisCard() {
   const { hauskreis, hauskreisId } = useHauskreis();
   const { me } = useMe();
@@ -200,23 +225,7 @@ export function LeaveSheet({
     (person) => person.active && person.id !== me?.id,
   );
 
-  /**
-   * Ob dieser Schritt den ganzen Hauskreis mitnimmt.
-   *
-   * Dieselbe Rechnung wie im Server (`membership.service.ts`): Es zählt nicht,
-   * wer noch aktiv in der Liste steht, sondern wer schon **einmal da war**.
-   * Offene Einladungen und eingesäte Zeilen sind Menschen, die diesen
-   * Hauskreis nie gesehen haben — sie können ihn nicht weiterführen, und der
-   * Server löst deshalb trotzdem auf.
-   *
-   * Die Prüfung auf `people.data` ist nicht Zierde: `every` auf einer leeren
-   * Liste ist `true`, und solange noch geladen wird, ist die Liste leer. Ohne
-   * sie stünde die Auflösungswarnung eine Sekunde lang vor jedem — auch vor
-   * dem, der in einer Gruppe von neun ist.
-   */
-  const dissolves =
-    people.data !== undefined &&
-    others.every((person) => person.acceptedAt === null);
+  const dissolves = useDissolvesOnLeave();
 
   /**
    * Die zweite Rückfrage, und sie stellt eine andere Frage als die erste.
@@ -226,6 +235,9 @@ export function LeaveSheet({
    * verschwinden Termine, Themen, Lieder und das Archiv mit. Das erfuhr man
    * bisher erst danach, aus dem Toast („… ist damit aufgelöst"), also zu einem
    * Zeitpunkt, an dem nichts mehr zu entscheiden war.
+   *
+   * Sie steht **zusätzlich** zum Hinweis im Sheet, nicht an seiner Stelle: der
+   * Hinweis sagt es, bevor man drückt, die Rückfrage lässt es einen bestätigen.
    */
   const submit = async () => {
     if (dissolves) {
@@ -244,7 +256,9 @@ export function LeaveSheet({
         onSuccess: (result) => {
           toast.success(
             mode === 'delete'
-              ? 'Dein Konto ist gelöscht.'
+              ? result.hauskreisDeleted
+                ? `Dein Konto ist gelöscht — „${name}" damit auch.`
+                : 'Dein Konto ist gelöscht.'
               : result.hauskreisDeleted
                 ? `„${name}" ist damit aufgelöst.`
                 : `Du bist raus aus „${name}".`,
@@ -279,7 +293,13 @@ export function LeaveSheet({
           <Button
             variant="danger"
             className="flex-1"
-            disabled={successorNeeded && successor === ''}
+            // Solange die Liste lädt, weiß niemand, ob dieser Schritt den
+            // Hauskreis mitnimmt — und `every` auf einer leeren Liste sagt
+            // fälschlich ja. Lieber eine Sekunde warten als ohne Warnung
+            // auflösen.
+            disabled={
+              people.data === undefined || (successorNeeded && successor === '')
+            }
             loading={action.isPending}
             onClick={() => void submit()}
           >
@@ -289,19 +309,36 @@ export function LeaveSheet({
       }
     >
       <div className="space-y-4">
+        {/* Der wichtigste Satz zuerst, und zwar bevor jemand drückt. Ohne ihn
+            stand die Auflösung nur in der Rückfrage danach — ein Dialog über
+            einem Sheet, an einer Stelle, an der man schon entschieden zu haben
+            glaubte. */}
+        {dissolves && (
+          <div className="rounded-md border border-alert-line bg-alert-bg p-3">
+            <p className="text-xs leading-relaxed text-alert">
+              <strong className="font-bold">
+                Damit verschwindet „{name}" selbst.
+              </strong>{' '}
+              Du bist die letzte Person, die hier war — mit diesem Schritt gehen
+              Termine, Themen, Lieder und das ganze Archiv mit. Das lässt sich
+              nicht rückgängig machen.
+            </p>
+          </div>
+        )}
+
         {mode === 'delete' && (
           <div className="space-y-3 text-xs leading-relaxed text-stone-500">
             <p>
-              <strong className="text-stone-700">Weg sind</strong> dein Name,
-              deine E-Mail-Adresse, dein Geburtstag, dein Bild und deine
-              Anmeldung. Danach kommst du hier nicht mehr herein.
+              <strong className="text-stone-700">Weg sind</strong> alle deine
+              persönlichen Daten. Du bist dann nicht mehr Teil dieses
+              Hauskreises und kannst dich mit dem bestehenden Konto nicht mehr
+              anmelden.
             </p>
             <p>
               <strong className="text-stone-700">Bleiben</strong> die
               vergangenen Abende, so wie sie waren — als Gastgeber, in einem
               Thema oder unter einem Actionstep stehst du dort dann als
-              „Ehemaliges Mitglied". Sie ganz zu löschen hieße, die Erinnerung
-              der anderen mit wegzunehmen.
+              „Ehemaliges Mitglied".
             </p>
           </div>
         )}

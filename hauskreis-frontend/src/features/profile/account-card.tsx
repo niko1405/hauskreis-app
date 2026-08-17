@@ -30,7 +30,7 @@ import { useToast } from '@/components/ui/toast';
 import { useChangeEmail } from '@/lib/api/hooks';
 import { accountActionArgs } from '@/lib/auth/oidc-config';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
-import { LeaveSheet } from './hauskreis-card';
+import { LeaveSheet, useDissolvesOnLeave } from './hauskreis-card';
 
 export function AccountCard({
   /**
@@ -42,6 +42,7 @@ export function AccountCard({
 }: {
   email: string | null;
 }) {
+  const dissolves = useDissolvesOnLeave();
   const [value, setValue] = useState(email ?? '');
   const [deleting, setDeleting] = useState(false);
   const change = useChangeEmail();
@@ -111,6 +112,15 @@ export function AccountCard({
               Konto löschen entfernt Name, Adresse und Anmeldung. Die
               vergangenen Abende bleiben stehen — dort stehst du danach als
               „Ehemaliges Mitglied".
+              {dissolves === true && (
+                <>
+                  {' '}
+                  <strong className="font-bold text-alert">
+                    Du bist die letzte Person hier — der Hauskreis wird damit
+                    aufgelöst.
+                  </strong>
+                </>
+              )}
             </p>
             <button
               type="button"
