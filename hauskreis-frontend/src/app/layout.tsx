@@ -51,10 +51,32 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#cc7a5e',
-  // Kein `maximum-scale`: Hineinzoomen darf man immer können.
+  /**
+   * Die Farbe der Fläche, nicht die der Marke.
+   *
+   * iOS färbt damit im Standalone-Modus den Streifen über der App. Stand dort
+   * Terracotta, saß ein kräftiger Balken über einer cremefarbenen Leinwand —
+   * eine sichtbare Kante genau da, wo eine native App keine hat. Die
+   * `media`-Angaben greifen, solange niemand von Hand umgeschaltet hat; danach
+   * zieht `theme.ts` das Meta-Tag nach.
+   */
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f5efe9' },
+    { media: '(prefers-color-scheme: dark)', color: '#1c1917' },
+  ],
   width: 'device-width',
   initialScale: 1,
+  /**
+   * Kein Zoom per Geste.
+   *
+   * Hier stand einmal das Gegenteil („Hineinzoomen darf man immer können").
+   * Für eine Seite stimmt das; für eine App, die man vom Home-Bildschirm
+   * startet, ist das Auseinanderziehen der ganzen Oberfläche kein Werkzeug,
+   * sondern ein Versehen. Im Safari-Tab ignoriert Apple die Sperre ohnehin,
+   * und die Systemschrift-Größe wirkt weiterhin.
+   */
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: 'cover',
 };
 

@@ -4,12 +4,13 @@
   "description": "Termine, Hosts, Themen, Songs, Gebetsbuddys und Actionsteps für einen Hauskreis.",
   "lang": "de",
   "dir": "ltr",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f5efe9",
-  "theme_color": "#cc7a5e",
+  "theme_color": "#f5efe9",
   "categories": ["lifestyle", "productivity"],
   "icons": [
     {

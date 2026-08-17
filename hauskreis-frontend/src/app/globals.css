@@ -65,8 +65,38 @@ body {
   background-color: var(--color-shell);
 }
 
+/* Kein Gummiband am oberen und unteren Rand. Zwei Gründe: es ist das
+   deutlichste Überbleibsel von „das ist eine Webseite", und es stünde dem
+   eigenen Ziehen-zum-Aktualisieren (`pull-to-refresh.tsx`) im Weg — auf
+   Android käme sonst zusätzlich das des Browsers. */
+html {
+  overscroll-behavior-y: none;
+}
+
 body {
   -webkit-tap-highlight-color: transparent;
+  /* Kein Lupen-Menü beim langen Drücken auf einen Link oder ein Bild. */
+  -webkit-touch-callout: none;
+}
+
+/* Kein Zoom beim Doppeltippen — die 300 ms Wartezeit davor gehen mit. */
+a,
+button,
+label,
+summary,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+/* Nichts markieren, was man nur drückt.
+   Bewusst nur die Bedienoberfläche: Zusammenfassungen, Actionsteps und
+   Liedtitel müssen sich kopieren lassen. */
+nav,
+button,
+label,
+[role='button'] {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Waagerecht scrollende Bereiche (Wochen-Tabelle, Chip-Reihen) sollen keine
@@ -79,9 +109,25 @@ body {
   scrollbar-width: none;
 }
 
-/* Sicherheitsabstand zur Home-Indicator-Leiste auf iOS. */
+/* Sichere Ränder.
+ *
+ * `viewport-fit=cover` (siehe layout.tsx) lässt die Seite bis in die Ecken
+ * laufen — damit liegt es an uns, nichts unter die Dynamic Island, den
+ * Home-Indikator oder in Querlage unter die abgerundeten Ecken zu schieben.
+ *
+ * `pt-safe` ist absichtlich kein Abstand am Gerüst, sondern einer, den
+ * einzelne Kopfzeilen setzen: das Kopfbild soll randlos bis ganz oben gehen,
+ * nur sein Inhalt tiefer beginnen.
+ */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.px-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 @media (prefers-reduced-motion: reduce) {

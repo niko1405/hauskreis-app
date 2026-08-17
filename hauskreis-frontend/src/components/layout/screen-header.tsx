@@ -76,7 +76,10 @@ export function ScreenHeader({
           bleibt. */}
       <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/85 to-canvas/25" />
 
-      <div className="relative flex items-end justify-between gap-4 px-5 pt-32 pb-4">
+      {/* Das Bild geht randlos bis unter die Statusleiste — das ist der
+          native Eindruck. Nur sein Inhalt rückt um den sicheren Rand nach
+          unten, damit der Titel nicht neben der Dynamic Island klebt. */}
+      <div className="relative flex items-end justify-between gap-4 px-5 pt-[calc(env(safe-area-inset-top)+8rem)] pb-4">
         <div className="min-w-0">
           <h1 className="font-serif text-3xl leading-tight font-bold text-stone-900">
             {title}
@@ -92,7 +95,7 @@ export function ScreenHeader({
           einmal tut und dann lange nicht wieder. */}
       <IconButton
         label="Hintergrundbild ändern"
-        className="absolute top-3 right-4 bg-card/70 backdrop-blur-sm"
+        className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-4 bg-card/70 backdrop-blur-sm"
         onClick={() => setOpen(true)}
       >
         <ImageIcon size={15} />

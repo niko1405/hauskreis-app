@@ -111,7 +111,9 @@ export function Sheet({
               </IconButton>
             </div>
 
-            <div className="no-scrollbar flex-1 space-y-6 overflow-y-auto">
+            {/* `overscroll-contain`: am Ende der Liste soll nicht die Seite
+                dahinter weiterrutschen. */}
+            <div className="no-scrollbar flex-1 space-y-6 overflow-y-auto overscroll-contain">
               {children}
             </div>
 

@@ -71,7 +71,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       <div
-        className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4"
+        // `pt-safe`, sonst schiebt die Animation den Toast um 16 px nach unten
+        // und damit auf Geräten mit Aussparung mitten in die Dynamic Island.
+        className="pt-safe pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4"
         role="status"
         aria-live="polite"
       >

@@ -33,7 +33,7 @@ export function NoHauskreisScreen({ email }: { email?: string }) {
   const invitations = useInvitations();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-shell p-6">
+    <div className="flex min-h-dvh items-center justify-center bg-shell p-6">
       <div className="w-full max-w-sm space-y-4">
         <header className="text-center">
           <h1 className="font-serif text-3xl leading-tight font-bold text-stone-900">

@@ -141,7 +141,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
 function FullScreen({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-shell p-6">
+    <div className="flex min-h-dvh items-center justify-center bg-shell p-6">
       <div className="w-full max-w-sm">{children}</div>
     </div>
   );
