@@ -1,11 +1,13 @@
 'use client';
 
 /**
- * Die Kopfzeile mit Hintergrundbild — auf „Heute", „Gebet", „Archiv" und
- * „Profil".
+ * Die Kopfzeile mit Hintergrundbild — auf „Heute", „Gebet" und „Profil".
  *
- * **Termine hat bewusst keine.** Dort liest man eine Liste über Wochen hinweg
- * und sucht eine Zeile; ein Foto darüber wäre nur Weg bis zur ersten davon.
+ * **Termine und Archiv haben bewusst keine.** Dort liest man Listen über Wochen
+ * hinweg und sucht eine Zeile; ein Foto darüber wäre nur Weg bis zur ersten
+ * davon. Das Archiv hatte einmal eins und hat es aus genau diesem Grund wieder
+ * verloren: Es ist der Bildschirm, auf dem man etwas *nachschlägt*, und die
+ * Suchzeile gehört dabei nach oben, nicht unter ein Bild.
  *
  * Aufbau von unten nach oben: das Bild füllt die ganze Fläche, darüber liegt
  * ein Schleier, der nach unten in die Leinwand ausläuft, und darauf steht der
@@ -18,7 +20,7 @@
  * Layout. Jeder Bildschirm hat seinen eigenen, damit man beim Umschalten sieht,
  * wo man ist.
  */
-import { ImageIcon } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import { IconButton } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import { useHeaderImage } from '@/lib/api/hooks';
@@ -29,9 +31,13 @@ import { HeaderImageSheet } from './header-image-sheet';
 /**
  * Der Verlauf, solange kein eigenes Bild da ist — aus den Farbtokens der App.
  *
- * Vier verschiedene und nicht viermal derselbe: sie sind das Einzige, woran man
- * im Kopfbereich erkennt, auf welchem Bildschirm man gelandet ist, solange dort
- * noch kein Foto steht.
+ * Je Bildschirm ein eigener und nicht dreimal derselbe: sie sind das Einzige,
+ * woran man im Kopfbereich erkennt, auf welchem Bildschirm man gelandet ist,
+ * solange dort noch kein Foto steht.
+ *
+ * `archive` steht hier ohne Abnehmer. Der Bildschirm trägt kein Kopfbild mehr,
+ * aber `HeaderScreen` kommt aus dem Server-Schema, und `Record` verlangt jeden
+ * Fall. Die Zeile fällt weg, sobald der Server die Auswahl kennt — nicht vorher.
  *
  * Die Verläufe selbst stehen in `globals.css`, damit der Dunkelmodus sie
  * mitnimmt, ohne dass hier jemand den Modus abfragen müsste.
@@ -101,7 +107,7 @@ export function ScreenHeader({
         className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-4 bg-card/70 backdrop-blur-sm"
         onClick={() => setOpen(true)}
       >
-        <ImageIcon size={15} />
+        <Camera size={17} strokeWidth={2} />
       </IconButton>
 
       <HeaderImageSheet

@@ -44,22 +44,39 @@ export function MembersCard() {
   );
 }
 
+/**
+ * Eine Zeile: Avatar, Name, Abzeichen.
+ *
+ * **Auf dem Telefon stehen die Abzeichen unter dem Namen.** Vorher standen sie
+ * daneben, in einem Behälter mit `shrink-0` und `flex-wrap` — und das ist die
+ * Kombination, die nicht funktioniert: `shrink-0` gibt keinen Pixel her, der
+ * Umbruch greift nie (der Behälter hat keine Breitengrenze, er wächst mit
+ * seinem Inhalt), und nachgeben muss die Namensspalte. Bei fünf möglichen
+ * Abzeichen blieb vom Namen nichts übrig — die Zeile zeigte, wer jemand *ist*,
+ * aber nicht mehr, **wer** es ist.
+ *
+ * Ab `sm` ist genug Platz, dann stehen sie wieder rechts daneben.
+ */
 function MemberRow({ person }: { person: PersonListEntry }) {
   return (
-    <li className="flex items-center gap-3 rounded-md border border-line p-3">
-      <Avatar person={person} size="sm" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-stone-800">
-          {person.name}
-        </p>
-        {person.username && (
-          <p className="truncate text-[11px] text-stone-400">
-            @{person.username}
+    <li className="flex flex-col gap-2 rounded-md border border-line p-3 sm:flex-row sm:items-center sm:gap-3">
+      {/* Avatar und Name bleiben in jeder Breite beieinander — der Avatar
+          gehört zum Namen und nicht über ihn. */}
+      <div className="flex min-w-0 items-center gap-3 sm:flex-1">
+        <Avatar person={person} size="sm" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold text-stone-800">
+            {person.name}
           </p>
-        )}
+          {person.username && (
+            <p className="truncate text-[11px] text-stone-400">
+              @{person.username}
+            </p>
+          )}
+        </div>
       </div>
 
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+      <div className="flex flex-wrap items-center gap-1 sm:justify-end">
         {person.acceptedAt === null && (
           <Badge variant="info">
             <Clock size={11} />

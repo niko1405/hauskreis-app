@@ -9,7 +9,7 @@ import { Music, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDeferredValue, useState } from 'react';
-import { ScreenHeader } from '@/components/layout/screen-header';
+import { PageHeader } from '@/components/layout/app-shell';
 import { Avatar, AvatarStack } from '@/components/ui/avatar';
 import { Button, IconButton } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -73,8 +73,11 @@ export function ArchiveScreen() {
 
   return (
     <div>
-      <ScreenHeader
-        screen="archive"
+      {/* Ohne Kopfbild, aus demselben Grund wie bei „Termine": hier liest man
+          Listen und sucht eine Zeile. Ein Foto darüber wäre nur Weg bis zur
+          ersten — und anders als auf „Heute" oder „Gebet" kommt man hierher
+          selten zum Verweilen. */}
+      <PageHeader
         title="Archiv"
         subtitle="Durchsuche vergangene Termine, Themen, Locations und Lieder."
       />

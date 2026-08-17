@@ -29,9 +29,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
  * Kopfzeile einer Seite — Titel links, Aktion rechts.
  *
  * Trägt den Abstand zur Statusleiste selbst, weil sie auf den Bildschirmen
- * ohne Kopfbild ganz oben steht (Termine, Detailseiten). Wo ein Bild liegt,
- * macht `ScreenHeader` dasselbe eine Ebene tiefer — dort soll das Bild bis an
- * die Kante gehen, nur sein Inhalt nicht.
+ * ohne Kopfbild ganz oben steht (Termine, Archiv, Detailseiten). Wo ein Bild
+ * liegt, macht `ScreenHeader` dasselbe eine Ebene tiefer — dort soll das Bild
+ * bis an die Kante gehen, nur sein Inhalt nicht.
  */
 export function PageHeader({
   title,

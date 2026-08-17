@@ -58,56 +58,72 @@ export function PeopleAdmin() {
 
         <ul className="space-y-2">
           {(people.data ?? []).map((person) => (
+            /* Dieselbe Form wie in der Mitgliederliste im Profil, nur mit
+               Knöpfen: Auf dem Telefon rutschen Abzeichen und Knöpfe unter den
+               Namen, ab `sm` stehen sie wieder daneben. Hier war es schlimmer
+               als dort — Abzeichen **und** bis zu drei Knöpfe hingen als
+               direkte Kinder ohne Umbruch in der Zeile, und bei einer offenen
+               Einladung quetschten sechs Elemente den Namen zu einem Buchstaben
+               zusammen. */
             <li
               key={person.id}
-              className="flex items-center gap-3 rounded-md border border-line p-3"
+              className="flex flex-col gap-2 rounded-md border border-line p-3 sm:flex-row sm:items-center sm:gap-3"
             >
-              <Avatar person={person} size="sm" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-stone-800">
-                  {person.name}
-                </p>
-                <p className="truncate text-[11px] text-stone-400">
-                  {person.email}
-                </p>
+              <div className="flex min-w-0 items-center gap-3 sm:flex-1">
+                <Avatar person={person} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-stone-800">
+                    {person.name}
+                  </p>
+                  <p className="truncate text-[11px] text-stone-400">
+                    {person.email}
+                  </p>
+                </div>
               </div>
-              {person.acceptedAt === null && (
-                <Badge variant="info">
-                  <Clock size={11} />
-                  eingeladen
-                </Badge>
-              )}
-              {!person.active && <Badge>inaktiv</Badge>}
-              {person.role === 'ADMIN' && (
-                <Badge variant="info">
-                  <Shield size={11} />
-                  Admin
-                </Badge>
-              )}
 
-              {person.acceptedAt === null && (
-                <IconButton
-                  label={`Einladung an ${person.email} erneut senden`}
-                  onClick={() =>
-                    resend.mutate(person.id, {
-                      onSuccess: (result) =>
-                        result.invitationEmailSent
-                          ? toast.success(
-                              `Einladung an ${person.email} unterwegs.`,
-                            )
-                          : toast.error(
-                              'Die Mail ging wieder nicht raus — läuft der Mailserver?',
-                            ),
-                    })
-                  }
-                >
-                  <Send size={15} />
-                </IconButton>
-              )}
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex flex-wrap items-center gap-1">
+                  {person.acceptedAt === null && (
+                    <Badge variant="info">
+                      <Clock size={11} />
+                      eingeladen
+                    </Badge>
+                  )}
+                  {!person.active && <Badge>inaktiv</Badge>}
+                  {person.role === 'ADMIN' && (
+                    <Badge variant="info">
+                      <Shield size={11} />
+                      Admin
+                    </Badge>
+                  )}
+                </div>
 
-              {person.active && <RoleToggle person={person} />}
+                {/* `shrink-0`: Die Knöpfe sind das Bedienbare der Zeile und
+                    bleiben in jeder Breite vollständig erreichbar. */}
+                <div className="ml-auto flex shrink-0 items-center gap-1">
+                  {person.acceptedAt === null && (
+                    <IconButton
+                      label={`Einladung an ${person.email} erneut senden`}
+                      onClick={() =>
+                        resend.mutate(person.id, {
+                          onSuccess: (result) =>
+                            result.invitationEmailSent
+                              ? toast.success(
+                                  `Einladung an ${person.email} unterwegs.`,
+                                )
+                              : toast.error(
+                                  'Die Mail ging wieder nicht raus — läuft der Mailserver?',
+                                ),
+                        })
+                      }
+                    >
+                      <Send size={15} />
+                    </IconButton>
+                  )}
 
-              {/* Die eigene Zeile trägt keinen Papierkorb.
+                  {person.active && <RoleToggle person={person} />}
+
+                  {/* Die eigene Zeile trägt keinen Papierkorb.
 
                   Anders als bei der Rolle ist das keine Regel über den
                   Augenblick, sondern über die Person: Sie kann nie zutreffen,
@@ -117,50 +133,52 @@ export function PeopleAdmin() {
 
                   Wer gehen will, nimmt „Hauskreis verlassen" im Profil — dort
                   wird auch die Nachfolge geklärt. */}
-              {person.id !== me.me?.id && (
-                <IconButton
-                  label={
-                    person.acceptedAt === null
-                      ? `Einladung an ${person.name} zurückziehen`
-                      : `${person.name} entfernen`
-                  }
-                  onClick={async () => {
-                    const pending = person.acceptedAt === null;
+                  {person.id !== me.me?.id && (
+                    <IconButton
+                      label={
+                        person.acceptedAt === null
+                          ? `Einladung an ${person.name} zurückziehen`
+                          : `${person.name} entfernen`
+                      }
+                      onClick={async () => {
+                        const pending = person.acceptedAt === null;
 
-                    const ok = await confirm(
-                      pending
-                        ? {
-                            title: `Einladung an ${person.name} zurückziehen?`,
-                            body: 'Das Konto wird mit gelöscht, die Adresse ist danach wieder frei.',
-                            confirmLabel: 'Zurückziehen',
-                            tone: 'danger',
-                          }
-                        : {
-                            title: `${person.name} entfernen?`,
-                            body: `Vergangene Abende zeigen weiter, wer gehostet hat — ${person.name} kommt aber aus allen kommenden Planungen heraus. Eine neue Einladung an dieselbe Adresse holt alles wieder zurück.`,
-                            confirmLabel: 'Entfernen',
-                            tone: 'danger',
-                          },
-                    );
-                    if (!ok) return;
-
-                    remove.mutate(person.id, {
-                      onSuccess: () =>
-                        toast.success(
+                        const ok = await confirm(
                           pending
-                            ? `Einladung an ${person.name} zurückgezogen.`
-                            : `${person.name} entfernt.`,
-                        ),
-                    });
-                  }}
-                >
-                  {person.acceptedAt === null ? (
-                    <X size={15} />
-                  ) : (
-                    <Trash2 size={15} />
+                            ? {
+                                title: `Einladung an ${person.name} zurückziehen?`,
+                                body: 'Das Konto wird mit gelöscht, die Adresse ist danach wieder frei.',
+                                confirmLabel: 'Zurückziehen',
+                                tone: 'danger',
+                              }
+                            : {
+                                title: `${person.name} entfernen?`,
+                                body: `Vergangene Abende zeigen weiter, wer gehostet hat — ${person.name} kommt aber aus allen kommenden Planungen heraus. Eine neue Einladung an dieselbe Adresse holt alles wieder zurück.`,
+                                confirmLabel: 'Entfernen',
+                                tone: 'danger',
+                              },
+                        );
+                        if (!ok) return;
+
+                        remove.mutate(person.id, {
+                          onSuccess: () =>
+                            toast.success(
+                              pending
+                                ? `Einladung an ${person.name} zurückgezogen.`
+                                : `${person.name} entfernt.`,
+                            ),
+                        });
+                      }}
+                    >
+                      {person.acceptedAt === null ? (
+                        <X size={15} />
+                      ) : (
+                        <Trash2 size={15} />
+                      )}
+                    </IconButton>
                   )}
-                </IconButton>
-              )}
+                </div>
+              </div>
             </li>
           ))}
         </ul>

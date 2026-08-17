@@ -23,7 +23,10 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold',
+        // `whitespace-nowrap`: Ein Abzeichen ist eine Beschriftung, kein Text.
+        // Wird es eng, soll die Zeile umbrechen und nicht „hostet nicht"
+        // mitten im Wort — das sieht nach Fehler aus und ist nie richtig.
+        'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap',
         VARIANTS[variant],
         className,
       )}
