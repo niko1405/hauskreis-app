@@ -32,6 +32,23 @@ export const usernameSchema = z
   );
 
 export const updatePersonSchema = createPersonSchema.partial().extend({
+  /**
+   * Die drei Haken noch einmal, und zwar **ohne** ihren Vorgabewert.
+   *
+   * `.partial()` macht ein Feld optional, nimmt ihm aber nicht seinen
+   * `.default()` — ein `PATCH`, der sie wegließ, kam als „spielt kein
+   * Instrument, kann hosten, ist nicht grundsätzlich dabei" an und überschrieb
+   * damit drei Einstellungen, die niemand angefasst hatte. Solange das ganze
+   * Profil in einem Formular stand, fiel es nicht auf: es schickte immer alle
+   * drei mit. Seit der Anmeldename in der Konto-Karte sitzt und für sich
+   * gespeichert wird, wäre es ein stiller Datenverlust bei jedem Klick.
+   *
+   * Beim Anlegen bleiben die Vorgaben, wo sie sind — dort beschreiben sie eine
+   * neue Person, hier eine Änderung, und weggelassen heißt „unverändert".
+   */
+  playsInstrument: z.boolean().optional(),
+  canHost: z.boolean().optional(),
+  autoAttend: z.boolean().optional(),
   active: z.boolean().optional(),
   /// Wandert bei Änderung nach Keycloak zurück, damit die Anmeldung mit dem
   /// neuen Namen funktioniert.

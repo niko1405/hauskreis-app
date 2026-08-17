@@ -65,7 +65,6 @@ function Loaded({ personId }: { personId: string }) {
   const current = person.data?.data;
 
   const [name, setName] = useState('');
-  const [username, setUsername] = useState('');
   const [playsInstrument, setPlaysInstrument] = useState(false);
   const [canHost, setCanHost] = useState(true);
   const [autoAttend, setAutoAttend] = useState(false);
@@ -75,7 +74,6 @@ function Loaded({ personId }: { personId: string }) {
   useEffect(() => {
     if (!current) return;
     setName(current.name);
-    setUsername(current.username ?? '');
     setPlaysInstrument(current.playsInstrument);
     setCanHost(current.canHost);
     setAutoAttend(current.autoAttend);
@@ -92,7 +90,6 @@ function Loaded({ personId }: { personId: string }) {
 
   const dirty =
     name !== current.name ||
-    username !== (current.username ?? '') ||
     playsInstrument !== current.playsInstrument ||
     canHost !== current.canHost ||
     autoAttend !== current.autoAttend ||
@@ -102,16 +99,13 @@ function Loaded({ personId }: { personId: string }) {
     update.mutate(
       {
         name,
-        // Zod-Defaults machen diese drei auch beim PATCH zu Pflichtfeldern.
+        // Diese drei stehen in diesem Formular, also schickt dieses Formular
+        // sie. Weglassen hieße seit `updatePersonSchema` „unverändert" — was
+        // hier nicht stimmt, denn ein weggenommener Haken ist eine Änderung.
         playsInstrument,
         canHost,
         autoAttend,
         ...(birthdate === '' ? {} : { birthdate }),
-        // Leer heißt „unverändert": wer noch nie angemeldet war, hat keinen —
-        // und ein leerer String wäre für den Server ein ungültiger Name.
-        ...(username === '' || username === current.username
-          ? {}
-          : { username }),
       },
       {
         onSuccess: () => toast.success('Gespeichert.'),
@@ -169,20 +163,9 @@ function Loaded({ personId }: { personId: string }) {
               />
             </Field>
 
-            <Field
-              label="Anmeldename"
-              hint="Damit meldest du dich in der App an, du kannst auch die E-Mail Adresse verwenden."
-            >
-              <TextInput
-                value={username}
-                placeholder={
-                  current.username === null
-                    ? 'Wird bei der ersten Anmeldung gesetzt'
-                    : undefined
-                }
-                onChange={(event) => setUsername(event.target.value)}
-              />
-            </Field>
+            {/* Der Anmeldename stand einmal hier. Er gehört aber zur Anmeldung
+                und nicht zu den Angaben über einen selbst — jetzt liegt er in
+                der Konto-Karte, direkt über der E-Mail. */}
 
             <Field
               label="Geburtstag"
@@ -252,7 +235,7 @@ function Loaded({ personId }: { personId: string }) {
 
         <AppearanceCard />
 
-        <AccountCard email={current.email} />
+        <AccountCard person={current} />
 
         <AppCard />
 
