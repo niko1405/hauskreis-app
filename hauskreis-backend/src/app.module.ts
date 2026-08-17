@@ -20,6 +20,7 @@ import { MeetingModule } from './meeting/meeting.module';
 import { TopicModule } from './topic/topic.module';
 import { SongModule } from './song/song.module';
 import { PrayerBuddyModule } from './prayer-buddy/prayer-buddy.module';
+import { PrayerRequestModule } from './prayer-request/prayer-request.module';
 import { NotificationModule } from './notification/notification.module';
 import { AbsenceModule } from './absence/absence.module';
 import { ArchiveModule } from './archive/archive.module';
@@ -66,6 +67,7 @@ import { ReleaseModule } from './release/release.module';
     TopicModule,
     SongModule,
     PrayerBuddyModule,
+    PrayerRequestModule,
     NotificationModule,
     AbsenceModule,
     ArchiveModule,

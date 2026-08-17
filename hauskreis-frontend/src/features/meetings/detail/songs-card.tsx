@@ -26,10 +26,24 @@ import { formatRelativeDay } from '@/lib/date';
 
 export function SongsCard({
   meetingId,
+  editing,
   readOnly = false,
   mayPick = true,
 }: {
   meetingId: string;
+  /**
+   * Der Bearbeitungsmodus der Seite — und hier gilt er **nur fürs Löschen**.
+   *
+   * Diese Karte war die einzige, die ihn gar nicht kannte: Neben jeder Zeile
+   * stand dauerhaft ein Papierkorb, der ohne Rückfrage löscht. Auf einer Seite,
+   * die man zehnmal öffnet, um nachzusehen, und einmal, um etwas zu ändern, ist
+   * das eine Zeile zu nah am Daumen.
+   *
+   * Vorschlagen bleibt frei. Ein Lied vorzuschlagen ist der Normalfall dieser
+   * Karte — wer etwas beitragen will, soll dafür keinen Schalter suchen müssen.
+   * Und Abhaken hat ohnehin seine eigene Regel (`mayPick`).
+   */
+  editing: boolean;
   /**
    * Ein vergangener oder abgesagter Abend: Vorschlagen und Löschen sind vorbei.
    * **Abhaken nicht** — das hat seine eigene Regel, siehe `mayPick`.
@@ -121,7 +135,7 @@ export function SongsCard({
 
               <LyricsLink url={entry.song.lyricsUrl} title={entry.song.title} />
 
-              {!readOnly && (
+              {!readOnly && editing && (
                 <IconButton
                   label="Lied entfernen"
                   onClick={() => remove.mutate(entry.id)}

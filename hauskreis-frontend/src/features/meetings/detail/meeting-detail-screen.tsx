@@ -82,6 +82,7 @@ import {
   DeleteMeetingBlock,
 } from './cancellation-card';
 import { NotesCard, NotesPrompt } from './notes-card';
+import { PrayerRequestsCard } from './prayer-requests-card';
 import { SongsCard } from './songs-card';
 import { TopicCard } from './topic-card';
 import { useRoleAssignment } from './use-role-assignment';
@@ -615,12 +616,24 @@ function Loaded({
         {meeting.hasSongSlot && (
           <SongsCard
             meetingId={meetingId}
+            editing={editing}
             readOnly={locked}
             mayPick={mayPickSongs}
           />
         )}
 
         <AttendanceCard meeting={meeting} readOnly={locked} />
+
+        {/* Nach der Anwesenheit und vor dem Thema: Anwesenheit und
+            Gebetsanliegen sind beides, was die Einzelnen zum Abend beitragen —
+            Thema und Nachbereitung sind sein Inhalt und dessen Nachklang und
+            bleiben zusammen am Ende. */}
+        <PrayerRequestsCard
+          meetingId={meetingId}
+          editing={editing}
+          locked={locked}
+          onEdit={() => setEditing(true)}
+        />
 
         {/* Thema samt Nachbereitung. Ohne den Baustein gar nicht: was an einem
             Abend besprochen wurde, ist die Zusammenfassung eines Themas.

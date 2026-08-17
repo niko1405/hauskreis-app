@@ -276,6 +276,7 @@ model Person {
   meetingScheduleEdits MeetingScheduleConfig[]   @relation("MeetingScheduleEditor")
   attendances          MeetingAttendance[]
   actionstepsDone      MeetingActionstepDone[]   @relation("ActionstepDoneBy")
+  prayerRequests       MeetingPrayerRequest[]    @relation("PrayerRequestBy")
   pushSubscriptions    PushSubscription[]
   notifications        NotificationLog[]
   notificationsAbout   NotificationLog[]         @relation("NotificationSubject")
@@ -469,6 +470,7 @@ model Meeting {
   songLeaders       MeetingSongLeader[]
   songs             MeetingSong[]
   actionstepDone    MeetingActionstepDone[]
+  prayerRequests    MeetingPrayerRequest[]
   notifications     NotificationLog[]
 
   /// One meeting per date per group — this is what makes the generator idempotent.
@@ -653,6 +655,39 @@ model MeetingActionstepDone {
   @@map("meeting_actionstep_done")
 }
 
+/// Das Gebetsanliegen einer Person für einen Abend.
+///
+/// **Genau eines je Person und Abend**, und das sagt der zusammengesetzte
+/// Schlüssel, nicht eine Prüfung im Dienst. „Wofür sollen wir beten" ist eine
+/// Frage, auf die man eine Antwort gibt; eine Liste eigener Anliegen wäre schon
+/// die nächste Sache, nämlich ein Notizbuch.
+///
+/// Lesen darf sie der ganze Hauskreis — dafür stehen sie da. Schreiben nur, wem
+/// sie gehört: Ein Gebetsanliegen ist nichts, was ein anderer für einen
+/// formuliert, auch kein Admin. Der Endpunkt heißt deshalb `…/mine` und trägt
+/// gar keine Personen-Id, die sich fälschen ließe.
+///
+/// **Anlegen darf jede:r, auch wer an dem Abend fehlt.** Wer nicht kommt, hat
+/// nicht weniger Anliegen — eher mehr, und die Bitte, dass die anderen für ihn
+/// beten, ist gerade dann der Punkt.
+///
+/// `updatedAt` und kein `version`: Ändern kann diese Zeile nur eine einzige
+/// Person, ein Wettlauf um sie gibt es also nicht.
+model MeetingPrayerRequest {
+  meetingId String   @map("meeting_id") @db.Uuid
+  personId  String   @map("person_id") @db.Uuid
+  text      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  person  Person  @relation("PrayerRequestBy", fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([meetingId, personId])
+  @@index([personId])
+  @@map("meeting_prayer_request")
+}
+
 /// Who looks after the music for one evening. At least one person where there
 /// are songs at all, and several are fine (CLAUDE.md §6).
 model MeetingSongLeader {
@@ -830,24 +865,24 @@ model PushSubscription {
 /// Records that a notification was sent, so a job that runs daily does not
 /// remind the same person about the same meeting over and over.
 model NotificationLog {
-  id               String           @id @default(uuid()) @db.Uuid
-  personId         String           @map("person_id") @db.Uuid
-  type             NotificationType
-  relatedMeetingId String?          @map("related_meeting_id") @db.Uuid
+  id                    String           @id @default(uuid()) @db.Uuid
+  personId              String           @map("person_id") @db.Uuid
+  type                  NotificationType
+  relatedMeetingId      String?          @map("related_meeting_id") @db.Uuid
   /// What a prayer buddy notification refers to. Without it every rotation
   /// would look like the same notification as the first one, and only the very
   /// first assignment would ever be announced.
-  relatedGroupId   String?          @map("related_group_id") @db.Uuid
+  relatedGroupId        String?          @map("related_group_id") @db.Uuid
   /// Who the notification is *about*, when that is somebody other than the
   /// recipient. A host hearing "Antonia cancelled" would otherwise be told
   /// about the first drop-out only: the meeting alone is not specific enough
   /// to tell two cancellations for the same evening apart.
-  relatedPersonId  String?          @map("related_person_id") @db.Uuid
+  relatedPersonId       String?          @map("related_person_id") @db.Uuid
   /// Welche Rolle gemeint war. Nur `ROLE_ASSIGNED` benutzt das — und braucht es:
   /// wer an einem Abend Gastgeber **und** für die Musik eingeteilt wird, soll
   /// zweimal hören, dass er dran ist. Der Termin allein ist dafür nicht
   /// unterscheidbar genug.
-  relatedRole      AssignmentRole?  @map("related_role")
+  relatedRole           AssignmentRole?  @map("related_role")
   /// Welche Fassung der App angekündigt wurde. Nur `RELEASE_NOTES` benutzt das.
   ///
   /// Ohne diese Spalte wären bei einer Ankündigung alle vier Felder darüber
@@ -858,8 +893,8 @@ model NotificationLog {
   /// `src/release/releases.ts` und gehören zum Programm, nicht zu den Daten.
   /// Dieselbe Spalte beantwortet nebenbei „ist diese Fassung überhaupt schon
   /// angekündigt worden?" — siehe `ReleaseAnnouncementService`.
-  relatedReleaseVersion String?     @map("related_release_version")
-  sentAt           DateTime         @default(now()) @map("sent_at")
+  relatedReleaseVersion String?          @map("related_release_version")
+  sentAt                DateTime         @default(now()) @map("sent_at")
 
   person         Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
   relatedMeeting Meeting?          @relation(fields: [relatedMeetingId], references: [id], onDelete: Cascade)

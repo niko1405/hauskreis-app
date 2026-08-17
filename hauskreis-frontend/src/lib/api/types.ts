@@ -179,6 +179,15 @@ export type CreateSongInput = S['CreateSongDto'];
 export type UpdateSongInput = S['UpdateSongDto'];
 
 export type MeetingSong = S['MeetingSongResponseDto'];
+
+/**
+ * Ein Gebetsanliegen an einem Abend — eines je Person.
+ *
+ * Ohne eigene Id: Der Schlüssel ist das Paar aus Abend und Person, und das
+ * Frontend adressiert es nie anders als über `…/mine`. `person.id` ist deshalb
+ * zugleich der React-Schlüssel der Zeile.
+ */
+export type PrayerRequest = S['PrayerRequestResponseDto'];
 export type AddMeetingSongInput = S['AddMeetingSongDto'];
 export type SetSongLeadersInput = S['SetSongLeadersDto'];
 

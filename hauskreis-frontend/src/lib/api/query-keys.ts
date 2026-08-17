@@ -71,6 +71,11 @@ export const qk = {
           [...root, 'meetings', meetingId, 'songs'] as const,
         songLeaders: (meetingId: string) =>
           [...root, 'meetings', meetingId, 'song-leaders'] as const,
+        /// Die Gebetsanliegen eines Abends. Eigener Schlüssel wie bei den
+        /// Liedern: Sie stehen nicht in der Antwort des Termins und haben
+        /// deshalb ihren eigenen ETag.
+        prayerRequests: (meetingId: string) =>
+          [...root, 'meetings', meetingId, 'prayer-requests'] as const,
         topicResponsibles: (meetingId: string) =>
           [...root, 'meetings', meetingId, 'topic-responsibles'] as const,
         topicChoices: (meetingId: string) =>
