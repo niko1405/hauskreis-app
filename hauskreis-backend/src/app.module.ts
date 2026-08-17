@@ -25,6 +25,7 @@ import { AbsenceModule } from './absence/absence.module';
 import { ArchiveModule } from './archive/archive.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HeaderImageModule } from './header-image/header-image.module';
+import { ReleaseModule } from './release/release.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { HeaderImageModule } from './header-image/header-image.module';
     ArchiveModule,
     DashboardModule,
     HeaderImageModule,
+    ReleaseModule,
   ],
   controllers: [HealthController],
   providers: [

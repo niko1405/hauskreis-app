@@ -55,6 +55,8 @@ export type PersonListEntry = S['PersonListResponseDto'][number];
 export type PersonRole = Person['role'];
 export type CreatePersonInput = S['CreatePersonDto'];
 export type InvitePersonInput = S['InvitePersonDto'];
+/** Ein Eintrag aus „Neu in Acts2". */
+export type Release = S['ReleaseListResponseDto'][number];
 /**
  * Eine Person, deren Konto gelöscht wurde. Kein Name, keine Adresse — was
  * bleibt, ist ihre Spur im Archiv, und daran erkennt eine Admin-Person sie

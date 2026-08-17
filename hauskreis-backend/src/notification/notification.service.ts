@@ -109,6 +109,10 @@ export class NotificationService implements OnModuleInit {
     /// Gastgeber **und** für die Musik eingeteilt wird, soll zweimal hören,
     /// dass er dran ist.
     relatedRole?: AssignmentRole | null;
+    /// Welche Fassung der App angekündigt wurde. Nur für `RELEASE_NOTES` —
+    /// ohne das wären dort alle Felder darüber leer, und je Person käme genau
+    /// eine Ankündigung durch, für immer.
+    relatedReleaseVersion?: string | null;
     payload: NotificationPayload;
   }): Promise<SendResult> {
     const setting = await this.preferences.resolve(
@@ -149,6 +153,7 @@ export class NotificationService implements OnModuleInit {
         relatedGroupId: params.relatedGroupId ?? null,
         relatedPersonId: params.relatedPersonId ?? null,
         relatedRole: params.relatedRole ?? null,
+        relatedReleaseVersion: params.relatedReleaseVersion ?? null,
       },
     });
 
@@ -249,6 +254,7 @@ export class NotificationService implements OnModuleInit {
     relatedGroupId?: string | null;
     relatedPersonId?: string | null;
     relatedRole?: AssignmentRole | null;
+    relatedReleaseVersion?: string | null;
   }): Promise<boolean> {
     const existing = await this.prisma.notificationLog.findFirst({
       where: {
@@ -258,6 +264,7 @@ export class NotificationService implements OnModuleInit {
         relatedGroupId: params.relatedGroupId ?? null,
         relatedPersonId: params.relatedPersonId ?? null,
         relatedRole: params.relatedRole ?? null,
+        relatedReleaseVersion: params.relatedReleaseVersion ?? null,
       },
     });
 

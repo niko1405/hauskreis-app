@@ -115,6 +115,8 @@ enum NotificationType {
   TESTIMONY_REMINDER
   /// Der nächste Abend fängt zu einer anderen Zeit an als bisher.
   MEETING_TIME_CHANGED
+  /// Es gibt eine neue Fassung der App und etwas Neues darin zu sehen.
+  RELEASE_NOTES
 
   @@map("notification_type")
 }
@@ -846,6 +848,17 @@ model NotificationLog {
   /// zweimal hören, dass er dran ist. Der Termin allein ist dafür nicht
   /// unterscheidbar genug.
   relatedRole      AssignmentRole?  @map("related_role")
+  /// Welche Fassung der App angekündigt wurde. Nur `RELEASE_NOTES` benutzt das.
+  ///
+  /// Ohne diese Spalte wären bei einer Ankündigung alle vier Felder darüber
+  /// leer, und die Entdopplung ließe je Person **genau eine** durch — für
+  /// immer. Der zweite Release käme nie an.
+  ///
+  /// Keine Beziehung, weil es keine Tabelle dazu gibt: Die Releases stehen in
+  /// `src/release/releases.ts` und gehören zum Programm, nicht zu den Daten.
+  /// Dieselbe Spalte beantwortet nebenbei „ist diese Fassung überhaupt schon
+  /// angekündigt worden?" — siehe `ReleaseAnnouncementService`.
+  relatedReleaseVersion String?     @map("related_release_version")
   sentAt           DateTime         @default(now()) @map("sent_at")
 
   person         Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
@@ -860,8 +873,12 @@ model NotificationLog {
   /// making that query an index lookup.
   /// Der Name ist gesetzt, weil der abgeleitete abgeschnitten würde und sich
   /// mit jeder weiteren Spalte änderte.
-  @@unique([personId, type, relatedMeetingId, relatedGroupId, relatedPersonId, relatedRole], map: "notification_log_dedup_key")
+  @@unique([personId, type, relatedMeetingId, relatedGroupId, relatedPersonId, relatedRole, relatedReleaseVersion], map: "notification_log_dedup_key")
   @@index([personId, sentAt])
+  /// Beantwortet „wurde diese Fassung schon angekündigt?" ohne über alle Zeilen
+  /// zu gehen. Ohne diese Frage bekäme jemand, der nächste Woche dazukommt,
+  /// beim nächsten Neustart eine Ankündigung für längst Vorhandenes.
+  @@index([type, relatedReleaseVersion])
   @@map("notification_log")
 }
 

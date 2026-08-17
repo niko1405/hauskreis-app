@@ -8385,7 +8385,8 @@
                 "CUSTOM_MEETING_CREATED",
                 "CUSTOM_MEETING_REMINDER",
                 "TESTIMONY_REMINDER",
-                "MEETING_TIME_CHANGED"
+                "MEETING_TIME_CHANGED",
+                "RELEASE_NOTES"
               ]
             }
           }
@@ -8706,6 +8707,67 @@
         },
         "tags": [
           "Notification"
+        ]
+      }
+    },
+    "/api/releases": {
+      "get": {
+        "operationId": "ReleaseController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Alle Releases, neueste zuerst",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Release"
         ]
       }
     }
@@ -10527,7 +10589,8 @@
                 "CUSTOM_MEETING_CREATED",
                 "CUSTOM_MEETING_REMINDER",
                 "TESTIMONY_REMINDER",
-                "MEETING_TIME_CHANGED"
+                "MEETING_TIME_CHANGED",
+                "RELEASE_NOTES"
               ]
             },
             "label": {
@@ -10689,7 +10752,8 @@
               "CUSTOM_MEETING_CREATED",
               "CUSTOM_MEETING_REMINDER",
               "TESTIMONY_REMINDER",
-              "MEETING_TIME_CHANGED"
+              "MEETING_TIME_CHANGED",
+              "RELEASE_NOTES"
             ]
           },
           "label": {
@@ -15663,6 +15727,36 @@
           "updatedAt"
         ],
         "additionalProperties": false
+      },
+      "ReleaseListResponseDto": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "string"
+            },
+            "date": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "highlights": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "version",
+            "date",
+            "title",
+            "highlights"
+          ],
+          "additionalProperties": false
+        }
       }
     }
   }

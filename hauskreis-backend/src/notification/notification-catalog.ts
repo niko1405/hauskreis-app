@@ -260,6 +260,16 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     },
     defaultEnabled: true,
   },
+  {
+    type: NotificationType.RELEASE_NOTES,
+    label: 'Neues in der App',
+    // Steht als letzte in der Liste, weil sie als einzige nichts mit dem
+    // Hauskreis zu tun hat, sondern mit der App darüber.
+    description:
+      'Wenn es etwas Neues zu sehen gibt. Ein paarmal im Jahr, nicht bei jeder Kleinigkeit.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
 ];
 
 const byType = new Map(

@@ -152,6 +152,10 @@ describe('NotificationService.notify', () => {
         relatedGroupId: null,
         relatedPersonId: 'antonia',
         relatedRole: null,
+        // Nur Release-Ankündigungen tragen hier etwas; die Spalte muss
+        // trotzdem in der Abfrage stehen, sonst fände sie eine Zeile mit
+        // gesetzter Version als vermeintliche Dublette.
+        relatedReleaseVersion: null,
       },
     });
     expect(notificationLog.create).toHaveBeenCalledWith({

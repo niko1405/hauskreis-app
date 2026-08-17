@@ -19,4 +19,14 @@ export const appPath = {
   meetings: () => '/termine',
   prayerBuddies: () => '/gebet',
   home: () => '/',
+  /**
+   * „Neu in Acts2".
+   *
+   * Die Version gehört in die Adresse, obwohl die Seite alle Releases zeigt:
+   * Der Service Worker setzt `tag: payload.url` (`sw.ts`), damit dieselbe
+   * Nachricht nicht zweimal aufpoppt. Ohne die Version fielen zwei
+   * Ankündigungen zu einer zusammen — und die zweite verdrängte die erste,
+   * bevor sie jemand gelesen hat.
+   */
+  release: (version: string) => `/neu?v=${encodeURIComponent(version)}`,
 } as const;

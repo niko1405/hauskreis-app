@@ -46,6 +46,7 @@ import {
 } from '@/lib/meeting';
 import { firstName } from '@/lib/person';
 import { ScreenHeader } from '@/components/layout/screen-header';
+import { ReleaseBanner } from '@/features/releases/release-banner';
 import { greetingOf } from './greeting';
 import type {
   Assignment,
@@ -92,6 +93,10 @@ export function HomeScreen() {
       <ScreenHeader screen="home" title={gruß.hallo} subtitle={gruß.zeile} />
 
       <div className="space-y-6 px-5">
+        {/* Ganz oben und nur einmal: Wer es angesehen oder weggeklickt hat,
+            sieht hier nichts mehr. */}
+        <ReleaseBanner />
+
         <ActionstepCard step={openActionstep} />
 
         {prayerBuddies && (

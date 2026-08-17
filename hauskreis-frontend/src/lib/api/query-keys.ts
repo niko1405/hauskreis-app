@@ -17,6 +17,8 @@ export const qk = {
   health: ['health'] as const,
   hauskreise: ['hauskreise'] as const,
   invitations: ['invitations'] as const,
+  /** Ändert sich nur mit einem Deploy — deshalb außerhalb des Hauskreis-Baums. */
+  releases: ['releases'] as const,
 
   push: {
     all: ['push'] as const,
