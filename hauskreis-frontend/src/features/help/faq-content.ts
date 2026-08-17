@@ -683,7 +683,15 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'privacy',
     question: 'Welche Daten speichert die App über mich?',
     answer:
-      'Nur, was sie zum Organisieren braucht: Anzeigename, Anmeldename, E-Mail-Adresse, optional dein Geburtstag (für die Geschenke-Planung), ob du ein Instrument spielst, ob du gerade hosten kannst, deine Wohnung, ob du Admin bist.\n\nDazu, was sich beim Benutzen ergibt: deine Zu- und Absagen, deine Abwesenheiten, welche Themen und Einheiten du gehalten hast, welche Lieder du eingetragen hast, deine gesetzten Actionstep-Haken, deine Benachrichtigungs-Einstellungen und die Geräte, auf denen du Benachrichtigungen erlaubt hast. Dein Profilbild liegt als Datei daneben.\n\nKein Standort, keine Kontakte, kein Kalenderzugriff, keine Werbung, keine Weitergabe an Dritte.',
+      'Nur, was sie zum Organisieren braucht: Anzeigename, Anmeldename, E-Mail-Adresse, optional dein Geburtstag (für die Geschenke-Planung), ob du ein Instrument spielst, ob du gerade hosten kannst, deine Wohnung, ob du Admin bist.\n\nDazu, was sich beim Benutzen ergibt: deine Zu- und Absagen, deine Abwesenheiten, welche Themen und Einheiten du gehalten hast, welche Lieder du eingetragen hast, deine gesetzten Actionstep-Haken, deine Benachrichtigungs-Einstellungen und die Geräte, auf denen du Benachrichtigungen erlaubt hast. Dein Profilbild liegt als Datei daneben.\n\nKein Standort, keine Kontakte, kein Kalenderzugriff, kein Nutzungsprofil, keine Werbung, keine Auswertung.',
+    keywords: ['daten', 'gespeichert', 'welche', 'dsgvo', 'privatsphäre'],
+  },
+  {
+    id: 'privacy-dritte',
+    category: 'privacy',
+    question: 'Verlässt irgendetwas die App?',
+    answer:
+      'Zweimal, und beide Male so wenig wie möglich:\n\n**Benachrichtigungen** gehen den Weg, den dein Gerät dafür vorschreibt — bei einem iPhone über Apple, bei Android über Google. Das lässt sich nicht umgehen; es ist der einzige Weg, wie eine Nachricht auf ein Telefon kommt, das gerade nicht offen ist. Dort steht der Text der Nachricht drin, also zum Beispiel „Du hostest am Dienstag". Wer keine Benachrichtigungen einschaltet, hat auch diesen Weg nicht.\n\n**Die beiden Knöpfe beim Eintragen eines Lieds** fragen ein Sprachmodell von Google. Dabei gehen Titel, Interpret oder die eingefügte Adresse hin — nichts über dich, keine Namen, kein Termin. Wer die Knöpfe nicht drückt, löst nichts aus.\n\nSonst nichts. Kein Tracking, keine Analyse-Werkzeuge, keine Anzeigen, nichts, was verkauft würde.',
     keywords: ['daten', 'gespeichert', 'welche', 'dsgvo', 'privatsphäre'],
   },
   {

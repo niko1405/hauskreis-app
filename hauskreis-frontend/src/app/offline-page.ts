@@ -51,6 +51,21 @@ export const OFFLINE_PAGE = `<!doctype html>
     }
   }
   * { box-sizing: border-box; }
+  /* Derselbe Schleier wie in der App (status-bar-scrim.tsx), nur von Hand:
+     Die App reicht bis unter die Notch, und iOS zeichnet die Uhr dort immer
+     weiß. Ohne ihn wäre sie hier auf dem hellen Grund nicht zu sehen — und
+     dieser Bildschirm ist gerade der, auf dem man wissen will, wie spät es
+     ist. Ohne Notch ist der sichere Rand null und damit auch dieses Element. */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), transparent);
+    pointer-events: none;
+  }
   body {
     margin: 0;
     min-height: 100dvh;

@@ -5,6 +5,7 @@ import {
   Roboto_Slab,
 } from 'next/font/google';
 import { BootWatchdog } from '@/components/layout/boot-watchdog';
+import { StatusBarScrim } from '@/components/layout/status-bar-scrim';
 import { ThemeScript } from '@/components/layout/theme-script';
 import { Providers } from './providers';
 import './globals.css';
@@ -119,6 +120,9 @@ export default function RootLayout({
         {/* Muss ganz oben stehen und vor allem anderen laufen — sonst blitzt
             die helle Fassung auf, bevor die dunkle greift. */}
         <ThemeScript />
+        {/* Über allem und vor allem: Er gilt auch für die Anmeldeseite und die
+            Fehlerseiten, die außerhalb des Gerüsts liegen. */}
+        <StatusBarScrim />
         <Providers>{children}</Providers>
         {/* Steht bewusst außerhalb von `Providers`: er muss auch dann etwas
             anzeigen können, wenn von deren JavaScript nichts ankommt. */}

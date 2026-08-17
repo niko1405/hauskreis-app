@@ -12,7 +12,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // `min-h-dvh` statt `min-h-screen`: `100vh` rechnet auf mobilen Browsern
     // mit ausgefahrener Adressleiste und ist deshalb zu hoch.
     <div className="px-safe flex min-h-dvh justify-center bg-shell">
-      <StatusBarScrim />
       <div className="flex w-full max-w-md flex-col border-line-strong/50 bg-canvas shadow-xl md:max-w-5xl md:flex-row md:border-x">
         <Sidebar />
         <div className="flex min-h-dvh flex-1 flex-col">
@@ -23,36 +22,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * Der Schleier über der Statusleiste.
- *
- * Seit `statusBarStyle: 'black-translucent'` (`app/layout.tsx`) reicht die App
- * bis unter die Notch — das Kopfbild geht durch, statt an einem Streifen
- * aufzuhören. Der Preis dafür: iOS zeichnet Uhr, Netz und Batterie ab dann
- * **immer weiß**, einen zweiten Wert gibt es nicht. Auf der cremefarbenen
- * Leinwand wären sie unsichtbar, und auf einem hellen Kopfbild kaum besser.
- *
- * Also derselbe Kniff, den native Apps über Fotos benutzen: ein dunkler
- * Verlauf, oben kräftig, nach unten aus. Er ist zwei Dinge zugleich — die
- * Lesbarkeit der Uhr und die Kante, die einem sagt, wo oben ist.
- *
- * Die Höhe ist **genau** der sichere Rand, und das ist der eigentliche Trick:
- * Ohne Notch — am Rechner, im Browser-Tab, unter Android — ist `env()` null,
- * das Element damit null Pixel hoch und nicht vorhanden. Es braucht keine
- * Abfrage, welches Gerät gerade zusieht.
- *
- * `z-40`: über der Leiste unten (`z-30`) und über den Kopfbildern, unter
- * Sheets und Meldungen (`z-50`) — die bringen ihren eigenen Abstand mit.
- */
-function StatusBarScrim() {
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[env(safe-area-inset-top)] bg-gradient-to-b from-black/45 to-transparent"
-    />
   );
 }
 
