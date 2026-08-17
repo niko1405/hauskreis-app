@@ -58,7 +58,7 @@ export function AppCard() {
 
   return (
     <section>
-      <SectionTitle>Die App</SectionTitle>
+      <SectionTitle>Über die App</SectionTitle>
       <Card className="space-y-4">
         <Link
           href="/neu"
@@ -74,41 +74,9 @@ export function AppCard() {
         </Link>
 
         <div className="border-t border-line pt-4">
-          <div className="flex items-start gap-3">
-            <span
-              className={cn(
-                'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full',
-                ready === true
-                  ? 'bg-music-bg text-music'
-                  : 'bg-stone-100 text-stone-400',
-              )}
-            >
-              {ready === true ? (
-                <HardDriveDownload size={15} />
-              ) : (
-                <CloudOff size={15} />
-              )}
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-stone-800">
-                {ready === null
-                  ? 'Wird geprüft …'
-                  : ready
-                    ? 'Offline bereit'
-                    : 'Noch nicht offline bereit'}
-              </p>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-stone-400">
-                {ready === false
-                  ? 'Lass die App einmal mit Internet offen, dann startet sie auch ohne.'
-                  : 'Die App startet auch ohne Internet und sagt dann, dass die Verbindung fehlt.'}
-              </p>
-            </div>
-          </div>
 
           <p className="mt-3 text-[11px] leading-relaxed text-stone-400">
-            Auf dem iPhone hat die App vom Home-Bildschirm ihren eigenen
-            Speicher — getrennt von Safari. Nach dem Neuinstallieren musst du
-            sie deshalb einmal mit Internet öffnen.
+            Hier hast du eine Übersicht über Neuigkeiten und neuen Features der App, verpasse Nichts! Wir geben dir Bescheid sobald etwas Neues kommt.
           </p>
         </div>
       </Card>

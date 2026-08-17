@@ -230,19 +230,7 @@ function Loaded({ personId }: { personId: string }) {
           </Card>
         </section>
 
-        <AppearanceCard />
-
         <MembersCard />
-
-        <HomeCard personId={personId} locationId={current.locationId} />
-
-        <AccountCard email={current.email} />
-
-        <AbsencesCard personId={personId} />
-
-        <NotificationsCard />
-
-        <AppCard />
 
         {me.isAdmin && (
           <section>
@@ -255,6 +243,18 @@ function Loaded({ personId }: { personId: string }) {
             </Link>
           </section>
         )}
+
+        <HomeCard personId={personId} locationId={current.locationId} />
+
+        <AbsencesCard personId={personId} />
+
+        <NotificationsCard />
+
+        <AppearanceCard />
+
+        <AccountCard email={current.email} />
+
+        <AppCard />
 
         <HauskreisCard />
 

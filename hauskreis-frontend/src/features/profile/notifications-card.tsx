@@ -36,7 +36,7 @@ const WEEKDAYS = [
 
 const BLOCKER_TEXT: Record<string, string> = {
   'ios-not-installed':
-    'Auf dem iPhone gehen Benachrichtigungen erst, wenn die App über „Teilen → Zum Home-Bildschirm“ installiert ist. Danach hier wiederkommen.',
+    'Auf dem iPhone gehen Benachrichtigungen erst, wenn die App über „Teilen → Zum Home-Bildschirm“ installiert ist.',
   unsupported: 'Dieser Browser kann keine Push-Benachrichtigungen.',
   denied:
     'Du hast Benachrichtigungen für diese Seite abgelehnt. Das lässt sich nur in den Browser-Einstellungen wieder ändern.',

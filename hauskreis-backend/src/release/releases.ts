@@ -37,14 +37,13 @@ export const RELEASES: readonly Release[] = [
   {
     version: '1.1.0',
     date: '2026-08-17',
-    title: 'Dunkelmodus, Ziehen zum Aktualisieren und ein paar Kanten weniger',
+    title: 'Darkmode, Manueller Refresh und Design-Updates',
     highlights: [
-      'Hell, dunkel oder wie dein Gerät — im Profil unter „Darstellung“.',
-      'Auf jedem Bildschirm nach unten ziehen lädt neu.',
-      'Ohne Internet sagt die App das jetzt, statt leer zu bleiben.',
-      'Sie fühlt sich nativer an: kein Zoom aus Versehen mehr, und nichts sitzt mehr unter der Kamera-Aussparung.',
+      'Neu: Darkmode — im Profil unter „Darstellung“ aktivierbar.',
+      'Manueller Refresh per Zieh-Geste.',
+      'Offline-Nutzung.',
+      'Natives Design: Verbesserte Einbettung in iOS und Android, neue App-Icons, neue Splash-Screens.',
       'Wer den Hauskreis verlässt und später zurückkommt, findet seine Abende im Archiv wieder unter seinem Namen.',
-      'Die Mails von Acts2 sehen jetzt aus wie die App.',
     ],
   },
 ] as const;

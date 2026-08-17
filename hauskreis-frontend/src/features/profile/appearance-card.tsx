@@ -59,7 +59,7 @@ export function AppearanceCard() {
         </div>
         <p className="text-[11px] leading-relaxed text-stone-400">
           Gilt nur auf diesem Gerät. „System" folgt der Einstellung deines
-          Telefons oder Rechners.
+          Smartphones oder Rechners.
         </p>
       </Card>
     </section>
