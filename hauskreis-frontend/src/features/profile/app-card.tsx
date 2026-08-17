@@ -1,83 +1,102 @@
 'use client';
 
 /**
- * Die App über sich selbst: welche Fassung läuft, und ist sie offline bereit.
+ * Die App über sich selbst: was neu ist, wie sie funktioniert, und wer sie
+ * gebaut hat.
  *
- * **Warum es das gibt.** Ein fehlender Service Worker sieht nach nichts aus.
- * Genau daran hing schon der Push-Fehler, den wir erst beheben konnten, als die
- * Meldung sichtbar wurde — und danach der Start ohne Netz, bei dem ein
- * schwarzer Bildschirm dieselbe Frage offen ließ: Ist etwas kaputt, oder war
- * nur noch nichts geladen? Auf einem iPhone lässt sich das ohne Mac nirgends
- * nachsehen. Also sagt es die App.
+ * Drei Zeilen, die nirgends sonst hingehören. „Was ist neu" trägt denselben
+ * Punkt wie das Profil-Symbol in der Leiste, damit der Weg dorthin nicht in der
+ * Karte endet, ohne zu sagen, warum man hier ist. „Hilfe" ist der eigentliche
+ * Zuwachs: Das Baukasten-System, die Vorschlagslogik und das Themen-System
+ * sind ohne Erklärung nicht zu erraten, und bisher stand sie nirgends.
  *
- * Der Satz darunter ist kein Kleingedrucktes, sondern der eigentliche Inhalt:
- * Eine App vom Home-Bildschirm hat unter iOS **ihren eigenen Speicher**,
- * getrennt von Safari. Was Safari geladen hat, gibt es dort nicht. Nach dem
- * Installieren muss sie einmal mit Netz geöffnet werden — vorher kann ein Start
- * im Flugmodus nichts anzeigen, weil nichts da ist.
+ * Hier stand einmal auch, ob die App offline bereit ist. Der Hinweis war ein
+ * Werkzeug für einen bestimmten Fehler — er hat ihn gezeigt, der Fehler ist
+ * weg, und eine Zeile, die immer dasselbe sagt, liest bald niemand mehr.
  */
-import { ChevronRight, CloudOff, HardDriveDownload } from 'lucide-react';
+import { ChevronRight, HelpCircle, Mail, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { useReleases } from '@/lib/api/hooks';
-import { cn } from '@/lib/cn';
+import { useUnreadRelease } from '@/features/releases/use-unread-release';
 
-/**
- * Ob der Service Worker diese Seite gerade steuert.
- *
- * `controller` und nicht `registration`: Angemeldet zu sein genügt nicht — erst
- * wenn er steuert, fängt er auch die nächste Navigation ab, und genau das ist
- * die Frage. Beim allerersten Besuch ist er einen Moment lang angemeldet und
- * noch nicht zuständig; `controllerchange` holt das nach.
- */
-function useOfflineReady(): boolean | null {
-  const [ready, setReady] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    if (!('serviceWorker' in navigator)) {
-      setReady(false);
-      return;
-    }
-
-    const update = () => setReady(navigator.serviceWorker.controller !== null);
-    update();
-
-    navigator.serviceWorker.addEventListener('controllerchange', update);
-    return () =>
-      navigator.serviceWorker.removeEventListener('controllerchange', update);
-  }, []);
-
-  return ready;
+/** Eine Zeile, die auf einen anderen Bildschirm führt. */
+function LinkRow({
+  href,
+  icon,
+  title,
+  hint,
+  dot = false,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  hint: string;
+  dot?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center justify-between gap-3 transition-colors hover:text-terracotta-500"
+    >
+      <span className="shrink-0 text-stone-400">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="flex items-center gap-2 text-sm font-bold text-stone-800">
+          {title}
+          {dot && (
+            <>
+              <span className="size-2 shrink-0 rounded-full bg-terracotta-500" />
+              <span className="sr-only">(Neues)</span>
+            </>
+          )}
+        </p>
+        <p className="text-[11px] text-stone-400">{hint}</p>
+      </div>
+      <ChevronRight size={16} className="shrink-0 text-stone-400" />
+    </Link>
+  );
 }
 
 export function AppCard() {
-  const releases = useReleases();
-  const ready = useOfflineReady();
-  const newest = releases.data?.[0];
+  const { unread, version } = useUnreadRelease();
 
   return (
     <section>
       <SectionTitle>Über die App</SectionTitle>
       <Card className="space-y-4">
-        <Link
+        <LinkRow
           href="/neu"
-          className="flex items-center justify-between gap-3 transition-colors hover:text-terracotta-500"
-        >
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-stone-800">Was ist neu</p>
-            <p className="text-[11px] text-stone-400">
-              {newest ? `Version ${newest.version}` : 'Alle Änderungen'}
-            </p>
-          </div>
-          <ChevronRight size={16} className="shrink-0 text-stone-400" />
-        </Link>
+          icon={<Sparkles size={16} />}
+          title="Was ist neu"
+          hint={
+            version
+              ? `Version ${version}${unread ? ' · noch nicht angesehen' : ''}`
+              : 'Alle Änderungen'
+          }
+          dot={unread}
+        />
 
         <div className="border-t border-line pt-4">
+          <LinkRow
+            href="/hilfe"
+            icon={<HelpCircle size={16} />}
+            title="Hilfe"
+            hint="Wie die App funktioniert — von Vorschlägen bis Datenschutz"
+          />
+        </div>
 
-          <p className="mt-3 text-[11px] leading-relaxed text-stone-400">
-            Hier hast du eine Übersicht über Neuigkeiten und neuen Features der App, verpasse Nichts! Wir geben dir Bescheid sobald etwas Neues kommt.
+        <div className="space-y-1 border-t border-line pt-4">
+          <p className="text-sm font-bold text-stone-800">Gebaut von Niko</p>
+          <p className="text-[11px] leading-relaxed text-stone-400">
+            Für unseren Hauskreis. Wenn etwas fehlt, klemmt oder anders sein
+            sollte — schreib mir einfach.
           </p>
+          <a
+            href="mailto:niko.vix@icloud.com"
+            className="inline-flex items-center gap-1.5 pt-1 text-[11px] font-semibold text-terracotta-600 hover:text-terracotta-700"
+          >
+            <Mail size={12} />
+            niko.vix@icloud.com
+          </a>
         </div>
       </Card>
     </section>
