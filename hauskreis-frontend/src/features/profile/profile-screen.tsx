@@ -26,6 +26,7 @@ import { useMe, usePerson, useUpdatePerson } from '@/lib/api/hooks';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { AbsencesCard } from './absences-card';
 import { AccountCard } from './account-card';
+import { AppCard } from './app-card';
 import { AppearanceCard } from './appearance-card';
 import { HomeCard } from './home-card';
 import { PhotoPicker } from './photo-picker';
@@ -240,6 +241,8 @@ function Loaded({ personId }: { personId: string }) {
         <AbsencesCard personId={personId} />
 
         <NotificationsCard />
+
+        <AppCard />
 
         {me.isAdmin && (
           <section>
