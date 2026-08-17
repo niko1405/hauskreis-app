@@ -53,6 +53,23 @@ export function useUpdatePerson(personId: string) {
   });
 }
 
+/**
+ * Nur Admin. Die Ehemaligen mit gelöschtem Konto.
+ *
+ * `enabled` von außen, weil die Liste nur im aufgeklappten Teil des
+ * Einladen-Formulars gebraucht wird — und der ist meistens zu.
+ */
+export function useFormerMembers(enabled = true) {
+  const { hauskreisId, enabled: ready, keys } = useHk();
+
+  return useQuery({
+    queryKey: keys.people.former,
+    queryFn: ({ signal }) => peopleApi.listFormerMembers(hauskreisId, signal),
+    enabled: ready && enabled,
+    staleTime: STALE.reference,
+  });
+}
+
 /** Nur Admin. */
 export function useInvitePerson() {
   const { hauskreisId, keys } = useHk();

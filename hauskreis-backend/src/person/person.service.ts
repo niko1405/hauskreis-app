@@ -14,6 +14,8 @@ import { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import { LocationService } from '../location/location.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
+import { MEMBERSHIP_SERVICE } from '../hauskreis/membership.token';
+import type { MembershipService } from '../hauskreis/membership.service';
 import type {
   AuthenticatedUser,
   HauskreisMembership,
@@ -347,14 +349,36 @@ export class PersonService {
    * und nicht dieser Gruppe.
    *
    * **Sich selbst entfernt hier niemand.** Nicht, weil es technisch nicht ginge,
-   * sondern weil dieser Weg die falschen Fragen nicht stellt: Er löscht die
-   * Zeile hart, während das Verlassen im Profil die Nachfolge klärt (wer
-   * übernimmt die Admin-Rechte?) und den Beitrag im Archiv stehen lässt. Wer
-   * sich hier selbst herausnähme, bekäme das Sackgassen-Ergebnis, das
-   * `assertMayChangeRole` und `leave` an ihren Stellen gerade verhindern — im
-   * schlimmsten Fall eine Gruppe ohne Admin, die sich nicht mehr helfen kann.
+   * sondern weil dieser Weg die falschen Fragen nicht stellt: Er klärt die
+   * Nachfolge nicht (wer übernimmt die Admin-Rechte?). Wer sich hier selbst
+   * herausnähme, bekäme das Sackgassen-Ergebnis, das `assertMayChangeRole` und
+   * `leave` an ihren Stellen gerade verhindern — im schlimmsten Fall eine
+   * Gruppe ohne Admin, die sich nicht mehr helfen kann.
    *
    * Es gibt also eine Tür, sie liegt nur woanders — und der Satz unten sagt, wo.
+   *
+   * **Zwei Fälle, zwei Ausgänge.**
+   *
+   * Wer schon einmal da war, wird *hinausbegleitet*, nicht gelöscht: derselbe
+   * Weg wie beim eigenen Verlassen. Vorher stand hier ein `person.delete`, und
+   * das war der schwerere der beiden Fehler — an der Zeile hängen
+   * `MeetingAttendance`, `TopicSessionResponsible`, `MeetingSongLeader`,
+   * `MeetingActionstepDone` und `MeetingTopicResponsible` mit `onDelete:
+   * Cascade`. Ein Admin, der jemanden entfernte, löschte damit dessen ganze
+   * Anwesenheit im Archiv, und die gehosteten Abende verloren ihren Gastgeber.
+   * Genau das löchrige Archiv, vor dem CLAUDE.md §5 warnt. Nebenbei blieben
+   * offene Rollen in kommenden Terminen unbemerkt stehen, und niemand erfuhr
+   * davon.
+   *
+   * **Name und E-Mail bleiben dabei stehen** — anders als beim Konto-Löschen.
+   * Entfernt zu werden ist nicht dasselbe wie vergessen werden zu wollen, und
+   * die Adresse ist der Schlüssel zurück: eine neue Einladung an dieselbe
+   * Adresse weckt genau diese Zeile wieder auf (`invite`), samt allem, was im
+   * Archiv an ihr hängt.
+   *
+   * Wer noch nie da war, ist eine zurückgezogene Einladung und wird weiterhin
+   * hart gelöscht. Da hängt nichts dran, und die Adresse muss für eine neue
+   * Einladung wieder frei werden.
    */
   async remove(hauskreisId: string, id: string, actor: HauskreisMembership) {
     if (actor.id === id) {
@@ -370,6 +394,7 @@ export class PersonService {
         email: true,
         locationId: true,
         acceptedAt: true,
+        active: true,
       },
     });
 
@@ -377,13 +402,39 @@ export class PersonService {
       throw new NotFoundException(`Person ${id} not found`);
     }
 
+    // Schon draußen. Kann vorkommen, wenn zwei Admins dieselbe Liste offen
+    // haben — der zweite Klick ist dann keine Panne, sondern schon erledigt.
+    if (!person.active) return;
+
+    if (person.acceptedAt !== null) {
+      // Nachgeschlagen statt hineingereicht, aus demselben Grund wie bei
+      // `replanPrayerBuddies`: `HauskreisModule` importiert `PersonModule`,
+      // andersherum stünde der Kreis. Und es ist auch hier keine
+      // Zusammenarbeit, sondern eine Folge — jemand verlässt die Gruppe, nur
+      // hat es diesmal ein anderer angestoßen.
+      //
+      // Über eine Zeichenkette und **nicht** über die Klasse: Die Klasse wäre
+      // ein Wert und damit ein echter Import, und der schlösse den Kreis auf
+      // Modulebene — `membership.service.ts` importiert diese Datei bereits.
+      // In CommonJS stünde `PersonService` dort beim Auswerten der Dekoratoren
+      // auf `undefined`, und Nest fände seine Abhängigkeit nicht mehr. Der
+      // Typ oben ist reine Typinformation und wird beim Übersetzen entfernt.
+      const memberships = this.moduleRef.get<MembershipService>(
+        MEMBERSHIP_SERVICE,
+        { strict: false },
+      );
+
+      // Ohne Nachfolgewunsch: Der Server sucht sich einen, wenn er muss. Ein
+      // Admin, der jemanden entfernt, soll nicht plötzlich vor der Frage
+      // stehen, wer dessen Rechte erbt.
+      await memberships.leave(hauskreisId, id, {}, actor.id);
+      return;
+    }
+
     await this.prisma.person.delete({ where: { id } });
     await this.syncHomes(person.locationId);
     await this.replanPrayerBuddies(hauskreisId);
-
-    if (person.acceptedAt === null) {
-      await this.discardInvitationAccount(person.email);
-    }
+    await this.discardInvitationAccount(person.email);
   }
 
   /**
@@ -542,6 +593,94 @@ export class PersonService {
   }
 
   /**
+   * Die ehemaligen Mitglieder, deren Konto gelöscht wurde — mit genug
+   * Geschichte, um sie auseinanderzuhalten.
+   *
+   * Sie heißen alle „Ehemaliges Mitglied" und haben keine Adresse mehr; ohne
+   * das Drumherum wäre die Liste eine Reihe identischer Zeilen, aus der
+   * niemand wählen könnte. Was bleibt, ist das, was sie getan haben: von wann
+   * bis wann sie dabei waren, wie oft sie gehostet und wie viele Einheiten sie
+   * gehalten haben. In einer Gruppe von neun genügt das.
+   *
+   * Wer den Hauskreis nur verlassen hat, steht hier **nicht**: Name und
+   * Adresse sind noch da, eine Einladung findet die Zeile von selbst.
+   */
+  async findFormerMembers(hauskreisId: string) {
+    const rows = await this.prisma.person.findMany({
+      where: { hauskreisId, active: false, anonymizedAt: { not: null } },
+      select: { id: true, createdAt: true, anonymizedAt: true },
+      orderBy: { anonymizedAt: 'desc' },
+    });
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const [hostedCount, sessionCount, attendedCount, lastHosted] =
+          await Promise.all([
+            this.prisma.meeting.count({ where: { hostPersonId: row.id } }),
+            this.prisma.topicSessionResponsible.count({
+              where: { personId: row.id },
+            }),
+            this.prisma.meetingAttendance.count({
+              where: { personId: row.id },
+            }),
+            this.prisma.meeting.findFirst({
+              where: { hostPersonId: row.id },
+              orderBy: { date: 'desc' },
+              select: { date: true },
+            }),
+          ]);
+
+        return {
+          id: row.id,
+          joinedAt: row.createdAt,
+          anonymizedAt: row.anonymizedAt,
+          hostedCount,
+          sessionCount,
+          attendedCount,
+          lastHostedDate: lastHosted?.date ?? null,
+        };
+      }),
+    );
+  }
+
+  /**
+   * Prüft, ob die ausgewählte Zeile wirklich eine wiedererkennbare Vergangene
+   * ist — und ob die Adresse dafür überhaupt frei ist.
+   */
+  private async resolveFormerMember(
+    hauskreisId: string,
+    formerPersonId: string,
+    byEmail: { id: string; name: string } | null,
+  ): Promise<{ id: string; name: string }> {
+    const former = await this.prisma.person.findFirst({
+      where: {
+        id: formerPersonId,
+        hauskreisId,
+        active: false,
+        anonymizedAt: { not: null },
+      },
+      select: { id: true, name: true },
+    });
+
+    if (!former) {
+      throw new BadRequestException(
+        'Diese ehemalige Zeile gibt es nicht mehr — lade ohne die Zuordnung ein.',
+      );
+    }
+
+    // Die Adresse gehört im selben Hauskreis schon einer anderen Zeile. Sie
+    // hier einzutragen liefe in `@@unique([hauskreisId, email])`; die Meldung
+    // daraus wäre ein Datenbankfehler statt einer Auskunft.
+    if (byEmail && byEmail.id !== former.id) {
+      throw new ConflictException(
+        `Zu dieser Adresse gibt es hier schon eine Zeile (${byEmail.name}). Beides zusammenzuführen geht nicht.`,
+      );
+    }
+
+    return former;
+  }
+
+  /**
    * Creates the Keycloak account first, then the local person row. If the
    * local insert fails we roll the Keycloak user back, so a failed invite
    * never leaves an orphaned account behind.
@@ -552,14 +691,22 @@ export class PersonService {
     // diesen Blick wäre eine zweite Einladung an dieselbe Adresse ein Verstoß
     // gegen `@@unique([hauskreisId, email])` — wer einmal gegangen ist, käme
     // nie wieder herein.
-    const previous = await this.prisma.person.findFirst({
+    const byEmail = await this.prisma.person.findFirst({
       where: { hauskreisId, email: dto.email },
       select: { id: true, active: true, name: true },
     });
 
-    if (previous?.active) {
-      throw new ConflictException(`${previous.name} ist schon dabei`);
+    if (byEmail?.active) {
+      throw new ConflictException(`${byEmail.name} ist schon dabei`);
     }
+
+    // Der ausdrückliche Weg zurück für ein gelöschtes Konto. Er schlägt die
+    // Suche über die Adresse nicht, er ersetzt sie: dort steht keine mehr.
+    const former = dto.formerPersonId
+      ? await this.resolveFormerMember(hauskreisId, dto.formerPersonId, byEmail)
+      : null;
+
+    const previous = former ?? byEmail;
 
     const { created, invitationEmailSent } =
       await this.keycloakAdmin.inviteUser({ email: dto.email });
@@ -586,6 +733,21 @@ export class PersonService {
               // Auch den Nutzernamen: die Person wählt ihn beim Aktivieren neu,
               // und bis dahin darf er niemanden blockieren.
               username: null,
+              // Die Adresse zurückgeben und das Vergessen zurücknehmen. Für
+              // die Zeile, die über die Adresse gefunden wurde, ändert das
+              // nichts — sie hat beides längst. Für eine wiedererkannte steht
+              // hier `null` beziehungsweise ein alter Zeitstempel, und ohne
+              // diese zwei Zeilen bliebe sie „Ehemaliges Mitglied" mit einer
+              // Löschmarkierung, obwohl gerade jemand eingeladen wurde.
+              email: dto.email,
+              anonymizedAt: null,
+              ...(former
+                ? // Platzhalter bis zur ersten Anmeldung, wie bei einer neuen
+                  // Einladung. „Ehemaliges Mitglied" stehen zu lassen hieße,
+                  // in der Mitgliederliste eine Einladung an einen Namen zu
+                  // zeigen, den niemand trägt.
+                  { name: localPartOf(dto.email) }
+                : {}),
             },
           })
         : await this.prisma.person.create({

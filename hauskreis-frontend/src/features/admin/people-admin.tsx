@@ -11,6 +11,7 @@
  */
 import {
   Clock,
+  History,
   Mail,
   Send,
   Shield,
@@ -31,13 +32,14 @@ import { useToast } from '@/components/ui/toast';
 import { ConflictError, errorMessage } from '@/lib/api/errors';
 import {
   useDeletePerson,
+  useFormerMembers,
   useInvitePerson,
   useMe,
   usePeople,
   useResendInvitation,
   useSetPersonRole,
 } from '@/lib/api/hooks';
-import type { PersonListEntry } from '@/lib/api/types';
+import type { FormerMember, PersonListEntry } from '@/lib/api/types';
 
 export function PeopleAdmin() {
   const people = usePeople();
@@ -113,9 +115,8 @@ export function PeopleAdmin() {
                   ist eine Einladung ins Leere. Der Server lehnt es trotzdem ab
                   — er ist die verbindliche Stelle, das hier ist die höfliche.
 
-                  Wer gehen will, nimmt „Hauskreis verlassen" im Profil. Dort
-                  wird die Nachfolge geklärt und der eigene Beitrag bleibt im
-                  Archiv stehen; dieser Weg hier löscht die Zeile hart. */}
+                  Wer gehen will, nimmt „Hauskreis verlassen" im Profil — dort
+                  wird auch die Nachfolge geklärt. */}
               {person.id !== me.me?.id && (
                 <IconButton
                   label={
@@ -136,7 +137,7 @@ export function PeopleAdmin() {
                           }
                         : {
                             title: `${person.name} entfernen?`,
-                            body: 'Vergangene Abende zeigen weiter, wer gehostet hat — die Person kommt aber aus allen kommenden Planungen heraus.',
+                            body: `Vergangene Abende zeigen weiter, wer gehostet hat — ${person.name} kommt aber aus allen kommenden Planungen heraus. Eine neue Einladung an dieselbe Adresse holt alles wieder zurück.`,
                             confirmLabel: 'Entfernen',
                             tone: 'danger',
                           },
@@ -242,6 +243,15 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'member' | 'admin'>('member');
 
+  /**
+   * Ob der Teil „war schon einmal dabei" offen ist, und wenn ja, welche Zeile
+   * gewählt wurde. Beides getrennt, damit das Zuklappen die Wahl aufhebt —
+   * eine unsichtbare Zuordnung mitzuschicken wäre die unangenehmste Art, sie
+   * zu vergessen.
+   */
+  const [merging, setMerging] = useState(false);
+  const [formerPersonId, setFormerPersonId] = useState('');
+
   const invite = useInvitePerson();
   const toast = useToast();
 
@@ -249,7 +259,11 @@ function InviteForm({ onDone }: { onDone: () => void }) {
     invite.mutate(
       // Nur Adresse und Rolle. Wie die Person heißt, entscheidet sie beim
       // Aktivieren ihres Kontos selbst; alles Weitere steht im Profil.
-      { email: email.trim(), role },
+      {
+        email: email.trim(),
+        role,
+        ...(merging && formerPersonId !== '' ? { formerPersonId } : {}),
+      },
       {
         onSuccess: (person) => {
           if (person.invitationEmailSent) {
@@ -297,6 +311,16 @@ function InviteForm({ onDone }: { onDone: () => void }) {
           <option value="admin">Admin</option>
         </Select>
       </Field>
+      <FormerMemberPicker
+        open={merging}
+        onToggle={() => {
+          setMerging((was) => !was);
+          setFormerPersonId('');
+        }}
+        chosen={formerPersonId}
+        onChoose={setFormerPersonId}
+      />
+
       <div className="flex gap-2">
         <Button variant="ghost" size="sm" className="flex-1" onClick={onDone}>
           Abbrechen
@@ -314,4 +338,109 @@ function InviteForm({ onDone }: { onDone: () => void }) {
       </div>
     </div>
   );
+}
+
+/**
+ * „War schon einmal dabei?" — der Weg zurück für ein gelöschtes Konto.
+ *
+ * Er wird nur für einen einzigen Fall gebraucht. Wer den Hauskreis bloß
+ * **verlässt**, behält Name und Adresse in seiner Zeile; eine Einladung an
+ * dieselbe Adresse findet sie von selbst wieder, und alles im Archiv hängt
+ * weiter an ihr. Wer sein **Konto löscht**, gibt beides ab — danach gibt es
+ * nichts mehr, woran der Server die Zeile erkennen könnte, und ohne diesen
+ * Knopf stünde die Person nach ihrer Rückkehr neben ihrer eigenen
+ * Vergangenheit.
+ *
+ * Standardmäßig zu, und das ist keine Sparsamkeit: Der Normalfall ist eine
+ * neue Person, und eine Auswahlliste ehemaliger Mitglieder über jedem
+ * Einladen-Formular wäre eine Frage, die sich fast nie stellt.
+ *
+ * Die Einträge heißen alle gleich, deshalb steht neben jedem, was er getan
+ * hat. In einer Gruppe von neun ist „hat 14 Abende gehostet, zuletzt im
+ * Februar" eine Beschreibung, bei der jede:r sofort weiß, wer gemeint ist.
+ */
+function FormerMemberPicker({
+  open,
+  onToggle,
+  chosen,
+  onChoose,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  chosen: string;
+  onChoose: (id: string) => void;
+}) {
+  const former = useFormerMembers(open);
+  const entries = former.data ?? [];
+
+  return (
+    <div>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={onToggle}
+        className="flex items-center gap-1.5 text-[11px] font-semibold text-stone-400 hover:text-stone-600"
+      >
+        <History size={12} />
+        War schon einmal dabei?
+      </button>
+
+      {open && (
+        <div className="mt-2 space-y-2 rounded-md border border-line bg-canvas p-3">
+          {former.isLoading && <Skeleton className="h-8 w-full" />}
+
+          {!former.isLoading && entries.length === 0 && (
+            <p className="text-[11px] leading-relaxed text-stone-400">
+              Hier steht niemand. Wer den Hauskreis nur verlassen hat, wird über
+              seine E-Mail-Adresse ohnehin wiedererkannt — dafür brauchst du
+              nichts weiter zu tun.
+            </p>
+          )}
+
+          {entries.length > 0 && (
+            <>
+              <p className="text-[11px] leading-relaxed text-stone-400">
+                Wähle die Zeile, zu der die eingeladene Person gehört. Ihre
+                vergangenen Abende stehen danach wieder unter ihrem Namen statt
+                unter „Ehemaliges Mitglied".
+              </p>
+              <Select
+                value={chosen}
+                aria-label="Ehemaliges Mitglied"
+                onChange={(event) => onChoose(event.target.value)}
+              >
+                <option value="">Niemand — neue Person</option>
+                {entries.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {describeFormerMember(entry)}
+                  </option>
+                ))}
+              </Select>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Woran man eine Zeile ohne Namen wiedererkennt. */
+function describeFormerMember(entry: FormerMember): string {
+  const parts = [
+    entry.hostedCount > 0 ? `${entry.hostedCount}× gehostet` : null,
+    entry.sessionCount > 0 ? `${entry.sessionCount}× Thema` : null,
+    entry.attendedCount > 0 ? `${entry.attendedCount} Abende dabei` : null,
+  ].filter(Boolean);
+
+  const since = `dabei seit ${formatMonth(entry.joinedAt)}`;
+  const until = `weg seit ${formatMonth(entry.anonymizedAt)}`;
+
+  return [since, until, ...parts].join(' · ');
+}
+
+function formatMonth(iso: string): string {
+  return new Date(iso).toLocaleDateString('de-DE', {
+    month: 'short',
+    year: 'numeric',
+  });
 }

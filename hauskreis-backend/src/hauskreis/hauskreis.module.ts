@@ -7,6 +7,7 @@ import { PersonModule } from '../person/person.module';
 import { PrayerBuddyModule } from '../prayer-buddy/prayer-buddy.module';
 import { MeetingModule } from '../meeting/meeting.module';
 import { NotificationModule } from '../notification/notification.module';
+import { MEMBERSHIP_SERVICE } from './membership.token';
 
 /**
  * Alle vier Importe hängen an einem einzigen Vorgang: dem Verlassen.
@@ -22,7 +23,14 @@ import { NotificationModule } from '../notification/notification.module';
 @Module({
   imports: [PersonModule, PrayerBuddyModule, MeetingModule, NotificationModule],
   controllers: [HauskreisController, InvitationController],
-  providers: [HauskreisService, MembershipService],
-  exports: [HauskreisService, MembershipService],
+  providers: [
+    HauskreisService,
+    MembershipService,
+    // Zusätzlich unter einer Zeichenkette, damit `PersonService.remove` den
+    // Dienst nachschlagen kann, ohne die Klasse zu importieren — die
+    // Begründung steht in `membership.token.ts`.
+    { provide: MEMBERSHIP_SERVICE, useExisting: MembershipService },
+  ],
+  exports: [HauskreisService, MembershipService, MEMBERSHIP_SERVICE],
 })
 export class HauskreisModule {}

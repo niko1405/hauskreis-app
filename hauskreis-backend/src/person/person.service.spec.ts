@@ -5,6 +5,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import type { LocationService } from '../location/location.service';
 import type { ModuleRef } from '@nestjs/core';
+import { MEMBERSHIP_SERVICE } from '../hauskreis/membership.token';
 import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { withClock } from '../meeting/group-clock.testing';
@@ -69,7 +70,19 @@ function setup() {
     planned: 0,
     notified: 0,
   });
-  const moduleRef = { get: jest.fn(() => ({ replanAfterMembershipChange })) };
+  // Wer entfernt wird, geht denselben Weg wie jemand, der selbst geht. Was
+  // dabei passiert, prüft `membership.service.spec.ts`; hier zählt, dass es
+  // aufgerufen wird — und dass die Zeile nicht mehr hart gelöscht wird.
+  const leave = jest
+    .fn()
+    .mockResolvedValue({ hauskreisDeleted: false, successorPersonId: null });
+  const moduleRef = {
+    get: jest.fn((token: unknown) =>
+      token === MEMBERSHIP_SERVICE
+        ? { leave }
+        : { replanAfterMembershipChange },
+    ),
+  };
   const service = withClock(
     new PersonService(
       prisma as unknown as PrismaService,
@@ -87,6 +100,7 @@ function setup() {
     locations,
     replanAfterMembershipChange,
     autoAttendance,
+    leave,
   };
 }
 
@@ -304,6 +318,8 @@ describe('PersonService.invite', () => {
         acceptedAt: null,
         keycloakUserId: null,
         username: null,
+        email: 'lea@example.com',
+        anonymizedAt: null,
       },
     });
   });
@@ -540,9 +556,9 @@ describe('PersonService.remove', () => {
   const asAdmin = { id: 'p9', hauskreisId: 'hk-1', role: 'ADMIN' as const };
 
   /**
-   * Der Weg hier löscht die Zeile hart. Das Verlassen im Profil klärt dagegen
-   * die Nachfolge — wer sich selbst herausnähme, käme an dieser Frage vorbei
-   * und könnte eine Gruppe ohne Admin zurücklassen.
+   * Das Verlassen im Profil klärt die Nachfolge — wer sich hier selbst
+   * herausnähme, käme an dieser Frage vorbei und könnte eine Gruppe ohne Admin
+   * zurücklassen.
    */
   it('lässt einen Admin sich nicht selbst entfernen', async () => {
     const { service, person } = setup();
@@ -557,21 +573,123 @@ describe('PersonService.remove', () => {
     expect(person.delete).not.toHaveBeenCalled();
   });
 
-  it('entfernt jemand anderen weiterhin', async () => {
-    const { service, person, keycloakAdmin } = setup();
+  /**
+   * Der wichtigste Test dieser Datei.
+   *
+   * Hier stand einmal ein `person.delete`, und daran hängen fünf Tabellen mit
+   * `onDelete: Cascade` — Anwesenheiten, Musik- und Themen-Zuständigkeiten,
+   * gehaltene Einheiten, Actionstep-Haken. Ein Admin, der jemanden entfernte,
+   * löschte damit dessen ganze Spur im Archiv. Genau das verhindert
+   * `deleteAccount` an seiner Stelle seit jeher; hier fehlte es.
+   */
+  it('begleitet hinaus, statt die Zeile zu löschen', async () => {
+    const { service, person, keycloakAdmin, leave } = setup();
     person.findFirst.mockResolvedValue({
       id: 'p1',
       email: 'mo@example.com',
       locationId: null,
       acceptedAt: new Date('2026-01-06'),
+      active: true,
     });
 
     await service.remove('hk-1', 'p1', asAdmin);
 
-    expect(person.delete).toHaveBeenCalledWith({ where: { id: 'p1' } });
+    expect(person.delete).not.toHaveBeenCalled();
+    // Derselbe Weg wie beim eigenen Verlassen, mit der Id dessen, der es
+    // angestoßen hat — davon hängt die Formulierung der Nachricht ab.
+    expect(leave).toHaveBeenCalledWith('hk-1', 'p1', {}, 'p9');
     // Wer schon da war, behält sein Konto: es gehört einem Menschen und nicht
     // dieser Gruppe.
     expect(keycloakAdmin.deleteUserByEmail).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Eine zurückgezogene Einladung ist der andere Fall: An der Zeile hängt
+   * nichts, und die Adresse muss für eine neue Einladung wieder frei werden.
+   */
+  it('löscht eine noch nicht angenommene Einladung ganz', async () => {
+    const { service, person, keycloakAdmin, leave } = setup();
+    person.findFirst.mockResolvedValue({
+      id: 'p2',
+      email: 'neu@example.com',
+      locationId: null,
+      acceptedAt: null,
+      active: true,
+    });
+    // Keine Zeile trägt die Adresse mehr — erst dann gibt
+    // `discardInvitationAccount` das Keycloak-Konto frei.
+    person.count.mockResolvedValue(0);
+
+    await service.remove('hk-1', 'p2', asAdmin);
+
+    expect(leave).not.toHaveBeenCalled();
+    expect(person.delete).toHaveBeenCalledWith({ where: { id: 'p2' } });
+    expect(keycloakAdmin.deleteUserByEmail).toHaveBeenCalledWith(
+      'neu@example.com',
+    );
+  });
+
+  it('lässt jemanden in Ruhe, der schon draußen ist', async () => {
+    const { service, person, leave } = setup();
+    person.findFirst.mockResolvedValue({
+      id: 'p3',
+      email: null,
+      locationId: null,
+      acceptedAt: new Date('2025-05-05'),
+      active: false,
+    });
+
+    await service.remove('hk-1', 'p3', asAdmin);
+
+    expect(leave).not.toHaveBeenCalled();
+    expect(person.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe('PersonService.invite mit Zusammenführung', () => {
+  const invitation = { email: 'lea@example.com', role: 'member' as const };
+
+  it('weckt eine anonymisierte Zeile auf und gibt ihr die Adresse zurück', async () => {
+    const { service, person, keycloakAdmin } = setup();
+    // Zur Adresse gibt es nichts — das Konto wurde gelöscht.
+    person.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'p-alt', name: 'Ehemaliges Mitglied' });
+    keycloakAdmin.inviteUser.mockResolvedValue({
+      created: true,
+      invitationEmailSent: true,
+    });
+    person.update.mockResolvedValue({ id: 'p-alt' });
+
+    await service.invite('hk-1', { ...invitation, formerPersonId: 'p-alt' });
+
+    expect(person.create).not.toHaveBeenCalled();
+    expect(person.update).toHaveBeenCalledWith({
+      where: { id: 'p-alt' },
+      data: expect.objectContaining({
+        active: true,
+        email: 'lea@example.com',
+        // Sonst bliebe die Zeile als gelöscht markiert, obwohl gerade jemand
+        // eingeladen wurde.
+        anonymizedAt: null,
+        // Und „Ehemaliges Mitglied" stünde als Name einer offenen Einladung da.
+        name: 'lea',
+      }),
+    });
+  });
+
+  it('führt nicht zusammen, wenn die Adresse hier schon jemandem gehört', async () => {
+    const { service, person, keycloakAdmin } = setup();
+    person.findFirst
+      .mockResolvedValueOnce({ id: 'p-andere', active: false, name: 'Mo' })
+      .mockResolvedValueOnce({ id: 'p-alt', name: 'Ehemaliges Mitglied' });
+
+    await expect(
+      service.invite('hk-1', { ...invitation, formerPersonId: 'p-alt' }),
+    ).rejects.toThrow(ConflictException);
+
+    // Vor dem Keycloak-Aufruf: sonst stünde ein Konto ohne Zeile da.
+    expect(keycloakAdmin.inviteUser).not.toHaveBeenCalled();
   });
 });
 

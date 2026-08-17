@@ -106,6 +106,15 @@ export class MembershipService {
     hauskreisId: string,
     personId: string,
     dto: LeaveHauskreisDto,
+    /**
+     * Wer den Austritt angestoßen hat.
+     *
+     * `null` heißt: die Person selbst. Steht hier eine Id, hat eine
+     * Admin-Person jemanden entfernt (`PersonService.remove`) — dann stimmt
+     * „hat den Hauskreis verlassen" nicht, und die Nachricht darüber geht an
+     * alle **außer** die, die es gerade getan hat.
+     */
+    removedByPersonId: string | null = null,
   ): Promise<{ hauskreisDeleted: boolean; successorPersonId: string | null }> {
     const me = await this.prisma.person.findFirst({
       where: { id: personId, hauskreisId, active: true },
@@ -180,7 +189,13 @@ export class MembershipService {
     // und wer mit ihr gepaart war, bliebe für zwei Wochen allein.
     await this.prayerBuddies.replanAfterMembershipChange(hauskreisId);
 
-    await this.announceDeparture(me, others, successorPersonId, leftover);
+    await this.announceDeparture(
+      me,
+      others.filter((person) => person.id !== removedByPersonId),
+      successorPersonId,
+      leftover,
+      removedByPersonId !== null,
+    );
 
     return { hauskreisDeleted: false, successorPersonId };
   }
@@ -289,6 +304,13 @@ export class MembershipService {
     others: { id: string }[],
     successorPersonId: string | null,
     leftover: LeftoverRoles,
+    /**
+     * Ob jemand entfernt wurde, statt selbst zu gehen. Nur der erste Satz
+     * ändert sich: „ist nicht mehr dabei" stimmt in beiden Fällen, „hat den
+     * Hauskreis verlassen" nur im einen. Wer es getan hat, steht nicht dabei —
+     * das ist eine Sache zwischen den beiden und keine Bekanntmachung.
+     */
+    removed = false,
   ): Promise<void> {
     const open = describeOpenRoles(leftover);
 
@@ -303,7 +325,9 @@ export class MembershipService {
           payload: {
             title: `${leaver.name} ist nicht mehr dabei`,
             body: [
-              `${leaver.name} hat den Hauskreis verlassen.`,
+              removed
+                ? `${leaver.name} gehört nicht mehr zum Hauskreis.`
+                : `${leaver.name} hat den Hauskreis verlassen.`,
               open,
               person.id === successorPersonId
                 ? 'Du übernimmst ab jetzt die Verwaltung.'

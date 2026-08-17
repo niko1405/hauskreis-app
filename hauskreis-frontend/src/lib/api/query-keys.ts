@@ -40,6 +40,8 @@ export const qk = {
         list: [...root, 'people', 'list'] as const,
         detail: (personId: string) =>
           [...root, 'people', 'detail', personId] as const,
+        /** Ehemalige mit gelöschtem Konto — nur im Einladen-Formular gebraucht. */
+        former: [...root, 'people', 'former'] as const,
       },
 
       locations: {

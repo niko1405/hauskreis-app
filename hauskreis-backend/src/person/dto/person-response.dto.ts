@@ -120,6 +120,28 @@ export const personListEntrySchema = personResponseSchema.extend({
   awayToday: z.boolean(),
 });
 
+/**
+ * Eine ehemalige Person, deren Konto gelöscht wurde.
+ *
+ * Kein Name, keine Adresse — die sind weg, und das ist der Sinn der Sache. Was
+ * bleibt, ist ihre Spur im Archiv, und die ist genau das, woran eine
+ * Admin-Person sie wiedererkennt, wenn sie zurückkommt.
+ */
+export const formerMemberSchema = z.object({
+  id: z.uuid(),
+  /// Wann die Zeile angelegt wurde — der Anfang der Mitgliedschaft.
+  joinedAt: isoDateTimeOut,
+  /// Wann das Konto gelöscht wurde.
+  anonymizedAt: isoDateTimeOut,
+  hostedCount: z.number().int(),
+  /// Gehaltene Themen-Einheiten.
+  sessionCount: z.number().int(),
+  attendedCount: z.number().int(),
+  /// Der letzte Abend, den diese Person gehostet hat. `null`, wenn sie nie
+  /// gehostet hat — dann sagen die Zahlen darüber mehr.
+  lastHostedDate: isoDateOut.nullable(),
+});
+
 /** Was `POST …/people/:id/resend-invitation` mitteilt. */
 export const resendInvitationResponseSchema = z.object({
   /// Falsch, wenn Keycloak die Mail nicht losgeworden ist — dann klemmt der
@@ -133,6 +155,9 @@ export class ResendInvitationResponseDto extends createZodDto(
 ) {}
 export class PersonListResponseDto extends createZodDto(
   z.array(personListEntrySchema),
+) {}
+export class FormerMemberListResponseDto extends createZodDto(
+  z.array(formerMemberSchema),
 ) {}
 export class InvitedPersonResponseDto extends createZodDto(
   invitedPersonResponseSchema,

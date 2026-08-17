@@ -55,6 +55,12 @@ export type PersonListEntry = S['PersonListResponseDto'][number];
 export type PersonRole = Person['role'];
 export type CreatePersonInput = S['CreatePersonDto'];
 export type InvitePersonInput = S['InvitePersonDto'];
+/**
+ * Eine Person, deren Konto gelöscht wurde. Kein Name, keine Adresse — was
+ * bleibt, ist ihre Spur im Archiv, und daran erkennt eine Admin-Person sie
+ * wieder, wenn sie zurückkommt.
+ */
+export type FormerMember = S['FormerMemberListResponseDto'][number];
 export type InvitedPerson = S['InvitedPersonResponseDto'];
 /**
  * Achtung: `playsInstrument`, `canHost` und `autoAttend` sind **Pflicht**,

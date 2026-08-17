@@ -27,6 +27,7 @@ import {
   ApiZodResponse,
 } from '../common/http/api-response.decorator';
 import {
+  FormerMemberListResponseDto,
   InvitedPersonResponseDto,
   PersonListResponseDto,
   PersonResponseDto,
@@ -44,6 +45,20 @@ export class PersonController {
   })
   findAll(@Param() params: HauskreisParamsDto) {
     return this.personService.findAll(params.hauskreisId);
+  }
+
+  /**
+   * Steht **vor** `:id`, sonst fängt die Route darunter „former" als Id ab und
+   * antwortet mit einem Validierungsfehler auf etwas, das gar keine Id ist.
+   */
+  @Get('former')
+  @HauskreisAdmin()
+  @ApiZodResponse(FormerMemberListResponseDto, {
+    description:
+      'Ehemalige mit gelöschtem Konto — für das Wiedererkennen beim Einladen',
+  })
+  findFormer(@Param() params: HauskreisParamsDto) {
+    return this.personService.findFormerMembers(params.hauskreisId);
   }
 
   @Get(':id')

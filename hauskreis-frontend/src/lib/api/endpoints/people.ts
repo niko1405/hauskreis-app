@@ -12,6 +12,7 @@ import type {
   CreatePersonInput,
   InvitedPerson,
   InvitePersonInput,
+  FormerMember,
   Person,
   PersonListEntry,
   UpdatePersonInput,
@@ -24,6 +25,18 @@ export function listPeople(
   signal?: AbortSignal,
 ): Promise<PersonListEntry[]> {
   return apiGet<PersonListEntry[]>(base(hauskreisId), { signal });
+}
+
+/**
+ * Nur Admin. Die Ehemaligen, deren Konto gelöscht wurde — ohne Namen und
+ * Adresse, dafür mit ihrer Spur im Archiv. Nur dort gebraucht, wo jemand
+ * eingeladen wird, der schon einmal dabei war.
+ */
+export function listFormerMembers(
+  hauskreisId: string,
+  signal?: AbortSignal,
+): Promise<FormerMember[]> {
+  return apiGet<FormerMember[]>(`${base(hauskreisId)}/former`, { signal });
 }
 
 export function getPerson(

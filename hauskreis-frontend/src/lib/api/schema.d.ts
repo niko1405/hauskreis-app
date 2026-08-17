@@ -628,6 +628,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/people/former': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['PersonController_findFormer'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/people/invite': {
     parameters: {
       query?: never;
@@ -990,7 +1006,7 @@ export interface paths {
     get: operations['MeController_me'];
     put?: never;
     post?: never;
-    delete?: never;
+    delete: operations['MeController_deleteAccount'];
     options?: never;
     head?: never;
     patch?: never;
@@ -1289,6 +1305,19 @@ export interface components {
       version: number;
       awayToday: boolean;
     }[];
+    FormerMemberListResponseDto: {
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      joinedAt: string;
+      /** Format: date-time */
+      anonymizedAt: string;
+      hostedCount: number;
+      sessionCount: number;
+      attendedCount: number;
+      /** Format: date */
+      lastHostedDate: string | null;
+    }[];
     PersonResponseDto: {
       /** Format: uuid */
       id: string;
@@ -1339,6 +1368,8 @@ export interface components {
        * @enum {string}
        */
       role: 'member' | 'admin';
+      /** Format: uuid */
+      formerPersonId?: string;
     };
     InvitedPersonResponseDto: {
       /** Format: uuid */
@@ -6398,6 +6429,64 @@ export interface operations {
       };
     };
   };
+  PersonController_findFormer: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ehemalige mit gelöschtem Konto — für das Wiedererkennen beim Einladen */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FormerMemberListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
   PersonController_invite: {
     parameters: {
       query?: never;
@@ -8410,6 +8499,51 @@ export interface operations {
         };
       };
       /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeController_deleteAccount: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Gelöscht, kein Inhalt */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nicht angemeldet */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden */
       404: {
         headers: {
           [name: string]: unknown;

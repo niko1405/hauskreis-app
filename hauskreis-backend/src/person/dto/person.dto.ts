@@ -62,6 +62,21 @@ const personParamsSchema = z.object({
 export const invitePersonSchema = z.object({
   email: z.email(),
   role: z.enum(['member', 'admin']).default('member'),
+  /**
+   * „Die war schon einmal dabei."
+   *
+   * Wer den Hauskreis nur **verlässt**, behält Name und Adresse in seiner
+   * Zeile — eine neue Einladung an dieselbe Adresse findet sie von selbst
+   * wieder, und alles im Archiv hängt weiter an ihr. Wer sein **Konto löscht**,
+   * gibt beides ab; danach steht dort „Ehemaliges Mitglied", und es gibt
+   * nichts mehr, woran der Server die Zeile erkennen könnte.
+   *
+   * Für diesen Fall — und nur für ihn — sagt eine Admin-Person es ausdrücklich:
+   * die Id einer anonymisierten Zeile aus `GET …/people/former`. Automatisch
+   * geht das nicht und soll es nicht: Wer sein Konto löscht, will vergessen
+   * werden. Ihn wiederzuerkennen ist eine Entscheidung, die ein Mensch trifft.
+   */
+  formerPersonId: z.uuid().optional(),
 });
 
 /**
