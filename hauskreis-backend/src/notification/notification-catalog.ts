@@ -266,7 +266,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     // Steht als letzte in der Liste, weil sie als einzige nichts mit dem
     // Hauskreis zu tun hat, sondern mit der App darüber.
     description:
-      'Wenn es etwas Neues zu sehen gibt. Ein paarmal im Jahr, nicht bei jeder Kleinigkeit.',
+      'Lass dich über neue Features informieren, wenn sie erscheinen.',
     schedule: { kind: 'EVENT' },
     defaultEnabled: true,
   },

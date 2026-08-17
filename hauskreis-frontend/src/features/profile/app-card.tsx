@@ -80,15 +80,15 @@ export function AppCard() {
             href="/hilfe"
             icon={<HelpCircle size={16} />}
             title="Hilfe"
-            hint="Wie die App funktioniert — von Vorschlägen bis Datenschutz"
+            hint="Du hast Fragen zur Nutzung? — hier findest du Antworten"
           />
         </div>
 
         <div className="space-y-1 border-t border-line pt-4">
           <p className="text-sm font-bold text-stone-800">Gebaut von Niko</p>
           <p className="text-[11px] leading-relaxed text-stone-400">
-            Für unseren Hauskreis. Wenn etwas fehlt, klemmt oder anders sein
-            sollte — schreib mir einfach.
+            Hey! Wenn etwas fehlt, klemmt oder anders sein sollte — schreib mir
+            einfach.
           </p>
           <a
             href="mailto:niko.vix@icloud.com"
