@@ -40,7 +40,22 @@ export const metadata: Metadata = {
     // Steht unter dem Symbol auf dem Home-Bildschirm. Kurz halten: iOS kürzt
     // ab etwa zwölf Zeichen mit Auslassungspunkten.
     title: 'Acts2',
-    statusBarStyle: 'default',
+    /**
+     * Der eine Schalter, der die App bis unter die Notch zieht.
+     *
+     * Mit `default` setzt iOS die WebView **unter** die Statusleiste. Damit ist
+     * `env(safe-area-inset-top)` null — jedes `calc(env(safe-area-inset-top) +
+     * …)` im Projekt fiel still auf seine Konstante zusammen, und den Streifen
+     * darüber malte iOS selbst aus `themeColor`. Genau das war der schwarze
+     * Balken: eine Farbe, die zur Schale gehört, über einer Leinwand, die
+     * anders aussieht.
+     *
+     * `black-translucent` gibt uns die Fläche zurück. Der Preis: Uhr, Netz und
+     * Batterie sind ab jetzt **immer weiß**, einen zweiten Wert gibt es nicht.
+     * Deshalb liegt im `AppShell` ein Schleier über dem sicheren Rand — ohne
+     * ihn wäre die Uhr im Hellmodus unsichtbar.
+     */
+    statusBarStyle: 'black-translucent',
   },
   icons: {
     icon: [
@@ -53,17 +68,26 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   /**
-   * Die Farbe der Fläche, nicht die der Marke.
+   * Die Farbe der Fläche, nicht die der Marke — und zwar der Fläche, die auf
+   * einem Telefon wirklich darunter liegt.
    *
-   * iOS färbt damit im Standalone-Modus den Streifen über der App. Stand dort
-   * Terracotta, saß ein kräftiger Balken über einer cremefarbenen Leinwand —
-   * eine sichtbare Kante genau da, wo eine native App keine hat. Die
-   * `media`-Angaben greifen, solange niemand von Hand umgeschaltet hat; danach
-   * zieht `theme.ts` das Meta-Tag nach.
+   * Das ist `--color-canvas`, nicht `--color-shell`. Die Schale ist die Farbe
+   * *neben* der Telefonspalte und erst ab `md` zu sehen; auf dem Handy füllt
+   * die Leinwand den Bildschirm. Hier standen die Schalenwerte, und die Kante
+   * darüber war im Dunkelmodus der schwarze Balken.
+   *
+   * Seit `statusBarStyle: 'black-translucent'` ist der Streifen unter iOS
+   * durchsichtig — diese Farbe ist der Rückfall. Er zählt zweimal: unter
+   * Android malt Chrome den Streifen immer daraus, und `black-translucent`
+   * führt Apple als veraltet, es kann also eines Tages wieder ein Streifen
+   * sein. Dann ist er in Leinwandfarbe statt schwarz.
+   *
+   * Die `media`-Angaben greifen, solange niemand von Hand umgeschaltet hat;
+   * danach zieht `theme.ts` das Meta-Tag nach — dieselben Werte, eine Quelle.
    */
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f5efe9' },
-    { media: '(prefers-color-scheme: dark)', color: '#1c1917' },
+    { media: '(prefers-color-scheme: light)', color: '#faf6f3' },
+    { media: '(prefers-color-scheme: dark)', color: '#1d1815' },
   ],
   width: 'device-width',
   initialScale: 1,

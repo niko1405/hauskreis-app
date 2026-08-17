@@ -21,12 +21,20 @@ type Resolved = 'light' | 'dark';
 
 /**
  * Die Farbe des Streifens über der App (iOS) beziehungsweise der Systemleiste
- * (Android). Muss zu `--color-shell` passen, sonst sitzt eine Kante über der
- * Leinwand — dieselben Werte wie in `globals.css`.
+ * (Android).
+ *
+ * Muss zu **`--color-canvas`** passen, nicht zu `--color-shell`. Hier stand die
+ * Schale, und das war der Fehler: Die Schale ist die Farbe neben der
+ * Telefonspalte und erst ab `md` sichtbar — auf dem Handy grenzt der Streifen
+ * an die Leinwand. Im Dunkelmodus saß dadurch `#14100d` über `#1d1815`, und
+ * genau diese Kante las sich als schwarzer Balken über der App.
+ *
+ * Dieselben Werte stehen in `layout.tsx`; wer hier etwas ändert, ändert es
+ * dort mit.
  */
 const THEME_COLOR: Record<Resolved, string> = {
-  light: '#f5efe9',
-  dark: '#14100d',
+  light: '#faf6f3',
+  dark: '#1d1815',
 };
 
 const listeners = new Set<() => void>();

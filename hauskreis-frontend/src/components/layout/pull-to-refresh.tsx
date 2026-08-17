@@ -197,7 +197,11 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
   return (
     <div ref={host} className="relative">
       {/* Der Kringel sitzt über der Inhaltskante und schiebt sich mit ihr ins
-          Bild. `pointer-events-none`, damit er nie im Weg steht. */}
+          Bild. `pointer-events-none`, damit er nie im Weg steht.
+
+          `top-[env(…)]` statt `top-0`: Seit die App bis unter die Notch reicht,
+          ist die Oberkante dieses Wirts die Oberkante des Bildschirms — der
+          Kringel drehte sich sonst hinter der Uhr. */}
       <div
         role="status"
         // Solange gezogen wird, ist der Kringel reine Rückmeldung an das Auge
@@ -205,7 +209,7 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
         // angesagt.
         aria-label={refreshing ? 'Wird aktualisiert' : undefined}
         aria-hidden={!refreshing}
-        className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center"
+        className="pointer-events-none absolute inset-x-0 top-[env(safe-area-inset-top)] z-10 flex justify-center"
         style={{
           transform: `translateY(${offset - 34}px)`,
           opacity: offset > 4 ? 1 : 0,
