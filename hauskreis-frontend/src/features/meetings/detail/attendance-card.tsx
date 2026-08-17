@@ -46,8 +46,12 @@ export function AttendanceCard({
     'UNKNOWN';
 
   // Inaktive Personen zählen nirgends mit — vorher stand im Nenner schlicht
-  // die Länge der ganzen Liste.
-  const active = (people.data ?? []).filter((person) => person.active);
+  // die Länge der ganzen Liste. Und Eingeladene ebenso wenig: Wer sich noch nie
+  // angemeldet hat, kann nicht antworten und stünde auf ewig unter „weiß noch
+  // nicht". Der Server rechnet für „alle haben abgesagt" mit derselben Menge.
+  const active = (people.data ?? []).filter(
+    (person) => person.active && person.acceptedAt !== null,
+  );
   const attending = active.filter((p) => statusOf(p.id) === 'ATTENDING');
   const absent = active.filter((p) => statusOf(p.id) === 'ABSENT');
   const unanswered = active.filter((p) => statusOf(p.id) === 'UNKNOWN');

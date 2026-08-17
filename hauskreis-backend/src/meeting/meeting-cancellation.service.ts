@@ -5,6 +5,7 @@ import {
   MeetingCancelSource,
   MeetingStatus,
 } from '../../generated/prisma/enums';
+import { ANGEKOMMEN } from '../person/angekommen';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { GroupClockService } from './group-clock.service';
 
@@ -64,15 +65,19 @@ export class MeetingCancellationService {
       return;
     }
 
+    // Zähler und Nenner müssen dieselbe Menge meinen, sonst wird die Schwelle
+    // nie erreicht. Eingeladene stehen in keiner von beiden: Wer sich noch nie
+    // angemeldet hat, kann nicht absagen — und hielte damit dauerhaft einen
+    // Abend am Leben, den alle anderen abgesagt haben.
     const [active, declined] = await Promise.all([
       this.prisma.person.count({
-        where: { hauskreisId: meeting.hauskreisId, active: true },
+        where: { hauskreisId: meeting.hauskreisId, ...ANGEKOMMEN },
       }),
       this.prisma.meetingAttendance.count({
         where: {
           meetingId,
           status: AttendanceStatus.ABSENT,
-          person: { active: true },
+          person: ANGEKOMMEN,
         },
       }),
     ]);

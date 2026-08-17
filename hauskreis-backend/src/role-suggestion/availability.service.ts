@@ -7,6 +7,13 @@ import { GroupClockService } from '../meeting/group-clock.service';
 /**
  * Wer an einem Abend da ist — und wer deshalb eine Rolle übernehmen kann.
  *
+ * **Zwei Gründe, aus denen jemand keine übernehmen kann**, und sie sind
+ * verschieden groß. Der eine gilt für einen Abend: die Person hat abgesagt oder
+ * ist verreist. Der andere gilt für die Person: sie war überhaupt noch nie da —
+ * eine offene Einladung, ein Konto, in das sich niemand angemeldet hat
+ * (`assertArrived`). Deshalb hängt der zweite auch nicht am Datum: Nachtragen
+ * ändert nichts daran, dass da niemand war.
+ *
  * Bis hierher prüfte **keine** der drei Zuteilungen, ob die Person überhaupt
  * kommt: `resolveVenue`, `setLeaders` und `TopicService.update` sahen nur nach,
  * ob sie zum Hauskreis gehört. Man konnte also jemanden als Gastgeber
@@ -44,6 +51,10 @@ export class AvailabilityService {
   ): Promise<void> {
     if (personIds.length === 0) return;
 
+    // Zuerst und ohne Rücksicht auf das Datum: eine offene Einladung ist keine
+    // Person, der man einen Abend anvertrauen kann — auch rückwirkend nicht.
+    await this.assertArrived(hauskreisId, personIds);
+
     const meeting = await this.prisma.meeting.findFirst({
       where: { id: meetingId, hauskreisId },
       select: { date: true },
@@ -68,6 +79,45 @@ export class AvailabilityService {
       away.length === 1
         ? `${names} ist an diesem Abend nicht dabei — wer nicht da ist, kann die Rolle nicht übernehmen.`
         : `${names} sind an diesem Abend nicht dabei — wer nicht da ist, kann die Rolle nicht übernehmen.`,
+    );
+  }
+
+  /**
+   * Wirft `400`, sobald jemand aus der Liste noch nie hier war.
+   *
+   * Eine Einladung legt Zeile und Konto an, aber niemanden, der sie annimmt.
+   * Bis das jemand tut, ist die Person eine Adresse — sie kann nicht zusagen,
+   * bekommt keine Benachrichtigung und weiß von keiner Zuteilung. Sie
+   * trotzdem eintragen zu können hieß, einen Abend für erledigt zu halten, für
+   * den in Wahrheit niemand zuständig ist.
+   *
+   * Öffentlich, weil zwei Wege hierher führen: die Prüfung auf Anwesenheit
+   * (Gastgeber beim Ändern, Musik, Thema) und die Mandantengrenze beim Anlegen
+   * eines Termins (Gastgeber und Testimony, `MeetingService`).
+   */
+  async assertArrived(
+    hauskreisId: string,
+    personIds: readonly string[],
+  ): Promise<void> {
+    if (personIds.length === 0) return;
+
+    const pending = await this.prisma.person.findMany({
+      where: {
+        id: { in: [...personIds] },
+        hauskreisId,
+        acceptedAt: null,
+      },
+      select: { name: true },
+    });
+
+    if (pending.length === 0) return;
+
+    const names = pending.map((person) => person.name).join(', ');
+
+    throw new BadRequestException(
+      pending.length === 1
+        ? `${names} hat die Einladung noch nicht angenommen — bis dahin lässt sich keine Rolle eintragen.`
+        : `${names} haben ihre Einladungen noch nicht angenommen — bis dahin lässt sich keine Rolle eintragen.`,
     );
   }
 

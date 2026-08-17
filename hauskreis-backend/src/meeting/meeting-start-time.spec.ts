@@ -95,7 +95,10 @@ function setup(groupStart = 1080, { anlegen = false } = {}) {
       { announceTimeChange } as unknown as MeetingNotificationService,
       {} as unknown as MeetingCancellationService,
       { announce: jest.fn() } as unknown as RoleAssignmentNotifier,
-      { assertAvailable: jest.fn() } as unknown as AvailabilityService,
+      {
+        assertAvailable: jest.fn(),
+        assertArrived: jest.fn(),
+      } as unknown as AvailabilityService,
       {} as unknown as RoleReleaseService,
       { apply: jest.fn() } as unknown as AutoAttendanceService,
       {

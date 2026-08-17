@@ -431,9 +431,11 @@ export class PersonService {
       return;
     }
 
+    // Eine zurückgezogene Einladung: die Zeile geht ganz, sie trägt keine
+    // Geschichte. Die Gebetsrotation bleibt in Ruhe — dort stand die Person
+    // nie, sie war ja noch nie da.
     await this.prisma.person.delete({ where: { id } });
     await this.syncHomes(person.locationId);
-    await this.replanPrayerBuddies(hauskreisId);
     await this.discardInvitationAccount(person.email);
   }
 
@@ -511,6 +513,11 @@ export class PersonService {
       // Was rein persönlich ist und keinen Archivwert hat. Es hängt an
       // `Cascade`, aber das feuert nur beim Löschen der Zeile — und die bleibt
       // hier gerade stehen.
+      //
+      // Die **Gebetsanliegen** gehören dazu und sind der heikelste Posten der
+      // Liste: „bitte betet für meine Mutter" ist nichts, was unter
+      // „Ehemaliges Mitglied" stehen bleiben darf. Anders als „wer hat
+      // gehostet" trägt es keine Geschichte, die dem Archiv fehlen würde.
       await this.prisma.$transaction([
         this.prisma.pushSubscription.deleteMany({
           where: { personId: { in: ids } },
@@ -524,15 +531,18 @@ export class PersonService {
         this.prisma.absencePeriod.deleteMany({
           where: { personId: { in: ids } },
         }),
+        this.prisma.meetingPrayerRequest.deleteMany({
+          where: { personId: { in: ids } },
+        }),
       ]);
     }
 
     for (const invitation of invitations) {
       await this.prisma.person.delete({ where: { id: invitation.id } });
       await this.syncHomes(invitation.locationId);
-      // Eine Eingeladene steht schon in der Rotation (siehe `invite`) — ohne
-      // das bliebe ihr Gegenüber zwei Wochen allein.
-      await this.replanPrayerBuddies(invitation.hauskreisId);
+      // Kein Neuaufbau der Gebetsrotation mehr: Eine offene Einladung stand nie
+      // darin (siehe `invite`), ihr Wegfallen ändert an den Gruppen also
+      // nichts.
     }
 
     try {
@@ -768,10 +778,14 @@ export class PersonService {
       throw error;
     }
 
-    // Wer eingeladen ist, gehört zur Rotation — er wartet sonst bis zu zehn
-    // Wochen auf seine ersten Buddys. Außerhalb des `try`, weil ein Haken hier
-    // kein Grund ist, ein richtig angelegtes Konto wieder wegzuräumen.
-    await this.replanPrayerBuddies(hauskreisId);
+    // Hier stand einmal ein Neuaufbau der Gebetsrotation, mit der Begründung
+    // „wer eingeladen ist, gehört dazu, er wartet sonst zehn Wochen auf seine
+    // ersten Buddys". Das Warten stimmte, der Schluss nicht: Ein Name in einer
+    // Gebetsgruppe, dem niemand schreiben kann, lässt sein Gegenüber zwei
+    // Wochen allein beten — schlechter als Warten. Die Rotation zieht jetzt
+    // nach, wenn die Einladung **angenommen** wird (`resolveForUser`,
+    // `MembershipService.acceptInvitation`), und das ist der Augenblick, in dem
+    // wirklich jemand dazukommt.
 
     return { ...person, invitationEmailSent };
   }
@@ -982,6 +996,11 @@ export class PersonService {
   /**
    * Resolves the person row for a logged-in Keycloak user. On first login the
    * row is still unlinked, so we match it by email and attach the subject id.
+   *
+   * **Hier kommt jemand an**, und das ist der Augenblick, in dem er in die
+   * Gebetsrotation gehört — nicht schon beim Einladen (siehe `invite`). Beide
+   * Zweige unten führen dorthin: das erste Anmelden auf eine bereits verknüpfte
+   * Zeile, und die Zuordnung über die Adresse.
    */
   async resolveForUser(user: AuthenticatedUser) {
     const linked = await this.prisma.person.findUnique({
@@ -996,12 +1015,17 @@ export class PersonService {
       const arrival = firstLogin ? new Date() : undefined;
       const naming = namingFromToken(user, linked, firstLogin);
 
-      return arrival || naming
-        ? this.prisma.person.update({
-            where: { id: linked.id },
-            data: { acceptedAt: arrival, ...naming },
-          })
-        : linked;
+      const person =
+        arrival || naming
+          ? await this.prisma.person.update({
+              where: { id: linked.id },
+              data: { acceptedAt: arrival, ...naming },
+            })
+          : linked;
+
+      if (firstLogin) await this.welcomeIntoRotation(person.hauskreisId);
+
+      return person;
     }
 
     if (!user.email) {
@@ -1034,7 +1058,7 @@ export class PersonService {
       );
     }
 
-    return this.prisma.person.update({
+    const person = await this.prisma.person.update({
       where: { id: invitations[0]!.id },
       data: {
         keycloakUserId: user.keycloakUserId,
@@ -1043,6 +1067,31 @@ export class PersonService {
         ...namingFromToken(user, { username: null }, true),
       },
     });
+
+    await this.welcomeIntoRotation(person.hauskreisId);
+
+    return person;
+  }
+
+  /**
+   * Nimmt jemanden in die Gebetsrotation auf, der gerade zum ersten Mal da ist.
+   *
+   * **Fehler werden geschluckt, und das ist der Kern dieser Methode.** Sie läuft
+   * im Anfrageweg — `resolveForUser` steht am Anfang jeder authentifizierten
+   * Anfrage —, und zwar ausgerechnet bei der allerersten. Ginge sie schief und
+   * risse die Anfrage mit, bestünde die Begrüßung in dieser App aus einer
+   * Fehlermeldung, und zwar wegen einer Sache, die den neuen Menschen in diesem
+   * Moment am wenigsten interessiert. Der Cron um vier Uhr baut ohnehin nach.
+   */
+  private async welcomeIntoRotation(hauskreisId: string): Promise<void> {
+    try {
+      await this.replanPrayerBuddies(hauskreisId);
+    } catch (error) {
+      this.logger.error(
+        `Erste Anmeldung in Hauskreis ${hauskreisId}, aber die Gebetsrotation ließ sich nicht nachziehen`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 }
 

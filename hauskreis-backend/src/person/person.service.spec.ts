@@ -28,6 +28,7 @@ function sideTables() {
     notificationPreference: { deleteMany: jest.fn() },
     notificationLog: { deleteMany: jest.fn() },
     absencePeriod: { deleteMany: jest.fn() },
+    meetingPrayerRequest: { deleteMany: jest.fn() },
   };
 }
 
@@ -185,6 +186,50 @@ describe('PersonService.resolveForUser', () => {
     });
   });
 
+  /**
+   * Der Augenblick, in dem wirklich jemand dazukommt — und damit der, in dem
+   * die Gebetsrotation nachzieht. Vorher passierte das beim Einladen, also für
+   * jemanden, der die App vielleicht nie öffnet.
+   */
+  it('holt die Person bei der ersten Anmeldung in die Gebetsrotation', async () => {
+    const { service, person, replanAfterMembershipChange } = setup();
+    person.findUnique.mockResolvedValue({
+      id: 'p3',
+      keycloakUserId: 'kc-123',
+      acceptedAt: null,
+    });
+    person.update.mockResolvedValue({
+      id: 'p3',
+      hauskreisId: 'hk-7',
+      acceptedAt: new Date(),
+    });
+
+    await service.resolveForUser(user);
+
+    expect(replanAfterMembershipChange).toHaveBeenCalledWith('hk-7');
+  });
+
+  /**
+   * Sie läuft im Anfrageweg, und zwar bei der allerersten Anfrage überhaupt.
+   * Eine Begrüßung, die aus einer Fehlermeldung besteht, wäre der schlechteste
+   * denkbare Einstieg — und der Cron um vier Uhr baut ohnehin nach.
+   */
+  it('lässt die Anmeldung nicht an der Gebetsrotation scheitern', async () => {
+    const { service, person, replanAfterMembershipChange } = setup();
+    person.findUnique.mockResolvedValue({
+      id: 'p3',
+      keycloakUserId: 'kc-123',
+      acceptedAt: null,
+    });
+    person.update.mockResolvedValue({ id: 'p3', hauskreisId: 'hk-7' });
+    replanAfterMembershipChange.mockRejectedValue(new Error('Datenbank weg'));
+
+    await expect(service.resolveForUser(user)).resolves.toEqual({
+      id: 'p3',
+      hauskreisId: 'hk-7',
+    });
+  });
+
   it('leaves the arrival date alone on every login after the first', async () => {
     const { service, person } = setup();
     const arrived = new Date('2026-01-02T03:04:05.000Z');
@@ -235,10 +280,16 @@ describe('PersonService.invite', () => {
   };
 
   /**
-   * Wer eingeladen ist, gehört zur Rotation — sonst wartet er, bis alle fünf
-   * geplanten Runden abgelaufen sind.
+   * Eine Einladung ist eine offene Frage, keine Zusage.
+   *
+   * Hier stand das Gegenteil: Wer eingeladen war, kam sofort in die Rotation,
+   * damit er nicht bis zu zehn Wochen auf seine ersten Buddys wartet. Das
+   * Warten war ein echtes Problem, der Schluss trotzdem falsch — ein Name, dem
+   * niemand schreiben kann, ließ sein Gegenüber zwei Wochen allein beten.
+   * Nachgezogen wird jetzt beim **Annehmen** (`resolveForUser`,
+   * `MembershipService.acceptInvitation`).
    */
-  it('holt die eingeladene Person in die Gebetsrotation', async () => {
+  it('lässt die Gebetsrotation beim Einladen in Ruhe', async () => {
     const { service, person, keycloakAdmin, replanAfterMembershipChange } =
       setup();
     keycloakAdmin.inviteUser.mockResolvedValue({
@@ -249,7 +300,7 @@ describe('PersonService.invite', () => {
 
     await service.invite('hk-1', invitation);
 
-    expect(replanAfterMembershipChange).toHaveBeenCalledWith('hk-1');
+    expect(replanAfterMembershipChange).not.toHaveBeenCalled();
   });
 
   it('rolls the Keycloak account back when the local insert fails', async () => {
@@ -744,9 +795,8 @@ describe('PersonService.deleteOrphanedAccount', () => {
 
     expect(person.delete).toHaveBeenCalledWith({ where: { id: 'p2' } });
     expect(person.updateMany).not.toHaveBeenCalled();
-    // Eingeladene stehen schon in der Rotation; ohne das bliebe ihr Gegenüber
-    // zwei Wochen allein.
-    expect(replanAfterMembershipChange).toHaveBeenCalledWith('hk-2');
+    // Und ohne die Rotation anzufassen: Eine offene Einladung stand nie darin.
+    expect(replanAfterMembershipChange).not.toHaveBeenCalled();
     expect(keycloakAdmin.deleteUser).toHaveBeenCalledWith('kc-123');
   });
 

@@ -4,6 +4,9 @@ import { AttendanceStatus, MeetingStatus } from '../../generated/prisma/enums';
 import { rankForRole } from './ranking';
 import { rankHomes, type HomeUse, type RankableHome } from './host-ranking';
 import { AbsenceCalendar } from '../absence/absence-window';
+// Vorschlagen, was der Server danach ablehnt, wäre eine Falle — und eine
+// eingeladene Person stünde hier sogar ganz oben, weil sie noch nie dran war.
+import { ANGEKOMMEN } from '../person/angekommen';
 import { AvailabilityService } from './availability.service';
 import {
   AssignmentRole,
@@ -163,7 +166,7 @@ export class RoleSuggestionService {
     const [people, hostEvents, topicEvents, calendar, declined] =
       await Promise.all([
         this.prisma.person.findMany({
-          where: { hauskreisId, active: true },
+          where: { hauskreisId, ...ANGEKOMMEN },
           select: { id: true, name: true, photoUpdatedAt: true },
         }),
         this.collectEvents(hauskreisId),
@@ -210,7 +213,7 @@ export class RoleSuggestionService {
       declined,
     ] = await Promise.all([
       this.prisma.person.findMany({
-        where: { hauskreisId, active: true },
+        where: { hauskreisId, ...ANGEKOMMEN },
         select: { id: true, name: true, photoUpdatedAt: true },
       }),
       this.collectEvents(hauskreisId),
@@ -250,7 +253,7 @@ export class RoleSuggestionService {
     const [people, hostEvents, topicEvents, songEvents, calendar, declined] =
       await Promise.all([
         this.prisma.person.findMany({
-          where: { hauskreisId, active: true, playsInstrument: true },
+          where: { hauskreisId, ...ANGEKOMMEN, playsInstrument: true },
           select: { id: true, name: true, photoUpdatedAt: true },
         }),
         this.collectEvents(hauskreisId),
@@ -286,7 +289,7 @@ export class RoleSuggestionService {
     const [households, expected, fullGroup] = await Promise.all([
       this.findHouseholds(hauskreisId),
       this.countExpectedAttendance(hauskreisId, meetingId),
-      this.prisma.person.count({ where: { hauskreisId, active: true } }),
+      this.prisma.person.count({ where: { hauskreisId, ...ANGEKOMMEN } }),
     ]);
 
     if (expected === null) {
@@ -339,7 +342,7 @@ export class RoleSuggestionService {
         hostWeight: true,
         capacity: true,
         residents: {
-          where: { active: true, canHost: true },
+          where: { ...ANGEKOMMEN, canHost: true },
           select: { id: true, name: true, photoUpdatedAt: true },
         },
       },
@@ -379,12 +382,12 @@ export class RoleSuggestionService {
     }
 
     const [active, declined] = await Promise.all([
-      this.prisma.person.count({ where: { hauskreisId, active: true } }),
+      this.prisma.person.count({ where: { hauskreisId, ...ANGEKOMMEN } }),
       this.prisma.meetingAttendance.count({
         where: {
           meetingId,
           status: AttendanceStatus.ABSENT,
-          person: { hauskreisId, active: true },
+          person: { hauskreisId, ...ANGEKOMMEN },
         },
       }),
     ]);

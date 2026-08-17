@@ -935,6 +935,12 @@ export class MeetingService {
   /**
    * Guards the multi-tenant boundary: a meeting must never point at a person or
    * location from a different Hauskreis. The foreign keys alone would allow it.
+   *
+   * Dazu die zweite Frage, die dieselben beiden Felder betrifft: **war die
+   * Person überhaupt schon einmal hier?** Der Weg über `assertAvailable` deckt
+   * nur den Gastgeber beim *Ändern* ab; beim Anlegen und beim Testimony
+   * kommt nichts dort vorbei, und eine offene Einladung als Gastgeber eines
+   * neuen Abends wäre ein Termin, der geplant aussieht und keinen hat.
    */
   private async assertReferencesBelongToHauskreis(
     hauskreisId: string,
@@ -954,6 +960,13 @@ export class MeetingService {
         dto.testimonyPersonId,
       );
     }
+
+    await this.availability.assertArrived(
+      hauskreisId,
+      [dto.hostPersonId, dto.testimonyPersonId].filter(
+        (id): id is string => typeof id === 'string',
+      ),
+    );
 
     if (dto.locationId) {
       const location = await this.prisma.location.findFirst({

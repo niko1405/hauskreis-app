@@ -251,11 +251,17 @@ export class MembershipService {
       // Was rein persönlich ist und keinen Archivwert hat. Es hängt an
       // `Cascade`, aber das feuert nur beim Löschen der Zeile — und die bleibt
       // hier gerade stehen.
+      //
+      // Die **Gebetsanliegen** gehören dazu und sind der heikelste Posten der
+      // Liste: „bitte betet für meine Mutter" ist nichts, was unter
+      // „Ehemaliges Mitglied" stehen bleiben darf. Anders als „wer hat
+      // gehostet" trägt es keine Geschichte, die dem Archiv fehlen würde.
       await this.prisma.$transaction([
         this.prisma.pushSubscription.deleteMany({ where: { personId } }),
         this.prisma.notificationPreference.deleteMany({ where: { personId } }),
         this.prisma.notificationLog.deleteMany({ where: { personId } }),
         this.prisma.absencePeriod.deleteMany({ where: { personId } }),
+        this.prisma.meetingPrayerRequest.deleteMany({ where: { personId } }),
       ]);
     }
 
@@ -449,10 +455,14 @@ export class MembershipService {
    * eine Einladung die bestehende Mitgliedschaft beendet, ist genau die
    * Überraschung, vor der man gefragt werden will.
    *
-   * Die Gebetsbuddys werden hier **nicht** neu geplant, und das ist kein
-   * Versehen: die Zeile ist seit der Einladung `active`, in der Rotation steht
-   * die Person also längst. Was sich ändert, ist der *alte* Hauskreis — darum
-   * kümmert sich `leave`.
+   * **Die Gebetsbuddys werden hier neu geplant**, und das war einmal anders.
+   * Der Satz dazu lautete: „die Zeile ist seit der Einladung `active`, in der
+   * Rotation steht die Person also längst." Das stimmt nicht mehr — eine offene
+   * Einladung bleibt jetzt draußen (`ANGEKOMMEN`), weil ein Name, dem niemand
+   * schreiben kann, sein Gegenüber zwei Wochen allein beten ließ. Wer annimmt,
+   * kommt genau hier dazu.
+   *
+   * Für den *alten* Hauskreis erledigt das weiterhin `leave`.
    */
   async acceptInvitation(
     user: AuthenticatedUser,
@@ -484,10 +494,25 @@ export class MembershipService {
       await this.leave(current.hauskreisId, current.id, dto);
     }
 
-    return this.prisma.person.update({
+    const person = await this.prisma.person.update({
       where: { id: invitation.id },
       data: { keycloakUserId: user.keycloakUserId, acceptedAt: new Date() },
     });
+
+    // Wie bei der ersten Anmeldung: Die Rotation zieht nach, aber sie darf das
+    // Ankommen nicht zum Scheitern bringen. Der Cron um vier Uhr baut nach.
+    try {
+      await this.prayerBuddies.replanAfterMembershipChange(
+        invitation.hauskreisId,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Einladung in Hauskreis ${invitation.hauskreisId} angenommen, aber die Gebetsrotation ließ sich nicht nachziehen`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
+    return person;
   }
 }
 

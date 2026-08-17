@@ -90,7 +90,11 @@ function setup(before = meeting()) {
   const roleAssignments = { announce: jest.fn() };
   // Standardmäßig ist niemand abwesend — die Regel selbst hat ihren eigenen
   // Spec; hier soll sie den anderen Tests nicht im Weg stehen.
-  const availability = { assertAvailable: jest.fn(), findDeclined: jest.fn() };
+  const availability = {
+    assertAvailable: jest.fn(),
+    assertArrived: jest.fn(),
+    findDeclined: jest.fn(),
+  };
   const roleRelease = { releaseFor: jest.fn() };
   // Das Lösen der Einheit beim Abschalten des Bausteins hat seinen eigenen
   // Spec; hier soll es den anderen Tests nicht im Weg stehen.

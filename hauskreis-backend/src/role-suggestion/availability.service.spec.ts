@@ -25,11 +25,18 @@ afterAll(() => {
   jest.useRealTimers();
 });
 
+const LEUTE = [
+  { id: 'p1', name: 'Niko' },
+  { id: 'p2', name: 'Mira' },
+];
+
 function setupAvailability(
   options: {
     date?: Date;
     declinedIds?: string[];
     periods?: { personId: string; startDate: Date; endDate: Date }[];
+    /** Wer noch nicht angenommen hat — für `assertArrived`. */
+    pendingIds?: string[];
   } = {},
 ) {
   const prisma = {
@@ -49,10 +56,19 @@ function setupAvailability(
       findMany: jest.fn().mockResolvedValue(options.periods ?? []),
     },
     person: {
-      findMany: jest.fn().mockResolvedValue([
-        { id: 'p1', name: 'Niko' },
-        { id: 'p2', name: 'Mira' },
-      ]),
+      // Zwei Fragen an dieselbe Tabelle, und sie brauchen verschiedene
+      // Antworten: `assertArrived` fragt nach offenen Einladungen
+      // (`acceptedAt: null`), `findUnavailable` nach Namen für die Meldung.
+      // Eine feste Antwort ließe jeden Test an der Einladungsprüfung scheitern.
+      findMany: jest.fn((args: { where: { acceptedAt?: null } }) =>
+        Promise.resolve(
+          args.where.acceptedAt === null
+            ? LEUTE.filter((person) =>
+                (options.pendingIds ?? []).includes(person.id),
+              )
+            : LEUTE,
+        ),
+      ),
     },
   };
 
@@ -126,6 +142,35 @@ describe('AvailabilityService.assertAvailable', () => {
     ).resolves.toBeUndefined();
   });
 
+  /**
+   * Zwei Gründe, keine Rolle übernehmen zu können, und sie sind verschieden
+   * groß: „an diesem Abend nicht da" gilt für einen Abend, „war überhaupt noch
+   * nie da" für die Person. Eine offene Einladung hat weder Zusage noch
+   * Benachrichtigung noch eine Ahnung von der Zuteilung.
+   */
+  it('weist ab, wer die Einladung noch nicht angenommen hat', async () => {
+    const { service } = setupAvailability({ pendingIds: ['p1'] });
+
+    await expect(service.assertAvailable('hk', 'm1', ['p1'])).rejects.toThrow(
+      /Niko hat die Einladung noch nicht angenommen/,
+    );
+  });
+
+  /**
+   * Und anders als die Abwesenheit auch **rückwirkend**: Nachtragen ändert
+   * nichts daran, dass da niemand war.
+   */
+  it('lässt eine offene Einladung auch nicht nachtragen', async () => {
+    const { service } = setupAvailability({
+      date: LETZTER_DIENSTAG,
+      pendingIds: ['p1'],
+    });
+
+    await expect(
+      service.assertAvailable('hk', 'm1', ['p1']),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('fragt gar nicht erst, wenn niemand genannt ist', async () => {
     const { service, prisma } = setupAvailability();
 
@@ -159,7 +204,11 @@ function setupRelease(
     },
     meetingSongLeader: {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      // Für `clearSongSelectionIfUnled`: Wer nach dem Löschen noch zuständig
+      // ist. Leer heißt „niemand mehr", also wird die Auswahl zurückgenommen.
+      findMany: jest.fn().mockResolvedValue([]),
     },
+    meetingSong: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
   };
 
   const prisma = {
@@ -372,7 +421,14 @@ function setupLeaving(
       // nichts geschrieben wurde.
       updateMany: meetingTouch,
     },
-    meetingSongLeader: { deleteMany: batch('song', 1) },
+    meetingSongLeader: {
+      deleteMany: batch('song', 1),
+      // Danach ist an keinem Abend mehr jemand für die Musik zuständig — die
+      // Auswahl fällt also mit. Sie steht hier nur als Attrappe; was sie
+      // entscheidet, prüft `song-selection-release.spec.ts`.
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    meetingSong: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     meetingTopicResponsible: { deleteMany: batch('topic', 1) },
     meetingAttendance: { deleteMany: batch('attendance', 2) },
     $transaction: jest.fn((operations: Promise<unknown>[]) =>

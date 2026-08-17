@@ -5,6 +5,7 @@ import { PrayerBuddyService } from '../prayer-buddy/prayer-buddy.service';
 import { AssignmentService, type Assignment } from './assignment.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
 import { addDays } from '../meeting/meeting-schedule';
+import { ANGEKOMMEN } from '../person/angekommen';
 import { GroupClockService } from '../meeting/group-clock.service';
 import {
   actionstepOf,
@@ -185,7 +186,9 @@ export class DashboardService {
           personId,
         }),
         this.buddies.findCurrent(hauskreisId, now),
-        this.prisma.person.count({ where: { hauskreisId, active: true } }),
+        // Dieselbe Menge wie in der Anwesenheitsliste am Termin: „3 von 8"
+        // muss auf beiden Bildschirmen dieselben acht meinen.
+        this.prisma.person.count({ where: { hauskreisId, ...ANGEKOMMEN } }),
       ]);
 
     const myGroup = buddies?.groups.find((group) =>

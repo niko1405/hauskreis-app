@@ -100,13 +100,22 @@ export function AssignmentPicker({
    * der gültigen Antworten. Bei Thema und Musik gibt es welche, weil der
    * Endpunkt nach Instrument filtert und Abwesende weglässt; eintragen darf die
    * Gruppe trotzdem, worauf sie sich geeinigt hat.
+   *
+   * **Eingeladene stehen hier nicht**, auch nicht beim Nachtragen. Der Server
+   * lehnt sie ab — eine offene Einladung ist niemand, dem man einen Abend
+   * anvertrauen kann —, und ein Name, der ausnahmslos in einer Fehlermeldung
+   * endet, ist eine Einladung ins Leere.
    */
+  const assignable = (people.data ?? []).filter(
+    (person) => person.acceptedAt !== null,
+  );
+
   const rankedIds = new Set(ranked.map((s) => s.personId));
   const unranked = withoutSuggestions
-    ? (people.data ?? [])
+    ? assignable
     : kind === 'HOST'
       ? []
-      : (people.data ?? []).filter((person) => !rankedIds.has(person.id));
+      : assignable.filter((person) => !rankedIds.has(person.id));
 
   return (
     <>

@@ -182,7 +182,7 @@ function setup(initial: Partial<Row>[] = [], people = PEOPLE) {
       .toSorted((a, b) => a.periodStart.getTime() - b.periodStart.getTime())
       .map((row) => `${iso(row.periodStart)}…${iso(row.periodEnd)}`);
 
-  return { service, rows, notify, upcoming, prayerBuddyGroup };
+  return { service, rows, notify, upcoming, prayerBuddyGroup, prisma };
 }
 
 describe('PrayerBuddyGeneratorService.ensureRoundsPlanned', () => {
@@ -254,6 +254,32 @@ describe('PrayerBuddyGeneratorService.ensureRoundsPlanned', () => {
     // kein Grund, es viermal weiter zu versuchen.
     expect(result.created).toBe(0);
     expect(rows).toHaveLength(0);
+  });
+
+  /**
+   * Wer eingeladen ist, ist noch nicht da.
+   *
+   * Eine offene Einladung ist von der ersten Sekunde an `active: true` — die
+   * Zeile entsteht beim Einladen. Stand sie damit in der Rotation, bekam ihr
+   * Gegenüber einen Namen genannt, dem es nicht schreiben konnte, und betete
+   * zwei Wochen allein. Hier wird deshalb die Abfrage selbst geprüft: Die
+   * Bedingung ist das ganze Verhalten, und sie fällt beim Umbauen leicht
+   * heraus.
+   */
+  it('lässt offene Einladungen aus der Rotation', async () => {
+    const { service, prisma } = setup();
+
+    await service.ensureRoundsPlanned('hk-1', TODAY);
+
+    expect(prisma.person.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          hauskreisId: 'hk-1',
+          active: true,
+          acceptedAt: { not: null },
+        }),
+      }),
+    );
   });
 });
 

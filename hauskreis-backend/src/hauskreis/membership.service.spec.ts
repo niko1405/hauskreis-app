@@ -72,6 +72,9 @@ function setup(
     },
     notificationLog: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     absencePeriod: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    meetingPrayerRequest: {
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
     // Die Transaktion reicht denselben Client durch; hier zählt nur, was
     // geschrieben werden wollte. Beide Formen: Callback und Array.
     $transaction: jest.fn((run: ((tx: unknown) => unknown) | unknown[]) =>

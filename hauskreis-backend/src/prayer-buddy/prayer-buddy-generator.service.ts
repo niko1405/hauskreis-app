@@ -7,6 +7,7 @@ import { PrayerBuddyService, type Assignment } from './prayer-buddy.service';
 import { buildGroups, repairGroups } from './grouping';
 import { NotificationType } from '../../generated/prisma/enums';
 import { addDays } from '../meeting/meeting-schedule';
+import { ANGEKOMMEN } from '../person/angekommen';
 import { GroupClockService } from '../meeting/group-clock.service';
 import { CRON_TIME_ZONE } from '../common/time/local-evening';
 
@@ -224,7 +225,7 @@ export class PrayerBuddyGeneratorService {
         orderBy: { createdAt: 'asc' },
       }),
       this.prisma.person.findMany({
-        where: { hauskreisId, active: true },
+        where: { hauskreisId, ...ANGEKOMMEN },
         select: { id: true },
       }),
     ]);
@@ -524,8 +525,11 @@ export class PrayerBuddyGeneratorService {
     options: { notify: boolean },
   ): Promise<RotationResult> {
     const [people, config, history] = await Promise.all([
+      // Eingeladene bleiben draußen: Wer sich noch nie angemeldet hat, kann
+      // seine Buddys weder erfahren noch mit ihnen beten — sein Gegenüber wäre
+      // zwei Wochen allein. Nimmt er die Einladung an, wird sofort neu geplant.
       this.prisma.person.findMany({
-        where: { hauskreisId, active: true },
+        where: { hauskreisId, ...ANGEKOMMEN },
         select: { id: true, name: true },
       }),
       this.buddies.getConfig(hauskreisId),
