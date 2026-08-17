@@ -633,7 +633,7 @@ function Loaded({
             meeting={meeting}
             responsibles={roles.topicPeople}
             editable={editing && mayEditTopic}
-            mayChoose={editing && mayChooseTopic}
+            mayChoose={mayChooseTopic}
             saving={update.isPending || roles.saving || session.saving}
             onChoose={openTopicChoice}
             onTitle={(next) => session.patch({ title: next })}

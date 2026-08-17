@@ -423,7 +423,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'locations',
     question: 'Wie trage ich meine eigene Wohnung ein?',
     answer:
-      'Im Profil unter „Wo du wohnst". Du tippst deine **Adresse** ein — du wählst nichts aus einer Liste. (Früher stand dort eine Liste mit „Bei Chris" darin, was nie Sinn ergab: In Chris\' Wohnung kannst du nicht hosten.)\n\nWohnt unter derselben Adresse schon jemand, fragt die App nach: „Wohnt ihr zusammen?" Nur wenn du bestätigst, zieht ihr in dieselbe Wohnung. Sonst wäre still aus zwei Haushalten einer geworden — und beide wären nur noch halb so oft dran.\n\n„Ich bringe keine Wohnung mit" ist ein völlig gültiger Zustand. Alle anderen Aufgaben kannst du trotzdem übernehmen.',
+      'Im Profil unter „Wo du wohnst". Du tippst deine **Adresse** ein — du wählst nichts aus einer Liste.\n\nWohnt unter derselben Adresse schon jemand, fragt die App nach: „Wohnt ihr zusammen?" Nur wenn du bestätigst, zieht ihr in dieselbe Wohnung. Sonst wäre still aus zwei Haushalten einer geworden — und beide wären nur noch halb so oft dran.\n\n„Ich bringe keine Wohnung mit" ist ein völlig gültiger Zustand. Alle anderen Aufgaben kannst du trotzdem übernehmen.',
     keywords: ['adresse', 'wohnung', 'eintragen', 'wo ich wohne'],
   },
   {
