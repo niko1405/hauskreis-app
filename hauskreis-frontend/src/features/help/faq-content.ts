@@ -72,14 +72,6 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     keywords: ['app', 'zweck', 'wozu', 'überblick'],
   },
   {
-    id: 'start-nichts-automatisch',
-    category: 'start',
-    question: 'Teilt die App irgendetwas von selbst zu?',
-    answer:
-      'Nein. Das ist der wichtigste Satz über diese App: Sie **schlägt vor**, eintragen tut ein Mensch.\n\nJedes Feld bleibt leer, bis jemand es füllt — Gastgeber, Thema, Musik, Testimony. Die App rechnet nur aus, wer am besten passen würde, und legt die Gründe daneben. Was daraus wird, entscheidet ihr.\n\nDrei Dinge macht sie ohne Rückfrage, und alle drei nehmen niemandem etwas ab: Sie legt kommende Termine an, sie würfelt die Gebetsgruppen, und sie sagt einen Abend ab, wenn wirklich alle abgesagt haben.',
-    keywords: ['automatisch', 'zwang', 'einteilen', 'zuteilung'],
-  },
-  {
     id: 'start-anmelden',
     category: 'start',
     question: 'Wie melde ich mich an?',
@@ -94,6 +86,14 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     answer:
       'Es gibt sie nicht im App Store — sie läuft im Browser und lässt sich von dort ablegen.\n\n**iPhone:** In Safari öffnen, unten auf Teilen tippen, „Zum Home-Bildschirm". Nur so funktionieren übrigens auch die Benachrichtigungen; im normalen Safari-Tab schaltet Apple sie ab.\n\n**Android:** Chrome bietet „App installieren" von selbst an, sonst steht es im Menü oben rechts.\n\nEin Hinweis fürs iPhone: Eine App vom Home-Bildschirm hat dort **ihren eigenen Speicher**, getrennt von Safari. Öffne sie nach dem Installieren einmal mit Internet — sonst hat sie beim ersten Start im Flugmodus noch nichts, was sie zeigen könnte.',
     keywords: ['pwa', 'installieren', 'homescreen', 'startbildschirm', 'ios'],
+  },
+  {
+    id: 'profil-setup',
+    category: 'start',
+    question: 'Was sind erste Schritte?',
+    answer:
+      'Folgendes passiert ausschließlich über das Profil - das sind sinnvolle Schritte sobald du dich registriert und eingeloggt hast:\n\n1. Lege deinen Anzeigenamen und Profilbild im oberen Abschnitt fest. Trage außerdem deinen Geburtstag ein.\n2. Lege fest, ob du ein Instrument spielst und aktiviere die automatische Zusage-Funktion unter "Deine Angaben"\n3. Trage im Abschnitt "Wo du wohnst" die Adresse deiner Wohnung sowie die Kapazität dazu ein.\n4. Aktiviere Benachrichtigungen im unteren Abschnitt und lege dort deine Präferenzen fest.\n5. Wähle im Abschnitt "Darstellung" dein bevorzugtes helles/dunkles Design, ganz nach deinem Geschmack.\n6. Für Admins: Öffne die Admin-Verwaltung und erkunde die Funktionen (mehr dazu unter "Verwaltung").',
+    keywords: ['erste', 'schritte', 'profil', 'einrichtung', 'setup', 'neu'],
   },
   {
     id: 'start-navigation',
@@ -112,6 +112,14 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     answer:
       'Sie sortiert alle in Frage kommenden Leute nach vier Dingen, in dieser Reihenfolge:\n\n1. **Wer gerade am wenigsten zu tun hat.** Gezählt wird über alle Aufgaben hinweg — Gastgeber, Thema, Musik, Testimony — und zwar für die nächsten acht Wochen. Was danach kommt, zählt nicht mit.\n2. **Wer am längsten nicht mehr diese eine Aufgabe hatte.** Wer sie noch nie hatte, steht ganz oben.\n3. **Wer sie insgesamt am seltensten hatte.**\n4. Der Name, damit die Liste beim Neuladen nicht durcheinandergerät.\n\nNeben jedem Namen stehen die Fakten, die zu dieser Reihenfolge geführt haben: wann derjenige zuletzt dran war, wie oft insgesamt, und was er sonst noch vor sich hat.',
     keywords: ['smart', 'reihenfolge', 'sortierung', 'algorithmus', 'fair'],
+  },
+  {
+    id: 'start-nichts-automatisch',
+    category: 'suggestions',
+    question: 'Teilt die App irgendetwas von selbst zu?',
+    answer:
+      'Nein. Das ist der wichtigste Satz über diese App: Sie **schlägt vor**, eintragen tut ein Mensch.\n\nJedes Feld bleibt leer, bis jemand es füllt — Gastgeber, Thema, Musik, Testimony. Die App rechnet nur aus, wer am besten passen würde, und legt die Gründe daneben. Was daraus wird, entscheidet ihr.\n\nDrei Dinge macht sie ohne Rückfrage, und alle drei nehmen niemandem etwas ab: Sie legt kommende Termine an, sie würfelt die Gebetsgruppen, und sie sagt einen Abend ab, wenn wirklich alle abgesagt haben.',
+    keywords: ['automatisch', 'zwang', 'einteilen', 'zuteilung'],
   },
   {
     id: 'suggestions-nie-dran',
@@ -499,7 +507,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'prayer',
     question: 'Jemand kommt dazu oder geht — was passiert mit meiner Gruppe?',
     answer:
-      'Die **laufende** Runde wird repariert, nicht neu gewürfelt: Wer miteinander betet, soll das weiter tun. Wer geht, wird herausgenommen; wer dazukommt, kommt in die kleinste Gruppe. Bleibt jemand allein zurück, rutscht er zur kleinsten anderen Gruppe dazu.\n\nDie **geplanten** Runden danach werden verworfen und neu gebaut — sie waren für eine Gruppe gedacht, die es so nicht mehr gibt. Sie zählen dann auch nicht in die Wiederholungs-Vermeidung hinein; diese Paarungen haben ja nie stattgefunden.',
+      'Die **laufende** Runde wird repariert, nicht neu gewürfelt: Wer miteinander betet, soll das weiter tun. Wer geht, wird herausgenommen; wer dazukommt, kommt in die kleinste Gruppe. Bleibt jemand allein zurück, rutscht er zur kleinsten anderen Gruppe dazu.\n\nDie **geplanten** Runden danach werden verworfen und neu gebaut — sie waren für eine Gruppe gedacht, die es so nicht mehr gibt. Sie zählen dann auch nicht in die Wiederholungs-Vermeidung hinein; diese Paarungen haben ja nie stattgefunden.\n\n**„Dazukommen" heißt: die Einladung annehmen**, nicht sie bekommen. Wer eingeladen ist, sich aber noch nie angemeldet hat, steht in keiner Gruppe — sein Gegenüber bekäme sonst einen Namen genannt, dem es nicht schreiben kann. Sobald die Person das erste Mal da ist, wird sofort neu geplant.',
     keywords: ['neu', 'verlassen', 'dazugekommen', 'ändert sich'],
   },
   {
@@ -509,6 +517,23 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     answer:
       'Wenn die Runde **beginnt** — nicht vorher. Die App plant zwar fünf Runden im Voraus, sagt aber nichts darüber; sonst wüsste man im Juni schon, mit wem man im August betet, und hätte es bis dahin vergessen.\n\nDie Benachrichtigung heißt „Neue Gebetsbuddys". Sehen kannst du deine Gruppe jederzeit unter „Gebet" und auf „Heute".',
     keywords: ['benachrichtigung', 'wann', 'erfahren', 'vorher'],
+  },
+
+  {
+    id: 'prayer-anliegen',
+    category: 'prayer',
+    question: 'Wie trage ich ein Gebetsanliegen ein?',
+    answer:
+      'Auf der Seite eines Termins, im Abschnitt **„Gebetsanliegen"**. Ein Klick auf „Mein Gebetsanliegen hinzufügen", schreiben, fertig — du musst dafür nicht erst in den Bearbeitungsmodus, der Klick schaltet ihn selbst ein.\n\n**Ändern und Löschen** brauchen dann den Bearbeitungsmodus („Bearbeiten" ganz unten auf der Seite). Das ist Absicht: Ein Papierkorb neben einem fertigen Satz wäre eine Zeile zu nah am Daumen.\n\nDu hast **ein** Anliegen je Abend. Schreibst du noch einmal, ersetzt du damit das alte.',
+    keywords: ['gebet', 'anliegen', 'notiz', 'beten für', 'bitte'],
+  },
+  {
+    id: 'prayer-anliegen-wer',
+    category: 'prayer',
+    question: 'Kann ich ein Anliegen eintragen, obwohl ich nicht dabei bin?',
+    answer:
+      'Ja, ausdrücklich. Wer an einem Abend fehlt, hat nicht weniger Anliegen — und die Bitte, dass die anderen für einen beten, ist dann eher wichtiger.\n\nLesen kann die Anliegen der ganze Hauskreis; ändern und löschen kannst du **nur dein eigenes**, auch als Admin. Es gibt in der App gar keinen Weg, an einem fremden zu schreiben.\n\nIst der Abend vorbei oder abgesagt, bleibt stehen, was dasteht — geändert wird dann nichts mehr.',
+    keywords: ['nicht dabei', 'abwesend', 'fremdes', 'löschen', 'sichtbar'],
   },
 
   // ── Nachbereitung ─────────────────────────────────────────────────────────
@@ -575,7 +600,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'account',
     question: 'Anzeigename und Anmeldename — was ist der Unterschied?',
     answer:
-      'Der **Anzeigename** ist, was die anderen sehen: auf den Karten, in den Vorschlägen, im Archiv. Groß- und Kleinschreibung wie du magst.\n\nDer **Anmeldename** ist, womit du dich anmeldest. Er wird klein geschrieben und ist über alle Hauskreise hinweg eindeutig. Statt seiner geht auch immer deine E-Mail-Adresse.\n\nOhne die Trennung stünde auf jeder Karte „niko" statt „Niko".',
+      'Der **Anzeigename** ist, was die anderen sehen: auf den Karten, in den Vorschlägen, im Archiv. Groß- und Kleinschreibung wie du magst. Er steht im Profil unter „Deine Angaben".\n\nDer **Anmeldename** ist, womit du dich anmeldest. Er wird klein geschrieben und ist über alle Hauskreise hinweg eindeutig. Statt seiner geht auch immer deine E-Mail-Adresse. Er steht im Profil unter „Konto", direkt über der Adresse — beides sind Anmeldedaten und gehören zusammen.\n\nOhne die Trennung stünde auf jeder Karte „niko" statt „Niko".',
     keywords: ['name', 'username', 'anzeigename', 'unterschied'],
   },
   {

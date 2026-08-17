@@ -35,6 +35,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: '1.3.0',
+    date: '2026-08-17',
+    title: 'Gebetsanliegen am Termin',
+    highlights: [
+      'Neu: Gebetsanliegen. Jede:r kann zu einem Abend ein Anliegen hinschreiben — auch wer an dem Abend nicht dabei ist.',
+      'Wer eingeladen, aber noch nie angemeldet war, taucht nicht mehr in den Gebetsbuddys, den Vorschlägen und der Anwesenheit auf. Sobald die Einladung angenommen ist, kommt die Person überall dazu.',
+      'Der Anmeldename steht jetzt beim Konto, direkt über der E-Mail-Adresse.',
+      'Wird die Musik-Zuteilung eines kommenden Abends leer, werden auch die abgehakten Lieder wieder frei.',
+      'Lied-Vorschläge lassen sich nur noch im Bearbeitungsmodus löschen.',
+      'Auf dem Handy quetschen viele Abzeichen den Namen nicht mehr weg, und das Archiv kommt ohne Hintergrundbild aus.',
+    ],
+  },
+  {
     version: '1.2.0',
     date: '2026-08-17',
     title: 'Eine Hilfe-Seite, und die App reicht bis unter die Notch',
