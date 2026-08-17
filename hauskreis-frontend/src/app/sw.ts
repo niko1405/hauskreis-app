@@ -9,8 +9,13 @@
  * wenigen Nachrichten die Subscription ab (CLAUDE.md §8).
  */
 import { defaultCache } from '@serwist/next/worker';
-import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
-import { Serwist } from 'serwist';
+import type {
+  PrecacheEntry,
+  SerwistGlobalConfig,
+  SerwistPlugin,
+} from 'serwist';
+import { ExpirationPlugin, NetworkFirst, NetworkOnly, Serwist } from 'serwist';
+import { OFFLINE_PAGE } from './offline-page';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -20,13 +25,87 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
+/**
+ * Der letzte Ausweg für eine Navigation: weder Netz noch etwas im
+ * Zwischenspeicher. `handlerDidError` ist der Haken, an dem auch Serwists
+ * eigenes `fallbacks` hängt — nur holt das seine Seite aus dem Precache, und
+ * genau darauf wollen wir uns nicht verlassen (siehe `offline-page.ts`).
+ */
+const offlineFallback: SerwistPlugin = {
+  handlerDidError: async () =>
+    new Response(OFFLINE_PAGE, {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    }),
+};
+
+/**
+ * Woher die API kommt. Wird beim Bauen eingesetzt, `sw.ts` läuft durch
+ * dieselbe Webpack-Stufe wie die App.
+ */
+const API_ORIGIN = originOf(process.env.NEXT_PUBLIC_API_BASE_URL);
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
-  navigationPreload: true,
-  runtimeCaching: defaultCache,
+  // Aus: `NetworkFirst` liest die vorgeladene Antwort nicht, es bliebe eine
+  // zweite Anfrage pro Kaltstart ohne Empfänger.
+  navigationPreload: false,
+  runtimeCaching: [
+    /**
+     * Seitenaufrufe.
+     *
+     * `defaultCache` hat dafür eine Regel, die **nie** greift: sie fragt nach
+     * dem `Content-Type` der *Anfrage*, und den schickt kein Browser bei einer
+     * Navigation. Seiten fallen dort bis zur Auffangregel `others` durch und
+     * teilen sich deren 32 Plätze mit den `__next.*.txt`-Segmentdateien des
+     * App Routers, die sie nach und nach verdrängen.
+     *
+     * Ohne Netz und ohne Treffer im Cache liefert `offlineFallback` die
+     * eingebettete Meldung — der Fall, in dem die App bisher als leere Seite
+     * startete.
+     */
+    {
+      matcher: ({ request }) => request.mode === 'navigate',
+      handler: new NetworkFirst({
+        cacheName: 'pages',
+        networkTimeoutSeconds: 5,
+        plugins: [
+          new ExpirationPlugin({ maxEntries: 16, maxAgeSeconds: 30 * 86400 }),
+          offlineFallback,
+        ],
+      }),
+    },
+
+    /**
+     * Die API wird **nicht** zwischengespeichert.
+     *
+     * `defaultCache` würde sie unter `cross-origin` eine Stunde lang
+     * aufbewahren, und der Schlüssel dieses Speichers ist allein die URL — das
+     * Token geht nicht ein. Auf einem geteilten Gerät oder nach einem
+     * Kontowechsel käme so die Antwort für jemand anderen zurück. Einen Cache
+     * hat die App ohnehin: TanStack Query, im Speicher und an die Sitzung
+     * gebunden.
+     */
+    {
+      matcher: ({ url }) => API_ORIGIN !== null && url.origin === API_ORIGIN,
+      handler: new NetworkOnly(),
+    },
+
+    ...defaultCache,
+  ],
 });
+
+/** Ohne gültige Adresse lieber gar keine Regel als eine, die zu viel fängt. */
+function originOf(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
 
 serwist.addEventListeners();
 
