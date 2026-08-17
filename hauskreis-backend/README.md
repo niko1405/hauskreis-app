@@ -2948,7 +2948,27 @@ Entwicklungs-Vorgabe steht: `SMTP_HOST`, `SMTP_FROM`, `KEYCLOAK_URL`,
 
 **Das Theme wird in der Produktion zwischengespeichert** (`start --optimized`,
 anders als im Entwicklungsmodus). Eine Änderung an Farben oder Texten kostet
-dort einen `docker compose restart keycloak`.
+dort einen `docker compose restart keycloak`. `docker compose up -d` reicht
+**nicht**: Compose legt einen Container nur neu an, wenn sich seine
+Konfiguration ändert, und eine eingehängte Datei zählt nicht dazu.
+[`deploy/deploy.sh`](../deploy/deploy.sh) erledigt den Neustart inzwischen von
+selbst — aber nur, wenn der ausgerollte Commit `keycloak/themes` wirklich
+angefasst hat.
+
+#### Warum es von jedem Bündel zwei Fassungen gibt
+
+Keycloak baut das Nachrichtenbündel in **zwei Durchgängen**: erst Englisch über
+die ganze Theme-Kette, dann die gewünschte Sprache darüber. Ein Theme, das nur
+`messages_de.properties` mitbringt, verliert deshalb _alle_ eigenen Schlüssel,
+sobald die aufgelöste Sprache nicht `de` ist — und FreeMarker druckt dann den
+Schlüsselnamen ab. Die Einladungsmail kam eine Weile genau so an, mit
+„emailBrand" und „executeActionsHeadline" im Text.
+
+Beide Themes tragen deshalb zusätzlich ein `messages_en.properties` mit
+**denselben deutschen Texten**. Das ist keine Übersetzung, sondern ein
+Sicherungsnetz: Der Realm kennt nur `de`, und eine halbe englische Oberfläche
+wäre kein Gewinn. Dass die beiden Dateien nicht auseinanderlaufen, prüft
+[`keycloak-theme-messages.spec.ts`](src/auth/keycloak-theme-messages.spec.ts).
 
 ### Das Image lokal ausprobieren
 
