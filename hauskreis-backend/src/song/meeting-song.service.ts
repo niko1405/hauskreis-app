@@ -9,7 +9,11 @@ import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier
 import { AssignmentRole } from '../../generated/prisma/enums';
 import { AvailabilityService } from '../role-suggestion/availability.service';
 import { EditRightsService } from '../meeting/edit-rights.service';
-import { touchMeeting } from '../meeting/meeting-version';
+import { GroupClockService } from '../meeting/group-clock.service';
+import {
+  clearSongSelectionIfUnled,
+  touchMeeting,
+} from '../meeting/meeting-version';
 import { SongService } from './song.service';
 import type {
   AddMeetingSongDto,
@@ -35,6 +39,7 @@ export class MeetingSongService {
     private readonly roleAssignments: RoleAssignmentNotifier,
     private readonly availability: AvailabilityService,
     private readonly editRights: EditRightsService,
+    private readonly clock: GroupClockService,
   ) {}
 
   async findAll(hauskreisId: string, meetingId: string) {
@@ -169,7 +174,10 @@ export class MeetingSongService {
     /** Wer gerade einträgt — bekommt keine Nachricht über sich selbst. */
     actorPersonId?: string,
   ) {
-    await this.assertMeetingBelongsToHauskreis(hauskreisId, meetingId);
+    const meeting = await this.assertMeetingBelongsToHauskreis(
+      hauskreisId,
+      meetingId,
+    );
     await this.assertPeopleBelongToHauskreis(hauskreisId, dto.personIds);
 
     // Vor dem Schreiben: benachrichtigt wird, wer **dazukommt**. Die Liste
@@ -186,6 +194,10 @@ export class MeetingSongService {
       dto.personIds.filter((personId) => !known.has(personId)),
     );
 
+    // Ob dieser Abend noch bevorsteht — entscheidet unten, ob eine verwaiste
+    // Auswahl aufgeräumt wird oder als Protokoll stehen bleibt.
+    const past = await this.clock.isPast(hauskreisId, meeting.date);
+
     await this.prisma.$transaction(async (tx) => {
       await tx.meetingSongLeader.deleteMany({
         where: { meetingId, personId: { notIn: dto.personIds } },
@@ -195,6 +207,11 @@ export class MeetingSongService {
         data: dto.personIds.map((personId) => ({ meetingId, personId })),
         skipDuplicates: true,
       });
+
+      // Bleibt niemand übrig, darf die getroffene Auswahl auch niemand mehr
+      // ändern — sie geht deshalb mit. In derselben Transaktion, damit es nie
+      // einen Augenblick gibt, in dem beides zugleich gilt.
+      if (!past) await clearSongSelectionIfUnled(tx, [meetingId]);
 
       // Die Musik-Zuteilung steht mit in der Antwort des Termins. Die Lieder
       // selbst nicht — die kommen von `…/meetings/:id/songs` mit eigenem ETag
@@ -212,18 +229,21 @@ export class MeetingSongService {
     return this.findLeaders(hauskreisId, meetingId);
   }
 
+  /** Antwortet mit dem Datum, weil `setLeaders` wissen muss, ob der Abend vorbei ist. */
   private async assertMeetingBelongsToHauskreis(
     hauskreisId: string,
     meetingId: string,
-  ): Promise<void> {
+  ): Promise<{ date: Date }> {
     const meeting = await this.prisma.meeting.findFirst({
       where: { id: meetingId, hauskreisId },
-      select: { id: true },
+      select: { date: true },
     });
 
     if (!meeting) {
       throw new NotFoundException(`Meeting ${meetingId} not found`);
     }
+
+    return meeting;
   }
 
   private async assertPeopleBelongToHauskreis(

@@ -34,3 +34,53 @@ export async function touchMeeting(
     data: { version: { increment: 1 } },
   });
 }
+
+/**
+ * Nimmt die Lied-Auswahl eines Abends zurück, sobald für die Musik niemand mehr
+ * zuständig ist.
+ *
+ * Das Abhaken ist vor dem Abend eine **Entscheidung** — „das singen wir" —, und
+ * treffen darf sie nur, wer die Lieder übt (`edit-rights.service.ts`). Ist
+ * niemand eingetragen, darf sie deshalb niemand mehr ändern. Eine stehen
+ * gebliebene Auswahl wäre dann nicht mehr die Absprache der Gruppe, sondern die
+ * einer Person, die inzwischen gar nicht mehr gefragt ist — und niemand käme
+ * daran vorbei außer über einen Umweg über die Zuteilung.
+ *
+ * **Nur für Abende, die noch nicht vorbei sind**, und diese Entscheidung trifft
+ * der Aufrufer. Danach ist die Auswahl ein Protokoll („das haben wir gesungen"),
+ * und die darf nicht verschwinden, bloß weil jemand aus der Zuteilung fällt oder
+ * den Hauskreis verlässt. Zwei der drei Aufrufer wissen es ohnehin schon; dass
+ * die Frage hier nicht gestellt wird, hält diese Funktion frei von der Uhr der
+ * Gruppe — und damit von einem Dienst, den sie sonst importieren müsste.
+ *
+ * Steht hier und nicht im `MeetingSongService`, weil sie aus **beiden**
+ * Richtungen gebraucht wird: beim Umtragen der Zuteilung (`SongModule`) und beim
+ * Freigeben von Rollen (`MeetingModule`). Als freie Funktion über einem
+ * `TransactionClient` hat sie keine Abhängigkeit, die einen Modul-Kreis
+ * herstellen könnte — genau wie `touchMeeting` darüber.
+ *
+ * `meetingIds` als Liste, weil der dritte Aufrufer — jemand verlässt den
+ * Hauskreis — alle kommenden Abende auf einmal räumt.
+ */
+export async function clearSongSelectionIfUnled(
+  db: Prisma.TransactionClient,
+  meetingIds: readonly string[],
+): Promise<void> {
+  if (meetingIds.length === 0) return;
+
+  const stillLed = await db.meetingSongLeader.findMany({
+    where: { meetingId: { in: [...meetingIds] } },
+    select: { meetingId: true },
+    distinct: ['meetingId'],
+  });
+
+  const led = new Set(stillLed.map((row) => row.meetingId));
+  const orphaned = meetingIds.filter((id) => !led.has(id));
+
+  if (orphaned.length === 0) return;
+
+  await db.meetingSong.updateMany({
+    where: { meetingId: { in: orphaned }, isSelected: true },
+    data: { isSelected: false },
+  });
+}

@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
 import { TopicLinkService } from '../topic/topic-link.service';
 import { GroupClockService } from './group-clock.service';
-import { touchMeeting } from './meeting-version';
+import { clearSongSelectionIfUnled, touchMeeting } from './meeting-version';
 
 /**
  * Wer absagt, gibt seine Rollen für diesen Abend frei.
@@ -104,6 +104,14 @@ export class RoleReleaseService {
       const result = await tx.meetingSongLeader.deleteMany({
         where: { meetingId, personId },
       });
+
+      // War das der oder die Letzte, fällt auch die Lied-Auswahl: Sie darf ab
+      // jetzt niemand mehr ändern, und eine Absprache, an der niemand mehr
+      // beteiligt ist, ist keine mehr. Dass der Abend noch bevorsteht, steht
+      // oben schon fest — vergangene und abgesagte kommen hier nicht an.
+      if (result.count > 0) {
+        await clearSongSelectionIfUnled(tx, [meetingId]);
+      }
 
       // Nur wenn oben nichts geschrieben wurde: dort ist die Version schon
       // gesprungen, und ein zweiter Sprung an derselben Zeile machte aus einem
@@ -233,6 +241,18 @@ export class RoleReleaseService {
         data: { version: { increment: 1 } },
       }),
     ]);
+
+    // Wie beim Absagen: Wo mit dieser Person die letzte Musik-Zuteilung ging,
+    // fällt auch die Auswahl. Alle Termine hier sind kommende (`date >= today`),
+    // ein Protokoll kann also keines dabei sein.
+    //
+    // Hinter der Transaktion und nicht darin: Die oben ist die Listenform, die
+    // ihre Anweisungen im Voraus entgegennimmt — diese Aufräumarbeit muss aber
+    // erst *nachsehen*, wo jetzt niemand mehr steht. Ein eigener Durchgang
+    // schadet nicht, die Person ist ohnehin schon weg.
+    if (song.count > 0) {
+      await clearSongSelectionIfUnled(this.prisma, meetingIds);
+    }
 
     if (
       hosted.length > 0 ||
