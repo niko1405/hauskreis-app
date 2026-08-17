@@ -35,6 +35,17 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: '1.2.0',
+    date: '2026-08-17',
+    title: 'Eine Hilfe-Seite, und die App reicht bis unter die Notch',
+    highlights: [
+      'Neu: „Hilfe" im Profil — rund 70 Fragen mit Suche, von den Vorschlägen über das Baukasten-System bis zum Datenschutz.',
+      'Wenn es etwas Neues gibt, siehst du das jetzt am Profil-Symbol: ein Punkt, der verschwindet, sobald du es angesehen hast.',
+      'Kein schwarzer Balken mehr über der App — Kopfbild und Hintergrund gehen bis hinter die Notch durch.',
+      'In der App steht jetzt, wer sie gebaut hat.',
+    ],
+  },
+  {
     version: '1.1.0',
     date: '2026-08-17',
     title: 'Darkmode, Manueller Refresh und Design-Updates',
