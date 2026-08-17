@@ -85,7 +85,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               animate={{ opacity: 1, y: 16 }}
               exit={{ opacity: 0, y: -40 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="flex w-full max-w-sm items-start gap-3 rounded-md border border-stone-800 bg-stone-900 p-4 text-stone-100 shadow-2xl"
+              className="flex w-full max-w-sm items-start gap-3 rounded-md border border-inverse-line bg-inverse p-4 text-inverse-fg shadow-2xl"
             >
               {(() => {
                 const Icon = ICONS[toast.kind];

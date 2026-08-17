@@ -79,7 +79,7 @@ const SCRIPT = `(function () {
 const FALLBACK_HTML = `
   <div style="max-width:22rem;text-align:center">
     <h1 style="font-size:1.25rem;margin:0 0 .5rem;font-weight:700">Die App kam nicht ganz an</h1>
-    <p id="${HINT_ID}" style="font-size:.875rem;line-height:1.6;color:#78716c;margin:0 0 1.5rem">
+    <p id="${HINT_ID}" style="font-size:.875rem;line-height:1.6;margin:0 0 1.5rem" class="hk-boot-hint">
       Ein Teil der App fehlt — meistens liegt das an einer instabilen Verbindung.
     </p>
     <button type="button" onclick="location.reload()"
@@ -89,9 +89,28 @@ const FALLBACK_HTML = `
   </div>
 `;
 
+/**
+ * Die Farben stehen hier und nicht in `globals.css`, weil dieser Kasten genau
+ * dann gebraucht wird, wenn das Stylesheet vielleicht gar nicht ankam.
+ *
+ * Ausnahmsweise nach `prefers-color-scheme` und nicht nach `data-theme`: eine
+ * ausdrückliche Wahl aus dem Profil steckt in `localStorage`, und darauf
+ * zuzugreifen hieße wieder, JavaScript vorauszusetzen. Für einen Bildschirm,
+ * der nur bei einem Fehler erscheint, ist die Systemeinstellung nah genug.
+ */
+const FALLBACK_CSS = `
+  #${FALLBACK_ID} { background:#f5efe9; color:#292524 }
+  #${FALLBACK_ID} .hk-boot-hint { color:#78716c }
+  @media (prefers-color-scheme: dark) {
+    #${FALLBACK_ID} { background:#14100d; color:#f5efe9 }
+    #${FALLBACK_ID} .hk-boot-hint { color:#a8a29e }
+  }
+`;
+
 export function BootWatchdog() {
   return (
     <>
+      <style dangerouslySetInnerHTML={{ __html: FALLBACK_CSS }} />
       {/* `dangerouslySetInnerHTML` hier nicht aus Bequemlichkeit: React
           hydratisiert solche Teilbäume nicht, dadurch überlebt das
           `onclick`-Attribut am Knopf. */}
@@ -105,8 +124,6 @@ export function BootWatchdog() {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '1.5rem',
-          background: '#f5efe9',
-          color: '#292524',
           fontFamily: 'system-ui, sans-serif',
         }}
         dangerouslySetInnerHTML={{ __html: FALLBACK_HTML }}

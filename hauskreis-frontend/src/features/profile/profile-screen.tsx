@@ -26,6 +26,7 @@ import { useMe, usePerson, useUpdatePerson } from '@/lib/api/hooks';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { AbsencesCard } from './absences-card';
 import { AccountCard } from './account-card';
+import { AppearanceCard } from './appearance-card';
 import { HomeCard } from './home-card';
 import { PhotoPicker } from './photo-picker';
 import { MembersCard } from './members-card';
@@ -227,6 +228,8 @@ function Loaded({ personId }: { personId: string }) {
             </Button>
           </Card>
         </section>
+
+        <AppearanceCard />
 
         <MembersCard />
 

@@ -85,7 +85,7 @@ export function SongPickerSheet({
               className={cn(
                 'rounded-full px-3 py-1 text-[11px] font-semibold transition-colors',
                 sort === key
-                  ? 'bg-stone-800 text-white'
+                  ? 'bg-inverse text-inverse-fg'
                   : 'bg-stone-100 text-stone-500 hover:bg-stone-200',
               )}
             >

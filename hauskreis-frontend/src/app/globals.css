@@ -1,9 +1,23 @@
 @import 'tailwindcss';
 
 /**
+ * Der Dunkelmodus hängt an einem Attribut am `<html>`, nicht an
+ * `prefers-color-scheme`: „System" ist nur eine von drei Möglichkeiten, und
+ * wer ausdrücklich hell gewählt hat, soll es hell haben, egal was das
+ * Betriebsgerät meint. Gesetzt wird es von `lib/theme.ts` und, vor dem ersten
+ * Zeichnen, vom Inline-Skript in `layout.tsx`.
+ */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/**
  * Die Farben stammen aus dem Entwurf, standen dort aber als Hex-Wert in jeder
  * einzelnen Datei. Hier bekommen sie Namen — danach heißt es `bg-canvas`
  * statt `bg-[#FAF6F3]`, und ein Farbwechsel ist eine Zeile statt einer Suche.
+ *
+ * Das ist auch der Grund, warum der Dunkelmodus überhaupt zu machen war: Jede
+ * Utility löst zur Laufzeit über `var(--color-…)` auf. Der Block ganz unten
+ * setzt dieselben Variablen neu und schaltet damit über 300 Fundstellen um,
+ * ohne eine einzige Komponente anzufassen.
  *
  * Die Schriften kommen über next/font (siehe layout.tsx) und werden hier nur
  * eingehängt; ein @import auf Google Fonts würde das erste Rendern blockieren.
@@ -46,6 +60,32 @@
   --color-alert-bg: #fdecee;
   --color-alert-line: #f6d5da;
 
+  /* Die Umkehrung: dunkle Fläche im hellen Modus, helle im dunklen.
+     Für die drei Stellen, die bewusst gegen die Seite stehen — der Toast,
+     der aktive Sortier-Chip und das Kamera-Abzeichen am Profilbild. Sie
+     standen als `bg-stone-800/900` da und wären beim Umschalten hell auf
+     hell geworden. */
+  --color-inverse: #292524;
+  --color-inverse-fg: #faf6f3;
+  --color-inverse-line: #1c1917;
+
+  /* Avatar-Paletten. Standen als Hex in `lib/person.ts` und hätten im
+     Dunkelmodus geleuchtet; die Zuordnung Person → Palette bleibt dort. */
+  --color-avatar-1-bg: #f9ebe5;
+  --color-avatar-1-fg: #b16248;
+  --color-avatar-2-bg: #e5f0ea;
+  --color-avatar-2-fg: #2d6a4f;
+  --color-avatar-3-bg: #fdf3e1;
+  --color-avatar-3-fg: #a67c33;
+  --color-avatar-4-bg: #ddf3fc;
+  --color-avatar-4-fg: #1e749c;
+  --color-avatar-5-bg: #fdecee;
+  --color-avatar-5-fg: #9d3b4c;
+  --color-avatar-6-bg: #eceefc;
+  --color-avatar-6-fg: #3b4c9d;
+  --color-avatar-7-bg: #f3e5f5;
+  --color-avatar-7-fg: #7b1fa2;
+
   /* Radien: der Entwurf arbeitet mit auffällig weichen Ecken */
   --radius-sheet: 36px;
   --radius-card: 28px;
@@ -55,9 +95,139 @@
 }
 
 :root {
-  /* Der Entwurf ist durchweg hell gedacht; ein halbherziger Dunkelmodus
-     würde die warme Anmutung eher kaputt machen als helfen. */
   color-scheme: light;
+
+  /* Die Verläufe im Kopfbereich, solange kein eigenes Foto hochgeladen ist.
+     Sie stehen hier und nicht in `screen-header.tsx`, weil sie sonst
+     dieselbe Umschaltung noch einmal in JavaScript bräuchten. */
+  --header-home: linear-gradient(160deg, #f5ddd3 0%, #d68e75 55%, #b16248 100%);
+  --header-prayer: linear-gradient(
+    160deg,
+    #e5f0ea 0%,
+    #7fae97 55%,
+    #2d6a4f 100%
+  );
+  --header-archive: linear-gradient(
+    160deg,
+    #fdf3e1 0%,
+    #d7b26a 55%,
+    #a67c33 100%
+  );
+  --header-profile: linear-gradient(
+    160deg,
+    #ddf3fc 0%,
+    #6fb3ce 55%,
+    #1e749c 100%
+  );
+}
+
+/**
+ * Der Dunkelmodus.
+ *
+ * Kein Umkehren der Helligkeit, sondern eine zweite, eigene Palette: Die App
+ * lebt von einem warmen Ton, und ein neutrales Grau daraus zu machen hätte
+ * genau das gekostet. Die Grauleiter bleibt deshalb bräunlich, Terracotta
+ * wird eine Spur kräftiger (auf Dunkel wirkt sie sonst stumpf), und die
+ * Rollenfarben bekommen gedämpfte Flächen statt der hellen Pastelltöne, die
+ * hier leuchten würden.
+ *
+ * Zwei Regeln kehren sich um: Bei `terracotta` ist im Hellen die höhere Zahl
+ * die dunklere Farbe, im Dunklen die hellere — `hover:bg-terracotta-700` muss
+ * in beiden Fällen „deutlicher" heißen. Und `stone` läuft ganz andersherum,
+ * weil `text-stone-400` überall „gedämpft" bedeutet und nicht „dunkelgrau".
+ *
+ * `:root[data-theme]` schlägt Tailwinds `:root` in der Spezifität — deshalb
+ * genügt hier die reine Neudefinition.
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Flächen */
+  --color-shell: #14100d;
+  --color-canvas: #1d1815;
+  --color-card: #26201b;
+  --color-line: #342c25;
+  --color-line-strong: #453a30;
+
+  /* Terracotta — 600/700 sind jetzt heller als 500, nicht dunkler */
+  --color-terracotta-50: #33211a;
+  --color-terracotta-100: #3d2820;
+  --color-terracotta-400: #d99a80;
+  --color-terracotta-500: #d07a56;
+  --color-terracotta-600: #dc8a68;
+  --color-terracotta-700: #e79b7c;
+
+  /* Rollenfarben */
+  --color-music: #7fc5a1;
+  --color-music-bg: #152b23;
+  --color-music-line: #26483a;
+
+  --color-topic: #d9b163;
+  --color-topic-bg: #332715;
+  --color-topic-line: #4c3a1f;
+
+  --color-info: #6cb6d8;
+  --color-info-bg: #122c39;
+  --color-info-line: #1e4658;
+
+  --color-alert: #e0879a;
+  --color-alert-bg: #3a1d24;
+  --color-alert-line: #572c36;
+
+  /* Die Umkehrung kehrt sich mit um */
+  --color-inverse: #efe7e0;
+  --color-inverse-fg: #1c1917;
+  --color-inverse-line: #d8cec6;
+
+  /* Grauleiter, warm und andersherum */
+  --color-stone-50: #262019;
+  --color-stone-100: #322a23;
+  --color-stone-200: #43392f;
+  --color-stone-300: #5f544a;
+  --color-stone-400: #8f8378;
+  --color-stone-500: #ab9f94;
+  --color-stone-600: #c4b8ad;
+  --color-stone-700: #d9cfc6;
+  --color-stone-800: #ece5df;
+  --color-stone-900: #faf6f3;
+
+  /* Avatare: dunkle Tönung, heller Buchstabe */
+  --color-avatar-1-bg: #3b241c;
+  --color-avatar-1-fg: #e6a288;
+  --color-avatar-2-bg: #1c3329;
+  --color-avatar-2-fg: #8fc7ab;
+  --color-avatar-3-bg: #3a2e19;
+  --color-avatar-3-fg: #dcb96e;
+  --color-avatar-4-bg: #16303d;
+  --color-avatar-4-fg: #7cc0dd;
+  --color-avatar-5-bg: #3a2126;
+  --color-avatar-5-fg: #e394a1;
+  --color-avatar-6-bg: #23273f;
+  --color-avatar-6-fg: #9aa6e8;
+  --color-avatar-7-bg: #32203a;
+  --color-avatar-7-fg: #cf94dd;
+
+  /* Kopfverläufe: gleiche Farbfamilie, aber von dunkel nach satt statt von
+     pastell nach satt — sonst wäre der Kopf die hellste Fläche der App. */
+  --header-home: linear-gradient(160deg, #3d2820 0%, #8a5340 55%, #b16248 100%);
+  --header-prayer: linear-gradient(
+    160deg,
+    #172b22 0%,
+    #2f6650 55%,
+    #48937a 100%
+  );
+  --header-archive: linear-gradient(
+    160deg,
+    #332715 0%,
+    #7a5c26 55%,
+    #a98442 100%
+  );
+  --header-profile: linear-gradient(
+    160deg,
+    #132b37 0%,
+    #2a6280 55%,
+    #3f8fb3 100%
+  );
 }
 
 html,

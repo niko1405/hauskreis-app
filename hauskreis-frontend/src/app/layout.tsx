@@ -5,6 +5,7 @@ import {
   Roboto_Slab,
 } from 'next/font/google';
 import { BootWatchdog } from '@/components/layout/boot-watchdog';
+import { ThemeScript } from '@/components/layout/theme-script';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -91,6 +92,9 @@ export default function RootLayout({
       className={`${jakarta.variable} ${instrument.variable} ${robotoSlab.variable}`}
     >
       <body className="bg-shell font-sans text-stone-800 antialiased selection:bg-terracotta-500 selection:text-white">
+        {/* Muss ganz oben stehen und vor allem anderen laufen — sonst blitzt
+            die helle Fassung auf, bevor die dunkle greift. */}
+        <ThemeScript />
         <Providers>{children}</Providers>
         {/* Steht bewusst außerhalb von `Providers`: er muss auch dann etwas
             anzeigen können, wenn von deren JavaScript nichts ankommt. */}

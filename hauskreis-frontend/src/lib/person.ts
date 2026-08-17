@@ -7,15 +7,22 @@
  */
 import type { PersonRef } from './api/types';
 
-/** Die Paletten des Entwurfs, in derselben warmen Familie. */
+/**
+ * Die Paletten des Entwurfs, in derselben warmen Familie.
+ *
+ * Die Farbwerte stehen in `globals.css`, nicht mehr hier: Im Dunkelmodus
+ * bräuchte jede von ihnen eine zweite Fassung, und die Zuordnung Person →
+ * Palette hat damit nichts zu tun. Hier bleibt die Zuordnung, dort liegt die
+ * Farbe.
+ */
 const AVATAR_SCHEMES = [
-  { bg: 'bg-[#F9EBE5]', text: 'text-[#B16248]' },
-  { bg: 'bg-[#E5F0EA]', text: 'text-[#2D6A4F]' },
-  { bg: 'bg-[#FDF3E1]', text: 'text-[#A67C33]' },
-  { bg: 'bg-[#DDF3FC]', text: 'text-[#1E749C]' },
-  { bg: 'bg-[#FDECEE]', text: 'text-[#9D3B4C]' },
-  { bg: 'bg-[#ECEEFC]', text: 'text-[#3B4C9D]' },
-  { bg: 'bg-[#F3E5F5]', text: 'text-[#7B1FA2]' },
+  { bg: 'bg-avatar-1-bg', text: 'text-avatar-1-fg' },
+  { bg: 'bg-avatar-2-bg', text: 'text-avatar-2-fg' },
+  { bg: 'bg-avatar-3-bg', text: 'text-avatar-3-fg' },
+  { bg: 'bg-avatar-4-bg', text: 'text-avatar-4-fg' },
+  { bg: 'bg-avatar-5-bg', text: 'text-avatar-5-fg' },
+  { bg: 'bg-avatar-6-bg', text: 'text-avatar-6-fg' },
+  { bg: 'bg-avatar-7-bg', text: 'text-avatar-7-fg' },
 ] as const;
 
 export type AvatarScheme = (typeof AVATAR_SCHEMES)[number];

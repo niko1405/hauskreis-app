@@ -63,7 +63,7 @@ export function PhotoPicker({ person }: { person: Person }) {
           size="lg"
           className={busy ? 'opacity-50' : ''}
         />
-        <span className="absolute -right-0.5 -bottom-0.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-card bg-stone-700 text-white">
+        <span className="absolute -right-0.5 -bottom-0.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-card bg-inverse text-inverse-fg">
           <Camera size={12} />
         </span>
       </button>

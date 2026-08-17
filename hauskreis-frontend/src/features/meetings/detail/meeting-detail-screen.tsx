@@ -549,7 +549,7 @@ function Loaded({
                   aria-disabled={!meeting?.location}
                   className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
                     meeting?.location
-                      ? 'bg-terracotta-600 text-white hover:bg-[#a8705c]'
+                      ? 'bg-terracotta-600 text-white hover:bg-terracotta-700'
                       : 'pointer-events-none cursor-not-allowed bg-gray-300 text-gray-500'
                   }`}
                 >

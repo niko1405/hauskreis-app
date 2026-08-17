@@ -14,6 +14,15 @@
 import { useEffect, useState } from 'react';
 import { isChunkLoadError, reloadOnceForChunkError } from '@/lib/chunk-error';
 
+const PALETTE = `
+  body { background:#f5efe9; color:#292524 }
+  .hint { color:#78716c }
+  @media (prefers-color-scheme: dark) {
+    body { background:#14100d; color:#f5efe9 }
+    .hint { color:#a8a29e }
+  }
+`;
+
 export default function GlobalError({
   error,
 }: {
@@ -31,25 +40,28 @@ export default function GlobalError({
       <body
         style={{
           margin: 0,
-          minHeight: '100vh',
+          minHeight: '100dvh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           padding: '1.5rem',
-          background: '#f5efe9',
-          color: '#292524',
           fontFamily: 'system-ui, sans-serif',
         }}
       >
+        {/* Die Farben als `<style>` und nicht als `style`-Objekt, weil sie
+            eine Medienabfrage brauchen. Nach `prefers-color-scheme` und nicht
+            nach der Wahl aus dem Profil: die läge in `localStorage`, und hier
+            ist gerade das JavaScript das Fragliche. */}
+        <style>{PALETTE}</style>
         <div style={{ maxWidth: '22rem', textAlign: 'center' }}>
           <h1 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem' }}>
             {chunk ? 'Die App kam nicht ganz an' : 'Die App ist abgestürzt'}
           </h1>
           <p
+            className="hint"
             style={{
               fontSize: '0.875rem',
               lineHeight: 1.6,
-              color: '#78716c',
               margin: '0 0 1.5rem',
             }}
           >

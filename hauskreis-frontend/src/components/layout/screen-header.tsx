@@ -32,12 +32,15 @@ import { HeaderImageSheet } from './header-image-sheet';
  * Vier verschiedene und nicht viermal derselbe: sie sind das Einzige, woran man
  * im Kopfbereich erkennt, auf welchem Bildschirm man gelandet ist, solange dort
  * noch kein Foto steht.
+ *
+ * Die Verläufe selbst stehen in `globals.css`, damit der Dunkelmodus sie
+ * mitnimmt, ohne dass hier jemand den Modus abfragen müsste.
  */
 const PLACEHOLDER: Record<HeaderScreen, string> = {
-  home: 'bg-[linear-gradient(160deg,#f5ddd3_0%,#d68e75_55%,#b16248_100%)]',
-  prayer: 'bg-[linear-gradient(160deg,#e5f0ea_0%,#7fae97_55%,#2d6a4f_100%)]',
-  archive: 'bg-[linear-gradient(160deg,#fdf3e1_0%,#d7b26a_55%,#a67c33_100%)]',
-  profile: 'bg-[linear-gradient(160deg,#ddf3fc_0%,#6fb3ce_55%,#1e749c_100%)]',
+  home: 'bg-[image:var(--header-home)]',
+  prayer: 'bg-[image:var(--header-prayer)]',
+  archive: 'bg-[image:var(--header-archive)]',
+  profile: 'bg-[image:var(--header-profile)]',
 };
 
 export function ScreenHeader({
