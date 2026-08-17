@@ -12,10 +12,9 @@
  * am Rechner hell ist kein Widerspruch, sondern der Normalfall.
  */
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { THEME_STORAGE_KEY, type Theme } from './theme-storage';
 
-export type Theme = 'light' | 'dark' | 'system';
-
-export const STORAGE_KEY = 'acts2-theme';
+export type { Theme };
 
 /** Was tatsächlich auf dem Bildschirm gilt, wenn „System" gewählt ist. */
 type Resolved = 'light' | 'dark';
@@ -34,7 +33,7 @@ const listeners = new Set<() => void>();
 
 function read(): Theme {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
       return stored;
     }
@@ -90,7 +89,7 @@ function subscribe(onChange: () => void): () => void {
 
   // Ein zweiter Tab derselben App hat vielleicht umgeschaltet.
   const onStorage = (event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY) return;
+    if (event.key !== THEME_STORAGE_KEY) return;
     apply(read());
     onChange();
   };
@@ -124,7 +123,7 @@ export function useTheme(): {
 
   const setTheme = useCallback((next: Theme) => {
     try {
-      localStorage.setItem(STORAGE_KEY, next);
+      localStorage.setItem(THEME_STORAGE_KEY, next);
     } catch {
       // Nicht speichern zu können heißt nicht, nicht umschalten zu können.
     }

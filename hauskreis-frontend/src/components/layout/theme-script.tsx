@@ -16,11 +16,11 @@
  * zu warten, bis React lebt, und genau darauf können wir hier nicht warten.
  * Wer die eine Seite ändert, ändert die andere mit.
  */
-import { STORAGE_KEY } from '@/lib/theme';
+import { THEME_STORAGE_KEY } from '@/lib/theme-storage';
 
 const SCRIPT = `(function () {
   try {
-    var stored = localStorage.getItem('${STORAGE_KEY}');
+    var stored = localStorage.getItem('${THEME_STORAGE_KEY}');
     var dark = stored === 'dark' || (stored !== 'light' &&
       window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
