@@ -2612,6 +2612,78 @@ Postgres behandelt Zeilen mit einem NULL im Tupel als verschieden, und beide
 Bezugsspalten sind nullable. Die echte Prüfung ist die Query in
 `hasBeenSent` — der Index macht sie nur schnell.
 
+## Geburtstage und Geschenke
+
+[`src/birthday/`](src/birthday/). Vier Tabellen, und die Aufteilung ist die
+eigentliche Entscheidung.
+
+### Eine offene Runde je Person
+
+`birthday_occasion` ist **ein** Geburtstag in **einem** Jahr. Je Person gibt es
+genau eine offene Zeile — ihr nächster Geburtstag —, ältere bleiben als
+Geschichte stehen. Deshalb gibt es keine „vergangenen Geburtstage" im UI: Wer
+gestern gefeiert hat, steht ab heute wieder unten unter „Kommende", mit dem
+Termin in einem Jahr.
+
+`BirthdayPlannerService.plan()` ist der einzige Schreibweg. Er legt fehlende
+Runden an, räumt Runden weg, deren Datum nicht mehr stimmt, und setzt die
+Zuständigkeiten. Angestoßen wird er nächtlich (`15 4 * * *`) und von allem, was
+die Grundlage ändert: ein eingetragener Geburtstag, ein Zu- oder Abgang, eine
+andere Einstellung, eine geänderte feste Zuteilung.
+
+### Die Reihe _ist_ der Geburtstag
+
+`rotate()` in [`rotation.ts`](src/birthday/rotation.ts) sortiert alle
+Geburtstage durchs Jahr und macht jede:n für den zuständig, der als nächstes
+dran ist. Drei Eigenschaften fallen dabei von selbst ab, ohne dass sie geprüft
+werden müssten: in einem Jahr ist jede:r genau einmal dran, niemand ist für sich
+selbst zuständig, und wer gerade beschenkt wurde, ist als nächstes an der Reihe.
+
+**Wer keinen Geburtstag eingetragen hat, steht nicht in der Reihe** — weder als
+Beschenkter noch als Schenkender. Das ist keine Strafe, sondern die Bauart: Der
+Platz in der Reihe ist der Geburtstag.
+
+### Warum die Zuständigkeit gespeichert wird
+
+Sie wird gerechnet **und** gespeichert. Rechnen allein könnte die Vergangenheit
+nicht festhalten („wen hattest du in den letzten Runden") und würde jede nahe
+Zuteilung noch umwerfen; Speichern allein zöge nicht nach, wenn jemand seinen
+Geburtstag nachträgt.
+
+`frozen()` entscheidet, was der Planer in Ruhe lässt: Die Frist läuft (Vorgabe
+14 Tage), oder es steht schon ein **Preis** dran. Der zweite Fall ist der
+wichtigere — wer das Geschenk hat, darf die Zuständigkeit nicht mehr verlieren,
+weil jemand anders sein Geburtsdatum korrigiert hat.
+
+### Vorschläge gehören der Person, nicht dem Geburtstag
+
+`gift_idea.for_person_id`, nicht `occasion_id`. Was letztes Jahr übrig blieb,
+ist dieses Jahr immer noch eine gute Idee; was genommen wurde, muss man kennen,
+um es nicht zweimal zu schenken. `gift_idea_vote` ist eine Zustimmung als bloße
+Zeile, wie `meeting_actionstep_done`.
+
+### Wer Geburtstag hat, bekommt nichts geschickt
+
+Die Regel steht in `BirthdayService.shapeOccasion()` und gilt für **jede**
+Antwort — Übersicht, Detail, Terminliste. Ist der Betrachter das
+Geburtstagskind, sind `gift`, `price_cents` und `gift_decided` leer und `ideas`
+ist `null`. Nicht ausgeblendet: nie verschickt. Eine Überraschung, die nur eine
+Entwicklerkonsole weit weg ist, ist keine.
+
+Dazu passt, dass keine Route eine Personen-Id trägt. Wer fragt, kommt aus dem
+Token — es gibt nichts zu fälschen.
+
+### `related_occasion_id`
+
+Dieselbe Geschichte wie bei `related_group_id`, eine Ebene weiter: Ohne diese
+Spalte wäre „du besorgst das Geschenk für Mira" in jedem Jahr dieselbe
+Nachricht wie im ersten und käme genau einmal im Leben an. `related_person_id`
+reicht nicht — Mira hat jedes Jahr Geburtstag.
+
+Wie beim Gebetsbuddy-Generator werden die Log-Zeilen einer Runde **gelöscht**,
+bevor neu gemeldet wird: Person, Art und Runde bleiben sonst gleich, und die
+Entdopplung verschluckte jede zweite Nachricht.
+
 ## Home-Screen und Zuteilungen
 
 Zwei Routen aus [`src/dashboard/`](src/dashboard/) — eine Sicht auf vorhandene

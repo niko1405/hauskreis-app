@@ -35,9 +35,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: '1.4.0',
+    date: '2026-08-18',
+    title: 'Geburtstage — und wer das Geschenk besorgt',
+    highlights: [
+      'Neu: Geburtstage. Sie stehen im Kalender, in der Terminliste und in einem eigenen Register — sobald jemand seinen im Profil einträgt.',
+      'Für jeden Geburtstag ist eine Person für das Geschenk zuständig. Der Reihe nach: Du bekommst den, dessen Geburtstag nach deinem kommt. Zwei Wochen vorher steht die Zuteilung fest.',
+      'Geschenk-Ideen sammeln und darüber abstimmen. Wer zuständig ist, sucht aus und trägt den Preis ein — wer Geburtstag hat, sieht davon nichts.',
+      'Der Hauskreis kann das Ganze auch ausschalten oder fest zuteilen (Verwaltung).',
+      'Beim Hochladen eines Profil- oder Hintergrundbilds wählst du jetzt selbst den Ausschnitt, statt dass aus der Mitte geschnitten wird.',
+      'Der Zurück-Pfeil auf Termin- und Themenseiten hängt nicht mehr unter der Notch.',
+    ],
+  },
+  {
     version: '1.3.0',
     date: '2026-08-17',
-    title: 'Gebetsanliegen am Termin',
+    title: 'Gebetsanliegen an Terminen',
     highlights: [
       'Neu: Gebetsanliegen. Jede:r kann zu einem Abend ein Anliegen hinschreiben — auch wer an dem Abend nicht dabei ist.',
       'Wer eingeladen, aber noch nie angemeldet war, taucht nicht mehr in den Gebetsbuddys, den Vorschlägen und der Anwesenheit auf. Sobald die Einladung angenommen ist, kommt die Person überall dazu.',
@@ -49,18 +62,17 @@ export const RELEASES: readonly Release[] = [
   },
   {
     version: '1.2.0',
-    date: '2026-08-17',
-    title: 'Eine Hilfe-Seite, und die App reicht bis unter die Notch',
+    date: '2026-08-16',
+    title: 'FAQ-Hilfe, Design-Updates und App-Info',
     highlights: [
       'Neu: „Hilfe" im Profil — rund 70 Fragen mit Suche, von den Vorschlägen über das Baukasten-System bis zum Datenschutz.',
       'Wenn es etwas Neues gibt, siehst du das jetzt am Profil-Symbol: ein Punkt, der verschwindet, sobald du es angesehen hast.',
       'Kein schwarzer Balken mehr über der App — Kopfbild und Hintergrund gehen bis hinter die Notch durch.',
-      'In der App steht jetzt, wer sie gebaut hat.',
     ],
   },
   {
     version: '1.1.0',
-    date: '2026-08-17',
+    date: '2026-08-15',
     title: 'Darkmode, Manueller Refresh und Design-Updates',
     highlights: [
       'Neu: Darkmode — im Profil unter „Darstellung“ aktivierbar.',

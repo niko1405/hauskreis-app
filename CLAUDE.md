@@ -171,7 +171,19 @@ grundlegende Vorschläge für Kernentitäten:
    - Die Zeitzone gilt sofort und überall: in ihr wird die Uhrzeit gelesen **und** gezählt, welchen Tag wir haben. Geprüft wird gegen die Liste, die die Laufzeit ohnehin mitbringt (`Intl.supportedValuesOf`), damit kein Tippfehler still danebengeht
    - Ändert sich die Uhrzeit des **nächsten** Termins, bekommen die anderen eine Benachrichtigung
 
-9. **Archiv**
+9. **Geburtstage und Geschenke**
+   - Geburtstage kommen aus `person.birthdate` und sonst nirgendwoher. Ohne Eintrag steht die Person nirgends — **auch nicht als Schenkende**: Der Platz in der Reihe *ist* der Geburtstag
+   - Sie stehen im Kalender (Punkt in der Ecke der Zelle), in der Terminliste bis zum letzten geladenen Abend, und in einem eigenen Register „Geburtstage" neben Liste, Planung und Kalender
+   - **Je Person gibt es genau eine offene Runde**, nämlich ihr nächster Geburtstag; ältere bleiben als Geschichte stehen. Deshalb gibt es keine „vergangenen Geburtstage": Wer gestern gefeiert hat, steht ab heute wieder unten unter „Kommende", mit dem Geburtstag in einem Jahr
+   - **Die Zuteilung: du bekommst den, der als nächstes dran ist.** Alle Geburtstage der Reihe nach durchs Jahr, und wer gerade gefeiert hat, besorgt das Geschenk für den nächsten. Daraus fällt von selbst ab, dass in einem Jahr jede:r genau einmal dran ist, dass niemand für sich selbst zuständig ist, und dass man genau dann erinnert wird, wenn man es zuletzt selbst erlebt hat
+   - Die Zuständigkeit wird **gerechnet und gespeichert**. Beides zusammen ist der Punkt: Rechnen allein könnte die Vergangenheit nicht festhalten und würde jede nahe Zuteilung noch umwerfen; Speichern allein zöge nicht nach, wenn jemand seinen Geburtstag nachträgt
+   - **Was eingefroren ist, wird nicht angefasst** — weder von einem Moduswechsel noch von einem nachgetragenen Datum. Zwei Gründe: die Frist läuft (Vorgabe 14 Tage, vom Admin einstellbar), oder es steht schon ein **Preis** dran. Wer das Geschenk hat, darf die Zuständigkeit nicht mehr verlieren
+   - Geschenk-Vorschläge hängen an der **Person**, nicht am Geburtstag: Was übrig blieb, ist nächstes Jahr immer noch eine gute Idee, und was genommen wurde, muss man kennen, um es nicht zweimal zu schenken. Zustimmen darf jede:r bei beliebig vielen; **aussuchen und den Preis eintragen** nur, wer besorgt
+   - **Wer Geburtstag hat, sieht nichts** — und zwar nicht ausgeblendet, sondern nie verschickt (`ideas: null`, `gift`/`priceCents`/`giftDecided` leer). Eine Überraschung, die nur eine Entwicklerkonsole weit weg ist, ist keine
+   - Der Admin kann das Ganze **abschalten** (Vorgabe) oder auf eine **feste** Zuteilung umstellen, die Runde für Runde gleich bleibt. Ändert sich dabei die Gruppe, schließt das System die Lücken selbst, bleibt aber auf „fest" und weist in der Verwaltung darauf hin
+   - Drei Benachrichtigungen: die Zuständigkeit hat gewechselt (Ereignis), der Geburtstag rückt näher (Vorlaufzeit, Vorgabe 14 Tage), es steht fest was es wird (Ereignis). Die **Vorlaufzeit bestimmt zugleich**, ab wann die Rolle auf dem Startbildschirm unter „Deine Rollen" steht — zwei Systeme mit zwei Meinungen darüber, ab wann etwas ansteht, wären eines zu viel
+
+10. **Archiv**
    - Es gibt ein Archiv, wo vergangene Termine und Themen angezeigt werden
    - Jedes Thema hat eine eigene Seite mit allen seinen Abenden; zwei Register trennen „Eigene" (auch die noch nicht gehaltenen) von „Alle"
    - Hier lassen sich auch neue Themen und Lieder anlegen — der Ort zum Vorarbeiten, ohne auf einen Dienstag zu warten
@@ -180,8 +192,12 @@ grundlegende Vorschläge für Kernentitäten:
 
 ## 7. Backlog (nicht priorisiert)
 
-8. Geschenke-Koordination (Gruppenchat in der App, wo die betroffene Person, welche Geburtstag hat, nicht mit drin ist)
-9. Essen / Too-Good-To-Go-Abholung (inkl. Vertretungsproblem)
+1. Essen / Too-Good-To-Go-Abholung (inkl. Vertretungsproblem)
+
+> Die Geschenke-Koordination stand hier einmal als Punkt 8. Sie ist gebaut
+> (§6.9) — allerdings ohne den ursprünglich angedachten Gruppenchat: Vorschläge
+> mit Zustimmung beantworten dieselbe Frage, ohne dass ein zweiter Chat neben
+> WhatsApp entsteht, gegen den diese App eigentlich gebaut ist.
 
 ## 8. Push-Notifications (PWA/iOS) – technische Anforderungen
 
