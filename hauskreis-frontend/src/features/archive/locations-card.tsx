@@ -13,7 +13,15 @@
  * - **Treffpunkt** — gehört niemandem, ist frei bearbeitbar und lässt sich
  *   stilllegen. Zu ändern gibt es Name und Anschrift.
  */
-import { Home, MapPin, Navigation, Pencil, Plus, Trash2, X } from 'lucide-react';
+import {
+  Home,
+  MapPin,
+  Navigation,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
@@ -85,11 +93,17 @@ export function LocationsCard() {
           Treffpunkte
         </h3>
         {spots.length > 0 && (
-          <ul className="space-y-2">
-            {spots.map((location) => (
-              <SpotRow key={location.id} location={location} />
-            ))}
-          </ul>
+          <>
+            <p className="px-1 text-[11px] text-stone-400 pb-2">
+              Lange auf einen Treffpunkt drücken, um ihn zu ändern oder zu
+              löschen.
+            </p>
+            <ul className="space-y-2">
+              {spots.map((location) => (
+                <SpotRow key={location.id} location={location} />
+              ))}
+            </ul>
+          </>
         )}
 
         <Button
@@ -156,19 +170,18 @@ function HomeRow({ location }: { location: Location }) {
 
 /** Ein Treffpunkt: gehört niemandem, also frei bearbeitbar und stilllegbar. */
 function SpotRow({ location }: { location: Location }) {
-  const remove = useDeleteLocation();
-  const confirm = useConfirm();
-  const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [revealed, setRevealed] = useState(false);
-  const { handlers, selectNone } = useLongPress(() => setRevealed(true));
+  const { handlers, selectNone } = useLongPress(
+    () => location.address && setRevealed(true),
+  );
 
   return (
     <li
       {...handlers}
       className={cn(
         'flex items-center gap-3 transition-colors bg-card rounded-md border p-3' +
-        (location.active ? '' : ' opacity-60'),
+          (location.active ? '' : ' opacity-60'),
         revealed ? 'border-terracotta-100 bg-terracotta-50/40' : 'border-line',
         selectNone,
       )}
@@ -201,79 +214,12 @@ function SpotRow({ location }: { location: Location }) {
           )}
         </>
       ) : (
-        <>
-          <IconButton
-            label={`${location.name} bearbeiten`}
-            onClick={() => setEditing(true)}
-          >
-            <Pencil size={15} />
-          </IconButton>
-
-          {location.active && (
-            <IconButton
-              label={`${location.name} entfernen`}
-              onClick={async () => {
-                const ok = await confirm({
-                  title: `${location.name} entfernen?`,
-                  body: 'War die Gruppe hier schon zu Gast, bleibt der Ort im Archiv stehen und verschwindet nur aus der Auswahl. Sonst wird er ganz gelöscht.',
-                  confirmLabel: 'Entfernen',
-                  tone: 'danger',
-                });
-                if (!ok) return;
-
-                remove.mutate(location.id, {
-                  onSuccess: (result) =>
-                    toast.success(
-                      result.deleted
-                        ? `${location.name} ist gelöscht.`
-                        : `${location.name} ist stillgelegt — vergangene Abende behalten ihn.`,
-                    ),
-                });
-              }}
-            >
-              <Trash2 size={15} />
-            </IconButton>
-          )}
-        </>
+        <SpotRowActions location={location} setEditing={setEditing} />
       )}
 
       {revealed && (
         <>
-          <IconButton
-            label={`${location.name} bearbeiten`}
-            onClick={() => setEditing(true)}
-          >
-            <Pencil size={15} />
-          </IconButton>
-
-          {location.active && (
-            <IconButton
-              label={`${location.name} entfernen`}
-              onClick={async () => {
-                const ok = await confirm({
-                  title: `${location.name} entfernen?`,
-                  // Was passiert, weiß erst der Server: hängt ein Abend daran,
-                  // wird der Ort nur stillgelegt. Deshalb hier beide Fälle nennen,
-                  // statt einen zu versprechen.
-                  body: 'War die Gruppe hier schon zu Gast, bleibt der Ort im Archiv stehen und verschwindet nur aus der Auswahl. Sonst wird er ganz gelöscht.',
-                  confirmLabel: 'Entfernen',
-                  tone: 'danger',
-                });
-                if (!ok) return;
-
-                remove.mutate(location.id, {
-                  onSuccess: (result) =>
-                    toast.success(
-                      result.deleted
-                        ? `${location.name} ist gelöscht.`
-                        : `${location.name} ist stillgelegt — vergangene Abende behalten ihn.`,
-                    ),
-                });
-              }}
-            >
-              <Trash2 size={15} />
-            </IconButton>
-          )}
+          <SpotRowActions location={location} setEditing={setEditing} />
 
           {/* Ein Weg zurück, ohne die Seite zu verlassen. Ohne ihn bliebe die
                     Zeile aufgeklappt, bis die Liste neu lädt. */}
@@ -291,5 +237,57 @@ function SpotRow({ location }: { location: Location }) {
         />
       )}
     </li>
+  );
+}
+
+function SpotRowActions({
+  location,
+  setEditing,
+}: {
+  location: Location;
+  setEditing: (editing: boolean) => void;
+}) {
+  const remove = useDeleteLocation();
+  const confirm = useConfirm();
+  const toast = useToast();
+
+  return (
+    <div>
+      <IconButton
+        label={`${location.name} bearbeiten`}
+        onClick={() => setEditing(true)}
+      >
+        <Pencil size={15} />
+      </IconButton>
+
+      {location.active && (
+        <IconButton
+          label={`${location.name} entfernen`}
+          onClick={async () => {
+            const ok = await confirm({
+              title: `${location.name} entfernen?`,
+              // Was passiert, weiß erst der Server: hängt ein Abend daran,
+              // wird der Ort nur stillgelegt. Deshalb hier beide Fälle nennen,
+              // statt einen zu versprechen.
+              body: 'War die Gruppe hier schon zu Gast, bleibt der Ort im Archiv stehen und verschwindet nur aus der Auswahl. Sonst wird er ganz gelöscht.',
+              confirmLabel: 'Entfernen',
+              tone: 'danger',
+            });
+            if (!ok) return;
+
+            remove.mutate(location.id, {
+              onSuccess: (result) =>
+                toast.success(
+                  result.deleted
+                    ? `${location.name} ist gelöscht.`
+                    : `${location.name} ist stillgelegt — vergangene Abende behalten ihn.`,
+                ),
+            });
+          }}
+        >
+          <Trash2 size={15} />
+        </IconButton>
+      )}
+    </div>
   );
 }

@@ -445,8 +445,7 @@ function SongLibrary({ search }: { search: string }) {
 
       {query.items.length > 0 && (
         // Einmal über der Liste, nicht an jeder Zeile: eine Geste, die man
-        // nicht sieht, muss dastehen — aber siebzehnmal untereinander wäre sie
-        // lauter als die Liste selbst.
+        // nicht sieht, muss dastehen
         <p className="px-1 text-[11px] text-stone-400">
           Lange auf ein Lied drücken, um es zu ändern oder zu löschen.
         </p>
