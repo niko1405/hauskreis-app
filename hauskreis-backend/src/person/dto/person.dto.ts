@@ -2,9 +2,38 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import { PersonRole } from '../../../generated/prisma/enums';
 
+/**
+ * Eine E-Mail-Adresse, wie sie in die Datenbank gehört: **kleingeschrieben**.
+ *
+ * Genau dieselbe Begründung wie bei `usernameSchema` darunter, und derselbe
+ * Fehler, den es dort nicht mehr gibt: Keycloak normalisiert Adressen auf
+ * Kleinbuchstaben, `person.email` behielt dagegen, was jemand eingetippt hat.
+ * Alle drei Abfragen, die eine offene Einladung suchen, vergleichen exakt —
+ * eine Einladung an `Max.Muster@gmail.com` fand sich also nie wieder, wenn im
+ * Token `max.muster@gmail.com` stand. Die Person meldete sich an, landete auf
+ * dem Onboarding-Bildschirm und stand in der Verwaltung weiter als
+ * „eingeladen". Beim nächsten Menschen ging es gut, weil er klein getippt war.
+ *
+ * **Erst normalisieren, dann prüfen** — die Reihenfolge ist kein Zufall: In
+ * Zod 4 laufen `.trim()` und `.toLowerCase()` hinter `z.email()` *nach* der
+ * Prüfung, und eine mitkopierte Leerstelle wäre dann schon abgewiesen. Über
+ * `.pipe()` liegen sie davor.
+ *
+ * Das `.meta()` ist der Preis dafür: Ein JSON-Schema beschreibt die
+ * **Eingabeseite** einer Pipe, und die ist hier eine gewöhnliche Zeichenkette —
+ * ohne die Angabe stünde in der API-Doku `type: string` und niemand sähe mehr,
+ * dass eine Adresse gemeint ist.
+ */
+export const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .pipe(z.email())
+  .meta({ format: 'email' });
+
 export const createPersonSchema = z.object({
   name: z.string().min(1).max(100),
-  email: z.email(),
+  email: emailSchema,
   birthdate: z.iso.date().optional(),
   playsInstrument: z.boolean().default(false),
   canHost: z.boolean().default(true),
@@ -77,7 +106,7 @@ const personParamsSchema = z.object({
  * Einladungsformular.
  */
 export const invitePersonSchema = z.object({
-  email: z.email(),
+  email: emailSchema,
   role: z.enum(['member', 'admin']).default('member'),
   /**
    * „Die war schon einmal dabei."
@@ -114,7 +143,7 @@ export const setHomeSchema = z.object({
 });
 
 export const changeEmailSchema = z.object({
-  email: z.email(),
+  email: emailSchema,
 });
 
 export class CreatePersonDto extends createZodDto(createPersonSchema) {}

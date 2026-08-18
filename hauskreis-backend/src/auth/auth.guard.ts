@@ -140,7 +140,13 @@ export class AuthGuard implements CanActivate {
 
     const user: AuthenticatedUser = {
       keycloakUserId: claims.sub,
-      email: claims.email,
+      // Kleingeschrieben, wie alles, was in `person.email` steht (siehe
+      // `emailSchema`). Keycloak normalisiert ohnehin — aber darauf zu bauen
+      // hieße, dem Anmeldedienst eine Zusage abzunehmen, die er nirgends gibt.
+      // An dieser Adresse hängt die Zuordnung einer offenen Einladung; sie an
+      // **beiden** Rändern gleich zu schreiben ist billiger, als jede Abfrage,
+      // die sie sucht, mit einem Sonderfall zu versehen.
+      email: claims.email?.toLowerCase(),
       username: claims.preferred_username,
       name: claims.name ?? claims.preferred_username,
       emailVerified: claims.email_verified === true,

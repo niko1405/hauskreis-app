@@ -48,8 +48,14 @@ export class KeycloakAdminService {
    * Vorher warf diese Stelle einen `409`, sobald es ein Konto mit dieser
    * Adresse gab. Damit war jede Einladung an jemanden, der die App bereits
    * benutzt, eine Sackgasse: genau der Fall „wechsel doch in unseren
-   * Hauskreis". Ein bestehendes Konto bekommt deshalb keine Einrichtungsmail
-   * mehr (Passwort und Adresse stehen schon) und wird schlicht wiederverwendet.
+   * Hauskreis". Ein bestehendes Konto wird deshalb wiederverwendet.
+   *
+   * **Es bekommt trotzdem eine Mail.** Hier stand einmal, das sei unnötig,
+   * „Passwort und Adresse stehen schon" — nur erfuhr die eingeladene Person
+   * damit gar nichts. Sie wartete auf eine Einladung, die nie kam, während in
+   * der Verwaltung „eingeladen" stand. Was ihr fehlt, ist nicht ein Passwort,
+   * sondern der Hinweis und ein Weg hinein; den Rest erledigt das Anmelden,
+   * weil `resolveForUser` die offene Zeile über die Adresse findet.
    *
    * Eine Rolle wird hier nicht mehr vergeben. „Admin" gilt pro Hauskreis und
    * steht an der `Person`, nicht am Konto.
@@ -57,7 +63,10 @@ export class KeycloakAdminService {
   async inviteUser(params: { email: string }): Promise<InviteResult> {
     const existing = await this.findUserByEmail(params.email);
     if (existing) {
-      return { created: false, invitationEmailSent: false };
+      return {
+        created: false,
+        invitationEmailSent: await this.sendInvitationEmail(existing.id),
+      };
     }
 
     // Ein Konto braucht beim Anlegen einen Nutzernamen, und der einzige, den
@@ -103,9 +112,11 @@ export class KeycloakAdminService {
   /**
    * Schickt die Einrichtungsmail noch einmal — an ein Konto, das schon steht.
    *
-   * Dieselben drei Schritte wie beim Einladen. Sie sind idempotent: wer sein
-   * Passwort inzwischen gesetzt hat, wird nur noch einmal danach gefragt, und
-   * das ist harmlos gegenüber der Alternative, gar nicht hereinzukommen.
+   * Genau derselbe Weg wie beim Einladen, und deshalb auch dieselbe Frage, was
+   * überhaupt zu erledigen ist (`setupActions`). Hier stand einmal, ein zweites
+   * Mal nach dem Passwort zu fragen sei „harmlos gegenüber der Alternative, gar
+   * nicht hereinzukommen". Das war eine falsche Alternative: Wer sein Passwort
+   * hat, kommt herein — er weiß nur nicht, dass er eingeladen ist.
    */
   async resendInvitation(email: string): Promise<boolean> {
     const user = await this.findUserByEmail(email);
@@ -301,15 +312,58 @@ export class KeycloakAdminService {
    * `editUsernameAllowed` steht — sonst ist das Feld gesperrt und der Schritt
    * zeigt nur Vor- und Nachnamen (siehe scripts/setup-keycloak.sh).
    */
+  /**
+   * Was beim Klick auf den Einladungslink zu erledigen ist.
+   *
+   * **Ein Passwort verlangt nur, wer keines hat.** Die Liste stand hier fest
+   * auf allen dreien, und das traf jede:n, der schon ein Konto besaß: Wer
+   * eingeladen wurde, weil er in einen anderen Hauskreis wechselt — oder wer
+   * eine zweite Einladung bekam, weil die erste nicht ankam — musste sein
+   * Passwort neu setzen, um irgendwo hinzukommen, wo er längst hineinkam. Das
+   * ist nicht bloß lästig, es sieht aus wie ein Angriff.
+   *
+   * Gefragt wird **Keycloak**, nicht `person.acceptedAt`. Der naheliegende
+   * Schluss „noch nie angemeldet, also kein Passwort" ist genau dort falsch,
+   * wo es darauf ankommt: Bei der Einladung, die ihre Zeile nicht wiederfand,
+   * stand `acceptedAt` auf `null`, obwohl das Konto vollständig eingerichtet
+   * war. Die Zugangsdaten weiß nur der, der sie hält.
+   *
+   * `VERIFY_EMAIL` bleibt in jedem Fall drin: Bestätigt Keycloak die Adresse
+   * schon, ist die Aktion beim Öffnen des Links sofort erledigt und niemand
+   * sieht sie. Fehlt sie dagegen, kommt niemand herein — das Backend weist
+   * jedes Token ohne `email_verified` ab.
+   */
+  private async setupActions(keycloakUserId: string): Promise<string[]> {
+    // Lässt sich das nicht klären, wird nach dem Passwort gefragt. Einmal zu
+    // viel gefragt ist ärgerlich; gar nicht gefragt sperrt jemanden aus, der
+    // noch keines hat.
+    //
+    // `Array.isArray` und nicht `?.length`: `request` gibt bei leerem Rumpf
+    // `undefined` zurück, und ein `catch` allein fängt das nicht — es ist kein
+    // abgelehntes Versprechen, sondern ein Wert, über den man stolpert.
+    const credentials = await this.request<unknown[]>(
+      `/users/${keycloakUserId}/credentials`,
+    ).catch((error: unknown) => {
+      this.logger.warn(
+        `Zugangsdaten von ${keycloakUserId} nicht lesbar (${
+          error instanceof Error ? error.message : String(error)
+        }) — die Einladung fragt sicherheitshalber nach einem Passwort`,
+      );
+      return undefined;
+    });
+
+    const hasPassword = Array.isArray(credentials) && credentials.length > 0;
+
+    return hasPassword
+      ? ['UPDATE_PROFILE', 'VERIFY_EMAIL']
+      : ['UPDATE_PROFILE', 'UPDATE_PASSWORD', 'VERIFY_EMAIL'];
+  }
+
   private async sendInvitationEmail(keycloakUserId: string): Promise<boolean> {
     try {
       await this.request(this.actionsEmailPath(keycloakUserId), {
         method: 'PUT',
-        body: JSON.stringify([
-          'UPDATE_PROFILE',
-          'UPDATE_PASSWORD',
-          'VERIFY_EMAIL',
-        ]),
+        body: JSON.stringify(await this.setupActions(keycloakUserId)),
       });
       return true;
     } catch (error) {
