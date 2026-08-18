@@ -445,10 +445,13 @@ function Loaded({
 
       {(roles.conflict || update.conflict) && (
         <ConflictBanner
-          onReload={() => window.location.reload()}
-          onDismiss={() => {
-            roles.dismissConflict();
-            update.dismissConflict();
+          onResolve={async () => {
+            // Zwei Schreibwege auf denselben Abend, und man weiß nicht, welcher
+            // sich beschwert hat — also beide auffrischen.
+            await Promise.all([
+              roles.resolveConflict(),
+              update.resolveConflict(),
+            ]);
           }}
         />
       )}

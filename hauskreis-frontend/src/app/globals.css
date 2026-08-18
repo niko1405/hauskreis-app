@@ -92,6 +92,20 @@
   --radius-lg: 24px;
   --radius-md: 20px;
   --radius-sm: 16px;
+
+  /* Der Ladebalken oben (`global-progress.tsx`). Ohne Fortschrittsangabe, weil
+     niemand weiß, wie weit eine Anfrage ist — er wandert, statt einen
+     Prozentsatz zu behaupten. */
+  --animate-progress: progress 1.4s ease-in-out infinite;
+}
+
+@keyframes progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
 }
 
 :root {

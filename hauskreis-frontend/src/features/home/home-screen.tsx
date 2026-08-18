@@ -18,6 +18,7 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import {
@@ -420,7 +421,10 @@ function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
   return (
     <Link
       href={href}
-      className="block px-4 py-3.5 transition-colors hover:bg-canvas"
+      className={cn(
+        'block px-4 py-3.5 transition-colors hover:bg-canvas active:bg-canvas',
+        PRESSABLE,
+      )}
     >
       {content}
     </Link>

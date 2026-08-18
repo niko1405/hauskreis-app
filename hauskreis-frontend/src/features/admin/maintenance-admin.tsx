@@ -101,10 +101,7 @@ function MeetingScheduleCard() {
       <SectionTitle>Termin-Rhythmus</SectionTitle>
       <Card className="space-y-4">
         {update.conflict && (
-          <ConflictBanner
-            onReload={() => void schedule.refetch()}
-            onDismiss={update.dismissConflict}
-          />
+          <ConflictBanner onResolve={update.resolveConflict} />
         )}
 
         <Field label="Wochentag">
@@ -212,10 +209,7 @@ function PrayerBuddyConfigCard() {
       <SectionTitle>Gebets-Rhythmus</SectionTitle>
       <Card className="space-y-4">
         {update.conflict && (
-          <ConflictBanner
-            onReload={() => void config.refetch()}
-            onDismiss={update.dismissConflict}
-          />
+          <ConflictBanner onResolve={update.resolveConflict} />
         )}
 
         <Field

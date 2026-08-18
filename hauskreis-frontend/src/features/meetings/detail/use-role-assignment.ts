@@ -91,7 +91,7 @@ export function useRoleAssignment(meeting: Meeting) {
     topicPeople,
     /** Der Konflikt aus `useResourceUpdate` — anzuzeigen, nicht zu verschlucken. */
     conflict: updateMeeting.conflict,
-    dismissConflict: () => updateMeeting.dismissConflict(),
+    resolveConflict: () => updateMeeting.resolveConflict(),
     saving:
       updateMeeting.isPending ||
       setSongLeaders.isPending ||

@@ -4,6 +4,7 @@
  * Das Gerüst: mobil eine Telefon-Leinwand mit Leiste unten, ab `md` eine
  * Spalte links und mehr Breite für Tabelle und Kalender.
  */
+import { GlobalProgress } from './global-progress';
 import { PullToRefresh } from './pull-to-refresh';
 import { Sidebar, TabBar } from './nav';
 
@@ -12,6 +13,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // `min-h-dvh` statt `min-h-screen`: `100vh` rechnet auf mobilen Browsern
     // mit ausgefahrener Adressleiste und ist deshalb zu hoch.
     <div className="px-safe flex min-h-dvh justify-center bg-shell">
+      <GlobalProgress />
       <div className="flex w-full max-w-md flex-col border-line-strong/50 bg-canvas shadow-xl md:max-w-5xl md:flex-row md:border-x">
         <Sidebar />
         <div className="flex min-h-dvh flex-1 flex-col">

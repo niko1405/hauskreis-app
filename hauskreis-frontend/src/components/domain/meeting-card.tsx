@@ -8,6 +8,7 @@ import { MapPin, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { useMe, useSetAttendance } from '@/lib/api/hooks';
+import { PRESSABLE } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import {
   formatDay,
@@ -49,7 +50,8 @@ export function MeetingCard({
       onMouseEnter={() => onPrefetch?.(meeting.id)}
       onTouchStart={() => onPrefetch?.(meeting.id)}
       className={cn(
-        'block rounded-card border p-5 shadow-sm transition-transform active:scale-[0.99]',
+        'block rounded-card border p-5 shadow-sm',
+        PRESSABLE,
         'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
         isWorship
           ? 'border-topic-line bg-gradient-to-br from-topic-bg to-card'

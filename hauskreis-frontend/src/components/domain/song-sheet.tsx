@@ -238,10 +238,7 @@ function EditSong({
     >
       <div className="space-y-4">
         {update.conflict && (
-          <ConflictBanner
-            onReload={() => void resource.refetch()}
-            onDismiss={update.dismissConflict}
-          />
+          <ConflictBanner onResolve={update.resolveConflict} />
         )}
 
         <SongFields

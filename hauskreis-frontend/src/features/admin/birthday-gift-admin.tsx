@@ -69,10 +69,7 @@ export function BirthdayGiftAdmin() {
       <SectionTitle>Geburtstags-Geschenke</SectionTitle>
       <Card className="space-y-4">
         {update.conflict && (
-          <ConflictBanner
-            onReload={() => void config.refetch()}
-            onDismiss={update.dismissConflict}
-          />
+          <ConflictBanner onResolve={update.resolveConflict} />
         )}
 
         <Checkbox

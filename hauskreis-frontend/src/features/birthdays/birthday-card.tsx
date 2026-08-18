@@ -17,6 +17,7 @@ import { Cake, Gift, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { PRESSABLE } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDayFull, formatDayMonth } from '@/lib/date';
 import { cn } from '@/lib/cn';
@@ -30,7 +31,10 @@ export function BirthdayCard({
   className?: string;
 }) {
   return (
-    <Link href={`/geburtstag?id=${occasion.id}`} className="block">
+    <Link
+      href={`/geburtstag?id=${occasion.id}`}
+      className={cn('block', PRESSABLE)}
+    >
       <Card
         className={cn(
           'transition-colors hover:border-terracotta-400',
@@ -162,7 +166,10 @@ export function countdown(days: number): string {
  */
 export function MyDutyCard({ occasion }: { occasion: BirthdayOccasion }) {
   return (
-    <Link href={`/geburtstag?id=${occasion.id}`} className="block">
+    <Link
+      href={`/geburtstag?id=${occasion.id}`}
+      className={cn('block', PRESSABLE)}
+    >
       <Card
         className={cn(
           'border-terracotta-200 transition-colors hover:border-terracotta-400',

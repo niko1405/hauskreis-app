@@ -163,7 +163,21 @@ export function errorMessage(e: unknown): string {
     return 'Keine Verbindung zum Server. Bist du online?';
   }
   if (e instanceof StaleResourceError) {
-    return 'Jemand anders war schneller — bitte neu laden.';
+    // Derselbe Ton wie im `ConflictBanner`: was los ist und was hilft, nicht
+    // wer schuld war.
+    return 'Das hat nicht geklappt — dein Stand war nicht mehr der aktuelle. Lade neu und probier es noch einmal.';
+  }
+  /**
+   * **Sollte niemand zu sehen bekommen.** Ein abgelaufenes Token erneuert der
+   * Fetch-Wrapper und wiederholt die Anfrage; erst wenn auch das scheitert,
+   * kommt der Fehler bis hierher — und dann ist die Sitzung wirklich weg.
+   *
+   * Der Satz steht trotzdem hier, weil ohne ihn der des Servers durchgereicht
+   * wurde: „Invalid or expired token". Wer das liest, hat gerade auf Speichern
+   * gedrückt und weiß weder, was ein Token ist, noch was er jetzt tun soll.
+   */
+  if (e instanceof UnauthorizedError) {
+    return 'Deine Anmeldung ist abgelaufen. Lade die Seite neu.';
   }
   if (e instanceof RateLimitError) {
     return 'Zu viele Anfragen. Einen Moment warten und erneut versuchen.';

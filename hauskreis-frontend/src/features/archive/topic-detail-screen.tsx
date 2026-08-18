@@ -117,12 +117,7 @@ function Loaded({ topic }: { topic: Topic }) {
         Archiv
       </Link>
 
-      {update.conflict && (
-        <ConflictBanner
-          onReload={() => window.location.reload()}
-          onDismiss={update.dismissConflict}
-        />
-      )}
+      {update.conflict && <ConflictBanner onResolve={update.resolveConflict} />}
 
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

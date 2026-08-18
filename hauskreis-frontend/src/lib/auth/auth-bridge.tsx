@@ -38,10 +38,7 @@ export function AuthBridge({ children }: { children: React.ReactNode }) {
     setAccessTokenGetter(() => authRef.current.user?.access_token);
   }
 
-  // Ein 401 kann mehrere parallele Aufrufe gleichzeitig treffen. Ohne diese
-  // Sperre liefen daraus mehrere Anmeldeversuche nebeneinander.
-  const recovering = useRef(false);
-  // Und eine zweite Bremse für den Fall, dass die Erneuerung zwar gelingt, das
+  // Eine Bremse für den Fall, dass die Erneuerung zwar gelingt, das
   // Ergebnis aber nichts ändert. Genau so entstand einmal eine Schleife ohne
   // Ende: der Server wies das Token wegen einer unbestätigten Adresse ab, die
   // Erneuerung lieferte brav ein neues, und das trug denselben Mangel. Ein
@@ -51,26 +48,41 @@ export function AuthBridge({ children }: { children: React.ReactNode }) {
   const attempts = useRef(0);
   const lastAttemptAt = useRef(0);
 
-  useEffect(() => {
-    setUnauthorizedHandler(() => {
-      if (recovering.current) return;
-      if (attempts.current >= MAX_RECOVERIES) return;
-      if (Date.now() - lastAttemptAt.current < RECOVERY_COOLDOWN_MS) return;
+  // Läuft gerade eine Erneuerung, warten alle anderen auf **dieselbe**. Ohne
+  // das liefe für jede parallel gescheiterte Anfrage eine eigene, und die
+  // Sperre darüber ließe sie schlicht ohne neues Token zurückkommen.
+  const inFlight = useRef<Promise<boolean> | null>(null);
 
-      recovering.current = true;
+  useEffect(() => {
+    setUnauthorizedHandler(async () => {
+      if (inFlight.current) return inFlight.current;
+      if (attempts.current >= MAX_RECOVERIES) return false;
+      if (Date.now() - lastAttemptAt.current < RECOVERY_COOLDOWN_MS) {
+        return false;
+      }
+
       attempts.current += 1;
       lastAttemptAt.current = Date.now();
 
-      void authRef.current
+      const renewal = authRef.current
         .signinSilent()
-        .then((user) => {
-          if (!user) return authRef.current.signinRedirect();
-          return undefined;
+        .then(async (user) => {
+          if (user) return true;
+          // Keine Sitzung mehr — dann hilft kein zweiter Versuch, sondern nur
+          // eine Anmeldung.
+          await authRef.current.signinRedirect();
+          return false;
         })
-        .catch(() => authRef.current.signinRedirect())
+        .catch(async () => {
+          await authRef.current.signinRedirect();
+          return false;
+        })
         .finally(() => {
-          recovering.current = false;
+          inFlight.current = null;
         });
+
+      inFlight.current = renewal;
+      return renewal;
     });
   }, []);
 

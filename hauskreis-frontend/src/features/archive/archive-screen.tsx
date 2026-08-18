@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useDeferredValue, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Avatar, AvatarStack } from '@/components/ui/avatar';
-import { Button, IconButton } from '@/components/ui/button';
+import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
@@ -106,6 +106,7 @@ export function ArchiveScreen() {
               aria-pressed={tab === key}
               className={cn(
                 'shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-colors',
+                PRESSABLE,
                 tab === key
                   ? 'border-terracotta-500 bg-terracotta-500 text-white'
                   : 'border-line bg-card text-stone-500 hover:border-line-strong',

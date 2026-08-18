@@ -123,10 +123,7 @@ function Loaded({ personId }: { personId: string }) {
 
       <div className="space-y-6 px-5">
         {update.conflict && (
-          <ConflictBanner
-            onReload={() => void person.refetch()}
-            onDismiss={update.dismissConflict}
-          />
+          <ConflictBanner onResolve={update.resolveConflict} />
         )}
 
         <Card>

@@ -10,7 +10,7 @@ import { useSearchParams } from 'next/navigation';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
 import { MeetingCard } from '@/components/domain/meeting-card';
-import { Button, IconButton } from '@/components/ui/button';
+import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { TextInput } from '@/components/ui/field';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import { BirthdayCard } from '@/features/birthdays/birthday-card';
@@ -94,6 +94,7 @@ export function MeetingsScreen() {
             aria-pressed={view === key}
             className={cn(
               'shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-colors',
+              PRESSABLE,
               view === key
                 ? 'border-terracotta-500 bg-terracotta-500 text-white'
                 : 'border-line bg-card text-stone-500 hover:border-line-strong',

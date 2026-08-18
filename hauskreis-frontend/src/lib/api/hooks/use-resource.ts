@@ -120,9 +120,28 @@ export function useResourceUpdate<T, TInput>({
     },
   });
 
-  const dismissConflict = useCallback(() => setConflict(false), []);
+  /**
+   * Den Konflikt aus der Welt schaffen: frischen Stand holen, Meldung weg.
+   *
+   * **Beides gehört zusammen, und genau das fehlte.** Der Knopf im Banner rief
+   * nur `refetch()`; das Kennzeichen blieb stehen, die Meldung also auch. Wer
+   * darauf drückte, sah nichts passieren — dabei war der ETag längst frisch
+   * und ein zweites Speichern hätte durchgegriffen.
+   *
+   * Wiederholt wird der Schreibvorgang **nicht** von selbst. Der zweite Druck
+   * auf Speichern ist die Stelle, an der ein Mensch bestätigt, dass er den
+   * fremden Stand überschreiben will; ein Knopf, der das nebenbei erledigt,
+   * macht aus der Sperre eine Formalie.
+   */
+  const resolveConflict = useCallback(async () => {
+    await queryClient.refetchQueries({ queryKey });
+    setConflict(false);
+    // `queryKey` ist ein Array-Literal aus dem Aufrufer und wechselt bei jedem
+    // Rendern die Identität; serialisiert bleibt es stabil.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, JSON.stringify(queryKey)]);
 
-  return { ...mutation, conflict, dismissConflict };
+  return { ...mutation, conflict, resolveConflict };
 }
 
 /**

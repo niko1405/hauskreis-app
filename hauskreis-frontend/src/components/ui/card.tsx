@@ -1,3 +1,4 @@
+import { PRESSABLE } from './button';
 import { cn } from '@/lib/cn';
 
 export function Card({
@@ -28,8 +29,9 @@ export function CardButton({
     <button
       type="button"
       className={cn(
-        'w-full rounded-card border border-line bg-card p-5 text-left shadow-sm shadow-stone-200/40 transition-transform',
-        'hover:border-line-strong active:scale-[0.99]',
+        'w-full rounded-card border border-line bg-card p-5 text-left shadow-sm shadow-stone-200/40',
+        PRESSABLE,
+        'hover:border-line-strong',
         'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none',
         className,
       )}

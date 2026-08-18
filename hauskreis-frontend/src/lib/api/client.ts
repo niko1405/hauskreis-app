@@ -68,7 +68,7 @@ export type Precondition = { etag: string | undefined } | typeof UNCONDITIONAL;
 type TokenGetter = () => string | undefined;
 
 let readAccessToken: TokenGetter = () => undefined;
-let handleUnauthorized: (() => void) | undefined;
+let handleUnauthorized: (() => Promise<boolean>) | undefined;
 let handleAuthorized: (() => void) | undefined;
 
 /** Vom Auth-Provider gesetzt. Getter statt Wert, damit ein Refresh durchschlägt. */
@@ -76,8 +76,15 @@ export function setAccessTokenGetter(getter: TokenGetter): void {
   readAccessToken = getter;
 }
 
-/** Wird bei einem 401 gerufen, das auch nach einem Refresh bestehen bleibt. */
-export function setUnauthorizedHandler(handler: () => void): void {
+/**
+ * Wird bei einem `401` gerufen und **erneuert die Anmeldung**.
+ *
+ * Gibt zurück, ob danach ein neues Token bereitliegt — nur dann lohnt es sich,
+ * die Anfrage zu wiederholen. Vorher war das ein `void`: Der Handler stieß die
+ * Erneuerung an, die Anfrage flog trotzdem, und bei einem Schreibvorgang stand
+ * der Mensch dann vor „Invalid or expired token".
+ */
+export function setUnauthorizedHandler(handler: () => Promise<boolean>): void {
   handleUnauthorized = handler;
 }
 
@@ -125,7 +132,46 @@ interface RawResponse<T> {
   etag: string | undefined;
 }
 
+/**
+ * Eine Anfrage — und bei einem abgelaufenen Token genau ein zweiter Versuch.
+ *
+ * **Warum das nötig ist.** Ein Zugangstoken gilt fünf Minuten, und die stille
+ * Erneuerung hängt an einer Zeitschaltuhr. Schläft das Telefon oder liegt der
+ * Reiter im Hintergrund, feuert sie nicht: Die erste Anfrage nach dem
+ * Aufwachen geht mit einem abgelaufenen Token raus.
+ *
+ * Für **Abfragen** war das längst geheilt — nach der Erneuerung stößt
+ * `AuthBridge` alles noch einmal an. Ein **Schreibvorgang** wurde dagegen nie
+ * wiederholt: Er scheiterte, und im Toast stand der Satz des Servers,
+ * „Invalid or expired token". Wer das liest, weiß weder was ein Token ist noch
+ * was er jetzt tun soll — und er hat gerade nur auf Speichern gedrückt.
+ *
+ * Wiederholt wird **einmal** und nur nach einem `401`. Alles andere hieße, auf
+ * Verdacht doppelt zu schreiben.
+ */
 async function request<T>(options: RequestOptions): Promise<RawResponse<T>> {
+  const first = await attempt<T>(options);
+  if (first.kind === 'ok') return first.response;
+
+  const renewed = (await handleUnauthorized?.()) ?? false;
+  if (!renewed) throw first.error;
+
+  const second = await attempt<T>(options);
+  if (second.kind === 'ok') return second.response;
+
+  throw second.error;
+}
+
+/**
+ * Ein einzelner Anlauf. Gibt einen `401` als Wert zurück statt ihn zu werfen —
+ * `request` entscheidet, ob daraus ein Fehler wird oder ein zweiter Versuch.
+ */
+async function attempt<T>(
+  options: RequestOptions,
+): Promise<
+  | { kind: 'ok'; response: RawResponse<T> }
+  | { kind: 'unauthorized'; error: Error }
+> {
   const { method, path, query, body, ifMatch, ifNoneMatch, signal } = options;
 
   const headers = new Headers();
@@ -165,24 +211,26 @@ async function request<T>(options: RequestOptions): Promise<RawResponse<T>> {
   const etag = response.headers.get('ETag') ?? undefined;
 
   if (response.status === 304) {
-    return { status: 304, data: undefined, etag };
+    return { kind: 'ok', response: { status: 304, data: undefined, etag } };
   }
 
   if (!response.ok) {
     const payload = await readErrorPayload(response, path);
     const error = toApiError(response.status, path, payload);
-    if (error instanceof UnauthorizedError) handleUnauthorized?.();
+    if (error instanceof UnauthorizedError) {
+      return { kind: 'unauthorized', error };
+    }
     throw error;
   }
 
   handleAuthorized?.();
 
   if (response.status === 204) {
-    return { status: 204, data: undefined, etag };
+    return { kind: 'ok', response: { status: 204, data: undefined, etag } };
   }
 
   const data = await readJson<T>(response);
-  return { status: response.status, data, etag };
+  return { kind: 'ok', response: { status: response.status, data, etag } };
 }
 
 /**

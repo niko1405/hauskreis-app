@@ -85,32 +85,36 @@ export function ErrorState({
  * Der `412`-Fall. Sichtbar zu machen, dass gerade jemand anders gespeichert
  * hat, ist der einzige Zweck der ganzen ETag-Mechanik — hier darf nichts
  * stillschweigend verschwinden.
+ *
+ * **Was hier stand, war die Mechanik und nicht die Auskunft.** „Jemand anders
+ * war schneller … lade neu und schau, was jetzt drinsteht" erklärt einen
+ * Wettlauf, an dem niemand teilnehmen wollte, und lässt offen, was jetzt zu
+ * tun ist. Dazu kam, dass „Neu laden" nur nachlud: Das Kennzeichen blieb
+ * gesetzt, die Meldung stand danach weiter da, und dass der ETag inzwischen
+ * frisch war, sah man ihr nicht an.
+ *
+ * Jetzt ein Satz, der sagt, was los ist, und **ein** Knopf, der beides
+ * erledigt (`resolveConflict`). Danach genügt ein zweiter Druck auf Speichern —
+ * und der ist die Stelle, an der ein Mensch bestätigt, dass er den fremden
+ * Stand überschreibt.
  */
 export function ConflictBanner({
-  onReload,
-  onDismiss,
+  onResolve,
 }: {
-  onReload: () => void;
-  onDismiss?: () => void;
+  onResolve: () => void | Promise<void>;
 }) {
   return (
     <div className="rounded-md border border-topic-line bg-topic-bg p-4">
-      <p className="text-sm font-bold text-topic">
-        Jemand anders war schneller
-      </p>
+      <p className="text-sm font-bold text-topic">Das hat nicht geklappt</p>
       <p className="mt-1 text-xs leading-relaxed text-topic/80">
-        Während du getippt hast, wurde hier schon gespeichert. Dein Stand ist
-        veraltet — lade neu und schau, was jetzt drinsteht.
+        Dein Stand war nicht mehr der aktuelle — jemand hat hier inzwischen
+        gespeichert. Wir haben ihn aufgefrischt; sieh kurz drüber und probier es
+        noch einmal.
       </p>
-      <div className="mt-3 flex gap-2">
-        <Button size="sm" onClick={onReload}>
-          Neu laden
+      <div className="mt-3">
+        <Button size="sm" onClick={() => void onResolve()}>
+          Alles klar
         </Button>
-        {onDismiss && (
-          <Button variant="ghost" size="sm" onClick={onDismiss}>
-            Später
-          </Button>
-        )}
       </div>
     </div>
   );
