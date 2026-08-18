@@ -17,7 +17,7 @@
  * die Treffer offen — wer sucht, will lesen, nicht nochmal klicken.
  */
 import { ChevronDown, Search, Shield } from 'lucide-react';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
 import { TextInput } from '@/components/ui/field';
 import { EmptyState } from '@/components/ui/states';
@@ -26,9 +26,11 @@ import { cn } from '@/lib/cn';
 import {
   FAQ_CATEGORIES,
   FAQ_ENTRIES,
+  FIRST_STEPS_ID,
   type FaqCategory,
   type FaqEntry,
 } from './faq-content';
+import { useUnreadFirstSteps } from './use-unread-help';
 
 /**
  * Vergleichsform: klein und ohne Akzente.
@@ -96,6 +98,29 @@ export function HelpScreen() {
         }))
         .filter((group) => group.entries.length > 0);
 
+  // ── Der Wegweiser vom Punkt am Profil ───────────────────────────────────
+  //
+  // `guide` bleibt für diesen Besuch stehen, `unread` nicht: `markSeen()`
+  // löscht den Merker sofort, und hinge das Aufklappen daran, fiele die Frage
+  // im selben Wimpernschlag wieder zu, in dem sie aufging.
+  const { unread: firstStepsUnread, markSeen } = useUnreadFirstSteps();
+  const [guide, setGuide] = useState(false);
+
+  useEffect(() => {
+    if (!firstStepsUnread) return;
+    setGuide(true);
+    markSeen();
+  }, [firstStepsUnread, markSeen]);
+
+  useEffect(() => {
+    if (!guide) return;
+    // Nach dem Render, in dem der Eintrag offen steht — vorher hat er die
+    // Höhe einer Zeile und das Springen zielte auf die falsche Stelle.
+    document
+      .getElementById(`faq-${FIRST_STEPS_ID}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [guide]);
+
   return (
     <div>
       <PageHeader title="Hilfe" subtitle="Wie die App funktioniert" />
@@ -149,12 +174,14 @@ export function HelpScreen() {
                 <div className="space-y-2">
                   {group.entries.map((entry) => (
                     <Entry
-                      // Der Schlüssel trägt den Suchbegriff mit: Er baut den
-                      // Eintrag neu auf, sobald sich die Suche ändert, und
-                      // damit greift das `open` unten auch beim zweiten Wort.
-                      key={`${entry.id}-${searching}`}
+                      // Der Schlüssel trägt Suchbegriff und Wegweiser mit: Er
+                      // baut den Eintrag neu auf, sobald sich einer der beiden
+                      // ändert, und damit greift das `open` unten auch beim
+                      // zweiten Wort. Ohne das bliebe `open` die
+                      // Anfangsstellung eines längst montierten `<details>`.
+                      key={`${entry.id}-${searching}-${guide}`}
                       entry={entry}
-                      open={searching}
+                      open={searching || (guide && entry.id === FIRST_STEPS_ID)}
                     />
                   ))}
                 </div>
@@ -199,6 +226,10 @@ function Pill({
 function Entry({ entry, open }: { entry: FaqEntry; open: boolean }) {
   return (
     <details
+      // Der Anker, den der Wegweiser anspringt. Am `<details>` und nicht am
+      // `<summary>`, damit `block: 'center'` den aufgeklappten Text mittig
+      // stellt und nicht nur seine Überschrift.
+      id={`faq-${entry.id}`}
       open={open}
       className="group rounded-card border border-line bg-card shadow-sm shadow-stone-200/40 open:border-line-strong"
     >

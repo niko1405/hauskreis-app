@@ -7,6 +7,7 @@
 import { Archive, CalendarDays, Home, Settings, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useUnreadFirstSteps } from '@/features/help/use-unread-help';
 import { useUnreadRelease } from '@/features/releases/use-unread-release';
 import { cn } from '@/lib/cn';
 
@@ -27,6 +28,20 @@ export const NAV_ITEMS = [
  * erweitern; für einen ist es Ballast.
  */
 const UNREAD_HREF = '/profil';
+
+/**
+ * Zwei Gründe, ein Punkt.
+ *
+ * Beide Wege enden im Profil — „Was ist neu" und „Hilfe" stehen dort in
+ * derselben Karte. Ein zweiter Punkt daneben würde die Leiste nicht genauer
+ * machen, sondern nur unruhiger; welcher der beiden gemeint ist, sagt die
+ * Karte eine Ebene tiefer.
+ */
+function useUnreadProfile(): boolean {
+  const release = useUnreadRelease();
+  const firstSteps = useUnreadFirstSteps();
+  return release.unread || firstSteps.unread;
+}
 
 function useIsActive() {
   const pathname = usePathname();
@@ -70,7 +85,7 @@ function NavIcon({
 
 export function TabBar() {
   const isActive = useIsActive();
-  const { unread } = useUnreadRelease();
+  const unread = useUnreadProfile();
 
   return (
     <nav
@@ -108,7 +123,7 @@ export function TabBar() {
 
 export function Sidebar() {
   const isActive = useIsActive();
-  const { unread } = useUnreadRelease();
+  const unread = useUnreadProfile();
 
   return (
     <nav

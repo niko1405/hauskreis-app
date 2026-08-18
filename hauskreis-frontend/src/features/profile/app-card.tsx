@@ -10,6 +10,11 @@
  * Zuwachs: Das Baukasten-System, die Vorschlagslogik und das Themen-System
  * sind ohne Erklärung nicht zu erraten, und bisher stand sie nirgends.
  *
+ * **„Hilfe" trägt beim allerersten Start einen eigenen Punkt** — nicht weil
+ * dort etwas neu wäre, sondern weil dort steht, was jetzt zu tun ist
+ * ([[use-unread-help]]). Deshalb sagt in dem Fall auch der Untertitel etwas
+ * anderes: Ein Punkt ohne Grund ist eine Frage, keine Antwort.
+ *
  * Hier stand einmal auch, ob die App offline bereit ist. Der Hinweis war ein
  * Werkzeug für einen bestimmten Fehler — er hat ihn gezeigt, der Fehler ist
  * weg, und eine Zeile, die immer dasselbe sagt, liest bald niemand mehr.
@@ -17,6 +22,7 @@
 import { ChevronRight, HelpCircle, Mail, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { Card, SectionTitle } from '@/components/ui/card';
+import { useUnreadFirstSteps } from '@/features/help/use-unread-help';
 import { useUnreadRelease } from '@/features/releases/use-unread-release';
 
 /** Eine Zeile, die auf einen anderen Bildschirm führt. */
@@ -58,6 +64,7 @@ function LinkRow({
 
 export function AppCard() {
   const { unread, version } = useUnreadRelease();
+  const firstSteps = useUnreadFirstSteps();
 
   return (
     <section>
@@ -80,7 +87,12 @@ export function AppCard() {
             href="/hilfe"
             icon={<HelpCircle size={16} />}
             title="Hilfe"
-            hint="Du hast Fragen zur Nutzung? — hier findest du Antworten"
+            hint={
+              firstSteps.unread
+                ? 'Neu hier? Fang mit „Was sind erste Schritte?“ an'
+                : 'Du hast Fragen zur Nutzung? — hier findest du Antworten'
+            }
+            dot={firstSteps.unread}
           />
         </div>
 

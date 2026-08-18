@@ -28,6 +28,7 @@ export const FAQ_CATEGORIES = [
   { id: 'songs', label: 'Musik & Lieder' },
   { id: 'locations', label: 'Orte & Hosten' },
   { id: 'prayer', label: 'Gebetsbuddys' },
+  { id: 'birthdays', label: 'Geburtstage' },
   { id: 'notes', label: 'Nachbereitung' },
   { id: 'account', label: 'Konto & Hauskreis' },
   { id: 'app', label: 'Darstellung & Technik' },
@@ -60,6 +61,15 @@ export interface FaqEntry {
   /** Wonach jemand sucht, ohne dass es im Text vorkommt. */
   keywords?: string[];
 }
+
+/**
+ * Die eine Frage, auf die der Punkt am Profil beim allerersten Start zeigt.
+ *
+ * Als Konstante und nicht als Zeichenkette an zwei Orten: Der
+ * Hilfe-Bildschirm schlägt genau diesen Eintrag auf, und würde er umbenannt,
+ * zeigte der Wegweiser stumm ins Leere. So bricht stattdessen der Typecheck.
+ */
+export const FIRST_STEPS_ID = 'profil-setup';
 
 export const FAQ_ENTRIES: readonly FaqEntry[] = [
   // ── Erste Schritte ────────────────────────────────────────────────────────
@@ -536,6 +546,64 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     keywords: ['nicht dabei', 'abwesend', 'fremdes', 'löschen', 'sichtbar'],
   },
 
+  // ── Geburtstage ───────────────────────────────────────────────────────────
+  {
+    id: 'birthdays-woher',
+    category: 'birthdays',
+    question: 'Woher weiß die App, wann ich Geburtstag habe?',
+    answer:
+      'Aus deinem Profil, und nur von dort. Solange du dort kein Datum eingetragen hast, taucht dein Geburtstag nirgends auf.\n\nDas Jahr ist optional gemeint: Wir zeigen daraus dein Alter, aber nur wenn die Zahl plausibel ist. Wer das nicht möchte, trägt ein offensichtlich falsches Jahr ein — dann steht nur der Tag da.',
+    keywords: ['geburtstag', 'geburtsdatum', 'alter', 'eintragen'],
+  },
+  {
+    id: 'birthdays-zustaendig',
+    category: 'birthdays',
+    question: 'Wie wird entschieden, wer das Geschenk besorgt?',
+    answer:
+      'Der Reihe nach, und die Reihe sind die Geburtstage selbst: **Du besorgst das Geschenk für den, dessen Geburtstag als nächstes nach deinem kommt.**\n\nDaraus fällt einiges von selbst ab. In einem Jahr ist jede:r genau einmal dran. Niemand ist für sich selbst zuständig. Und wer gerade beschenkt wurde, ist als nächstes dran — man wird also genau dann erinnert, wenn man es zuletzt selbst erlebt hat.\n\nWer keinen Geburtstag eingetragen hat, steht nicht in der Reihe: weder als Beschenkter noch als Schenkender. Trägt er ihn nach, rückt er beim nächsten Lauf überall ein — und die Zuständigkeiten der anderen verschieben sich mit.',
+    keywords: ['geschenk', 'zuständig', 'rotation', 'reihenfolge', 'wer'],
+  },
+  {
+    id: 'birthdays-freeze',
+    category: 'birthdays',
+    question: 'Kann sich meine Zuständigkeit noch ändern?',
+    answer:
+      'Bis zwei Wochen vor dem Geburtstag ja — dann etwa, wenn jemand seinen Geburtstag nachträgt oder den Hauskreis verlässt. Danach steht sie fest, und daran ändert auch ein Nachtrag nichts mehr.\n\nAußerdem: Sobald du einen **Preis** eingetragen hast, ist die Zuteilung gesperrt, egal wie früh. Wer schon etwas besorgt hat, soll nicht hinterher hören, dass jemand anders zuständig war.\n\nDie Frist stellt die Verwaltung ein.',
+    keywords: ['fest', 'ändern', 'frist', 'gesperrt', 'freeze', 'schloss'],
+  },
+  {
+    id: 'birthdays-vorschlaege',
+    category: 'birthdays',
+    question: 'Wie funktionieren die Geschenk-Vorschläge?',
+    answer:
+      'Auf der Seite eines Geburtstags kann jede:r Ideen vorschlagen und bei beliebig vielen zustimmen — bei Geschenken sind oft zwei gut und einer scheidet aus. Wer vorschlägt, stimmt automatisch mit zu.\n\n**Aussuchen darf nur, wer das Geschenk besorgt.** Damit ist die Abstimmung beendet; zurücknehmen geht trotzdem. Danach kann diese Person noch eintragen, was es gekostet hat — die anderen bekommen eine Nachricht.\n\nVorschläge gehören der **Person**, nicht dem einzelnen Geburtstag. Was letztes Jahr übrig blieb, steht dieses Jahr wieder da; was genommen wurde, steht unter „Schon einmal geschenkt", damit es niemand zweimal aussucht.',
+    keywords: ['vorschlag', 'idee', 'abstimmen', 'stimme', 'preis', 'auswählen'],
+  },
+  {
+    id: 'birthdays-eigener',
+    category: 'birthdays',
+    question: 'Sehe ich, was ich selbst geschenkt bekomme?',
+    answer:
+      'Nein — und zwar nicht „ausgeblendet", sondern gar nicht. Bei deinem eigenen Geburtstag schickt der Server dir die Vorschläge, die Auswahl und den Preis erst gar nicht; auf der Seite steht nur ein netter Satz.\n\nWer für dich zuständig ist, siehst du dagegen schon. Das ist keine Überraschung, die man verderben könnte.',
+    keywords: ['eigener', 'überraschung', 'geheim', 'sehen'],
+  },
+  {
+    id: 'birthdays-vergangene',
+    category: 'birthdays',
+    question: 'Wo sind die vergangenen Geburtstage?',
+    answer:
+      'Es gibt keine. Wer gestern gefeiert hat, steht ab heute wieder ganz unten unter „Kommende" — mit seinem Geburtstag in einem Jahr.\n\nWas bleibt, sind deine eigenen früheren Zuständigkeiten: Unter „Deine Aufgabe" lässt sich aufklappen, für wen du in den letzten Runden das Geschenk besorgt hast.',
+    keywords: ['vergangen', 'archiv', 'historie', 'früher'],
+  },
+  {
+    id: 'birthdays-ausschalten',
+    category: 'birthdays',
+    adminOnly: true,
+    question: 'Wir schenken uns nichts — geht das auch?',
+    answer:
+      'Ja, und es ist sogar die Vorgabe. In der Verwaltung unter „Geburtstags-Geschenke" lässt sich das Einteilen ganz abschalten: Dann stehen die Geburtstage weiter im Kalender und in der Liste, aber niemand bekommt eine Aufgabe und niemand eine Nachricht.\n\nDort lässt sich statt „der Reihe nach" auch eine **feste** Zuteilung wählen, die Jahr für Jahr gleich bleibt. Ändert sich dabei die Gruppe, schließt das System entstehende Lücken selbst und weist in der Verwaltung darauf hin — der Modus bleibt trotzdem „fest".',
+    keywords: ['ausschalten', 'deaktivieren', 'fest', 'manuell', 'verwaltung'],
+  },
   // ── Nachbereitung ─────────────────────────────────────────────────────────
   {
     id: 'notes-wo',
