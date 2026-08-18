@@ -47,6 +47,15 @@ import { formatDayFull } from '@/lib/date';
 import { cn } from '@/lib/cn';
 import type { BirthdayDetail, GiftIdea } from '@/lib/api/types';
 
+/**
+ * Der Weg zurück führt dorthin, wo man hergekommen ist.
+ *
+ * Nicht auf die Terminliste: Ein Geburtstag steht zwar auch dort, aber gesucht
+ * hat man ihn im Register „Geburtstage" — und aus einer Benachrichtigung kommt
+ * man ohnehin über genau diese Adresse (`appPath.birthdays()` im Backend).
+ */
+const BIRTHDAYS = '/termine?tab=geburtstage';
+
 export function BirthdayDetailScreen({ occasionId }: { occasionId: string }) {
   const birthday = useBirthday(occasionId);
 
@@ -65,9 +74,9 @@ export function BirthdayDetailScreen({ occasionId }: { occasionId: string }) {
         <ErrorState
           error={birthday.error ?? new Error('Geburtstag nicht gefunden')}
         />
-        <Link href="/termine">
+        <Link href={BIRTHDAYS}>
           <Button variant="ghost" className="mt-4">
-            Zurück zu den Terminen
+            Zurück zu den Geburtstagen
           </Button>
         </Link>
       </div>
@@ -87,7 +96,7 @@ function Loaded({
   return (
     <div className="space-y-6 px-5 pt-safe-4 pb-10">
       <div className="flex items-center justify-between">
-        <Link href="/termine">
+        <Link href={BIRTHDAYS}>
           <IconButton label="Zurück">
             <ArrowLeft size={18} />
           </IconButton>
