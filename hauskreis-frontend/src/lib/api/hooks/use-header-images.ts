@@ -55,8 +55,11 @@ export function useHeaderImage(screen: HeaderScreen) {
 
   const file = useQuery({
     queryKey: keys.headerImages.file(screen, updatedAt ?? ''),
+    // Der Zeitstempel steht in **beidem**: im Schlüssel, damit die App neu
+    // anfragt, und in der Adresse, damit der Browser nicht aus seinem eigenen
+    // Speicher antwortet. Das eine ersetzt das andere nicht.
     queryFn: ({ signal }) =>
-      headerImagesApi.getHeaderImage(hauskreisId, screen, signal),
+      headerImagesApi.getHeaderImage(hauskreisId, screen, updatedAt!, signal),
     enabled: Boolean(hauskreisId) && updatedAt !== undefined,
     // Unter demselben Schlüssel **kann** sich nichts mehr ändern.
     staleTime: Infinity,

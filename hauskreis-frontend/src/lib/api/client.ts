@@ -286,12 +286,12 @@ export async function apiGet<T>(
  */
 export async function apiGetDataUrl(
   path: string,
-  options: { signal?: AbortSignal } = {},
+  options: { query?: QueryParams; signal?: AbortSignal } = {},
 ): Promise<string> {
   const token = readAccessToken();
   const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
 
-  const response = await fetch(buildUrl(path), {
+  const response = await fetch(buildUrl(path, options.query), {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     signal: options.signal ? anySignal([options.signal, timeout]) : timeout,
     credentials: 'omit',

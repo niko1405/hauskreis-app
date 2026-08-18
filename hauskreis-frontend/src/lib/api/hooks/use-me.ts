@@ -128,7 +128,8 @@ export function usePersonPhoto(person: {
 
   return useQuery({
     queryKey: ['photo', person.id, person.photoUpdatedAt],
-    queryFn: ({ signal }) => coreApi.getPhoto(hauskreisId, person.id, signal),
+    queryFn: ({ signal }) =>
+      coreApi.getPhoto(hauskreisId, person.id, person.photoUpdatedAt!, signal),
     enabled: Boolean(hauskreisId) && person.photoUpdatedAt !== null,
     staleTime: Infinity,
     // Ein fehlendes Bild ist kein Netzproblem — es noch dreimal zu versuchen

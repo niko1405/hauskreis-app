@@ -30,13 +30,28 @@ export function listHeaderImages(
  *
  * Über den Client und nicht als `<img src>`: die API kennt nur das
  * Bearer-Token, ein direkter Verweis käme mit 401 zurück.
+ *
+ * **`?v=` ist kein Schmuck, sondern der ganze Grund, warum ein neues Bild
+ * ankommt.** Die Antwort trägt `Cache-Control: private, max-age=3600`; ohne
+ * einen Wechsel in der Adresse beantwortet der Browser die nächste Anfrage
+ * eine Stunde lang aus seinem eigenen Speicher — ohne zu fragen, ohne ETag,
+ * ohne dass die App etwas davon merkt. Genau so kam nach dem Hochladen das
+ * alte Bild zurück, und zwei Geräte zeigten verschiedene: Jedes hatte seinen
+ * eigenen veralteten Stand.
+ *
+ * Der Schlüssel der Abfrage allein reichte nicht. Er sorgt dafür, dass die App
+ * neu **anfragt** — was auf die Anfrage antwortet, entscheidet er nicht.
  */
 export function getHeaderImage(
   hauskreisId: string,
   screen: HeaderScreen,
+  updatedAt: string,
   signal?: AbortSignal,
 ): Promise<string> {
-  return apiGetDataUrl(base(hauskreisId, `/${screen}`), { signal });
+  return apiGetDataUrl(base(hauskreisId, `/${screen}`), {
+    query: { v: updatedAt },
+    signal,
+  });
 }
 
 /** Ein neues Bild setzen. Zurück kommt der Zeitstempel für die URL. */

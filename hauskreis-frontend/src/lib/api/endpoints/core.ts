@@ -100,9 +100,15 @@ export function deletePhoto(): Promise<void> {
 export function getPhoto(
   hauskreisId: string,
   personId: string,
+  updatedAt: string,
   signal?: AbortSignal,
 ): Promise<string> {
+  // `?v=` wie beim Kopfbild — und aus demselben Grund: Die Antwort darf eine
+  // Stunde zwischengespeichert werden, also muss sich die Adresse ändern,
+  // wenn sich das Bild ändert. Der Kommentar am Controller behauptete das
+  // schon lange („die URL trägt den Zeitstempel"), nur stand es nirgends.
   return apiGetDataUrl(hkPath(hauskreisId, `/people/${personId}/photo`), {
+    query: { v: updatedAt },
     signal,
   });
 }
