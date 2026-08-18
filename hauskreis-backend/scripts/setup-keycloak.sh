@@ -89,16 +89,105 @@ if [ "${PRODUCTION}" = "1" ]; then
   echo "==> Produktionsmodus: keine Testkonten, echter Mailversand"
 fi
 
+# Das Token für die Admin-API steht in einer Variablen und nicht in einer
+# Konstanten, weil es **abläuft**: Der Realm `master` gibt Token mit einer
+# Minute Gültigkeit aus, und dieses Skript läuft länger als eine Minute. Vorher
+# hieß das, dass irgendwo in der zweiten Hälfte ein 401 kam — an wechselnden
+# Stellen, je nachdem wie schnell der Server an dem Tag war.
+TOKEN=""
+
+refresh_token() {
+  local response
+  response=$(curl -s -X POST "${KC_URL}/realms/master/protocol/openid-connect/token" \
+    -d "client_id=admin-cli" \
+    -d "username=${KC_ADMIN}" \
+    --data-urlencode "password=${KC_ADMIN_PASSWORD}" \
+    -d "grant_type=password") || response=""
+
+  TOKEN=$(printf '%s' "${response}" | node -pe '
+    const raw = require("fs").readFileSync(0, "utf8");
+    raw ? (JSON.parse(raw).access_token ?? "") : "";
+  ' 2>/dev/null) || TOKEN=""
+
+  if [ -z "${TOKEN}" ]; then
+    echo "" >&2
+    echo "FEHLER: Anmeldung als '${KC_ADMIN}' an ${KC_URL} fehlgeschlagen." >&2
+    if [ -n "${response}" ]; then
+      echo "        Antwort: ${response}" >&2
+    else
+      echo "        Keine Antwort — läuft Keycloak, und stimmt KEYCLOAK_URL?" >&2
+    fi
+    exit 1
+  fi
+}
+
+# Ein Aufruf gegen die Admin-API, mit Klartext statt Stapelspur.
+#
+# Zwei Dinge, die `curl -sf … | node` nicht konnte, und beide haben wehgetan:
+#
+#   * **Sagen, was schiefging.** `-f` verschluckt den Antworttext und gibt nur
+#     einen Exit-Code her. Was aus dem Skript herausfiel, war ein
+#     `SyntaxError: Unexpected end of JSON input` samt Node-Stapelspur — und
+#     daraus liest niemand „401" oder „409" heraus.
+#   * **Einen abgelaufenen Token bemerken.** Siehe oben. Einmal neu holen und
+#     einmal wiederholen ist die ganze Kur; hilft das nicht, stimmt etwas
+#     anderes nicht, und dann steht es jetzt auch da.
+#
+# Gibt den Antworttext auf stdout aus — die Aufrufer schicken ihn wie gehabt
+# nach `node -pe` oder nach `/dev/null`.
+kc_curl() {
+  local attempt response status body
+
+  for attempt in 1 2; do
+    response=$(curl -s -w $'\n%{http_code}' \
+      -H "Authorization: Bearer ${TOKEN}" \
+      -H "Content-Type: application/json" \
+      "$@") || response=""
+
+    status="${response##*$'\n'}"
+    body="${response%$'\n'*}"
+
+    if [ "${status}" = "401" ] && [ "${attempt}" = "1" ]; then
+      refresh_token
+      continue
+    fi
+
+    case "${status}" in
+      2*)
+        printf '%s' "${body}"
+        return 0
+        ;;
+    esac
+
+    echo "" >&2
+    echo "FEHLER: Keycloak antwortete mit HTTP ${status:-(keine Antwort)}" >&2
+    echo "        Aufruf: $*" >&2
+    if [ -n "${body}" ]; then
+      echo "        Antwort: ${body}" >&2
+    fi
+    exit 1
+  done
+}
+
+# Nur der Statuscode, für die Frage „gibt es das schon?". Auch hier wird ein
+# abgelaufener Token erneuert: Ein 401 sähe sonst aus wie „nicht 404" und damit
+# wie „existiert bereits" — die Einrichtung liefe durch und ließe eine Lücke.
+api_status() {
+  local code
+  code=$(curl -s -o /dev/null -w '%{http_code}' \
+    -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" "$@")
+
+  if [ "${code}" = "401" ]; then
+    refresh_token
+    code=$(curl -s -o /dev/null -w '%{http_code}' \
+      -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" "$@")
+  fi
+
+  printf '%s' "${code}"
+}
+
 echo "==> Requesting admin token from ${KC_URL}"
-TOKEN=$(curl -sf -X POST "${KC_URL}/realms/master/protocol/openid-connect/token" \
-  -d "client_id=admin-cli" \
-  -d "username=${KC_ADMIN}" \
-  --data-urlencode "password=${KC_ADMIN_PASSWORD}" \
-  -d "grant_type=password" | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).access_token')
-
-auth=(-H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json")
-
-api_status() { curl -s -o /dev/null -w '%{http_code}' "${auth[@]}" "$@"; }
+refresh_token
 
 check_theme() {
   # Ein Realm lässt sich anstandslos auf ein Theme setzen, das es gar nicht
@@ -109,7 +198,7 @@ check_theme() {
   echo "==> Prüfen, ob das Theme 'hauskreis' installiert ist"
 
   local missing
-  missing=$(curl -sf "${auth[@]}" "${KC_URL}/admin/serverinfo" | node -pe '
+  missing=$(kc_curl "${KC_URL}/admin/serverinfo" | node -pe '
     const themes = JSON.parse(require("fs").readFileSync(0,"utf8")).themes ?? {};
     const has = (kind) => (themes[kind] ?? []).some(t => t.name === "hauskreis");
     ["login","email"].filter(kind => !has(kind)).join(",");
@@ -150,7 +239,7 @@ fi
 
 echo "==> Ensuring realm '${REALM}'"
 if [ "$(api_status "${KC_URL}/admin/realms/${REALM}")" = "404" ]; then
-  curl -sf -X POST "${KC_URL}/admin/realms" "${auth[@]}" \
+  kc_curl -X POST "${KC_URL}/admin/realms" \
     -d "{\"realm\":\"${REALM}\",\"enabled\":true}" >/dev/null
   echo "    created"
 else
@@ -161,7 +250,7 @@ fi
 # "Invalid sender address 'null'", which breaks the invite flow. Point the realm
 # at the local Mailpit container so invitations are catchable at :8025.
 echo "==> Configuring realm SMTP (Mailpit)"
-curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}" "${auth[@]}" -d "{
+kc_curl -X PUT "${KC_URL}/admin/realms/${REALM}" -d "{
     \"smtpServer\": {
       \"host\": \"${SMTP_HOST}\",
       \"port\": \"${SMTP_PORT}\",
@@ -221,10 +310,25 @@ echo "    Passwort vergessen: möglich"
 echo "    Registrierung: offen, E-Mail-Bestätigung Pflicht"
 echo "    Anmeldung: mit Nutzername oder E-Mail"
 
+# **Nachgelesen statt behauptet.** Die Zeilen darüber sagen, was geschickt
+# wurde. Diese sagt, was danach dasteht — und genau daran hing die Mail mit den
+# Platzhaltern: Ohne `internationalizationEnabled` liest Keycloak `messages_en`
+# statt `messages_de`, und die eigenen Sätze im Theme bleiben liegen. Der Realm
+# nimmt ein Theme übrigens auch dann an, wenn es den Namen gar nicht gibt —
+# ob er auch installiert ist, prüft `check_theme` am Ende.
+kc_curl "${KC_URL}/admin/realms/${REALM}" | node -pe '
+  const realm = JSON.parse(require("fs").readFileSync(0, "utf8"));
+  const sprache = realm.internationalizationEnabled
+    ? (realm.defaultLocale ?? "(keine Vorgabe)")
+    : "aus — Keycloak nimmt messages_en";
+  `    Steht jetzt so: emailTheme=${realm.emailTheme || "(keins)"}` +
+    `, loginTheme=${realm.loginTheme || "(keins)"}, Sprache=${sprache}`;
+'
+
 echo "==> Ensuring realm roles: member, admin"
 for role in member admin; do
   if [ "$(api_status "${KC_URL}/admin/realms/${REALM}/roles/${role}")" = "404" ]; then
-    curl -sf -X POST "${KC_URL}/admin/realms/${REALM}/roles" "${auth[@]}" \
+    kc_curl -X POST "${KC_URL}/admin/realms/${REALM}/roles" \
       -d "{\"name\":\"${role}\"}" >/dev/null
     echo "    created ${role}"
   else
@@ -233,7 +337,7 @@ for role in member admin; do
 done
 
 client_uuid() {
-  curl -sf "${auth[@]}" \
+  kc_curl \
     "${KC_URL}/admin/realms/${REALM}/clients?clientId=$1" \
     | node -pe 'const a=JSON.parse(require("fs").readFileSync(0,"utf8")); a.length ? a[0].id : ""'
 }
@@ -246,12 +350,12 @@ ensure_audience_mapper() {
   local uuid="$1" name="hauskreis-api-audience"
 
   local existing
-  existing=$(curl -sf "${auth[@]}" \
+  existing=$(kc_curl \
     "${KC_URL}/admin/realms/${REALM}/clients/${uuid}/protocol-mappers/models" \
     | node -pe "JSON.parse(require('fs').readFileSync(0,'utf8')).filter(m => m.name === '${name}').length")
 
   if [ "${existing}" = "0" ]; then
-    curl -sf -X POST "${auth[@]}" \
+    kc_curl -X POST \
       "${KC_URL}/admin/realms/${REALM}/clients/${uuid}/protocol-mappers/models" -d "{
         \"name\": \"${name}\",
         \"protocol\": \"openid-connect\",
@@ -289,7 +393,7 @@ echo "==> Ensuring backend client '${CLIENT_ID}' (Admin API, no browser flow)"
 EXISTING=$(client_uuid "${CLIENT_ID}")
 
 if [ -z "${EXISTING}" ]; then
-  curl -sf -X POST "${KC_URL}/admin/realms/${REALM}/clients" "${auth[@]}" -d "{
+  kc_curl -X POST "${KC_URL}/admin/realms/${REALM}/clients" -d "{
       \"clientId\": \"${CLIENT_ID}\",
       \"enabled\": true,
       \"protocol\": \"openid-connect\",
@@ -305,7 +409,7 @@ else
   # Auch am bestehenden Client nachziehen: Wer lokal entwickelt und später
   # `--production` auf denselben Realm laufen lässt, hätte den Flow sonst weiter
   # offen — und niemand sähe es, weil das Skript „already exists" meldet.
-  curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}/clients/${EXISTING}" "${auth[@]}" -d "{
+  kc_curl -X PUT "${KC_URL}/admin/realms/${REALM}/clients/${EXISTING}" -d "{
       \"clientId\": \"${CLIENT_ID}\",
       \"directAccessGrantsEnabled\": ${DIRECT_GRANTS}
     }" >/dev/null
@@ -319,7 +423,7 @@ echo "==> Ensuring frontend client '${FRONTEND_CLIENT_ID}' (public, PKCE)"
 FRONTEND_UUID=$(client_uuid "${FRONTEND_CLIENT_ID}")
 
 if [ -z "${FRONTEND_UUID}" ]; then
-  curl -sf -X POST "${KC_URL}/admin/realms/${REALM}/clients" "${auth[@]}" -d "{
+  kc_curl -X POST "${KC_URL}/admin/realms/${REALM}/clients" -d "{
       \"clientId\": \"${FRONTEND_CLIENT_ID}\",
       \"enabled\": true,
       \"protocol\": \"openid-connect\",
@@ -339,7 +443,7 @@ else
   # von `localhost:3001` auf die echte Domain lief das Skript deshalb durch,
   # meldete Erfolg und änderte nichts — der Fehler kam erst beim ersten
   # Anmeldeversuch als `invalid_redirect_uri` zurück, und zwar bei allen neun.
-  curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}/clients/${FRONTEND_UUID}" "${auth[@]}" -d "{
+  kc_curl -X PUT "${KC_URL}/admin/realms/${REALM}/clients/${FRONTEND_UUID}" -d "{
       \"clientId\": \"${FRONTEND_CLIENT_ID}\",
       \"redirectUris\": [\"${FRONTEND_URL}/*\"],
       \"webOrigins\": [\"${FRONTEND_URL}\"],
@@ -360,20 +464,22 @@ ensure_audience_mapper "${FRONTEND_UUID}"
 
 # Grant the service account permission to manage users (needed for the invite flow).
 echo "==> Granting realm-management roles to service account"
-SA_USER_ID=$(curl -sf "${auth[@]}" \
-  "${KC_URL}/admin/realms/${REALM}/clients?clientId=${CLIENT_ID}" \
-  | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8"))[0].id' \
-  | xargs -I{} curl -sf "${auth[@]}" "${KC_URL}/admin/realms/${REALM}/clients/{}/service-account-user" \
+# Die Kennung des Clients steht schon in `EXISTING` — hier stand einmal eine
+# zweite Abfrage, durch `xargs` in den nächsten Aufruf gereicht. Das ging nur,
+# solange `curl` ein Programm war: `xargs` startet einen Prozess und kennt
+# deshalb keine Shell-Funktionen.
+SA_USER_ID=$(kc_curl \
+  "${KC_URL}/admin/realms/${REALM}/clients/${EXISTING}/service-account-user" \
   | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).id')
 
-RM_CLIENT_ID=$(curl -sf "${auth[@]}" \
+RM_CLIENT_ID=$(kc_curl \
   "${KC_URL}/admin/realms/${REALM}/clients?clientId=realm-management" \
   | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8"))[0].id')
 
 # 'realm-admin' is the composite that also covers reading realm roles and
 # mapping them onto users, which the invite flow needs. manage-users alone
 # yields a 403 on the role-mapping call.
-ROLES_JSON=$(curl -sf "${auth[@]}" \
+ROLES_JSON=$(kc_curl \
   "${KC_URL}/admin/realms/${REALM}/clients/${RM_CLIENT_ID}/roles" \
   | node -pe '
     const all = JSON.parse(require("fs").readFileSync(0,"utf8"));
@@ -381,7 +487,7 @@ ROLES_JSON=$(curl -sf "${auth[@]}" \
     JSON.stringify(all.filter(r => want.includes(r.name)).map(r => ({id:r.id,name:r.name})));
   ')
 
-curl -sf -X POST "${auth[@]}" \
+kc_curl -X POST \
   "${KC_URL}/admin/realms/${REALM}/users/${SA_USER_ID}/role-mappings/clients/${RM_CLIENT_ID}" \
   -d "${ROLES_JSON}" >/dev/null
 echo "    granted realm-admin"
@@ -391,12 +497,12 @@ create_user() {
   echo "==> Ensuring user '${username}' (role: ${role})"
 
   local uid
-  uid=$(curl -sf "${auth[@]}" \
+  uid=$(kc_curl \
     "${KC_URL}/admin/realms/${REALM}/users?username=${username}&exact=true" \
     | node -pe 'const a=JSON.parse(require("fs").readFileSync(0,"utf8")); a.length ? a[0].id : ""')
 
   if [ -z "${uid}" ]; then
-    curl -sf -X POST "${KC_URL}/admin/realms/${REALM}/users" "${auth[@]}" -d "{
+    kc_curl -X POST "${KC_URL}/admin/realms/${REALM}/users" -d "{
         \"username\": \"${username}\",
         \"email\": \"${email}\",
         \"firstName\": \"${username}\",
@@ -406,14 +512,14 @@ create_user() {
         \"requiredActions\": [],
         \"credentials\": [{\"type\":\"password\",\"value\":\"${password}\",\"temporary\":false}]
       }" >/dev/null
-    uid=$(curl -sf "${auth[@]}" \
+    uid=$(kc_curl \
       "${KC_URL}/admin/realms/${REALM}/users?username=${username}&exact=true" \
       | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8"))[0].id')
     echo "    created"
   elif [ "${RESET_USERS}" = "1" ]; then
     # Keycloak's default user profile requires firstName/lastName; without them
     # the token endpoint rejects logins with "Account is not fully set up".
-    curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}/users/${uid}" "${auth[@]}" -d "{
+    kc_curl -X PUT "${KC_URL}/admin/realms/${REALM}/users/${uid}" -d "{
         \"email\": \"${email}\",
         \"firstName\": \"${username}\",
         \"lastName\": \"Test\",
@@ -421,7 +527,7 @@ create_user() {
         \"enabled\": true,
         \"requiredActions\": []
       }" >/dev/null
-    curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}/users/${uid}/reset-password" "${auth[@]}" \
+    kc_curl -X PUT "${KC_URL}/admin/realms/${REALM}/users/${uid}/reset-password" \
       -d "{\"type\":\"password\",\"value\":\"${password}\",\"temporary\":false}" >/dev/null
     echo "    already exists — profile and password reset (--reset-users)"
   else
@@ -429,10 +535,10 @@ create_user() {
   fi
 
   local role_json
-  role_json=$(curl -sf "${auth[@]}" "${KC_URL}/admin/realms/${REALM}/roles/${role}" \
+  role_json=$(kc_curl "${KC_URL}/admin/realms/${REALM}/roles/${role}" \
     | node -pe 'const r=JSON.parse(require("fs").readFileSync(0,"utf8")); JSON.stringify([{id:r.id,name:r.name}])')
 
-  curl -sf -X POST "${auth[@]}" \
+  kc_curl -X POST \
     "${KC_URL}/admin/realms/${REALM}/users/${uid}/role-mappings/realm" \
     -d "${role_json}" >/dev/null
   echo "    role '${role}' assigned"
@@ -452,6 +558,15 @@ fi
 
 check_theme
 
+echo ""
+# Der Realm zeigt jetzt auf das Theme, und die Dateien liegen im Container.
+# Gelesen hat Keycloak sie trotzdem nur einmal, beim Start: In `start` (anders
+# als `start-dev`) werden Themes zwischengespeichert. Wer eine Vorlage oder
+# einen Text ändert, braucht deshalb einen Neustart — sonst sucht man den
+# Fehler in Dateien, die längst stimmen. Beim Ausrollen erledigt das
+# `deploy/deploy.sh` selbst, sobald sich unter `keycloak/themes` etwas ändert.
+echo "Hinweis: Geänderte Theme-Dateien liest Keycloak erst beim Start."
+echo "         Von Hand:  docker compose -f docker-compose.prod.yml restart keycloak"
 echo ""
 echo "Keycloak setup complete."
 echo "  Realm:   ${REALM}"
