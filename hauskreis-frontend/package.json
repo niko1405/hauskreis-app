@@ -25,6 +25,7 @@
     "oidc-client-ts": "^3.5.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-easy-crop": "^6.2.3",
     "react-oidc-context": "^3.3.1",
     "tailwind-merge": "^3.6.0"
   },

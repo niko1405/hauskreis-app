@@ -7,16 +7,17 @@
  * zweites Bedienelement für dieselbe Sache; dass man auf sein Gesicht tippt, um
  * es zu ändern, muss man niemandem erklären.
  *
- * Zugeschnitten und verkleinert wird auf dem Server (`sharp`, 512 Pixel, WebP).
- * Hier geht die Datei so raus, wie sie gewählt wurde — was ankommt, muss der
- * Server ohnehin prüfen, und eine Verkleinerung im Browser wäre eine zweite
- * Stelle mit denselben Regeln.
+ * **Den Ausschnitt wählt man selbst** ([[image-cropper]]). Vorher schnitt der
+ * Server aus der Mitte, und bei einem Hochformat war das oft der Hals. Der
+ * Server verkleinert weiterhin (`sharp`, 512 Pixel, WebP) — er bekommt nur
+ * jetzt schon ein quadratisches Bild und hat deshalb nichts mehr wegzunehmen.
  */
 import { Camera, Trash2 } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { IconButton } from '@/components/ui/button';
 import { useConfirm } from '@/components/ui/confirm';
+import { AVATAR_CROP, ImageCropper } from '@/components/ui/image-cropper';
 import { useToast } from '@/components/ui/toast';
 import { useDeletePhoto, useUploadPhoto } from '@/lib/api/hooks';
 import type { Person } from '@/lib/api/types';
@@ -31,22 +32,22 @@ export function PhotoPicker({ person }: { person: Person }) {
   const confirm = useConfirm();
   const toast = useToast();
 
+  // Die gewählte Datei wartet hier, solange der Ausschnitt offen ist. Die
+  // Prüfung auf die Größe gilt weiterhin dem **Original**: Ein 40-MB-Foto erst
+  // zu dekodieren, um dann abzulehnen, wäre die schlechtere Reihenfolge.
+  const [pending, setPending] = useState<File | null>(null);
+
   const busy = upload.isPending || remove.isPending;
 
   const choose = (file: File | undefined) => {
     if (!file) return;
 
-    // Vor dem Hochladen und nicht danach: fünf Megabyte über eine
-    // Mobilverbindung zu schicken, nur um dann ein „zu groß" zu lesen, ist die
-    // schlechtere Reihenfolge.
     if (file.size > MAX_BYTES) {
       toast.error('Das Bild ist zu groß — bis 5 MB geht.');
       return;
     }
 
-    upload.mutate(file, {
-      onSuccess: () => toast.success('Bild gespeichert.'),
-    });
+    setPending(file);
   };
 
   return (
@@ -83,6 +84,22 @@ export function PhotoPicker({ person }: { person: Person }) {
           // scheinbar nichts.
           event.target.value = '';
         }}
+      />
+
+      <ImageCropper
+        file={pending}
+        target={AVATAR_CROP}
+        title="Profilbild zuschneiden"
+        busy={upload.isPending}
+        onCancel={() => setPending(null)}
+        onDone={(cropped) =>
+          upload.mutate(cropped, {
+            onSuccess: () => {
+              setPending(null);
+              toast.success('Bild gespeichert.');
+            },
+          })
+        }
       />
 
       {person.photoUpdatedAt && (
