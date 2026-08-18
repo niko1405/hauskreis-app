@@ -210,6 +210,14 @@ function Loaded({ personId }: { personId: string }) {
           </Card>
         </section>
 
+        <HomeCard personId={personId} locationId={current.locationId} />
+
+        <AbsencesCard personId={personId} />
+
+        <NotificationsCard />
+
+        <AppearanceCard />
+
         <MembersCard />
 
         {me.isAdmin && (
@@ -223,14 +231,6 @@ function Loaded({ personId }: { personId: string }) {
             </Link>
           </section>
         )}
-
-        <HomeCard personId={personId} locationId={current.locationId} />
-
-        <AbsencesCard personId={personId} />
-
-        <NotificationsCard />
-
-        <AppearanceCard />
 
         <AccountCard person={current} />
 
