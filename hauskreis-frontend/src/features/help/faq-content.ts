@@ -577,7 +577,14 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     question: 'Wie funktionieren die Geschenk-Vorschläge?',
     answer:
       'Auf der Seite eines Geburtstags kann jede:r Ideen vorschlagen und bei beliebig vielen zustimmen — bei Geschenken sind oft zwei gut und einer scheidet aus. Wer vorschlägt, stimmt automatisch mit zu.\n\n**Aussuchen darf nur, wer das Geschenk besorgt.** Damit ist die Abstimmung beendet; zurücknehmen geht trotzdem. Danach kann diese Person noch eintragen, was es gekostet hat — die anderen bekommen eine Nachricht.\n\nVorschläge gehören der **Person**, nicht dem einzelnen Geburtstag. Was letztes Jahr übrig blieb, steht dieses Jahr wieder da; was genommen wurde, steht unter „Schon einmal geschenkt", damit es niemand zweimal aussucht.',
-    keywords: ['vorschlag', 'idee', 'abstimmen', 'stimme', 'preis', 'auswählen'],
+    keywords: [
+      'vorschlag',
+      'idee',
+      'abstimmen',
+      'stimme',
+      'preis',
+      'auswählen',
+    ],
   },
   {
     id: 'birthdays-eigener',
