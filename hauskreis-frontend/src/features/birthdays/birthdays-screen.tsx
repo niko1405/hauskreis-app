@@ -21,7 +21,7 @@ import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import { Avatar } from '@/components/ui/avatar';
 import { useBirthdays } from '@/lib/api/hooks';
 import { formatDayMonth } from '@/lib/date';
-import { BirthdayCard } from './birthday-card';
+import { BirthdayCard, MyDutyCard } from './birthday-card';
 
 export function BirthdaysScreen() {
   const birthdays = useBirthdays();
@@ -57,7 +57,7 @@ export function BirthdaysScreen() {
           <SectionTitle>Deine Aufgabe</SectionTitle>
 
           {data.myNext ? (
-            <BirthdayCard occasion={data.myNext} />
+            <MyDutyCard occasion={data.myNext} />
           ) : (
             <Card>
               <p className="text-[11px] leading-relaxed text-stone-400">
