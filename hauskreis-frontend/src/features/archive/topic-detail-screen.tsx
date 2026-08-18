@@ -108,7 +108,7 @@ function Loaded({ topic }: { topic: Topic }) {
   };
 
   return (
-    <div className="space-y-6 px-5 pt-4 pb-10">
+    <div className="space-y-6 px-5 pt-safe-4 pb-10">
       <Link
         href="/archiv"
         className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-terracotta-600"

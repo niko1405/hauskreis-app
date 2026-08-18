@@ -132,7 +132,12 @@ const TopicChoiceSheet = dynamic(() =>
 );
 
 /** Der Host fehlt: er steckt im Ort-Sheet, weil er dieselbe Frage beantwortet. */
-type SheetRole = Exclude<AssignmentRole, 'PRAYER_BUDDY' | 'HOST'>;
+// Gastgeber hat sein eigenes Sheet (mit Wohnungen statt Personen); Gebetsbuddys
+// und Geschenke teilt der Server zu und nicht ein Mensch an einem Abend.
+type SheetRole = Exclude<
+  AssignmentRole,
+  'PRAYER_BUDDY' | 'HOST' | 'BIRTHDAY_GIFT'
+>;
 
 export function MeetingDetailScreen({ meetingId }: { meetingId: string }) {
   const router = useRouter();
@@ -141,7 +146,7 @@ export function MeetingDetailScreen({ meetingId }: { meetingId: string }) {
 
   if (meetingQuery.isLoading) {
     return (
-      <div className="space-y-4 px-5 pt-6">
+      <div className="space-y-4 px-5 pt-safe-6">
         <CardSkeleton />
         <CardSkeleton />
       </div>
@@ -150,7 +155,7 @@ export function MeetingDetailScreen({ meetingId }: { meetingId: string }) {
 
   if (meetingQuery.error || !meeting) {
     return (
-      <div className="px-5 pt-6">
+      <div className="px-5 pt-safe-6">
         <ErrorState
           error={meetingQuery.error ?? new Error('Termin nicht gefunden')}
           onRetry={() => void meetingQuery.refetch()}
@@ -425,7 +430,7 @@ function Loaded({
   };
 
   return (
-    <div className="space-y-6 px-5 pt-4 pb-10">
+    <div className="space-y-6 px-5 pt-safe-4 pb-10">
       <div className="flex items-center justify-between">
         <Link href="/termine">
           <IconButton label="Zurück">

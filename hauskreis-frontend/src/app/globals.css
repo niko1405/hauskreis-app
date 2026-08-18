@@ -295,6 +295,26 @@ label,
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
 }
+
+/* Der sichere Rand **plus** ein eigener Abstand.
+ *
+ * `pt-safe pt-4` nebeneinander zu schreiben geht nicht: beide setzen
+ * `padding-top`, und welche gewinnt, entscheidet die Reihenfolge im
+ * Stylesheet — nicht die im `class`-Attribut. Addiert werden muss es also in
+ * einer einzigen Regel.
+ *
+ * Gebraucht überall dort, wo eine Kopfzeile ganz oben steht: `PageHeader`
+ * (1.5rem) und die Detailseiten mit ihrem Zurück-Pfeil (1rem). Der Pfeil hing
+ * sonst unter der Dynamic Island — die Detailseiten rendern ohne
+ * `PageHeader`/`ScreenHeader` und trugen deshalb als einzige gar keinen
+ * sicheren Rand.
+ */
+.pt-safe-4 {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 1rem);
+}
+.pt-safe-6 {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 1.5rem);
+}
 .px-safe {
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);

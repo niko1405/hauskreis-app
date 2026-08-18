@@ -43,10 +43,9 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    // Der sichere Rand wird auf den vorhandenen Abstand *addiert*, nicht an
-    // seine Stelle gesetzt — `pt-safe` und `pt-6` würden einander sonst
-    // überschreiben, je nachdem welche Regel im Stylesheet später steht.
-    <header className="flex items-end justify-between gap-4 px-5 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4">
+    // `pt-safe-6` ist der sichere Rand **plus** 1.5rem in einer Regel; warum es
+    // nicht `pt-safe pt-6` sein kann, steht bei der Klasse in `globals.css`.
+    <header className="flex items-end justify-between gap-4 px-5 pt-safe-6 pb-4">
       <div>
         <h1 className="font-serif text-3xl leading-tight font-bold text-stone-900">
           {title}
