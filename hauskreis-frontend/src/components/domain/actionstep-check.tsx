@@ -37,9 +37,7 @@ export function ActionstepCheck({
   const setDone = useSetActionstepDone(meetingId);
 
   const doneByMe = done.some((row) => row.person.id === me.me?.id);
-  const activeCount = (people.data ?? []).filter(
-    (person) => person.active,
-  ).length;
+  const activeCount = (people.data ?? []).length;
   const others = done
     .map((row) => row.person)
     .filter((person) => person.id !== me.me?.id);

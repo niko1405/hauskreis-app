@@ -31,11 +31,16 @@ function setup(options: {
   meeting?: Record<string, unknown> | null;
   active?: number;
   declined?: number;
+  /** Was `reviveUpcoming` an ausgefallenen Abenden vorfindet. */
+  upcoming?: { id: string }[];
 }) {
   const update = jest.fn().mockResolvedValue({});
 
+  const findMany = jest.fn().mockResolvedValue(options.upcoming ?? []);
+
   const prisma = {
     meeting: {
+      findMany,
       findUnique: jest.fn().mockResolvedValue(
         options.meeting === undefined
           ? {
@@ -67,7 +72,7 @@ function setup(options: {
     ),
   );
 
-  return { service, update, notifications };
+  return { service, update, notifications, findMany };
 }
 
 /** Was `update` schreiben wollte. */
@@ -208,6 +213,65 @@ describe('MeetingCancellationService.reconcile — wieder aufleben', () => {
     });
 
     await service.reconcile('m1');
+
+    expect(update).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Zwei Wege ändern das Ergebnis, ohne dass jemand seine Anwesenheit anfasst:
+ * der Schalter „ich bin grundsätzlich dabei" und ein Mensch, der neu
+ * dazukommt. Beide Male blieb der Abend ausgefallen, obwohl er es nicht mehr
+ * war — `reconcile` hängt an einem Termin und wurde von dort nie gerufen.
+ */
+describe('MeetingCancellationService.reviveUpcoming', () => {
+  it('sieht sich jeden von selbst ausgefallenen Abend noch einmal an', async () => {
+    const { service, findMany, update } = setup({
+      upcoming: [{ id: 'm1' }],
+      meeting: cancelled(),
+      active: 9,
+      declined: 3,
+    });
+
+    await service.reviveUpcoming('hk1');
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          hauskreisId: 'hk1',
+          status: MeetingStatus.CANCELLED,
+          // Eine Absage von Hand bleibt eine Absage.
+          cancelSource: MeetingCancelSource.ALL_DECLINED,
+        }),
+      }),
+    );
+    expect(written(update)).toMatchObject({
+      status: MeetingStatus.PLANNED,
+      cancelSource: null,
+    });
+  });
+
+  it('fasst nichts an, wenn kein Abend von selbst ausgefallen ist', async () => {
+    const { service, update } = setup({ upcoming: [] });
+
+    await service.reviveUpcoming('hk1');
+
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Aufwecken heißt nicht wecken um jeden Preis: Sind die Absagen immer noch
+   * vollzählig, bleibt der Abend, wo er ist.
+   */
+  it('lässt einen Abend liegen, den weiterhin alle abgesagt haben', async () => {
+    const { service, update } = setup({
+      upcoming: [{ id: 'm1' }],
+      meeting: cancelled(),
+      active: 9,
+      declined: 9,
+    });
+
+    await service.reviveUpcoming('hk1');
 
     expect(update).not.toHaveBeenCalled();
   });

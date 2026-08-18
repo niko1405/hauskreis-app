@@ -53,7 +53,7 @@ export function useDissolvesOnLeave(): boolean | undefined {
   if (people.data === undefined) return undefined;
 
   return people.data
-    .filter((person) => person.active && person.id !== me?.id)
+    .filter((person) => person.id !== me?.id)
     .every((person) => person.acceptedAt === null);
 }
 

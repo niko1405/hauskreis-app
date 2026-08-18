@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
+import { MeetingCancellationService } from '../meeting/meeting-cancellation.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PersonRole } from '../../generated/prisma/enums';
 import { GroupClockService } from '../meeting/group-clock.service';
@@ -115,6 +116,27 @@ export class PersonService {
   }
 
   /**
+   * Weckt Abende auf, die mangels Zusagen von selbst ausgefallen sind.
+   *
+   * Nachgeschlagen wie die beiden Rotationen darüber, und aus demselben Grund:
+   * `MeetingModule` importiert `PersonModule`; andersherum stünde der Kreis.
+   * `AutoAttendanceService` kann es nicht selbst tun — das Modul kommt bewusst
+   * mit Prisma aus, damit jeder es importieren kann, und genau das wäre dahin.
+   *
+   * Zwei Wege führen hierher: Der Schalter „ich bin grundsätzlich dabei"
+   * schreibt Zusagen auf kommende Abende, und wer ankommt, ändert die Zahl,
+   * gegen die Absagen gezählt werden. Beide Male stand ein Abend weiter als
+   * ausgefallen da, obwohl er es nicht mehr war.
+   */
+  private async reviveEmptyMeetings(hauskreisId: string): Promise<void> {
+    const cancellations = this.moduleRef.get(MeetingCancellationService, {
+      strict: false,
+    });
+
+    await cancellations.reviveUpcoming(hauskreisId);
+  }
+
+  /**
    * Zieht die Namen der betroffenen Wohnungen nach, nachdem jemand um- oder
    * ausgezogen ist.
    *
@@ -150,12 +172,32 @@ export class PersonService {
    * hier ist billiger als eine Runde mehr über die Leitung, und die Antwort
    * wäre dieselbe.
    */
+  /**
+   * Wer zum Hauskreis gehört — **inklusive** offener Einladungen.
+   *
+   * `active: true` und sonst nichts, und beide Hälften dieser Entscheidung
+   * haben einen Grund:
+   *
+   * **Ausgetretene fallen raus.** Hier stand gar kein Filter, und das war ein
+   * stiller Fehler: Wer den Hauskreis verlassen hatte, stand danach unter der
+   * Rangliste in jedem Zuteilungs-Sheet und in der Verwaltung unter „Personen"
+   * — als „Ehemaliges Mitglied", wenn er auch sein Konto gelöscht hatte.
+   * `acceptedAt` half dagegen nicht: Das ist gesetzt, er war ja einmal da.
+   * Seinen Namen tragen weiter die vergangenen Abende, und das ist der Ort,
+   * an den er gehört.
+   *
+   * **Eingeladene bleiben drin**, obwohl `ANGEKOMMEN` sie überall sonst
+   * aussortiert. Das ist Absicht: Diese Liste und die Mitgliederliste im
+   * Profil sind die einzigen beiden, die die Frage „wer ist eingeladen"
+   * überhaupt beantworten sollen (siehe `angekommen.ts`). Wer sie nicht sehen
+   * will, filtert auf `acceptedAt` — so wie der Zuteilungs-Picker.
+   */
   async findAll(hauskreisId: string) {
     const today = await this.clock.today(hauskreisId);
 
     const [people, away] = await Promise.all([
       this.prisma.person.findMany({
-        where: { hauskreisId },
+        where: { hauskreisId, active: true },
         select: personSelect,
         orderBy: { name: 'asc' },
       }),
@@ -213,6 +255,10 @@ export class PersonService {
     if (person.autoAttend) {
       await this.autoAttendance.apply(hauskreisId, { personId: person.id });
     }
+
+    // Eine Person mehr heißt: Ein Abend, den bis eben alle abgesagt hatten,
+    // ist keiner mehr, den alle abgesagt haben.
+    await this.reviveEmptyMeetings(hauskreisId);
 
     return person;
   }
@@ -310,6 +356,9 @@ export class PersonService {
     // ausgesprochen hat.
     if (dto.autoAttend === true) {
       await this.autoAttendance.apply(hauskreisId, { personId: id });
+      // Die frischen Zusagen können einen Abend zurückholen, der mangels
+      // Zusagen von selbst ausgefallen war.
+      await this.reviveEmptyMeetings(hauskreisId);
     }
 
     return updated;
@@ -1128,6 +1177,9 @@ export class PersonService {
     try {
       await this.replanPrayerBuddies(hauskreisId);
       await this.replanBirthdays(hauskreisId);
+      // „Alle haben abgesagt" wird gegen die Zahl der Angekommenen gerechnet,
+      // und die ist gerade um eins gewachsen.
+      await this.reviveEmptyMeetings(hauskreisId);
     } catch (error) {
       this.logger.error(
         `Erste Anmeldung in Hauskreis ${hauskreisId}, aber die Rotationen ließen sich nicht nachziehen`,

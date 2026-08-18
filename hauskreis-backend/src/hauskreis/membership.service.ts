@@ -527,6 +527,10 @@ export class MembershipService {
         invitation.hauskreisId,
       );
       await this.birthdays.plan(invitation.hauskreisId);
+      // Eine Person mehr heißt: „alle haben abgesagt" stimmt womöglich nicht
+      // mehr. Gezählt wird gegen die Zahl der Angekommenen, und die ist gerade
+      // um eins gewachsen — ohne dass jemand seine Anwesenheit angefasst hat.
+      await this.cancellations.reviveUpcoming(invitation.hauskreisId);
     } catch (error) {
       this.logger.error(
         `Einladung in Hauskreis ${invitation.hauskreisId} angenommen, aber die Rotationen ließen sich nicht nachziehen`,

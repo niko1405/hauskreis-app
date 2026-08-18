@@ -99,6 +99,48 @@ export class MeetingCancellationService {
     }
   }
 
+  /**
+   * Alle Abende ansehen, die die App selbst abgesagt hat.
+   *
+   * **Für Änderungen, die keine Anwesenheit anfassen.** `reconcile` hängt an
+   * einem einzelnen Termin und wird gerufen, wenn jemand seine Antwort ändert.
+   * Zwei Wege ändern das Ergebnis aber, ohne eine Antwort anzufassen, und
+   * beide sind zuletzt aufgefallen:
+   *
+   *   * **Der Schalter „ich bin grundsätzlich dabei".** Er füllt kommende
+   *     Abende mit Zusagen auf (`AutoAttendanceService`), auch abgesagte — und
+   *     danach passierte nichts. Der Abend blieb ausgefallen, obwohl jemand
+   *     zugesagt hatte.
+   *   * **Wer ankommt, ändert den Nenner.** Hier wird gezählt, wie viele
+   *     Absagen es gibt und wie viele Menschen es gibt; eine Person mehr macht
+   *     aus „alle haben abgesagt" ein „fast alle". Beim ersten Anmelden und
+   *     beim Annehmen einer Einladung geschieht das, ohne dass irgendwer seine
+   *     Anwesenheit ändert.
+   *
+   * **Nur aufwecken, nie absagen** — deshalb die enge Abfrage. Zusagen und
+   * Zugänge können eine Absage auflösen, aber keine auslösen. Wer geht, ist
+   * der umgekehrte Fall, und den erledigt `leave` schon Termin für Termin.
+   */
+  async reviveUpcoming(hauskreisId: string): Promise<void> {
+    const today = await this.clock.today(hauskreisId);
+
+    const cancelled = await this.prisma.meeting.findMany({
+      where: {
+        hauskreisId,
+        date: { gte: today },
+        status: MeetingStatus.CANCELLED,
+        // Eine Absage von Hand bleibt eine Absage. Zurückgenommen wird nur,
+        // was die App selbst geschlossen hat.
+        cancelSource: MeetingCancelSource.ALL_DECLINED,
+      },
+      select: { id: true },
+    });
+
+    for (const meeting of cancelled) {
+      await this.reconcile(meeting.id);
+    }
+  }
+
   private async cancelBecauseEverybodyDeclined(meetingId: string) {
     await this.prisma.meeting.update({
       where: { id: meetingId },

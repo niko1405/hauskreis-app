@@ -23,9 +23,10 @@ import type { PersonListEntry } from '@/lib/api/types';
 export function MembersCard() {
   const people = usePeople();
 
-  // Ausgetretene bleiben als Zeile im Archiv stehen, damit vergangene Abende
-  // weiter zeigen, wer gehostet hat — in „wer ist dabei" gehören sie nicht.
-  const members = (people.data ?? []).filter((person) => person.active);
+  // Ausgetretene stehen hier nicht — die sortiert der Server aus. Eingeladene
+  // dagegen schon, mit ihrem Abzeichen: Diese Liste und die Verwaltung sind
+  // die einzigen beiden, die „wer ist eingeladen" beantworten sollen.
+  const members = people.data ?? [];
 
   return (
     <section>

@@ -27,12 +27,16 @@ function sideTables() {
     pushSubscription: { deleteMany: jest.fn() },
     notificationPreference: { deleteMany: jest.fn() },
     notificationLog: { deleteMany: jest.fn() },
-    absencePeriod: { deleteMany: jest.fn() },
+    // `findMany` gehört nicht zum Aufräumen, sondern zu `findAll`: Wer heute
+    // unterwegs ist, steht als `awayToday` an der Person.
+    absencePeriod: { deleteMany: jest.fn(), findMany: jest.fn() },
     meetingPrayerRequest: { deleteMany: jest.fn() },
   };
 }
 
 function setup() {
+  const side = sideTables();
+  side.absencePeriod.findMany.mockResolvedValue([]);
   const person: PersonDelegate = {
     findUnique: jest.fn(),
     findFirst: jest.fn(),
@@ -43,7 +47,6 @@ function setup() {
     delete: jest.fn(),
     updateMany: jest.fn(),
   };
-  const side = sideTables();
   const prisma = {
     person,
     ...side,
@@ -77,11 +80,24 @@ function setup() {
   const leave = jest
     .fn()
     .mockResolvedValue({ hauskreisDeleted: false, successorPersonId: null });
+  // Die Geburtstags-Reihe zieht mit; was dabei herauskommt, prüft
+  // `birthday-planner.service.spec.ts`. Sie fehlte hier, und weil
+  // `welcomeIntoRotation` Fehler schluckt, stand bei jedem Lauf still ein
+  // „planner.plan is not a function" im Protokoll.
+  const plan = jest.fn().mockResolvedValue({
+    created: 0,
+    reassigned: 0,
+    notified: 0,
+  });
+  // Ein Abend, den bis eben alle abgesagt hatten, ist keiner mehr, sobald
+  // jemand dazukommt oder zusagt. Geprüft wird das in
+  // `meeting-cancellation.service.spec.ts`; hier zählt, dass gefragt wird.
+  const reviveUpcoming = jest.fn().mockResolvedValue(undefined);
   const moduleRef = {
     get: jest.fn((token: unknown) =>
       token === MEMBERSHIP_SERVICE
         ? { leave }
-        : { replanAfterMembershipChange },
+        : { replanAfterMembershipChange, plan, reviveUpcoming },
     ),
   };
   const service = withClock(
@@ -102,8 +118,12 @@ function setup() {
     replanAfterMembershipChange,
     autoAttendance,
     leave,
+    reviveUpcoming,
   };
 }
+
+/** `If-Match: *` — die Zeile muss es geben, welche Fassung ist hier egal. */
+const ANY_VERSION = { kind: 'any' } as const;
 
 const user: AuthenticatedUser = {
   keycloakUserId: 'kc-123',
@@ -815,5 +835,134 @@ describe('PersonService.deleteOrphanedAccount', () => {
 
     await expect(service.deleteOrphanedAccount(user)).resolves.toBeUndefined();
     expect(person.updateMany).toHaveBeenCalled();
+  });
+});
+
+/**
+ * Wer nicht mehr dabei ist, gehört in keine Liste, aus der jemand auswählt.
+ *
+ * Hier stand gar kein Filter, und das fiel an zwei Stellen auf: Ein
+ * ausgetretenes Mitglied stand unter der Rangliste in jedem Zuteilungs-Sheet
+ * und in der Verwaltung unter „Personen" — nach einer Konto-Löschung als
+ * „Ehemaliges Mitglied". `acceptedAt` half dagegen nicht, das ist gesetzt: Die
+ * Person war ja einmal da.
+ */
+describe('PersonService.findAll', () => {
+  it('fragt nur nach denen, die dabei sind', async () => {
+    const { service, person } = setup();
+    person.findMany.mockResolvedValue([]);
+
+    await service.findAll('hk-1');
+
+    expect(person.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { hauskreisId: 'hk-1', active: true },
+      }),
+    );
+  });
+
+  /**
+   * Eingeladene bleiben ausdrücklich drin. Diese Liste und die Mitgliederliste
+   * im Profil sind die einzigen beiden, die „wer ist eingeladen" überhaupt
+   * beantworten sollen.
+   */
+  it('lässt offene Einladungen stehen', async () => {
+    const { service, person } = setup();
+    person.findMany.mockResolvedValue([]);
+
+    await service.findAll('hk-1');
+
+    const [call] = person.findMany.mock.calls as [{ where: object }][];
+    expect(call![0].where).not.toHaveProperty('acceptedAt');
+  });
+});
+
+/**
+ * „Alle haben abgesagt" wird gegen die Zahl der Angekommenen gerechnet — und
+ * die ändert sich, ohne dass jemand seine Anwesenheit anfasst.
+ */
+describe('PersonService und die von selbst ausgefallenen Abende', () => {
+  it('sieht sie an, wenn jemand dazukommt', async () => {
+    const { service, person, reviveUpcoming } = setup();
+    person.create.mockResolvedValue({
+      id: 'p-neu',
+      locationId: null,
+      autoAttend: false,
+    });
+
+    await service.create('hk-1', {
+      name: 'Neu',
+      email: 'neu@example.com',
+      playsInstrument: false,
+      canHost: true,
+      autoAttend: false,
+    });
+
+    expect(reviveUpcoming).toHaveBeenCalledWith('hk-1');
+  });
+
+  it('sieht sie an, wenn jemand „ich bin grundsätzlich dabei" einschaltet', async () => {
+    const { service, person, autoAttendance, reviveUpcoming } = setup();
+    person.findFirst.mockResolvedValue({
+      locationId: null,
+      active: true,
+      username: 'lea',
+      keycloakUserId: 'kc-123',
+      birthdate: null,
+    });
+    person.updateMany.mockResolvedValue({ count: 1 });
+
+    await service.update(
+      'hk-1',
+      'p-1',
+      { autoAttend: true },
+      undefined,
+      ANY_VERSION,
+    );
+
+    expect(autoAttendance.apply).toHaveBeenCalledWith('hk-1', {
+      personId: 'p-1',
+    });
+    expect(reviveUpcoming).toHaveBeenCalledWith('hk-1');
+  });
+
+  it('lässt sie in Ruhe, wenn der Schalter ausgeht', async () => {
+    // Was zugesagt ist, bleibt zugesagt — es kommt also nichts dazu, was einen
+    // Abend zurückholen könnte.
+    const { service, person, reviveUpcoming } = setup();
+    person.findFirst.mockResolvedValue({
+      locationId: null,
+      active: true,
+      username: 'lea',
+      keycloakUserId: 'kc-123',
+      birthdate: null,
+    });
+    person.updateMany.mockResolvedValue({ count: 1 });
+
+    await service.update(
+      'hk-1',
+      'p-1',
+      { autoAttend: false },
+      undefined,
+      ANY_VERSION,
+    );
+
+    expect(reviveUpcoming).not.toHaveBeenCalled();
+  });
+
+  it('sieht sie an, wenn sich jemand zum ersten Mal anmeldet', async () => {
+    const { service, person, reviveUpcoming } = setup();
+    person.findUnique.mockResolvedValue({
+      id: 'p-1',
+      hauskreisId: 'hk-1',
+      acceptedAt: null,
+      username: null,
+      name: 'lea',
+    });
+    person.update.mockResolvedValue({ id: 'p-1', hauskreisId: 'hk-1' });
+
+    await service.resolveForUser(user);
+
+    expect(reviveUpcoming).toHaveBeenCalledWith('hk-1');
   });
 });

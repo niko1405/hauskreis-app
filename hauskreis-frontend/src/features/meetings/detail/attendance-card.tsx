@@ -45,12 +45,12 @@ export function AttendanceCard({
     meeting.attendances.find((a) => a.personId === personId)?.status ??
     'UNKNOWN';
 
-  // Inaktive Personen zählen nirgends mit — vorher stand im Nenner schlicht
-  // die Länge der ganzen Liste. Und Eingeladene ebenso wenig: Wer sich noch nie
-  // angemeldet hat, kann nicht antworten und stünde auf ewig unter „weiß noch
-  // nicht". Der Server rechnet für „alle haben abgesagt" mit derselben Menge.
+  // Eingeladene zählen nicht mit: Wer sich noch nie angemeldet hat, kann nicht
+  // antworten und stünde auf ewig unter „weiß noch nicht". Der Server rechnet
+  // für „alle haben abgesagt" mit derselben Menge. Ausgetretene kommen gar
+  // nicht erst an — die sortiert `findAll` aus.
   const active = (people.data ?? []).filter(
-    (person) => person.active && person.acceptedAt !== null,
+    (person) => person.acceptedAt !== null,
   );
   const attending = active.filter((p) => statusOf(p.id) === 'ATTENDING');
   const absent = active.filter((p) => statusOf(p.id) === 'ABSENT');
