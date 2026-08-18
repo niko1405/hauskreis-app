@@ -55,22 +55,16 @@ log "Version ${TAG}"
 # Danach steht das Arbeitsverzeichnis auf einem losgelösten HEAD. Das ist
 # Absicht: der Server spiegelt einen Stand, er entwickelt nicht.
 # ---------------------------------------------------------------------------
-THEME_PATH='hauskreis-backend/keycloak/themes'
-themes_changed=0
+THEME_PATH="${STACK_DIR}/hauskreis-backend/keycloak/themes"
+# Woran der Server sich merkt, welchen Theme-Stand sein Keycloak gelesen hat.
+# Außerhalb des Arbeitsverzeichnisses, damit `git checkout --force` ihn nicht
+# wegräumt.
+THEME_STAMP="${THEME_STAMP:-/var/lib/hauskreis-deploy/keycloak-theme.sha}"
 
 if [ "${TAG}" != "latest" ]; then
   log "Quelltext auf ${TAG}"
-  before=$(git -C "${STACK_DIR}" rev-parse HEAD)
   git -C "${STACK_DIR}" fetch --quiet origin
   git -C "${STACK_DIR}" checkout --quiet --force "${TAG}"
-  after=$(git -C "${STACK_DIR}" rev-parse HEAD)
-
-  # Ob die Keycloak-Themes von diesem Deploy berührt wurden. Siehe unten,
-  # warum das eine eigene Frage ist.
-  if [ "${before}" != "${after}" ] &&
-    ! git -C "${STACK_DIR}" diff --quiet "${before}" "${after}" -- "${THEME_PATH}"; then
-    themes_changed=1
-  fi
 fi
 
 cd "${COMPOSE_DIR}"
@@ -89,26 +83,52 @@ log "Stack starten"
 IMAGE_TAG="${TAG}" compose up -d --remove-orphans
 
 # ---------------------------------------------------------------------------
-# Keycloak neu starten, wenn sich sein Theme geändert hat.
+# Keycloak neu starten, wenn sein Theme nicht mehr das ist, das er gelesen hat.
 #
-# `up -d` tut das nicht: Compose legt einen Container nur neu an, wenn sich
-# **seine Konfiguration** ändert — Image, Umgebung, Netz. Eine eingehängte
-# Datei zählt nicht dazu. In Produktion liest Keycloak Themes aber genau
-# einmal, beim Start (`docker-compose.prod.yml` sagt es an der Einhängung
-# selbst), und behält sie danach im Zwischenspeicher.
+# **Warum überhaupt.** `up -d` startet Keycloak nicht neu: Compose legt einen
+# Container nur neu an, wenn sich **seine Konfiguration** ändert — Image,
+# Umgebung, Netz. Eine eingehängte Datei zählt nicht dazu. In Produktion
+# (`command: start`) liest Keycloak Themes aber genau einmal, beim Start, und
+# behält sie danach im Zwischenspeicher. Ohne diesen Schritt läuft ein
+# Theme-Deploy geräuschlos ins Leere: die Dateien liegen richtig auf der
+# Platte, der Dienst benutzt weiter die alten.
 #
-# Ohne diesen Schritt lief ein Theme-Deploy also ins Leere, und zwar
-# geräuschlos: die Dateien lagen richtig auf der Platte, der Dienst benutzte
-# weiter die alten. Genau so kamen die Einladungsmails eine Weile mit den Namen
-# ihrer Textbausteine statt mit den Sätzen an.
+# **Warum eine Prüfsumme und kein `git diff`.** Hier stand vorher ein Vergleich
+# der beiden Commits dieses Deploys. Der hat den Fehler, gegen den er gebaut
+# war, nicht behoben — und die Gründe sind lehrreich genug, um sie
+# aufzuschreiben:
 #
-# Nur bei echter Änderung, nicht bei jedem Deploy: Ein Neustart wirft alle
+#   1. Der Vergleich wurde im **selben** Commit eingeführt wie die Theme-Datei,
+#      die er hätte ausrollen sollen. Beim Deploy dieses Commits lief noch die
+#      alte Fassung dieses Skripts — die den Block nicht kannte.
+#   2. Danach hat kein Commit mehr das Theme angefasst. Also nie wieder ein
+#      Neustart, und der Zwischenspeicher blieb auf dem Stand von davor.
+#   3. Ein Deploy desselben Commits von Hand (`workflow_dispatch`) hat
+#      `before == after` und hätte ebenfalls nichts gemerkt.
+#
+# Eine Prüfsumme über das Verzeichnis hat keinen dieser drei Fehler: Sie
+# vergleicht, was **auf der Platte liegt**, mit dem, was der laufende Dienst
+# zuletzt gelesen hat — unabhängig von Commits, Reihenfolge und davon, welche
+# Fassung dieses Skripts gerade läuft. Fehlt die Marke (erster Lauf nach dieser
+# Änderung), wird einmal neu gestartet. Das ist genau richtig: dann *weiß*
+# niemand, was der Dienst gelesen hat.
+#
+# Neu gestartet wird weiterhin nur bei echter Änderung. Ein Neustart wirft alle
 # laufenden Anmeldevorgänge weg, und das ist ein zu hoher Preis für ein Deploy,
 # das mit Keycloak nichts zu tun hatte.
 # ---------------------------------------------------------------------------
-if [ "${themes_changed}" -eq 1 ]; then
-  log "Keycloak-Theme hat sich geändert — Dienst neu starten"
+theme_hash=$(
+  find "${THEME_PATH}" -type f -exec sha256sum {} + |
+    sort -k 2 |
+    sha256sum |
+    cut -d' ' -f1
+)
+
+if [ "$(cat "${THEME_STAMP}" 2>/dev/null || true)" != "${theme_hash}" ]; then
+  log "Keycloak-Theme ist nicht der gelesene Stand — Dienst neu starten"
   compose restart keycloak
+  mkdir -p "$(dirname "${THEME_STAMP}")"
+  printf '%s\n' "${theme_hash}" >"${THEME_STAMP}"
 fi
 
 # ---------------------------------------------------------------------------

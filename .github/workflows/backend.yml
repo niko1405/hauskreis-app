@@ -12,6 +12,11 @@ on:
     paths:
       - "hauskreis-backend/**"
       - ".github/workflows/backend.yml"
+      # Das Deploy-Skript selbst. Es fehlte hier, und das ist eine stille
+      # Falle: Der Server holt es über den `git checkout` **in** diesem
+      # Workflow — läuft der Workflow nicht, bleibt auch das Skript stehen.
+      # Eine Änderung nur an `deploy/` hätte den Server also nie erreicht.
+      - "deploy/**"
   # Für den Fall, dass man ohne Codeänderung neu bauen will (Basis-Image mit
   # Sicherheitsupdates, abgelaufene Ebenen im Cache).
   workflow_dispatch:

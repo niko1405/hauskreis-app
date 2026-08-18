@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, relative } from 'node:path';
 
 /**
  * Hält die beiden Sprachfassungen jedes Themes zusammen.
@@ -51,6 +51,39 @@ function readProperties(file: string): Map<string, string> {
   return entries;
 }
 
+/**
+ * Jede `.ftl` eines Themes, samt Unterordnern.
+ *
+ * Das E-Mail-Theme legt seine Vorlagen unter `html/`, das Anmelde-Theme direkt
+ * daneben — eine feste Liste hätte deshalb schon zweimal danebengegriffen.
+ */
+function templates(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return templates(path);
+    return entry.name.endsWith('.ftl') ? [path] : [];
+  });
+}
+
+/**
+ * Welche Textbausteine eine Vorlage anfordert.
+ *
+ * `msg("schlüssel")` und `msg('schlüssel', arg)` — nur die Fälle mit einem
+ * festen Namen.
+ *
+ * **Zusammengesetzte Namen fallen heraus.** `msg("requiredAction.${'$'}{item}")`
+ * in `info.ftl` setzt den Schlüssel erst zur Laufzeit aus einer Schleifen-
+ * variablen zusammen; welche Werte dabei herauskommen, weiß nur Keycloak. Ihn
+ * hier zu verlangen hieße, den Test gegen eine Frage zu stellen, die er nicht
+ * beantworten kann.
+ */
+function requestedKeys(file: string): string[] {
+  const source = readFileSync(file, 'utf8');
+  return [...source.matchAll(/\bmsg\(\s*["']([^"']+)["']/g)]
+    .map((match) => match[1]!)
+    .filter((key) => !key.includes('${'));
+}
+
 describe.each(['email', 'login'])('Keycloak-Theme %s', (theme) => {
   const german = readProperties(
     join(THEMES, theme, 'messages', 'messages_de.properties'),
@@ -72,5 +105,36 @@ describe.each(['email', 'login'])('Keycloak-Theme %s', (theme) => {
 
   it('trägt in beiden Sprachen dieselben Texte', () => {
     expect(Object.fromEntries(fallback)).toEqual(Object.fromEntries(german));
+  });
+
+  /**
+   * Der Test, der beim ersten Anlauf gefehlt hat.
+   *
+   * Die beiden darüber halten die Sprachfassungen zusammen — sie hätten auch
+   * dann bestanden, wenn in *beiden* ein Schlüssel fehlt, den die Vorlage
+   * anfordert. Genau das ist der Zustand, den man in der Mail sieht: Wo nichts
+   * definiert ist, gibt `msg()` den Namen zurück, und der steht dann im Text.
+   *
+   * Geprüft wird gegen die deutsche Fassung; die englische ist über den Test
+   * darüber bereits deckungsgleich.
+   *
+   * Nicht geprüft wird die Gegenrichtung. `messages_de` definiert
+   * absichtlich mehr, als die eigenen Vorlagen anfordern: die Betreffzeilen
+   * liest Keycloaks Java-Seite, die Klartext-Fassungen der Mails kommen aus
+   * den geerbten Vorlagen von `base`.
+   */
+  it('definiert jeden Baustein, den seine Vorlagen anfordern', () => {
+    const missing = new Map<string, string[]>();
+
+    for (const file of templates(join(THEMES, theme))) {
+      const unknown = requestedKeys(file).filter((key) => !german.has(key));
+      // Der Pfad ab dem Theme reicht, um die Datei zu finden — der Rest wäre
+      // die Verzeichnisstruktur des jeweiligen Rechners im Fehlerbericht.
+      if (unknown.length > 0) {
+        missing.set(relative(THEMES, file), [...new Set(unknown)]);
+      }
+    }
+
+    expect(Object.fromEntries(missing)).toEqual({});
   });
 });
