@@ -41,6 +41,10 @@ const occasionSelect = {
   occursOn: true,
   priceCents: true,
   selectedGiftIdeaId: true,
+  // Die Kennung **neben** der Beziehung: `frozen` fragt nur, ob überhaupt
+  // jemand zuständig ist, und dafür eine ganze Person zu vergleichen wäre
+  // umständlicher als die Spalte, die ohnehin dasteht.
+  responsiblePersonId: true,
   person: { select: { ...personRefSelect, birthdate: true } },
   responsible: { select: personRefSelect },
   selectedIdea: { select: { id: true, text: true } },
@@ -51,6 +55,7 @@ type OccasionRow = {
   occursOn: Date;
   priceCents: number | null;
   selectedGiftIdeaId: string | null;
+  responsiblePersonId: string | null;
   person: {
     id: string;
     name: string;

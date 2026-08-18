@@ -101,7 +101,11 @@ function setup(options: Options = {}) {
 
 describe('frozen', () => {
   it('friert ein, sobald die Frist läuft', () => {
-    const occasion = { occursOn: day('2026-08-25'), priceCents: null };
+    const occasion = {
+      occursOn: day('2026-08-25'),
+      priceCents: null,
+      responsiblePersonId: 'a',
+    };
     expect(frozen(occasion, day('2026-08-18'), 14)).toBe(true);
     expect(frozen(occasion, day('2026-08-01'), 14)).toBe(false);
   });
@@ -109,18 +113,42 @@ describe('frozen', () => {
   it('friert ein, sobald jemand einen Preis eingetragen hat', () => {
     // Auch weit vorher: Wer das Geschenk schon hat, darf die Zuständigkeit
     // nicht mehr verlieren, weil jemand seinen Geburtstag nachträgt.
-    const occasion = { occursOn: day('2026-12-24'), priceCents: 2500 };
+    const occasion = {
+      occursOn: day('2026-12-24'),
+      priceCents: 2500,
+      responsiblePersonId: 'a',
+    };
     expect(frozen(occasion, day('2026-08-18'), 14)).toBe(true);
   });
 
   it('zählt Vergangenes als eingefroren', () => {
     expect(
       frozen(
-        { occursOn: day('2026-08-01'), priceCents: null },
+        {
+          occursOn: day('2026-08-01'),
+          priceCents: null,
+          responsiblePersonId: 'a',
+        },
         day('2026-08-18'),
         14,
       ),
     ).toBe(true);
+  });
+
+  it('friert nichts ein, solange niemand zuständig ist', () => {
+    // Die Frist schützt eine Zuständigkeit. Ohne eine wäre sie eine Sperre:
+    // Der Geburtstag bliebe bis zum Tag selbst ohne jeden Zuständigen.
+    expect(
+      frozen(
+        {
+          occursOn: day('2026-08-20'),
+          priceCents: null,
+          responsiblePersonId: null,
+        },
+        day('2026-08-18'),
+        14,
+      ),
+    ).toBe(false);
   });
 });
 
@@ -223,6 +251,28 @@ describe('BirthdayPlannerService.plan', () => {
     );
   });
 
+  it('teilt auch innerhalb der Frist zu, wenn noch niemand zuständig ist', async () => {
+    // Der Fall beim Einschalten: Wer die Geschenke aktiviert, während der
+    // nächste Geburtstag schon in der Frist liegt, bekam für ihn früher nie
+    // jemanden — und ausgerechnet der eine, um den es ging, blieb leer.
+    const { service, occasionUpdate } = setup({
+      people: [
+        { id: 'a', name: 'Anna', birthdate: day('1990-01-10') },
+        { id: 'b', name: 'Ben', birthdate: day('1991-08-25') },
+      ],
+      open: [
+        { id: 'o-b', personId: 'b', occursOn: day('2026-08-25'), name: 'Ben' },
+      ],
+    });
+
+    await service.plan('hk-1');
+
+    expect(occasionUpdate).toHaveBeenCalledWith({
+      where: { id: 'o-b' },
+      data: { responsiblePersonId: 'a', version: { increment: 1 } },
+    });
+  });
+
   it('lässt eine eingefrorene Zuständigkeit in Ruhe', async () => {
     const { service, occasionUpdate, notify } = setup({
       people: [
@@ -319,6 +369,46 @@ describe('BirthdayPlannerService.plan', () => {
     expect(configUpdateMany).toHaveBeenCalledWith({
       where: { hauskreisId: 'hk-1' },
       data: { pairingsRepairedAt: expect.any(Date) },
+    });
+  });
+
+  it('übernimmt beim Wechsel auf „fest" die Rotation, statt neu zu würfeln', async () => {
+    const { service, pairingCreateMany, configUpdateMany } = setup({
+      config: { enabled: true, mode: BirthdayGiftMode.MANUAL, freezeDays: 14 },
+      people: [
+        { id: 'a', name: 'Anna', birthdate: day('1990-01-10') },
+        { id: 'b', name: 'Ben', birthdate: day('1991-04-02') },
+        { id: 'c', name: 'Cem', birthdate: day('1992-09-30') },
+      ],
+      pairings: [],
+    });
+
+    await service.plan('hk-1');
+
+    // Genau der Kreis aus `rotate`: Anna → Ben → Cem → Anna.
+    expect(pairingCreateMany).toHaveBeenCalledWith({
+      data: [
+        {
+          hauskreisId: 'hk-1',
+          birthdayPersonId: 'a',
+          responsiblePersonId: 'c',
+        },
+        {
+          hauskreisId: 'hk-1',
+          birthdayPersonId: 'b',
+          responsiblePersonId: 'a',
+        },
+        {
+          hauskreisId: 'hk-1',
+          birthdayPersonId: 'c',
+          responsiblePersonId: 'b',
+        },
+      ],
+    });
+    // Übernehmen ist keine Reparatur — der Admin muss hier nichts nachsehen.
+    expect(configUpdateMany).toHaveBeenCalledWith({
+      where: { hauskreisId: 'hk-1' },
+      data: { pairingsRepairedAt: null },
     });
   });
 

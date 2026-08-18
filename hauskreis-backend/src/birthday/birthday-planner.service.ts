@@ -271,20 +271,25 @@ export class BirthdayPlannerService {
     // pflegt.
     if (!settings.enabled) return new Map();
 
-    if (settings.mode === BirthdayGiftMode.ROTATING) {
-      return rotate(
-        people.map((person) => ({
-          id: person.id,
-          name: person.name,
-          birthdate: person.birthdate!,
-        })),
-      );
-    }
+    if (settings.mode === BirthdayGiftMode.ROTATING)
+      return rotate(giftable(people));
 
     const stored = await this.prisma.birthdayGiftPairing.findMany({
       where: { hauskreisId },
       select: { birthdayPersonId: true, responsiblePersonId: true },
     });
+
+    // **Der Wechsel auf „fest" hält fest, was gilt** — er würfelt nicht neu.
+    // Beim ersten Lauf im neuen Modus steht noch keine Zeile da, und ohne
+    // diesen Anfang füllte `repairPairings` alle Löcher gleichzeitig: Das
+    // Ergebnis wäre eine ausgewogene, aber willkürliche Zuteilung, in der
+    // niemand mehr den bekommt, für den er bis eben zuständig war.
+    if (stored.length === 0) {
+      const seeded = rotate(giftable(people));
+      if (seeded.size > 0) await this.storePairings(hauskreisId, seeded, false);
+
+      return seeded;
+    }
 
     const { duties, changed } = repairPairings(
       new Map(
@@ -293,27 +298,41 @@ export class BirthdayPlannerService {
       people.map((person) => person.id),
     );
 
-    if (changed) {
-      // Die Reparatur wird **festgeschrieben**, nicht nur benutzt: Sonst
-      // rechnete der nächste Lauf sie erneut aus, und ein Admin, der in die
-      // Verwaltung schaut, sähe dort die alte, löchrige Zuteilung.
-      await this.prisma.$transaction([
-        this.prisma.birthdayGiftPairing.deleteMany({ where: { hauskreisId } }),
-        this.prisma.birthdayGiftPairing.createMany({
-          data: [...duties].map(([birthdayPersonId, responsiblePersonId]) => ({
-            hauskreisId,
-            birthdayPersonId,
-            responsiblePersonId,
-          })),
-        }),
-        this.prisma.birthdayGiftConfig.updateMany({
-          where: { hauskreisId },
-          data: { pairingsRepairedAt: new Date() },
-        }),
-      ]);
-    }
+    // Die Reparatur wird **festgeschrieben**, nicht nur benutzt: Sonst
+    // rechnete der nächste Lauf sie erneut aus, und ein Admin, der in die
+    // Verwaltung schaut, sähe dort die alte, löchrige Zuteilung.
+    if (changed) await this.storePairings(hauskreisId, duties, true);
 
     return duties;
+  }
+
+  /**
+   * Die feste Zuteilung ablegen.
+   *
+   * `repaired` sagt, ob der Admin hinsehen sollte. Ein Loch zu stopfen ist eine
+   * Entscheidung, die das System für ihn getroffen hat; die Zuteilung beim
+   * Moduswechsel zu übernehmen ist keine — dafür einen Hinweis zu setzen hieße,
+   * ihn zu etwas aufzufordern, das schon stimmt.
+   */
+  private async storePairings(
+    hauskreisId: string,
+    duties: Duties,
+    repaired: boolean,
+  ): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.birthdayGiftPairing.deleteMany({ where: { hauskreisId } }),
+      this.prisma.birthdayGiftPairing.createMany({
+        data: [...duties].map(([birthdayPersonId, responsiblePersonId]) => ({
+          hauskreisId,
+          birthdayPersonId,
+          responsiblePersonId,
+        })),
+      }),
+      this.prisma.birthdayGiftConfig.updateMany({
+        where: { hauskreisId },
+        data: { pairingsRepairedAt: repaired ? new Date() : null },
+      }),
+    ]);
   }
 
   /** Schreibt die Zuständigkeiten und sagt denen Bescheid, die es betrifft. */
@@ -421,12 +440,41 @@ export class BirthdayPlannerService {
  *   * **Es ist schon Geld geflossen.** Wer den Preis eingetragen hat, hat das
  *     Geschenk. Dass ihm die Zuständigkeit hinterher abhandenkommt, weil jemand
  *     seinen Geburtstag nachgetragen hat, wäre der schlechteste Fall von allen.
+ *
+ * **Beides schützt eine Zuständigkeit — es gibt also nichts zu schützen,
+ * solange keine da ist.** Ohne diese Zeile war die Frist eine Sperre statt
+ * eines Schutzes: Wer die Geschenke einschaltete, während der nächste
+ * Geburtstag schon in der Frist lag, bekam für ihn nie jemanden zugeteilt. Der
+ * Lauf übersprang die Runde jeden Tag aufs Neue, bis der Tag vorbei war — und
+ * genau der eine Geburtstag, um den es ging, blieb als einziger ohne
+ * Zuständigen stehen.
  */
+/**
+ * Nur die, die einen Platz in der Reihe haben.
+ *
+ * Die Abfrage filtert bereits auf `birthdate: { not: null }`; das Ausrufezeichen
+ * steht hier einmal statt an jeder Aufrufstelle.
+ */
+function giftable(
+  people: { id: string; name: string; birthdate: Date | null }[],
+) {
+  return people.map((person) => ({
+    id: person.id,
+    name: person.name,
+    birthdate: person.birthdate!,
+  }));
+}
+
 export function frozen(
-  occasion: { occursOn: Date; priceCents: number | null },
+  occasion: {
+    occursOn: Date;
+    priceCents: number | null;
+    responsiblePersonId: string | null;
+  },
   today: Date,
   freezeDays: number,
 ): boolean {
+  if (occasion.responsiblePersonId === null) return false;
   if (occasion.priceCents !== null) return true;
   return daysUntil(occasion.occursOn, today) <= freezeDays;
 }
