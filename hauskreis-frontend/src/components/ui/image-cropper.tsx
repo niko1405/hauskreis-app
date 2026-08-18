@@ -35,13 +35,39 @@ export interface CropTarget {
   shape: 'rect' | 'round';
   /** Kantenlänge der Ausgabe in Pixeln (Breite; die Höhe folgt aus `aspect`). */
   width: number;
+  /**
+   * Was je nach Gerät vom Rand wegfällt, als Anteil einer Kante.
+   *
+   * **Warum es das überhaupt gibt.** Gespeichert wird ein festes Format,
+   * angezeigt wird mit `background-size: cover` in einem Kasten, dessen Höhe
+   * aus dem Inhalt kommt und dessen Breite vom Gerät. Beides deckt sich nur
+   * zufällig, und ein einziger Ausschnitt kann 1,5:1 und 5:1 nicht gleichzeitig
+   * bedienen — irgendetwas fällt weg.
+   *
+   * Statt so zu tun, als wäre der Rahmen die ganze Wahrheit, steht es jetzt
+   * drin.
+   */
+  trim?: {
+    /** Je Seite, auf dem schmalsten Telefon (Kopfzeile 1,50:1 gegen 2:1). */
+    sides: number;
+    /** Oben und unten, in einem breiten Fenster (4,9:1 gegen 2:1). */
+    topBottom: number;
+  };
 }
 
 export const HEADER_CROP: CropTarget = {
   aspect: 2,
   shape: 'rect',
   width: 1280,
+  // Auf einem iPhone mit Notch wird die Kopfzeile durch den sicheren Rand
+  // höher und damit im Format schmaler (1,50:1) — dort fehlt seitlich je ein
+  // Achtel. In einem breiten Fenster kippt es um: Bei 4,9:1 bleiben nur gut
+  // 40 % der Höhe stehen. Die Zahlen stammen aus dem CSS von
+  // `screen-header.tsx`; ändert sich dort der Abstand, gehören sie nachgezogen.
+  trim: { sides: 0.125, topBottom: 0.3 },
 };
+// Kein `trim`: Ein Profilbild steht immer in einem Kreis mit festem
+// Seitenverhältnis. Was man wählt, ist auch das, was man sieht.
 export const AVATAR_CROP: CropTarget = {
   aspect: 1,
   shape: 'round',
@@ -132,10 +158,15 @@ export function ImageCropper({
       }
     >
       <div className="space-y-4">
-        {/* Die Bühne braucht eine Höhe, die nicht vom Bild kommt: `Cropper`
-            stellt sich absolut in seinen Elternteil, und der wäre ohne Angabe
-            null Pixel hoch. */}
-        <div className="relative h-64 overflow-hidden rounded-card bg-stone-900">
+        {/* Die Bühne trägt **genau** das Zielformat, und das ist kein Zufall:
+            Damit füllt der Zuschnitt-Rahmen den Kasten vollständig aus, und die
+            Markierungen darunter hängen sich schlicht an `inset-0`, statt die
+            Lage des Rahmens nachzurechnen. Eine Höhe braucht der Kasten
+            trotzdem — `Cropper` stellt sich absolut hinein. */}
+        <div
+          className="relative overflow-hidden rounded-card bg-stone-900"
+          style={{ aspectRatio: String(target.aspect) }}
+        >
           {url && (
             <Cropper
               image={url}
@@ -143,7 +174,7 @@ export function ImageCropper({
               zoom={zoom}
               aspect={target.aspect}
               cropShape={target.shape}
-              showGrid={target.shape === 'rect'}
+              showGrid={false}
               minZoom={1}
               maxZoom={4}
               restrictPosition
@@ -152,6 +183,8 @@ export function ImageCropper({
               onCropComplete={onCropComplete}
             />
           )}
+
+          {target.trim && <TrimGuides trim={target.trim} />}
         </div>
 
         {/* Der Regler ist für die Maus da — auf dem Telefon zoomt man mit zwei
@@ -172,12 +205,83 @@ export function ImageCropper({
           />
         </label>
 
-        <p className="text-[11px] leading-relaxed text-stone-400">
-          Gespeichert wird der Ausschnitt mit {target.width}×{height} Pixeln.
-          Was außerhalb des Rahmens liegt, ist danach weg.
-        </p>
+        {target.trim ? (
+          <div className="space-y-1.5 text-[11px] leading-relaxed text-stone-400">
+            <p>
+              Gespeichert wird der Ausschnitt mit {target.width}×{height}{' '}
+              Pixeln. Wie viel davon zu sehen ist, hängt am Gerät — deshalb die
+              Markierungen:
+            </p>
+            <p className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="inline-block size-2.5 shrink-0 rounded-[2px] bg-stone-500"
+              />
+              fällt auf dem Handy weg (seitlich)
+            </p>
+            <p className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="inline-block size-2.5 shrink-0 rounded-[2px] bg-stone-300"
+              />
+              fällt in einem breiten Fenster weg (oben und unten)
+            </p>
+            <p className="text-stone-500">
+              Was innerhalb der gestrichelten Linie steht, ist überall zu sehen.
+            </p>
+          </div>
+        ) : (
+          <p className="text-[11px] leading-relaxed text-stone-400">
+            Gespeichert wird der Ausschnitt mit {target.width}×{height} Pixeln.
+            Was außerhalb des Rahmens liegt, ist danach weg.
+          </p>
+        )}
       </div>
     </Sheet>
+  );
+}
+
+/**
+ * Zeigt, was je nach Gerät vom Rand wegfällt.
+ *
+ * Zwei Sorten, weil es zwei Fälle sind und sie in verschiedene Richtungen
+ * gehen: Auf dem Telefon macht der sichere Rand die Kopfzeile höher, das Format
+ * wird schmaler, und abgeschnitten wird **seitlich**. In einem breiten Fenster
+ * ist die Kopfzeile ein flacher Streifen, und abgeschnitten wird **oben und
+ * unten**. Die Ecken liegen in beidem — dass sie am dunkelsten sind, ist keine
+ * Absicht, aber richtig.
+ *
+ * Zurückhaltend gedeckt und ohne Klickfang: Es ist ein Hinweis darauf, wo man
+ * das Gesicht besser nicht hinlegt, keine Sperre. Wer den Rand ausnutzen will,
+ * darf.
+ */
+function TrimGuides({ trim }: { trim: NonNullable<CropTarget['trim']> }) {
+  const sides = `${trim.sides * 100}%`;
+  const bands = `${trim.topBottom * 100}%`;
+
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      <div
+        className="absolute inset-x-0 top-0 bg-stone-900/30"
+        style={{ height: bands }}
+      />
+      <div
+        className="absolute inset-x-0 bottom-0 bg-stone-900/30"
+        style={{ height: bands }}
+      />
+      <div
+        className="absolute inset-y-0 left-0 bg-stone-900/45"
+        style={{ width: sides }}
+      />
+      <div
+        className="absolute inset-y-0 right-0 bg-stone-900/45"
+        style={{ width: sides }}
+      />
+      <div
+        className="absolute border border-dashed border-white/60"
+        style={{ inset: `${bands} ${sides}` }}
+      />
+    </div>
   );
 }
 
