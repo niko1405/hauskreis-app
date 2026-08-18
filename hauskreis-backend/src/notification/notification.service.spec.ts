@@ -154,8 +154,10 @@ describe('NotificationService.notify', () => {
         relatedRole: null,
         // Nur Release-Ankündigungen tragen hier etwas; die Spalte muss
         // trotzdem in der Abfrage stehen, sonst fände sie eine Zeile mit
-        // gesetzter Version als vermeintliche Dublette.
+        // gesetzter Version als vermeintliche Dublette. Dasselbe gilt für den
+        // Geburtstag darunter.
         relatedReleaseVersion: null,
+        relatedOccasionId: null,
       },
     });
     expect(notificationLog.create).toHaveBeenCalledWith({

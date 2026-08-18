@@ -35,12 +35,10 @@ import { useMeeting, useMeetingList, useSongLeaders } from '@/lib/api/hooks';
 import { addDays, formatDay, formatRelativeDay, today } from '@/lib/date';
 import { ROLE_LABEL, planningComplete } from '@/lib/meeting';
 import { cn } from '@/lib/cn';
-import type {
-  AssignmentRole,
-  MeetingListItem,
-  PersonRef,
-} from '@/lib/api/types';
+import type { MeetingListItem, PersonRef } from '@/lib/api/types';
 import { useRoleAssignment } from './detail/use-role-assignment';
+
+import type { AssignmentKind } from '@/components/domain/assignment-picker';
 
 const AssignmentSheet = dynamic(() =>
   import('@/components/domain/assignment-sheet').then((m) => m.AssignmentSheet),
@@ -50,7 +48,15 @@ const VenueSheet = dynamic(() =>
   import('@/components/domain/venue-sheet').then((m) => m.VenueSheet),
 );
 
-type Column = Exclude<AssignmentRole, 'PRAYER_BUDDY'>;
+/**
+ * Die Spalten der Mehrwochen-Planung — die Rollen, die an einem Abend hängen.
+ *
+ * Gebetsbuddys und Geschenke fallen heraus: Beide hängen an keinem Termin, und
+ * eine Spalte, die in jeder Zeile leer bliebe, wäre keine Information.
+ * Deckungsgleich mit `AssignmentKind` im Zuteilungs-Sheet, und das ist kein
+ * Zufall — es ist dieselbe Frage.
+ */
+type Column = AssignmentKind;
 
 /**
  * Drei Stufen reichen: ganz, kleiner, klein. Ein stufenloser Regler wäre auf

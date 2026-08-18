@@ -134,6 +134,15 @@ function setup(
       } as unknown as PrismaService,
       { findAssignments } as unknown as AssignmentService,
       { findCurrent } as unknown as PrayerBuddyService,
+      // Die Uhr kommt gleich über `withClock` — hier steht nur ihr Platz, damit
+      // die Reihenfolge stimmt.
+      undefined as unknown as GroupClockService,
+      // Nur für eine Zahl: ab wie vielen Tagen vorher ein Geburtstag als
+      // eigene Rolle gilt. Dieselbe Einstellung, die auch die Push-Nachricht
+      // auslöst — deshalb wird sie hier nachgeschlagen und nicht geraten.
+      {
+        resolve: jest.fn().mockResolvedValue({ enabled: true, leadDays: 14 }),
+      } as unknown as NotificationPreferenceService,
     ),
   );
 
@@ -317,6 +326,10 @@ describe('DashboardService.build', () => {
       from: utc('2026-07-29'),
       to: utc('2026-09-23'),
       personId: 'niko',
+      // Die persönliche Vorlaufzeit für Geburtstage. Sie fährt hier mit, weil
+      // die Rolle „du besorgst ein Geschenk" genau dann erscheinen soll, wenn
+      // auch die Erinnerung kommt — und nicht acht Wochen vorher.
+      birthdayLeadDays: 14,
     });
   });
 

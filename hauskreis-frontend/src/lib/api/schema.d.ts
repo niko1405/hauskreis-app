@@ -132,6 +132,134 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/birthdays': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['BirthdayController_findAll'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/birthdays/config': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['BirthdayController_getConfig'];
+    put: operations['BirthdayController_updateConfig'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/birthdays/pairings': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['BirthdayController_listPairings'];
+    put: operations['BirthdayController_setPairings'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/birthdays/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['BirthdayController_findOne'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/birthdays/{id}/gift': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['BirthdayController_decide'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/birthdays/{id}/ideas': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['BirthdayController_propose'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/birthdays/{id}/ideas/{ideaId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: operations['BirthdayController_remove'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/birthdays/{id}/ideas/{ideaId}/vote': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['BirthdayController_approve'];
+    post?: never;
+    delete: operations['BirthdayController_withdraw'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/header-images': {
     parameters: {
       query?: never;
@@ -1719,7 +1847,10 @@ export interface components {
         | 'CUSTOM_MEETING_REMINDER'
         | 'TESTIMONY_REMINDER'
         | 'MEETING_TIME_CHANGED'
-        | 'RELEASE_NOTES';
+        | 'RELEASE_NOTES'
+        | 'BIRTHDAY_GIFT_ASSIGNED'
+        | 'BIRTHDAY_GIFT_REMINDER'
+        | 'BIRTHDAY_GIFT_DECIDED';
       label: string;
       description: string;
       schedule:
@@ -1766,7 +1897,10 @@ export interface components {
         | 'CUSTOM_MEETING_REMINDER'
         | 'TESTIMONY_REMINDER'
         | 'MEETING_TIME_CHANGED'
-        | 'RELEASE_NOTES';
+        | 'RELEASE_NOTES'
+        | 'BIRTHDAY_GIFT_ASSIGNED'
+        | 'BIRTHDAY_GIFT_REMINDER'
+        | 'BIRTHDAY_GIFT_DECIDED';
       label: string;
       description: string;
       schedule:
@@ -1830,6 +1964,268 @@ export interface components {
       pruned: number;
       failed: number;
     };
+    BirthdayOverviewResponseDto: {
+      members: {
+        person: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        };
+        /** Format: date */
+        birthdate: string | null;
+      }[];
+      upcoming: {
+        /** Format: uuid */
+        id: string;
+        person: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        };
+        /** Format: date */
+        occursOn: string;
+        age: number | null;
+        daysUntil: number;
+        responsible: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+        frozen: boolean;
+        isOwn: boolean;
+        giftDecided: boolean;
+        gift: {
+          /** Format: uuid */
+          id: string;
+          text: string;
+        } | null;
+        priceCents: number | null;
+      }[];
+      myNext: {
+        /** Format: uuid */
+        id: string;
+        person: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        };
+        /** Format: date */
+        occursOn: string;
+        age: number | null;
+        daysUntil: number;
+        responsible: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+        frozen: boolean;
+        isOwn: boolean;
+        giftDecided: boolean;
+        gift: {
+          /** Format: uuid */
+          id: string;
+          text: string;
+        } | null;
+        priceCents: number | null;
+      } | null;
+      myPast: {
+        /** Format: uuid */
+        id: string;
+        person: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        };
+        /** Format: date */
+        occursOn: string;
+        age: number | null;
+        daysUntil: number;
+        responsible: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+        frozen: boolean;
+        isOwn: boolean;
+        giftDecided: boolean;
+        gift: {
+          /** Format: uuid */
+          id: string;
+          text: string;
+        } | null;
+        priceCents: number | null;
+      }[];
+      config: {
+        enabled: boolean;
+        /** @enum {string} */
+        mode: 'ROTATING' | 'MANUAL';
+        freezeDays: number;
+        /** Format: date-time */
+        pairingsRepairedAt: string | null;
+        updatedBy: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+      };
+    };
+    BirthdayGiftConfigResponseDto: {
+      enabled: boolean;
+      /** @enum {string} */
+      mode: 'ROTATING' | 'MANUAL';
+      freezeDays: number;
+      /** Format: date-time */
+      pairingsRepairedAt: string | null;
+      updatedBy: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      } | null;
+    };
+    UpdateBirthdayGiftConfigDto: {
+      enabled: boolean;
+      /** @enum {string} */
+      mode: 'ROTATING' | 'MANUAL';
+      freezeDays: number;
+    };
+    GiftPairingListResponseDto: {
+      pairings: {
+        birthdayPerson: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        };
+        responsible: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+      }[];
+      config: {
+        enabled: boolean;
+        /** @enum {string} */
+        mode: 'ROTATING' | 'MANUAL';
+        freezeDays: number;
+        /** Format: date-time */
+        pairingsRepairedAt: string | null;
+        updatedBy: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+      };
+    };
+    UpdateGiftPairingsDto: {
+      pairings: {
+        /** Format: uuid */
+        birthdayPersonId: string;
+        /** Format: uuid */
+        responsiblePersonId: string;
+      }[];
+    };
+    BirthdayDetailResponseDto: {
+      /** Format: uuid */
+      id: string;
+      person: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      };
+      /** Format: date */
+      occursOn: string;
+      age: number | null;
+      daysUntil: number;
+      responsible: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      } | null;
+      frozen: boolean;
+      isOwn: boolean;
+      giftDecided: boolean;
+      gift: {
+        /** Format: uuid */
+        id: string;
+        text: string;
+      } | null;
+      priceCents: number | null;
+      ideas:
+        | {
+            /** Format: uuid */
+            id: string;
+            text: string;
+            url: string | null;
+            proposedBy: {
+              /** Format: uuid */
+              id: string;
+              name: string;
+              /** Format: date-time */
+              photoUpdatedAt: string | null;
+            } | null;
+            votes: number;
+            votedByMe: boolean;
+            /** Format: date */
+            giftedOn: string | null;
+          }[]
+        | null;
+      canPropose: boolean;
+      canDecide: boolean;
+    };
+    DecideGiftDto: {
+      /** Format: uuid */
+      giftIdeaId?: string | null;
+      priceCents?: number | null;
+    };
+    CreateGiftIdeaDto: {
+      text: string;
+      /** Format: uri */
+      url?: string | null;
+    };
+    GiftIdeaListResponseDto: {
+      /** Format: uuid */
+      id: string;
+      text: string;
+      url: string | null;
+      proposedBy: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      } | null;
+      votes: number;
+      votedByMe: boolean;
+      /** Format: date */
+      giftedOn: string | null;
+    }[];
     MeetingPageResponseDto: {
       items: {
         /** Format: uuid */
@@ -2893,7 +3289,13 @@ export interface components {
     AssignmentListResponseDto: {
       items: {
         /** @enum {string} */
-        role: 'HOST' | 'TOPIC' | 'SONG' | 'TESTIMONY' | 'PRAYER_BUDDY';
+        role:
+          | 'HOST'
+          | 'TOPIC'
+          | 'SONG'
+          | 'TESTIMONY'
+          | 'PRAYER_BUDDY'
+          | 'BIRTHDAY_GIFT';
         /** Format: date */
         date: string;
         /** Format: date */
@@ -2909,6 +3311,8 @@ export interface components {
         meetingId: string | null;
         /** Format: uuid */
         groupId: string | null;
+        /** Format: uuid */
+        occasionId: string | null;
         label: string | null;
       }[];
     };
@@ -2966,7 +3370,13 @@ export interface components {
       } | null;
       myRoles: {
         /** @enum {string} */
-        role: 'HOST' | 'TOPIC' | 'SONG' | 'TESTIMONY' | 'PRAYER_BUDDY';
+        role:
+          | 'HOST'
+          | 'TOPIC'
+          | 'SONG'
+          | 'TESTIMONY'
+          | 'PRAYER_BUDDY'
+          | 'BIRTHDAY_GIFT';
         /** Format: date */
         date: string;
         /** Format: date */
@@ -2982,6 +3392,8 @@ export interface components {
         meetingId: string | null;
         /** Format: uuid */
         groupId: string | null;
+        /** Format: uuid */
+        occasionId: string | null;
         label: string | null;
       }[];
       openActionstep: {
@@ -3708,6 +4120,676 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['AssignmentListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_findAll: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BirthdayOverviewResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_getConfig: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BirthdayGiftConfigResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_updateConfig: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateBirthdayGiftConfigDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BirthdayGiftConfigResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Das `If-Match` ist veraltet — jemand anders hat inzwischen gespeichert. Neu laden und erneut versuchen. */
+      412: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Kein `If-Match` mitgeschickt. Den ETag aus dem vorangehenden GET verwenden. */
+      428: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_listPairings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GiftPairingListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_setPairings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateGiftPairingsDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GiftPairingListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_findOne: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BirthdayDetailResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_decide: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DecideGiftDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BirthdayDetailResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_propose: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateGiftIdeaDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GiftIdeaListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+        ideaId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GiftIdeaListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_approve: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+        ideaId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GiftIdeaListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_withdraw: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+        ideaId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GiftIdeaListResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -9378,7 +10460,10 @@ export interface operations {
           | 'CUSTOM_MEETING_REMINDER'
           | 'TESTIMONY_REMINDER'
           | 'MEETING_TIME_CHANGED'
-          | 'RELEASE_NOTES';
+          | 'RELEASE_NOTES'
+          | 'BIRTHDAY_GIFT_ASSIGNED'
+          | 'BIRTHDAY_GIFT_REMINDER'
+          | 'BIRTHDAY_GIFT_DECIDED';
       };
       cookie?: never;
     };

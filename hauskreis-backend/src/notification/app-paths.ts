@@ -18,6 +18,17 @@ export const appPath = {
   meeting: (meetingId: string) => `/termin?id=${meetingId}`,
   meetings: () => '/termine',
   prayerBuddies: () => '/gebet',
+  /** Die Liste aller Geburtstage — ein Register im Termin-Bildschirm. */
+  birthdays: () => '/termine?tab=geburtstage',
+  /**
+   * Ein einzelner Geburtstag mit seinen Geschenk-Vorschlägen.
+   *
+   * Die Kennung der **Runde** und nicht die der Person: Der Service Worker
+   * setzt `tag: payload.url`, damit dieselbe Nachricht nicht zweimal aufpoppt.
+   * Mit der Personen-Id verdrängte die Erinnerung im nächsten Jahr die
+   * Entscheidung aus diesem — sie sähen für ihn gleich aus.
+   */
+  birthday: (occasionId: string) => `/geburtstag?id=${occasionId}`,
   home: () => '/',
   /**
    * „Neu in Acts2".

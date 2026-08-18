@@ -4,7 +4,7 @@
  * Ein Rollen-Chip: „Host: Lukas". Ist niemand eingetragen, wird daraus die
  * Einladung „+ Host eintragen" — nicht ein leeres Feld oder ein Gedankenstrich.
  */
-import { BookOpen, House, Mic, Music, Users } from 'lucide-react';
+import { BookOpen, Gift, House, Mic, Music, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { ROLE_LABEL } from '@/lib/meeting';
@@ -16,6 +16,7 @@ export const ROLE_ICON: Record<AssignmentRole, LucideIcon> = {
   SONG: Music,
   TESTIMONY: Mic,
   PRAYER_BUDDY: Users,
+  BIRTHDAY_GIFT: Gift,
 };
 
 // Testimony trägt bewusst die Farbe des Themas: die beiden schließen einander
@@ -29,6 +30,9 @@ export const ROLE_STYLE: Record<AssignmentRole, string> = {
   SONG: 'bg-music-bg text-music border-music-line',
   TESTIMONY: 'bg-topic-bg text-topic border-topic-line',
   PRAYER_BUDDY: 'bg-info-bg text-info border-info-line',
+  // Eigene Farbe, weil es als einziges an keinem Abend hängt: Es steht in der
+  // Rollenliste zwischen lauter Dienstagabenden und ist doch etwas anderes.
+  BIRTHDAY_GIFT: 'bg-alert-bg text-alert border-alert-line',
 };
 
 const ROLE_EMPTY_STYLE: Record<AssignmentRole, string> = {
@@ -37,6 +41,7 @@ const ROLE_EMPTY_STYLE: Record<AssignmentRole, string> = {
   SONG: 'text-music border-music-line bg-music-bg/40',
   TESTIMONY: 'text-topic border-topic-line bg-topic-bg/40',
   PRAYER_BUDDY: 'text-info border-info-line bg-info-bg/40',
+  BIRTHDAY_GIFT: 'text-alert border-alert-line bg-alert-bg/40',
 };
 
 export function RoleChip({

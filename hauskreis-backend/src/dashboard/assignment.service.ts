@@ -5,7 +5,7 @@ import { MeetingStatus } from '../../generated/prisma/enums';
 import { overlapping, toUtcDate } from '../meeting/meeting-schedule';
 
 export type AssignmentRoleName =
-  'HOST' | 'TOPIC' | 'SONG' | 'TESTIMONY' | 'PRAYER_BUDDY';
+  'HOST' | 'TOPIC' | 'SONG' | 'TESTIMONY' | 'PRAYER_BUDDY' | 'BIRTHDAY_GIFT';
 
 /**
  * One thing somebody is down for.
@@ -26,6 +26,8 @@ export interface Assignment {
   meetingId: string | null;
   /** Set for PRAYER_BUDDY. */
   groupId: string | null;
+  /** Set for BIRTHDAY_GIFT — the birthday, not the person. */
+  occasionId: string | null;
   /** Ready-to-show context: the home, the topic, who else is in the group. */
   label: string | null;
 }
@@ -35,10 +37,22 @@ export interface FindAssignmentsOptions {
   to: Date;
   /** Omit for everyone — that is the multi-week table (CLAUDE.md §9). */
   personId?: string;
+  /**
+   * Ab wie vielen Tagen vorher ein Geburtstag als eigene Rolle gilt.
+   *
+   * **Weggelassen heißt: gar nicht.** Und das ist der Regelfall — die
+   * Mehrwochen-Tabelle zeigt Rollen an Abenden, und ein Geburtstag ist keiner.
+   * Nur der Startbildschirm reicht eine Zahl herein, nämlich die persönliche
+   * Vorlaufzeit aus den Benachrichtigungs-Einstellungen. Damit erscheint die
+   * Rolle unter „Deine Rollen" **genau dann**, wenn auch die Push-Nachricht
+   * kommt: Etwas dort stehen zu sehen, wovon die Erinnerung erst nächste Woche
+   * kommt, wäre zwei Systeme mit zwei Meinungen.
+   */
+  birthdayLeadDays?: number;
 }
 
 /**
- * Who is down for what in a stretch of time, across all four roles.
+ * Who is down for what in a stretch of time, across all five roles.
  *
  * A view over data that already exists, like `ArchiveService` — no new tables.
  * Without it the frontend would have to fetch meetings, topics, song leaders
@@ -59,7 +73,21 @@ export class AssignmentService {
     const from = toUtcDate(options.from);
     const to = toUtcDate(options.to);
 
-    const [meetings, groups] = await Promise.all([
+    // Der Geburtstag zählt erst ab der persönlichen Vorlaufzeit als Rolle —
+    // und `to` ist hier bewusst nicht das Fenster des Aufrufers, sondern das
+    // engere von beiden: Der Startbildschirm schaut acht Wochen voraus, die
+    // Vorlaufzeit sind vielleicht zwei.
+    const birthdayTo =
+      options.birthdayLeadDays === undefined
+        ? null
+        : new Date(
+            Math.min(
+              to.getTime(),
+              from.getTime() + options.birthdayLeadDays * 86_400_000,
+            ),
+          );
+
+    const [meetings, groups, birthdays] = await Promise.all([
       this.prisma.meeting.findMany({
         where: {
           hauskreisId,
@@ -107,6 +135,23 @@ export class AssignmentService {
         },
         orderBy: { periodStart: 'asc' },
       }),
+      birthdayTo === null
+        ? []
+        : this.prisma.birthdayOccasion.findMany({
+            where: {
+              hauskreisId,
+              occursOn: { gte: from, lte: birthdayTo },
+              ...(options.personId && {
+                responsiblePersonId: options.personId,
+              }),
+            },
+            select: {
+              id: true,
+              occursOn: true,
+              person: { select: { name: true } },
+              responsible: { select: personRefSelect },
+            },
+          }),
     ]);
 
     const assignments: Assignment[] = [];
@@ -122,6 +167,7 @@ export class AssignmentService {
           person: meeting.host,
           meetingId: meeting.id,
           groupId: null,
+          occasionId: null,
           label: meeting.location?.name ?? null,
         });
       }
@@ -134,6 +180,7 @@ export class AssignmentService {
           person: meeting.testimonyPerson,
           meetingId: meeting.id,
           groupId: null,
+          occasionId: null,
           label: null,
         });
       }
@@ -154,6 +201,7 @@ export class AssignmentService {
           person: responsible.person,
           meetingId: meeting.id,
           groupId: null,
+          occasionId: null,
           label: topicLabel,
         });
       }
@@ -166,9 +214,25 @@ export class AssignmentService {
           person: leader.person,
           meetingId: meeting.id,
           groupId: null,
+          occasionId: null,
           label: null,
         });
       }
+    }
+
+    for (const occasion of birthdays) {
+      if (!occasion.responsible) continue;
+
+      assignments.push({
+        role: 'BIRTHDAY_GIFT',
+        date: isoDate(occasion.occursOn),
+        endDate: null,
+        person: occasion.responsible,
+        meetingId: null,
+        groupId: null,
+        occasionId: occasion.id,
+        label: `für ${occasion.person.name}`,
+      });
     }
 
     for (const group of groups) {
@@ -182,6 +246,7 @@ export class AssignmentService {
           person,
           meetingId: null,
           groupId: group.id,
+          occasionId: null,
           label: formatOthers(members, person.id),
         });
       }
@@ -212,6 +277,9 @@ const ROLE_ORDER: Record<AssignmentRoleName, number> = {
   TESTIMONY: 1,
   SONG: 2,
   PRAYER_BUDDY: 3,
+  // Ganz unten, weil es als einziges nicht an einem Abend hängt — und weil es
+  // die Rolle mit der längsten Vorlaufzeit ist. Wer sie sieht, hat noch Zeit.
+  BIRTHDAY_GIFT: 4,
 };
 
 /** "mit Antonia und Reini" — the tone from CLAUDE.md §9. */

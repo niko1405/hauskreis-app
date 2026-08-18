@@ -3,9 +3,10 @@ import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { PrayerBuddyService } from '../prayer-buddy/prayer-buddy.service';
 import { AssignmentService, type Assignment } from './assignment.service';
-import { MeetingStatus } from '../../generated/prisma/enums';
+import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
 import { addDays } from '../meeting/meeting-schedule';
 import { ANGEKOMMEN } from '../person/angekommen';
+import { NotificationPreferenceService } from '../notification/notification-preference.service';
 import { GroupClockService } from '../meeting/group-clock.service';
 import {
   actionstepOf,
@@ -108,6 +109,7 @@ export class DashboardService {
     private readonly assignments: AssignmentService,
     private readonly buddies: PrayerBuddyService,
     private readonly clock: GroupClockService,
+    private readonly preferences: NotificationPreferenceService,
   ) {}
 
   async build(
@@ -184,6 +186,17 @@ export class DashboardService {
           from: today,
           to: addDays(today, HOME_HORIZON_DAYS),
           personId,
+          // Der Geburtstag taucht hier genau dann auf, wenn auch die
+          // Erinnerung kommt — dieselbe Zahl, dieselbe Einstellung. Zwei
+          // Systeme mit zwei Meinungen darüber, ab wann etwas „ansteht",
+          // wären eines zu viel.
+          birthdayLeadDays:
+            (
+              await this.preferences.resolve(
+                personId,
+                NotificationType.BIRTHDAY_GIFT_REMINDER,
+              )
+            ).leadDays ?? 0,
         }),
         this.buddies.findCurrent(hauskreisId, now),
         // Dieselbe Menge wie in der Anwesenheitsliste am Termin: „3 von 8"

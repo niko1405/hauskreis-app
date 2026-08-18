@@ -242,11 +242,20 @@ function OpenActionstepCard({ step }: { step: HomeActionstep }) {
   );
 }
 
-/** Host, Thema, Musik — die Gebetsbuddys lässt schon der Server weg. */
+/**
+ * Was unter „Weitere" auftauchen kann — je Sorte die nächste.
+ *
+ * Die Gebetsbuddys lässt schon der Server weg (mit jemandem gepaart zu sein ist
+ * keine Aufgabe). Der **Geschenk-Termin** steht dagegen bewusst dabei: Er hängt
+ * an keinem Abend, kann also nie in der oberen Liste landen, und ohne diesen
+ * Eintrag wäre er auf dem Startbildschirm gar nicht zu sehen — obwohl er die
+ * Rolle mit der längsten Vorlaufzeit ist.
+ */
 const CATEGORIES: Exclude<AssignmentRole, 'PRAYER_BUDDY'>[] = [
   'HOST',
   'TOPIC',
   'SONG',
+  'BIRTHDAY_GIFT',
 ];
 
 /**
@@ -352,7 +361,7 @@ function MyRoles({
 
 /** Rolle *und* Abend: dieselbe Rolle kann an mehreren Terminen dranstehen. */
 function roleKey(role: Assignment): string {
-  return `${role.role}-${role.date}-${role.meetingId}`;
+  return `${role.role}-${role.date}-${role.meetingId ?? role.occasionId}`;
 }
 
 function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
@@ -395,13 +404,22 @@ function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
 
   // Die Zeile trägt ihren eigenen Rand nicht mehr — sie liegt jetzt *in* einer
   // Karte, und ein Rahmen im Rahmen war genau das Unruhige daran.
-  if (!role.meetingId) {
+  // Zwei Sorten Ziel: Termin-Rollen führen zum Abend, der Geschenk-Termin zu
+  // seinem Geburtstag. Ohne Ziel bleibt es eine Zeile — ein Link ins Nichts
+  // wäre schlechter als keiner.
+  const href = role.meetingId
+    ? `/termin?id=${role.meetingId}`
+    : role.occasionId
+      ? `/geburtstag?id=${role.occasionId}`
+      : null;
+
+  if (!href) {
     return <div className="px-4 py-3.5">{content}</div>;
   }
 
   return (
     <Link
-      href={`/termin?id=${role.meetingId}`}
+      href={href}
       className="block px-4 py-3.5 transition-colors hover:bg-canvas"
     >
       {content}

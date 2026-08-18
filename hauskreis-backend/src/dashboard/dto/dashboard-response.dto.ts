@@ -9,17 +9,27 @@ import { wallClockOut } from '../../common/dto/wall-clock';
  *
  * Absichtlich einheitlich, obwohl eine Gebetsbuddy-Periode zwei Wochen umspannt
  * und eine Termin-Rolle auf einen Tag fällt: sonst müsste jeder Konsument auf
- * vier Formen verzweigen. `endDate` und `groupId` sind nur bei
- * `PRAYER_BUDDY` gesetzt, `meetingId` nur bei den übrigen dreien.
+ * fünf Formen verzweigen. `endDate` und `groupId` sind nur bei
+ * `PRAYER_BUDDY` gesetzt, `occasionId` nur bei `BIRTHDAY_GIFT`, `meetingId`
+ * nur bei den drei Termin-Rollen.
  */
 export const assignmentSchema = z.object({
-  role: z.enum(['HOST', 'TOPIC', 'SONG', 'TESTIMONY', 'PRAYER_BUDDY']),
+  role: z.enum([
+    'HOST',
+    'TOPIC',
+    'SONG',
+    'TESTIMONY',
+    'PRAYER_BUDDY',
+    'BIRTHDAY_GIFT',
+  ]),
   date: isoDateOut,
   /// Nur bei `PRAYER_BUDDY`: das Ende des Zeitraums, einschließlich.
   endDate: isoDateOut.nullable(),
   person: personRefSchema,
   meetingId: z.uuid().nullable(),
   groupId: z.uuid().nullable(),
+  /// Nur bei `BIRTHDAY_GIFT`: der Geburtstag, für den man das Geschenk besorgt.
+  occasionId: z.uuid().nullable(),
   /// Für die Anzeige vorbereitet: „Bei Chris", „mit Antonia und Reini".
   label: z.string().nullable(),
 });

@@ -117,6 +117,12 @@ enum NotificationType {
   MEETING_TIME_CHANGED
   /// Es gibt eine neue Fassung der App und etwas Neues darin zu sehen.
   RELEASE_NOTES
+  /// Du besorgst jetzt das Geschenk für jemanden — oder eben nicht mehr.
+  BIRTHDAY_GIFT_ASSIGNED
+  /// Der Geburtstag, für den du das Geschenk besorgst, rückt näher.
+  BIRTHDAY_GIFT_REMINDER
+  /// Für einen Geburtstag steht fest, was es wird — oder was es gekostet hat.
+  BIRTHDAY_GIFT_DECIDED
 
   @@map("notification_type")
 }
@@ -164,16 +170,20 @@ model Hauskreis {
   /// Optimistic locking counter, see docs/conditional requests.
   version   Int      @default(0)
 
-  people            Person[]
-  locations         Location[]
-  meetings          Meeting[]
-  topics            Topic[]
-  songs             Song[]
-  prayerBuddyGroups PrayerBuddyGroup[]
-  prayerBuddyConfig PrayerBuddyCycleConfig?
-  meetingSchedule   MeetingScheduleConfig?
-  absences          AbsencePeriod[]
-  headerImages      HeaderImage[]
+  people               Person[]
+  locations            Location[]
+  meetings             Meeting[]
+  topics               Topic[]
+  songs                Song[]
+  prayerBuddyGroups    PrayerBuddyGroup[]
+  prayerBuddyConfig    PrayerBuddyCycleConfig?
+  meetingSchedule      MeetingScheduleConfig?
+  absences             AbsencePeriod[]
+  headerImages         HeaderImage[]
+  birthdayGiftConfig   BirthdayGiftConfig?
+  birthdayGiftPairings BirthdayGiftPairing[]
+  birthdayOccasions    BirthdayOccasion[]
+  giftIdeas            GiftIdea[]
 
   @@map("hauskreis")
 }
@@ -252,36 +262,46 @@ model Person {
   /// Optimistic locking counter, see docs/conditional requests.
   version         Int        @default(0)
 
-  hauskreis            Hauskreis                 @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
-  location             Location?                 @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  hostedMeetings       Meeting[]                 @relation("MeetingHost")
-  testimonies          Meeting[]                 @relation("MeetingTestimony")
-  cancelledMeetings    Meeting[]                 @relation("MeetingCanceller")
-  songsCreated         Song[]                    @relation("SongCreator")
-  songLeaderships      MeetingSongLeader[]       @relation("SongLeader")
-  songsSuggested       MeetingSong[]             @relation("SongSuggester")
+  hauskreis               Hauskreis                 @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  location                Location?                 @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  hostedMeetings          Meeting[]                 @relation("MeetingHost")
+  testimonies             Meeting[]                 @relation("MeetingTestimony")
+  cancelledMeetings       Meeting[]                 @relation("MeetingCanceller")
+  songsCreated            Song[]                    @relation("SongCreator")
+  songLeaderships         MeetingSongLeader[]       @relation("SongLeader")
+  songsSuggested          MeetingSong[]             @relation("SongSuggester")
   /// Die Rolle „Thema" an einem einzelnen Abend — das Gegenstück zu
   /// `songLeaderships`. Zuständigkeit für einen Abend, nicht für ein Thema.
-  topicDuties          MeetingTopicResponsible[]
+  topicDuties             MeetingTopicResponsible[]
   /// Wer eine einzelne Einheit gehalten hat. Historisch und rückwirkend
   /// unantastbar (Spec 8.5): auch wer später als Collaborator entfernt wird,
   /// bleibt hier stehen — er war ja dabei.
-  topicSessionsHeld    TopicSessionResponsible[]
+  topicSessionsHeld       TopicSessionResponsible[]
   /// Themen, die dieser Person gehören. Wer als Erster wählt, wird Owner.
-  topicsOwned          Topic[]                   @relation("TopicOwner")
+  topicsOwned             Topic[]                   @relation("TopicOwner")
   /// Themen, an denen die Person mitarbeiten darf. Ein Recht, keine Pflicht.
-  topicCollaborations  TopicCollaborator[]
-  prayerBuddyGroups    PrayerBuddyGroupMember[]  @relation("PrayerBuddy")
-  cycleConfigEdits     PrayerBuddyCycleConfig[]  @relation("CycleConfigEditor")
-  meetingScheduleEdits MeetingScheduleConfig[]   @relation("MeetingScheduleEditor")
-  attendances          MeetingAttendance[]
-  actionstepsDone      MeetingActionstepDone[]   @relation("ActionstepDoneBy")
-  prayerRequests       MeetingPrayerRequest[]    @relation("PrayerRequestBy")
-  pushSubscriptions    PushSubscription[]
-  notifications        NotificationLog[]
-  notificationsAbout   NotificationLog[]         @relation("NotificationSubject")
-  notificationSettings NotificationPreference[]
-  absences             AbsencePeriod[]
+  topicCollaborations     TopicCollaborator[]
+  prayerBuddyGroups       PrayerBuddyGroupMember[]  @relation("PrayerBuddy")
+  cycleConfigEdits        PrayerBuddyCycleConfig[]  @relation("CycleConfigEditor")
+  meetingScheduleEdits    MeetingScheduleConfig[]   @relation("MeetingScheduleEditor")
+  attendances             MeetingAttendance[]
+  actionstepsDone         MeetingActionstepDone[]   @relation("ActionstepDoneBy")
+  prayerRequests          MeetingPrayerRequest[]    @relation("PrayerRequestBy")
+  pushSubscriptions       PushSubscription[]
+  notifications           NotificationLog[]
+  notificationsAbout      NotificationLog[]         @relation("NotificationSubject")
+  notificationSettings    NotificationPreference[]
+  absences                AbsencePeriod[]
+  /// Die eigenen Geburtstage, einer je Jahr. Historie und der kommende.
+  birthdays               BirthdayOccasion[]        @relation("BirthdayOf")
+  /// Für wessen Geschenk diese Person zuständig ist — auch das rückwirkend.
+  giftDuties              BirthdayOccasion[]        @relation("BirthdayGiftBy")
+  giftIdeasFor            GiftIdea[]                @relation("GiftIdeaFor")
+  giftIdeasProposed       GiftIdea[]                @relation("GiftIdeaBy")
+  giftIdeaVotes           GiftIdeaVote[]            @relation("GiftIdeaVoter")
+  giftPairingFor          BirthdayGiftPairing[]     @relation("GiftPairingFor")
+  giftPairingBy           BirthdayGiftPairing[]     @relation("GiftPairingBy")
+  birthdayGiftConfigEdits BirthdayGiftConfig[]      @relation("BirthdayGiftConfigEditor")
 
   @@unique([hauskreisId, email])
   @@index([hauskreisId])
@@ -894,12 +914,20 @@ model NotificationLog {
   /// Dieselbe Spalte beantwortet nebenbei „ist diese Fassung überhaupt schon
   /// angekündigt worden?" — siehe `ReleaseAnnouncementService`.
   relatedReleaseVersion String?          @map("related_release_version")
+  /// Welcher Geburtstag gemeint war — also die Runde, nicht die Person.
+  ///
+  /// Ohne diese Spalte wäre die Erinnerung „du besorgst das Geschenk für
+  /// Mira" in jedem Jahr dieselbe Nachricht wie im ersten, und sie käme genau
+  /// einmal im Leben an. `relatedPersonId` reicht dafür nicht: Mira hat jedes
+  /// Jahr Geburtstag.
+  relatedOccasionId     String?          @map("related_occasion_id") @db.Uuid
   sentAt                DateTime         @default(now()) @map("sent_at")
 
-  person         Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
-  relatedMeeting Meeting?          @relation(fields: [relatedMeetingId], references: [id], onDelete: Cascade)
-  relatedGroup   PrayerBuddyGroup? @relation(fields: [relatedGroupId], references: [id], onDelete: Cascade)
-  relatedPerson  Person?           @relation("NotificationSubject", fields: [relatedPersonId], references: [id], onDelete: Cascade)
+  person          Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
+  relatedMeeting  Meeting?          @relation(fields: [relatedMeetingId], references: [id], onDelete: Cascade)
+  relatedGroup    PrayerBuddyGroup? @relation(fields: [relatedGroupId], references: [id], onDelete: Cascade)
+  relatedPerson   Person?           @relation("NotificationSubject", fields: [relatedPersonId], references: [id], onDelete: Cascade)
+  relatedOccasion BirthdayOccasion? @relation(fields: [relatedOccasionId], references: [id], onDelete: Cascade)
 
   /// The deduplication key. Postgres treats rows with a NULL in the tuple as
   /// distinct, so this index does not actually enforce anything for
@@ -908,7 +936,7 @@ model NotificationLog {
   /// making that query an index lookup.
   /// Der Name ist gesetzt, weil der abgeleitete abgeschnitten würde und sich
   /// mit jeder weiteren Spalte änderte.
-  @@unique([personId, type, relatedMeetingId, relatedGroupId, relatedPersonId, relatedRole, relatedReleaseVersion], map: "notification_log_dedup_key")
+  @@unique([personId, type, relatedMeetingId, relatedGroupId, relatedPersonId, relatedRole, relatedReleaseVersion, relatedOccasionId], map: "notification_log_dedup_key")
   @@index([personId, sentAt])
   /// Beantwortet „wurde diese Fassung schon angekündigt?" ohne über alle Zeilen
   /// zu gehen. Ohne diese Frage bekäme jemand, der nächste Woche dazukommt,
@@ -997,4 +1025,184 @@ model HeaderImage {
 
   @@unique([hauskreisId, screen])
   @@map("header_image")
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Geburtstage und Geschenke
+// ───────────────────────────────────────────────────────────────────────────
+
+/// Wie die Zuständigkeit für ein Geburtstagsgeschenk zustande kommt.
+///
+/// `ROTATING` rechnet sie aus den Geburtstagen selbst: Wer dran war, ist für
+/// den zuständig, dessen Geburtstag als nächstes kommt. Damit ist in einer
+/// Runde — einem Jahr — jede:r genau einmal dran, und niemand für sich selbst.
+///
+/// `MANUAL` nimmt stattdessen die feste Zuteilung aus `BirthdayGiftPairing`.
+/// Sie bleibt Runde für Runde dieselbe, bis ein Admin sie ändert.
+enum BirthdayGiftMode {
+  ROTATING
+  MANUAL
+
+  @@map("birthday_gift_mode")
+}
+
+/// Ob und wie sich die Gruppe zu Geburtstagen beschenkt. Eine Zeile je
+/// Hauskreis, beim ersten Lesen angelegt — wie `PrayerBuddyCycleConfig`.
+///
+/// **`enabled` steht mit Absicht auf `false`.** Nicht jeder Hauskreis schenkt
+/// sich etwas, und ein System, das ungefragt Zuständigkeiten verteilt und
+/// Nachrichten verschickt, wäre für die ein Ärgernis statt einer Hilfe. Die
+/// Geburtstage selbst stehen trotzdem im Kalender — das ist die Hälfte, die
+/// niemanden zu etwas verpflichtet.
+model BirthdayGiftConfig {
+  id                 String           @id @default(uuid()) @db.Uuid
+  hauskreisId        String           @unique @map("hauskreis_id") @db.Uuid
+  enabled            Boolean          @default(false)
+  mode               BirthdayGiftMode @default(ROTATING)
+  /// Wie viele Tage vor einem Geburtstag die Zuteilung fest wird.
+  ///
+  /// Wer eine Woche vorher erfährt, dass er doch nicht zuständig ist, hat
+  /// vielleicht schon etwas besorgt. Ab hier ändert sich nichts mehr, auch
+  /// nicht durch einen Moduswechsel oder einen neu eingetragenen Geburtstag.
+  freezeDays         Int              @default(14) @map("freeze_days")
+  /// Wann das System eine manuelle Zuteilung zuletzt selbst schließen musste.
+  ///
+  /// Bei `MANUAL` hängt die Zuteilung an Namen, und Namen kommen und gehen.
+  /// Wer geht, reißt ein Loch — und das System füllt es, statt jemanden ohne
+  /// Zuständigen dastehen zu lassen. Der Zeitstempel ist der Anlass für den
+  /// Hinweis in der Verwaltung: **es steht jetzt etwas da, das kein Mensch
+  /// entschieden hat.** Ein Admin räumt ihn weg, indem er die Zuteilung
+  /// bestätigt.
+  pairingsRepairedAt DateTime?        @map("pairings_repaired_at")
+  updatedByPersonId  String?          @map("updated_by_person_id") @db.Uuid
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  /// Optimistic locking counter, see docs/conditional requests.
+  version            Int              @default(0)
+
+  hauskreis Hauskreis @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  updatedBy Person?   @relation("BirthdayGiftConfigEditor", fields: [updatedByPersonId], references: [id], onDelete: SetNull)
+
+  @@map("birthday_gift_config")
+}
+
+/// Die feste Zuteilung im Modus `MANUAL`: wer besorgt das Geschenk für wen.
+///
+/// Der Schlüssel liegt auf dem **Beschenkten**, nicht auf dem Schenkenden: Für
+/// jeden Geburtstag gibt es genau eine zuständige Person, umgekehrt darf jemand
+/// auch für zwei zuständig sein. Der Admin darf das so wollen — nur „für sich
+/// selbst" prüft der Dienst weg.
+model BirthdayGiftPairing {
+  hauskreisId         String @map("hauskreis_id") @db.Uuid
+  birthdayPersonId    String @map("birthday_person_id") @db.Uuid
+  responsiblePersonId String @map("responsible_person_id") @db.Uuid
+
+  hauskreis      Hauskreis @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  birthdayPerson Person    @relation("GiftPairingFor", fields: [birthdayPersonId], references: [id], onDelete: Cascade)
+  responsible    Person    @relation("GiftPairingBy", fields: [responsiblePersonId], references: [id], onDelete: Cascade)
+
+  @@id([hauskreisId, birthdayPersonId])
+  @@index([responsiblePersonId])
+  @@map("birthday_gift_pairing")
+}
+
+/// **Ein** Geburtstag einer Person in **einem** Jahr — und wer das Geschenk
+/// besorgt.
+///
+/// **Warum die Zuständigkeit hier steht und nicht bei jedem Aufruf gerechnet
+/// wird.** Gerechnet wird sie, aber das Ergebnis muss stehen bleiben: Ein
+/// Geburtstag, der vorbei ist, gehört zur Geschichte („wen hattest du in den
+/// letzten Runden"), und ein Geburtstag, der bald ist, darf nicht mehr
+/// wechseln, weil jemand heute seinen Geburtstag einträgt. Beides ginge nicht,
+/// wenn die Antwort erst beim Lesen entstünde.
+///
+/// **Es gibt immer genau eine offene Zeile je Person**, nämlich ihr nächster
+/// Geburtstag; ältere bleiben als Geschichte stehen. Deshalb reicht
+/// `@@unique([personId, occursOn])` — dieselbe Person, dasselbe Datum, eine
+/// Zeile, und der nächtliche Lauf darf beliebig oft laufen.
+///
+/// `responsiblePersonId` darf leer sein. Das ist kein Fehlerzustand, sondern
+/// der ehrliche Ausgang mehrerer Fälle: Das System ist ausgeschaltet, es gibt
+/// zu wenige Leute mit eingetragenem Geburtstag, oder die Person, die
+/// zuständig war, hat den Hauskreis verlassen und es ließ sich niemand mehr
+/// nachrücken.
+model BirthdayOccasion {
+  id                  String   @id @default(uuid()) @db.Uuid
+  hauskreisId         String   @map("hauskreis_id") @db.Uuid
+  personId            String   @map("person_id") @db.Uuid
+  /// Der Kalendertag dieses Geburtstags — mit Jahr, anders als `person.birthdate`.
+  occursOn            DateTime @map("occurs_on") @db.Date
+  responsiblePersonId String?  @map("responsible_person_id") @db.Uuid
+  /// Welcher Vorschlag es geworden ist. Setzt ihn die zuständige Person, ist
+  /// die Abstimmung beendet; sie kann das zurücknehmen, solange nicht
+  /// eingefroren ist.
+  selectedGiftIdeaId  String?  @map("selected_gift_idea_id") @db.Uuid
+  /// Was es gekostet hat, in Cent. Ganzzahlig, weil Geld nie als Fließkomma.
+  ///
+  /// Steht hier etwas, gilt die Zuteilung als **eingefroren**, auch außerhalb
+  /// der Frist: Wer schon etwas besorgt und den Preis eingetragen hat, soll
+  /// nicht hinterher hören, dass jemand anders zuständig war.
+  priceCents          Int?     @map("price_cents")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+  /// Optimistic locking counter, see docs/conditional requests.
+  version             Int      @default(0)
+
+  hauskreis     Hauskreis         @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  person        Person            @relation("BirthdayOf", fields: [personId], references: [id], onDelete: Cascade)
+  responsible   Person?           @relation("BirthdayGiftBy", fields: [responsiblePersonId], references: [id], onDelete: SetNull)
+  selectedIdea  GiftIdea?         @relation("GiftIdeaChosen", fields: [selectedGiftIdeaId], references: [id], onDelete: SetNull)
+  notifications NotificationLog[]
+
+  @@unique([personId, occursOn])
+  @@index([hauskreisId, occursOn])
+  @@index([responsiblePersonId])
+  @@map("birthday_occasion")
+}
+
+/// Ein Geschenk-Vorschlag — für **eine Person**, nicht für einen Geburtstag.
+///
+/// Das ist die eigentliche Entscheidung an diesem Modell. Vorschläge überleben
+/// den Geburtstag, für den sie gemacht wurden: Was letztes Jahr nicht genommen
+/// wurde, ist dieses Jahr immer noch eine gute Idee, und was genommen wurde,
+/// muss man wissen, um es nicht zweimal zu schenken. Hinge der Vorschlag am
+/// Geburtstag, wäre er mit ihm weg.
+model GiftIdea {
+  id                 String   @id @default(uuid()) @db.Uuid
+  hauskreisId        String   @map("hauskreis_id") @db.Uuid
+  /// Für wen das Geschenk gedacht ist.
+  forPersonId        String   @map("for_person_id") @db.Uuid
+  text               String
+  /// Wo man es bekommt. Der Inhalt wird nie gespeichert, wir verlinken nach
+  /// draußen — wie bei den Liedern.
+  url                String?
+  proposedByPersonId String?  @map("proposed_by_person_id") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  hauskreis  Hauskreis          @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  forPerson  Person             @relation("GiftIdeaFor", fields: [forPersonId], references: [id], onDelete: Cascade)
+  proposedBy Person?            @relation("GiftIdeaBy", fields: [proposedByPersonId], references: [id], onDelete: SetNull)
+  votes      GiftIdeaVote[]
+  chosenAt   BirthdayOccasion[] @relation("GiftIdeaChosen")
+
+  @@index([hauskreisId, forPersonId])
+  @@map("gift_idea")
+}
+
+/// Eine Zustimmung zu einem Vorschlag.
+///
+/// Kein Feld mit einer Zahl, sondern die bloße Anwesenheit einer Zeile — wie
+/// bei `MeetingActionstepDone`: zugestimmt oder nicht, ein dritter Zustand wäre
+/// erfunden. Mehrere Vorschläge darf man gut finden; bei Geschenken sind oft
+/// zwei brauchbar und einer scheidet aus.
+model GiftIdeaVote {
+  giftIdeaId String   @map("gift_idea_id") @db.Uuid
+  personId   String   @map("person_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  giftIdea GiftIdea @relation(fields: [giftIdeaId], references: [id], onDelete: Cascade)
+  person   Person   @relation("GiftIdeaVoter", fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([giftIdeaId, personId])
+  @@index([personId])
+  @@map("gift_idea_vote")
 }

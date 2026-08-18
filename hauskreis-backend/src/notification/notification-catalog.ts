@@ -261,6 +261,43 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     defaultEnabled: true,
   },
   {
+    type: NotificationType.BIRTHDAY_GIFT_ASSIGNED,
+    label: 'Du besorgst ein Geschenk',
+    // Ein Ereignis und keine Vorlaufzeit: Der Anlass ist nicht der Geburtstag,
+    // sondern dass sich die Zuteilung geändert hat. Wann das passiert, weiß
+    // vorher niemand.
+    description:
+      'Wenn du für den Geburtstag von jemandem zuständig wirst — oder es doch nicht mehr bist.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
+    type: NotificationType.BIRTHDAY_GIFT_REMINDER,
+    label: 'Ein Geburtstag steht an',
+    description:
+      'Rechtzeitig vorher, damit noch Zeit zum Besorgen bleibt. Bestimmt auch, ab wann der Geburtstag unter „Deine Rollen“ auftaucht.',
+    schedule: {
+      kind: 'LEAD_TIME',
+      // Zwei Wochen, und damit deutlich länger als bei allem anderen: Ein
+      // Geschenk muss man sich ausdenken, bestellen und liefern lassen. Drei
+      // Tage vorher wäre die Erinnerung schon die Nachricht, dass es zu spät
+      // ist. Deckt sich mit der Vorgabe für die Frist, ab der die Zuteilung
+      // fest ist — beides beantwortet dieselbe Frage.
+      defaultLeadDays: 14,
+      minLeadDays: 1,
+      maxLeadDays: 60,
+    },
+    defaultEnabled: true,
+  },
+  {
+    type: NotificationType.BIRTHDAY_GIFT_DECIDED,
+    label: 'Ein Geschenk steht fest',
+    description:
+      'Wenn entschieden ist, was es wird, oder was es gekostet hat. Wer Geburtstag hat, bekommt davon nichts mit.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
     type: NotificationType.RELEASE_NOTES,
     label: 'Neues in der App',
     // Steht als letzte in der Liste, weil sie als einzige nichts mit dem

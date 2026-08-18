@@ -133,6 +133,15 @@ export const qk = {
         current: [...root, 'prayer-buddies', 'current'] as const,
         config: [...root, 'prayer-buddies', 'config'] as const,
       },
+
+      birthdays: {
+        all: [...root, 'birthdays'] as const,
+        overview: [...root, 'birthdays', 'overview'] as const,
+        detail: (occasionId: string) =>
+          [...root, 'birthdays', 'detail', occasionId] as const,
+        config: [...root, 'birthdays', 'config'] as const,
+        pairings: [...root, 'birthdays', 'pairings'] as const,
+      },
     };
   },
 };

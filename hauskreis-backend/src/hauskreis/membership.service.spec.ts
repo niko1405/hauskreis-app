@@ -75,12 +75,24 @@ function setup(
     meetingPrayerRequest: {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
+    // Geschenk-Vorschläge **für** die Person und ihre Zustimmungen zu fremden.
+    // Was sie selbst vorgeschlagen hat, bleibt stehen — es gehört dem, für den
+    // es gedacht war.
+    giftIdea: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    giftIdeaVote: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     // Die Transaktion reicht denselben Client durch; hier zählt nur, was
     // geschrieben werden wollte. Beide Formen: Callback und Array.
     $transaction: jest.fn((run: ((tx: unknown) => unknown) | unknown[]) =>
       typeof run === 'function' ? run(prisma) : Promise.all(run as unknown[]),
     ),
   } as unknown as PrismaService;
+
+  const planBirthdays = jest.fn().mockResolvedValue({
+    created: 0,
+    reassigned: 0,
+    notified: 0,
+  });
+  const announceDeparture = jest.fn().mockResolvedValue(undefined);
 
   const replanAfterMembershipChange = jest.fn().mockResolvedValue({
     repaired: 0,
@@ -114,6 +126,10 @@ function setup(
     {
       replanAfterMembershipChange,
     } as unknown as PrayerBuddyGeneratorService,
+    {
+      plan: planBirthdays,
+      announceDeparture,
+    } as unknown as BirthdayPlannerService,
     { releaseEverythingUpcoming } as unknown as RoleReleaseService,
     { reconcile } as unknown as MeetingCancellationService,
     { notify } as unknown as NotificationService,
@@ -127,6 +143,8 @@ function setup(
     hauskreisDelete,
     hauskreisCreate,
     replanAfterMembershipChange,
+    planBirthdays,
+    announceDeparture,
     releaseEverythingUpcoming,
     reconcile,
     notify,

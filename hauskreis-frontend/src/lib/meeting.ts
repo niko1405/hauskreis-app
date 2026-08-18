@@ -222,6 +222,7 @@ export const ROLE_LABEL: Record<AssignmentRole, string> = {
   SONG: 'Musik',
   TESTIMONY: 'Testimony',
   PRAYER_BUDDY: 'Gebetsbuddy',
+  BIRTHDAY_GIFT: 'Geschenk',
 };
 
 /** Überschrift des Zuteilungs-Sheets, im Ton der App. */
@@ -231,6 +232,11 @@ export const ROLE_QUESTION: Record<AssignmentRole, string> = {
   SONG: 'Wer macht die Musik?',
   TESTIMONY: 'Wer erzählt?',
   PRAYER_BUDDY: 'Wer betet miteinander?',
+  // Steht nie in einem Zuteilungs-Sheet — Geschenke teilt der Server zu, nicht
+  // ein Mensch an einem Abend. Der Eintrag ist hier, weil TypeScript die Karte
+  // vollständig verlangt, und das ist gut so: Er erinnert daran, dass es die
+  // Rolle gibt.
+  BIRTHDAY_GIFT: 'Wer besorgt das Geschenk?',
 };
 
 /**

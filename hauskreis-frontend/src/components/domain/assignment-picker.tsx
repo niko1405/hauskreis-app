@@ -43,7 +43,18 @@ import type {
 } from '@/lib/api/types';
 import { SuggestionRow } from './suggestion-row';
 
-export type AssignmentKind = Exclude<AssignmentRole, 'PRAYER_BUDDY'>;
+/**
+ * Die Rollen, die ein Mensch an einem Abend einträgt.
+ *
+ * Gebetsbuddys und Geschenke stehen bewusst nicht dabei: Beide teilt der
+ * Server zu — die einen gewürfelt, die anderen der Reihe nach —, und beide
+ * hängen an keinem Termin. Ein Sheet „wer besorgt das Geschenk" gibt es
+ * deshalb nicht; die Zuteilung ändert man in der Verwaltung, nicht hier.
+ */
+export type AssignmentKind = Exclude<
+  AssignmentRole,
+  'PRAYER_BUDDY' | 'BIRTHDAY_GIFT'
+>;
 
 /**
  * Warum jemand nicht bewertet wurde. Steht da, damit ein fehlender Name nicht

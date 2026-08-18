@@ -1,24 +1,39 @@
 'use client';
 
 /**
- * „Termine" — drei Sichten auf dieselben Daten: Liste, Mehrwochen-Planung,
- * Kalender. Kalender und Tabelle werden erst geladen, wenn man sie auswählt.
+ * „Termine" — vier Sichten: Liste, Mehrwochen-Planung, Kalender, Geburtstage.
+ * Alles außer der Liste wird erst geladen, wenn man es auswählt.
  */
 import { Plus, Search } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { useDeferredValue, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
 import { MeetingCard } from '@/components/domain/meeting-card';
 import { Button, IconButton } from '@/components/ui/button';
 import { TextInput } from '@/components/ui/field';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
-import { useMeetingList, usePrefetchMeeting } from '@/lib/api/hooks';
+import { BirthdayCard } from '@/features/birthdays/birthday-card';
+import {
+  useBirthdays,
+  useMeetingList,
+  usePrefetchMeeting,
+} from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
+import type { BirthdayOccasion, MeetingListItem } from '@/lib/api/types';
 
 const AssignmentTable = dynamic(
   () => import('./assignment-table').then((m) => m.AssignmentTable),
   { loading: () => <CardSkeleton /> },
 );
+const BirthdaysScreen = dynamic(
+  () =>
+    import('@/features/birthdays/birthdays-screen').then(
+      (m) => m.BirthdaysScreen,
+    ),
+  { loading: () => <CardSkeleton /> },
+);
+
 const MeetingCalendar = dynamic(
   () => import('./meeting-calendar').then((m) => m.MeetingCalendar),
   { loading: () => <CardSkeleton /> },
@@ -27,16 +42,32 @@ const CreateMeetingSheet = dynamic(() =>
   import('./create-meeting-sheet').then((m) => m.CreateMeetingSheet),
 );
 
-type View = 'liste' | 'planung' | 'kalender';
+type View = 'liste' | 'planung' | 'kalender' | 'geburtstage';
 
 const VIEWS: { key: View; label: string }[] = [
   { key: 'liste', label: 'Liste' },
   { key: 'planung', label: 'Planung' },
   { key: 'kalender', label: 'Kalender' },
+  // Zuletzt, weil man hierher gezielt kommt und nicht beim Durchblättern: Wer
+  // „Termine" öffnet, sucht meistens einen Abend.
+  { key: 'geburtstage', label: 'Geburtstage' },
 ];
 
+/**
+ * Ob die Adresse ein bestimmtes Register meint.
+ *
+ * Nur beim ersten Rendern gelesen und danach nicht mehr — das Register ist
+ * eine Ansicht, kein Ort: Wer weiterklickt, soll nicht in seiner Historie
+ * vier Einträge für dieselbe Seite finden. Gebraucht wird es für den Weg von
+ * außen, etwa aus einer Benachrichtigung.
+ */
+function initialView(tab: string | null): View {
+  return VIEWS.some((view) => view.key === tab) ? (tab as View) : 'liste';
+}
+
 export function MeetingsScreen() {
-  const [view, setView] = useState<View>('liste');
+  const tab = useSearchParams().get('tab');
+  const [view, setView] = useState<View>(() => initialView(tab));
   const [creating, setCreating] = useState(false);
 
   return (
@@ -77,6 +108,7 @@ export function MeetingsScreen() {
         {view === 'liste' && <MeetingListView />}
         {view === 'planung' && <AssignmentTable />}
         {view === 'kalender' && <MeetingCalendar />}
+        {view === 'geburtstage' && <BirthdaysScreen />}
       </div>
 
       {creating && (
@@ -89,6 +121,17 @@ export function MeetingsScreen() {
   );
 }
 
+/**
+ * Ein Eintrag in der Liste — ein Abend oder ein Geburtstag.
+ *
+ * Ein ausgezeichneter Verbund statt zweier Listen untereinander: Beides steht
+ * chronologisch, und „was kommt als nächstes" ist eine Frage, die man nicht
+ * zweimal stellen will.
+ */
+type ListEntry =
+  | { kind: 'meeting'; date: string; meeting: MeetingListItem }
+  | { kind: 'birthday'; date: string; occasion: BirthdayOccasion };
+
 function MeetingListView() {
   const [search, setSearch] = useState('');
   const [scope, setScope] = useState<'upcoming' | 'past'>('upcoming');
@@ -99,6 +142,44 @@ function MeetingListView() {
     search: deferredSearch.trim() || undefined,
   });
   const prefetch = usePrefetchMeeting();
+  const birthdays = useBirthdays();
+
+  /**
+   * Termine und Geburtstage in einer Liste, nach Datum.
+   *
+   * **Nur so weit, wie Termine geladen sind.** Der letzte geladene Abend ist
+   * die Grenze — sonst hingen unten fünf Geburtstage im Leeren, für Wochen,
+   * die noch gar nicht geplant sind. Wer „Mehr laden" drückt, schiebt die
+   * Grenze mit, und die Geburtstage rücken nach.
+   *
+   * Keine bei „Vergangene" und keine bei aktiver Suche: Dort sucht man einen
+   * Abend, und ein Geburtstag dazwischen wäre ein Treffer, den niemand gesucht
+   * hat.
+   */
+  const entries = useMemo<ListEntry[]>(() => {
+    const meetings: ListEntry[] = query.items.map((meeting) => ({
+      kind: 'meeting',
+      date: meeting.date,
+      meeting,
+    }));
+
+    const horizon = query.items.at(-1)?.date;
+    if (scope !== 'upcoming' || deferredSearch.trim() || !horizon) {
+      return meetings;
+    }
+
+    const occasions: ListEntry[] = (birthdays.data?.upcoming ?? [])
+      .filter((occasion) => occasion.occursOn <= horizon)
+      .map((occasion) => ({
+        kind: 'birthday',
+        date: occasion.occursOn,
+        occasion,
+      }));
+
+    return [...meetings, ...occasions].toSorted((a, b) =>
+      a.date.localeCompare(b.date),
+    );
+  }, [query.items, birthdays.data, scope, deferredSearch]);
 
   return (
     <div className="space-y-4">
@@ -154,11 +235,17 @@ function MeetingListView() {
       )}
 
       <ul className="space-y-3">
-        {query.items.map((meeting) => (
-          <li key={meeting.id}>
-            <MeetingCard meeting={meeting} onPrefetch={prefetch} />
-          </li>
-        ))}
+        {entries.map((entry) =>
+          entry.kind === 'meeting' ? (
+            <li key={entry.meeting.id}>
+              <MeetingCard meeting={entry.meeting} onPrefetch={prefetch} />
+            </li>
+          ) : (
+            <li key={entry.occasion.id}>
+              <BirthdayCard occasion={entry.occasion} />
+            </li>
+          ),
+        )}
       </ul>
 
       {query.hasNextPage && (

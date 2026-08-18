@@ -1,3 +1,4 @@
+export * from './use-birthdays';
 export * from './use-absences';
 export * from './use-dashboard';
 export * from './use-header-images';

@@ -113,6 +113,10 @@ export class NotificationService implements OnModuleInit {
     /// ohne das wären dort alle Felder darüber leer, und je Person käme genau
     /// eine Ankündigung durch, für immer.
     relatedReleaseVersion?: string | null;
+    /// Welcher Geburtstag gemeint war — die Runde, nicht die Person. Ohne das
+    /// wäre „du besorgst das Geschenk für Mira" in jedem Jahr dieselbe
+    /// Nachricht wie im ersten und käme genau einmal im Leben an.
+    relatedOccasionId?: string | null;
     payload: NotificationPayload;
   }): Promise<SendResult> {
     const setting = await this.preferences.resolve(
@@ -154,6 +158,7 @@ export class NotificationService implements OnModuleInit {
         relatedPersonId: params.relatedPersonId ?? null,
         relatedRole: params.relatedRole ?? null,
         relatedReleaseVersion: params.relatedReleaseVersion ?? null,
+        relatedOccasionId: params.relatedOccasionId ?? null,
       },
     });
 
@@ -255,6 +260,7 @@ export class NotificationService implements OnModuleInit {
     relatedPersonId?: string | null;
     relatedRole?: AssignmentRole | null;
     relatedReleaseVersion?: string | null;
+    relatedOccasionId?: string | null;
   }): Promise<boolean> {
     const existing = await this.prisma.notificationLog.findFirst({
       where: {
@@ -265,6 +271,7 @@ export class NotificationService implements OnModuleInit {
         relatedPersonId: params.relatedPersonId ?? null,
         relatedRole: params.relatedRole ?? null,
         relatedReleaseVersion: params.relatedReleaseVersion ?? null,
+        relatedOccasionId: params.relatedOccasionId ?? null,
       },
     });
 

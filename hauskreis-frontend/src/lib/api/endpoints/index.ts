@@ -4,6 +4,7 @@
  * (Prefetch, Service Worker, Skripte).
  */
 export * as absencesApi from './absences';
+export * as birthdaysApi from './birthdays';
 export * as coreApi from './core';
 export * as dashboardApi from './dashboard';
 export * as headerImagesApi from './header-images';

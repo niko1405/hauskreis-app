@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PersonService } from '../person/person.service';
 import { PhotoService } from '../person/photo.service';
 import { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
+import { BirthdayPlannerService } from '../birthday/birthday-planner.service';
 import {
   RoleReleaseService,
   type LeftoverRoles,
@@ -41,6 +42,7 @@ export class MembershipService {
     private readonly prisma: PrismaService,
     private readonly people: PersonService,
     private readonly prayerBuddies: PrayerBuddyGeneratorService,
+    private readonly birthdays: BirthdayPlannerService,
     private readonly roleRelease: RoleReleaseService,
     private readonly cancellations: MeetingCancellationService,
     private readonly notifications: NotificationService,
@@ -189,6 +191,14 @@ export class MembershipService {
     // und wer mit ihr gepaart war, bliebe für zwei Wochen allein.
     await this.prayerBuddies.replanAfterMembershipChange(hauskreisId);
 
+    // Die Geburtstags-Reihe genauso — mit einem Schritt davor, den es bei den
+    // Gebetsbuddys nicht gibt: Wer für den Geburtstag der gegangenen Person
+    // zuständig war, muss es erfahren, **bevor** die Runde mit ihr
+    // verschwindet. Danach steht nirgends mehr, dass es diese Zuständigkeit
+    // gab. Wer stattdessen jemand anderen bekommt, hört das aus dem
+    // gewöhnlichen Lauf; wer niemanden mehr bekommt, aus dieser Nachricht.
+    await this.replanBirthdays(hauskreisId, personId);
+
     await this.announceDeparture(
       me,
       others.filter((person) => person.id !== removedByPersonId),
@@ -262,6 +272,17 @@ export class MembershipService {
         this.prisma.notificationLog.deleteMany({ where: { personId } }),
         this.prisma.absencePeriod.deleteMany({ where: { personId } }),
         this.prisma.meetingPrayerRequest.deleteMany({ where: { personId } }),
+        // Geschenk-Vorschläge **für** diese Person und ihre Zustimmungen zu
+        // fremden. Beides ist persönlich und ohne Archivwert: Was jemandem
+        // geschenkt wurde, der nicht mehr da ist, muss niemand mehr wissen —
+        // anders als „wer hat gehostet".
+        //
+        // Die Vorschläge, die sie **gemacht** hat, bleiben stehen: Sie gehören
+        // dem, für den sie gedacht waren, und dessen Geburtstag kommt wieder.
+        // `proposedBy` steht danach auf `null` („SetNull"), der Vorschlag
+        // selbst bleibt brauchbar.
+        this.prisma.giftIdea.deleteMany({ where: { forPersonId: personId } }),
+        this.prisma.giftIdeaVote.deleteMany({ where: { personId } }),
       ]);
     }
 
@@ -505,14 +526,41 @@ export class MembershipService {
       await this.prayerBuddies.replanAfterMembershipChange(
         invitation.hauskreisId,
       );
+      await this.birthdays.plan(invitation.hauskreisId);
     } catch (error) {
       this.logger.error(
-        `Einladung in Hauskreis ${invitation.hauskreisId} angenommen, aber die Gebetsrotation ließ sich nicht nachziehen`,
+        `Einladung in Hauskreis ${invitation.hauskreisId} angenommen, aber die Rotationen ließen sich nicht nachziehen`,
         error instanceof Error ? error.stack : String(error),
       );
     }
 
     return person;
+  }
+
+  /**
+   * Zieht die Geburtstage nach, nachdem jemand gegangen ist.
+   *
+   * Die Reihenfolge ist der ganze Inhalt: Erst sagen, dass eine Zuständigkeit
+   * wegfällt, dann neu verteilen. Andersherum wäre die Runde des Gegangenen
+   * schon gelöscht (`onDelete: Cascade`), und mit ihr die Auskunft, wer für sie
+   * zuständig war.
+   *
+   * Fehler werden geschluckt: Ein Austritt darf nicht daran scheitern, dass
+   * eine Nachricht nicht rausging. Der nächtliche Lauf baut nach.
+   */
+  private async replanBirthdays(
+    hauskreisId: string,
+    departedPersonId: string,
+  ): Promise<void> {
+    try {
+      await this.birthdays.announceDeparture(hauskreisId, departedPersonId);
+      await this.birthdays.plan(hauskreisId);
+    } catch (error) {
+      this.logger.error(
+        `Austritt aus Hauskreis ${hauskreisId}, aber die Geburtstage ließen sich nicht nachziehen`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 }
 

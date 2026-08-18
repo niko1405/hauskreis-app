@@ -41,12 +41,17 @@ function setup(meetings: MeetingRow[] = [], groups: GroupRow[] = []) {
   );
   const groupFindMany = jest.fn().mockResolvedValue(groups);
 
+  // Geburtstage kommen nur dazu, wenn der Aufrufer eine Vorlaufzeit nennt —
+  // die Mehrwochen-Tabelle tut das nicht, und dann läuft die Abfrage gar nicht.
+  const birthdayFindMany = jest.fn().mockResolvedValue([]);
+
   const service = new AssignmentService({
     meeting: { findMany: meetingFindMany },
     prayerBuddyGroup: { findMany: groupFindMany },
+    birthdayOccasion: { findMany: birthdayFindMany },
   } as unknown as PrismaService);
 
-  return { service, meetingFindMany, groupFindMany };
+  return { service, meetingFindMany, groupFindMany, birthdayFindMany };
 }
 
 const range = { from: utc('2026-08-01'), to: utc('2026-08-31') };
@@ -70,6 +75,7 @@ describe('AssignmentService.findAssignments', () => {
         person: person('chris', 'chris'),
         meetingId: 'm1',
         groupId: null,
+        occasionId: null,
         label: 'Bei Chris',
       },
     ]);

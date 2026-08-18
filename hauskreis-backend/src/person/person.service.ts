@@ -14,6 +14,7 @@ import { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import { LocationService } from '../location/location.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
+import { BirthdayPlannerService } from '../birthday/birthday-planner.service';
 import { MEMBERSHIP_SERVICE } from '../hauskreis/membership.token';
 import type { MembershipService } from '../hauskreis/membership.service';
 import type {
@@ -92,6 +93,25 @@ export class PersonService {
     });
 
     await generator.replanAfterMembershipChange(hauskreisId);
+  }
+
+  /**
+   * Zieht die Geburtstags-Zuständigkeiten nach.
+   *
+   * Nachgeschlagen aus demselben Grund wie die Gebetsrotation darüber — der
+   * Kreis `Person → Birthday → Notification → Person` stünde sonst genauso.
+   *
+   * Angestoßen von **zwei** Sorten Änderung, und die zweite ist die, die es bei
+   * den Gebetsbuddys nicht gibt: Wer dazukommt oder geht, verschiebt die Reihe;
+   * wer seinen **Geburtstag** einträgt oder korrigiert, aber auch. Der Platz in
+   * der Reihe *ist* der Geburtstag.
+   */
+  private async replanBirthdays(hauskreisId: string): Promise<void> {
+    const planner = this.moduleRef.get(BirthdayPlannerService, {
+      strict: false,
+    });
+
+    await planner.plan(hauskreisId);
   }
 
   /**
@@ -188,6 +208,7 @@ export class PersonService {
 
     await this.syncHomes(person.locationId);
     await this.replanPrayerBuddies(hauskreisId);
+    await this.replanBirthdays(hauskreisId);
 
     if (person.autoAttend) {
       await this.autoAttendance.apply(hauskreisId, { personId: person.id });
@@ -218,6 +239,10 @@ export class PersonService {
         active: true,
         username: true,
         keycloakUserId: true,
+        // Für die Geburtstags-Reihe: Ob es ein Wechsel war, sieht man nur im
+        // Vorher — und ein Lauf bei jedem Speichern des Profils wäre einer zu
+        // viel.
+        birthdate: true,
       },
     });
 
@@ -259,6 +284,22 @@ export class PersonService {
     // Ein neuer Name oder eine neue Wohnung ändert die Paarungen nicht.
     if (before && dto.active !== undefined && dto.active !== before.active) {
       await this.replanPrayerBuddies(hauskreisId);
+    }
+
+    // Ein nachgetragener oder berichtigter Geburtstag verschiebt die ganze
+    // Reihe: Wer vorher gar nicht mitzählte, steht danach zwischen zwei
+    // anderen und ändert damit auch deren Zuständigkeit. Genau das war die
+    // Anforderung — „die Zuteilung soll aktualisieren, sobald jemand seinen
+    // Geburtstag neu einträgt".
+    const birthdayChanged =
+      dto.birthdate !== undefined &&
+      before?.birthdate?.toISOString().slice(0, 10) !== dto.birthdate;
+
+    if (
+      birthdayChanged ||
+      (dto.active !== undefined && dto.active !== before?.active)
+    ) {
+      await this.replanBirthdays(hauskreisId);
     }
 
     // Rückwirkend, und das ist der Sinn: wer den Schalter umlegt, meint die
@@ -1086,9 +1127,10 @@ export class PersonService {
   private async welcomeIntoRotation(hauskreisId: string): Promise<void> {
     try {
       await this.replanPrayerBuddies(hauskreisId);
+      await this.replanBirthdays(hauskreisId);
     } catch (error) {
       this.logger.error(
-        `Erste Anmeldung in Hauskreis ${hauskreisId}, aber die Gebetsrotation ließ sich nicht nachziehen`,
+        `Erste Anmeldung in Hauskreis ${hauskreisId}, aber die Rotationen ließen sich nicht nachziehen`,
         error instanceof Error ? error.stack : String(error),
       );
     }

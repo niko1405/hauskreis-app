@@ -246,3 +246,16 @@ export type GenerationResult = S['GenerationResultResponseDto'];
 export type ReminderRunResult = S['ReminderRunResultResponseDto'];
 export type ActionstepRunResult = S['ActionstepRunResultResponseDto'];
 export type SyncResult = S['SyncResultResponseDto'];
+
+// ── Geburtstage und Geschenke ───────────────────────────────────────────────
+
+export type BirthdayOverview = S['BirthdayOverviewResponseDto'];
+export type BirthdayOccasion = BirthdayOverview['upcoming'][number];
+export type BirthdayDetail = S['BirthdayDetailResponseDto'];
+export type GiftIdea = S['GiftIdeaListResponseDto'][number];
+export type BirthdayGiftConfig = S['BirthdayGiftConfigResponseDto'];
+export type UpdateBirthdayGiftConfigInput = S['UpdateBirthdayGiftConfigDto'];
+export type GiftPairings = S['GiftPairingListResponseDto'];
+export type UpdateGiftPairingsInput = S['UpdateGiftPairingsDto'];
+export type CreateGiftIdeaInput = S['CreateGiftIdeaDto'];
+export type DecideGiftInput = S['DecideGiftDto'];
