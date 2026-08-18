@@ -33,8 +33,10 @@ describe('emailSchema', () => {
   });
 
   it('lässt keinen Unsinn durch', () => {
-    expect(() => emailSchema.parse('Kein Komma, keine Adresse')).toThrow();
-    expect(() => emailSchema.parse('MAX@')).toThrow();
+    expect(() => emailSchema.parse('Kein Komma, keine Adresse')).toThrow(
+      /Invalid email/,
+    );
+    expect(() => emailSchema.parse('MAX@')).toThrow(/Invalid email/);
   });
 });
 
