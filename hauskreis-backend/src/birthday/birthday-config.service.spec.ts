@@ -1,4 +1,6 @@
 import { birthdayGiftConfigResponseSchema } from './dto/birthday-response.dto';
+import { BirthdayConfigService } from './birthday-config.service';
+import type { PrismaService } from '../prisma/prisma.service';
 
 /**
  * Die Regel, die einmal gefehlt hat.
@@ -39,5 +41,61 @@ describe('birthdayGiftConfigResponseSchema', () => {
     expect(() => birthdayGiftConfigResponseSchema.parse(ohne)).toThrow(
       /version/,
     );
+  });
+});
+
+/**
+ * Die Regel, die auch von Hand gilt: **jede:r besorgt genau ein Geschenk.**
+ *
+ * Sie ließ sich hier aushebeln, weil nur die linke Spalte geprüft wurde. Wer
+ * die Zeilen in der Verwaltung durchklickte, konnte dieselbe Person zweimal
+ * eintragen — und eine andere blieb ohne Aufgabe.
+ */
+/** Drei Leute mit Geburtstag; mehr braucht keine dieser Prüfungen. */
+function konfigDienst() {
+  const prisma = {
+    person: {
+      findMany: jest
+        .fn()
+        .mockResolvedValue([{ id: 'a' }, { id: 'b' }, { id: 'c' }]),
+    },
+  } as unknown as PrismaService;
+
+  return new BirthdayConfigService(prisma);
+}
+
+function pairing(birthdayPersonId: string, responsiblePersonId: string) {
+  return { birthdayPersonId, responsiblePersonId };
+}
+
+describe('BirthdayConfigService.setPairings', () => {
+  it('weist zurück, wer für zwei Geburtstage zuständig sein soll', async () => {
+    await expect(
+      konfigDienst().setPairings(
+        'hk-1',
+        { pairings: [pairing('a', 'c'), pairing('b', 'c')] },
+        'admin',
+      ),
+    ).rejects.toThrow(/zweimal/);
+  });
+
+  it('weist zwei Zuständige für denselben Geburtstag zurück', async () => {
+    await expect(
+      konfigDienst().setPairings(
+        'hk-1',
+        { pairings: [pairing('a', 'b'), pairing('a', 'c')] },
+        'admin',
+      ),
+    ).rejects.toThrow(/nur eine Person/);
+  });
+
+  it('weist Sich-selbst-beschenken zurück', async () => {
+    await expect(
+      konfigDienst().setPairings(
+        'hk-1',
+        { pairings: [pairing('a', 'a')] },
+        'admin',
+      ),
+    ).rejects.toThrow(/Sich selbst/);
   });
 });

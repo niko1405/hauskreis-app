@@ -170,6 +170,36 @@ export function BirthdayGiftAdmin() {
  * Aufgelistet sind **alle** mit eingetragenem Geburtstag, auch die ohne
  * Zuständigen: Ein Loch ist genau das, was man hier sehen soll.
  */
+/**
+ * Jemanden eintragen — und dort wegnehmen, wo er vorher stand.
+ *
+ * Die Auswahl verhält sich damit wie eine Radiogruppe, und zwar aus einem
+ * Grund, den man dem Formular nicht ansieht: **Jede:r besorgt genau ein
+ * Geschenk.** Das ist die Zusage der ganzen Reihe — einmal im Jahr dran, nie
+ * für sich selbst —, und der Server lehnt eine zweite Zuständigkeit ab.
+ *
+ * Die naheliegende Alternative wäre, belegte Namen auszugrauen. Sie führt in
+ * eine Sackgasse: Wer sich durch die Liste klickt, kann bei der letzten Zeile
+ * nur noch sich selbst übrig haben und käme dort nicht mehr heraus, ohne von
+ * vorn anzufangen. So bleibt jeder Zwischenstand gültig — die Zeile, aus der
+ * jemand herausrutscht, steht auf „Niemand", und das ist ein erlaubter
+ * Zustand: Der Planer füllt sie beim Speichern.
+ */
+function assign(
+  current: Record<string, string>,
+  birthdayPersonId: string,
+  responsiblePersonId: string,
+): Record<string, string> {
+  const next: Record<string, string> = {};
+
+  for (const [forWhom, responsible] of Object.entries(current)) {
+    next[forWhom] = responsible === responsiblePersonId ? '' : responsible;
+  }
+
+  next[birthdayPersonId] = responsiblePersonId;
+  return next;
+}
+
 function PairingsCard({ repairedAt }: { repairedAt: string | null }) {
   const pairings = useGiftPairings();
   const save = useSetGiftPairings();
@@ -221,10 +251,9 @@ function PairingsCard({ repairedAt }: { repairedAt: string | null }) {
               className="sm:w-48"
               value={value[row.birthdayPerson.id] ?? ''}
               onChange={(event) =>
-                setDraft({
-                  ...value,
-                  [row.birthdayPerson.id]: event.target.value,
-                })
+                setDraft(
+                  assign(value, row.birthdayPerson.id, event.target.value),
+                )
               }
             >
               <option value="">Niemand</option>
@@ -249,6 +278,14 @@ function PairingsCard({ repairedAt }: { repairedAt: string | null }) {
         <p className="text-[11px] leading-relaxed text-stone-400">
           Noch hat niemand seinen Geburtstag eingetragen. Ohne Datum gibt es
           keinen Platz in der Reihe.
+        </p>
+      )}
+
+      {rows.length > 0 && (
+        <p className="text-[11px] leading-relaxed text-stone-400">
+          Jede:r besorgt genau ein Geschenk. Trägst du jemanden hier ein,
+          rutscht er dort heraus, wo er vorher stand. Bleibt eine Zeile auf
+          „Niemand", füllt die App sie beim Speichern selbst.
         </p>
       )}
 

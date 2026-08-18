@@ -162,6 +162,22 @@ export class BirthdayConfigService {
       seen.add(pairing.birthdayPersonId);
     }
 
+    // Und die Gegenrichtung: niemand besorgt zwei Geschenke, solange jemand
+    // anders keines besorgt. Das ist die Zusage der ganzen Reihe — jede:r ist
+    // in einem Jahr genau einmal dran (CLAUDE.md §6.9) —, und sie ließ sich
+    // hier aushebeln: Die Prüfung darüber sah nur die linke Spalte. Wer die
+    // Zeilen in der Verwaltung durchklickte, konnte eine Person zweimal
+    // eintragen, und eine andere blieb ohne Aufgabe.
+    const giving = new Set<string>();
+    for (const pairing of dto.pairings) {
+      if (giving.has(pairing.responsiblePersonId)) {
+        throw new BadRequestException(
+          'Jede:r besorgt genau ein Geschenk — hier steht jemand zweimal',
+        );
+      }
+      giving.add(pairing.responsiblePersonId);
+    }
+
     await this.prisma.$transaction([
       this.prisma.birthdayGiftPairing.deleteMany({ where: { hauskreisId } }),
       this.prisma.birthdayGiftPairing.createMany({

@@ -113,6 +113,40 @@ describe('rotate', () => {
   });
 });
 
+/**
+ * Was an einer Zuteilung nicht stimmt — eine leere Liste heißt: runde Sache.
+ *
+ * Geprüft wird die Zusage, auf die sich neun Leute verlassen: **jede:r
+ * beschenkt genau einen und wird von genau einem beschenkt.** Einmal im Jahr
+ * dran, nie für sich selbst.
+ *
+ * Als Aufzählung und nicht als Reihe von `expect`-Aufrufen, damit ein
+ * Fehlschlag sagt, *wer* zu viel oder zu wenig hat — sonst stünde in der
+ * Ausgabe nur, dass zwei sortierte Listen sich unterscheiden.
+ */
+function maengel(
+  duties: ReadonlyMap<string, string>,
+  members: readonly string[],
+): string[] {
+  const found: string[] = [];
+  const responsibles = [...duties.values()];
+
+  for (const id of members) {
+    const besorgt = responsibles.filter((other) => other === id).length;
+    if (besorgt !== 1) found.push(`${id} besorgt ${besorgt} Geschenke`);
+    if (!duties.has(id)) found.push(`für ${id} ist niemand zuständig`);
+  }
+
+  for (const [forWhom, responsible] of duties) {
+    if (forWhom === responsible) found.push(`${forWhom} beschenkt sich selbst`);
+    if (!members.includes(responsible)) {
+      found.push(`${responsible} ist gar nicht dabei`);
+    }
+  }
+
+  return found.toSorted();
+}
+
 describe('repairPairings', () => {
   it('lässt eine tragfähige Zuteilung unangetastet', () => {
     const fest = new Map([
@@ -138,27 +172,74 @@ describe('repairPairings', () => {
     const { duties, changed } = repairPairings(fest, ['a', 'b']);
 
     expect(changed).toBe(true);
-    expect(duties.get('a')).toBe('b');
-    expect(duties.get('b')).toBe('a');
+    expect(maengel(duties, ['a', 'b'])).toEqual([]);
   });
 
-  it('nimmt ein neues Mitglied in beide Richtungen auf', () => {
+  /**
+   * **Der Fehler, um den es ging.** Ein Neuzugang reißt zwei Löcher: Für ihn
+   * ist niemand zuständig, und er selbst ist es für niemanden. Die alte
+   * Fassung sah nur das erste, gab ihm jemanden aus dem Bestand — und der
+   * hatte danach zwei, während der Neue nichts zu tun bekam. In der Verwaltung
+   * stand dann genau das: einer ohne Zuteilung, einer mit zwei.
+   */
+  it('teilt einen Neuzugang auch selbst ein', () => {
+    const kreis = new Map([
+      ['a', 'c'],
+      ['b', 'a'],
+      ['c', 'b'],
+    ]);
+
+    const { duties, changed } = repairPairings(kreis, ['a', 'b', 'c', 'd']);
+
+    expect(changed).toBe(true);
+    expect(maengel(duties, ['a', 'b', 'c', 'd'])).toEqual([]);
+    // Eingehängt statt neu gewürfelt: drei der vier alten Kanten bleiben.
+    expect(duties.get('b')).toBe('a');
+    expect(duties.get('c')).toBe('b');
+    expect(duties.get('a')).toBe('d');
+    expect(duties.get('d')).toBe('c');
+  });
+
+  /**
+   * Und derselbe Weg noch einmal, so wie er in der App entsteht: Man lädt
+   * jemanden ein, dann noch jemanden — der Planer läuft nach jedem Zugang.
+   * Beim zweiten Mal war die Zuteilung schon schief, und die alte Fassung
+   * schrieb die Schieflage fort.
+   */
+  it('bleibt rund, wenn nacheinander zwei dazukommen', () => {
+    const kreis = new Map([
+      ['a', 'c'],
+      ['b', 'a'],
+      ['c', 'b'],
+    ]);
+
+    const nachD = repairPairings(kreis, ['a', 'b', 'c', 'd']).duties;
+    expect(maengel(nachD, ['a', 'b', 'c', 'd'])).toEqual([]);
+
+    const nachE = repairPairings(nachD, ['a', 'b', 'c', 'd', 'e']).duties;
+    expect(maengel(nachE, ['a', 'b', 'c', 'd', 'e'])).toEqual([]);
+  });
+
+  it('nimmt zwei Neuzugänge auf einmal auf', () => {
     const fest = new Map([
       ['a', 'b'],
       ['b', 'a'],
     ]);
 
-    const { duties, changed } = repairPairings(fest, ['a', 'b', 'c']);
+    const { duties } = repairPairings(fest, ['a', 'b', 'c', 'd']);
 
-    expect(changed).toBe(true);
-    // `c` bekommt jemanden — und zwar den mit der geringsten Last.
-    expect(duties.get('c')).toBeDefined();
-    expect(duties.get('c')).not.toBe('c');
+    expect(maengel(duties, ['a', 'b', 'c', 'd'])).toEqual([]);
+    // Das bestehende Paar bleibt, wie es war.
+    expect(duties.get('a')).toBe('b');
+    expect(duties.get('b')).toBe('a');
   });
 
-  it('verteilt die Löcher auf die, die am wenigsten zu tun haben', () => {
-    // `a` ist schon für zwei zuständig. Die beiden offenen Plätze gehen an
-    // Leute mit weniger Last — `a` bekommt nichts dazu.
+  /**
+   * Eine doppelte Zuständigkeit kann nur aus alten Daten kommen — die
+   * Verwaltung lässt sie nicht mehr zu. Sie wird auf eine Kante zurückgeführt,
+   * und zwar auf dieselbe bei jedem Lauf.
+   */
+  it('löst eine doppelte Zuständigkeit auf', () => {
     const fest = new Map([
       ['b', 'a'],
       ['c', 'a'],
@@ -166,22 +247,27 @@ describe('repairPairings', () => {
 
     const { duties } = repairPairings(fest, ['a', 'b', 'c', 'd']);
 
-    const last = (id: string) =>
-      [...duties.values()].filter((responsible) => responsible === id).length;
-
-    expect(last('a')).toBe(2);
-    expect(duties.size).toBe(4);
-    for (const id of ['b', 'c', 'd']) expect(last(id)).toBeLessThanOrEqual(1);
+    expect(maengel(duties, ['a', 'b', 'c', 'd'])).toEqual([]);
+    // Die erste Kante nach Geburtstagsperson gewinnt.
+    expect(duties.get('b')).toBe('a');
   });
 
   it('wirft eine Zuteilung auf sich selbst weg', () => {
     const { duties } = repairPairings(new Map([['a', 'a']]), ['a', 'b']);
     expect(duties.get('a')).toBe('b');
+    expect(maengel(duties, ['a', 'b'])).toEqual([]);
   });
 
   it('lässt eine einzelne Person ohne Zuständigen', () => {
     const { duties } = repairPairings(new Map(), ['a']);
     expect(duties.size).toBe(0);
+  });
+
+  it('macht aus dem Nichts eine vollständige Runde', () => {
+    const mitglieder = ['a', 'b', 'c', 'd', 'e'];
+    expect(
+      maengel(repairPairings(new Map(), mitglieder).duties, mitglieder),
+    ).toEqual([]);
   });
 
   it('ist deterministisch', () => {

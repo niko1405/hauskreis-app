@@ -70,15 +70,30 @@ export function rotate(people: readonly GiftablePerson[]): Duties {
  * ist es jetzt niemand mehr (nicht egal). Genauso beim Zugang: Ein neues
  * Mitglied hat keinen Zuständigen und ist für niemanden zuständig.
  *
- * **Was diese Funktion nicht tut: den Modus wechseln.** Ein Loch zu stopfen
- * heißt nicht, dass die Gruppe künftig würfeln will. Der Admin bekommt einen
- * Hinweis und entscheidet selbst — solange er das nicht tut, steht eine
- * vollständige Zuteilung da statt einer halben.
+ * **Es sind zwei Löcher, nicht eins — und daran ist die alte Fassung
+ * gescheitert.** Sie suchte für jeden Geburtstag ohne Zuständigen jemanden mit
+ * wenig Last und war dann fertig. Dass ein Neuzugang auch selbst noch niemanden
+ * beschenkt, kam darin nicht vor, und für seinen eigenen Geburtstag scheidet er
+ * als Kandidat aus. Also bekam er jemanden aus dem Bestand, und der hatte
+ * hinterher zwei:
  *
- * **Wie gestopft wird.** Was ein Mensch entschieden hat, bleibt stehen; nur die
- * Löcher werden gefüllt, und zwar von dem, der bisher am wenigsten zu tun hat.
- * Das ist die Wahl, die eine ausgewogene Zuteilung ausgewogen lässt, statt
- * einem Einzelnen alles Übriggebliebene zuzuschieben.
+ * ```
+ * {a,b,c} als Kreis a→c, b→a, c→b, dann kommt d dazu
+ *   Loch d, Kandidat a  →  a→c, b→a, c→b, d→a
+ *   a schenkt zweimal, d gar nicht
+ * ```
+ *
+ * Genau das war in der Verwaltung zu sehen: einer ohne Zuteilung, einer mit
+ * zwei. In der Rotation kann es nicht passieren, weil `rotate` den Kreis jedes
+ * Mal ganz neu legt.
+ *
+ * **Die Regel, die gilt** (CLAUDE.md §6.9): Jede:r beschenkt genau einen und
+ * wird von genau einem beschenkt — eine fixpunktfreie Permutation. Sie ist
+ * nicht bloß hübsch, sie ist die Zusage, auf die sich neun Leute verlassen:
+ * einmal im Jahr dran, und nie für sich selbst.
+ *
+ * **Was ein Mensch entschieden hat, bleibt trotzdem stehen**, soweit es mit
+ * dieser Regel verträglich ist. Gestopft wird nur, was offen ist.
  */
 export function repairPairings(
   existing: Duties,
@@ -87,38 +102,59 @@ export function repairPairings(
 ): { duties: Map<string, string>; changed: boolean } {
   const present = new Set(members);
   const duties = new Map<string, string>();
+  const giving = new Set<string>();
 
-  // 1. Was noch trägt, bleibt: beide Seiten müssen dabei sein, und niemand ist
-  //    für sich selbst zuständig — auch dann nicht, wenn es einmal so
-  //    eingetragen wurde.
-  for (const [forWhom, responsible] of existing) {
+  // 1. Was noch trägt, bleibt. Drei Bedingungen, und die dritte ist neu:
+  //    beide Seiten dabei, kein Selbstbezug, und der Schenkende schenkt noch
+  //    nicht. In fester Reihenfolge, damit bei einer Dopplung immer dieselbe
+  //    Kante gewinnt und nicht die, die Postgres zuerst zurückgab.
+  for (const [forWhom, responsible] of [...existing].toSorted(([a], [b]) =>
+    a < b ? -1 : 1,
+  )) {
     if (!present.has(forWhom) || !present.has(responsible)) continue;
     if (forWhom === responsible) continue;
+    if (giving.has(responsible)) continue;
+
     duties.set(forWhom, responsible);
+    giving.add(responsible);
   }
 
-  const load = new Map<string, number>(members.map((id) => [id, 0]));
-  for (const responsible of duties.values()) {
-    load.set(responsible, (load.get(responsible) ?? 0) + 1);
+  // 2. Die beiden offenen Seiten. Sie sind gleich groß, und das ist die
+  //    eigentliche Erkenntnis: Jede übernommene Kante verbraucht genau einen
+  //    Geburtstag und genau einen Schenkenden.
+  const holes = members.filter((id) => !duties.has(id)).toSorted();
+  const idle = members.filter((id) => !giving.has(id)).toSorted();
+
+  for (const [index, forWhom] of holes.entries()) {
+    duties.set(forWhom, idle[index]!);
   }
 
-  // 2. Die Löcher, in fester Reihenfolge — sonst hinge das Ergebnis daran, wie
-  //    die Datenbank die Zeilen zurückgab.
-  const open = members.filter((id) => !duties.has(id)).toSorted();
+  // 3. Selbstbeschenkung auflösen. Beim Reihum-Zuordnen kann jemand auf sich
+  //    selbst fallen; dann wird mit einem anderen Paar getauscht.
+  for (const forWhom of holes) {
+    if (duties.get(forWhom) !== forWhom) continue;
 
-  for (const forWhom of open) {
-    const candidate = members
-      .filter((id) => id !== forWhom)
-      .toSorted(
-        (a, b) => (load.get(a) ?? 0) - (load.get(b) ?? 0) || (a < b ? -1 : 1),
-      )[0];
+    const partner =
+      // Ein anderes frisch gefülltes Loch — der Normalfall.
+      holes.find((other) => other !== forWhom) ??
+      // Oder, wenn es keins gibt, eine übernommene Kante. **Das ist der Fall
+      // mit genau einem Neuzugang**, und der kam in der alten Fassung gar
+      // nicht vor: `d` ist gleichzeitig das einzige Loch und der einzige
+      // Untätige. Er wird in den bestehenden Kreis eingehängt — aus `x→y`
+      // werden `x→d` und `d→y`, drei von vier alten Kanten bleiben stehen.
+      [...duties.keys()].find((other) => other !== forWhom);
 
-    // Nur eine Person in der Gruppe: dann bleibt sie ohne Zuständigen. Sich
-    // selbst zu beschenken wäre kein Ausweg, sondern eine Behauptung.
-    if (!candidate) continue;
+    // Niemand zum Tauschen heißt: Die Gruppe hat genau ein Mitglied mit
+    // Geburtstag. Dann bleibt es ohne Zuständigen — sich selbst zu beschenken
+    // wäre kein Ausweg, sondern eine Behauptung.
+    if (!partner) {
+      duties.delete(forWhom);
+      continue;
+    }
 
-    duties.set(forWhom, candidate);
-    load.set(candidate, (load.get(candidate) ?? 0) + 1);
+    const theirs = duties.get(partner)!;
+    duties.set(partner, forWhom);
+    duties.set(forWhom, theirs);
   }
 
   const changed =
