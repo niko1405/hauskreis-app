@@ -37,12 +37,11 @@ export const RELEASES: readonly Release[] = [
   {
     version: '1.4.1',
     date: '2026-08-19',
-    title: 'Einladungen kommen an',
+    title: 'Fix: Einladungen und weitere Verbesserungen',
     highlights: [
-      'Eine Einladung findet ihre Person jetzt auch dann, wenn die Adresse mit großen Buchstaben eingetragen wurde. Vorher landete man nach dem Anmelden im Nichts und stand weiter als „eingeladen" da.',
+      'Das Einladungssystem wurde überprüft und verbessert, sodass Einladungen jetzt zuverlässig ankommen und angenommen werden können.',
       'Wer schon ein Acts2-Konto hat, muss über den Einladungslink kein neues Passwort mehr setzen — und bekommt überhaupt erst eine Mail.',
       'Bei fester Geschenk-Zuteilung ist wieder jede:r genau einmal dran. Wer neu dazukommt, bekommt nicht nur jemanden, sondern besorgt auch selbst ein Geschenk.',
-      'Sagt jemand zu oder kommt jemand neu dazu, findet ein Abend wieder statt, der mangels Zusagen von selbst ausgefallen war.',
       'Wer den Hauskreis verlassen hat, steht in keiner Auswahl und in keiner Vorschlagsliste mehr.',
       'Die App gibt beim Antippen sofort nach und zeigt oben einen Strich, solange etwas lädt — auch bei schlechter Verbindung merkt man jetzt, dass sie zugehört hat.',
     ],
@@ -50,7 +49,7 @@ export const RELEASES: readonly Release[] = [
   {
     version: '1.4.0',
     date: '2026-08-18',
-    title: 'Geburtstage — und wer das Geschenk besorgt',
+    title: 'Geburtstage und Geschenksystem',
     highlights: [
       'Neu: Geburtstage. Sie stehen im Kalender, in der Terminliste und in einem eigenen Register — sobald jemand seinen im Profil einträgt.',
       'Für jeden Geburtstag ist eine Person für das Geschenk zuständig. Der Reihe nach: Du bekommst den, dessen Geburtstag nach deinem kommt. Zwei Wochen vorher steht die Zuteilung fest.',
