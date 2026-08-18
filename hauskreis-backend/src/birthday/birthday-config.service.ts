@@ -40,23 +40,16 @@ export class BirthdayConfigService {
     });
   }
 
-  /** Der Rohzustand samt Version — für das bedingte Schreiben. */
-  async getWithVersion(hauskreisId: string) {
-    await this.get(hauskreisId);
-
-    return this.prisma.birthdayGiftConfig.findUniqueOrThrow({
-      where: { hauskreisId },
-      select: { ...configSelect, version: true },
-    });
-  }
-
   async update(
     hauskreisId: string,
     dto: UpdateBirthdayGiftConfigDto,
     personId: string,
     ifMatch?: IfMatchCondition,
   ) {
-    const current = await this.getWithVersion(hauskreisId);
+    // Legt die Zeile an, falls es sie noch nicht gibt — sonst schlüge das
+    // erste Speichern mit „gibt es nicht" fehl, obwohl die Verwaltung die
+    // Einstellungen gerade angezeigt hat.
+    const current = await this.get(hauskreisId);
 
     return updateWithVersionCheck({
       condition: ifMatch,
@@ -76,7 +69,7 @@ export class BirthdayConfigService {
       reload: () =>
         this.prisma.birthdayGiftConfig.findUniqueOrThrow({
           where: { hauskreisId },
-          select: { ...configSelect, version: true },
+          select: configSelect,
         }),
     });
   }
@@ -198,4 +191,8 @@ const configSelect = {
   freezeDays: true,
   pairingsRepairedAt: true,
   updatedBy: { select: personRefSelect },
+  // Gehört in **jede** Antwort, nicht nur in die zum Schreiben: Aus ihr baut
+  // `EtagInterceptor` den ETag, und ohne ihn kann das bedingte Schreiben nie
+  // gelingen. Siehe die Begründung am Antwort-Schema.
+  version: true,
 } as const;

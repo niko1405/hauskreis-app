@@ -12676,6 +12676,11 @@
                 ],
                 "additionalProperties": false,
                 "nullable": true
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
               }
             },
             "required": [
@@ -12683,7 +12688,8 @@
               "mode",
               "freezeDays",
               "pairingsRepairedAt",
-              "updatedBy"
+              "updatedBy",
+              "version"
             ],
             "additionalProperties": false
           }
@@ -12746,6 +12752,11 @@
             ],
             "additionalProperties": false,
             "nullable": true
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
           }
         },
         "required": [
@@ -12753,7 +12764,8 @@
           "mode",
           "freezeDays",
           "pairingsRepairedAt",
-          "updatedBy"
+          "updatedBy",
+          "version"
         ],
         "additionalProperties": false
       },
@@ -12898,6 +12910,11 @@
                 ],
                 "additionalProperties": false,
                 "nullable": true
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
               }
             },
             "required": [
@@ -12905,7 +12922,8 @@
               "mode",
               "freezeDays",
               "pairingsRepairedAt",
-              "updatedBy"
+              "updatedBy",
+              "version"
             ],
             "additionalProperties": false
           }

@@ -2083,6 +2083,7 @@ export interface components {
           /** Format: date-time */
           photoUpdatedAt: string | null;
         } | null;
+        version: number;
       };
     };
     BirthdayGiftConfigResponseDto: {
@@ -2099,6 +2100,7 @@ export interface components {
         /** Format: date-time */
         photoUpdatedAt: string | null;
       } | null;
+      version: number;
     };
     UpdateBirthdayGiftConfigDto: {
       enabled: boolean;
@@ -2137,6 +2139,7 @@ export interface components {
           /** Format: date-time */
           photoUpdatedAt: string | null;
         } | null;
+        version: number;
       };
     };
     UpdateGiftPairingsDto: {

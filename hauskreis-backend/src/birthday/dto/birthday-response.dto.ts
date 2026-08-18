@@ -69,6 +69,18 @@ export const birthdayGiftConfigResponseSchema = z.object({
   /// Wann das System eine feste Zuteilung zuletzt selbst schließen musste.
   pairingsRepairedAt: isoDateTimeOut.nullable(),
   updatedBy: personRefSchema.nullable(),
+  /**
+   * **Ohne dieses Feld gibt es keinen brauchbaren ETag.**
+   *
+   * `EtagInterceptor` setzt `W/"<version>"` nur, wenn die *serialisierte*
+   * Antwort ein `version` trägt — und serialisiert wird gegen dieses Schema.
+   * Fehlte es, bliebe Express' eigener Inhalts-Hash stehen (`W/"a3-…"`), den
+   * `parseEtagVersion` nicht als Version erkennt. Das Ergebnis war kein
+   * Fehler beim Lesen, sondern einer beim **Schreiben**: Der Client schickt
+   * den Hash als `If-Match`, die Bedingung passt auf keine Version, und die
+   * Verwaltung meldete „jemand war schneller" — obwohl niemand sonst da war.
+   */
+  version: z.int().nonnegative(),
 });
 
 /**
