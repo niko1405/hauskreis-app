@@ -53,6 +53,26 @@ const BRAUCHT_UEBERTHEMA =
   'Dafür braucht es erst ein Überthema — gib der Einheit einen, dann kommen weitere dazu.';
 
 /**
+ * „Hängt nicht an diesem Abend" — und ein Entwurf hängt an keinem.
+ *
+ * Ausgeschrieben, weil es die kurze Fassung nicht gibt: `NOT: { meetingId }`
+ * wird zu `NOT (meeting_id = $1)`, `meetingId: { not: … }` zu
+ * `meeting_id <> $1`. Beides ist für eine leere Spalte NULL und damit **nicht
+ * wahr** — die Zeile fällt heraus. Betroffen war ausgerechnet der Normalfall:
+ * die im Archiv vorbereitete Einheit, die an keinem Abend hängt, stand in der
+ * Auswahl nicht zur Wahl.
+ *
+ * Prisma setzt den NULL-Schutz von selbst, aber nur über **Relationen** (dort
+ * steht ein `IS NOT NULL` im Join). Für eine Fremdschlüssel-Spalte tut es das
+ * nicht.
+ */
+export const nichtAnDiesemAbend = (
+  meetingId: string,
+): Prisma.TopicSessionWhereInput => ({
+  OR: [{ meetingId: null }, { meetingId: { not: meetingId } }],
+});
+
+/**
  * Zuteilung und Auswahl beim Thema — die beiden Schritte, die bis eben einer
  * waren.
  *
@@ -225,9 +245,9 @@ export class TopicSessionService {
             { responsibles: { some: { personId } } },
           ],
           // Was schon an diesem Abend hängt, steht nicht zur Wahl — es ist die
-          // Wahl. `meetingId` und nicht die Relation: der NULL-Fall soll
-          // durchkommen, und über `meeting` verschluckt SQL ihn.
-          NOT: { meetingId },
+          // Wahl. Als eigener `AND`-Zweig, weil das `OR` darüber schon vergeben
+          // ist und beide Bedingungen gelten müssen.
+          AND: [nichtAnDiesemAbend(meetingId)],
         },
         select: {
           id: true,

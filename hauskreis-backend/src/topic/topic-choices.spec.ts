@@ -165,8 +165,9 @@ describe('choices', () => {
     });
 
     /**
-     * Über `meetingId` und nicht über die Relation: `meeting is not null` würde
-     * jeden Entwurf mit wegwerfen, und die sind der Normalfall.
+     * Ausgeschrieben und nicht als `NOT`: Die kurze Fassung wirft in SQL jeden
+     * Entwurf mit weg, und die sind der Normalfall. Warum, steht in
+     * `topic-choices-sql.spec.ts` — dort auch der Beweis, dass es so bleibt.
      */
     it('schließt den eigenen Abend aus, ohne die Entwürfe zu verlieren', async () => {
       const { service, sessionFind } = setup([]);
@@ -174,7 +175,9 @@ describe('choices', () => {
       await service.choices('hk', 'm1', 'p1');
 
       expect(sessionFind.mock.calls[0][0]).toMatchObject({
-        where: { NOT: { meetingId: 'm1' } },
+        where: {
+          AND: [{ OR: [{ meetingId: null }, { meetingId: { not: 'm1' } }] }],
+        },
       });
     });
 
