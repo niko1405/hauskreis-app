@@ -17,6 +17,7 @@ import {
   CreateTopicDto,
   CreateTopicSessionDto,
   ListTopicsQueryDto,
+  NameTopicDto,
   TopicCollaboratorParamsDto,
   TopicParamsDto,
   TopicSessionParamsDto,
@@ -37,7 +38,7 @@ import {
 import {
   TopicPageResponseDto,
   TopicResponseDto,
-  TopicSessionResponseDto,
+  TopicSessionDetailDto,
 } from './dto/topic-response.dto';
 import { ReminderRunResultResponseDto } from '../meeting/dto/meeting-response.dto';
 import { viewerOf } from './topic-shape';
@@ -179,7 +180,7 @@ export class TopicController {
    * Sie taucht danach beim Wählen unter „Angefangenes" auf.
    */
   @Post('topics/:id/sessions')
-  @ApiZodResponse(TopicSessionResponseDto, { status: HttpStatus.CREATED })
+  @ApiZodResponse(TopicSessionDetailDto, { status: HttpStatus.CREATED })
   async createSession(
     @Param() params: TopicParamsDto,
     @Body() dto: CreateTopicSessionDto,
@@ -193,8 +194,52 @@ export class TopicController {
     );
   }
 
+  /**
+   * Eine **einzelne** Einheit anlegen — ohne Thema, ohne Abend.
+   *
+   * Der zweite Weg neben `POST topics`: Nicht jeder Abend spannt einen Bogen,
+   * und ein Thema zu erfinden, das nie ein zweites Mal vorkommt, ist keine
+   * Vorbereitung, sondern Buchhaltung.
+   */
+  @Post('topic-sessions')
+  @ApiZodResponse(TopicSessionDetailDto, { status: HttpStatus.CREATED })
+  async createStandaloneSession(
+    @Param() params: HauskreisParamsDto,
+    @Body() dto: CreateTopicSessionDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.sessions.createStandaloneSession(
+      params.hauskreisId,
+      dto,
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
+    );
+  }
+
+  /**
+   * Das Überthema: aus einer einzelnen Einheit wird ein Thema.
+   *
+   * Kein `If-Match`. Der Aufruf ändert nichts, was zwei Menschen verschieden
+   * ausfüllen könnten — er beantwortet die Frage „gehört das zu etwas
+   * Größerem?" mit ja, und zwar genau einmal: Ein zweiter Aufruf trifft kein
+   * `standalone: true` mehr und endet in einem 409.
+   */
+  @Patch('topic-sessions/:sessionId/topic')
+  @ApiZodResponse(TopicSessionDetailDto)
+  async nameTopic(
+    @Param() params: TopicSessionParamsDto,
+    @Body() dto: NameTopicDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.sessions.nameTopic(
+      params.hauskreisId,
+      params.sessionId,
+      dto.title,
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
+    );
+  }
+
   @Get('topic-sessions/:sessionId')
-  @ApiZodResponse(TopicSessionResponseDto)
+  @ApiZodResponse(TopicSessionDetailDto)
   async findSession(
     @Param() params: TopicSessionParamsDto,
     @CurrentMembership() membership: HauskreisMembership,
@@ -208,7 +253,7 @@ export class TopicController {
 
   /** Titel, Actionstep und Zusammenfassung eines einzelnen Abends. */
   @Patch('topic-sessions/:sessionId')
-  @ApiZodResponse(TopicSessionResponseDto)
+  @ApiZodResponse(TopicSessionDetailDto)
   @ApiConditionalWrite()
   async updateSession(
     @Param() params: TopicSessionParamsDto,

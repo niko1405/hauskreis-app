@@ -12,6 +12,7 @@ import {
   membershipOf,
   shapeTopic,
   topicInclude,
+  topicMembershipSelect,
   topicScopeWhere,
   type Viewer,
 } from './topic-shape';
@@ -280,15 +281,11 @@ export class TopicService {
   }
 
   private async load(hauskreisId: string, id: string) {
+    // Dasselbe `select` wie überall, wo nach einem Recht gefragt wird — es hier
+    // noch einmal auszuschreiben hieße, jede neue Spalte zweimal nachzutragen.
     const topic = await this.prisma.topic.findFirst({
       where: { id, hauskreisId },
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        ownerPersonId: true,
-        collaborators: { select: { personId: true } },
-      },
+      select: topicMembershipSelect,
     });
 
     if (!topic) {

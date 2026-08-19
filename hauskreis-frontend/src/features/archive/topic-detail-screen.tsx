@@ -21,8 +21,8 @@
  */
 import {
   ArrowLeft,
-  ArrowUpRight,
   Check,
+  Footprints,
   Pencil,
   Plus,
   Trash2,
@@ -33,10 +33,15 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button, IconButton } from '@/components/ui/button';
+import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
-import { InlineEdit, TextArea, TextInput } from '@/components/ui/field';
+import {
+  FieldLabel,
+  InlineEdit,
+  TextArea,
+  TextInput,
+} from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import {
   CardSkeleton,
@@ -44,18 +49,16 @@ import {
   ErrorState,
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
-import { ActionstepCheck } from '@/components/domain/actionstep-check';
 import { errorMessage } from '@/lib/api/errors';
 import {
   useCreateTopicSession,
   useDeleteTopic,
-  useDeleteTopicSession,
-  useEditTopicSession,
   useRemoveCollaborator,
   useTopic,
   useUpdateTopic,
 } from '@/lib/api/hooks';
-import { formatDay, hasStarted } from '@/lib/date';
+import { formatDay } from '@/lib/date';
+import { cn } from '@/lib/cn';
 import { namesOf } from '@/lib/person';
 import type { Topic, TopicSessionInTopic } from '@/lib/api/types';
 
@@ -180,18 +183,16 @@ function Loaded({ topic }: { topic: Topic }) {
       <People topic={topic} editing={editing} />
 
       {gehalten.length > 0 && (
-        <SessionList
-          title="Abende"
-          sessions={gehalten}
-          editing={darfSchreiben}
-        />
+        <SessionList title="Einheiten" sessions={gehalten} von={1} />
       )}
 
       {kommend.length > 0 && (
         <SessionList
           title="Steht noch bevor"
           sessions={kommend}
-          editing={darfSchreiben}
+          // Die Nummerierung läuft über die Abschnitte hinweg weiter: sie zählt
+          // die Abende des Themas, nicht die Zeilen dieser Liste.
+          von={gehalten.length + 1}
         />
       )}
 
@@ -202,7 +203,7 @@ function Loaded({ topic }: { topic: Topic }) {
           title="Angefangen, noch ohne Abend"
           hint="Sichtbar nur für dich und alle, die am Thema mitarbeiten. Beim Wählen an einem Termin lässt sich das hier aufnehmen."
           sessions={entwuerfe}
-          editing={darfSchreiben}
+          von={gehalten.length + kommend.length + 1}
           action={
             darfSchreiben ? (
               <button
@@ -327,28 +328,46 @@ function People({ topic, editing }: { topic: Topic; editing: boolean }) {
     </section>
   );
 }
-
+/**
+ * Die Einheiten als Zeitstrahl.
+ *
+ * Vorher war jede eine Karte mit drei Feldern darin. Das war bequem — man
+ * konnte alles an einem Ort ändern — und machte die Liste als Liste unbrauchbar:
+ * Bei vier Abenden musste man scrollen, um zu sehen, dass es vier sind, und die
+ * Reihenfolge, die ein Thema ja ausmacht, ging zwischen den Feldern unter.
+ *
+ * Jetzt trägt jede Zeile nur, was man beim Überfliegen braucht, und der Inhalt
+ * steht auf ihrer eigenen Seite. Die Nummern an der Linie sind der Punkt: Sie
+ * sagen, dass hier etwas aufeinander folgt.
+ */
 function SessionList({
   title,
   hint,
   sessions,
-  editing,
+  /** Womit die Nummerierung anfängt — die Liste ist über drei Abschnitte verteilt. */
+  von,
   action,
 }: {
   title: string;
   hint?: string;
   sessions: TopicSessionInTopic[];
-  editing: boolean;
+  von: number;
   action?: React.ReactNode;
 }) {
   return (
     <section>
       <SectionTitle>{title}</SectionTitle>
       {hint && <p className="mb-2 text-xs text-stone-400">{hint}</p>}
-      <ul className="space-y-3">
-        {sessions.map((session) => (
+      <ul>
+        {sessions.map((session, index) => (
           <li key={session.id}>
-            <SessionCard session={session} editing={editing} />
+            <SessionRow
+              session={session}
+              nummer={von + index}
+              /* Die Linie verbindet zwei Punkte; nach dem letzten gibt es
+                 nichts mehr zu verbinden. */
+              letzte={index === sessions.length - 1}
+            />
           </li>
         ))}
       </ul>
@@ -360,179 +379,82 @@ function SessionList({
 }
 
 /**
- * Eine Einheit — im Lesemodus eine Kachel, im Bearbeitungsmodus drei Felder.
+ * Eine Zeile am Zeitstrahl.
  *
- * Dass hier geschrieben werden darf, sagt der Server über `session.mayEdit`; es
- * gibt keine zweite Regel, die mit der am Termin auseinanderlaufen könnte.
- * Gelöscht wird nur, was noch nicht war — ein gehaltener Abend ist das
- * Protokoll dessen, was war, und geht nur mit dem ganzen Thema.
+ * Der Weg hinein führt auf die eigene Seite der Einheit — auch aus dem
+ * Bearbeitungsmodus heraus. Zwei Orte, an denen sich derselbe Text ändern
+ * lässt, sind einer zu viel; hier steht, *dass* es sie gibt, dort, was drin
+ * steht.
  */
-function SessionCard({
+function SessionRow({
   session,
-  editing,
+  nummer,
+  letzte,
 }: {
   session: TopicSessionInTopic;
-  editing: boolean;
+  nummer: number;
+  letzte: boolean;
 }) {
-  const toast = useToast();
-  const confirm = useConfirm();
-  const edit = useEditTopicSession();
-  const remove = useDeleteTopicSession();
-
-  const darf = editing && session.mayEdit;
-  const leute = session.responsibles.map((r) => r.person);
-
-  // Erst ab Abendbeginn: einen Vorsatz für heute Abend hakt man heute früh
-  // nicht ab, und ein Entwurf hat gar keinen Abend, an dem der Haken hinge.
-  //
-  // Nicht mehr `session.held` — das ist tagesgenau und hätte den Haken hier
-  // erst am **Tag darauf** freigegeben, während er auf der Terminseite schon
-  // am Abend selbst dasteht. Zweimal derselbe Vorsatz, zweimal derselbe Haken;
-  // dann auch zweimal dieselbe Grenze. Ein abgesagter Abend hat keine.
-  const abhakbar = Boolean(
-    session.meeting &&
-    session.meeting.status !== 'CANCELLED' &&
-    hasStarted(session.meeting.date, session.meeting.startTime) &&
-    session.actionstepText,
-  );
-
-  const patch = (input: Parameters<typeof edit.mutate>[0]['input']) =>
-    edit.mutate(
-      { sessionId: session.id, input },
-      { onError: (error) => toast.error(errorMessage(error)) },
-    );
-
-  const loeschen = async () => {
-    const ok = await confirm({
-      title: `„${session.title ?? 'Diese Einheit'}" löschen?`,
-      body: session.meeting
-        ? 'Der Abend steht danach wieder ohne Thema da — wer dafür zuständig ist, bleibt es.'
-        : 'Der Entwurf verschwindet samt allem, was darin steht.',
-      confirmLabel: 'Löschen',
-      tone: 'danger',
-    });
-    if (!ok) return;
-
-    remove.mutate(session.id, {
-      onSuccess: () => toast.success('Einheit gelöscht.'),
-    });
-  };
+  const leute = session.responsibles.map((row) => row.person);
 
   return (
-    <Card
-      className={
-        darf ? undefined : 'transition-colors hover:border-line-strong'
-      }
+    <Link
+      href={`/einheit?id=${session.id}`}
+      className={cn('group flex gap-3', PRESSABLE)}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <InlineEdit
-            label="Titel der Einheit"
-            value={session.title}
-            emptyLabel="Ohne eigenen Titel"
-            placeholder="Worum geht es an diesem Abend?"
-            className="font-serif text-sm font-bold text-stone-900"
-            saving={edit.isPending}
-            onSave={darf ? (title) => patch({ title }) : undefined}
-          />
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1">
-          {session.meeting && (
-            <Link
-              href={`/termin?id=${session.meeting.id}`}
-              className="inline-flex items-center gap-1 text-[10px] font-bold tracking-widest text-stone-400 uppercase hover:text-terracotta-600"
-            >
-              {formatDay(session.meeting.date)}
-              <ArrowUpRight className="size-3" />
-            </Link>
+      {/* Die Spur: Punkt und Linie. Sie gehört nicht in die Karte, sondern
+          neben sie — sonst hörte sie an jeder Kante auf. */}
+      <div className="flex w-6 shrink-0 flex-col items-center">
+        <span
+          className={cn(
+            'mt-3 flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold',
+            session.held
+              ? 'bg-terracotta-500 text-white'
+              : 'border border-line-strong bg-card text-stone-400',
           )}
-          {/* Gehaltenes bleibt: dafür gibt es hier keinen Knopf. */}
-          {darf && !session.held && (
-            <IconButton
-              label="Einheit löschen"
-              disabled={remove.isPending}
-              onClick={loeschen}
-            >
-              <Trash2 size={13} />
-            </IconButton>
-          )}
-        </div>
+        >
+          {nummer}
+        </span>
+        {!letzte && <span className="w-px flex-1 bg-line" />}
       </div>
 
-      {leute.length > 0 && (
-        <p className="mt-0.5 text-[11px] text-stone-400">
-          {session.held ? 'gehalten von' : 'vorbereitet von'} {namesOf(leute)}
-        </p>
-      )}
+      <div className="min-w-0 flex-1 pb-3">
+        <div className="rounded-lg border border-line bg-card p-3 transition-colors group-hover:border-line-strong">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="min-w-0 flex-1 truncate font-serif text-sm font-bold text-stone-900">
+              {session.title ?? 'Ohne eigenen Titel'}
+            </p>
+            <span className="shrink-0 text-[11px] font-medium text-stone-400">
+              {session.meeting ? formatDay(session.meeting.date) : 'offen'}
+            </span>
+          </div>
 
-      {darf ? (
-        <div className="mt-3 space-y-3">
-          <div>
-            <FieldLabel>Zusammenfassung</FieldLabel>
-            <InlineEdit
-              label="Zusammenfassung"
-              multiline
-              value={session.summaryText}
-              emptyLabel="Noch nichts"
-              saving={edit.isPending}
-              onSave={(summaryText) => patch({ summaryText })}
-            />
-          </div>
-          <div>
-            <FieldLabel>Actionstep</FieldLabel>
-            <InlineEdit
-              label="Actionstep"
-              value={session.actionstepText}
-              emptyLabel="Noch keiner"
-              saving={edit.isPending}
-              onSave={(actionstepText) => patch({ actionstepText })}
-            />
-            {abhakbar && (
-              <ActionstepCheck
-                meetingId={session.meeting!.id}
-                done={session.actionstepDone}
-              />
-            )}
-          </div>
-        </div>
-      ) : (
-        <>
-          {session.summaryText && (
-            <p className="mt-2 text-xs leading-relaxed text-stone-500">
-              {session.summaryText}
+          {leute.length > 0 && (
+            <p className="mt-0.5 truncate text-[11px] text-stone-400">
+              {session.held ? 'gehalten von' : 'vorbereitet von'}{' '}
+              {namesOf(leute)}
             </p>
           )}
 
+          {/* Nur, *dass* es einen gibt. Der Text steht auf der eigenen Seite —
+              hier wären es zwei Zeilen, die jede Übersicht wieder auffressen. */}
           {session.actionstepText && (
-            <div className="mt-2 rounded-md bg-terracotta-50/60 px-2.5 py-1.5">
-              <p className="text-[11px] font-semibold text-terracotta-700">
-                Actionstep: {session.actionstepText}
-              </p>
-            </div>
-          )}
-
-          {/* Abhaken darf jede:r für sich, auch wer den Text nicht ändern
-              darf — es ist der eigene Vorsatz. Deshalb steht der Block in
-              beiden Zweigen. */}
-          {abhakbar && (
-            <ActionstepCheck
-              meetingId={session.meeting!.id}
-              done={session.actionstepDone}
-            />
+            <p className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-terracotta-700">
+              <Footprints size={11} />
+              Actionstep
+            </p>
           )}
 
           {!session.contentVisible && (
-            <p className="mt-2 text-xs text-stone-400">
+            <p className="mt-1 text-[11px] text-stone-400">
               Zu sehen gibt es das am Abend.
             </p>
           )}
-        </>
-      )}
-    </Card>
+        </div>
+      </div>
+    </Link>
   );
 }
-
 /** Titel ist Pflicht: ein Entwurf ohne Abend hat nichts als seinen Titel. */
 function CreateSessionSheet({
   topicId,
@@ -629,13 +551,5 @@ function CreateSessionSheet({
         />
       </div>
     </Sheet>
-  );
-}
-
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-stone-500 uppercase">
-      {children}
-    </p>
   );
 }

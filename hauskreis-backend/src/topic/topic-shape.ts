@@ -107,6 +107,10 @@ export const topicMembershipSelect = {
   id: true,
   title: true,
   status: true,
+  // Nicht fürs Recht, sondern für die Frage davor: An einer Hülle darf keine
+  // zweite Einheit entstehen, und wer das prüft, hat ohnehin schon dieses
+  // `select` in der Hand.
+  standalone: true,
   ownerPersonId: true,
   collaborators: { select: { personId: true } },
 } satisfies Prisma.TopicSelect;
@@ -187,6 +191,7 @@ type TopicRow = {
   id: string;
   title: string | null;
   status: string;
+  standalone: boolean;
   ownerPersonId: string | null;
   collaborators: readonly { personId: string }[];
 };
@@ -248,6 +253,11 @@ export function shapeSession(
       id: topic.id,
       title: visible ? topic.title : null,
       status: topic.status,
+      // Ohne Vorbehalt, und das ist Absicht: *dass* es kein Thema darüber gibt,
+      // verrät nichts darüber, worum es geht. Die Anzeige braucht es dagegen
+      // vor dem Abend — sonst stünde dort „Zugehöriges Thema" über einer
+      // Einheit, die keins hat.
+      standalone: topic.standalone,
     },
     meetingId: session.meetingId,
     meeting: session.meeting
@@ -305,6 +315,7 @@ export function shapeTopic(topic: FullTopicRow, viewer: Viewer) {
     title: topic.title,
     summaryText: topic.summaryText,
     status: topic.status,
+    standalone: topic.standalone,
     createdAt: topic.createdAt,
     updatedAt: topic.updatedAt,
     version: topic.version,

@@ -14,6 +14,10 @@ export const topicRefSchema = z.object({
   id: z.uuid(),
   title: z.string().nullable(),
   status: z.enum(TopicStatus),
+  /// Wahr heißt: Es gibt hier gar kein Thema, nur diese eine Einheit. Der
+  /// Datensatz existiert trotzdem — er trägt Owner und Mitarbeitende (siehe
+  /// `Topic.standalone` im Schema). Wer ihn anzeigt, zeigt ihn nicht an.
+  standalone: z.boolean(),
 });
 
 /**
@@ -99,6 +103,23 @@ export const topicSessionInMeetingSchema = topicSessionResponseSchema
   });
 
 /**
+ * Die Einheit für sich allein — mit ihrer Stelle im Thema.
+ *
+ * Die beiden Zahlen stehen hier und nicht in `topicSessionResponseSchema`, weil
+ * sie nur dort einen Sinn haben, wo die Einheit **ohne** ihre Geschwister
+ * angezeigt wird: auf ihrem eigenen Bildschirm. In der Liste unter einem Thema
+ * zählt man selbst, und in der Terminansicht steht es schon in
+ * `topicSessionInMeetingSchema`.
+ *
+ * Bei einer alleinstehenden Einheit steht dort `1 von 1` — richtig, aber nichts,
+ * was man hinschreiben müsste; die Anzeige liest `topic.standalone`.
+ */
+export const topicSessionDetailSchema = topicSessionResponseSchema.extend({
+  sessionIndex: z.number().int().positive(),
+  sessionCount: z.number().int().positive(),
+});
+
+/**
  * Ein Stoff, den die Gruppe durcharbeitet.
  *
  * Nicht an einen Abend gebunden: ein Thema zieht sich über beliebig viele
@@ -111,6 +132,10 @@ export const topicResponseSchema = z.object({
   title: z.string().nullable(),
   summaryText: z.string().nullable(),
   status: z.enum(TopicStatus),
+  /// Nur die Hülle einer einzelnen Einheit — dann steht in `title` nichts und
+  /// in `sessions` genau eine. Die Archivliste unterscheidet daran, ob sie ein
+  /// Thema oder eine Einheit vor sich hat.
+  standalone: z.boolean(),
   createdAt: isoDateTimeOut,
   updatedAt: isoDateTimeOut,
   version: z.number().int().nonnegative(),
@@ -135,29 +160,50 @@ export const topicResponseSchema = z.object({
 });
 
 /**
- * Eine offene Einheit — angefangen, aber noch nicht gehalten.
+ * Eine einzelne Einheit — eine ohne Thema darüber.
  *
- * `meeting` ist der Abend, an dem sie **gerade** hängt. `null` ist der Normalfall
- * eines Entwurfs. Steht dort ein Termin, kostet das Aufnehmen jenen Abend seine
+ * `meeting` ist der Abend, an dem sie **gerade** hängt; `null` heißt, sie wartet
+ * noch. Steht dort ein Termin, kostet das Hierherholen jenen Abend seine
  * Auswahl — deshalb kommt er mit: die Rückfrage („Die hängt am 18.08. —
- * wegnehmen?") braucht ihn. Ein **vergangener** Abend steht hier nie.
+ * wegnehmen?") braucht ihn.
+ *
+ * Zwei Flaggen statt einer, weil an ihnen zwei verschiedene Angebote hängen:
+ *
+ * - `resumable` — sie lässt sich **hierher holen**. Wahr, solange kein Abend
+ *   dranhängt oder der noch bevorsteht; danach ist die Einheit das Protokoll
+ *   eines Abends, der war.
+ * - `held` — der Abend war und fiel nicht aus. Nur zum Anzeigen: „am 12.08.
+ *   gehalten" liest sich anders als „hängt am 26.08.".
+ *
+ * Was schon war, steht also weiter in der Liste — nicht zum Nehmen, sondern zum
+ * **Fortsetzen**: Aus einer gehaltenen Einheit lässt sich ein Thema machen, und
+ * das ist der häufigere Fall.
  */
-export const openTopicSessionSchema = z.object({
+export const singleTopicSessionSchema = z.object({
   id: z.uuid(),
   title: z.string().nullable(),
   createdAt: isoDateTimeOut,
   meeting: z
     .object({ id: z.uuid(), date: isoDateOut, title: z.string().nullable() })
     .nullable(),
+  resumable: z.boolean(),
+  held: z.boolean(),
 });
 
 /**
- * Was jemand wählen kann, der für einen Abend zugeteilt ist (Spec §3).
+ * Was jemand wählen kann, der für einen Abend zugeteilt ist.
  *
- * Option A („neues Thema") braucht keine Daten und steht deshalb nicht hier.
+ * Zwei Listen entlang der Trennlinie, um die es hier geht: ein Thema über
+ * mehreren Abenden, oder ein Abend für sich. Neu anfangen braucht keine Daten
+ * und steht deshalb nicht hier.
+ *
+ * Themen-gebundene Entwürfe fehlen mit Absicht: Sie hängen unter ihrem Thema
+ * und stehen dort, wo man es öffnet. Eine eigene Liste daneben zeigte dieselben
+ * Zeilen zweimal.
  */
 export const topicChoicesResponseSchema = z.object({
-  /// B) Eigene Themen, laufende zuerst.
+  /// Eigene Themen, laufende zuerst. Hüllen fallen heraus — sie tragen genau
+  /// eine Einheit und keinen Titel und stünden hier als Zeile ohne Aussage.
   topics: z.array(
     topicRefSchema.extend({
       sessionCount: z.number().int().nonnegative(),
@@ -165,15 +211,9 @@ export const topicChoicesResponseSchema = z.object({
       lastHeldAt: isoDateOut.nullable(),
     }),
   ),
-  /// C) Eigene offene Einheiten, nach Thema gebündelt. Die Gruppe ist die
-  /// Einheit der Anzeige: „Vergebung — Teil 2, Teil 3" liest sich als ein Faden,
-  /// drei lose Zeilen tun das nicht.
-  openSessions: z.array(
-    z.object({
-      topic: topicRefSchema,
-      sessions: z.array(openTopicSessionSchema),
-    }),
-  ),
+  /// Die eigenen einzelnen Einheiten — die offenen zum Nehmen, die gehaltenen
+  /// zum Fortsetzen. Was schon an *diesem* Abend hängt, steht nicht dabei.
+  singleSessions: z.array(singleTopicSessionSchema),
 });
 
 /** Wer an einem Abend das Thema vorbereitet. */
@@ -185,6 +225,9 @@ export const topicResponsiblesResponseSchema = z.object({
 export class TopicResponseDto extends createZodDto(topicResponseSchema) {}
 export class TopicSessionResponseDto extends createZodDto(
   topicSessionResponseSchema,
+) {}
+export class TopicSessionDetailDto extends createZodDto(
+  topicSessionDetailSchema,
 ) {}
 export class TopicChoicesResponseDto extends createZodDto(
   topicChoicesResponseSchema,

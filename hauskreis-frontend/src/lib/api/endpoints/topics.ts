@@ -24,6 +24,7 @@ import type { TopicListParams } from '../params';
 import type {
   CreateTopicInput,
   CreateTopicSessionInput,
+  NameTopicInput,
   Page,
   ReminderRunResult,
   Topic,
@@ -108,6 +109,38 @@ export function createTopicSession(
   return apiPost<TopicSession>(
     `${base(hauskreisId)}/${topicId}/sessions`,
     input,
+  );
+}
+
+/**
+ * Eine **einzelne** Einheit anlegen — ohne Thema und ohne Abend.
+ *
+ * Nicht jeder Abend spannt einen Bogen. Wer nur einen vorbereiten will, sollte
+ * kein Thema erfinden müssen, das nie ein zweites Mal vorkommt.
+ */
+export function createStandaloneSession(
+  hauskreisId: string,
+  input: CreateTopicSessionInput,
+): Promise<TopicSession> {
+  return apiPost<TopicSession>(sessions(hauskreisId), input);
+}
+
+/**
+ * Das Überthema: aus einer einzelnen Einheit wird ein Thema.
+ *
+ * Ohne ETag, weil der Aufruf nichts überschreibt, das zwei Menschen verschieden
+ * ausfüllen könnten — ein zweiter endet im Konflikt statt in einem zweiten
+ * Titel.
+ */
+export function nameTopic(
+  hauskreisId: string,
+  sessionId: string,
+  input: NameTopicInput,
+): Promise<Resource<TopicSession>> {
+  return apiPatch<TopicSession>(
+    `${sessions(hauskreisId)}/${sessionId}/topic`,
+    input,
+    { etag: undefined },
   );
 }
 

@@ -92,13 +92,22 @@ export const createTopicSessionSchema = z.object({
  */
 export const chooseTopicSessionSchema = z
   .object({
-    mode: z.enum(['new', 'existing', 'resume']),
-    /// Bei `new` der Titel des Themas, bei `existing` der des Abends. Beide Male
-    /// optional — den Titel trägt ein, wer sich vorbereitet, und das ist nicht
-    /// immer schon im Moment der Wahl.
+    /// `new` — neues Thema samt erstem Abend. `existing` — ein eigenes Thema
+    /// fortsetzen. `resume` — eine offene Einheit hierher holen. `single` —
+    /// eine einzelne Einheit ohne Thema. `promote` — aus einer einzelnen
+    /// Einheit ein Thema machen und diesen Abend als zweite anhängen.
+    mode: z.enum(['new', 'existing', 'resume', 'single', 'promote']),
+    /// Bei `new` der Titel des Themas, sonst der des Abends. Immer optional —
+    /// den Titel trägt ein, wer sich vorbereitet, und das ist nicht immer schon
+    /// im Moment der Wahl.
     title: z.string().trim().min(1).max(200).nullish(),
-    /// Nur bei `existing`: das Anlege-Sheet fragt beides ab, und sie hinterher
-    /// nachzuschieben ließe den Abend kurz mit einer leeren Einheit dastehen.
+    /// Nur bei `promote`, und dort **Pflicht**: der Bogen, den die beiden
+    /// Abende von jetzt an spannen. Ohne ihn wäre es kein Thema, sondern zwei
+    /// Abende — genau der Zustand, aus dem man gerade herauswill.
+    topicTitle: z.string().trim().min(1).max(200).optional(),
+    /// Bei `existing`, `single` und `promote`: das Anlege-Sheet fragt beides ab,
+    /// und sie hinterher nachzuschieben ließe den Abend kurz mit einer leeren
+    /// Einheit dastehen.
     actionstepText: z.string().trim().min(1).max(2000).nullish(),
     summaryText: z.string().trim().min(1).max(5000).nullish(),
     topicId: z.uuid().optional(),
@@ -113,14 +122,36 @@ export const chooseTopicSessionSchema = z
       });
     }
 
-    if (value.mode === 'resume' && !value.sessionId) {
+    if (
+      (value.mode === 'resume' || value.mode === 'promote') &&
+      !value.sessionId
+    ) {
       ctx.addIssue({
         code: 'custom',
         path: ['sessionId'],
-        message: 'Bei mode=resume wird sessionId gebraucht',
+        message: `Bei mode=${value.mode} wird sessionId gebraucht`,
+      });
+    }
+
+    if (value.mode === 'promote' && !value.topicTitle) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['topicTitle'],
+        message: 'Bei mode=promote wird topicTitle gebraucht',
       });
     }
   });
+
+/**
+ * Das Überthema für eine bisher alleinstehende Einheit.
+ *
+ * Ein einziges Feld, und der Titel ist Pflicht: Ein Thema, das keinen hat, ist
+ * von einer Hülle nicht zu unterscheiden — und dann hätte der Knopf nichts
+ * getan.
+ */
+export const nameTopicSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+});
 
 /**
  * Wer an diesem Abend das Thema vorbereitet — ersetzt die Liste.
@@ -160,6 +191,7 @@ export class UpdateTopicSessionDto extends createZodDto(
 export class CreateTopicSessionDto extends createZodDto(
   createTopicSessionSchema,
 ) {}
+export class NameTopicDto extends createZodDto(nameTopicSchema) {}
 export class ChooseTopicSessionDto extends createZodDto(
   chooseTopicSessionSchema,
 ) {}

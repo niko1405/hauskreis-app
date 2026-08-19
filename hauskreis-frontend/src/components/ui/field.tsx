@@ -14,6 +14,21 @@ const CONTROL =
   'placeholder:text-stone-300 focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 focus:outline-none ' +
   'disabled:bg-stone-50 disabled:text-stone-400';
 
+/**
+ * Die Überschrift über einem Feld, das kein `Field` ist.
+ *
+ * `Field` bringt sein Label selbst mit — hier geht es um die Stellen, an denen
+ * unter der Überschrift ein `InlineEdit` steht statt eines Eingabefelds. Stand
+ * dreimal wortgleich in drei Dateien; beim vierten Aufrufer war es Zeit.
+ */
+export function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-stone-500 uppercase">
+      {children}
+    </p>
+  );
+}
+
 export function Field({
   label,
   hint,

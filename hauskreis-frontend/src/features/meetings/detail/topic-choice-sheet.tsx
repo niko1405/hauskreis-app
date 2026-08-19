@@ -10,17 +10,32 @@
  *
  * Die Schritte:
  *
- * 1. `root` — neu anfangen, etwas Angefangenes aufnehmen, oder ein eigenes
- *    Thema öffnen.
+ * 1. `root` — drei Abschnitte entlang der einen Frage, um die es hier geht:
+ *    ein **Abend für sich**, ein **Thema** über mehreren, oder aus einem
+ *    einzelnen Abend eins **machen**.
  * 2. `topic` — dessen Abende, mit „gehalten" und „offen"; offene lassen sich
  *    direkt nehmen, darunter geht es zu einer neuen Einheit.
- * 3. `create` — Titel, Actionstep, Zusammenfassung und mit wem zusammen.
- * 4. `people` — der Personen-Picker aus der Rollenzuteilung. Er ist hier eine
+ * 3. `promote` — das Überthema für eine bisher alleinstehende Einheit, und
+ *    gleich die zweite dazu.
+ * 4. `create` — Titel, Actionstep, Zusammenfassung und mit wem zusammen.
+ * 5. `people` — der Personen-Picker aus der Rollenzuteilung. Er ist hier eine
  *    **Abkürzung**: was er einträgt, ist die Rolle „Thema" an diesem Abend, und
  *    daraus macht der Server die Mitwirkenden. So gibt es genau einen Weg,
  *    Mitarbeiter:in eines Themas zu werden.
+ *
+ * **Themen-gebundene Entwürfe stehen nicht im `root`.** Sie hängen unter ihrem
+ * Thema und stehen in Schritt 2, wo man es öffnet; eine eigene Liste daneben
+ * zeigte dieselben Zeilen ein zweites Mal.
  */
-import { ArrowLeft, Check, Info, Pencil, Plus, Sparkles } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  FileText,
+  Info,
+  Layers,
+  Plus,
+  Sparkles,
+} from 'lucide-react';
 import { useState } from 'react';
 import { AssignmentPicker } from '@/components/domain/assignment-picker';
 import { AvatarStack } from '@/components/ui/avatar';
@@ -29,7 +44,7 @@ import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/components/ui/confirm';
 import { TextArea, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
-import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
+import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
 import {
@@ -41,8 +56,8 @@ import {
 import { formatDay, isPast } from '@/lib/date';
 import type {
   ChooseTopicSessionInput,
-  OpenTopicSession,
   PersonRef,
+  SingleTopicSession,
   TopicChoiceTopic,
   TopicSessionInTopic,
 } from '@/lib/api/types';
@@ -50,6 +65,7 @@ import type {
 type Step =
   | { name: 'root' }
   | { name: 'topic'; topicId: string; title: string | null }
+  | { name: 'promote'; sessionId: string; sessionTitle: string | null }
   | { name: 'create'; topicId: string; title: string | null }
   | { name: 'people'; topicId: string; title: string | null };
 
@@ -121,7 +137,7 @@ export function TopicChoiceSheet({
    */
   const aufnehmen = async (
     session: { id: string; title: string | null },
-    meeting: OpenTopicSession['meeting'],
+    meeting: SingleTopicSession['meeting'],
   ) => {
     if (meeting) {
       const ok = await confirm({
@@ -180,6 +196,27 @@ export function TopicChoiceSheet({
     );
   }
 
+  if (step.name === 'promote') {
+    return (
+      <PromoteStep
+        sessionTitle={step.sessionTitle}
+        saving={choose.isPending}
+        onBack={() => setStep({ name: 'root' })}
+        onPromote={(topicTitle, title) =>
+          waehlen(
+            {
+              mode: 'promote',
+              sessionId: step.sessionId,
+              topicTitle,
+              title: title || null,
+            },
+            'Jetzt ein Thema — dieser Abend ist die zweite Einheit.',
+          )
+        }
+      />
+    );
+  }
+
   if (step.name === 'topic') {
     return (
       <TopicStep
@@ -193,60 +230,66 @@ export function TopicChoiceSheet({
     );
   }
 
+  const einzelne = choices.data?.singleSessions ?? [];
+  const offene = einzelne.filter((session) => session.resumable);
+  const themen = choices.data?.topics ?? [];
+
   return (
     <Sheet
       open={open}
       onClose={schliessen}
       title="Thema wählen"
-      subtitle="Neu anfangen, etwas fortsetzen oder Angefangenes aufnehmen"
+      subtitle="Ein Abend für sich, oder ein Thema über mehrere"
     >
-      <NewTopicSection
-        saving={choose.isPending}
-        onCreate={(title) =>
-          waehlen({ mode: 'new', title: title || null }, 'Thema angelegt.')
-        }
-      />
-
       {choices.isLoading && <CardSkeleton />}
       {choices.error && <ErrorState error={choices.error} />}
 
-      {(choices.data?.openSessions.length ?? 0) > 0 && (
-        <section>
-          <Heading icon={<Pencil size={12} />}>Angefangenes aufnehmen</Heading>
-          <div className="space-y-4">
-            {choices.data?.openSessions.map((gruppe) => (
-              <div key={gruppe.topic.id}>
-                <p className="mb-1.5 text-[11px] font-semibold text-stone-500">
-                  {gruppe.topic.title ?? 'Thema ohne Titel'}
-                </p>
-                <ul className="space-y-2">
-                  {gruppe.sessions.map((session) => (
-                    <li key={session.id}>
-                      <ChoiceRow
-                        title={session.title ?? 'Entwurf ohne Titel'}
-                        hint={
-                          session.meeting
-                            ? `hängt am ${formatDay(session.meeting.date)}`
-                            : 'noch an keinem Abend'
-                        }
-                        onSelect={() => aufnehmen(session, session.meeting)}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Zuerst der einfachste Fall. Die meisten Abende sind einer — und wer
+          ein Thema will, sucht ohnehin gezielt danach. */}
+      <section>
+        <Heading icon={<FileText size={12} />}>Einzelne Einheit wählen</Heading>
 
-      {(choices.data?.topics.length ?? 0) > 0 && (
-        <section>
-          <Heading icon={<Sparkles size={12} />}>
-            Eigenes Thema fortsetzen
-          </Heading>
-          <ul className="space-y-2">
-            {choices.data?.topics.map((topic) => (
+        {offene.length > 0 && (
+          <ul className="mb-3 space-y-2">
+            {offene.map((session) => (
+              <li key={session.id}>
+                <ChoiceRow
+                  title={session.title ?? 'Einheit ohne Titel'}
+                  hint={
+                    session.meeting
+                      ? `hängt am ${formatDay(session.meeting.date)}`
+                      : 'noch an keinem Abend'
+                  }
+                  onSelect={() => aufnehmen(session, session.meeting)}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <InlineCreate
+          placeholder="Worum geht es an diesem Abend?"
+          label="Titel der neuen Einheit"
+          saving={choose.isPending}
+          onCreate={(title) =>
+            waehlen(
+              { mode: 'single', title: title || null },
+              'Einheit angelegt — sie hängt am Abend.',
+            )
+          }
+        />
+        <p className="mt-1.5 text-[11px] text-stone-400">
+          Ein Abend ohne Bogen darüber. Ein Überthema lässt sich später
+          jederzeit ergänzen.
+        </p>
+      </section>
+
+      <section>
+        <Heading icon={<Layers size={12} />}>Eigenes Thema fortsetzen</Heading>
+
+        {themen.length > 0 && (
+          <ul className="mb-3 space-y-2">
+            {themen.map((topic) => (
               <li key={topic.id}>
                 <ChoiceRow
                   title={topic.title ?? 'Thema ohne Titel'}
@@ -256,17 +299,54 @@ export function TopicChoiceSheet({
               </li>
             ))}
           </ul>
+        )}
+
+        <InlineCreate
+          placeholder="Worum geht es?"
+          label="Titel des neuen Themas"
+          saving={choose.isPending}
+          onCreate={(title) =>
+            waehlen({ mode: 'new', title: title || null }, 'Thema angelegt.')
+          }
+        />
+        <p className="mt-1.5 text-[11px] text-stone-400">
+          Der Titel darf auch später kommen — dieser Abend wird die erste
+          Einheit.
+        </p>
+      </section>
+
+      {/* Der Weg, den man nicht vorhersehen kann: Man hält einen Abend und
+          merkt danach, dass da mehr drinsteckt. Hier stehen deshalb auch die
+          gehaltenen — nehmen kann man die nicht mehr, fortsetzen schon. */}
+      {einzelne.length > 0 && (
+        <section>
+          <Heading icon={<Sparkles size={12} />}>Einheit fortsetzen</Heading>
+          <ul className="space-y-2">
+            {einzelne.map((session) => (
+              <li key={session.id}>
+                <ChoiceRow
+                  title={session.title ?? 'Einheit ohne Titel'}
+                  hint={
+                    session.meeting
+                      ? `${session.held ? 'gehalten am' : 'hängt am'} ${formatDay(session.meeting.date)}`
+                      : 'noch an keinem Abend'
+                  }
+                  onSelect={() =>
+                    setStep({
+                      name: 'promote',
+                      sessionId: session.id,
+                      sessionTitle: session.title,
+                    })
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1.5 text-[11px] text-stone-400">
+            Gibt ihr ein Überthema — dieser Abend wird dann ihre zweite Einheit.
+          </p>
         </section>
       )}
-
-      {choices.data &&
-        choices.data.topics.length === 0 &&
-        choices.data.openSessions.length === 0 && (
-          <EmptyState
-            title="Noch nichts Eigenes"
-            hint="Sobald du ein Thema angefangen hast, steht es hier zum Fortsetzen."
-          />
-        )}
 
       {/* Der Weg zurück. Ohne ihn ließe sich ein einmal gewähltes Thema nur noch
           tauschen, nie ganz wegnehmen — und „wir machen an dem Abend doch was
@@ -287,35 +367,114 @@ export function TopicChoiceSheet({
   );
 }
 
-// ── Schritt 1: neues Thema ───────────────────────────────────────────────────
+// ── Anlegen an Ort und Stelle ────────────────────────────────────────────────
 
-function NewTopicSection({
+/**
+ * Ein Feld und ein Knopf, unter der Liste, zu der das Neue gehört.
+ *
+ * Zweimal dasselbe Bauteil für zwei verschiedene Dinge — einmal legt es eine
+ * einzelne Einheit an, einmal ein Thema. Das steht nicht am Bauteil, sondern
+ * darüber: Wer unter „Einzelne Einheit wählen" tippt, will eine, und ein
+ * Abschnitt weiter unten will er ein Thema.
+ */
+function InlineCreate({
+  placeholder,
+  label,
   saving,
   onCreate,
 }: {
+  placeholder: string;
+  label: string;
   saving: boolean;
   onCreate: (title: string) => void;
 }) {
   const [title, setTitle] = useState('');
 
   return (
-    <section>
-      <Heading icon={<Plus size={12} />}>Neues Thema</Heading>
-      <div className="flex gap-2">
+    <div className="flex gap-2">
+      <TextInput
+        aria-label={label}
+        value={title}
+        placeholder={placeholder}
+        onChange={(event) => setTitle(event.target.value)}
+      />
+      <Button size="sm" loading={saving} onClick={() => onCreate(title)}>
+        <Plus size={14} />
+        Anlegen
+      </Button>
+    </div>
+  );
+}
+
+// ── Schritt: aus einer Einheit ein Thema machen ──────────────────────────────
+
+/**
+ * Das Überthema, und gleich der zweite Abend dazu.
+ *
+ * Zwei Felder, und nur das erste ist Pflicht — der Bogen ist der Grund, warum
+ * es jetzt ein Thema ist, der Titel dieses Abends kann warten. Was in der alten
+ * Einheit steht, wird dabei nicht angefasst; sie bleibt an ihrem Abend.
+ */
+function PromoteStep({
+  sessionTitle,
+  saving,
+  onBack,
+  onPromote,
+}: {
+  sessionTitle: string | null;
+  saving: boolean;
+  onBack: () => void;
+  onPromote: (topicTitle: string, title: string) => void;
+}) {
+  const [topicTitle, setTopicTitle] = useState('');
+  const [title, setTitle] = useState('');
+
+  const trimmed = topicTitle.trim();
+
+  return (
+    <Sheet
+      open
+      onClose={onBack}
+      title="Überthema hinzufügen"
+      subtitle={
+        sessionTitle
+          ? `„${sessionTitle}" wird die erste Einheit, dieser Abend die zweite.`
+          : 'Diese Einheit wird die erste, dieser Abend die zweite.'
+      }
+      footer={
+        <div className="flex gap-2">
+          <Button variant="ghost" className="flex-1" onClick={onBack}>
+            <ArrowLeft size={14} /> Zurück
+          </Button>
+          <Button
+            className="flex-1"
+            loading={saving}
+            disabled={trimmed.length === 0}
+            onClick={() => onPromote(trimmed, title.trim())}
+          >
+            Übernehmen
+          </Button>
+        </div>
+      }
+    >
+      <Labelled label="Titel des Themas">
         <TextInput
-          aria-label="Titel des neuen Themas"
+          aria-label="Titel des Themas"
+          value={topicTitle}
+          placeholder="Worum geht es über die Abende hinweg?"
+          onChange={(event) => setTopicTitle(event.target.value)}
+        />
+      </Labelled>
+
+      <Labelled label="Titel dieses Abends">
+        <TextInput
+          aria-label="Titel dieses Abends"
           value={title}
-          placeholder="Worum geht es?"
+          placeholder="Optional — darf auch später kommen."
           onChange={(event) => setTitle(event.target.value)}
         />
-        <Button size="sm" loading={saving} onClick={() => onCreate(title)}>
-          Anlegen
-        </Button>
-      </div>
-      <p className="mt-1.5 text-[11px] text-stone-400">
-        Der Titel darf auch später kommen — dann steht hier erst mal nichts.
-      </p>
-    </section>
+      </Labelled>
+    </Sheet>
   );
 }
 

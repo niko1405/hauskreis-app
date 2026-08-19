@@ -26,7 +26,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { InlineEdit } from '@/components/ui/field';
+import { FieldLabel, InlineEdit } from '@/components/ui/field';
 import { cn } from '@/lib/cn';
 import { useTopic } from '@/lib/api/hooks';
 import { formatDay } from '@/lib/date';
@@ -71,11 +71,27 @@ export function TopicCard({
 
         {session && sichtbar && (
           <>
-            <TopicHeading session={session} />
+            {/* Eine Einheit ohne Thema bekommt hier keine leere Kopfzeile.
+                „Zugehöriges Thema: —" behauptete eine Lücke, wo keine ist. */}
+            {!session.topic.standalone && <TopicHeading session={session} />}
 
-            <div className="mt-6 relative rounded-lg border border-line-strong p-4 pt-5">
-              <span className="absolute -top-2.5 left-3 rounded-md bg-terracotta-600 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white">
-                Einheit {session.sessionIndex} von {session.sessionCount}
+            <div
+              className={cn(
+                'relative rounded-lg border border-line-strong p-4 pt-5',
+                session.topic.standalone ? 'mt-2' : 'mt-6',
+              )}
+            >
+              <span
+                className={cn(
+                  'absolute -top-2.5 left-3 rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wide',
+                  session.topic.standalone
+                    ? 'border border-line-strong bg-canvas text-stone-500'
+                    : 'bg-terracotta-600 text-white',
+                )}
+              >
+                {session.topic.standalone
+                  ? 'Einzelne Einheit'
+                  : `Einheit ${session.sessionIndex} von ${session.sessionCount}`}
               </span>
 
               <InlineEdit
@@ -113,7 +129,8 @@ export function TopicCard({
               </div>
             </div>
 
-            {session.sessionCount > 1 && (
+            {/* Eine Hülle hat keine Geschwister — die Klappe wäre immer leer. */}
+            {!session.topic.standalone && session.sessionCount > 1 && (
               <OtherSessions
                 topicId={session.topic.id}
                 exclude={session.id}
@@ -236,14 +253,6 @@ function OtherSessionRow({ session }: { session: TopicSessionInTopic }) {
         </p>
       )}
     </Link>
-  );
-}
-
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-stone-500 uppercase">
-      {children}
-    </p>
   );
 }
 

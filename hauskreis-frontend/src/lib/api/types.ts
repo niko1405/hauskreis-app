@@ -148,8 +148,14 @@ export type TopicStatus = Topic['status'];
 export type CreateTopicInput = S['CreateTopicDto'];
 export type UpdateTopicInput = S['UpdateTopicDto'];
 
-/** Ein Abend eines Themas — hier sitzt der Inhalt, nicht am Termin. */
-export type TopicSession = S['TopicSessionResponseDto'];
+/**
+ * Ein Abend eines Themas — hier sitzt der Inhalt, nicht am Termin.
+ *
+ * Für sich allein angezeigt (eigener Bildschirm) trägt sie dazu ihre Stelle im
+ * Thema; das ist `TopicSessionDetail`, und das liefern alle Endpunkte, die eine
+ * einzelne Einheit zurückgeben.
+ */
+export type TopicSession = S['TopicSessionDetailDto'];
 /** Dieselbe Einheit unter ihrem Thema: ohne die Kopfzeile, die darüber steht. */
 export type TopicSessionInTopic = Topic['sessions'][number];
 /** Und unter ihrem Termin: ohne den Termin, an dem sie ohnehin hängt. */
@@ -157,17 +163,22 @@ export type TopicSessionInMeeting = NonNullable<Meeting['topicSession']>;
 export type UpdateTopicSessionInput = S['UpdateTopicSessionDto'];
 /** Eine Einheit anlegen, ohne dass ein Abend dafür feststeht. Titel ist Pflicht. */
 export type CreateTopicSessionInput = S['CreateTopicSessionDto'];
-/** Die drei Wege aus Spec §3: neues Thema, eigenes fortsetzen, Entwurf zurück. */
+/**
+ * Die fünf Wege am Abend: neues Thema, eigenes fortsetzen, Entwurf zurückholen,
+ * einzelne Einheit, oder aus einer einzelnen ein Thema machen.
+ */
 export type ChooseTopicSessionInput = S['ChooseTopicSessionDto'];
+/** Das Überthema für eine bisher alleinstehende Einheit. */
+export type NameTopicInput = S['NameTopicDto'];
 export type TopicChoices = S['TopicChoicesResponseDto'];
 export type TopicChoiceTopic = TopicChoices['topics'][number];
-/** Offene Einheiten eines Themas, gebündelt — so, wie sie angezeigt werden. */
-export type TopicChoiceGroup = TopicChoices['openSessions'][number];
 /**
- * Eine offene Einheit. Trägt `meeting`, wenn sie gerade an einem **anderen**
- * kommenden Abend hängt — dann kostet das Aufnehmen jenen Abend seine Auswahl.
+ * Eine einzelne Einheit — eine ohne Thema darüber. `meeting` ist der Abend, an
+ * dem sie **gerade** hängt; `resumable` sagt, ob sie sich hierher holen lässt,
+ * `held`, ob ihr Abend schon war. Was war, lässt sich nicht mehr holen, aber
+ * immer noch zu einem Thema fortsetzen.
  */
-export type OpenTopicSession = TopicChoiceGroup['sessions'][number];
+export type SingleTopicSession = TopicChoices['singleSessions'][number];
 export type TopicResponsibles = S['TopicResponsiblesResponseDto'];
 
 // ── Lieder ──────────────────────────────────────────────────────────────────

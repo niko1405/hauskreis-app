@@ -515,6 +515,23 @@ model Topic {
   /// in `TopicSession.summaryText`.
   summaryText   String?     @map("summary_text")
   status        TopicStatus @default(RUNNING)
+  /// Ein Thema, das keines ist: die Hülle um eine **einzelne Einheit**.
+  ///
+  /// Nicht jeder Abend spannt einen Bogen. Wer nur einen vorbereiten will,
+  /// sollte kein Thema erfinden müssen, das nie ein zweites Mal vorkommt — nach
+  /// außen gibt es hier deshalb keins, sondern nur die Einheit.
+  ///
+  /// Die Zeile steht trotzdem, weil an ihr hängt, was die Einheit ohnehin
+  /// braucht: `ownerPersonId` und `TopicCollaborator`, und damit jede Rechte-
+  /// und Sichtbarkeitsprüfung aus `topic-visibility.ts`. Ohne sie gäbe es
+  /// beides ein zweites Mal, an einer zweiten Tabelle, mit einer zweiten
+  /// Gelegenheit auseinanderzulaufen.
+  ///
+  /// Sie trägt **genau eine** Einheit und keinen Titel. Beides hält der Code
+  /// (`createSession`, `choose`), nicht die Datenbank: Der Übergang nach `false`
+  /// — jemand vergibt ein Überthema — ist ein einziges `update`, und ein
+  /// Datenbank-Zwang, der genau dabei im Weg stünde, wäre teuer erkauft.
+  standalone    Boolean     @default(false)
   /// Wem das Thema gehört: wer als Erster eine Einheit dafür gewählt hat, nicht
   /// wer zuerst der Rolle zugeteilt wurde (Spec §3).
   ///

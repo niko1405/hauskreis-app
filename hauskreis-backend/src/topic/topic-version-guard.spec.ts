@@ -27,7 +27,7 @@ const BERLIN = 'Europe/Berlin';
 const VIEWER = { personId: 'niko', isAdmin: false, zone: BERLIN };
 
 /** Ein Thema, das dem Betrachter gehört — sonst kommt er nicht an den Schreibpfad. */
-const MEINS = { ownerPersonId: 'niko', collaborators: [] };
+const MEINS = { ownerPersonId: 'niko', collaborators: [], standalone: false };
 
 describe('updateSession', () => {
   function setup() {
@@ -49,7 +49,14 @@ describe('updateSession', () => {
           id: 's1',
           meetingId: 'm1',
           topicId: 't1',
-          topic: { id: 't1', ...MEINS, title: null, status: 'RUNNING' },
+          topic: {
+            id: 't1',
+            ...MEINS,
+            title: null,
+            status: 'RUNNING',
+            // `findSession` zählt daraus die Stelle im Thema.
+            sessions: [{ id: 's1', meeting: null }],
+          },
         }),
       },
       $transaction: (run: (client: typeof tx) => unknown) => run(tx),

@@ -8,21 +8,18 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
-import { AssignmentRole, TopicStatus } from '../../generated/prisma/enums';
+import { AssignmentRole } from '../../generated/prisma/enums';
 import { personRefSelect } from '../common/dto/response';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import { AvailabilityService } from '../role-suggestion/availability.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import type { IfMatchCondition } from '../common/http/etag';
-import {
-  isPast,
-  notFinishedBefore,
-  currentDay,
-} from '../meeting/meeting-schedule';
+import { isPast } from '../meeting/meeting-schedule';
 import { touchMeeting } from '../meeting/meeting-version';
 import { GroupClockService } from '../meeting/group-clock.service';
 import {
   membershipOf,
+  sessionPosition,
   sessionSelectWithTopic,
   shapeSession,
   topicMembershipSelect,
@@ -44,6 +41,16 @@ import type {
  */
 const ABEND_WAR_SCHON =
   'Der Abend war schon — was dort besprochen wurde, bleibt dort stehen';
+
+/**
+ * Warum an einer Hülle keine zweite Einheit entstehen kann.
+ *
+ * Nicht Datenbank-Sicherheit, sondern eine Aussage: Zwei Abende, über denen
+ * nichts steht, sind kein Thema, sondern zwei Abende. Wer den Bogen sieht, gibt
+ * ihm einen Namen — und genau dann wird aus der Hülle ein Thema.
+ */
+const BRAUCHT_UEBERTHEMA =
+  'Dafür braucht es erst ein Überthema — gib der Einheit einen, dann kommen weitere dazu.';
 
 /**
  * Zuteilung und Auswahl beim Thema — die beiden Schritte, die bis eben einer
@@ -154,33 +161,42 @@ export class TopicSessionService {
   // ------------------------------------------------------------------ Auswahl
 
   /**
-   * Was zur Wahl steht (Spec §3, Optionen B und C).
+   * Was zur Wahl steht.
    *
-   * Option A braucht keine Daten und steht deshalb nicht in der Antwort.
+   * Zwei Listen, und die Trennlinie ist die zwischen einem Thema und einem
+   * einzelnen Abend: `topics` sind die eigenen **echten** Themen, Hüllen fallen
+   * heraus (sie tragen genau eine Einheit und keinen Titel, unter „Thema
+   * fortsetzen" wären sie eine Zeile ohne Aussage). `singleSessions` sind
+   * umgekehrt genau diese Einheiten.
+   *
+   * Themen-gebundene Entwürfe stehen in keiner der beiden: Sie hängen unter
+   * ihrem Thema, und dorthin führt der Weg über `topics` — eine zweite Liste
+   * daneben zeigte dieselben Zeilen ein zweites Mal.
    *
    * Der Grenzfall aus 8.5 sitzt im zweiten Teil: eine eigene angefangene Einheit
    * bleibt auch dann greifbar, wenn der Owner die Person als Mitarbeiterin
    * entfernt hat. Ihr eigener Entwurf ist ihrer. Nimmt sie ihn wieder auf, wird
    * sie darüber automatisch wieder Mitarbeiterin — was auch der Sinn der Regel
-   * ist. Unter Option B taucht das Thema für sie dagegen nicht mehr auf.
+   * ist. Unter `topics` taucht das Thema für sie dagegen nicht mehr auf.
    *
-   * „Offen" heißt hier nicht nur „an keinem Abend". Eine Einheit, die an einem
-   * *anderen kommenden* Abend hängt, steht ebenfalls zur Wahl — man hat sie
-   * vielleicht am falschen Dienstag angehängt, und der Weg zurück wäre sonst:
-   * dorthin gehen, zurücknehmen, hierher kommen, wählen. Sie kommt mit ihrem
-   * Termin, damit die Rückfrage ein Datum nennen kann. Ein *vergangener* Abend
-   * steht nie dabei.
+   * `resumable` sagt, ob sich die Einheit **hierher holen** lässt: an keinem
+   * Abend oder an einem, der noch bevorsteht. Gerechnet wird sie hier, mit
+   * genau der Regel, die `resumeSession` gleich anwendet — die Anzeige soll
+   * nichts anbieten, was der Server danach ablehnt. Was schon war, steht
+   * trotzdem in der Liste: daraus lässt sich immer noch ein Thema machen
+   * (`mode: 'promote'`), und das ist der häufigere Fall — man hält einen Abend
+   * und merkt danach, dass da mehr drinsteckt.
    */
   async choices(hauskreisId: string, meetingId: string, personId: string) {
     await this.loadMeeting(hauskreisId, meetingId);
 
     const zone = await this.clock.zoneOf(hauskreisId);
-    const heute = currentDay(zone);
 
-    const [topics, offene] = await Promise.all([
+    const [topics, einzelne] = await Promise.all([
       this.prisma.topic.findMany({
         where: {
           hauskreisId,
+          standalone: false,
           OR: [
             { ownerPersonId: personId },
             { collaborators: { some: { personId } } },
@@ -202,38 +218,24 @@ export class TopicSessionService {
       }),
       this.prisma.topicSession.findMany({
         where: {
-          topic: { hauskreisId },
-          // Zwei Fragen, zwei `OR`s — die gehen nur getrennt, weil ein Objekt
-          // in Prisma nur ein `OR` trägt.
-          AND: [
-            {
-              OR: [
-                { topic: { ownerPersonId: personId } },
-                { topic: { collaborators: { some: { personId } } } },
-                { responsibles: { some: { personId } } },
-              ],
-            },
-            {
-              OR: [
-                // Der NULL-Fall zuerst und als eigener Zweig: über die Relation
-                // gefragt, verschluckt SQL ihn: `meeting is null` erfüllt weder
-                // `id != x` noch dessen Gegenteil.
-                { meetingId: null },
-                {
-                  meeting: {
-                    AND: [notFinishedBefore(heute), { id: { not: meetingId } }],
-                  },
-                },
-              ],
-            },
+          topic: { hauskreisId, standalone: true },
+          OR: [
+            { topic: { ownerPersonId: personId } },
+            { topic: { collaborators: { some: { personId } } } },
+            { responsibles: { some: { personId } } },
           ],
+          // Was schon an diesem Abend hängt, steht nicht zur Wahl — es ist die
+          // Wahl. `meetingId` und nicht die Relation: der NULL-Fall soll
+          // durchkommen, und über `meeting` verschluckt SQL ihn.
+          NOT: { meetingId },
         },
         select: {
           id: true,
           title: true,
           createdAt: true,
-          meeting: { select: { id: true, date: true, title: true } },
-          topic: { select: { id: true, title: true, status: true } },
+          meeting: {
+            select: { id: true, date: true, status: true, title: true },
+          },
         },
         // Was schon einen Abend hat, zuerst und chronologisch; die freien
         // Entwürfe danach, der jüngste oben.
@@ -246,10 +248,20 @@ export class TopicSessionService {
         id: topic.id,
         title: topic.title,
         status: topic.status,
+        standalone: false,
         sessionCount: topic.sessions.length,
         lastHeldAt: lastHeldDate(topic.sessions, zone),
       })),
-      openSessions: groupByTopic(offene),
+      singleSessions: einzelne.map(({ meeting, ...session }) => ({
+        ...session,
+        meeting: meeting && {
+          id: meeting.id,
+          date: meeting.date,
+          title: meeting.title,
+        },
+        resumable: meeting === null || !isPast(meeting.date, zone),
+        held: isHeld(meeting, zone),
+      })),
     };
   }
 
@@ -342,7 +354,7 @@ export class TopicSessionService {
     return this.findSession(hauskreisId, sessionId, viewer);
   }
 
-  /** Die drei Wege aus Spec §3, hinter einer Verzweigung. */
+  /** Die fünf Wege, hinter einer Verzweigung. */
   private attach(
     tx: Prisma.TransactionClient,
     options: {
@@ -376,6 +388,21 @@ export class TopicSessionService {
         viewer,
         mitwirkende,
       );
+    }
+
+    if (dto.mode === 'single') {
+      return this.createStandalone(
+        tx,
+        hauskreisId,
+        meetingId,
+        dto,
+        viewer.personId,
+        mitwirkende,
+      );
+    }
+
+    if (dto.mode === 'promote') {
+      return this.promote(tx, hauskreisId, meetingId, dto, viewer, mitwirkende);
     }
 
     return this.createNew(
@@ -412,6 +439,137 @@ export class TopicSessionService {
   }
 
   /**
+   * Eine einzelne Einheit, hier und jetzt — ohne Thema darüber.
+   *
+   * Der Abend, der keinen Bogen spannt. Angelegt wird trotzdem ein `Topic`,
+   * weil daran Owner und Mitarbeitende hängen (siehe `Topic.standalone`); zu
+   * sehen bekommt es niemand, es hat nicht einmal einen Titel.
+   *
+   * Der Titel der **Einheit** ist hier optional, anders als beim Anlegen im
+   * Archiv: Dort hat sie nichts als ihn, hier steht sie unter ihrem Termin und
+   * ist auch namenlos auffindbar.
+   */
+  private async createStandalone(
+    tx: Prisma.TransactionClient,
+    hauskreisId: string,
+    meetingId: string,
+    dto: ChooseTopicSessionDto,
+    ownerPersonId: string,
+    mitwirkende: string[],
+  ): Promise<string> {
+    const topic = await tx.topic.create({
+      data: { hauskreisId, standalone: true, ownerPersonId },
+      select: { id: true },
+    });
+
+    const session = await tx.topicSession.create({
+      data: {
+        topicId: topic.id,
+        meetingId,
+        title: dto.title ?? null,
+        actionstepText: dto.actionstepText ?? null,
+        summaryText: dto.summaryText ?? null,
+      },
+      select: { id: true },
+    });
+
+    await this.links.join(tx, session.id, topic.id, mitwirkende);
+    return session.id;
+  }
+
+  /**
+   * Aus einer einzelnen Einheit wird ein Thema — und dieser Abend seine zweite.
+   *
+   * Der Weg, den man nicht vorhersehen kann: Man hält einen Abend, und erst
+   * danach zeigt sich, dass da mehr drinsteckt. Umgehängt wird dabei nichts.
+   * Die Hülle, die es ohnehin schon gab, bekommt einen Titel und hört auf,
+   * eine Hülle zu sein; die alte Einheit bleibt an ihrem alten Abend stehen,
+   * mit allem, was in ihr steht.
+   *
+   * Deshalb steht hier ein `updateMany` mit `standalone: true` in der
+   * Bedingung: Haben zwei Zugeteilte gleichzeitig dieselbe Einheit im Blick,
+   * gewinnt der erste, und der zweite bekommt keinen zweiten Titel über ein
+   * Thema geschrieben, das schon einen hat.
+   */
+  private async promote(
+    tx: Prisma.TransactionClient,
+    hauskreisId: string,
+    meetingId: string,
+    dto: ChooseTopicSessionDto,
+    viewer: Viewer,
+    mitwirkende: string[],
+  ): Promise<string> {
+    const vorlage = await tx.topicSession.findFirst({
+      where: { id: dto.sessionId as string, topic: { hauskreisId } },
+      select: {
+        id: true,
+        topicId: true,
+        topic: { select: topicMembershipSelect },
+        responsibles: { select: { personId: true } },
+      },
+    });
+
+    if (!vorlage) {
+      throw new NotFoundException(`Topic session ${dto.sessionId} not found`);
+    }
+
+    if (!vorlage.topic.standalone) {
+      throw new BadRequestException(
+        'Diese Einheit gehört schon zu einem Thema — setz es unter „Thema fortsetzen" fort.',
+      );
+    }
+
+    // Dieselbe Rettung wie in `resumeSession`: der eigene Entwurf bleibt der
+    // eigene, auch wenn man am Thema nicht (mehr) mitarbeiten darf.
+    const eigene = vorlage.responsibles.some(
+      (row) => row.personId === viewer.personId,
+    );
+
+    if (
+      !eigene &&
+      !mayEditTopic({
+        isAdmin: viewer.isAdmin,
+        personId: viewer.personId,
+        topic: membershipOf(vorlage.topic),
+      })
+    ) {
+      throw new ForbiddenException(
+        'Ein Überthema gibt der Einheit, wer sie vorbereitet hat.',
+      );
+    }
+
+    const { count } = await tx.topic.updateMany({
+      where: { id: vorlage.topicId, standalone: true },
+      data: {
+        title: dto.topicTitle as string,
+        standalone: false,
+        version: { increment: 1 },
+      },
+    });
+
+    if (count === 0) {
+      throw new ConflictException(
+        'Jemand war schneller — diese Einheit gehört inzwischen zu einem Thema.',
+      );
+    }
+
+    const session = await tx.topicSession.create({
+      data: {
+        topicId: vorlage.topicId,
+        meetingId,
+        title: dto.title ?? null,
+        actionstepText: dto.actionstepText ?? null,
+        summaryText: dto.summaryText ?? null,
+      },
+      select: { id: true },
+    });
+
+    await this.links.join(tx, session.id, vorlage.topicId, mitwirkende);
+    await touchTopic(tx, vorlage.topicId, { reopen: true });
+    return session.id;
+  }
+
+  /**
    * B) Ein eigenes Thema um einen weiteren Abend erweitern.
    *
    * Titel, Actionstep und Zusammenfassung dürfen gleich mitkommen: das
@@ -434,6 +592,8 @@ export class TopicSessionService {
     });
 
     if (!topic) throw new NotFoundException(`Topic ${topicId} not found`);
+
+    if (topic.standalone) throw new BadRequestException(BRAUCHT_UEBERTHEMA);
 
     if (
       !mayEditTopic({
@@ -613,6 +773,8 @@ export class TopicSessionService {
 
     if (!topic) throw new NotFoundException(`Topic ${topicId} not found`);
 
+    if (topic.standalone) throw new BadRequestException(BRAUCHT_UEBERTHEMA);
+
     if (
       !mayEditTopic({
         isAdmin: viewer.isAdmin,
@@ -641,6 +803,122 @@ export class TopicSessionService {
 
       return session.id;
     });
+
+    return this.findSession(hauskreisId, sessionId, viewer);
+  }
+
+  /**
+   * Eine **einzelne** Einheit anlegen, ohne Thema und ohne Abend.
+   *
+   * Der zweite Weg ins Archiv, neben „Neues Thema": Nicht jeder Abend spannt
+   * einen Bogen, und wer nur einen vorbereiten will, sollte kein Thema erfinden
+   * müssen, das nie ein zweites Mal vorkommt.
+   *
+   * Was hier entsteht, ist trotzdem ein `Topic` — die Hülle, an der Owner und
+   * Mitarbeitende hängen. Sie hat keinen Titel und wird nirgends als Thema
+   * angezeigt; erst wenn jemand ihr über `nameTopic` einen gibt, wird sie eins.
+   *
+   * Der Titel der Einheit ist **Pflicht**, wie bei `createSession` und aus
+   * demselben Grund: Eine Einheit ohne Abend hat nichts als ihn.
+   */
+  async createStandaloneSession(
+    hauskreisId: string,
+    dto: CreateTopicSessionDto,
+    viewer: Viewer,
+  ) {
+    const sessionId = await this.prisma.$transaction(async (tx) => {
+      const topic = await tx.topic.create({
+        data: {
+          hauskreisId,
+          standalone: true,
+          ownerPersonId: viewer.personId,
+        },
+        select: { id: true },
+      });
+
+      const session = await tx.topicSession.create({
+        data: {
+          topicId: topic.id,
+          title: dto.title,
+          actionstepText: dto.actionstepText ?? null,
+          summaryText: dto.summaryText ?? null,
+        },
+        select: { id: true },
+      });
+
+      await this.links.join(tx, session.id, topic.id, [viewer.personId]);
+      return session.id;
+    });
+
+    return this.findSession(hauskreisId, sessionId, viewer);
+  }
+
+  /**
+   * Das Überthema: aus einer einzelnen Einheit wird ein Thema.
+   *
+   * Ein Titel und ein Schalter, mehr ist es nicht — und das ist der Grund,
+   * warum die Hülle überhaupt existiert. Termin-Bindung, Verantwortliche,
+   * Mitarbeitende und der Inhalt der Einheit bleiben unangetastet, weil sie
+   * schon an der richtigen Stelle hängen.
+   *
+   * Der Weg zurück fehlt mit Absicht. „Das Thema doch wieder auflösen" wäre nur
+   * dann eindeutig, wenn genau eine Einheit daran hinge — und wer die zweite
+   * schon angelegt hat, meint mit dem Knopf etwas anderes als die App.
+   */
+  async nameTopic(
+    hauskreisId: string,
+    sessionId: string,
+    title: string,
+    viewer: Viewer,
+  ) {
+    const session = await this.prisma.topicSession.findFirst({
+      where: { id: sessionId, topic: { hauskreisId } },
+      select: {
+        id: true,
+        topicId: true,
+        topic: { select: topicMembershipSelect },
+        responsibles: { select: { personId: true } },
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException(`Topic session ${sessionId} not found`);
+    }
+
+    if (!session.topic.standalone) {
+      throw new BadRequestException(
+        'Diese Einheit gehört schon zu einem Thema — den Titel ändert man dort.',
+      );
+    }
+
+    // Dieselbe Rettung wie in `resumeSession` und `promote`.
+    const eigene = session.responsibles.some(
+      (row) => row.personId === viewer.personId,
+    );
+
+    if (
+      !eigene &&
+      !mayEditTopic({
+        isAdmin: viewer.isAdmin,
+        personId: viewer.personId,
+        topic: membershipOf(session.topic),
+      })
+    ) {
+      throw new ForbiddenException(
+        'Ein Überthema gibt der Einheit, wer sie vorbereitet hat.',
+      );
+    }
+
+    const { count } = await this.prisma.topic.updateMany({
+      where: { id: session.topicId, standalone: true },
+      data: { title, standalone: false, version: { increment: 1 } },
+    });
+
+    if (count === 0) {
+      throw new ConflictException(
+        'Jemand war schneller — diese Einheit gehört inzwischen zu einem Thema.',
+      );
+    }
 
     return this.findSession(hauskreisId, sessionId, viewer);
   }
@@ -694,6 +972,16 @@ export class TopicSessionService {
     }
 
     await this.prisma.$transaction(async (tx) => {
+      if (session.topic.standalone) {
+        // Die Hülle geht mit. Sie hat keine zweite Einheit — sie *kann* keine
+        // haben — und bliebe sonst als titelloser Eintrag unter „Eigene Themen"
+        // stehen: ein Thema, das niemand angelegt hat und niemand sieht, bis es
+        // in einer Liste auftaucht. Die Einheit selbst fällt per Cascade mit.
+        await tx.topic.delete({ where: { id: session.topicId } });
+        await touchMeeting(tx, session.meetingId);
+        return;
+      }
+
       // `TopicSessionResponsible` fällt per `onDelete: Cascade` mit.
       await tx.topicSession.delete({ where: { id: sessionId } });
 
@@ -704,6 +992,14 @@ export class TopicSessionService {
 
   // -------------------------------------------------------------------- Inhalt
 
+  /**
+   * Eine Einheit für sich, mit ihrer Stelle im Thema.
+   *
+   * `sessionIndex`/`sessionCount` stehen hier, weil die Einheit seit ihrem
+   * eigenen Bildschirm für sich allein angezeigt wird — vorher stand sie immer
+   * unter einer Liste, die die Zählung selbst kannte. Die Geschwister liegen
+   * ohnehin schon im `select`.
+   */
   async findSession(hauskreisId: string, sessionId: string, viewer: Viewer) {
     const session = await this.prisma.topicSession.findFirst({
       where: { id: sessionId, topic: { hauskreisId } },
@@ -714,7 +1010,10 @@ export class TopicSessionService {
       throw new NotFoundException(`Topic session ${sessionId} not found`);
     }
 
-    return shapeSession(session, session.topic, viewer);
+    return {
+      ...shapeSession(session, session.topic, viewer),
+      ...sessionPosition(session.id, session.topic.sessions),
+    };
   }
 
   /**
@@ -833,41 +1132,6 @@ export class TopicSessionService {
       );
     }
   }
-}
-
-/** Eine offene Einheit, so wie sie aus der Abfrage in `choices` kommt. */
-export interface OffeneEinheit {
-  id: string;
-  title: string | null;
-  createdAt: Date;
-  meeting: { id: string; date: Date; title: string | null } | null;
-  topic: { id: string; title: string | null; status: TopicStatus };
-}
-
-/**
- * Bündelt offene Einheiten unter ihrem Thema.
- *
- * Serverseitig und nicht in der Anzeige, weil die Gruppe die Einheit der
- * Darstellung ist: „Vergebung — Teil 2, Teil 3" liest sich als ein Faden, drei
- * lose Zeilen tun das nicht. Zweimal zu gruppieren hieße zweimal die Chance,
- * anders zu sortieren.
- *
- * Die Reihenfolge der Abfrage bleibt erhalten — `Map` merkt sich, wer zuerst
- * kam, und ein Thema erscheint dort, wo seine früheste Einheit steht.
- */
-function groupByTopic(sessions: OffeneEinheit[]) {
-  const gruppen = new Map<
-    string,
-    { topic: OffeneEinheit['topic']; sessions: Omit<OffeneEinheit, 'topic'>[] }
-  >();
-
-  for (const { topic, ...session } of sessions) {
-    const gruppe = gruppen.get(topic.id) ?? { topic, sessions: [] };
-    gruppe.sessions.push(session);
-    gruppen.set(topic.id, gruppe);
-  }
-
-  return [...gruppen.values()];
 }
 
 /** Der jüngste Abend, an dem eine Einheit dieses Themas hing. */

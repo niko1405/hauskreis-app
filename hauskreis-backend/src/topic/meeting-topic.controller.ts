@@ -24,7 +24,7 @@ import {
 import {
   TopicChoicesResponseDto,
   TopicResponsiblesResponseDto,
-  TopicSessionResponseDto,
+  TopicSessionDetailDto,
 } from './dto/topic-response.dto';
 import { viewerOf } from './topic-shape';
 import { GroupClockService } from '../meeting/group-clock.service';
@@ -92,7 +92,7 @@ export class MeetingTopicController {
    * wieder aufnehmen. Wer zuerst wählt, wird Owner.
    */
   @Post('topic-session')
-  @ApiZodResponse(TopicSessionResponseDto, {
+  @ApiZodResponse(TopicSessionDetailDto, {
     status: 201,
     description: '409, wenn jemand im selben Moment schneller war',
   })

@@ -36,7 +36,7 @@ import { NotebookPen, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { InlineEdit } from '@/components/ui/field';
+import { FieldLabel, InlineEdit } from '@/components/ui/field';
 import { ActionstepCheck } from '@/components/domain/actionstep-check';
 import type { Meeting } from '@/lib/api/types';
 
@@ -223,13 +223,5 @@ function AddPart({
       <Plus size={14} />
       {children}
     </button>
-  );
-}
-
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-stone-500 uppercase">
-      {children}
-    </p>
   );
 }

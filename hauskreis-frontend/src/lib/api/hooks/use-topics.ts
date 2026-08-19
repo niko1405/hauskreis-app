@@ -6,6 +6,7 @@ import type { TopicListParams } from '../params';
 import type {
   CreateTopicInput,
   CreateTopicSessionInput,
+  NameTopicInput,
   Topic,
   TopicSession,
   UpdateTopicInput,
@@ -138,6 +139,46 @@ export function useCreateTopicSession(topicId: string) {
     (input: CreateTopicSessionInput) =>
       topicsApi.createTopicSession(hauskreisId, topicId, input),
     { invalidateKeys: [keys.topics.all, keys.meetings.all, ...derived] },
+  );
+}
+
+/**
+ * Eine **einzelne** Einheit anlegen — ohne Thema und ohne Abend.
+ *
+ * Dieselben Schlüssel wie beim Anlegen unter einem Thema: Sie steht ab sofort
+ * in der Archivliste *und* unter den Dingen, die sich an einem Abend wählen
+ * lassen.
+ */
+export function useCreateStandaloneSession() {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useApiMutation(
+    (input: CreateTopicSessionInput) =>
+      topicsApi.createStandaloneSession(hauskreisId, input),
+    { invalidateKeys: [keys.topics.all, keys.meetings.all, ...derived] },
+  );
+}
+
+/**
+ * Das Überthema: aus einer einzelnen Einheit wird ein Thema.
+ *
+ * Räumt auch den Einzelstand der Einheit ab — auf ihrem Bildschirm steht danach
+ * die Kopfzeile mit dem Weg zum Thema, und die kommt aus derselben Antwort.
+ */
+export function useNameTopic(sessionId: string) {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useApiMutation(
+    (input: NameTopicInput) =>
+      topicsApi.nameTopic(hauskreisId, sessionId, input),
+    {
+      invalidateKeys: [
+        keys.topics.all,
+        keys.topics.session(sessionId),
+        keys.meetings.all,
+        ...derived,
+      ],
+    },
   );
 }
 

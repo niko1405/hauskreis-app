@@ -1,11 +1,15 @@
 /**
- * Was zur Wahl steht (Spec §3, Optionen B und C).
+ * Was zur Wahl steht.
  *
- * Zwei Dinge werden hier festgehalten. **Offene Einheiten stehen unter ihrem
- * Thema**, nicht als lose Liste — „Vergebung: Teil 2, Teil 3" liest sich als ein
- * Faden. Und **„offen" heißt nicht „an keinem Abend"**: eine Einheit, die am
- * falschen kommenden Dienstag hängt, steht mit zur Wahl und bringt ihren Termin
- * mit, damit die Rückfrage ein Datum nennen kann.
+ * Die Trennlinie, um die es hier geht: ein **Thema** über mehreren Abenden, oder
+ * ein Abend **für sich**. Beide Listen kommen aus derselben Antwort, und beide
+ * lassen etwas weg — `topics` die Hüllen, `singleSessions` alles, was zu einem
+ * Thema gehört.
+ *
+ * Zwei Flaggen tragen die Anzeige: `resumable` sagt, ob sich die Einheit
+ * hierher holen lässt, `held`, ob ihr Abend schon war. Sie fallen auseinander,
+ * und genau das ist der Punkt — was schon war, lässt sich nicht mehr nehmen,
+ * aber immer noch zu einem Thema machen.
  */
 import { TopicSessionService } from './topic-session.service';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -24,11 +28,12 @@ afterAll(() => {
   jest.useRealTimers();
 });
 
-const VERGEBUNG = { id: 't1', title: 'Vergebung', status: 'RUNNING' };
-const HOFFNUNG = { id: 't2', title: 'Hoffnung', status: 'COMPLETED' };
-
-function setup(offene: Record<string, unknown>[]) {
-  const sessionFind = jest.fn().mockResolvedValue(offene);
+function setup(
+  einzelne: Record<string, unknown>[],
+  themen: Record<string, unknown>[] = [],
+) {
+  const sessionFind = jest.fn().mockResolvedValue(einzelne);
+  const topicFind = jest.fn().mockResolvedValue(themen);
 
   const prisma = {
     meeting: {
@@ -40,7 +45,7 @@ function setup(offene: Record<string, unknown>[]) {
         topicSession: null,
       }),
     },
-    topic: { findMany: jest.fn().mockResolvedValue([]) },
+    topic: { findMany: topicFind },
     topicSession: { findMany: sessionFind },
   };
 
@@ -53,80 +58,124 @@ function setup(offene: Record<string, unknown>[]) {
     ),
   );
 
-  return { service, sessionFind };
+  return { service, sessionFind, topicFind };
 }
 
 const einheit = (
   id: string,
-  topic: typeof VERGEBUNG,
   meeting: Record<string, unknown> | null = null,
-) => ({ id, title: id, createdAt: utc('01'), meeting, topic });
+) => ({ id, title: id, createdAt: utc('01'), meeting });
+
+const abend = (tag: string, status = 'PLANNED') => ({
+  id: `m-${tag}`,
+  date: utc(tag),
+  status,
+  title: null,
+});
 
 describe('choices', () => {
-  it('bündelt offene Einheiten unter ihrem Thema', async () => {
-    const { service } = setup([
-      einheit('a', VERGEBUNG),
-      einheit('b', HOFFNUNG),
-      einheit('c', VERGEBUNG),
-    ]);
+  it('reicht die einzelnen Einheiten als flache Liste durch', async () => {
+    const { service } = setup([einheit('a'), einheit('b')]);
 
-    const { openSessions } = await service.choices('hk', 'm1', 'p1');
+    const { singleSessions } = await service.choices('hk', 'm1', 'p1');
 
-    expect(openSessions).toHaveLength(2);
-    expect(openSessions[0]?.topic).toEqual(VERGEBUNG);
-    expect(openSessions[0]?.sessions.map((s) => s.id)).toEqual(['a', 'c']);
-    expect(openSessions[1]?.topic).toEqual(HOFFNUNG);
-  });
-
-  /** Das Thema steht schon über der Gruppe — in der Zeile wäre es doppelt. */
-  it('lässt das Thema aus den einzelnen Zeilen weg', async () => {
-    const { service } = setup([einheit('a', VERGEBUNG)]);
-
-    const { openSessions } = await service.choices('hk', 'm1', 'p1');
-
-    expect(openSessions[0]?.sessions[0]).not.toHaveProperty('topic');
+    expect(singleSessions.map((session) => session.id)).toEqual(['a', 'b']);
   });
 
   /**
-   * Eine Einheit am falschen Dienstag bringt ihren Abend mit — ohne ihn ließe
-   * sich nicht fragen, ob man ihn wirklich wegnehmen will.
+   * Der Abend kommt mit, weil die Rückfrage vor dem Umhängen ein Datum nennen
+   * muss: „Die hängt am 18.08. — wirklich wegnehmen?"
    */
   it('reicht den fremden Abend mit durch', async () => {
-    const fremd = { id: 'm-anders', date: utc('18'), title: null };
-    const { service } = setup([einheit('a', VERGEBUNG, fremd)]);
+    const { service } = setup([einheit('a', abend('18'))]);
 
-    const { openSessions } = await service.choices('hk', 'm1', 'p1');
+    const { singleSessions } = await service.choices('hk', 'm1', 'p1');
 
-    expect(openSessions[0]?.sessions[0]?.meeting).toEqual(fremd);
+    expect(singleSessions[0]?.meeting).toEqual({
+      id: 'm-18',
+      date: utc('18'),
+      title: null,
+    });
+  });
+
+  describe('resumable und held', () => {
+    it('ein Entwurf ohne Abend lässt sich holen und war nicht', async () => {
+      const { service } = setup([einheit('a')]);
+
+      const [session] = (await service.choices('hk', 'm1', 'p1'))
+        .singleSessions;
+
+      expect(session).toMatchObject({ resumable: true, held: false });
+    });
+
+    it('ein kommender Abend lässt sich holen', async () => {
+      const { service } = setup([einheit('a', abend('18'))]);
+
+      const [session] = (await service.choices('hk', 'm1', 'p1'))
+        .singleSessions;
+
+      expect(session).toMatchObject({ resumable: true, held: false });
+    });
+
+    /**
+     * Der Fall, für den es zwei Flaggen braucht: nicht mehr zu holen, aber
+     * genau die Einheit, aus der man ein Thema machen will.
+     */
+    it('ein vergangener Abend ist gehalten und nicht mehr zu holen', async () => {
+      const { service } = setup([einheit('a', abend('01'))]);
+
+      const [session] = (await service.choices('hk', 'm1', 'p1'))
+        .singleSessions;
+
+      expect(session).toMatchObject({ resumable: false, held: true });
+    });
+
+    /** Abgesagt heißt: er war nicht. Zu holen ist er trotzdem nicht mehr. */
+    it('ein abgesagter vergangener Abend gilt nicht als gehalten', async () => {
+      const { service } = setup([einheit('a', abend('01', 'CANCELLED'))]);
+
+      const [session] = (await service.choices('hk', 'm1', 'p1'))
+        .singleSessions;
+
+      expect(session).toMatchObject({ resumable: false, held: false });
+    });
   });
 
   describe('die Abfrage', () => {
-    /**
-     * Der NULL-Fall braucht einen eigenen Zweig: über die Relation gefragt,
-     * verschluckt SQL ihn — `meeting is null` erfüllt weder `id != x` noch
-     * dessen Gegenteil. Ohne den Zweig verschwänden alle Entwürfe.
-     */
-    it('fragt Entwürfe getrennt von fremden Abenden ab', async () => {
-      const { service, sessionFind } = setup([]);
+    /** Eine Hülle ist kein Thema — unter „Thema fortsetzen" sagte sie nichts. */
+    it('lässt Hüllen aus der Themenliste heraus', async () => {
+      const { service, topicFind } = setup([]);
 
       await service.choices('hk', 'm1', 'p1');
 
-      const { where } = sessionFind.mock.calls[0][0] as {
-        where: { AND: [unknown, { OR: Record<string, unknown>[] }] };
-      };
-
-      expect(where.AND[1].OR[0]).toEqual({ meetingId: null });
+      expect(topicFind.mock.calls[0][0]).toMatchObject({
+        where: { standalone: false },
+      });
     });
 
-    /** Der eigene Abend gehört nicht in die Auswahl für ihn selbst. */
-    it('schließt den eigenen Abend aus', async () => {
+    /** Und umgekehrt: die zweite Liste besteht nur aus ihnen. */
+    it('fragt für die Einheiten ausschließlich Hüllen ab', async () => {
       const { service, sessionFind } = setup([]);
 
       await service.choices('hk', 'm1', 'p1');
 
-      expect(JSON.stringify(sessionFind.mock.calls[0][0])).toContain(
-        '"not":"m1"',
-      );
+      expect(sessionFind.mock.calls[0][0]).toMatchObject({
+        where: { topic: { hauskreisId: 'hk', standalone: true } },
+      });
+    });
+
+    /**
+     * Über `meetingId` und nicht über die Relation: `meeting is not null` würde
+     * jeden Entwurf mit wegwerfen, und die sind der Normalfall.
+     */
+    it('schließt den eigenen Abend aus, ohne die Entwürfe zu verlieren', async () => {
+      const { service, sessionFind } = setup([]);
+
+      await service.choices('hk', 'm1', 'p1');
+
+      expect(sessionFind.mock.calls[0][0]).toMatchObject({
+        where: { NOT: { meetingId: 'm1' } },
+      });
     });
 
     /**
@@ -140,10 +189,10 @@ describe('choices', () => {
       await service.choices('hk', 'm1', 'p1');
 
       const { where } = sessionFind.mock.calls[0][0] as {
-        where: { AND: [{ OR: Record<string, unknown>[] }, unknown] };
+        where: { OR: Record<string, unknown>[] };
       };
 
-      expect(where.AND[0].OR).toContainEqual({
+      expect(where.OR).toContainEqual({
         responsibles: { some: { personId: 'p1' } },
       });
     });

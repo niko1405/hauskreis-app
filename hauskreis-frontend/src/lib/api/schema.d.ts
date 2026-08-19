@@ -1044,6 +1044,22 @@ export interface paths {
     patch: operations['SongController_update'];
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/topic-sessions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['TopicController_createStandaloneSession'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/topic-sessions/{sessionId}': {
     parameters: {
       query?: never;
@@ -1058,6 +1074,22 @@ export interface paths {
     options?: never;
     head?: never;
     patch: operations['TopicController_updateSession'];
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/topic-sessions/{sessionId}/topic': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: operations['TopicController_nameTopic'];
     trace?: never;
   };
   '/api/hauskreise/{hauskreisId}/topics': {
@@ -2331,6 +2363,7 @@ export interface components {
             title: string | null;
             /** @enum {string} */
             status: 'RUNNING' | 'COMPLETED';
+            standalone: boolean;
           };
           /** Format: uuid */
           meetingId: string | null;
@@ -2516,6 +2549,7 @@ export interface components {
           title: string | null;
           /** @enum {string} */
           status: 'RUNNING' | 'COMPLETED';
+          standalone: boolean;
         };
         /** Format: uuid */
         meetingId: string | null;
@@ -2730,6 +2764,7 @@ export interface components {
         summaryText: string | null;
         /** @enum {string} */
         status: 'RUNNING' | 'COMPLETED';
+        standalone: boolean;
         /** Format: date-time */
         createdAt: string;
         /** Format: date-time */
@@ -2817,6 +2852,7 @@ export interface components {
       summaryText: string | null;
       /** @enum {string} */
       status: 'RUNNING' | 'COMPLETED';
+      standalone: boolean;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -2905,7 +2941,7 @@ export interface components {
       actionstepText?: string | null;
       summaryText?: string | null;
     };
-    TopicSessionResponseDto: {
+    TopicSessionDetailDto: {
       /** Format: uuid */
       id: string;
       /** Format: uuid */
@@ -2916,6 +2952,7 @@ export interface components {
         title: string | null;
         /** @enum {string} */
         status: 'RUNNING' | 'COMPLETED';
+        standalone: boolean;
       };
       /** Format: uuid */
       meetingId: string | null;
@@ -2958,6 +2995,11 @@ export interface components {
       held: boolean;
       contentVisible: boolean;
       mayEdit: boolean;
+      sessionIndex: number;
+      sessionCount: number;
+    };
+    NameTopicDto: {
+      title: string;
     };
     UpdateTopicSessionDto: {
       title?: string | null;
@@ -2987,38 +3029,33 @@ export interface components {
         title: string | null;
         /** @enum {string} */
         status: 'RUNNING' | 'COMPLETED';
+        standalone: boolean;
         sessionCount: number;
         /** Format: date */
         lastHeldAt: string | null;
       }[];
-      openSessions: {
-        topic: {
+      singleSessions: {
+        /** Format: uuid */
+        id: string;
+        title: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        meeting: {
           /** Format: uuid */
           id: string;
+          /** Format: date */
+          date: string;
           title: string | null;
-          /** @enum {string} */
-          status: 'RUNNING' | 'COMPLETED';
-        };
-        sessions: {
-          /** Format: uuid */
-          id: string;
-          title: string | null;
-          /** Format: date-time */
-          createdAt: string;
-          meeting: {
-            /** Format: uuid */
-            id: string;
-            /** Format: date */
-            date: string;
-            title: string | null;
-          } | null;
-        }[];
+        } | null;
+        resumable: boolean;
+        held: boolean;
       }[];
     };
     ChooseTopicSessionDto: {
       /** @enum {string} */
-      mode: 'new' | 'existing' | 'resume';
+      mode: 'new' | 'existing' | 'resume' | 'single' | 'promote';
       title?: string | null;
+      topicTitle?: string;
       actionstepText?: string | null;
       summaryText?: string | null;
       /** Format: uuid */
@@ -7554,7 +7591,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['TopicSessionResponseDto'];
+          'application/json': components['schemas']['TopicSessionDetailDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -9064,6 +9101,67 @@ export interface operations {
       };
     };
   };
+  TopicController_createStandaloneSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateTopicSessionDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TopicSessionDetailDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
   TopicController_findSession: {
     parameters: {
       query?: never;
@@ -9081,7 +9179,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['TopicSessionResponseDto'];
+          'application/json': components['schemas']['TopicSessionDetailDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -9191,7 +9289,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['TopicSessionResponseDto'];
+          'application/json': components['schemas']['TopicSessionDetailDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -9241,6 +9339,68 @@ export interface operations {
       };
       /** @description Kein `If-Match` mitgeschickt. Den ETag aus dem vorangehenden GET verwenden. */
       428: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  TopicController_nameTopic: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        sessionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['NameTopicDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TopicSessionDetailDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -9689,7 +9849,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['TopicSessionResponseDto'];
+          'application/json': components['schemas']['TopicSessionDetailDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */

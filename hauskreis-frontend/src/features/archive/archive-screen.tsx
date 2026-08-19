@@ -5,7 +5,17 @@
  * Song-Datenbank. Gesucht wird serverseitig (`search`), sonst müsste die App
  * mit der Zeit alles laden, nur um clientseitig zu filtern.
  */
-import { Music, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  FileText,
+  Layers,
+  Music,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDeferredValue, useState } from 'react';
@@ -32,13 +42,14 @@ import { MeetingsArchive } from './meetings-archive';
 import { errorMessage } from '@/lib/api/errors';
 import {
   useArchiveSummary,
+  useCreateStandaloneSession,
   useCreateTopic,
   useDeleteSong,
   useSongList,
   useTopicList,
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import { formatRelativeDay } from '@/lib/date';
+import { formatDay, formatRelativeDay } from '@/lib/date';
 import type { SongListParams } from '@/lib/api/params';
 import type { SongListItem, TopicListItem } from '@/lib/api/types';
 
@@ -190,10 +201,10 @@ function TopicArchive({ search }: { search: string }) {
         onClick={() => setAnlegen(true)}
       >
         <Plus size={14} />
-        Neues Thema
+        Neu anlegen
       </Button>
 
-      <NewTopicSheet open={anlegen} onClose={() => setAnlegen(false)} />
+      <NewEntrySheet open={anlegen} onClose={() => setAnlegen(false)} />
 
       {query.isLoading && <CardSkeleton />}
       {query.error && <ErrorState error={query.error} />}
@@ -258,18 +269,106 @@ function TopicTab({
 }
 
 /**
- * Ein Thema anlegen, ohne dass ein Abend dafür feststeht.
+ * Zwei Sorten, ein Knopf — und die Frage davor.
  *
- * Nur der Titel und der Bogen darüber — die Einheiten kommen auf der Themenseite
- * dazu, und dorthin führt der Weg direkt nach dem Anlegen. Beides in ein
- * Formular zu packen hieße, das Anlegen einer Einheit zweimal zu schreiben.
+ * Ein **Thema** zieht sich über mehrere Abende und hat einen Bogen darüber. Eine
+ * **einzelne Einheit** ist ein Abend, mehr nicht. Wer nur einen vorbereiten
+ * will, musste vorher ein Thema erfinden, das nie ein zweites Mal vorkommt.
+ *
+ * Warum die Frage und nicht zwei Knöpfe nebeneinander: Zwei Knöpfe verlangen,
+ * dass man den Unterschied schon kennt, bevor man einen drückt. Der Schritt
+ * davor kann ihn in einem Satz erklären, und er kostet genau einen Tipp.
  */
-function NewTopicSheet({
+function NewEntrySheet({
   open,
   onClose,
 }: {
   open: boolean;
   onClose: () => void;
+}) {
+  const [art, setArt] = useState<'frage' | 'thema' | 'einheit'>('frage');
+
+  const close = () => {
+    setArt('frage');
+    onClose();
+  };
+
+  if (art === 'thema') {
+    return <NewTopicStep onBack={() => setArt('frage')} onDone={close} />;
+  }
+
+  if (art === 'einheit') {
+    return <NewSessionStep onBack={() => setArt('frage')} onDone={close} />;
+  }
+
+  return (
+    <Sheet
+      open={open}
+      onClose={close}
+      title="Neu anlegen"
+      subtitle="Was soll es werden?"
+    >
+      <div className="space-y-2">
+        <ArtRow
+          icon={<Layers size={18} />}
+          title="Ein Thema"
+          hint="Zieht sich über mehrere Abende. Die Einheiten kommen danach dazu."
+          onSelect={() => setArt('thema')}
+        />
+        <ArtRow
+          icon={<FileText size={18} />}
+          title="Eine einzelne Einheit"
+          hint="Ein Abend für sich, ohne Bogen darüber. Ein Überthema lässt sich später jederzeit ergänzen."
+          onSelect={() => setArt('einheit')}
+        />
+      </div>
+    </Sheet>
+  );
+}
+
+function ArtRow({
+  icon,
+  title,
+  hint,
+  onSelect,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  hint: string;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        'flex w-full items-start gap-3 rounded-lg border border-line bg-card p-3.5 text-left transition-colors hover:border-line-strong',
+        PRESSABLE,
+      )}
+    >
+      <span className="mt-0.5 shrink-0 text-terracotta-500">{icon}</span>
+      <span className="min-w-0">
+        <span className="block text-sm font-bold text-stone-800">{title}</span>
+        <span className="mt-0.5 block text-[11px] leading-relaxed text-stone-500">
+          {hint}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+/**
+ * Ein Thema anlegen, ohne dass ein Abend dafür feststeht.
+ *
+ * Nur der Titel und der Bogen darüber — die Einheiten kommen auf der Themenseite
+ * dazu, und dorthin führt der Weg direkt nach dem Anlegen.
+ */
+function NewTopicStep({
+  onBack,
+  onDone,
+}: {
+  onBack: () => void;
+  onDone: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -280,22 +379,17 @@ function NewTopicSheet({
 
   const trimmed = title.trim();
 
-  const close = () => {
-    setTitle('');
-    setSummary('');
-    onClose();
-  };
-
   return (
     <Sheet
-      open={open}
-      onClose={close}
+      open
+      onClose={onDone}
       title="Neues Thema"
-      subtitle="Erstelle ein neues Thema, — einzelne Einheiten für Abende können danach hinzugefügt werden."
+      subtitle="Zieht sich über mehrere Abende — die Einheiten kommen danach dazu."
       footer={
         <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={close}>
-            Abbrechen
+          <Button variant="secondary" className="flex-1" onClick={onBack}>
+            <ArrowLeft size={14} />
+            Zurück
           </Button>
           <Button
             className="flex-1"
@@ -310,7 +404,7 @@ function NewTopicSheet({
                 {
                   onSuccess: (topic) => {
                     toast.success('Angelegt — jetzt die Einheiten.');
-                    close();
+                    onDone();
                     router.push(`/thema?id=${topic.id}`);
                   },
                   onError: (error) => toast.error(errorMessage(error)),
@@ -345,39 +439,171 @@ function NewTopicSheet({
   );
 }
 
-/** Eine Zeile in der Liste — der Weg hinein führt auf die Themenseite. */
+/**
+ * Eine einzelne Einheit anlegen — ohne Thema, ohne Abend.
+ *
+ * Hier stehen Actionstep und Zusammenfassung gleich mit im Formular, anders als
+ * beim Thema: Es gibt keine Ebene darunter, auf die man sie schieben könnte,
+ * und wer eine Einheit vorbereitet, hat oft beides schon im Kopf.
+ */
+function NewSessionStep({
+  onBack,
+  onDone,
+}: {
+  onBack: () => void;
+  onDone: () => void;
+}) {
+  const router = useRouter();
+  const toast = useToast();
+  const create = useCreateStandaloneSession();
+
+  const [title, setTitle] = useState('');
+  const [summary, setSummary] = useState('');
+  const [actionstep, setActionstep] = useState('');
+
+  const trimmed = title.trim();
+
+  return (
+    <Sheet
+      open
+      onClose={onDone}
+      title="Neue Einheit"
+      subtitle="Ein Abend für sich. Ein Überthema lässt sich später jederzeit ergänzen."
+      footer={
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={onBack}>
+            <ArrowLeft size={14} />
+            Zurück
+          </Button>
+          <Button
+            className="flex-1"
+            loading={create.isPending}
+            disabled={trimmed.length === 0}
+            onClick={() =>
+              create.mutate(
+                {
+                  title: trimmed,
+                  summaryText: summary.trim() || null,
+                  actionstepText: actionstep.trim() || null,
+                },
+                {
+                  onSuccess: (session) => {
+                    toast.success('Angelegt — wählbar an jedem Abend.');
+                    onDone();
+                    router.push(`/einheit?id=${session.id}`);
+                  },
+                  onError: (error) => toast.error(errorMessage(error)),
+                },
+              )
+            }
+          >
+            Erstellen
+          </Button>
+        </div>
+      }
+    >
+      <Field label="Titel">
+        <TextInput
+          value={title}
+          placeholder="Worum geht es an diesem Abend?"
+          onChange={(event) => setTitle(event.target.value)}
+        />
+      </Field>
+
+      <Field
+        label="Zusammenfassung"
+        hint="Optional — hilft allen, die nicht da waren."
+      >
+        <TextArea
+          rows={3}
+          value={summary}
+          onChange={(event) => setSummary(event.target.value)}
+        />
+      </Field>
+
+      <Field label="Actionstep" hint="Optional — der Vorsatz für die Woche.">
+        <TextInput
+          value={actionstep}
+          onChange={(event) => setActionstep(event.target.value)}
+        />
+      </Field>
+    </Sheet>
+  );
+}
+
+/**
+ * Eine Zeile in der Liste — und sie trägt zwei Sorten.
+ *
+ * Ein **Thema** und eine **einzelne Einheit** stehen hier nebeneinander, weil
+ * man beim Suchen nicht vorher weiß, welches von beidem man sucht. Getrennte
+ * Listen hätten die Frage „wo war das noch mal" verdoppelt.
+ *
+ * Unterschieden wird am Symbol und daran, was in der Zeile steht: Bei einer
+ * Hülle gibt es keinen Themen-Titel — dort steht der Titel der Einheit, ihre
+ * Zusammenfassung und ihr Abend. Ein „1 Einheit" darunter wäre keine Auskunft,
+ * sondern eine Selbstverständlichkeit.
+ */
 function TopicEntry({ topic }: { topic: TopicListItem }) {
   const leute = [
     ...(topic.owner ? [topic.owner] : []),
     ...topic.collaborators.map((c) => c.person),
   ];
 
+  // Bei einer Hülle ist die eine Einheit der ganze Eintrag. Sie kann fehlen,
+  // wenn der Server sie zurückhält — dann bleibt die Zeile ohne Inhalt, und das
+  // ist richtig so.
+  const einzelne = topic.standalone ? topic.sessions[0] : undefined;
+
+  const titel = topic.standalone
+    ? (einzelne?.title ?? 'Einheit ohne Titel')
+    : (topic.title ?? 'Thema ohne Titel');
+  const text = topic.standalone ? einzelne?.summaryText : topic.summaryText;
+
   return (
-    <Link href={`/thema?id=${topic.id}`} className="block">
+    <Link
+      href={
+        topic.standalone && einzelne
+          ? `/einheit?id=${einzelne.id}`
+          : `/thema?id=${topic.id}`
+      }
+      className={cn('block', PRESSABLE)}
+    >
       <Card className="transition-colors hover:border-line-strong">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="font-serif text-base font-bold text-stone-900">
-            {topic.title ?? 'Thema ohne Titel'}
+        <div className="flex items-start gap-2.5">
+          <span
+            className="mt-0.5 shrink-0 text-stone-300"
+            aria-label={topic.standalone ? 'Einzelne Einheit' : 'Thema'}
+          >
+            {topic.standalone ? <FileText size={15} /> : <Layers size={15} />}
+          </span>
+
+          <h3 className="min-w-0 flex-1 font-serif text-base font-bold text-stone-900">
+            {titel}
           </h3>
+
           {/* Nur für die eigenen: bei einem fremden Thema sagt „läuft" nichts,
               was man tun könnte. */}
-          {topic.mine && topic.status === 'RUNNING' && (
+          {topic.mine && !topic.standalone && topic.status === 'RUNNING' && (
             <Badge variant="topic">läuft</Badge>
           )}
         </div>
 
-        {topic.summaryText && (
-          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-stone-500">
-            {topic.summaryText}
+        {text && (
+          <p className="mt-1.5 line-clamp-2 pl-[25px] text-xs leading-relaxed text-stone-500">
+            {text}
           </p>
         )}
 
-        <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="mt-3 flex items-center justify-between gap-3 pl-[25px]">
           <AvatarStack people={leute} size="xs" />
           <span className="text-[11px] text-stone-400">
-            {topic.sessions.length === 1
-              ? '1 Einheit'
-              : `${topic.sessions.length} Einheiten`}
+            {topic.standalone
+              ? einzelne?.meeting
+                ? formatDay(einzelne.meeting.date)
+                : 'noch an keinem Abend'
+              : topic.sessions.length === 1
+                ? '1 Einheit'
+                : `${topic.sessions.length} Einheiten`}
           </span>
         </div>
       </Card>
