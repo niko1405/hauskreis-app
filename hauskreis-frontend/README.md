@@ -43,9 +43,23 @@ Ein anderer Port muss an allen drei Stellen geändert werden.
 | -------------- | ------------------------------------------------------------ |
 | `pnpm dev`     | Entwicklungsserver auf 3001 (Turbopack, ohne Service Worker) |
 | `pnpm build`   | Produktionsbau **mit** `--webpack` — siehe unten             |
-| `pnpm start`   | gebaute App auf 3001                                         |
+| `pnpm start`   | den Bau aus `out/` auf 3001 ausliefern — siehe Warnung unten |
 | `pnpm gen:api` | Typen aus `../hauskreis-backend/openapi.json` erzeugen       |
 | `pnpm check`   | Lint, Formatprüfung und Typecheck in einem                   |
+
+`pnpm start` ist **nicht** `next start`: Das kann `output: 'export'` nicht
+ausliefern und bricht mit einem Hinweis auf `serve` ab. Genau das tut das
+Skript, damit „bauen und ansehen" zwei Befehle bleiben und nicht drei.
+
+> **Nach einer Vorschau den Service Worker abmelden.** Er wird nur in
+> Produktionsbauten eingehängt, gehört danach aber dem **Origin** und nicht dem
+> Server: Wer anschließend `pnpm dev` auf demselben Port startet, bekommt
+> weiterhin die zwischengespeicherte App-Hülle des Baus ausgeliefert — samt der
+> Adressen, die zur **Bauzeit** in ihm gelandet sind. Das sieht aus, als
+> ignoriere der Dev-Server die `.env`, und ist in Wahrheit eine Seite, die gar
+> nicht von ihm kommt. In den DevTools: _Application → Service Workers →
+> Unregister_, dann _Storage → Clear site data_, danach alle Tabs auf `:3001`
+> schließen und neu öffnen.
 
 ## Architektur
 

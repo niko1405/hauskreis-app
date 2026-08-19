@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build --webpack",
-    "start": "next start -p 3001",
+    "start": "pnpm dlx serve@latest out -p 3001",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
