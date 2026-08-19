@@ -263,16 +263,45 @@ describe('choose — A) neues Thema', () => {
     expect(topicCreate).toHaveBeenCalled();
   });
 
-  /** Nur solange der Abend bevorsteht — was war, war. */
-  it('weist einen Wechsel an einem vergangenen Abend ab', async () => {
+  /**
+   * Ein Protokoll entsteht nach dem Abend, nicht davor.
+   *
+   * Man hält den Abend, kommt vor lauter Abend nicht zum Eintragen und holt es
+   * hinterher nach — genau dafür ist die Sperre gefallen, die hier früher
+   * geprüft wurde.
+   */
+  it('lässt einen Wechsel an einem vergangenen Abend zu', async () => {
+    const { service, sessionUpdateMany, topicCreate } = setup({
+      session: { id: 's-alt', topicId: 't-alt' },
+      date: LETZTER_DIENSTAG,
+    });
+
+    await service.choose('hk', 'm1', { mode: 'new' }, ICH);
+
+    // Die bisherige Einheit löst sich wie immer und wartet als Entwurf.
+    expect(sessionUpdateMany).toHaveBeenCalledWith({
+      where: { id: 's-alt', meetingId: 'm1' },
+      data: { meetingId: null, version: { increment: 1 } },
+    });
+    expect(topicCreate).toHaveBeenCalled();
+  });
+
+  /**
+   * Die Zuteilung gilt weiter, und zwar rückwirkend genauso streng.
+   *
+   * Anders als beim Abhaken der Lieder — dort darf nach dem Abend jede:r, weil
+   * „das haben wir gesungen" eine Beobachtung ist. Das Thema ist eine
+   * Zuschreibung, und die trifft niemand für einen anderen.
+   */
+  it('lässt einen Nicht-Zugeteilten auch nachträglich nicht wählen', async () => {
     const { service } = setup({
       session: { id: 's-alt', topicId: 't-alt' },
       date: LETZTER_DIENSTAG,
     });
 
     await expect(
-      service.choose('hk', 'm1', { mode: 'new' }, ICH),
-    ).rejects.toBeInstanceOf(BadRequestException);
+      service.choose('hk', 'm1', { mode: 'new' }, FREMD),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
 
@@ -505,16 +534,25 @@ describe('unlink', () => {
     });
   });
 
-  /** Was war, war: ein Protokoll löst man nicht von seinem Abend. */
-  it('weist einen vergangenen Abend ab', async () => {
-    const { service } = setup({
+  /**
+   * Auch nach dem Abend — sonst stünde im selben Sheet ein Weg ins Leere.
+   *
+   * Wer das Thema dort noch ändern darf, muss es auch wegnehmen können: „wir
+   * haben an dem Abend doch etwas anderes gemacht" ist derselbe Satz wie „wir
+   * haben gar kein Thema gehabt".
+   */
+  it('lässt einen vergangenen Abend zu', async () => {
+    const { service, sessionUpdate } = setup({
       session: { id: 's1', topicId: 't1' },
       date: LETZTER_DIENSTAG,
     });
 
-    await expect(service.unlink('hk', 'm1', ICH)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await service.unlink('hk', 'm1', ICH);
+
+    expect(sessionUpdate).toHaveBeenCalledWith({
+      where: { id: 's1' },
+      data: { meetingId: null, version: { increment: 1 } },
+    });
   });
 
   /** Dieselbe Grenze wie beim Wählen: der Abend gehört denen, die ihn halten. */

@@ -86,6 +86,11 @@ export function TopicChoiceSheet({
   responsibles,
   /** Ob am Abend schon etwas hängt; dann gibt es auch den Weg zurück. */
   hasSession,
+  /**
+   * Ob der Abend schon war. Nachtragen ist erlaubt — aber was hier schon steht,
+   * ist dann ein Protokoll, und das gibt man nicht ohne Rückfrage auf.
+   */
+  past,
   onUnlink,
 }: {
   meetingId: string;
@@ -93,6 +98,7 @@ export function TopicChoiceSheet({
   onClose: () => void;
   responsibles: PersonRef[];
   hasSession: boolean;
+  past: boolean;
   onUnlink: () => void;
 }) {
   const [step, setStep] = useState<Step>({ name: 'root' });
@@ -121,7 +127,30 @@ export function TopicChoiceSheet({
     setStep({ name: 'topic', topicId, title });
   };
 
-  const waehlen = (input: ChooseTopicSessionInput, erfolg: string) => {
+  /**
+   * Die eine Rückfrage, die es an einem vergangenen Abend braucht.
+   *
+   * Was dort hängt, ist gehalten worden. Wird es ersetzt oder weggenommen, löst
+   * es sich vom Abend und wartet als Entwurf — es ist danach **nicht mehr
+   * gehalten** und verschwindet damit aus dem Archiv. Verloren ist nichts, aber
+   * das sieht man ihm nicht an, und deshalb steht es hier.
+   */
+  const protokollAufgeben = async (): Promise<boolean> => {
+    if (!past || !hasSession) return true;
+
+    return confirm({
+      title: 'Das Protokoll dieses Abends ersetzen?',
+      body: 'Was hier steht, wurde an diesem Abend gehalten. Es geht nicht verloren — die bisherige Einheit wartet danach als Entwurf —, gilt aber nicht mehr als gehalten und steht dann nicht mehr im Archiv.',
+      confirmLabel: 'Weiter',
+    });
+  };
+
+  const waehlen = async (
+    input: ChooseTopicSessionInput,
+    erfolg: string,
+  ): Promise<void> => {
+    if (!(await protokollAufgeben())) return;
+
     choose.mutate(input, {
       onSuccess: () => {
         toast.success(erfolg);
@@ -148,7 +177,7 @@ export function TopicChoiceSheet({
       if (!ok) return;
     }
 
-    waehlen(
+    void waehlen(
       { mode: 'resume', sessionId: session.id },
       'Wieder aufgenommen — dein Thema steht am Abend.',
     );
@@ -181,7 +210,7 @@ export function TopicChoiceSheet({
           setStep({ name: 'topic', topicId: step.topicId, title: step.title })
         }
         onCreate={() =>
-          waehlen(
+          void waehlen(
             {
               mode: 'existing',
               topicId: step.topicId,
@@ -203,7 +232,7 @@ export function TopicChoiceSheet({
         saving={choose.isPending}
         onBack={() => setStep({ name: 'root' })}
         onPromote={(topicTitle, title) =>
-          waehlen(
+          void waehlen(
             {
               mode: 'promote',
               sessionId: step.sessionId,
@@ -272,7 +301,7 @@ export function TopicChoiceSheet({
           label="Titel der neuen Einheit"
           saving={choose.isPending}
           onCreate={(title) =>
-            waehlen(
+            void waehlen(
               { mode: 'single', title: title || null },
               'Einheit angelegt — sie hängt am Abend.',
             )
@@ -306,7 +335,10 @@ export function TopicChoiceSheet({
           label="Titel des neuen Themas"
           saving={choose.isPending}
           onCreate={(title) =>
-            waehlen({ mode: 'new', title: title || null }, 'Thema angelegt.')
+            void waehlen(
+              { mode: 'new', title: title || null },
+              'Thema angelegt.',
+            )
           }
         />
         <p className="mt-1.5 text-[11px] text-stone-400">
@@ -354,7 +386,8 @@ export function TopicChoiceSheet({
       {hasSession && (
         <button
           type="button"
-          onClick={() => {
+          onClick={async () => {
+            if (!(await protokollAufgeben())) return;
             onUnlink();
             schliessen();
           }}

@@ -302,11 +302,10 @@ export class TopicSessionService {
     // Streng: kein Admin-Freifahrtschein, weil die Wahl kein Verwaltungsakt
     // ist, sondern die Aussage „ich bereite das vor" — die kann niemand für
     // einen anderen treffen. Und „niemand zugeteilt heißt jede:r darf" gilt
-    // hier auch nicht: das wäre eine Regel fürs Nachtragen eines Abends, der
-    // schon war, nicht fürs Belegen eines Abends, der kommt. Wer wählen will,
-    // trägt sich vorher als zuständig ein; das ist eine Zeile und kein
-    // Hindernis. Dieselbe Fassung gilt für die Liedauswahl
-    // (`EditRightsService.assertMayPickSongs`).
+    // hier auch nicht, **auch nicht rückwirkend**: Anders als beim Abhaken der
+    // Lieder ist das Thema keine Beobachtung, die jede:r machen kann, sondern
+    // eine Zuschreibung. Wer nachtragen will, trägt sich als zuständig ein; das
+    // ist eine Zeile und kein Hindernis.
     if (!assigned.includes(viewer.personId)) {
       throw new ForbiddenException(
         'Das Thema wählt, wer an dem Abend dafür zugeteilt ist — trag dich erst als zuständig ein.',
@@ -315,9 +314,14 @@ export class TopicSessionService {
 
     const bisher = meeting.topicSession;
 
-    if (bisher && isPast(meeting.date, viewer.zone)) {
-      throw new BadRequestException(ABEND_WAR_SCHON);
-    }
+    // Hier stand einmal eine Sperre für vergangene Abende. Sie stimmte für den
+    // Normalfall und war für den einen falsch, um den es hier geht: Man hält
+    // einen Abend, kommt vor lauter Abend nicht zum Eintragen, und will es
+    // hinterher nachholen. Ein Protokoll entsteht nun einmal danach.
+    //
+    // Was weiter gesperrt bleibt, sind Aussagen über *fremde* Abende:
+    // `resumeSession` holt keine Einheit von einem vergangenen Abend weg, und
+    // `removeSession` löscht nichts Gehaltenes.
 
     // `topicId` und `sessionId` sind an dieser Stelle da — das Schema lässt
     // `existing` ohne das eine und `resume` ohne das andere gar nicht durch.
@@ -707,8 +711,12 @@ export class TopicSessionService {
   /**
    * Die Auswahl zurücknehmen: die Einheit wird wieder unfertig.
    *
-   * Nur solange der Abend bevorsteht. Danach ist die Einheit das Protokoll eines
-   * Abends, der stattgefunden hat, und die löst man nicht mehr davon.
+   * Auch nach dem Abend — aus demselben Grund, aus dem sich das Thema dort noch
+   * wählen lässt: Wenn es sich ändern lässt, muss es sich auch wegnehmen
+   * lassen. Sonst stünde in derselben Auswahl ein Weg, der ins Leere führt.
+   *
+   * Die Einheit ist danach ein Entwurf und gilt nicht mehr als gehalten. Das
+   * ist der Preis, und die Rückfrage im Wahl-Sheet nennt ihn.
    */
   async unlink(hauskreisId: string, meetingId: string, viewer: Viewer) {
     const meeting = await this.loadMeeting(hauskreisId, meetingId);
@@ -716,10 +724,6 @@ export class TopicSessionService {
 
     if (!session) {
       throw new NotFoundException('An diesem Abend hängt kein Thema');
-    }
-
-    if (isPast(meeting.date, viewer.zone)) {
-      throw new BadRequestException(ABEND_WAR_SCHON);
     }
 
     const assigned = meeting.topicResponsibles.map((row) => row.personId);

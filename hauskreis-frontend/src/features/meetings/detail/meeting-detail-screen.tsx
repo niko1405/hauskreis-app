@@ -306,9 +306,14 @@ function Loaded({
    *
    * Was danach am *Thema* geändert werden darf, sagt der Server über `mayEdit`:
    * ein Thema gehört seinen Leuten und nicht dem Abend.
+   *
+   * **`!cancelled` und nicht `!locked`:** Ein vergangener Abend lässt sich
+   * nachtragen. Man hält ihn, kommt vor lauter Abend nicht zum Eintragen, und
+   * holt es hinterher nach — ein Protokoll entsteht nun einmal danach. Ein
+   * abgesagter Abend bleibt gesperrt: dort gibt es nichts zu protokollieren.
    */
   const mayChooseTopic =
-    !locked &&
+    !cancelled &&
     Boolean(me.me) &&
     roles.topicPeople.some((person) => person.id === me.me?.id);
 
@@ -765,6 +770,7 @@ function Loaded({
           meetingId={meeting.id}
           responsibles={roles.topicPeople}
           hasSession={Boolean(meeting.topicSession)}
+          past={past}
           onUnlink={session.unlink}
           onClose={() => setChoosingTopic(false)}
         />
