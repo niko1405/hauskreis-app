@@ -325,6 +325,75 @@ kc_curl "${KC_URL}/admin/realms/${REALM}" | node -pe '
     `, loginTheme=${realm.loginTheme || "(keins)"}, Sprache=${sprache}`;
 '
 
+# ---------------------------------------------------------------------------
+# Die Einwilligung (Art. 9 DSGVO)
+#
+# Zwei Schritte, weil `defaultAction` nur die Hälfte trifft: Es hängt die
+# Aktion an jedes **neu registrierte** Konto. Ein eingeladenes entsteht dagegen
+# über `POST /users`, wo Keycloak keine Vorgaben nachträgt — dafür schickt das
+# Backend `TERMS_AND_CONDITIONS` in der Einladungsmail mit
+# (`keycloak-admin.service.ts`, `setupActions`).
+#
+# Und rückwirkend gilt `defaultAction` ohnehin nicht. Wer schon ein Konto hat,
+# bekommt die Aktion deshalb hier nachgetragen.
+# ---------------------------------------------------------------------------
+echo "==> Einwilligung: Required Action 'TERMS_AND_CONDITIONS'"
+kc_curl -X PUT \
+  "${KC_URL}/admin/realms/${REALM}/authentication/required-actions/TERMS_AND_CONDITIONS" \
+  -d '{
+    "alias": "TERMS_AND_CONDITIONS",
+    "name": "Terms and Conditions",
+    "providerId": "TERMS_AND_CONDITIONS",
+    "enabled": true,
+    "defaultAction": true,
+    "priority": 20,
+    "config": {}
+  }' >/dev/null
+echo "    aktiv und Vorgabe für neue Konten"
+
+# Bestandskonten. Übersprungen wird, wer sie schon angenommen hat: Keycloak
+# hinterlegt dabei das Attribut `termsAndConditions` mit einem Zeitstempel —
+# und genau das ist zugleich der Nachweis nach Art. 7 (1) DSGVO.
+#
+# `briefRepresentation=false`, weil die knappe Fassung die Attribute weglässt;
+# ohne sie sähe jedes Konto aus, als hätte es nie zugestimmt, und alle bekämen
+# die Seite bei jedem Skriptlauf erneut.
+echo "==> Einwilligung: Bestandskonten nachtragen"
+NACHZUTRAGEN=$(
+  kc_curl "${KC_URL}/admin/realms/${REALM}/users?briefRepresentation=false&max=1000" |
+    node -pe '
+      const users = JSON.parse(require("fs").readFileSync(0, "utf8"));
+      users
+        .filter((user) => !user.attributes?.termsAndConditions)
+        .filter((user) => !(user.requiredActions ?? []).includes("TERMS_AND_CONDITIONS"))
+        .map((user) => `${user.id} ${user.username}`)
+        .join("\n");
+    '
+)
+
+if [ -z "${NACHZUTRAGEN}" ]; then
+  echo "    nichts nachzutragen"
+else
+  while read -r user_id username; do
+    [ -z "${user_id}" ] && continue
+
+    # Nur das eine Feld ändern: Ein PUT mit einer aus der Liste gebauten
+    # Repräsentation überschriebe alles andere gleich mit, und die Liste ist
+    # nicht dasselbe wie der Einzelstand.
+    AKTUELL=$(kc_curl "${KC_URL}/admin/realms/${REALM}/users/${user_id}")
+    NEU=$(printf '%s' "${AKTUELL}" | node -pe '
+      const user = JSON.parse(require("fs").readFileSync(0, "utf8"));
+      const actions = new Set(user.requiredActions ?? []);
+      actions.add("TERMS_AND_CONDITIONS");
+      JSON.stringify({ requiredActions: [...actions] });
+    ')
+
+    kc_curl -X PUT "${KC_URL}/admin/realms/${REALM}/users/${user_id}" \
+      -d "${NEU}" >/dev/null
+    echo "    ${username}: fragt beim nächsten Anmelden"
+  done <<< "${NACHZUTRAGEN}"
+fi
+
 echo "==> Ensuring realm roles: member, admin"
 for role in member admin; do
   if [ "$(api_status "${KC_URL}/admin/realms/${REALM}/roles/${role}")" = "404" ]; then

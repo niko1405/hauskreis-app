@@ -332,6 +332,14 @@ export class KeycloakAdminService {
    * schon, ist die Aktion beim Öffnen des Links sofort erledigt und niemand
    * sieht sie. Fehlt sie dagegen, kommt niemand herein — das Backend weist
    * jedes Token ohne `email_verified` ab.
+   *
+   * **`TERMS_AND_CONDITIONS` steht hier und nicht nur am Realm.** Die
+   * Realm-Vorgabe (`defaultAction`) greift bei der Selbstregistrierung; ein
+   * eingeladenes Konto entsteht dagegen über `POST /users`, und dort trägt
+   * Keycloak keine Vorgaben nach. Ohne diese Zeile käme also ausgerechnet der
+   * häufigste Weg in den Hauskreis an der Einwilligung vorbei. Wer sie schon
+   * angenommen hat, sieht sie beim Öffnen des Links nicht — erledigte Aktionen
+   * fallen weg wie `VERIFY_EMAIL`.
    */
   private async setupActions(keycloakUserId: string): Promise<string[]> {
     // Lässt sich das nicht klären, wird nach dem Passwort gefragt. Einmal zu
@@ -355,8 +363,13 @@ export class KeycloakAdminService {
     const hasPassword = Array.isArray(credentials) && credentials.length > 0;
 
     return hasPassword
-      ? ['UPDATE_PROFILE', 'VERIFY_EMAIL']
-      : ['UPDATE_PROFILE', 'UPDATE_PASSWORD', 'VERIFY_EMAIL'];
+      ? ['UPDATE_PROFILE', 'VERIFY_EMAIL', 'TERMS_AND_CONDITIONS']
+      : [
+          'UPDATE_PROFILE',
+          'UPDATE_PASSWORD',
+          'VERIFY_EMAIL',
+          'TERMS_AND_CONDITIONS',
+        ];
   }
 
   private async sendInvitationEmail(keycloakUserId: string): Promise<boolean> {

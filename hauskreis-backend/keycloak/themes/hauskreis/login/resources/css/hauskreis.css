@@ -484,3 +484,73 @@ a:hover {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* -------------------------------------------------------------------------
+ * Rechtliches
+ *
+ * Die Fußzeile unter der Karte (login/footer.ftl) und die Einwilligungsseite
+ * (login/terms.ftl). Beides gibt es auf diesen Seiten erst, seit die App
+ * Datenschutzerklärung und Impressum hat.
+ * ---------------------------------------------------------------------- */
+
+/* Zurückhaltend und trotzdem lesbar: Pflichtangaben, die man selten braucht
+   und dann sofort finden muss. */
+.hk-legal {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  font-size: 0.6875rem;
+  color: var(--hk-ink-faint);
+}
+
+.hk-legal a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hk-legal a:hover {
+  color: var(--hk-ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Die Nutzungsbedingungen über dem Häkchen. Kleiner als der Satz darunter:
+   Sie sind der Rahmen, die Einwilligung ist die Aussage. */
+.hk-terms-intro {
+  margin: 0 0 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--hk-ink-soft);
+}
+
+/* Das Kästchen und sein Satz als ein Klickziel — wer den Text trifft, meint
+   den Haken. */
+.hk-terms-check {
+  display: flex;
+  gap: 0.625rem;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+  padding: 0.875rem;
+  border: 1px solid var(--hk-line-strong);
+  border-radius: 0.5rem;
+  background: var(--hk-canvas);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--hk-ink);
+  cursor: pointer;
+}
+
+.hk-terms-check input[type='checkbox'] {
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.125rem;
+  accent-color: var(--hk-terracotta);
+  cursor: pointer;
+}
+
+.hk-terms-check a {
+  color: var(--hk-terracotta-dark);
+  text-underline-offset: 2px;
+}

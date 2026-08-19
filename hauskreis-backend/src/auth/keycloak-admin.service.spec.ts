@@ -129,8 +129,31 @@ describe('KeycloakAdminService — Bestätigungsmail', () => {
     const mail = withoutToken(calls).at(-1);
     expect(mail?.url).toContain('execute-actions-email');
     expect(mail?.body).toBe(
-      JSON.stringify(['UPDATE_PROFILE', 'UPDATE_PASSWORD', 'VERIFY_EMAIL']),
+      JSON.stringify([
+        'UPDATE_PROFILE',
+        'UPDATE_PASSWORD',
+        'VERIFY_EMAIL',
+        'TERMS_AND_CONDITIONS',
+      ]),
     );
+  });
+});
+
+/**
+ * Die Einwilligung reist mit der Einladung.
+ *
+ * Am Realm steht sie als `defaultAction` — das greift aber nur bei der
+ * Selbstregistrierung. Ein eingeladenes Konto entsteht über `POST /users`, und
+ * dort trägt Keycloak keine Vorgaben nach. Ohne diese Zeile käme ausgerechnet
+ * der häufigste Weg in den Hauskreis an der Einwilligung vorbei.
+ */
+describe('KeycloakAdminService — Einwilligung', () => {
+  it('verlangt die Zustimmung auch von einem Konto mit Passwort', async () => {
+    const { service, calls } = setup({ credentials: [{ type: 'password' }] });
+
+    await service.resendInvitation('alt@example.com');
+
+    expect(withoutToken(calls).at(-1)?.body).toContain('TERMS_AND_CONDITIONS');
   });
 });
 
@@ -150,7 +173,12 @@ describe('KeycloakAdminService — was die Einladung verlangt', () => {
     await service.resendInvitation('neu@example.com');
 
     expect(withoutToken(calls).at(-1)?.body).toBe(
-      JSON.stringify(['UPDATE_PROFILE', 'UPDATE_PASSWORD', 'VERIFY_EMAIL']),
+      JSON.stringify([
+        'UPDATE_PROFILE',
+        'UPDATE_PASSWORD',
+        'VERIFY_EMAIL',
+        'TERMS_AND_CONDITIONS',
+      ]),
     );
   });
 
@@ -160,7 +188,11 @@ describe('KeycloakAdminService — was die Einladung verlangt', () => {
     await service.resendInvitation('alt@example.com');
 
     expect(withoutToken(calls).at(-1)?.body).toBe(
-      JSON.stringify(['UPDATE_PROFILE', 'VERIFY_EMAIL']),
+      JSON.stringify([
+        'UPDATE_PROFILE',
+        'VERIFY_EMAIL',
+        'TERMS_AND_CONDITIONS',
+      ]),
     );
   });
 
@@ -182,7 +214,12 @@ describe('KeycloakAdminService — was die Einladung verlangt', () => {
     const mail = withoutToken(calls).at(-1);
     expect(mail?.url).toContain('execute-actions-email');
     expect(mail?.body).toBe(
-      JSON.stringify(['UPDATE_PROFILE', 'UPDATE_PASSWORD', 'VERIFY_EMAIL']),
+      JSON.stringify([
+        'UPDATE_PROFILE',
+        'UPDATE_PASSWORD',
+        'VERIFY_EMAIL',
+        'TERMS_AND_CONDITIONS',
+      ]),
     );
   });
 
