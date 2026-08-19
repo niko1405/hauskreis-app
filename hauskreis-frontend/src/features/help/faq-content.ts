@@ -310,6 +310,34 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     keywords: ['angefangenes', 'entwurf', 'vorarbeiten', 'ohne termin'],
   },
   {
+    id: 'topics-einzeln',
+    category: 'topics',
+    question: 'Muss jede Einheit zu einem Thema gehören?',
+    answer:
+      'Nein. Nicht jeder Abend spannt einen Bogen über mehrere — und wer nur einen vorbereiten will, sollte kein Thema erfinden müssen, das nie ein zweites Mal vorkommt.\n\nEine **einzelne Einheit** legst du im Archiv über „Neu anlegen" an, oder direkt an einem Abend unter „Thema wählen" → „Einzelne Einheit wählen".\n\nSie verhält sich sonst wie jede andere Einheit: eigener Titel, Zusammenfassung, Actionstep, eigene Seite. Im Archiv erkennst du sie am Symbol — ein Blatt für die einzelne Einheit, Ebenen für ein Thema über mehrere Abende.',
+    keywords: [
+      'einzeln',
+      'ohne thema',
+      'alleinstehend',
+      'einheit',
+      'ein abend',
+    ],
+  },
+  {
+    id: 'topics-ueberthema',
+    category: 'topics',
+    question: 'Aus einer einzelnen Einheit doch ein Thema machen?',
+    answer:
+      'Geht jederzeit — das ist genau der Fall, den man vorher nicht kommen sieht: Du hältst einen Abend und merkst danach, dass da mehr drinsteckt.\n\nAuf der Seite der Einheit steht dafür **„Überthema hinzufügen"**. Du gibst den Titel ein, den die Abende zusammen tragen; alles, was in der Einheit steht, bleibt genau so stehen, samt Termin und Beteiligten.\n\nAm Abend selbst geht es in einem Schritt: unter „Thema wählen" → **„Einheit fortsetzen"**. Dort stehen auch die schon gehaltenen. Die alte Einheit bleibt an ihrem Abend, und dieser wird die zweite.\n\nDeshalb braucht eine zweite Einheit immer erst ein Überthema: Zwei Abende, über denen nichts steht, sind kein Thema, sondern zwei Abende.',
+    keywords: [
+      'überthema',
+      'fortsetzen',
+      'zweite einheit',
+      'thema machen',
+      'zusammenfassen',
+    ],
+  },
+  {
     id: 'topics-wechsel',
     category: 'topics',
     question: 'Ich habe etwas anderes gewählt — ist meine Vorbereitung weg?',

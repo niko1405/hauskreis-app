@@ -82,9 +82,9 @@ Das alles passiert im Tab **Profil**, von oben nach unten:
 5. **Benachrichtigungen.** Einmal je Gerät einschalten, dann je Art festlegen,
    ob und wie früh sie kommen. Bei den Erinnerungen stellst du die Vorlaufzeit
    in Tagen ein, beim Actionstep die Wochentage (auch mehrere).
-6. **Darstellung.** Hell, Dunkel oder System — ganz nach Geschmack.
-7. **Konto.** Weiter unten kannst du jederzeit Anmeldename, E-Mail-Adresse und
+6. **Konto.** Weiter unten kannst du jederzeit Anmeldename, E-Mail-Adresse und
    Passwort ändern.
+7. **Darstellung.** Hell, Dunkel oder System — ganz nach Geschmack.
 
 ---
 
@@ -260,6 +260,15 @@ trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
 
 - Ein **Thema** kann sich über beliebig viele Abende ziehen. Jeder einzelne
   Abend davon ist eine **Einheit**.
+- **Eine Einheit geht auch ohne Thema.** Nicht jeder Abend spannt einen Bogen —
+  wer nur einen vorbereiten will, legt im Archiv über „Neu anlegen" eine
+  einzelne Einheit an, statt ein Thema zu erfinden, das nie ein zweites Mal
+  vorkommt. In der Liste erkennst du beides am Symbol.
+- **Aus einer einzelnen Einheit wird jederzeit ein Thema.** Merkst du später,
+  dass mehr drinsteckt, gibst du ihr auf ihrer Seite ein **Überthema**; alles,
+  was drinsteht, bleibt stehen. Am Abend selbst geht es in einem Schritt über
+  „Thema wählen" → „Einheit fortsetzen". Umgekehrt gilt: Eine zweite Einheit
+  braucht immer erst ein Überthema.
 - Das Thema hat einen Titel und eine Zusammenfassung über alle Einheiten hinweg
   (beides optional). Jede Einheit hat ihre eigene Zusammenfassung und ihren
   eigenen **Actionstep** — der gilt dann bis zum nächsten Treffen.
@@ -274,6 +283,9 @@ trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
   die alte Einheit löst sich vom Termin und wartet wieder als Entwurf.
 - Themen kann man **zu mehreren vorbereiten.** Wer eine Einheit hält, darf am
   ganzen Thema schreiben. **Löschen darf nur, wer das Thema angelegt hat.**
+- Jede Einheit hat ihre **eigene Seite** — dort stehen Zusammenfassung,
+  Actionstep, wer sie vorbereitet, und der Weg zum Termin. Auf der Themenseite
+  stehen die Einheiten als Zeitstrahl untereinander; ein Klick führt hinein.
 - Titel, Actionstep und Zusammenfassung einer noch nicht gehaltenen Einheit
   sehen nur die Zuständigen — bis der Abend anfängt.
 

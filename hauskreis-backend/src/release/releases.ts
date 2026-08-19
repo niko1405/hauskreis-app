@@ -35,6 +35,18 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: '1.5.0',
+    date: '2026-08-19',
+    title: 'Einheiten auch ohne Thema',
+    highlights: [
+      'Nicht jeder Abend spannt einen Bogen. Du kannst jetzt eine einzelne Einheit anlegen, ohne dafür ein Thema zu erfinden — im Archiv über „Neu anlegen" oder direkt beim Wählen an einem Abend.',
+      'Merkst du später, dass doch mehr drinsteckt, gibst du ihr ein Überthema. Alles, was drinsteht, bleibt stehen, und der neue Abend wird die zweite Einheit.',
+      'Jede Einheit hat jetzt ihre eigene Seite: Zusammenfassung, Actionstep, wer sie vorbereitet, und der Weg zum Termin.',
+      'Die Einheiten eines Themas stehen dafür als Zeitstrahl untereinander — auf einen Blick sichtbar, was wann dran war und was noch kommt.',
+      'Im Archiv erkennst du an einem Symbol, ob ein Eintrag ein Thema über mehrere Abende ist oder eine einzelne Einheit.',
+    ],
+  },
+  {
     version: '1.4.1',
     date: '2026-08-19',
     title: 'Fix: Einladungen und weitere Verbesserungen',
