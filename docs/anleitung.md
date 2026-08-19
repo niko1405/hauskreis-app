@@ -283,6 +283,14 @@ trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
   zugeteilt, dann wählt diese Person: ein neues Thema, eine Fortsetzung des
   eigenen, oder eine offene Einheit. **Wählen darf nur, wer an dem Abend
   zugeteilt ist** — auch kein Admin.
+- **Kommt jemand dazu, wird die Wahl zurückgesetzt.** Der Abend steht dann
+  wieder auf „Thema wählen"; deine Vorbereitung ist nicht weg, sie wartet als
+  Entwurf und lässt sich sofort wieder auswählen. Der Grund: Wer neu dran ist,
+  soll mitentscheiden, was drankommt, statt in eine fremde Vorbereitung
+  hineinzurutschen. Wählst du, während noch jemand zugeteilt ist, fragt die App
+  nach — ihr bereitet es dann zusammen vor, und beide dürfen am ganzen Thema
+  schreiben. Fällt die zweite Person wieder aus der Zuteilung, verschwindet sie
+  auch wieder aus der Einheit.
 - Eine Einheit lässt sich auch **ohne Termin** anlegen, im Archiv auf der
   Themenseite. Sie wartet dann als „offen", bis sie an einem Abend ausgewählt
   wird. Das ist der Ort zum Vorbereiten.
@@ -290,9 +298,11 @@ trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
   die alte Einheit löst sich vom Termin und wartet wieder als Entwurf.
 - Themen kann man **zu mehreren vorbereiten.** Wer eine Einheit hält, darf am
   ganzen Thema schreiben. **Löschen darf nur, wer das Thema angelegt hat.**
-- Jede Einheit hat ihre **eigene Seite** — dort stehen Zusammenfassung,
-  Actionstep, wer sie vorbereitet, und der Weg zum Termin. Auf der Themenseite
-  stehen die Einheiten als Zeitstrahl untereinander; ein Klick führt hinein.
+- Jede Einheit hat ihre **eigene Seite**, und dort wird sie auch geschrieben —
+  Titel, Zusammenfassung, Actionstep, wer sie vorbereitet, der Weg zum Termin.
+  Auf der Terminseite tippst du dafür einfach auf die Einheit; der Pfeil oben
+  links bringt dich wieder zurück. Auf der Themenseite stehen die Einheiten als
+  Zeitstrahl untereinander, ein Klick führt genauso hinein.
 - Titel, Actionstep und Zusammenfassung einer noch nicht gehaltenen Einheit
   sehen nur die Zuständigen — bis der Abend anfängt.
 

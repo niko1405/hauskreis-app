@@ -11,6 +11,7 @@
  * Einfachauswahl schließt sofort: die Frage ist mit dem Tippen beantwortet.
  * Mehrfachauswahl sammelt erst und braucht deshalb einen Abschluss.
  */
+import { Info } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet } from '@/components/ui/sheet';
@@ -34,6 +35,15 @@ export interface AssignmentSheetProps {
    * eine Erinnerung, und die weiß man oder man weiß sie nicht.
    */
   withoutSuggestions?: boolean;
+  /**
+   * Was diese Zuteilung sonst noch auslöst — steht über der Liste.
+   *
+   * Für den einen Fall, in dem Eintragen mehr tut als eintragen: Kommt jemand
+   * zur Rolle „Thema" dazu, fällt die schon getroffene Wahl zurück. Das gehört
+   * **vor** die Entscheidung; eine Rückfrage danach erschiene auf dem schon
+   * geschlossenen Sheet.
+   */
+  hint?: React.ReactNode;
   onSubmit: (personIds: string[]) => void;
   saving?: boolean;
 }
@@ -46,6 +56,7 @@ export function AssignmentSheet({
   selectedIds,
   multiple = false,
   withoutSuggestions = false,
+  hint,
   onSubmit,
   saving = false,
 }: AssignmentSheetProps) {
@@ -85,6 +96,13 @@ export function AssignmentSheet({
       title={ROLE_QUESTION[kind]}
       subtitle={multiple ? 'Mehrere möglich' : undefined}
     >
+      {hint && (
+        <p className="mb-4 flex gap-2 rounded-md border border-info-line bg-info-bg px-3 py-2.5 text-[11px] leading-relaxed text-info">
+          <Info size={14} className="mt-px shrink-0" />
+          <span>{hint}</span>
+        </p>
+      )}
+
       <AssignmentPicker
         kind={kind}
         meetingId={meetingId}

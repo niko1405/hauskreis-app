@@ -215,36 +215,15 @@ export function useUpdateTopicSession(sessionId: string) {
   });
 }
 
-/**
- * Eine Einheit ändern, ohne ihren Einzelstand im Cache zu haben.
- *
- * Der Weg vom Termin aus: dort steht die Einheit im Termin-DTO, nicht als
- * eigene Ressource, und ihr ETag liegt damit nirgends. Wie bei
- * `useEditTopicInList` wird er beim Schreiben geholt.
+/*
+ * Hier stand `useEditTopicSession` — der Weg vom Termin aus, der sich den ETag
+ * beim Schreiben holte, weil die Einheit dort im Termin-DTO steckt und nicht
+ * als eigene Ressource im Cache liegt. Seit die Einheit auf ihrer eigenen Seite
+ * bearbeitet wird, gibt es diesen Weg nicht mehr: Wer schreibt, hat sie geladen
+ * und damit ihren ETag. Ein zweiter Weg wäre eine zweite Meinung darüber, was
+ * bei einem Konflikt passiert — `useResourceUpdate` zeigt ihn an, die
+ * Kurzfassung verschluckte ihn.
  */
-export function useEditTopicSession() {
-  const { hauskreisId, keys, derived } = useHk();
-
-  return useApiMutation(
-    async ({
-      sessionId,
-      input,
-    }: {
-      sessionId: string;
-      input: UpdateTopicSessionInput;
-    }) => {
-      const current = await topicsApi.getTopicSession(hauskreisId, sessionId);
-
-      return topicsApi.updateTopicSession(
-        hauskreisId,
-        sessionId,
-        input,
-        current.etag,
-      );
-    },
-    { invalidateKeys: [keys.topics.all, keys.meetings.all, ...derived] },
-  );
-}
 
 /** Nur Admin. */
 export function useRunTopicReminders() {

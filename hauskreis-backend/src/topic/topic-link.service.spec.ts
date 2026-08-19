@@ -153,8 +153,11 @@ describe('TopicLinkService.reconcile', () => {
     expect(entkoppelt(sessionUpdate)).toBe(true);
   });
 
-  /** Spec §9: wer dazukommt, hält mit und darf ab sofort am Thema schreiben. */
-  it('nimmt eine dazugekommene Person in Einheit und Thema auf', async () => {
+  /**
+   * Ohne `arriving` steht hier nur: die Liste ist jetzt so. Dann gilt weiter,
+   * was immer galt — jede:r Zugeteilte hält mit und darf am Thema schreiben.
+   */
+  it('nimmt die Zugeteilten in Einheit und Thema auf', async () => {
     const { service, tx, responsibleCreate, collaboratorCreate } = setup({
       session: { ownerPersonId: 'p1' },
     });
@@ -178,6 +181,59 @@ describe('TopicLinkService.reconcile', () => {
   });
 
   /**
+   * Kommt jemand dazu, der zum Thema nicht gehört, fällt die Wahl zurück an
+   * alle Zugeteilten. p1 bereitet weiter vor und bliebe nach der alten Regel
+   * hängen — aber p9 hat diese Einheit nie gewählt und soll nicht still in eine
+   * fremde Vorbereitung hineinrutschen.
+   */
+  it('setzt die Wahl zurück, wenn jemand Fremdes dazukommt', async () => {
+    const { service, tx, sessionUpdate } = setup({
+      session: { ownerPersonId: 'p1' },
+    });
+
+    await service.reconcile(tx, 'm1', ['p1', 'p9'], [], ['p9']);
+
+    expect(entkoppelt(sessionUpdate)).toBe(true);
+  });
+
+  /**
+   * Und dabei wird nichts aufgeräumt: Der Entwurf wartet ab sofort auf p1, und
+   * ohne seine Zeile fände er ihn nicht wieder.
+   */
+  it('lässt dem bisherigen Zuständigen dabei seine Einheit', async () => {
+    const { service, tx, responsibleDelete } = setup({
+      session: { ownerPersonId: 'p1' },
+    });
+
+    await service.reconcile(tx, 'm1', ['p1', 'p9'], [], ['p9']);
+
+    expect(responsibleDelete).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Die Ausnahme, und der Grund für sie: Wer am Thema ohnehin schon mitschreibt,
+   * entscheidet mit dieser Zuteilung nichts Neues. Ihn erst hinauszuwerfen, um
+   * ihn gleich wieder wählen zu lassen, wäre eine Zeremonie.
+   */
+  it('lässt sie hängen, wenn die dazugekommene Person zum Thema gehört', async () => {
+    const { service, tx, sessionUpdate, responsibleCreate } = setup({
+      session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
+    });
+
+    await service.reconcile(tx, 'm1', ['p1', 'p2'], [], ['p2']);
+
+    expect(sessionUpdate).not.toHaveBeenCalled();
+    expect(responsibleCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          { sessionId: 's1', personId: 'p1' },
+          { sessionId: 's1', personId: 'p2' },
+        ],
+      }),
+    );
+  });
+
+  /**
    * Der eingefrorene Fall. Was war, war — die Zusammenfassung eines vergangenen
    * Abends verschwindet nicht, weil jemand die Rolle nachträglich korrigiert.
    */
@@ -188,6 +244,18 @@ describe('TopicLinkService.reconcile', () => {
     });
 
     await service.reconcile(tx, 'm1', ['p9']);
+
+    expect(sessionUpdate).not.toHaveBeenCalled();
+  });
+
+  /** Auch nicht, wenn jemand dazukommt: Was gehalten wurde, bleibt gehalten. */
+  it('setzt an einem vergangenen Abend nichts zurück', async () => {
+    const { service, tx, sessionUpdate } = setup({
+      date: LETZTER_DIENSTAG,
+      session: { ownerPersonId: 'p1' },
+    });
+
+    await service.reconcile(tx, 'm1', ['p1', 'p9'], [], ['p9']);
 
     expect(sessionUpdate).not.toHaveBeenCalled();
   });
@@ -265,8 +333,12 @@ describe('TopicLinkService.reconcile — wer herausfällt', () => {
     expect(entzogen(collaboratorDelete)).toEqual([]);
   });
 
+  /**
+   * Weder das Schreibrecht noch die Zeile an der Einheit. Unter „vorbereitet
+   * von" stünde er sonst nicht mehr — an einer Einheit, die ihm gehört.
+   */
   it('fasst den Owner nicht an', async () => {
-    const { service, tx, collaboratorDelete } = setup({
+    const { service, tx, collaboratorDelete, responsibleDelete } = setup({
       session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
     });
 
@@ -275,6 +347,7 @@ describe('TopicLinkService.reconcile — wer herausfällt', () => {
     await service.reconcile(tx, 'm1', ['p2'], ['p1']);
 
     expect(entzogen(collaboratorDelete)).toEqual([]);
+    expect(responsibleDelete).not.toHaveBeenCalled();
   });
 
   /**

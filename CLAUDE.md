@@ -125,7 +125,9 @@ grundlegende Vorschläge für Kernentitäten:
    - Thema als eigene Entität, optionaler Titel, kann mehrere Termine laufen
    - Zwei Schritte: erst wird jemand für den Abend **zugeteilt**, dann **wählt** diese Person — neues Thema, ein eigenes fortsetzen, oder eine offene Einheit aufnehmen
    - Steht schon etwas, ist ein zweites Wählen ein **Wechsel**: die bisherige Einheit löst sich und wartet als Entwurf
+   - **Wer dazukommt, setzt die Wahl zurück.** Kommt jemand nachträglich zur Rolle, der zum Thema noch nicht gehört, steht der Abend wieder auf „Thema wählen" — die Vorbereitung wartet als Entwurf und lässt sich sofort wieder aufnehmen. Sonst rutschte er still in eine Vorbereitung, die er nie gewählt hat, samt Schreibrecht am ganzen Thema. Wer schon mitschreibt, löst nichts aus: dort ist nichts zu entscheiden, was nicht schon entschieden wäre. Umgekehrt fragt die Wahl nach, wenn außer einem selbst noch jemand zugeteilt ist („bereitet ihr das zusammen vor?"). Fällt jemand wieder aus der Zuteilung, verschwindet er auch wieder aus der Einheit — **nur der Owner nicht**, dem gehört sie
    - Wird der Baustein „Thema" abgeschaltet, fällt die Zuteilung weg (wie bei der Musik); die Einheit wird nur gelöst, nicht geleert
+   - **Geschrieben wird die Einheit auf ihrer eigenen Seite**, nicht am Termin. Die Terminkarte zeigt sie und führt hinein; zwei Orte für dieselben drei Felder wären zwei Meinungen darüber, wo sie hingehören — und der Termin kann weniger (kein Löschen, kein Überthema, keine Beteiligten)
    - Gleiche Vorschlagslogik wie beim Host (nach "zuletzt Thema gehabt"), gezählt wird die Zuteilung am Termin
 
 3. **Song-Zuteilung**

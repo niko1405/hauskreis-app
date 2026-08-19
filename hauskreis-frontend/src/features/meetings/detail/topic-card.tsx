@@ -11,9 +11,14 @@
  *
  * Die Hierarchie ist der Punkt der Sektion: oben steht, wozu der Abend gehört,
  * darunter, was an ihm dran ist. Vorher standen beide Titel gleichrangig und man
- * musste raten, welcher der größere war. Das Thema selbst ist hier **nur ein
- * Link** — Titel und Zusammenfassung ändert man auf seiner Seite, weil es über
- * mehreren Abenden steht und nicht über diesem einen.
+ * musste raten, welcher der größere war.
+ *
+ * **Hier wird nichts geändert, hier wird gelesen.** Thema und Einheit sind
+ * beide nur Links auf ihre Seiten. Die Einheit hatte einmal keine eigene, und
+ * solange das so war, mussten die Stifte hier stehen; seit sie eine hat, wären
+ * es zwei Orte für dieselbe Sache — und einer davon kann weniger: kein Löschen,
+ * kein Überthema, keine Beteiligten. Was der Abend *selbst* über sich sagt
+ * (Titel, Uhrzeit, Infos, Rollen), ändert man weiterhin auf dieser Seite.
  *
  * **Wer was sieht.** Der Inhalt einer noch nicht gehaltenen Einheit gehört bis
  * 18 Uhr am Termintag denen, die ihn vorbereiten — der Actionstep der nächsten
@@ -24,7 +29,7 @@
 import { ArrowUpRight, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button, PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { FieldLabel, InlineEdit } from '@/components/ui/field';
 import { cn } from '@/lib/cn';
@@ -36,26 +41,17 @@ import type { Meeting, PersonRef, TopicSessionInTopic } from '@/lib/api/types';
 export function TopicCard({
   meeting,
   responsibles,
-  /** Ob jetzt gerade am Inhalt geschrieben werden darf. */
-  editable,
   /** Ob gewählt werden darf — nur die Zugeteilten. */
   mayChoose,
   saving,
   onChoose,
-  onTitle,
-  onSummary,
-  onActionstep,
   children,
 }: {
   meeting: Meeting;
   responsibles: PersonRef[];
-  editable: boolean;
   mayChoose: boolean;
   saving: boolean;
   onChoose: () => void;
-  onTitle: (next: string | null) => void;
-  onSummary: (next: string | null) => void;
-  onActionstep: (next: string | null) => void;
   /** Der Abhak-Block, den nur die Detailseite kennt. */
   children?: React.ReactNode;
 }) {
@@ -75,9 +71,15 @@ export function TopicCard({
                 „Zugehöriges Thema: —" behauptete eine Lücke, wo keine ist. */}
             {!session.topic.standalone && <TopicHeading session={session} />}
 
-            <div
+            {/* Der Kasten ist der Weg zur Einheit. `InlineEdit` ohne `onSave`
+                rendert nur einen Absatz — im Link sitzt also nichts
+                Anklickbares, was mit ihm um den Druck streiten könnte. */}
+            <Link
+              href={`/einheit?id=${session.id}&von=termin`}
               className={cn(
-                'relative rounded-lg border border-line-strong p-4 pt-5',
+                'group relative block rounded-lg border border-line-strong p-4 pt-5',
+                'transition-colors hover:border-terracotta-300',
+                PRESSABLE,
                 session.topic.standalone ? 'mt-2' : 'mt-6',
               )}
             >
@@ -94,15 +96,15 @@ export function TopicCard({
                   : `Einheit ${session.sessionIndex} von ${session.sessionCount}`}
               </span>
 
-              <InlineEdit
-                label="Titel dieses Abends"
-                value={session.title}
-                emptyLabel="Noch ohne eigenen Titel"
-                placeholder="Worum geht es an diesem Abend?"
-                className="font-serif text-2xl font-bold text-stone-900"
-                saving={saving}
-                onSave={editable ? onTitle : undefined}
-              />
+              <div className="flex items-baseline gap-1">
+                <InlineEdit
+                  label="Titel dieses Abends"
+                  value={session.title}
+                  emptyLabel="Noch ohne eigenen Titel"
+                  className="min-w-0 flex-1 font-serif text-2xl font-bold text-stone-900"
+                />
+                <ArrowUpRight className="size-4 shrink-0 self-center text-stone-400 transition-colors group-hover:text-terracotta-600" />
+              </div>
 
               <div className="mt-4">
                 <FieldLabel>Zusammenfassung</FieldLabel>
@@ -111,8 +113,6 @@ export function TopicCard({
                   multiline
                   value={session.summaryText}
                   emptyLabel="Noch nichts — hilft allen, die nicht da waren."
-                  saving={saving}
-                  onSave={editable ? onSummary : undefined}
                 />
               </div>
 
@@ -122,12 +122,15 @@ export function TopicCard({
                   label="Actionstep"
                   value={session.actionstepText}
                   emptyLabel="Noch kein Actionstep für die Woche"
-                  saving={saving}
-                  onSave={editable ? onActionstep : undefined}
                 />
-                {session.actionstepText && children}
               </div>
-            </div>
+            </Link>
+
+            {/* Der Haken bleibt hier und wandert nicht mit: Er hängt am Termin
+                und gilt pro Person, während der Text der Einheit gehört. Er
+                steht deshalb unter dem Kasten statt darin — in einem Link hat
+                ein Knopf nichts verloren. */}
+            {session.actionstepText && children}
 
             {/* Eine Hülle hat keine Geschwister — die Klappe wäre immer leer. */}
             {!session.topic.standalone && session.sessionCount > 1 && (

@@ -206,7 +206,7 @@ function Loaded({
   const update = useUpdateMeeting(meetingId);
   const songLeaders = useSongLeaders(meetingId);
   const roles = useRoleAssignment(meeting);
-  const session = useTopicSessionActions(meeting);
+  const session = useTopicSessionActions(meetingId);
   const confirm = useConfirm();
 
   const cancelled = meeting.status === 'CANCELLED';
@@ -304,8 +304,9 @@ function Loaded({
    * anderen treffen. Wer wählen will, trägt sich eine Zeile weiter oben als
    * zuständig ein. Der Server hält dieselbe Grenze.
    *
-   * Was danach am *Thema* geändert werden darf, sagt der Server über `mayEdit`:
-   * ein Thema gehört seinen Leuten und nicht dem Abend.
+   * Was danach *in* der Einheit geändert werden darf, entscheidet sich nicht
+   * mehr hier: Das steht auf ihrer eigenen Seite, und dort fragt der Server mit
+   * `mayEdit` — ein Thema gehört seinen Leuten und nicht dem Abend.
    *
    * **`!cancelled` und nicht `!locked`:** Ein vergangener Abend lässt sich
    * nachtragen. Man hält ihn, kommt vor lauter Abend nicht zum Eintragen, und
@@ -316,8 +317,6 @@ function Loaded({
     !cancelled &&
     Boolean(me.me) &&
     roles.topicPeople.some((person) => person.id === me.me?.id);
-
-  const mayEditTopic = meeting.topicSession?.mayEdit ?? false;
 
   /**
    * Ob die Nachbereitungs-Karte dasteht — und nicht bloß, ob der Baustein an
@@ -658,13 +657,9 @@ function Loaded({
           <TopicCard
             meeting={meeting}
             responsibles={roles.topicPeople}
-            editable={editing && mayEditTopic}
             mayChoose={mayChooseTopic}
             saving={update.isPending || roles.saving || session.saving}
             onChoose={openTopicChoice}
-            onTitle={(next) => session.patch({ title: next })}
-            onSummary={(next) => session.patch({ summaryText: next })}
-            onActionstep={(next) => session.patch({ actionstepText: next })}
           >
             {/* Abhaken darf jede:r für sich, auch wer den Text nicht ändern
                 darf — es ist der eigene Vorsatz. Erst ab Abendbeginn: einen
@@ -747,6 +742,11 @@ function Loaded({
           selectedIds={selectedFor(sheet)}
           multiple={sheet !== 'TESTIMONY'}
           withoutSuggestions={past}
+          hint={
+            sheet === 'TOPIC' && meeting.topicSession && !past
+              ? 'Kommt jemand dazu, wird die Themenwahl zurückgesetzt — ihr entscheidet dann gemeinsam neu. Vorbereitetes bleibt als Entwurf erhalten.'
+              : undefined
+          }
           onSubmit={submitFor(sheet)}
           saving={roles.saving}
         />

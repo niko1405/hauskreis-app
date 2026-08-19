@@ -49,8 +49,15 @@ function setup(
   const meetingTouch = jest.fn().mockResolvedValue({ count: 1 });
   const topicTouch = jest.fn().mockResolvedValue({ count: 1 });
 
+  const responsibleDelete = jest.fn().mockResolvedValue({ count: 0 });
+  const responsibleCreate = jest.fn().mockResolvedValue({ count: 0 });
+
   const tx = {
     meeting: { updateMany: meetingTouch },
+    meetingTopicResponsible: {
+      deleteMany: responsibleDelete,
+      createMany: responsibleCreate,
+    },
     topic: {
       create: topicCreate,
       updateMany: topicTouch,
@@ -136,6 +143,13 @@ function setup(
       }),
       update: jest.fn().mockResolvedValue({}),
     },
+    // Alle Angefragten gehören zum Hauskreis — die Gegenprobe steht woanders.
+    person: {
+      count: jest.fn(({ where }: { where: { id: { in: string[] } } }) =>
+        Promise.resolve(new Set(where.id.in).size),
+      ),
+    },
+    meetingTopicResponsible: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn((run: (tx: unknown) => unknown) => run(tx)),
   };
 
@@ -561,6 +575,50 @@ describe('unlink', () => {
 
     await expect(service.unlink('hk', 'm1', FREMD)).rejects.toBeInstanceOf(
       ForbiddenException,
+    );
+  });
+});
+
+/**
+ * Die Zuteilung selbst — und die eine Angabe, die sie weiterreichen muss.
+ *
+ * Wer **dazukommt**, entscheidet über das Schicksal einer schon getroffenen
+ * Wahl (`TopicLinkService.reconcile`). Ableiten lässt es sich dort nicht: Wenn
+ * `reconcile` läuft, stehen die neuen Zeilen schon, und die alten sind weg.
+ * Fiele die Angabe hier still unter den Tisch, verhielte sich alles wieder wie
+ * vorher — ohne dass irgendetwas fehlschlüge.
+ */
+describe('setResponsibles', () => {
+  it('reicht die Dazugekommenen an reconcile durch', async () => {
+    const { service, links } = setup({ assigned: ['p1'] });
+
+    await service.setResponsibles(
+      'hk',
+      'm1',
+      { personIds: ['p1', 'p2'] },
+      'p1',
+    );
+
+    expect(links.reconcile).toHaveBeenCalledWith(
+      expect.anything(),
+      'm1',
+      ['p1', 'p2'],
+      [],
+      ['p2'],
+    );
+  });
+
+  it('und die Herausgefallenen daneben', async () => {
+    const { service, links } = setup({ assigned: ['p1', 'p2'] });
+
+    await service.setResponsibles('hk', 'm1', { personIds: ['p3'] }, 'p1');
+
+    expect(links.reconcile).toHaveBeenCalledWith(
+      expect.anything(),
+      'm1',
+      ['p3'],
+      ['p1', 'p2'],
+      ['p3'],
     );
   });
 });

@@ -44,18 +44,27 @@ export class TopicLinkService {
    * - Statt A ist jetzt C dran: C hat mit dem Thema nichts zu tun, die Einheit
    *   wird entkoppelt und wartet als Entwurf auf A (Spec §4).
    * - Niemand mehr zugeteilt: dasselbe.
-   * - C kommt zu A dazu: A bleibt, die Einheit bleibt — und C wird
-   *   Verantwortliche der Einheit und Mitarbeiter:in des Themas (Spec §9).
+   * - **C kommt zu A dazu: die Wahl wird zurückgesetzt.** C hat sie nicht
+   *   getroffen und soll nicht still in eine fremde Vorbereitung hineinrutschen
+   *   — schon gar nicht mit Schreibrecht am ganzen Thema. Der Abend steht danach
+   *   wieder auf „Thema wählen", die Vorbereitung von A wartet als Entwurf, und
+   *   wer dann wählt, entscheidet mit dem Wissen, wer sonst noch dran ist.
+   * - Kommt C dazu und **gehört schon zum Thema**, bleibt die Einheit hängen und
+   *   C wird nur Verantwortliche:r dieses Abends. Dort ist nichts zu
+   *   entscheiden, was nicht schon entschieden wäre.
    *
    * @param departing Wer aus der Zuteilung **herausfällt**. Muss mitkommen und
    *   lässt sich hier nicht ableiten: `setResponsibles` hat die alten Zeilen zu
    *   diesem Zeitpunkt schon gelöscht.
+   * @param arriving Wer **dazukommt**. Aus demselben Grund von außen: die neuen
+   *   Zeilen stehen zu diesem Zeitpunkt schon.
    */
   async reconcile(
     tx: Prisma.TransactionClient,
     meetingId: string,
     assigned: readonly string[],
     departing: readonly string[] = [],
+    arriving: readonly string[] = [],
   ): Promise<void> {
     const meeting = await tx.meeting.findUnique({
       where: { id: meetingId },
@@ -96,7 +105,18 @@ export class TopicLinkService {
       collaboratorIds: session.topic.collaborators.map((row) => row.personId),
     };
 
-    if (assigned.some((personId) => belongsTo(membership, personId))) {
+    // Wer neu dazukommt und zum Thema nicht gehört, hat es nicht gewählt. Die
+    // Wahl fällt deshalb zurück an die Zugeteilten — alle, gemeinsam. Nicht
+    // gelöscht, nur gelöst: darum geht es unten in denselben Zweig wie „niemand
+    // gehört mehr dazu".
+    const fremd = arriving.filter(
+      (personId) => !belongsTo(membership, personId),
+    );
+
+    if (
+      fremd.length === 0 &&
+      assigned.some((personId) => belongsTo(membership, personId))
+    ) {
       await this.join(tx, session.id, session.topicId, assigned);
 
       // Wer aus der Zuteilung fällt, bereitet diesen Abend nicht mehr vor — die
@@ -126,7 +146,11 @@ export class TopicLinkService {
     await touchTopic(tx, session.topicId);
 
     this.logger.log(
-      `Session ${session.id} detached from meeting ${meetingId}: nobody assigned belongs to the topic`,
+      `Session ${session.id} detached from meeting ${meetingId}: ${
+        fremd.length > 0
+          ? `${fremd.join(', ')} joined the assignment without belonging to the topic`
+          : 'nobody assigned belongs to the topic'
+      }`,
     );
   }
 
@@ -173,8 +197,11 @@ export class TopicLinkService {
    * Wer noch an einer hängt — gehalten oder geplant — behält das Schreibrecht.
    * Wer explizit als Mitwirkende:r an einer Einheit steht, ist dadurch geschützt.
    *
-   * Der Owner verliert nie etwas: sein Recht kommt aus `topic.ownerPersonId` und
-   * nicht aus dieser Tabelle.
+   * **Der Owner verliert nie etwas, auch nicht die Zeile an der Einheit.** Sein
+   * Schreibrecht käme ohnehin aus `topic.ownerPersonId` und nicht aus einer
+   * dieser Tabellen — aber unter „vorbereitet von" stünde er nicht mehr, und
+   * das wäre falsch: Die Einheit ist seine. Dass er an diesem einen Abend nicht
+   * mehr zugeteilt ist, sagt der Termin, nicht die Einheit.
    */
   async leave(
     tx: Prisma.TransactionClient,
@@ -189,15 +216,15 @@ export class TopicLinkService {
       select: { ownerPersonId: true },
     });
 
-    await tx.topicSessionResponsible.deleteMany({
-      where: { sessionId, personId: { in: [...personIds] } },
-    });
-
     const kandidaten = personIds.filter(
       (personId) => personId !== topic?.ownerPersonId,
     );
 
     if (kandidaten.length === 0) return;
+
+    await tx.topicSessionResponsible.deleteMany({
+      where: { sessionId, personId: { in: kandidaten } },
+    });
 
     const haltende = await tx.topicSessionResponsible.findMany({
       where: { personId: { in: kandidaten }, session: { topicId } },

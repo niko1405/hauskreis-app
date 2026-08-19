@@ -16,7 +16,8 @@ import { SessionDetailScreen } from '@/features/archive/session-detail-screen';
 
 function Detail() {
   const router = useRouter();
-  const id = useSearchParams().get('id');
+  const params = useSearchParams();
+  const id = params.get('id');
 
   if (!id) {
     return (
@@ -33,7 +34,8 @@ function Detail() {
     );
   }
 
-  return <SessionDetailScreen sessionId={id} />;
+  // `von` sagt, wohin der Pfeil zurückführt — vom Termin aus zurück zum Termin.
+  return <SessionDetailScreen sessionId={id} von={params.get('von')} />;
 }
 
 export default function EinheitPage() {

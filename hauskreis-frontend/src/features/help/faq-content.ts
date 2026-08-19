@@ -290,7 +290,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Ich bin fürs Thema zugeteilt — was jetzt?',
     answer:
-      'Zugeteilt heißt: Du bist dran. Was ihr macht, steht damit noch nicht fest — der zweite Schritt ist das **Wählen**, und den machst du.\n\nAuf der Terminseite hast du drei Möglichkeiten:\n\n**Neues Thema** — du fängst etwas an.\n**Eigenes fortsetzen** — ein Thema von dir bekommt einen weiteren Abend.\n**Angefangenes aufnehmen** — du nimmst eine Einheit, die schon vorbereitet ist und noch an keinem Abend hängt.\n\nErst mit dem Wählen entsteht der Ort, an dem Titel, Actionstep und Zusammenfassung stehen.',
+      'Zugeteilt heißt: Du bist dran. Was ihr macht, steht damit noch nicht fest — der zweite Schritt ist das **Wählen**, und den machst du.\n\nAuf der Terminseite steht dafür „Thema wählen" mit drei Abschnitten:\n\n**Einzelne Einheit wählen** — ein Abend für sich, ohne Bogen darüber.\n**Eigenes Thema fortsetzen** — ein Thema von dir bekommt einen weiteren Abend.\n**Einheit fortsetzen** — aus einer einzelnen Einheit wird ein Thema, und dieser Abend ihre zweite.\n\nErst mit dem Wählen entsteht der Ort, an dem Titel, Actionstep und Zusammenfassung stehen — und geschrieben werden sie dann auf der Seite der Einheit, nicht am Termin.',
     keywords: ['dran', 'vorbereiten', 'wählen', 'zuständig'],
   },
   {
@@ -335,6 +335,20 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
       'zweite einheit',
       'thema machen',
       'zusammenfassen',
+    ],
+  },
+  {
+    id: 'topics-dazugekommen',
+    category: 'topics',
+    question: 'Jemand ist dazugekommen — wo ist mein Thema hin?',
+    answer:
+      'Es wartet als Entwurf und lässt sich sofort wieder auswählen. Zurückgesetzt wird die Wahl mit Absicht: Wer neu für den Abend zugeteilt wird, soll mitentscheiden, was drankommt — statt still in eine Vorbereitung hineinzurutschen, die er nie gewählt hat.\n\nWählst du dann (wieder), fragt die App nach: **„Zusammen vorbereiten?"** Sagst du ja, seid ihr beide für die Einheit zuständig und dürft am ganzen Thema schreiben.\n\nFällt die zweite Person später wieder aus der Zuteilung, verschwindet sie auch wieder aus der Einheit. Wem das Thema gehört, bleibt dagegen immer stehen.\n\nZwei Ausnahmen: Wer am selben Thema ohnehin schon mitschreibt, setzt nichts zurück — dort ist nichts mehr zu entscheiden. Und ein Abend, der schon war, bleibt unangetastet; was gehalten wurde, verliert sein Thema nicht.',
+    keywords: [
+      'dazugekommen',
+      'zurückgesetzt',
+      'verschwunden',
+      'zusammen',
+      'gemeinsam',
     ],
   },
   {

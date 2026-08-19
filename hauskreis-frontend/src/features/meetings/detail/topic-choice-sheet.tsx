@@ -49,11 +49,13 @@ import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
 import {
   useChooseTopicSession,
+  useMe,
   useSetTopicResponsibles,
   useTopic,
   useTopicChoices,
 } from '@/lib/api/hooks';
 import { formatDay, isPast } from '@/lib/date';
+import { namesOf } from '@/lib/person';
 import type {
   ChooseTopicSessionInput,
   PersonRef,
@@ -114,6 +116,7 @@ export function TopicChoiceSheet({
   const choose = useChooseTopicSession(meetingId);
   const toast = useToast();
   const confirm = useConfirm();
+  const me = useMe();
 
   const schliessen = () => {
     setStep({ name: 'root' });
@@ -145,11 +148,38 @@ export function TopicChoiceSheet({
     });
   };
 
+  /**
+   * Die zweite Rückfrage: An diesem Abend ist noch jemand zuständig.
+   *
+   * Wer wählt, wählt für alle, die am Abend dran sind — sie werden
+   * Verantwortliche dieser Einheit und dürfen danach am **ganzen** Thema
+   * schreiben. Das ist richtig so (es ist dieselbe Vorbereitung), aber es ist
+   * eine Entscheidung über andere Leute, und die trifft man nicht im
+   * Vorbeigehen.
+   *
+   * Umgekehrt gilt dasselbe: Kommt später jemand dazu, fällt die Wahl zurück,
+   * damit sie hier noch einmal bewusst getroffen wird (`TopicLinkService`).
+   */
+  const zusammenVorbereiten = async (): Promise<boolean> => {
+    const andere = responsibles.filter((person) => person.id !== me.me?.id);
+    if (andere.length === 0) return true;
+
+    const namen = namesOf(andere);
+    const mehrere = andere.length > 1;
+
+    return confirm({
+      title: 'Zusammen vorbereiten?',
+      body: `Außer dir ${mehrere ? 'sind' : 'ist'} ${namen} an diesem Abend für das Thema zuständig. Mit dieser Wahl bereitet ihr es gemeinsam vor — ${namen} ${mehrere ? 'dürfen' : 'darf'} danach am ganzen Thema schreiben.`,
+      confirmLabel: 'Zusammen vorbereiten',
+    });
+  };
+
   const waehlen = async (
     input: ChooseTopicSessionInput,
     erfolg: string,
   ): Promise<void> => {
     if (!(await protokollAufgeben())) return;
+    if (!(await zusammenVorbereiten())) return;
 
     choose.mutate(input, {
       onSuccess: () => {

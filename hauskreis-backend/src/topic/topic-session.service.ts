@@ -117,6 +117,9 @@ export class TopicSessionService {
    * Ersetzt die Liste; leer ist gültig und heißt „noch kein Zuständiger". Wer
    * zuteilt, prüfen wir nicht weiter — wer vorbereitet, ist eine Frage an die
    * Gruppe, und die beantwortet sie im Gespräch, nicht über Rechte.
+   *
+   * Was danach mit einer schon getroffenen Wahl geschieht, entscheidet
+   * `reconcile`: Wer dazukommt und zum Thema nicht gehört, setzt sie zurück.
    */
   async setResponsibles(
     hauskreisId: string,
@@ -163,7 +166,13 @@ export class TopicSessionService {
         skipDuplicates: true,
       });
 
-      await this.links.reconcile(tx, meetingId, dto.personIds, departing);
+      await this.links.reconcile(
+        tx,
+        meetingId,
+        dto.personIds,
+        departing,
+        arriving,
+      );
     });
 
     if (arriving.length > 0) {

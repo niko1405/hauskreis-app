@@ -60,17 +60,30 @@ import { formatDay, hasStarted } from '@/lib/date';
 import { namesOf } from '@/lib/person';
 import type { TopicSession } from '@/lib/api/types';
 
-export function SessionDetailScreen({ sessionId }: { sessionId: string }) {
+export function SessionDetailScreen({
+  sessionId,
+  von,
+}: {
+  sessionId: string;
+  /** Woher man kam — bestimmt allein, wohin der Pfeil zurückführt. */
+  von?: string | null;
+}) {
   const query = useTopicSession(sessionId);
 
   if (query.isLoading) return <CardSkeleton />;
   if (query.error) return <ErrorState error={query.error} />;
   if (!query.data) return null;
 
-  return <Loaded session={query.data.data} />;
+  return <Loaded session={query.data.data} von={von} />;
 }
 
-function Loaded({ session }: { session: TopicSession }) {
+function Loaded({
+  session,
+  von,
+}: {
+  session: TopicSession;
+  von?: string | null;
+}) {
   const router = useRouter();
   const toast = useToast();
   const confirm = useConfirm();
@@ -97,13 +110,23 @@ function Loaded({ session }: { session: TopicSession }) {
   );
 
   /**
-   * Zurück dorthin, wo man herkam — und das ist bei den beiden Sorten
-   * verschieden. Eine Einheit mit Thema erreicht man über dessen Seite, eine
-   * alleinstehende direkt aus dem Archiv.
+   * Zurück dorthin, wo man herkam.
+   *
+   * Drei Wege führen hierher, und der Pfeil soll den zurückgehen, den man kam:
+   * vom **Termin** (dann steht es in der Adresse), von der **Themenseite**, oder
+   * bei einer alleinstehenden Einheit aus dem **Archiv**. Kein `router.back()`:
+   * Das Ziel soll einen Neuladen überstehen, und ein geteilter Link soll dasselbe
+   * tun wie der eigene Aufruf.
+   *
+   * Hängt die Einheit inzwischen an keinem Abend mehr, gibt es keinen Termin, zu
+   * dem man zurückkönnte — dann gilt wieder die Herkunft aus der Sorte.
    */
-  const zurueck = allein
-    ? { href: '/archiv', label: 'Archiv' }
-    : { href: `/thema?id=${session.topic.id}`, label: 'Zum Thema' };
+  const zurueck =
+    von === 'termin' && session.meeting
+      ? { href: `/termin?id=${session.meeting.id}`, label: 'Zum Termin' }
+      : allein
+        ? { href: '/archiv', label: 'Archiv' }
+        : { href: `/thema?id=${session.topic.id}`, label: 'Zum Thema' };
 
   const loeschen = async () => {
     const ok = await confirm({
