@@ -37,10 +37,10 @@ export const RELEASES: readonly Release[] = [
   {
     version: '1.5.0',
     date: '2026-08-19',
-    title: 'Einheiten auch ohne Thema',
+    title: 'Alleinstehende Einheiten',
     highlights: [
-      'Nicht jeder Abend spannt einen Bogen. Du kannst jetzt eine einzelne Einheit anlegen, ohne dafür ein Thema zu erfinden — im Archiv über „Neu anlegen" oder direkt beim Wählen an einem Abend.',
-      'Merkst du später, dass doch mehr drinsteckt, gibst du ihr ein Überthema. Alles, was drinsteht, bleibt stehen, und der neue Abend wird die zweite Einheit.',
+      'Du kannst jetzt eine einzelne Einheit anlegen, ohne dafür ein Thema zu erfinden — im Archiv über „Neu anlegen" oder direkt beim Wählen an einem Abend.',
+      'Merkst du später, dass doch mehr dazugehört, gibst du ihr ein Überthema. Alles, was drinsteht, bleibt stehen, und der neue Abend wird die zweite Einheit.',
       'Jede Einheit hat jetzt ihre eigene Seite: Zusammenfassung, Actionstep, wer sie vorbereitet, und der Weg zum Termin.',
       'Die Einheiten eines Themas stehen dafür als Zeitstrahl untereinander — auf einen Blick sichtbar, was wann dran war und was noch kommt.',
       'Im Archiv erkennst du an einem Symbol, ob ein Eintrag ein Thema über mehrere Abende ist oder eine einzelne Einheit.',
@@ -53,8 +53,6 @@ export const RELEASES: readonly Release[] = [
     highlights: [
       'Das Einladungssystem wurde überprüft und verbessert, sodass Einladungen jetzt zuverlässig ankommen und angenommen werden können.',
       'Wer schon ein Acts2-Konto hat, muss über den Einladungslink kein neues Passwort mehr setzen — und bekommt überhaupt erst eine Mail.',
-      'Bei fester Geschenk-Zuteilung ist wieder jede:r genau einmal dran. Wer neu dazukommt, bekommt nicht nur jemanden, sondern besorgt auch selbst ein Geschenk.',
-      'Wer den Hauskreis verlassen hat, steht in keiner Auswahl und in keiner Vorschlagsliste mehr.',
       'Die App gibt beim Antippen sofort nach und zeigt oben einen Strich, solange etwas lädt — auch bei schlechter Verbindung merkt man jetzt, dass sie zugehört hat.',
     ],
   },
