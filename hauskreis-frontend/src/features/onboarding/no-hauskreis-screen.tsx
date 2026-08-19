@@ -27,6 +27,7 @@ import {
   useInvitations,
 } from '@/lib/api/hooks';
 import type { Invitation } from '@/lib/api/types';
+import { LegalFooter } from '@/components/layout/legal-footer';
 
 export function NoHauskreisScreen({ email }: { email?: string }) {
   const auth = useAuth();
@@ -77,6 +78,10 @@ export function NoHauskreisScreen({ email }: { email?: string }) {
         </Button>
 
         <DeleteAccountButton />
+
+        {/* Auch hier, aus demselben Grund wie auf der Anmeldeseite: Wer noch in
+            keinem Hauskreis steht, sieht das Profil nicht. */}
+        <LegalFooter className="pt-2" />
       </div>
     </div>
   );

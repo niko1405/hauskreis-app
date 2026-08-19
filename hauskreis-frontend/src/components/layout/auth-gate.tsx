@@ -19,6 +19,7 @@ import { useSessionRestore } from '@/lib/auth/use-session-restore';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { useOnline } from '@/lib/use-online';
 import { useSlow } from '@/lib/use-slow';
+import { LegalFooter } from './legal-footer';
 import { setGroupZone } from '@/lib/date';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/states';
@@ -351,6 +352,11 @@ function LoginScreen() {
           </button>
         </p>
       </div>
+
+      {/* Hier und nicht im Profil: Wer abgemeldet ist, kommt an das Profil
+          nicht heran — und genau dieser Bildschirm ist der erste, den jemand
+          von Acts2 sieht. */}
+      <LegalFooter className="mt-6" />
     </FullScreen>
   );
 }

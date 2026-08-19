@@ -19,7 +19,14 @@
  * Werkzeug für einen bestimmten Fehler — er hat ihn gezeigt, der Fehler ist
  * weg, und eine Zeile, die immer dasselbe sagt, liest bald niemand mehr.
  */
-import { ChevronRight, HelpCircle, Mail, Sparkles } from 'lucide-react';
+import {
+  ChevronRight,
+  FileText,
+  HelpCircle,
+  Mail,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
 import Link from 'next/link';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useUnreadFirstSteps } from '@/features/help/use-unread-help';
@@ -68,19 +75,40 @@ export function AppCard() {
 
   return (
     <section>
-      <SectionTitle>Über die App</SectionTitle>
+      <SectionTitle>Rechtliches &amp; Über die App</SectionTitle>
       <Card className="space-y-4">
+        {/* Rechtliches steht **oben** und nicht als Nachtrag unter „Gebaut von
+            Niko". Wer es sucht, sucht es zuerst — und wer es nicht sucht,
+            überliest zwei Zeilen. */}
         <LinkRow
-          href="/neu"
-          icon={<Sparkles size={16} />}
-          title="Was ist neu"
-          hint={
-            version
-              ? `Version ${version}${unread ? ' · noch nicht angesehen' : ''}`
-              : 'Alle Änderungen'
-          }
-          dot={unread}
+          href="/datenschutz"
+          icon={<ShieldCheck size={16} />}
+          title="Datenschutzerklärung"
+          hint="Welche Daten Acts2 verarbeitet — und welche nicht"
         />
+
+        <div className="border-t border-line pt-4">
+          <LinkRow
+            href="/impressum"
+            icon={<FileText size={16} />}
+            title="Impressum"
+            hint="Wer diese App betreibt"
+          />
+        </div>
+
+        <div className="border-t border-line pt-4">
+          <LinkRow
+            href="/neu"
+            icon={<Sparkles size={16} />}
+            title="Was ist neu"
+            hint={
+              version
+                ? `Version ${version}${unread ? ' · noch nicht angesehen' : ''}`
+                : 'Alle Änderungen'
+            }
+            dot={unread}
+          />
+        </div>
 
         <div className="border-t border-line pt-4">
           <LinkRow
