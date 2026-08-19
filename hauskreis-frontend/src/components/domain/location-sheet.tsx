@@ -28,17 +28,31 @@ export function LocationSheet({
   open,
   onClose,
   onCreated,
+  onSaved,
   location,
 }: {
   open: boolean;
   onClose: () => void;
   /** Bekommt den neuen Ort — damit die aufrufende Stelle ihn gleich setzen kann. */
   onCreated?: (location: Location) => void;
+  /**
+   * Gespeichert, nicht abgebrochen.
+   *
+   * `onClose` allein sagt das nicht: beide Wege enden dort, und die Liste im
+   * Archiv will ihre aufgeklappte Zeile nur nach dem einen von beiden wieder
+   * zuklappen.
+   */
+  onSaved?: () => void;
   /** Gesetzt heißt: bearbeiten statt anlegen. */
   location?: Location;
 }) {
   return location ? (
-    <EditSheet open={open} onClose={onClose} location={location} />
+    <EditSheet
+      open={open}
+      onClose={onClose}
+      onSaved={onSaved}
+      location={location}
+    />
   ) : (
     <CreateSheet open={open} onClose={onClose} onCreated={onCreated} />
   );
@@ -95,10 +109,12 @@ function CreateSheet({
 function EditSheet({
   open,
   onClose,
+  onSaved,
   location,
 }: {
   open: boolean;
   onClose: () => void;
+  onSaved?: () => void;
   location: Location;
 }) {
   // Das Schreiben verlangt einen ETag, und der liegt beim geladenen Einzelstand
@@ -149,7 +165,12 @@ function EditSheet({
                   hostWeight: current.hostWeight,
                   requiresHost: current.requiresHost,
                 },
-                { onSuccess: () => onClose() },
+                {
+                  onSuccess: () => {
+                    onSaved?.();
+                    onClose();
+                  },
+                },
               )
             }
           >

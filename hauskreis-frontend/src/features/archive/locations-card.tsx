@@ -233,6 +233,9 @@ function SpotRow({ location }: { location: Location }) {
         <LocationSheet
           open
           onClose={() => setEditing(false)}
+          // Gespeichert heißt fertig mit der Zeile. Beim Abbrechen bleibt sie
+          // offen: dann war man ja noch nicht fertig.
+          onSaved={() => setRevealed(false)}
           location={location}
         />
       )}
@@ -252,7 +255,9 @@ function SpotRowActions({
   const toast = useToast();
 
   return (
-    <div>
+    /* Ohne `flex` stapelt der Rahmen seine beiden Knöpfe senkrecht — in einer
+       Zeile, die selbst schon waagerecht liest. */
+    <div className="flex shrink-0 items-center gap-1">
       <IconButton
         label={`${location.name} bearbeiten`}
         onClick={() => setEditing(true)}
