@@ -292,6 +292,16 @@ export function shapeSession(
       personId: viewer.personId,
       topic: membershipOf(topic),
     }),
+    /**
+     * Gehört mir das Thema dieser Einheit?
+     *
+     * Keine Rechtefrage — `mayEdit` beantwortet die schon, und weiter gefasst:
+     * dort zählen Mitarbeit und Adminrolle mit. Hier geht es enger zu, weil eine
+     * Stelle es enger braucht: Wer das Thema gewählt hat, darf Mitwirkende ein-
+     * und austragen, **ohne dass die Wahl zurückfällt** (`TopicLinkService`).
+     * Die Zuteilung sagt es vorher an, und dafür muss sie es wissen.
+     */
+    owned: topic.ownerPersonId === viewer.personId,
   };
 }
 

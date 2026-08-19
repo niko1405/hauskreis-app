@@ -319,6 +319,29 @@ function Loaded({
     roles.topicPeople.some((person) => person.id === me.me?.id);
 
   /**
+   * Was das Eintragen einer Person an diesem Abend sonst noch tut.
+   *
+   * Zwei sehr verschiedene Sätze, und welcher gilt, hängt daran, wem das
+   * gewählte Thema gehört. **Dem Owner** gehört auch der Kreis darum: Er holt
+   * jemanden dazu oder nimmt ihn wieder heraus, und die Wahl bleibt stehen.
+   * **Allen anderen** fällt sie beim Dazuholen zurück — was sie hier erfahren,
+   * bevor sie es tun, und nicht hinterher an einer leeren Karte.
+   *
+   * Steht noch gar nichts, gibt es auch nichts anzukündigen; an einem
+   * vergangenen Abend ebenso wenig, dort ist alles eingefroren.
+   */
+  const topicHint = ((): string | undefined => {
+    const gewaehlt = meeting.topicSession;
+    if (!gewaehlt || past) return undefined;
+
+    if (gewaehlt.owned) {
+      return 'Wer dazukommt, bereitet die Einheit mit dir vor und darf am ganzen Thema schreiben. Wer herausfällt, verliert sie wieder — geschrieben bleibt, was geschrieben ist.';
+    }
+
+    return 'Kommt jemand dazu, wird die Themenwahl zurückgesetzt — ihr entscheidet dann gemeinsam neu. Vorbereitetes bleibt als Entwurf erhalten.';
+  })();
+
+  /**
    * Ob die Nachbereitungs-Karte dasteht — und nicht bloß, ob der Baustein an
    * ist.
    *
@@ -742,11 +765,7 @@ function Loaded({
           selectedIds={selectedFor(sheet)}
           multiple={sheet !== 'TESTIMONY'}
           withoutSuggestions={past}
-          hint={
-            sheet === 'TOPIC' && meeting.topicSession && !past
-              ? 'Kommt jemand dazu, wird die Themenwahl zurückgesetzt — ihr entscheidet dann gemeinsam neu. Vorbereitetes bleibt als Entwurf erhalten.'
-              : undefined
-          }
+          hint={sheet === 'TOPIC' ? topicHint : undefined}
           onSubmit={submitFor(sheet)}
           saving={roles.saving}
         />

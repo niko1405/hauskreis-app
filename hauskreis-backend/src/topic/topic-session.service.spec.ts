@@ -603,8 +603,11 @@ describe('setResponsibles', () => {
       expect.anything(),
       'm1',
       ['p1', 'p2'],
-      [],
-      ['p2'],
+      {
+        departing: [],
+        arriving: ['p2'],
+        actorPersonId: 'p1',
+      },
     );
   });
 
@@ -617,8 +620,11 @@ describe('setResponsibles', () => {
       expect.anything(),
       'm1',
       ['p3'],
-      ['p1', 'p2'],
-      ['p3'],
+      {
+        departing: ['p1', 'p2'],
+        arriving: ['p3'],
+        actorPersonId: 'p1',
+      },
     );
   });
 });

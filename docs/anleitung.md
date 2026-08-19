@@ -291,6 +291,10 @@ trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
   nach — ihr bereitet es dann zusammen vor, und beide dürfen am ganzen Thema
   schreiben. Fällt die zweite Person wieder aus der Zuteilung, verschwindet sie
   auch wieder aus der Einheit.
+- **Hast du das Thema selbst gewählt, gilt das für dich nicht.** Du holst dir
+  jemanden dazu oder nimmst ihn wieder heraus, und deine Wahl bleibt stehen —
+  zurückgesetzt wird nur, wenn jemand *anderes* dich dazuträgt. Was die
+  Zuteilung gerade bewirkt, steht jedes Mal oben im Sheet.
 - Eine Einheit lässt sich auch **ohne Termin** anlegen, im Archiv auf der
   Themenseite. Sie wartet dann als „offen", bis sie an einem Abend ausgewählt
   wird. Das ist der Ort zum Vorbereiten.

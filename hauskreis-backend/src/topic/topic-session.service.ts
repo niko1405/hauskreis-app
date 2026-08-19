@@ -119,7 +119,9 @@ export class TopicSessionService {
    * Gruppe, und die beantwortet sie im Gespräch, nicht über Rechte.
    *
    * Was danach mit einer schon getroffenen Wahl geschieht, entscheidet
-   * `reconcile`: Wer dazukommt und zum Thema nicht gehört, setzt sie zurück.
+   * `reconcile`: Wer dazukommt und zum Thema nicht gehört, setzt sie zurück —
+   * es sei denn, der Owner selbst trägt ein. Deshalb geht `actorPersonId` dort
+   * mit hinein und nicht nur in die Benachrichtigung.
    */
   async setResponsibles(
     hauskreisId: string,
@@ -166,13 +168,11 @@ export class TopicSessionService {
         skipDuplicates: true,
       });
 
-      await this.links.reconcile(
-        tx,
-        meetingId,
-        dto.personIds,
+      await this.links.reconcile(tx, meetingId, dto.personIds, {
         departing,
         arriving,
-      );
+        actorPersonId,
+      });
     });
 
     if (arriving.length > 0) {

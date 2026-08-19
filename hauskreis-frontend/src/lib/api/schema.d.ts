@@ -2387,6 +2387,7 @@ export interface components {
           held: boolean;
           contentVisible: boolean;
           mayEdit: boolean;
+          owned: boolean;
           sessionIndex: number;
           sessionCount: number;
         } | null;
@@ -2573,6 +2574,7 @@ export interface components {
         held: boolean;
         contentVisible: boolean;
         mayEdit: boolean;
+        owned: boolean;
         sessionIndex: number;
         sessionCount: number;
       } | null;
@@ -2832,6 +2834,7 @@ export interface components {
           held: boolean;
           contentVisible: boolean;
           mayEdit: boolean;
+          owned: boolean;
         }[];
         publiclyVisible: boolean;
         mine: boolean;
@@ -2920,6 +2923,7 @@ export interface components {
         held: boolean;
         contentVisible: boolean;
         mayEdit: boolean;
+        owned: boolean;
       }[];
       publiclyVisible: boolean;
       mine: boolean;
@@ -2995,6 +2999,7 @@ export interface components {
       held: boolean;
       contentVisible: boolean;
       mayEdit: boolean;
+      owned: boolean;
       sessionIndex: number;
       sessionCount: number;
     };

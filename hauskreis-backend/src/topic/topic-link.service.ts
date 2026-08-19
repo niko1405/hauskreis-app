@@ -52,20 +52,37 @@ export class TopicLinkService {
    * - Kommt C dazu und **gehört schon zum Thema**, bleibt die Einheit hängen und
    *   C wird nur Verantwortliche:r dieses Abends. Dort ist nichts zu
    *   entscheiden, was nicht schon entschieden wäre.
+   * - **Holt A selbst ihn dazu, bleibt sie ebenfalls hängen.** Das Zurücksetzen
+   *   schützt die Vorbereitung vor fremdem Zugriff — nicht vor der Person, der
+   *   sie gehört. Wer das Thema gewählt hat, zieht den Kreis darum selbst: A
+   *   nimmt C dazu, und C bereitet ab jetzt mit vor.
    *
-   * @param departing Wer aus der Zuteilung **herausfällt**. Muss mitkommen und
-   *   lässt sich hier nicht ableiten: `setResponsibles` hat die alten Zeilen zu
-   *   diesem Zeitpunkt schon gelöscht.
-   * @param arriving Wer **dazukommt**. Aus demselben Grund von außen: die neuen
-   *   Zeilen stehen zu diesem Zeitpunkt schon.
+   * Die drei Angaben unten kommen von außen und lassen sich hier nicht
+   * ableiten: Wenn `reconcile` läuft, stehen die neuen Zeilen schon und die
+   * alten sind weg.
    */
   async reconcile(
     tx: Prisma.TransactionClient,
     meetingId: string,
     assigned: readonly string[],
-    departing: readonly string[] = [],
-    arriving: readonly string[] = [],
+    aenderung: {
+      /** Wer aus der Zuteilung **herausfällt**. */
+      departing?: readonly string[];
+      /** Wer **dazukommt**. */
+      arriving?: readonly string[];
+      /**
+       * Wer die Zuteilung ändert.
+       *
+       * Zählt nur für den einen Fall oben: Gehört ihm das Thema, das gerade am
+       * Abend hängt, setzt sein Eintragen nichts zurück. Ein Admin bekommt hier
+       * **keinen** Freifahrtschein — genau wie beim Wählen, und aus demselben
+       * Grund: Es geht nicht um Verwaltung, sondern um jemandes Vorbereitung.
+       */
+      actorPersonId?: string;
+    } = {},
   ): Promise<void> {
+    const { departing = [], arriving = [], actorPersonId } = aenderung;
+
     const meeting = await tx.meeting.findUnique({
       where: { id: meetingId },
       select: {
@@ -109,9 +126,15 @@ export class TopicLinkService {
     // Wahl fällt deshalb zurück an die Zugeteilten — alle, gemeinsam. Nicht
     // gelöscht, nur gelöst: darum geht es unten in denselben Zweig wie „niemand
     // gehört mehr dazu".
-    const fremd = arriving.filter(
-      (personId) => !belongsTo(membership, personId),
-    );
+    //
+    // Es sei denn, der Owner selbst trägt ein. Dass er dafür auch zugeteilt sein
+    // muss, steht nicht hier: Ist er es nicht, entscheidet die Zeile darunter
+    // ohnehin nach der alten Regel.
+    const vomOwner = membership.ownerPersonId === actorPersonId;
+
+    const fremd = vomOwner
+      ? []
+      : arriving.filter((personId) => !belongsTo(membership, personId));
 
     if (
       fremd.length === 0 &&
@@ -305,7 +328,9 @@ export class TopicLinkService {
         tx,
         meetingId,
         rest.map((row) => row.personId),
-        [personId],
+        // Ohne `actorPersonId`: Wer absagt, trägt niemanden ein — und die
+        // Ausnahme für den Owner gilt nur für Ankommende.
+        { departing: [personId] },
       );
 
       return true;

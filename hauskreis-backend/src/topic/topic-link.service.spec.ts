@@ -191,7 +191,7 @@ describe('TopicLinkService.reconcile', () => {
       session: { ownerPersonId: 'p1' },
     });
 
-    await service.reconcile(tx, 'm1', ['p1', 'p9'], [], ['p9']);
+    await service.reconcile(tx, 'm1', ['p1', 'p9'], { arriving: ['p9'] });
 
     expect(entkoppelt(sessionUpdate)).toBe(true);
   });
@@ -205,7 +205,7 @@ describe('TopicLinkService.reconcile', () => {
       session: { ownerPersonId: 'p1' },
     });
 
-    await service.reconcile(tx, 'm1', ['p1', 'p9'], [], ['p9']);
+    await service.reconcile(tx, 'm1', ['p1', 'p9'], { arriving: ['p9'] });
 
     expect(responsibleDelete).not.toHaveBeenCalled();
   });
@@ -220,7 +220,7 @@ describe('TopicLinkService.reconcile', () => {
       session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
     });
 
-    await service.reconcile(tx, 'm1', ['p1', 'p2'], [], ['p2']);
+    await service.reconcile(tx, 'm1', ['p1', 'p2'], { arriving: ['p2'] });
 
     expect(sessionUpdate).not.toHaveBeenCalled();
     expect(responsibleCreate).toHaveBeenCalledWith(
@@ -231,6 +231,61 @@ describe('TopicLinkService.reconcile', () => {
         ],
       }),
     );
+  });
+
+  /**
+   * Die zweite Ausnahme, und die wichtigere: Das Zurücksetzen schützt eine
+   * Vorbereitung vor fremdem Zugriff — nicht vor der Person, der sie gehört.
+   * Wer das Thema gewählt hat, holt sich jemanden dazu, ohne es zu verlieren.
+   */
+  it('lässt sie hängen, wenn der Owner selbst jemanden dazuholt', async () => {
+    const { service, tx, sessionUpdate, collaboratorCreate } = setup({
+      session: { ownerPersonId: 'p1' },
+    });
+
+    await service.reconcile(tx, 'm1', ['p1', 'p9'], {
+      arriving: ['p9'],
+      actorPersonId: 'p1',
+    });
+
+    expect(sessionUpdate).not.toHaveBeenCalled();
+    expect(collaboratorCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: [{ topicId: 't1', personId: 'p9' }] }),
+    );
+  });
+
+  /**
+   * Ein Mitarbeiter ist nicht der Owner. Er darf am Thema schreiben — aber
+   * jemanden in *diese* Vorbereitung zu holen, ist die Entscheidung dessen, der
+   * sie angefangen hat.
+   */
+  it('setzt zurück, wenn ein Mitarbeiter jemanden dazuholt', async () => {
+    const { service, tx, sessionUpdate } = setup({
+      session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
+    });
+
+    await service.reconcile(tx, 'm1', ['p1', 'p2', 'p9'], {
+      arriving: ['p9'],
+      actorPersonId: 'p2',
+    });
+
+    expect(entkoppelt(sessionUpdate)).toBe(true);
+  });
+
+  /**
+   * Und ein Thema ohne Owner hat keinen, der die Ausnahme in Anspruch nehmen
+   * könnte. Ohne diese Prüfung fiele jede Zuteilung ohne handelnde Person unter
+   * die Ausnahme — `null === undefined` ist zum Glück falsch, aber das soll
+   * jemand festhalten.
+   */
+  it('kennt keine Ausnahme für ein verwaistes Thema', async () => {
+    const { service, tx, sessionUpdate } = setup({
+      session: { ownerPersonId: null },
+    });
+
+    await service.reconcile(tx, 'm1', ['p9'], { arriving: ['p9'] });
+
+    expect(entkoppelt(sessionUpdate)).toBe(true);
   });
 
   /**
@@ -255,7 +310,7 @@ describe('TopicLinkService.reconcile', () => {
       session: { ownerPersonId: 'p1' },
     });
 
-    await service.reconcile(tx, 'm1', ['p1', 'p9'], [], ['p9']);
+    await service.reconcile(tx, 'm1', ['p1', 'p9'], { arriving: ['p9'] });
 
     expect(sessionUpdate).not.toHaveBeenCalled();
   });
@@ -298,7 +353,7 @@ describe('TopicLinkService.reconcile — wer herausfällt', () => {
       session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
     });
 
-    await service.reconcile(tx, 'm1', ['p1'], ['p2']);
+    await service.reconcile(tx, 'm1', ['p1'], { departing: ['p2'] });
 
     expect(responsibleDelete).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -312,7 +367,7 @@ describe('TopicLinkService.reconcile — wer herausfällt', () => {
       session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
     });
 
-    await service.reconcile(tx, 'm1', ['p1'], ['p2']);
+    await service.reconcile(tx, 'm1', ['p1'], { departing: ['p2'] });
 
     expect(entzogen(collaboratorDelete)).toEqual(['p2']);
   });
@@ -328,7 +383,7 @@ describe('TopicLinkService.reconcile — wer herausfällt', () => {
       nochBeteiligt: ['p2'],
     });
 
-    await service.reconcile(tx, 'm1', ['p1'], ['p2']);
+    await service.reconcile(tx, 'm1', ['p1'], { departing: ['p2'] });
 
     expect(entzogen(collaboratorDelete)).toEqual([]);
   });
@@ -344,7 +399,7 @@ describe('TopicLinkService.reconcile — wer herausfällt', () => {
 
     // p1 gehört zum Thema, die Einheit bleibt also hängen; ausgetragen wird der
     // Owner selbst.
-    await service.reconcile(tx, 'm1', ['p2'], ['p1']);
+    await service.reconcile(tx, 'm1', ['p2'], { departing: ['p1'] });
 
     expect(entzogen(collaboratorDelete)).toEqual([]);
     expect(responsibleDelete).not.toHaveBeenCalled();
@@ -360,7 +415,7 @@ describe('TopicLinkService.reconcile — wer herausfällt', () => {
       session: { ownerPersonId: 'p1' },
     });
 
-    await service.reconcile(tx, 'm1', ['p9'], ['p1']);
+    await service.reconcile(tx, 'm1', ['p9'], { departing: ['p1'] });
 
     expect(entkoppelt(sessionUpdate)).toBe(true);
     expect(responsibleDelete).not.toHaveBeenCalled();
@@ -373,7 +428,7 @@ describe('TopicLinkService.reconcile — wer herausfällt', () => {
       session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
     });
 
-    await service.reconcile(tx, 'm1', ['p1'], ['p2']);
+    await service.reconcile(tx, 'm1', ['p1'], { departing: ['p2'] });
 
     expect(responsibleDelete).not.toHaveBeenCalled();
   });

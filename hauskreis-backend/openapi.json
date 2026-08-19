@@ -13906,6 +13906,9 @@
                     "mayEdit": {
                       "type": "boolean"
                     },
+                    "owned": {
+                      "type": "boolean"
+                    },
                     "sessionIndex": {
                       "type": "integer",
                       "exclusiveMinimum": true,
@@ -13934,6 +13937,7 @@
                     "held",
                     "contentVisible",
                     "mayEdit",
+                    "owned",
                     "sessionIndex",
                     "sessionCount"
                   ],
@@ -14672,6 +14676,9 @@
               "mayEdit": {
                 "type": "boolean"
               },
+              "owned": {
+                "type": "boolean"
+              },
               "sessionIndex": {
                 "type": "integer",
                 "exclusiveMinimum": true,
@@ -14700,6 +14707,7 @@
               "held",
               "contentVisible",
               "mayEdit",
+              "owned",
               "sessionIndex",
               "sessionCount"
             ],
@@ -15741,6 +15749,9 @@
                       },
                       "mayEdit": {
                         "type": "boolean"
+                      },
+                      "owned": {
+                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -15758,7 +15769,8 @@
                       "actionstepDone",
                       "held",
                       "contentVisible",
-                      "mayEdit"
+                      "mayEdit",
+                      "owned"
                     ],
                     "additionalProperties": false
                   }
@@ -16105,6 +16117,9 @@
                 },
                 "mayEdit": {
                   "type": "boolean"
+                },
+                "owned": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -16122,7 +16137,8 @@
                 "actionstepDone",
                 "held",
                 "contentVisible",
-                "mayEdit"
+                "mayEdit",
+                "owned"
               ],
               "additionalProperties": false
             }
@@ -16428,6 +16444,9 @@
           "mayEdit": {
             "type": "boolean"
           },
+          "owned": {
+            "type": "boolean"
+          },
           "sessionIndex": {
             "type": "integer",
             "exclusiveMinimum": true,
@@ -16458,6 +16477,7 @@
           "held",
           "contentVisible",
           "mayEdit",
+          "owned",
           "sessionIndex",
           "sessionCount"
         ],

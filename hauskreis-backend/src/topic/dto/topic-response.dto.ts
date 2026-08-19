@@ -76,6 +76,10 @@ export const topicSessionResponseSchema = z.object({
   /// App die Regel nicht ein zweites Mal aufschreibt — und nicht anders auslegt.
   /// Sie hängt am **Thema**, nicht am Abend: wer dazugehört, darf jede Einheit.
   mayEdit: z.boolean(),
+  /// Ob das Thema dem Betrachter **gehört** — enger als `mayEdit`, wo Mitarbeit
+  /// und Adminrolle mitzählen. Eine Stelle braucht es enger: Wer gewählt hat,
+  /// darf Mitwirkende ein- und austragen, ohne dass die Wahl zurückfällt.
+  owned: z.boolean(),
 });
 
 /** Die Einheit ohne ihr Thema — für Listen, die schon unter dem Thema stehen. */
