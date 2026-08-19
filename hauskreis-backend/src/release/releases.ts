@@ -35,6 +35,17 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: '1.6.0',
+    date: '2026-08-19',
+    title: 'Datenschutz, Impressum — und Themen nachtragen',
+    highlights: [
+      'Acts2 hat jetzt eine Datenschutzerklärung und ein Impressum. Du findest beides im Profil unter „Rechtliches & Über die App" und auf der Anmeldeseite.',
+      'Beim Anlegen eines Kontos wird künftig ausdrücklich um Einwilligung gebeten, dass die Daten im christlichen Kontext verarbeitet werden dürfen — das verlangt die DSGVO für Angaben, die etwas über den Glauben aussagen. Wer schon dabei ist, bekommt die Frage einmalig beim nächsten Anmelden.',
+      'Zur Beruhigung: Die App benutzt keine Analyse- oder Werbedienste, setzt keine eigenen Cookies und lädt keine Schriften von fremden Servern nach. Deshalb gibt es auch keinen Cookie-Banner — es gäbe nichts zu fragen.',
+      'Das Thema eines vergangenen Abends lässt sich jetzt nachtragen und ändern. Wer dafür zugeteilt war, kann eintragen, worum es ging — auch wenn man am Abend selbst nicht dazu kam.',
+    ],
+  },
+  {
     version: '1.5.0',
     date: '2026-08-19',
     title: 'Alleinstehende Einheiten',

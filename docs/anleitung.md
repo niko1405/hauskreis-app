@@ -95,6 +95,12 @@ Das alles passiert im Tab **Profil**, von oben nach unten:
 - Du kannst auch einen **eigenen Hauskreis gründen** — aber immer nur in einem
   gleichzeitig sein.
 - **Einladen darf nur ein Admin.**
+- Beim **Anlegen des Kontos** wirst du einmal um Zustimmung gebeten: zu den
+  Nutzungsbedingungen und dazu, dass deine Daten im christlichen Kontext
+  verarbeitet werden dürfen. Das verlangt die DSGVO für alles, was etwas über
+  den Glauben aussagt — und dazu zählt schon die Mitgliedschaft in einem
+  Hauskreis. Datenschutzerklärung und Impressum stehen im Profil und in der
+  Fußzeile der Anmeldeseite.
 - Die Hintergrundbilder auf **Heute**, **Gebet** und **Profil** ändert man über
   das Kamera-Symbol oben rechts. **Achtung: Das Bild gilt für alle im
   Hauskreis.** Termine und Archiv haben bewusst keins — dort sucht man eine
@@ -153,8 +159,9 @@ hier anlegen, ohne auf einen Dienstag zu warten.
 ### 5.5 Profil
 
 Alle Einstellungen aus Kapitel 3, dazu die Mitgliederliste, der Admin-Bereich
-(nur für Admins) und ganz unten unter **„Über die App"** die **Hilfe** und
-**„Was ist neu"**.
+(nur für Admins) und ganz unten unter **„Rechtliches & Über die App"** die
+**Datenschutzerklärung**, das **Impressum**, die **Hilfe** und **„Was ist
+neu"**.
 
 ---
 

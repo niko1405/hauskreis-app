@@ -799,6 +799,37 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
 
   // ── Datenschutz ───────────────────────────────────────────────────────────
   {
+    id: 'privacy-rechtstexte',
+    category: 'privacy',
+    question: 'Wo finde ich Datenschutzerklärung und Impressum?',
+    answer:
+      'Im Profil ganz unten unter **„Rechtliches & Über die App"**. Beides steht außerdem in der Fußzeile der Anmeldeseite — man kommt also auch ohne Konto heran, was bei einer Datenschutzerklärung ja der Sinn der Sache ist.',
+    keywords: ['datenschutz', 'impressum', 'rechtliches', 'dsgvo', 'erklärung'],
+  },
+  {
+    id: 'privacy-einwilligung',
+    category: 'privacy',
+    question: 'Warum muss ich beim Anlegen des Kontos etwas bestätigen?',
+    answer:
+      'Weil Acts2 einem christlichen Hauskreis dient. Schon die Mitgliedschaft sagt damit etwas über deinen Glauben aus, und dazu kommen Gebetsanliegen, Themen und wer wann bei den Treffen war.\n\nDie DSGVO zählt religiöse Überzeugungen zu den **besonderen Kategorien** personenbezogener Daten (Art. 9). Dafür reicht kein stillschweigendes Einverständnis — es braucht eine **ausdrückliche Einwilligung**, und die holt die App beim Anlegen des Kontos ein.\n\nDu kannst sie jederzeit für die Zukunft widerrufen: im Profil über „Hauskreis verlassen" oder „Konto löschen".',
+    keywords: [
+      'einwilligung',
+      'zustimmung',
+      'häkchen',
+      'art 9',
+      'religion',
+      'bestätigen',
+    ],
+  },
+  {
+    id: 'privacy-cookies',
+    category: 'privacy',
+    question: 'Warum gibt es keinen Cookie-Banner?',
+    answer:
+      'Weil es nichts zu fragen gäbe. Acts2 setzt **keine eigenen Cookies**, benutzt keine Analyse-, Statistik- oder Werbedienste und lädt keine Schriften von fremden Servern nach — die kommen fertig mit der App.\n\nEin Banner ist nur für das nötig, was **über** den Betrieb des Dienstes hinausgeht. Genau das gibt es hier nicht, und einer, der nach einer Erlaubnis fragt, die er nicht braucht, ist eine Gewohnheit und keine Auskunft.\n\nWas die App im Browser ablegt, dient allein dem Betrieb: dass du angemeldet bleibst, welches Design du gewählt hast, und ob du die Neuigkeiten schon gesehen hast.',
+    keywords: ['cookie', 'banner', 'consent', 'tracking', 'analytics'],
+  },
+  {
     id: 'privacy-passwort',
     category: 'privacy',
     question: 'Wo liegt mein Passwort?',
