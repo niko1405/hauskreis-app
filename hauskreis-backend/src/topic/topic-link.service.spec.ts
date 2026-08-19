@@ -45,6 +45,7 @@ function setup(options: {
         };
 
   const sessionUpdate = jest.fn().mockResolvedValue({});
+  const sessionTouch = jest.fn().mockResolvedValue({ count: 1 });
   const responsibleCreate = jest.fn().mockResolvedValue({ count: 0 });
   const responsibleDelete = jest.fn().mockResolvedValue({ count: 0 });
   const responsibleFind = jest
@@ -71,7 +72,7 @@ function setup(options: {
         .mockResolvedValue({ ownerPersonId: session?.topic.ownerPersonId }),
       updateMany: topicTouch,
     },
-    topicSession: { update: sessionUpdate },
+    topicSession: { update: sessionUpdate, updateMany: sessionTouch },
     topicSessionResponsible: {
       createMany: responsibleCreate,
       deleteMany: responsibleDelete,
@@ -91,6 +92,7 @@ function setup(options: {
     service,
     tx: tx as unknown as Prisma.TransactionClient,
     sessionUpdate,
+    sessionTouch,
     responsibleCreate,
     responsibleDelete,
     collaboratorCreate,
@@ -102,6 +104,12 @@ function setup(options: {
 /** Wessen Mitarbeit `deleteMany` wegnehmen wollte. */
 const entzogen = (fn: jest.Mock): string[] =>
   (fn.mock.calls[0]?.[0].where?.personId?.in as string[]) ?? [];
+
+/** Ob die Revision der Einheit angehoben wurde — daran hängt ihr ETag. */
+const angehoben = (fn: jest.Mock) =>
+  fn.mock.calls.some(
+    (call) => call[0]?.where?.id === 's1' && call[0]?.data?.version,
+  );
 
 /** Was `update` schreiben wollte. */
 const entkoppelt = (fn: jest.Mock) =>
@@ -178,6 +186,34 @@ describe('TopicLinkService.reconcile', () => {
         data: [{ topicId: 't1', personId: 'p2' }],
       }),
     );
+  });
+
+  /**
+   * Wer an einer Einheit steht, steht in einer eigenen Tabelle — ihre eigene
+   * Zeile bleibt dabei unberührt. Ohne einen Griff an die Revision bliebe der
+   * ETag stehen, der Server antwortete `304`, und die Seite der Einheit zeigte
+   * weiter den alten Kreis. Genau so ist es aufgefallen: „Ich habe jemanden
+   * dazugetragen, aber dort steht immer noch nur ich."
+   */
+  it('hebt die Revision der Einheit an, wenn jemand dazukommt', async () => {
+    const { service, tx, sessionTouch } = setup({
+      session: { ownerPersonId: 'p1' },
+    });
+
+    await service.reconcile(tx, 'm1', ['p1', 'p2']);
+
+    expect(angehoben(sessionTouch)).toBe(true);
+  });
+
+  /** Und in die andere Richtung, wo derselbe 304 den Entfernten stehen ließ. */
+  it('hebt sie auch an, wenn jemand herausfällt', async () => {
+    const { service, tx, sessionTouch } = setup({
+      session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
+    });
+
+    await service.reconcile(tx, 'm1', ['p1'], { departing: ['p2'] });
+
+    expect(angehoben(sessionTouch)).toBe(true);
   });
 
   /**

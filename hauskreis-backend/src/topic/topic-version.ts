@@ -29,3 +29,27 @@ export async function touchTopic(
     },
   });
 }
+
+/**
+ * Dasselbe eine Ebene tiefer: die Revision **einer Einheit**.
+ *
+ * Gebraucht für den einen Fall, in dem sich ihre Antwort ändert, ohne dass die
+ * Zeile angefasst wird: `responsibles` steht in einer eigenen Tabelle. Wer
+ * dazukommt oder herausfällt, ändert damit `TopicSessionDto` — die Version
+ * bliebe aber stehen, der ETag auch, und der Server antwortete beim nächsten
+ * Aufruf mit `304`.
+ *
+ * Das war kein theoretisches Problem: „Ich habe jemanden zur Rolle
+ * hinzugefügt, aber auf der Seite der Einheit steht weiter nur ich" — und
+ * ebenso beim Entfernen, wo er einfach stehen blieb. Beide Male stimmte die
+ * Datenbank und log die Anzeige.
+ */
+export async function touchSession(
+  db: Prisma.TransactionClient,
+  sessionId: string,
+): Promise<void> {
+  await db.topicSession.updateMany({
+    where: { id: sessionId },
+    data: { version: { increment: 1 } },
+  });
+}

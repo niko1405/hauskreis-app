@@ -4,7 +4,7 @@ import { Prisma } from '../../generated/prisma/client';
 import { GroupClockService } from '../meeting/group-clock.service';
 import { touchMeeting } from '../meeting/meeting-version';
 import { belongsTo } from './topic-visibility';
-import { touchTopic } from './topic-version';
+import { touchSession, touchTopic } from './topic-version';
 
 /**
  * Die Verbindung zwischen einem Abend und der Einheit, die daran hängt.
@@ -209,6 +209,8 @@ export class TopicLinkService {
         .map((personId) => ({ topicId, personId })),
       skipDuplicates: true,
     });
+
+    await this.touchAffected(tx, sessionId, topicId);
   }
 
   /**
@@ -264,6 +266,30 @@ export class TopicLinkService {
         },
       },
     });
+
+    await this.touchAffected(tx, sessionId, topicId);
+  }
+
+  /**
+   * Wer an einer Einheit steht, steht in einer **eigenen Tabelle** — und damit
+   * ändert sich die Antwort beider Seiten, ohne dass eine ihrer Zeilen
+   * angefasst würde.
+   *
+   * Ohne diesen Griff bleibt die Version stehen, mit ihr der ETag, und der
+   * Server antwortet beim nächsten Aufruf `304`: Die Seite der Einheit zeigte
+   * weiter den alten Kreis — den Dazugekommenen nicht, den Entfernten noch. Die
+   * Terminseite dagegen stimmte, weil an ihr `touchMeeting` hängt. Das ist die
+   * Sorte Fehler, die man für einen Fehler in der Fachlogik hält.
+   */
+  private async touchAffected(
+    tx: Prisma.TransactionClient,
+    sessionId: string,
+    topicId: string,
+  ): Promise<void> {
+    await touchSession(tx, sessionId);
+    // Das Thema trägt seine Einheiten samt Verantwortlichen mit aus — dieselbe
+    // Änderung, eine Ebene höher, derselbe 304.
+    await touchTopic(tx, topicId);
   }
 
   /**
