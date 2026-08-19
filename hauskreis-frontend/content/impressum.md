@@ -1,8 +1,8 @@
 ## Angaben gemäß § 5 DDG
 
-**[Vorname Nachname]**
-[Straße Hausnummer]
-[PLZ Ort]
+**Nikolas Vix**
+Humboldtstraße 21
+76131 Karlsruhe
 Deutschland
 
 ## Kontakt
@@ -11,7 +11,7 @@ E-Mail: [niko.vix@icloud.com](mailto:niko.vix@icloud.com)
 
 ## Verantwortlich für den Inhalt
 
-**[Vorname Nachname]**, Anschrift wie oben.
+**Nikolas Vix**, Anschrift wie oben.
 
 ## Zur Einordnung
 

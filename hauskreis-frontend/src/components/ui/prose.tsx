@@ -6,10 +6,11 @@
  * eine Abhängigkeit zu holen, die jede Sonderform von Markdown kann, hieße
  * einige hundert Kilobyte auszuliefern, damit zwei Seiten Absätze bekommen.
  *
- * Verstanden werden: `##`/`###`-Überschriften, Absätze, `-`-Listen, `**fett**`
- * und `[Text](adresse)`. Das ist genau das, was ein Generator ausspuckt, und
- * genau das, was ein Rechtstext braucht. Alles andere steht als gewöhnlicher
- * Absatz da — nichts verschwindet, nur weil der Renderer es nicht kennt.
+ * Verstanden werden: `##`/`###`-Überschriften, Absätze, `-`-Listen, `**fett**`,
+ * `[Text](adresse)` und der harte Zeilenumbruch (Zeilenende `\`). Das ist genau
+ * das, was ein Generator ausspuckt, und genau das, was ein Rechtstext braucht.
+ * Alles andere steht als gewöhnlicher Absatz da — nichts verschwindet, nur weil
+ * der Renderer es nicht kennt.
  *
  * Der kleine Bruder davon ist `Emphasised` im Hilfe-Bildschirm: Der kann nur
  * Fettdruck, weil die Antworten dort nicht mehr brauchen.
@@ -66,7 +67,21 @@ function parse(markdown: string): Block[] {
 
       // Ein Absatz darf über mehrere Zeilen laufen; die Zeilenumbrüche im
       // Quelltext sind Formatierung der Datei, nicht des Textes.
-      return [{ kind: 'paragraph', text: block.split('\n').join(' ') }];
+      //
+      // **Außer am Zeilenende steht ein `\`** — der harte Umbruch aus Markdown.
+      // Ohne ihn stünde eine Anschrift als „Nikolas Vix Humboldtstraße 21 76131
+      // Karlsruhe" da, und drei einzelne Absätze daraus zu machen wäre dieselbe
+      // Anschrift mit Luft dazwischen.
+      const zeilen = block.split('\n').map((line) => line.trimEnd());
+      let text = '';
+
+      for (const [index, zeile] of zeilen.entries()) {
+        const hart = zeile.endsWith('\\');
+        text += hart ? zeile.slice(0, -1).trimEnd() : zeile;
+        if (index < zeilen.length - 1) text += hart ? '\n' : ' ';
+      }
+
+      return [{ kind: 'paragraph', text }];
     });
 }
 
@@ -168,7 +183,13 @@ export function Prose({ markdown }: { markdown: string }) {
             key={index}
             className="text-sm leading-relaxed text-stone-600"
           >
-            <Inline text={block.text} />
+            {block.text.split('\n').map((zeile, zeilenIndex) => (
+              // eslint-disable-next-line react/no-array-index-key
+              <span key={zeilenIndex}>
+                {zeilenIndex > 0 && <br />}
+                <Inline text={zeile} />
+              </span>
+            ))}
           </p>
         );
       })}
