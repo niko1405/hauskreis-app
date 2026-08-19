@@ -44,6 +44,7 @@ Zwecke ihrer Verarbeitung zusammen und verweist auf die betroffenen Personen.
 - Sicherheitsmaßnahmen
 - Bereitstellung unseres Onlineangebotes und Nutzerfreundlichkeit
 - Informationstechnische Infrastruktur
+- Versand von System-E-Mails (Einladung, Adressbestätigung, Passwort-Reset)
 
 ## Maßgebliche Rechtsgrundlagen
 
@@ -198,6 +199,33 @@ Website: [cloudflare.com](https://www.cloudflare.com). Datenschutzerklärung:
 [cloudflare.com/privacypolicy](https://www.cloudflare.com/privacypolicy/).
 Grundlage Drittlandtransfers: Data Privacy Framework (DPF).
 
+## Versand von System-E-Mails
+
+Unsere Applikation verschickt E-Mails, die für die Nutzung des Kontos notwendig
+sind: die Einladung in einen Hauskreis, die Bestätigung Ihrer E-Mail-Adresse und
+den Link zum Zurücksetzen des Passworts. Einen Newsletter oder Werbe-E-Mails
+versenden wir nicht.
+
+Für den Versand nutzen wir einen Dienstleister. An ihn übermittelt werden Ihre
+E-Mail-Adresse und der Inhalt der jeweiligen Nachricht. Der Inhalt beschränkt
+sich auf den Anlass der Mail und einen Link; er enthält keine Angaben über den
+Hauskreis, seine Mitglieder oder Inhalte aus der Applikation.
+
+**Verarbeitete Datenarten:** Kontaktdaten (E-Mail-Adresse); Inhaltsdaten (Text
+der Nachricht); Meta-, Kommunikations- und Verfahrensdaten.
+
+**Rechtsgrundlagen:** Berechtigte Interessen (Art. 6 Abs. 1 S. 1 lit. f DSGVO),
+um Konten einrichten und absichern zu können.
+
+**Resend:** Dienst für den Versand von E-Mails. Dienstanbieter: Plus Five Five,
+Inc. (Resend), 2261 Market Street #5039, San Francisco, CA 94114, USA. Website:
+[resend.com](https://resend.com). Datenschutzerklärung:
+[resend.com/legal/privacy-policy](https://resend.com/legal/privacy-policy).
+Auftragsverarbeitung:
+[resend.com/legal/dpa](https://resend.com/legal/dpa). Grundlage
+Drittlandtransfers: Data Privacy Framework (DPF) sowie
+Standardvertragsklauseln.
+
 ## Einsatz von Cookies und lokalen Speichern
 
 Unter dem Begriff „Cookies" werden Funktionen, die Informationen auf Endgeräten
@@ -218,45 +246,61 @@ zum Einsatz.**
 **Rechtsgrundlagen:** Berechtigte Interessen (Art. 6 Abs. 1 S. 1 lit. f DSGVO)
 sowie technische Notwendigkeit nach § 25 Abs. 2 TDDDG.
 
-## Plug-ins und eingebettete Funktionen sowie Inhalte
+## Dienste und Schnittstellen Dritter
 
-Wir binden Funktions- und Inhaltselemente in unser Onlineangebot ein, die von
-den Servern ihrer jeweiligen Anbieter (nachfolgend als „Drittanbieter"
-bezeichnet) bezogen werden. Die Einbindung setzt voraus, dass die Drittanbieter
-die IP-Adresse der Nutzer verarbeiten, da sie ohne IP-Adresse die Inhalte nicht
-ausliefern könnten.
+Für einzelne Funktionen greifen wir auf Dienste anderer Anbieter zurück. In
+unsere Applikation sind dabei **keine** fremden Inhalte eingebettet: Es gibt
+keine nachgeladenen Skripte, keine Karten im Seitenrahmen, keine externen
+Schriften und keine Social-Media-Elemente. Die Schriften werden bereits beim
+Erstellen der Applikation eingebunden und von unserer eigenen Adresse
+ausgeliefert.
 
-**Verarbeitete Datenarten:** Nutzungsdaten; Meta-, Kommunikations- und
-Verfahrensdaten; Standortdaten (bei Maps).
+Die nachfolgenden Dienste werden auf zwei verschiedenen Wegen erreicht, und der
+Unterschied ist für Sie wesentlich: Ein Aufruf **von unserem Server aus**
+überträgt die IP-Adresse unseres Servers, nicht Ihre. Nur wo Ihr Browser selbst
+einen Anbieter anspricht — beim Öffnen eines Kartenlinks —, erfährt dieser Ihre
+IP-Adresse.
+
+**Verarbeitete Datenarten:** Inhaltsdaten (eingegebene Liedtitel und
+Interpreten); Standortdaten (die Anschrift eines Treffpunkts, beim Öffnen eines
+Kartenlinks); Meta-, Kommunikations- und Verfahrensdaten.
 
 **Rechtsgrundlagen:** Einwilligung (Art. 6 Abs. 1 S. 1 lit. a DSGVO);
 Berechtigte Interessen (Art. 6 Abs. 1 S. 1 lit. f DSGVO).
 
 ### Weitere Hinweise zu Verarbeitungsprozessen, Verfahren und Diensten
 
-**Google Gemini API und Google Suche API:** Wir binden in unserer Applikation
-Schnittstellen (APIs) zu den Diensten Google Gemini und der Google Suche ein.
-Diese dienen ausschließlich dazu, von Ihnen ausdrücklich angeforderte Funktionen
-(z. B. das automatische Vervollständigen von Liedtiteln, Interpreten oder das
-Auflösen von Adressen) bereitzustellen. Hierbei werden die von Ihnen in die
-Suchmaske eingegebenen Daten (Suchbegriffe) sowie technisch bedingt Ihre
-IP-Adresse an die Server von Google übertragen. Eine automatische Übertragung im
-Hintergrund ohne Ihre Aktion findet nicht statt. Dienstanbieter: Google Cloud
-EMEA Limited, 70 Sir John Rogerson's Quay, Dublin 2, Irland. Rechtsgrundlagen:
-Berechtigte Interessen (Art. 6 Abs. 1 S. 1 lit. f DSGVO), um Such- und
-Vervollständigungsfunktionen effizient bereitzustellen. Website:
-[cloud.google.com](https://cloud.google.com/). Datenschutzerklärung:
+**Google Gemini API und Google Suche API:** Beim Anlegen eines Liedes können Sie
+sich zu einem Titel passende Links vorschlagen oder aus einem Link Titel und
+Interpret auslesen lassen. Beides geschieht **ausschließlich auf Ihren
+ausdrücklichen Knopfdruck**; eine automatische Übertragung im Hintergrund findet
+nicht statt.
+
+Die Anfrage stellt dabei **unser Server**, nicht Ihr Browser. An Google
+übertragen werden der eingegebene Liedtitel, gegebenenfalls der Interpret und
+bereits bekannte Adressen — sowie die IP-Adresse **unseres Servers**. Ihre eigene
+IP-Adresse wird Google dabei nicht bekannt. Personenbezogene Daten der Mitglieder
+werden nicht übermittelt. Dienstanbieter: Google Ireland Limited, Gordon House,
+Barrow Street, Dublin 4, Irland. Rechtsgrundlagen: Berechtigte Interessen
+(Art. 6 Abs. 1 S. 1 lit. f DSGVO), um das Eintragen von Liedern zu erleichtern.
+Website: [ai.google.dev](https://ai.google.dev/). Datenschutzerklärung:
 [business.safety.google/privacy](https://business.safety.google/privacy/).
 Grundlage Drittlandtransfers: Data Privacy Framework (DPF).
 
-**Google Maps:** Wir binden Landkarten des Dienstes „Google Maps" ein. Der
-Aufruf erfolgt erst, wenn Sie als Nutzer explizit eine Adresse antippen, um
-diese auf der Karte zu öffnen. Zu den verarbeiteten Daten gehören IP-Adressen
-und Standortdaten der Nutzer. Dienstanbieter: Google Cloud EMEA Limited, 70 Sir
-John Rogerson's Quay, Dublin 2, Irland. Rechtsgrundlagen: Einwilligung
-(Art. 6 Abs. 1 S. 1 lit. a DSGVO). Website:
-[mapsplatform.google.com](https://mapsplatform.google.com/).
-Datenschutzerklärung:
+**Google Maps (ausgehender Link):** Zu jedem Treffpunkt zeigen wir einen Link
+an, der eine Kartensuche bei Google Maps öffnet. Es ist **keine Karte
+eingebettet**: Solange Sie den Link nicht antippen, besteht keinerlei Verbindung
+zu Google, und es wird nichts übertragen.
+
+Tippen Sie ihn an, verlässt Ihr Browser unsere Applikation und ruft Google Maps
+auf. Dabei übermittelt Ihr Browser die im Link enthaltene Anschrift des
+Treffpunkts sowie Ihre IP-Adresse an Google. Wir erheben dafür keine
+Standortdaten Ihres Gerätes; die Anschrift ist die, die ein Mitglied selbst in
+sein Profil eingetragen hat. Was danach geschieht, richtet sich nach den
+Bestimmungen von Google. Dienstanbieter: Google Ireland Limited, Gordon House,
+Barrow Street, Dublin 4, Irland. Rechtsgrundlagen: Einwilligung
+(Art. 6 Abs. 1 S. 1 lit. a DSGVO), erteilt durch das Antippen des Links.
+Website: [google.com/maps](https://www.google.com/maps). Datenschutzerklärung:
 [business.safety.google/privacy](https://business.safety.google/privacy/).
 Grundlage Drittlandtransfers: Data Privacy Framework (DPF).
 
