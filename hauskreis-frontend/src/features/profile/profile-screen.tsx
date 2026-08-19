@@ -216,8 +216,6 @@ function Loaded({ personId }: { personId: string }) {
 
         <NotificationsCard />
 
-        <AppearanceCard />
-
         <MembersCard />
 
         {me.isAdmin && (
@@ -233,6 +231,8 @@ function Loaded({ personId }: { personId: string }) {
         )}
 
         <AccountCard person={current} />
+
+        <AppearanceCard />
 
         <AppCard />
 
