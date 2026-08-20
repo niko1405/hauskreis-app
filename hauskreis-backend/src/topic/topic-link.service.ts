@@ -92,6 +92,9 @@ export class TopicLinkService {
           select: {
             id: true,
             topicId: true,
+            // Wer an ihr steht — gebraucht für den Fall, dass der Owner geht:
+            // Dann geht die Einheit mit, und die anderen kommen von ihr herunter.
+            responsibles: { select: { personId: true } },
             topic: {
               select: {
                 ownerPersonId: true,
@@ -136,7 +139,21 @@ export class TopicLinkService {
       ? []
       : arriving.filter((personId) => !belongsTo(membership, personId));
 
+    // **Mit dem Owner oder gar nicht.** Fällt der aus der Zuteilung, geht die
+    // Einheit mit — auch wenn jemand zugeteilt bleibt, den er dazugeholt hat.
+    // Die anderen sind an diesem Abend seine Mitwirkenden und nicht seine
+    // Nachfolger: Die Vorbereitung gehört ihm, und ohne ihn steht sie nicht.
+    //
+    // Ausdrücklich am **Herausfallen** und nicht an „der Owner ist nicht
+    // zugeteilt". Sonst löste jede beliebige Rollenänderung an einem Abend, den
+    // ein Mitarbeiter für das Thema hält, dessen Einheit ab — ein Thema über
+    // mehrere Abende darf aber reihum gehalten werden.
+    const ownerGeht =
+      membership.ownerPersonId !== null &&
+      departing.includes(membership.ownerPersonId);
+
     if (
+      !ownerGeht &&
       fremd.length === 0 &&
       assigned.some((personId) => belongsTo(membership, personId))
     ) {
@@ -156,9 +173,9 @@ export class TopicLinkService {
       return;
     }
 
-    // Hier wird **nicht** aufgeräumt, und das ist der Punkt: der Entwurf wartet
-    // ab sofort auf genau die Leute, die eben herausgefallen sind. Nähme man
-    // ihnen die Zeile, verschwände er aus ihrem „Angefangenes" — und mit dem
+    // Sonst wird hier **nicht** aufgeräumt, und das ist der Punkt: der Entwurf
+    // wartet ab sofort auf genau die Leute, die eben herausgefallen sind. Nähme
+    // man ihnen die Zeile, verschwände er aus ihrem „Angefangenes" — und mit dem
     // Mitarbeiter-Recht auch aus jeder anderen Liste. Ein Entwurf, den niemand
     // mehr sehen kann, ist gelöscht, nur langsamer.
     await tx.topicSession.update({
@@ -168,11 +185,26 @@ export class TopicLinkService {
 
     await touchTopic(tx, session.topicId);
 
+    // Die eine Ausnahme davon: Geht der Owner, kommen die Mitwirkenden von
+    // seiner Einheit herunter. Ihm selbst nimmt das nichts — sein Zugang hängt
+    // an `topic.ownerPersonId` und nicht an dieser Tabelle, der Entwurf wartet
+    // also weiter auf ihn. `leave` lässt ihn ohnehin stehen.
+    if (ownerGeht) {
+      await this.leave(
+        tx,
+        session.id,
+        session.topicId,
+        session.responsibles.map((row) => row.personId),
+      );
+    }
+
     this.logger.log(
       `Session ${session.id} detached from meeting ${meetingId}: ${
-        fremd.length > 0
-          ? `${fremd.join(', ')} joined the assignment without belonging to the topic`
-          : 'nobody assigned belongs to the topic'
+        ownerGeht
+          ? 'the owner left the assignment'
+          : fremd.length > 0
+            ? `${fremd.join(', ')} joined the assignment without belonging to the topic`
+            : 'nobody assigned belongs to the topic'
       }`,
     );
   }

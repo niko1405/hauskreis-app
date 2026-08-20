@@ -295,6 +295,10 @@ trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
   jemanden dazu oder nimmst ihn wieder heraus, und deine Wahl bleibt stehen —
   zurückgesetzt wird nur, wenn jemand *anderes* dich dazuträgt. Was die
   Zuteilung gerade bewirkt, steht jedes Mal oben im Sheet.
+- **Nimmst du dich selbst aus der Rolle, geht deine Einheit mit** — der Abend
+  steht wieder ohne Thema da, auch wenn jemand zugeteilt bleibt, den du
+  dazugeholt hattest. Wer mit vorbereitet hat, kommt dabei von der Einheit
+  herunter. Deine Vorbereitung selbst bleibt und wartet als Entwurf auf dich.
 - Eine Einheit lässt sich auch **ohne Termin** anlegen, im Archiv auf der
   Themenseite. Sie wartet dann als „offen", bis sie an einem Abend ausgewählt
   wird. Das ist der Ort zum Vorbereiten.

@@ -26,21 +26,31 @@ afterAll(() => {
 
 function setup(options: {
   date?: Date;
-  session?: { ownerPersonId: string | null; collaboratorIds?: string[] } | null;
+  session?: {
+    ownerPersonId: string | null;
+    collaboratorIds?: string[];
+    /** Wer an der Einheit selbst steht. Ohne Angabe: Owner und Mitarbeitende. */
+    responsibleIds?: string[];
+  } | null;
   /** Wer nach der Änderung noch an einer anderen Einheit des Themas hängt. */
   nochBeteiligt?: string[];
 }) {
+  const owner = options.session?.ownerPersonId ?? 'p1';
+  const mitarbeit = options.session?.collaboratorIds ?? [];
+
   const session =
     options.session === null
       ? null
       : {
           id: 's1',
           topicId: 't1',
+          responsibles: (
+            options.session?.responsibleIds ??
+            [owner, ...mitarbeit].filter((personId) => personId !== null)
+          ).map((personId) => ({ personId })),
           topic: {
-            ownerPersonId: options.session?.ownerPersonId ?? 'p1',
-            collaborators: (options.session?.collaboratorIds ?? []).map(
-              (personId) => ({ personId }),
-            ),
+            ownerPersonId: owner,
+            collaborators: mitarbeit.map((personId) => ({ personId })),
           },
         };
 
@@ -425,33 +435,18 @@ describe('TopicLinkService.reconcile — wer herausfällt', () => {
   });
 
   /**
-   * Weder das Schreibrecht noch die Zeile an der Einheit. Unter „vorbereitet
-   * von" stünde er sonst nicht mehr — an einer Einheit, die ihm gehört.
-   */
-  it('fasst den Owner nicht an', async () => {
-    const { service, tx, collaboratorDelete, responsibleDelete } = setup({
-      session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
-    });
-
-    // p1 gehört zum Thema, die Einheit bleibt also hängen; ausgetragen wird der
-    // Owner selbst.
-    await service.reconcile(tx, 'm1', ['p2'], { departing: ['p1'] });
-
-    expect(entzogen(collaboratorDelete)).toEqual([]);
-    expect(responsibleDelete).not.toHaveBeenCalled();
-  });
-
-  /**
-   * Der Regressionswächter. Im Entkoppel-Zweig wartet der Entwurf ab sofort auf
-   * genau die Leute, die eben herausgefallen sind — nähme man ihnen die Zeile,
-   * verschwände er aus ihrem „Angefangenes" und wäre gelöscht, nur langsamer.
+   * Der Regressionswächter. Im gewöhnlichen Entkoppel-Zweig wartet der Entwurf
+   * ab sofort auf genau die Leute, die eben herausgefallen sind — nähme man
+   * ihnen die Zeile, verschwände er aus ihrem „Angefangenes" und wäre gelöscht,
+   * nur langsamer. Hier fällt eine Mitarbeiterin heraus, während der Owner
+   * ohnehin nicht zugeteilt war: Es bleibt niemand übrig, der zum Thema gehört.
    */
   it('räumt nichts auf, wenn die Einheit gerade entkoppelt wird', async () => {
     const { service, tx, sessionUpdate, responsibleDelete } = setup({
-      session: { ownerPersonId: 'p1' },
+      session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
     });
 
-    await service.reconcile(tx, 'm1', ['p9'], { departing: ['p1'] });
+    await service.reconcile(tx, 'm1', ['p9'], { departing: ['p2'] });
 
     expect(entkoppelt(sessionUpdate)).toBe(true);
     expect(responsibleDelete).not.toHaveBeenCalled();
@@ -466,6 +461,86 @@ describe('TopicLinkService.reconcile — wer herausfällt', () => {
 
     await service.reconcile(tx, 'm1', ['p1'], { departing: ['p2'] });
 
+    expect(responsibleDelete).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * **Mit dem Owner oder gar nicht.**
+ *
+ * Wer die Einheit gewählt hat, nimmt sie mit, wenn er aus der Zuteilung fällt —
+ * auch dann, wenn jemand zugeteilt bleibt, den er selbst dazugeholt hat. Die
+ * Mitwirkenden eines Abends sind seine Helfer und nicht seine Nachfolger; die
+ * Vorbereitung gehört ihm.
+ */
+describe('TopicLinkService.reconcile — wenn der Owner geht', () => {
+  it('nimmt die Einheit vom Abend, obwohl eine Mitarbeiterin bleibt', async () => {
+    const { service, tx, sessionUpdate } = setup({
+      session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
+    });
+
+    await service.reconcile(tx, 'm1', ['p2'], { departing: ['p1'] });
+
+    expect(entkoppelt(sessionUpdate)).toBe(true);
+  });
+
+  /** Und nimmt die anderen von ihr herunter — Einheit wie Thema. */
+  it('räumt die Mitwirkenden ab', async () => {
+    const { service, tx, responsibleDelete, collaboratorDelete } = setup({
+      session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
+    });
+
+    await service.reconcile(tx, 'm1', ['p2'], { departing: ['p1'] });
+
+    expect(entzogen(responsibleDelete)).toEqual(['p2']);
+    expect(entzogen(collaboratorDelete)).toEqual(['p2']);
+  });
+
+  /**
+   * Ihn selbst nicht: Sein Zugang hängt an `topic.ownerPersonId`, und unter
+   * „vorbereitet von" gehört er weiter an seine Einheit. Der Entwurf wartet auf
+   * ihn.
+   */
+  it('lässt den Owner an seiner Einheit stehen', async () => {
+    const { service, tx, responsibleDelete } = setup({
+      session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
+    });
+
+    await service.reconcile(tx, 'm1', ['p2'], { departing: ['p1'] });
+
+    expect(entzogen(responsibleDelete)).not.toContain('p1');
+  });
+
+  /**
+   * Am **Herausfallen** und nicht an „der Owner ist nicht zugeteilt": Ein Thema
+   * über mehrere Abende darf reihum gehalten werden. Hier hält p2 einen Abend
+   * von p1s Thema allein, und eine beliebige andere Rollenänderung darf ihm das
+   * nicht wegnehmen.
+   */
+  it('lässt einen Abend in Ruhe, den ein Mitarbeiter ohne den Owner hält', async () => {
+    const { service, tx, sessionUpdate } = setup({
+      session: {
+        ownerPersonId: 'p1',
+        collaboratorIds: ['p2'],
+        responsibleIds: ['p2'],
+      },
+    });
+
+    await service.reconcile(tx, 'm1', ['p2'], { departing: ['p3'] });
+
+    expect(sessionUpdate).not.toHaveBeenCalled();
+  });
+
+  /** Ein vergangener Abend bleibt auch hier eingefroren. */
+  it('fasst einen vergangenen Abend nicht an', async () => {
+    const { service, tx, sessionUpdate, responsibleDelete } = setup({
+      date: LETZTER_DIENSTAG,
+      session: { ownerPersonId: 'p1', collaboratorIds: ['p2'] },
+    });
+
+    await service.reconcile(tx, 'm1', ['p2'], { departing: ['p1'] });
+
+    expect(sessionUpdate).not.toHaveBeenCalled();
     expect(responsibleDelete).not.toHaveBeenCalled();
   });
 });

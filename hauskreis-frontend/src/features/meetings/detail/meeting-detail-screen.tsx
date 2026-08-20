@@ -335,7 +335,7 @@ function Loaded({
     if (!gewaehlt || past) return undefined;
 
     if (gewaehlt.owned) {
-      return 'Wer dazukommt, bereitet die Einheit mit dir vor und darf am ganzen Thema schreiben. Wer herausfällt, verliert sie wieder — geschrieben bleibt, was geschrieben ist.';
+      return 'Wer dazukommt, bereitet die Einheit mit dir vor und darf am ganzen Thema schreiben; wer herausfällt, verliert sie wieder. Nimmst du dich selbst heraus, geht die Einheit mit vom Abend — vorbereitet bleibt sie.';
     }
 
     return 'Kommt jemand dazu, wird die Themenwahl zurückgesetzt — ihr entscheidet dann gemeinsam neu. Vorbereitetes bleibt als Entwurf erhalten.';
