@@ -12,11 +12,13 @@
  * Vorarbeiten selbst der Anlass.
  */
 import {
+  UNCONDITIONAL,
   apiDelete,
   apiGet,
   apiGetResource,
   apiPatch,
   apiPost,
+  apiPut,
   type Resource,
 } from '../client';
 import { hkPath } from './paths';
@@ -83,6 +85,21 @@ export function deleteTopic(
 }
 
 /**
+ * Holt jemanden ausdrücklich ans Thema — der einzige Weg zum themaweiten
+ * Schreibrecht, seit eine gehaltene Einheit keines mehr mitbringt. Nur der
+ * Owner darf das.
+ */
+export function addCollaborator(
+  hauskreisId: string,
+  topicId: string,
+  personId: string,
+): Promise<void> {
+  return apiPost(`${base(hauskreisId)}/${topicId}/collaborators`, {
+    personId,
+  });
+}
+
+/**
  * Nimmt jemandem das Bearbeitungsrecht. Nur der Owner darf das; was die Person
  * gehalten hat, bleibt an den Einheiten stehen.
  */
@@ -123,6 +140,26 @@ export function createStandaloneSession(
   input: CreateTopicSessionInput,
 ): Promise<TopicSession> {
   return apiPost<TopicSession>(sessions(hauskreisId), input);
+}
+
+/**
+ * Setzt, wer diese Einheit vorbereitet — ersetzt die Liste.
+ *
+ * Wer dazukommt, wird für den zugeordneten Abend auch als zuständig
+ * eingetragen; wer herausfällt, bleibt dort stehen. Ohne Vorbedingung, wie bei
+ * den Rollen am Termin: Es ist eine Liste und kein Text, an dem zwei Leute
+ * gleichzeitig schreiben.
+ */
+export function setSessionResponsibles(
+  hauskreisId: string,
+  sessionId: string,
+  personIds: string[],
+): Promise<TopicSession> {
+  return apiPut<TopicSession>(
+    `${sessions(hauskreisId)}/${sessionId}/responsibles`,
+    { personIds },
+    UNCONDITIONAL,
+  ).then((r) => r.data);
 }
 
 /**

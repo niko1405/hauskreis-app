@@ -1076,6 +1076,22 @@ export interface paths {
     patch: operations['TopicController_updateSession'];
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/topic-sessions/{sessionId}/responsibles': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['TopicController_setSessionResponsibles'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/topic-sessions/{sessionId}/topic': {
     parameters: {
       query?: never;
@@ -1138,6 +1154,22 @@ export interface paths {
     options?: never;
     head?: never;
     patch: operations['TopicController_update'];
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/topics/{id}/collaborators': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['TopicController_addCollaborator'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   '/api/hauskreise/{hauskreisId}/topics/{id}/collaborators/{personId}': {
@@ -2387,7 +2419,7 @@ export interface components {
           held: boolean;
           contentVisible: boolean;
           mayEdit: boolean;
-          owned: boolean;
+          mayEditTopic: boolean;
           sessionIndex: number;
           sessionCount: number;
         } | null;
@@ -2574,7 +2606,7 @@ export interface components {
         held: boolean;
         contentVisible: boolean;
         mayEdit: boolean;
-        owned: boolean;
+        mayEditTopic: boolean;
         sessionIndex: number;
         sessionCount: number;
       } | null;
@@ -2834,7 +2866,7 @@ export interface components {
           held: boolean;
           contentVisible: boolean;
           mayEdit: boolean;
-          owned: boolean;
+          mayEditTopic: boolean;
         }[];
         publiclyVisible: boolean;
         mine: boolean;
@@ -2923,7 +2955,7 @@ export interface components {
         held: boolean;
         contentVisible: boolean;
         mayEdit: boolean;
-        owned: boolean;
+        mayEditTopic: boolean;
       }[];
       publiclyVisible: boolean;
       mine: boolean;
@@ -2939,6 +2971,10 @@ export interface components {
       summaryText?: string | null;
       /** @enum {string} */
       status?: 'RUNNING' | 'COMPLETED';
+    };
+    AddCollaboratorDto: {
+      /** Format: uuid */
+      personId: string;
     };
     CreateTopicSessionDto: {
       title: string;
@@ -2999,12 +3035,15 @@ export interface components {
       held: boolean;
       contentVisible: boolean;
       mayEdit: boolean;
-      owned: boolean;
+      mayEditTopic: boolean;
       sessionIndex: number;
       sessionCount: number;
     };
     NameTopicDto: {
       title: string;
+    };
+    SetTopicResponsiblesDto: {
+      personIds: string[];
     };
     UpdateTopicSessionDto: {
       title?: string | null;
@@ -3024,9 +3063,6 @@ export interface components {
         };
       }[];
     };
-    SetTopicResponsiblesDto: {
-      personIds: string[];
-    };
     TopicChoicesResponseDto: {
       topics: {
         /** Format: uuid */
@@ -3045,6 +3081,11 @@ export interface components {
         title: string | null;
         /** Format: date-time */
         createdAt: string;
+        topic: {
+          /** Format: uuid */
+          id: string;
+          title: string | null;
+        } | null;
         meeting: {
           /** Format: uuid */
           id: string;
@@ -9353,6 +9394,68 @@ export interface operations {
       };
     };
   };
+  TopicController_setSessionResponsibles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        sessionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetTopicResponsiblesDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TopicSessionDetailDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
   TopicController_nameTopic: {
     parameters: {
       query?: never;
@@ -9775,6 +9878,58 @@ export interface operations {
       };
       /** @description Kein `If-Match` mitgeschickt. Den ETag aus dem vorangehenden GET verwenden. */
       428: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  TopicController_addCollaborator: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AddCollaboratorDto'];
+      };
+    };
+    responses: {
+      /** @description Gelöscht, kein Inhalt */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nicht angemeldet */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden */
+      404: {
         headers: {
           [name: string]: unknown;
         };

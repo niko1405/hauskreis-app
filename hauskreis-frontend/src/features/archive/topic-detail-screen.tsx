@@ -27,6 +27,7 @@ import {
   Plus,
   Trash2,
   UserMinus,
+  UserPlus,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -49,10 +50,12 @@ import {
   ErrorState,
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
+import { PeoplePickerSheet } from '@/components/domain/people-picker-sheet';
 import { errorMessage } from '@/lib/api/errors';
 import {
   useCreateTopicSession,
   useDeleteTopic,
+  useAddCollaborator,
   useRemoveCollaborator,
   useTopic,
   useUpdateTopic,
@@ -260,16 +263,42 @@ function Loaded({ topic }: { topic: Topic }) {
 }
 
 /**
- * Owner und Mitarbeitende.
+ * Owner und Mitarbeitende — die **thema-weite** Ebene.
  *
- * Entfernen darf nur der Owner (`mayDelete` trägt dieselbe Bedingung). Wer
- * entfernt wird, verliert das Bearbeitungsrecht — bleibt aber unten an den
- * Abenden stehen, die er gehalten hat. Das ist Geschichte und kein Recht.
+ * Nicht zu verwechseln mit denen, die eine einzelne Einheit vorbereiten: Die
+ * stehen unten an ihrem Abend und dürfen genau ihn schreiben. Wer hier steht,
+ * darf **jedes** dieser Felder ändern und neue Einheiten anlegen.
+ *
+ * Der Unterschied ist neu und der Grund für den Knopf. Vorher rutschte jede:r,
+ * der einmal einen Abend hielt, automatisch hier herein — Hoheit über ein Thema,
+ * das über Monate läuft, als Nebenwirkung einer Zuteilung. Ab jetzt ist es eine
+ * Entscheidung, und die trifft der Owner (`mayDelete` trägt dieselbe
+ * Bedingung).
+ *
+ * Wer entfernt wird, verliert das Bearbeitungsrecht am Thema — bleibt aber
+ * unten an den Abenden stehen, die er gehalten hat. Das ist Geschichte und kein
+ * Recht.
  */
 function People({ topic, editing }: { topic: Topic; editing: boolean }) {
   const confirm = useConfirm();
   const toast = useToast();
+  const addCollaborator = useAddCollaborator(topic.id);
   const removeCollaborator = useRemoveCollaborator(topic.id);
+  const [waehlen, setWaehlen] = useState(false);
+
+  const dabei = [
+    ...(topic.owner ? [topic.owner.id] : []),
+    ...topic.collaborators.map(({ person }) => person.id),
+  ];
+
+  const dazu = (personId: string) =>
+    addCollaborator.mutate(personId, {
+      onSuccess: () => {
+        toast.success('Dazugenommen.');
+        setWaehlen(false);
+      },
+      onError: (error) => toast.error(errorMessage(error)),
+    });
 
   const entfernen = async (personId: string, name: string) => {
     const ok = await confirm({
@@ -324,7 +353,31 @@ function People({ topic, editing }: { topic: Topic; editing: boolean }) {
             Niemand eingetragen — dann darf hier jede:r etwas ändern.
           </p>
         )}
+
+        {editing && topic.mayDelete && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full"
+            loading={addCollaborator.isPending}
+            onClick={() => setWaehlen(true)}
+          >
+            <UserPlus size={15} />
+            Mitwirkende hinzufügen
+          </Button>
+        )}
       </Card>
+
+      {waehlen && (
+        <PeoplePickerSheet
+          title="Wer arbeitet am Thema mit?"
+          subtitle="Sie darf danach jede Einheit ändern und neue anlegen. Für nur einen Abend genügt es, sie dort als Mitwirkende einzutragen."
+          excludeIds={dabei}
+          saving={addCollaborator.isPending}
+          onPick={dazu}
+          onClose={() => setWaehlen(false)}
+        />
+      )}
     </section>
   );
 }

@@ -49,6 +49,7 @@ describe('updateSession', () => {
           id: 's1',
           meetingId: 'm1',
           topicId: 't1',
+          responsibles: [],
           topic: {
             id: 't1',
             ...MEINS,

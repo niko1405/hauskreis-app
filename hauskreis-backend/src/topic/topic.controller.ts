@@ -8,16 +8,19 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { TopicService } from './topic.service';
 import { TopicSessionService } from './topic-session.service';
 import { TopicReminderService } from './topic-reminder.service';
 import {
+  AddCollaboratorDto,
   CreateTopicDto,
   CreateTopicSessionDto,
   ListTopicsQueryDto,
   NameTopicDto,
+  SetTopicResponsiblesDto,
   TopicCollaboratorParamsDto,
   TopicParamsDto,
   TopicSessionParamsDto,
@@ -155,6 +158,27 @@ export class TopicController {
   }
 
   /**
+   * Holt jemanden ausdrücklich als Mitarbeitende:n ans Thema — der einzige Weg
+   * zum themaweiten Schreibrecht, seit eine gehaltene Einheit keines mehr
+   * mitbringt.
+   */
+  @Post('topics/:id/collaborators')
+  @ApiZodNoContent()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async addCollaborator(
+    @Param() params: TopicParamsDto,
+    @Body() dto: AddCollaboratorDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.topics.addCollaborator(
+      params.hauskreisId,
+      params.id,
+      dto.personId,
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
+    );
+  }
+
+  /**
    * Nimmt jemandem das Bearbeitungsrecht am Thema. Was die Person gehalten hat,
    * bleibt an den Einheiten stehen — das ist Geschichte, kein Recht.
    */
@@ -247,6 +271,28 @@ export class TopicController {
     return this.sessions.findSession(
       params.hauskreisId,
       params.sessionId,
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
+    );
+  }
+
+  /**
+   * Wer diese Einheit vorbereitet — ersetzt die Liste.
+   *
+   * Der Ort, an dem die Vorbereitung ihren Kreis zieht. Wer dazukommt, wird für
+   * den zugeordneten Abend auch als zuständig eingetragen; wer herausfällt,
+   * bleibt dort stehen.
+   */
+  @Put('topic-sessions/:sessionId/responsibles')
+  @ApiZodResponse(TopicSessionDetailDto)
+  async setSessionResponsibles(
+    @Param() params: TopicSessionParamsDto,
+    @Body() dto: SetTopicResponsiblesDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.sessions.setSessionResponsibles(
+      params.hauskreisId,
+      params.sessionId,
+      dto,
       viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
     );
   }

@@ -38,10 +38,10 @@ export interface AssignmentSheetProps {
   /**
    * Was diese Zuteilung sonst noch auslöst — steht über der Liste.
    *
-   * Für den einen Fall, in dem Eintragen mehr tut als eintragen: Kommt jemand
-   * zur Rolle „Thema" dazu, fällt die schon getroffene Wahl zurück. Das gehört
-   * **vor** die Entscheidung; eine Rückfrage danach erschiene auf dem schon
-   * geschlossenen Sheet.
+   * Für den einen Fall, in dem Eintragen mehr tut als eintragen: Hängt am Abend
+   * eine Einheit und bleibt niemand zuständig, der sie vorbereitet, löst sie
+   * sich. Das gehört **vor** die Entscheidung; eine Rückfrage danach erschiene
+   * auf dem schon geschlossenen Sheet.
    */
   hint?: React.ReactNode;
   onSubmit: (personIds: string[]) => void;

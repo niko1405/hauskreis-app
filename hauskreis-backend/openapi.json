@@ -8100,6 +8100,98 @@
         ]
       }
     },
+    "/api/hauskreise/{hauskreisId}/topic-sessions/{sessionId}/responsibles": {
+      "put": {
+        "operationId": "TopicController_setSessionResponsibles",
+        "parameters": [
+          {
+            "name": "hauskreisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetTopicResponsiblesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopicSessionDetailDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Topic"
+        ]
+      }
+    },
     "/api/hauskreise/{hauskreisId}/topic-sessions/{sessionId}/topic": {
       "patch": {
         "operationId": "TopicController_nameTopic",
@@ -8708,6 +8800,81 @@
             }
           }
         ],
+        "responses": {
+          "204": {
+            "description": "Gelöscht, kein Inhalt"
+          },
+          "401": {
+            "description": "Nicht angemeldet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Topic"
+        ]
+      }
+    },
+    "/api/hauskreise/{hauskreisId}/topics/{id}/collaborators": {
+      "post": {
+        "operationId": "TopicController_addCollaborator",
+        "parameters": [
+          {
+            "name": "hauskreisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCollaboratorDto"
+              }
+            }
+          }
+        },
         "responses": {
           "204": {
             "description": "Gelöscht, kein Inhalt"
@@ -13906,7 +14073,7 @@
                     "mayEdit": {
                       "type": "boolean"
                     },
-                    "owned": {
+                    "mayEditTopic": {
                       "type": "boolean"
                     },
                     "sessionIndex": {
@@ -13937,7 +14104,7 @@
                     "held",
                     "contentVisible",
                     "mayEdit",
-                    "owned",
+                    "mayEditTopic",
                     "sessionIndex",
                     "sessionCount"
                   ],
@@ -14676,7 +14843,7 @@
               "mayEdit": {
                 "type": "boolean"
               },
-              "owned": {
+              "mayEditTopic": {
                 "type": "boolean"
               },
               "sessionIndex": {
@@ -14707,7 +14874,7 @@
               "held",
               "contentVisible",
               "mayEdit",
-              "owned",
+              "mayEditTopic",
               "sessionIndex",
               "sessionCount"
             ],
@@ -15750,7 +15917,7 @@
                       "mayEdit": {
                         "type": "boolean"
                       },
-                      "owned": {
+                      "mayEditTopic": {
                         "type": "boolean"
                       }
                     },
@@ -15770,7 +15937,7 @@
                       "held",
                       "contentVisible",
                       "mayEdit",
-                      "owned"
+                      "mayEditTopic"
                     ],
                     "additionalProperties": false
                   }
@@ -16118,7 +16285,7 @@
                 "mayEdit": {
                   "type": "boolean"
                 },
-                "owned": {
+                "mayEditTopic": {
                   "type": "boolean"
                 }
               },
@@ -16138,7 +16305,7 @@
                 "held",
                 "contentVisible",
                 "mayEdit",
-                "owned"
+                "mayEditTopic"
               ],
               "additionalProperties": false
             }
@@ -16218,6 +16385,19 @@
             ]
           }
         }
+      },
+      "AddCollaboratorDto": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "personId"
+        ]
       },
       "CreateTopicSessionDto": {
         "type": "object",
@@ -16444,7 +16624,7 @@
           "mayEdit": {
             "type": "boolean"
           },
-          "owned": {
+          "mayEditTopic": {
             "type": "boolean"
           },
           "sessionIndex": {
@@ -16477,7 +16657,7 @@
           "held",
           "contentVisible",
           "mayEdit",
-          "owned",
+          "mayEditTopic",
           "sessionIndex",
           "sessionCount"
         ],
@@ -16494,6 +16674,23 @@
         },
         "required": [
           "title"
+        ]
+      },
+      "SetTopicResponsiblesDto": {
+        "type": "object",
+        "properties": {
+          "personIds": {
+            "maxItems": 9,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "personIds"
         ]
       },
       "UpdateTopicSessionDto": {
@@ -16571,23 +16768,6 @@
         ],
         "additionalProperties": false
       },
-      "SetTopicResponsiblesDto": {
-        "type": "object",
-        "properties": {
-          "personIds": {
-            "maxItems": 9,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            }
-          }
-        },
-        "required": [
-          "personIds"
-        ]
-      },
       "TopicChoicesResponseDto": {
         "type": "object",
         "properties": {
@@ -16657,6 +16837,26 @@
                   "format": "date-time",
                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
                 },
+                "topic": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "title": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title"
+                  ],
+                  "additionalProperties": false,
+                  "nullable": true
+                },
                 "meeting": {
                   "type": "object",
                   "properties": {
@@ -16694,6 +16894,7 @@
                 "id",
                 "title",
                 "createdAt",
+                "topic",
                 "meeting",
                 "resumable",
                 "held"

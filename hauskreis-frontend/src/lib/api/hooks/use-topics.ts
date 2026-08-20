@@ -113,6 +113,20 @@ export function useDeleteTopic() {
   );
 }
 
+/**
+ * Nur der Owner. Wer hier dazukommt, darf **jede** Einheit des Themas ändern
+ * und neue anlegen — mehr als die Crew einer einzelnen Einheit.
+ */
+export function useAddCollaborator(topicId: string) {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useApiMutation(
+    (personId: string) =>
+      topicsApi.addCollaborator(hauskreisId, topicId, personId),
+    { invalidateKeys: [keys.topics.all, keys.meetings.all, ...derived] },
+  );
+}
+
 /** Nur der Owner. Was die Person gehalten hat, bleibt an den Einheiten stehen. */
 export function useRemoveCollaborator(topicId: string) {
   const { hauskreisId, keys, derived } = useHk();
@@ -213,6 +227,29 @@ export function useUpdateTopicSession(sessionId: string) {
       topicsApi.updateTopicSession(hauskreisId, sessionId, input, etag),
     invalidateKeys: [keys.topics.all, keys.meetings.all, ...derived],
   });
+}
+
+/**
+ * Wer diese Einheit vorbereitet — ersetzt die Liste.
+ *
+ * Auch `meetings.all` wird ungültig, und das ist der Punkt der Kopplung: Wer
+ * dazukommt, steht danach auch in der Rolle „Thema" des zugeordneten Abends.
+ */
+export function useSetSessionResponsibles(sessionId: string) {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useApiMutation(
+    (personIds: string[]) =>
+      topicsApi.setSessionResponsibles(hauskreisId, sessionId, personIds),
+    {
+      invalidateKeys: [
+        keys.topics.all,
+        keys.topics.session(sessionId),
+        keys.meetings.all,
+        ...derived,
+      ],
+    },
+  );
 }
 
 /*

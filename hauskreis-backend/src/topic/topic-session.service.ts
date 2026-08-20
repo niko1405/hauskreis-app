@@ -25,7 +25,7 @@ import {
   topicMembershipSelect,
   type Viewer,
 } from './topic-shape';
-import { isHeld, mayEditTopic } from './topic-visibility';
+import { isHeld, mayEditSession, mayEditTopic } from './topic-visibility';
 import { touchTopic } from './topic-version';
 import { TopicLinkService } from './topic-link.service';
 import type {
@@ -118,10 +118,11 @@ export class TopicSessionService {
    * zuteilt, prüfen wir nicht weiter — wer vorbereitet, ist eine Frage an die
    * Gruppe, und die beantwortet sie im Gespräch, nicht über Rechte.
    *
-   * Was danach mit einer schon getroffenen Wahl geschieht, entscheidet
-   * `reconcile`: Wer dazukommt und zum Thema nicht gehört, setzt sie zurück —
-   * es sei denn, der Owner selbst trägt ein. Deshalb geht `actorPersonId` dort
-   * mit hinein und nicht nur in die Benachrichtigung.
+   * Eine schon getroffene Wahl bleibt davon **unberührt**, solange irgendwer
+   * zuständig ist, der sie vorbereitet. Wer dazukommt, steht an dem Abend mit
+   * vorne und entscheidet nicht über fremde Vorbereitung; wer etwas anderes
+   * will, nimmt „Anderes Thema wählen". Nur wenn am Ende niemand mehr übrig ist,
+   * der zur Einheit gehört, löst `reconcile` sie vom Abend.
    */
   async setResponsibles(
     hauskreisId: string,
@@ -151,13 +152,6 @@ export class TopicSessionService {
       await this.availability.assertAvailable(hauskreisId, meetingId, arriving);
     }
 
-    // Wer herausfällt, muss vor dem Löschen festgehalten werden — nachher steht
-    // es nirgends mehr, und `reconcile` kann es aus den Verantwortlichen der
-    // Einheit nicht ableiten: dort stehen auch Leute, die nie zugeteilt waren.
-    const departing = [...before].filter(
-      (personId) => !dto.personIds.includes(personId),
-    );
-
     await this.prisma.$transaction(async (tx) => {
       await tx.meetingTopicResponsible.deleteMany({
         where: { meetingId, personId: { notIn: dto.personIds } },
@@ -168,11 +162,7 @@ export class TopicSessionService {
         skipDuplicates: true,
       });
 
-      await this.links.reconcile(tx, meetingId, dto.personIds, {
-        departing,
-        arriving,
-        actorPersonId,
-      });
+      await this.links.reconcile(tx, meetingId, dto.personIds);
     });
 
     if (arriving.length > 0) {
@@ -192,21 +182,26 @@ export class TopicSessionService {
   /**
    * Was zur Wahl steht.
    *
-   * Zwei Listen, und die Trennlinie ist die zwischen einem Thema und einem
-   * einzelnen Abend: `topics` sind die eigenen **echten** Themen, Hüllen fallen
-   * heraus (sie tragen genau eine Einheit und keinen Titel, unter „Thema
-   * fortsetzen" wären sie eine Zeile ohne Aussage). `singleSessions` sind
-   * umgekehrt genau diese Einheiten.
+   * Zwei Listen, und die Trennlinie ist die zwischen „ein Thema fortsetzen" und
+   * „eine fertige Einheit nehmen":
    *
-   * Themen-gebundene Entwürfe stehen in keiner der beiden: Sie hängen unter
-   * ihrem Thema, und dorthin führt der Weg über `topics` — eine zweite Liste
-   * daneben zeigte dieselben Zeilen ein zweites Mal.
+   * - `topics` sind die eigenen **echten** Themen, an denen man *neue* Einheiten
+   *   anlegen darf — also Owner oder Mitarbeit. Hüllen fallen heraus (sie tragen
+   *   genau eine Einheit und keinen Titel, unter „Thema fortsetzen" wären sie
+   *   eine Zeile ohne Aussage).
+   * - `singleSessions` sind **meine offenen Einheiten**: jede, an der ich als
+   *   Verantwortliche:r stehe, ob alleinstehend oder unter einem Thema.
    *
-   * Der Grenzfall aus 8.5 sitzt im zweiten Teil: eine eigene angefangene Einheit
-   * bleibt auch dann greifbar, wenn der Owner die Person als Mitarbeiterin
-   * entfernt hat. Ihr eigener Entwurf ist ihrer. Nimmt sie ihn wieder auf, wird
-   * sie darüber automatisch wieder Mitarbeiterin — was auch der Sinn der Regel
-   * ist. Unter `topics` taucht das Thema für sie dagegen nicht mehr auf.
+   * Der zweite Teil war einmal auf Hüllen beschränkt, und das ging nicht mehr
+   * auf, seit die Vorbereitung ihren eigenen Kreis zieht: Legt jemand die dritte
+   * Einheit seines Themas an und nimmt mich dazu, gehöre ich zum *Thema* nicht —
+   * die Einheit stünde damit in keiner der beiden Listen, und ich könnte sie an
+   * meinem Abend nicht wählen, obwohl ich sie mit vorbereitet habe.
+   *
+   * Der Grenzfall aus 8.5 fällt seitdem von selbst mit ab: Der eigene Entwurf
+   * bleibt greifbar, auch wenn der Owner einen als Mitarbeitenden entfernt hat.
+   * Unter `topics` taucht das Thema für so jemanden dagegen nicht auf — eine
+   * *weitere* Einheit anlegen darf er dort nicht.
    *
    * `resumable` sagt, ob sich die Einheit **hierher holen** lässt: an keinem
    * Abend oder an einem, der noch bevorsteht. Gerechnet wird sie hier, mit
@@ -247,11 +242,22 @@ export class TopicSessionService {
       }),
       this.prisma.topicSession.findMany({
         where: {
-          topic: { hauskreisId, standalone: true },
+          topic: { hauskreisId },
           OR: [
-            { topic: { ownerPersonId: personId } },
-            { topic: { collaborators: { some: { personId } } } },
+            // Eine Einheit, die ich vorbereite — der Normalfall, unabhängig
+            // davon, ob ein Thema darüber steht.
             { responsibles: { some: { personId } } },
+            // Dazu die alleinstehenden aus meinen Themen: Bei einer Hülle führt
+            // kein Weg über `topics`, dort steht sie nicht drin.
+            {
+              topic: {
+                standalone: true,
+                OR: [
+                  { ownerPersonId: personId },
+                  { collaborators: { some: { personId } } },
+                ],
+              },
+            },
           ],
           // Was schon an diesem Abend hängt, steht nicht zur Wahl — es ist die
           // Wahl. Als eigener `AND`-Zweig, weil das `OR` darüber schon vergeben
@@ -262,6 +268,10 @@ export class TopicSessionService {
           id: true,
           title: true,
           createdAt: true,
+          // Das Thema darüber, damit die Liste eine gebundene Einheit als solche
+          // ausweisen kann („aus: Apostelgeschichte") statt sie wie einen
+          // einzelnen Abend aussehen zu lassen.
+          topic: { select: { id: true, title: true, standalone: true } },
           meeting: {
             select: { id: true, date: true, status: true, title: true },
           },
@@ -281,8 +291,9 @@ export class TopicSessionService {
         sessionCount: topic.sessions.length,
         lastHeldAt: lastHeldDate(topic.sessions, zone),
       })),
-      singleSessions: einzelne.map(({ meeting, ...session }) => ({
+      singleSessions: einzelne.map(({ meeting, topic, ...session }) => ({
         ...session,
+        topic: topic.standalone ? null : { id: topic.id, title: topic.title },
         meeting: meeting && {
           id: meeting.id,
           date: meeting.date,
@@ -298,8 +309,10 @@ export class TopicSessionService {
    * Die Wahl treffen — einer der drei Wege aus Spec §3.
    *
    * Owner wird, wer **zuerst tatsächlich wählt**, nicht wer zuerst zugeteilt
-   * wurde. Alle anderen, die in diesem Moment ebenfalls für den Abend zugeteilt
-   * sind, kommen als Verantwortliche der Einheit mit.
+   * wurde. An die Einheit kommt dabei **nur er selbst**. Wer sonst noch für den
+   * Abend zugeteilt ist, steht dort vorne und hat mit der Vorbereitung nichts zu
+   * tun, solange ihn niemand dazunimmt — das geschieht auf der Seite der Einheit
+   * (`setSessionResponsibles`) und nicht als Nebenwirkung einer Wahl.
    *
    * Dass zwei gleichzeitig klicken, fängt nicht eine Prüfung ab, sondern der
    * eindeutige Index auf `topic_session.meeting_id`: der zweite Schreibvorgang
@@ -374,7 +387,7 @@ export class TopicSessionService {
           meetingId,
           dto,
           viewer,
-          mitwirkende: assigned,
+          mitwirkende: [viewer.personId],
         });
 
         await touchMeeting(tx, meetingId);
@@ -384,7 +397,86 @@ export class TopicSessionService {
         throw toConflict(error);
       });
 
+    // Und die Gegenrichtung: Eine aufgenommene Einheit bringt ihre Crew mit in
+    // die Abend-Rolle. Wer sie vorbereitet hat, steht an dem Abend auch dafür
+    // ein — sonst müsste man dieselbe Liste zweimal pflegen. Für die frisch
+    // angelegten Wege ist das ein Leerlauf: dort steht nur der Wählende drin,
+    // und der ist ja zugeteilt.
+    await this.syncRoleFromSession(
+      hauskreisId,
+      meetingId,
+      sessionId,
+      viewer.personId,
+    );
+
     return this.findSession(hauskreisId, sessionId, viewer);
+  }
+
+  /**
+   * Die eine Kopplung zwischen Vorbereitung und Abend — und sie geht **nur in
+   * diese Richtung**: Wer die Einheit vorbereitet, steht am Abend auch dafür
+   * ein.
+   *
+   * Umgekehrt gilt es nicht: Zur Rolle zugeteilt zu werden macht niemanden zum
+   * Mitwirkenden an der Vorbereitung. Wer nur vorne steht, hat inhaltlich nichts
+   * beigetragen, und ein Schreibrecht über eine Anwesenheit wäre genau die
+   * Vermischung, die diese Trennung auflöst.
+   *
+   * Wer an dem Abend **nicht kann**, wird übersprungen statt den Aufruf
+   * scheitern zu lassen: Mitvorbereiten kann man auch, wenn man selbst fehlt.
+   * Vergangene Abende und Abende ohne Baustein „Thema" bleiben unberührt.
+   */
+  private async syncRoleFromSession(
+    hauskreisId: string,
+    meetingId: string,
+    sessionId: string,
+    actorPersonId: string,
+  ): Promise<void> {
+    const meeting = await this.prisma.meeting.findFirst({
+      where: { id: meetingId, hauskreisId },
+      select: { date: true, hasTopicSlot: true },
+    });
+
+    if (!meeting?.hasTopicSlot) return;
+    if (await this.clock.isPast(hauskreisId, meeting.date)) return;
+
+    const crew = await this.prisma.topicSessionResponsible.findMany({
+      where: { sessionId },
+      select: { personId: true },
+    });
+
+    if (crew.length === 0) return;
+
+    const personIds = crew.map((row) => row.personId);
+
+    const [vorhanden, koennen] = await Promise.all([
+      this.prisma.meetingTopicResponsible.findMany({
+        where: { meetingId },
+        select: { personId: true },
+      }),
+      this.availability.findAvailable(hauskreisId, meetingId, personIds),
+    ]);
+
+    const schon = new Set(vorhanden.map((row) => row.personId));
+    const dazu = koennen.filter((personId) => !schon.has(personId));
+
+    if (dazu.length === 0) return;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.meetingTopicResponsible.createMany({
+        data: dazu.map((personId) => ({ meetingId, personId })),
+        skipDuplicates: true,
+      });
+
+      await touchMeeting(tx, meetingId);
+    });
+
+    await this.roleAssignments.announce(
+      meetingId,
+      AssignmentRole.TOPIC,
+      dazu,
+      actorPersonId,
+    );
   }
 
   /** Die fünf Wege, hinter einer Verzweigung. */
@@ -552,18 +644,14 @@ export class TopicSessionService {
       );
     }
 
-    // Dieselbe Rettung wie in `resumeSession`: der eigene Entwurf bleibt der
-    // eigene, auch wenn man am Thema nicht (mehr) mitarbeiten darf.
-    const eigene = vorlage.responsibles.some(
-      (row) => row.personId === viewer.personId,
-    );
-
+    // `mayEditSession` und nicht `mayEditTopic`: Ein Überthema gibt der Einheit,
+    // wer sie vorbereitet hat — auch wenn er am Thema selbst nichts darf.
     if (
-      !eigene &&
-      !mayEditTopic({
+      !mayEditSession({
         isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(vorlage.topic),
+        responsibleIds: vorlage.responsibles.map((row) => row.personId),
       })
     ) {
       throw new ForbiddenException(
@@ -697,22 +785,16 @@ export class TopicSessionService {
       );
     }
 
-    // Der eigene Entwurf zählt auch dann, wenn der Owner die Person als
-    // Mitarbeiterin entfernt hat — siehe `choices`.
-    const eigenerEntwurf = session.responsibles.some(
-      (row) => row.personId === viewer.personId,
-    );
-
     if (
-      !eigenerEntwurf &&
-      !mayEditTopic({
+      !mayEditSession({
         isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(session.topic),
+        responsibleIds: session.responsibles.map((row) => row.personId),
       })
     ) {
       throw new ForbiddenException(
-        'Wieder aufnehmen kann eine Einheit, wer an ihrem Thema mitarbeitet.',
+        'Wieder aufnehmen kann eine Einheit, wer sie vorbereitet.',
       );
     }
 
@@ -924,17 +1006,12 @@ export class TopicSessionService {
       );
     }
 
-    // Dieselbe Rettung wie in `resumeSession` und `promote`.
-    const eigene = session.responsibles.some(
-      (row) => row.personId === viewer.personId,
-    );
-
     if (
-      !eigene &&
-      !mayEditTopic({
+      !mayEditSession({
         isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(session.topic),
+        responsibleIds: session.responsibles.map((row) => row.personId),
       })
     ) {
       throw new ForbiddenException(
@@ -1023,6 +1100,95 @@ export class TopicSessionService {
     });
   }
 
+  // ---------------------------------------------------------- Wer vorbereitet
+
+  /**
+   * Setzt, wer **diese Einheit** vorbereitet.
+   *
+   * Der Ort, an dem die Vorbereitung ihren Kreis zieht — und der Grund, warum
+   * die Zuteilung am Termin es nicht mehr tut. Wer hier steht, darf die Einheit
+   * schreiben (`mayEditSession`), aber nichts am Thema darüber; dafür trägt der
+   * Owner ihn ausdrücklich als Mitarbeitenden ein.
+   *
+   * Ändern darf die Liste, wer die Einheit ändern darf. Wer vorbereitet, soll
+   * sich Hilfe holen können, ohne fragen zu müssen; weiter als bis zu dieser
+   * Einheit trägt das Recht ohnehin nicht.
+   *
+   * Nach oben gekoppelt wird nur das **Dazukommen** (`syncRoleFromSession`).
+   * Wer herausgenommen wird, bleibt in der Abend-Rolle stehen: Er bereitet nicht
+   * mehr vor, steht aber vielleicht trotzdem vorne — und jemanden still aus
+   * einem Abend zu nehmen, an dem er eingeplant ist, wäre die überraschendere
+   * der beiden Möglichkeiten.
+   */
+  async setSessionResponsibles(
+    hauskreisId: string,
+    sessionId: string,
+    dto: SetTopicResponsiblesDto,
+    viewer: Viewer,
+  ) {
+    const session = await this.prisma.topicSession.findFirst({
+      where: { id: sessionId, topic: { hauskreisId } },
+      select: {
+        id: true,
+        topicId: true,
+        meetingId: true,
+        topic: { select: topicMembershipSelect },
+        responsibles: { select: { personId: true } },
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException(`Topic session ${sessionId} not found`);
+    }
+
+    const before = session.responsibles.map((row) => row.personId);
+
+    if (
+      !mayEditSession({
+        isAdmin: viewer.isAdmin,
+        personId: viewer.personId,
+        topic: membershipOf(session.topic),
+        responsibleIds: before,
+      })
+    ) {
+      throw new ForbiddenException(
+        'Wer eine Einheit vorbereitet, tragen die ein, die sie vorbereiten.',
+      );
+    }
+
+    await this.assertPeopleBelongToHauskreis(hauskreisId, dto.personIds);
+
+    const vorher = new Set(before);
+    const nachher = new Set(dto.personIds);
+
+    await this.prisma.$transaction(async (tx) => {
+      await this.links.join(
+        tx,
+        sessionId,
+        session.topicId,
+        dto.personIds.filter((personId) => !vorher.has(personId)),
+      );
+
+      await this.links.leave(
+        tx,
+        sessionId,
+        session.topicId,
+        before.filter((personId) => !nachher.has(personId)),
+      );
+    });
+
+    if (session.meetingId) {
+      await this.syncRoleFromSession(
+        hauskreisId,
+        session.meetingId,
+        sessionId,
+        viewer.personId,
+      );
+    }
+
+    return this.findSession(hauskreisId, sessionId, viewer);
+  }
+
   // -------------------------------------------------------------------- Inhalt
 
   /**
@@ -1052,9 +1218,14 @@ export class TopicSessionService {
   /**
    * Titel, Actionstep und Zusammenfassung eines Abends.
    *
-   * Bearbeiten darf, wer zum **Thema** gehört — jede Einheit davon, auch die, bei
-   * der man selbst nicht dabei war (Spec 8.1). Ein Recht je Abend wäre
-   * Buchhaltung; ein Thema ist eine gemeinsame Arbeit.
+   * Zwei Kreise dürfen das: wer zum **Thema** gehört (jede seiner Einheiten,
+   * auch die, bei der man nicht dabei war) und wer **diese Einheit**
+   * vorbereitet. Der zweite ist neu und der Grund für `mayEditSession`: Wer
+   * einen Abend mit vorbereitet, muss ihn schreiben können, ohne dafür Hoheit
+   * über ein Thema zu bekommen, das über Monate läuft.
+   *
+   * `removeSession` bleibt bewusst enger. Schreiben darf, wer vorbereitet;
+   * wegräumen, wem das Thema gehört.
    */
   async updateSession(
     hauskreisId: string,
@@ -1070,6 +1241,7 @@ export class TopicSessionService {
         meetingId: true,
         topicId: true,
         topic: { select: topicMembershipSelect },
+        responsibles: { select: { personId: true } },
       },
     });
 
@@ -1078,14 +1250,15 @@ export class TopicSessionService {
     }
 
     if (
-      !mayEditTopic({
+      !mayEditSession({
         isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(session.topic),
+        responsibleIds: session.responsibles.map((row) => row.personId),
       })
     ) {
       throw new ForbiddenException(
-        'Zusammenfassung und Actionstep trägt ein, wer das Thema vorbereitet.',
+        'Zusammenfassung und Actionstep trägt ein, wer diesen Abend vorbereitet.',
       );
     }
 

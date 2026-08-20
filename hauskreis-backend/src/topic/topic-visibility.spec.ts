@@ -6,7 +6,9 @@ import {
   isHeld,
   isPubliclyVisible,
   mayDeleteTopic,
+  mayEditSession,
   mayEditTopic,
+  preparesSession,
 } from './topic-visibility';
 
 /** Die Zone der Gruppe — die Fälle unten sind in Ortszeit gedacht. */
@@ -15,6 +17,8 @@ const BERLIN = 'Europe/Berlin';
 const OWNER = 'owner-id';
 const COLLAB = 'collab-id';
 const FREMD = 'fremd-id';
+/** Steht an *einer* Einheit, gehört zum Thema aber nicht. */
+const CREW = 'crew-id';
 
 /**
  * Ein Kalendertag, wie Prisma ihn liefert — gezählt **in der Zone der Gruppe**.
@@ -131,6 +135,99 @@ describe('mayEditTopic', () => {
   });
 });
 
+/**
+ * Die zweite Ebene — **eine** Einheit, nämlich die, die man vorbereitet.
+ *
+ * Der Grund für sie: Wer einmal an einem Abend aushilft, soll ihn schreiben
+ * können, ohne dafür Hoheit über ein Thema zu bekommen, das über Monate läuft.
+ */
+describe('mayEditSession', () => {
+  const darf = (personId: string, responsibleIds: string[] = [CREW]) =>
+    mayEditSession({ isAdmin: false, personId, topic: thema, responsibleIds });
+
+  it('lässt den Owner ran', () => {
+    expect(darf(OWNER)).toBe(true);
+  });
+
+  it('lässt die Mitarbeitenden am Thema ran', () => {
+    expect(darf(COLLAB)).toBe(true);
+  });
+
+  it('lässt ran, wer diese Einheit vorbereitet', () => {
+    expect(darf(CREW)).toBe(true);
+  });
+
+  it('lässt Fremde nicht ran', () => {
+    expect(darf(FREMD)).toBe(false);
+  });
+
+  /** Die Crew der *anderen* Einheit hilft hier nicht — das Recht ist je Abend. */
+  it('zählt nur die Crew dieser einen Einheit', () => {
+    expect(darf(CREW, [])).toBe(false);
+  });
+
+  it('lässt den Admin ran', () => {
+    expect(
+      mayEditSession({
+        isAdmin: true,
+        personId: FREMD,
+        topic: thema,
+        responsibleIds: [],
+      }),
+    ).toBe(true);
+  });
+
+  it('lässt bei einem verwaisten Thema jede:n ran', () => {
+    expect(
+      mayEditSession({
+        isAdmin: false,
+        personId: FREMD,
+        topic: verwaist,
+        responsibleIds: [],
+      }),
+    ).toBe(true);
+  });
+});
+
+/**
+ * Dasselbe ohne die beiden Freifahrtscheine — „gehört dazu" statt „darf hinein".
+ *
+ * `TopicLinkService.reconcile` fragt so und nicht anders: Zählte der Admin mit,
+ * hielte allein seine Zuteilung jede Einheit an jedem Abend fest, und die Regel
+ * „entkoppeln, wenn keiner der Zuständigen sie vorbereitet" liefe in einer
+ * Gruppe mit einem Admin praktisch nie.
+ */
+describe('preparesSession', () => {
+  it('zählt Owner, Mitarbeit und Crew', () => {
+    for (const personId of [OWNER, COLLAB, CREW]) {
+      expect(
+        preparesSession({ personId, topic: thema, responsibleIds: [CREW] }),
+      ).toBe(true);
+    }
+  });
+
+  it('zählt Fremde nicht', () => {
+    expect(
+      preparesSession({
+        personId: FREMD,
+        topic: thema,
+        responsibleIds: [CREW],
+      }),
+    ).toBe(false);
+  });
+
+  /** Der Unterschied zu `mayEditSession`, festgehalten. */
+  it('macht aus einem verwaisten Thema keine Mitgliedschaft', () => {
+    expect(
+      preparesSession({
+        personId: FREMD,
+        topic: verwaist,
+        responsibleIds: [],
+      }),
+    ).toBe(false);
+  });
+});
+
 describe('mayDeleteTopic', () => {
   it('nur der Owner', () => {
     expect(
@@ -195,6 +292,22 @@ describe('isContentVisible', () => {
       isContentVisible({
         ...basis,
         assigned: [FREMD],
+        meeting: meeting(5),
+      }),
+    ).toBe(true);
+  });
+
+  /**
+   * Und wer die Einheit vorbereitet, erst recht — auch wenn er zum Thema nicht
+   * gehört und am Abend selbst gar nicht kann. Ohne diese Zeile bekäme er
+   * seinen eigenen Text als `null` zurück; seit die Vorbereitung ihren eigenen
+   * Kreis zieht, ist das kein Randfall mehr, sondern der Normalfall.
+   */
+  it('wer die Einheit vorbereitet, sieht sie jederzeit', () => {
+    expect(
+      isContentVisible({
+        ...basis,
+        responsibleIds: [FREMD],
         meeting: meeting(5),
       }),
     ).toBe(true);

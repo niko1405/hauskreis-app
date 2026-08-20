@@ -1,10 +1,10 @@
 /**
  * Was zur Wahl steht.
  *
- * Die Trennlinie, um die es hier geht: ein **Thema** über mehreren Abenden, oder
- * ein Abend **für sich**. Beide Listen kommen aus derselben Antwort, und beide
- * lassen etwas weg — `topics` die Hüllen, `singleSessions` alles, was zu einem
- * Thema gehört.
+ * Die Trennlinie, um die es hier geht: ein **Thema fortsetzen** (dort eine neue
+ * Einheit anlegen) oder eine **fertige Einheit nehmen**. `topics` lässt die
+ * Hüllen weg, `singleSessions` trägt alles, was ich vorbereite — auch unter
+ * einem fremden Thema.
  *
  * Zwei Flaggen tragen die Anzeige: `resumable` sagt, ob sich die Einheit
  * hierher holen lässt, `held`, ob ihr Abend schon war. Sie fallen auseinander,
@@ -64,7 +64,12 @@ function setup(
 const einheit = (
   id: string,
   meeting: Record<string, unknown> | null = null,
-) => ({ id, title: id, createdAt: utc('01'), meeting });
+  topic: Record<string, unknown> = {
+    id: 't-hülle',
+    title: null,
+    standalone: true,
+  },
+) => ({ id, title: id, createdAt: utc('01'), topic, meeting });
 
 const abend = (tag: string, status = 'PLANNED') => ({
   id: `m-${tag}`,
@@ -153,14 +158,45 @@ describe('choices', () => {
       });
     });
 
-    /** Und umgekehrt: die zweite Liste besteht nur aus ihnen. */
-    it('fragt für die Einheiten ausschließlich Hüllen ab', async () => {
+    /**
+     * Und umgekehrt: die zweite Liste fragt **nicht** mehr nach Hüllen.
+     *
+     * Sie tat es einmal, und das ging nicht mehr auf, seit die Vorbereitung
+     * ihren eigenen Kreis zieht: Legt jemand die dritte Einheit seines Themas an
+     * und nimmt mich dazu, gehöre ich zum *Thema* nicht — die Einheit stünde
+     * damit in keiner der beiden Listen und wäre an meinem Abend nicht wählbar,
+     * obwohl ich sie mit vorbereite.
+     */
+    it('fragt die Einheiten themaübergreifend ab', async () => {
       const { service, sessionFind } = setup([]);
 
       await service.choices('hk', 'm1', 'p1');
 
-      expect(sessionFind.mock.calls[0][0]).toMatchObject({
-        where: { topic: { hauskreisId: 'hk', standalone: true } },
+      const { where } = sessionFind.mock.calls[0][0] as {
+        where: { topic: Record<string, unknown> };
+      };
+
+      expect(where.topic).toEqual({ hauskreisId: 'hk' });
+    });
+
+    /** Die Hüllen kommen über den zweiten Zweig — dort führt kein Weg über `topics`. */
+    it('nimmt die alleinstehenden Einheiten der eigenen Themen mit', async () => {
+      const { service, sessionFind } = setup([]);
+
+      await service.choices('hk', 'm1', 'p1');
+
+      const { where } = sessionFind.mock.calls[0][0] as {
+        where: { OR: Record<string, unknown>[] };
+      };
+
+      expect(where.OR).toContainEqual({
+        topic: {
+          standalone: true,
+          OR: [
+            { ownerPersonId: 'p1' },
+            { collaborators: { some: { personId: 'p1' } } },
+          ],
+        },
       });
     });
 
@@ -182,11 +218,11 @@ describe('choices', () => {
     });
 
     /**
-     * Spec 8.5: der eigene Entwurf bleibt greifbar, auch wenn der Owner die
-     * Person als Mitarbeiterin entfernt hat. Dafür der dritte Zweig über die
-     * Verantwortlichen der Einheit.
+     * Der Hauptzweig: was ich vorbereite. Deckt zugleich Spec 8.5 ab — der
+     * eigene Entwurf bleibt greifbar, auch wenn der Owner die Person als
+     * Mitarbeiterin entfernt hat.
      */
-    it('findet auch den eigenen Entwurf ohne Mitarbeit am Thema', async () => {
+    it('findet jede Einheit, die ich vorbereite', async () => {
       const { service, sessionFind } = setup([]);
 
       await service.choices('hk', 'm1', 'p1');

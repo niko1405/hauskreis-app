@@ -150,6 +150,9 @@ function setup(
       ),
     },
     meetingTopicResponsible: { findMany: jest.fn().mockResolvedValue([]) },
+    // Die Crew der gewählten Einheit — daraus füllt `choose` die Abend-Rolle
+    // nach. Leer heißt: nichts nachzutragen.
+    topicSessionResponsible: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn((run: (tx: unknown) => unknown) => run(tx)),
   };
 
@@ -159,7 +162,10 @@ function setup(
     new TopicSessionService(
       prisma as unknown as PrismaService,
       { announce: jest.fn() } as unknown as RoleAssignmentNotifier,
-      { assertAvailable: jest.fn() } as unknown as AvailabilityService,
+      {
+        assertAvailable: jest.fn(),
+        findAvailable: jest.fn().mockResolvedValue([]),
+      } as unknown as AvailabilityService,
       links as unknown as TopicLinkService,
     ),
   );
@@ -195,10 +201,14 @@ describe('choose — A) neues Thema', () => {
   });
 
   /**
-   * Spec §3: die Reihenfolge der *Zuteilung* zählt nicht. p2 steht zuerst in der
-   * Liste und wird trotzdem nur Mitwirkende — p1 hat gewählt.
+   * Spec §3: die Reihenfolge der *Zuteilung* zählt nicht — p1 hat gewählt.
+   *
+   * Und an die Einheit kommt **nur er**. Bis eben rutschten alle Zugeteilten
+   * als Mitwirkende mit hinein, samt Schreibrecht am ganzen Thema; wer an dem
+   * Abend nur vorne steht, hat damit aber inhaltlich nichts zu tun. Wen er
+   * dazunimmt, entscheidet er auf der Seite der Einheit.
    */
-  it('nimmt alle zugeteilten Personen als Mitwirkende mit', async () => {
+  it('macht nur den Wählenden zum Mitwirkenden', async () => {
     const { service, links, topicCreate } = setup({ assigned: ['p2', 'p1'] });
 
     await service.choose('hk', 'm1', { mode: 'new' }, ICH);
@@ -212,7 +222,7 @@ describe('choose — A) neues Thema', () => {
       expect.anything(),
       's-neu',
       't-neu',
-      ['p2', 'p1'],
+      ['p1'],
     );
   });
 
@@ -589,7 +599,15 @@ describe('unlink', () => {
  * vorher — ohne dass irgendetwas fehlschlüge.
  */
 describe('setResponsibles', () => {
-  it('reicht die Dazugekommenen an reconcile durch', async () => {
+  /**
+   * Was `reconcile` bekommt, ist seit der Trennung nur noch die neue Liste.
+   *
+   * `departing`, `arriving` und `actorPersonId` standen hier, solange eine
+   * Rollenänderung an fremder Vorbereitung herumoperieren musste — wer dazukam,
+   * setzte die Wahl zurück, es sei denn, der Owner trug ihn selbst ein. Ohne
+   * diese Regeln genügt die Frage „bereitet einer von denen die Einheit vor".
+   */
+  it('reicht die neue Zuteilung an reconcile durch', async () => {
     const { service, links } = setup({ assigned: ['p1'] });
 
     await service.setResponsibles(
@@ -599,32 +617,35 @@ describe('setResponsibles', () => {
       'p1',
     );
 
-    expect(links.reconcile).toHaveBeenCalledWith(
-      expect.anything(),
-      'm1',
-      ['p1', 'p2'],
-      {
-        departing: [],
-        arriving: ['p2'],
-        actorPersonId: 'p1',
-      },
-    );
+    expect(links.reconcile).toHaveBeenCalledWith(expect.anything(), 'm1', [
+      'p1',
+      'p2',
+    ]);
   });
 
-  it('und die Herausgefallenen daneben', async () => {
+  it('auch dann, wenn alle herausfallen', async () => {
     const { service, links } = setup({ assigned: ['p1', 'p2'] });
 
-    await service.setResponsibles('hk', 'm1', { personIds: ['p3'] }, 'p1');
+    await service.setResponsibles('hk', 'm1', { personIds: [] }, 'p1');
 
-    expect(links.reconcile).toHaveBeenCalledWith(
-      expect.anything(),
+    expect(links.reconcile).toHaveBeenCalledWith(expect.anything(), 'm1', []);
+  });
+
+  /**
+   * Und die Gegenrichtung bleibt aus: Zur Rolle zugeteilt zu werden trägt
+   * niemanden in die Einheit ein. Genau das war die Vermischung, die diese
+   * Trennung auflöst — ein Schreibrecht über eine Anwesenheit.
+   */
+  it('trägt niemanden in die Einheit ein', async () => {
+    const { service, links } = setup({ assigned: ['p1'] });
+
+    await service.setResponsibles(
+      'hk',
       'm1',
-      ['p3'],
-      {
-        departing: ['p1', 'p2'],
-        arriving: ['p3'],
-        actorPersonId: 'p1',
-      },
+      { personIds: ['p1', 'p2'] },
+      'p1',
     );
+
+    expect(links.join).not.toHaveBeenCalled();
   });
 });

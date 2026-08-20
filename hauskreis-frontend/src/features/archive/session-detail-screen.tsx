@@ -27,16 +27,19 @@ import {
   CalendarDays,
   Check,
   FileText,
+  Info,
   Layers,
   Pencil,
   Plus,
   Trash2,
+  UserMinus,
+  UserPlus,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, IconButton } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
 import { FieldLabel, InlineEdit, TextInput } from '@/components/ui/field';
@@ -48,11 +51,13 @@ import {
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { ActionstepCheck } from '@/components/domain/actionstep-check';
-import { AvatarStack } from '@/components/ui/avatar';
+import { PeoplePickerSheet } from '@/components/domain/people-picker-sheet';
+import { Avatar, AvatarStack } from '@/components/ui/avatar';
 import { errorMessage } from '@/lib/api/errors';
 import {
   useDeleteTopicSession,
   useNameTopic,
+  useSetSessionResponsibles,
   useTopicSession,
   useUpdateTopicSession,
 } from '@/lib/api/hooks';
@@ -95,7 +100,6 @@ function Loaded({
 
   const darf = editing && session.mayEdit;
   const allein = session.topic.standalone;
-  const leute = session.responsibles.map((row) => row.person);
 
   /**
    * Dieselbe Grenze wie auf der Terminseite: einen Vorsatz für heute Abend hakt
@@ -209,17 +213,9 @@ function Loaded({
             <Badge>noch an keinem Abend</Badge>
           )}
         </div>
-
-        {leute.length > 0 && (
-          <div className="mt-3 flex items-center gap-2">
-            <AvatarStack people={leute} size="xs" />
-            <span className="text-[11px] text-stone-400">
-              {session.held ? 'gehalten von' : 'vorbereitet von'}{' '}
-              {namesOf(leute)}
-            </span>
-          </div>
-        )}
       </header>
+
+      <Crew session={session} editing={editing} />
 
       {!session.contentVisible && (
         <Card>
@@ -277,7 +273,10 @@ function Loaded({
         </>
       )}
 
-      {session.mayEdit && (
+      {/* „Weitere Einheit anlegen" hängt am **Thema** — das darf nicht, wer nur
+          diesen einen Abend vorbereitet. „Überthema hinzufügen" schon: Es gibt
+          der eigenen Einheit einen Bogen und räumt in keinem fremden Thema. */}
+      {(allein ? session.mayEdit : session.mayEditTopic) && (
         <Weitergehen
           allein={allein}
           topicId={session.topic.id}
@@ -304,8 +303,9 @@ function Loaded({
       )}
 
       {/* Gehaltenes bleibt: ein Abend, der war, ist das Protokoll dessen, was
-          war. */}
-      {session.mayEdit && !session.held && (
+          war. Und löschen darf, wem das Thema gehört — eine Einheit aus einem
+          fremden Thema räumt man nicht als Aushilfe weg. */}
+      {session.mayEditTopic && !session.held && (
         <Button
           variant="ghost"
           className="w-full text-alert"
@@ -325,6 +325,145 @@ function Loaded({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Wer diese Einheit vorbereitet — und der Ort, an dem sich das ändert.
+ *
+ * Bis eben war das eine Zeile unter der Überschrift: eine Tatsache, die man
+ * ablas. Sie ist jetzt eine Entscheidung, weil sie es immer schon war und nur
+ * am falschen Ort getroffen wurde — nämlich über die Zuteilung am Termin, die
+ * damit zwei Fragen zugleich beantwortete. Wer hier steht, darf **diese**
+ * Einheit schreiben, sonst nichts am Thema.
+ *
+ * Die eine Nebenwirkung steht daneben, bevor man sie auslöst: Hängt die Einheit
+ * an einem kommenden Abend, kommt wer dazukommt auch in dessen Rolle „Thema".
+ * Andersherum nicht — wer hier herausfällt, bleibt am Abend eingetragen.
+ */
+function Crew({
+  session,
+  editing,
+}: {
+  session: TopicSession;
+  editing: boolean;
+}) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const setCrew = useSetSessionResponsibles(session.id);
+  const [waehlen, setWaehlen] = useState(false);
+
+  const leute = session.responsibles.map((row) => row.person);
+  const ids = leute.map((person) => person.id);
+  const darf = editing && session.mayEdit;
+
+  const kommenderAbend =
+    session.meeting && session.meeting.status !== 'CANCELLED' && !session.held
+      ? session.meeting
+      : null;
+
+  const dazu = (personId: string) =>
+    setCrew.mutate([...ids, personId], {
+      onSuccess: () => {
+        toast.success('Dazugenommen.');
+        setWaehlen(false);
+      },
+      onError: (error) => toast.error(errorMessage(error)),
+    });
+
+  const heraus = async (personId: string, name: string) => {
+    const ok = await confirm({
+      title: `${name} herausnehmen?`,
+      body: kommenderAbend
+        ? `${name} kann diese Einheit danach nicht mehr ändern. Für den Abend bleibt ${name} eingetragen — das trägst du am Termin aus.`
+        : `${name} kann diese Einheit danach nicht mehr ändern.`,
+      confirmLabel: 'Herausnehmen',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    setCrew.mutate(
+      ids.filter((id) => id !== personId),
+      {
+        onSuccess: () => toast.success(`${name} herausgenommen.`),
+        onError: (error) => toast.error(errorMessage(error)),
+      },
+    );
+  };
+
+  // Außerhalb des Bearbeitungsmodus bleibt es, was es war: eine Zeile mit
+  // Gesichtern. Eine Sektion mit Karte drumherum für „von Jonas vorbereitet"
+  // wäre eine Überschrift über einem Halbsatz.
+  if (!darf) {
+    if (leute.length === 0) return null;
+
+    return (
+      <div className="flex items-center gap-2">
+        <AvatarStack people={leute} size="xs" />
+        <span className="text-[11px] text-stone-400">
+          {session.held ? 'gehalten von' : 'vorbereitet von'} {namesOf(leute)}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <section>
+      <SectionTitle>Wer das vorbereitet</SectionTitle>
+      <Card className="space-y-2">
+        {kommenderAbend && (
+          <p className="rounded-lg border border-info-line bg-info-bg p-2.5 text-xs leading-relaxed text-info">
+            <Info size={13} className="mr-1.5 inline shrink-0 align-[-2px]" />
+            Wer hier dazukommt, wird für {formatDay(kommenderAbend.date)} auch
+            als zuständig eingetragen.
+          </p>
+        )}
+
+        {leute.map((person) => (
+          <div key={person.id} className="flex items-center gap-2.5">
+            <Avatar person={person} size="sm" />
+            <span className="flex-1 text-sm font-medium text-stone-700">
+              {person.name}
+            </span>
+            <IconButton
+              label={`${person.name} herausnehmen`}
+              disabled={setCrew.isPending}
+              onClick={() => heraus(person.id, person.name)}
+            >
+              <UserMinus size={14} />
+            </IconButton>
+          </div>
+        ))}
+
+        {leute.length === 0 && (
+          <p className="text-sm text-stone-400">
+            Niemand eingetragen — dann darf hier jede:r etwas ändern.
+          </p>
+        )}
+
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-full"
+          loading={setCrew.isPending}
+          onClick={() => setWaehlen(true)}
+        >
+          <UserPlus size={15} />
+          Jemanden dazunehmen
+        </Button>
+      </Card>
+
+      {waehlen && (
+        <PeoplePickerSheet
+          title="Wer bereitet mit vor?"
+          subtitle="Sie darf danach diese Einheit ändern — sonst nichts am Thema."
+          excludeIds={ids}
+          saving={setCrew.isPending}
+          onPick={dazu}
+          onClose={() => setWaehlen(false)}
+        />
+      )}
+    </section>
   );
 }
 

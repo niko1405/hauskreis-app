@@ -319,27 +319,23 @@ function Loaded({
     roles.topicPeople.some((person) => person.id === me.me?.id);
 
   /**
-   * Was das Eintragen einer Person an diesem Abend sonst noch tut.
+   * Der einzige Automatismus, der von dieser Zuteilung noch ausgeht.
    *
-   * Zwei sehr verschiedene Sätze, und welcher gilt, hängt daran, wem das
-   * gewählte Thema gehört. **Dem Owner** gehört auch der Kreis darum: Er holt
-   * jemanden dazu oder nimmt ihn wieder heraus, und die Wahl bleibt stehen.
-   * **Allen anderen** fällt sie beim Dazuholen zurück — was sie hier erfahren,
-   * bevor sie es tun, und nicht hinterher an einer leeren Karte.
+   * Hier standen einmal zwei ganz andere Sätze: Wer dazukam, setzte die
+   * Themenwahl zurück — es sei denn, der Owner trug ihn selbst ein. Das ist
+   * weggefallen, und mit ihm die Erklärungsnot. Zugeteilt zu sein heißt, an dem
+   * Abend dafür einzustehen; es gibt kein Schreibrecht mehr, vor dem eine
+   * fremde Vorbereitung geschützt werden müsste.
    *
-   * Steht noch gar nichts, gibt es auch nichts anzukündigen; an einem
-   * vergangenen Abend ebenso wenig, dort ist alles eingefroren.
+   * Übrig bleibt die Kehrseite: Hängt am Abend etwas, das keiner der
+   * Zuständigen anfassen darf, ist er in Wahrheit ungeplant — dann löst sich
+   * die Einheit und wartet als Entwurf. Das gehört **vor** die Entscheidung;
+   * eine Rückfrage danach erschiene auf dem schon geschlossenen Sheet.
    */
-  const topicHint = ((): string | undefined => {
-    const gewaehlt = meeting.topicSession;
-    if (!gewaehlt || past) return undefined;
-
-    if (gewaehlt.owned) {
-      return 'Wer dazukommt, bereitet die Einheit mit dir vor und darf am ganzen Thema schreiben; wer herausfällt, verliert sie wieder. Nimmst du dich selbst heraus, geht die Einheit mit vom Abend — vorbereitet bleibt sie.';
-    }
-
-    return 'Kommt jemand dazu, wird die Themenwahl zurückgesetzt — ihr entscheidet dann gemeinsam neu. Vorbereitetes bleibt als Entwurf erhalten.';
-  })();
+  const topicHint =
+    meeting.topicSession && !past
+      ? 'Bleibt am Ende niemand zuständig, der diese Einheit vorbereitet, löst sie sich vom Abend — vorbereitet bleibt sie. Wer sie mit vorbereitet, steht auf ihrer eigenen Seite.'
+      : undefined;
 
   /**
    * Ob die Nachbereitungs-Karte dasteht — und nicht bloß, ob der Baustein an

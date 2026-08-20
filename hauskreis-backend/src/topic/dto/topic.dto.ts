@@ -163,6 +163,11 @@ export const setTopicResponsiblesSchema = z.object({
   personIds: z.array(z.uuid()).max(9),
 });
 
+/** Wen der Owner ausdrücklich zum Thema dazuholt. */
+export const addCollaboratorSchema = z.object({
+  personId: z.uuid(),
+});
+
 const topicParamsSchema = z.object({
   hauskreisId: z.uuid(),
   id: z.uuid(),
@@ -198,6 +203,7 @@ export class ChooseTopicSessionDto extends createZodDto(
 export class SetTopicResponsiblesDto extends createZodDto(
   setTopicResponsiblesSchema,
 ) {}
+export class AddCollaboratorDto extends createZodDto(addCollaboratorSchema) {}
 export class TopicParamsDto extends createZodDto(topicParamsSchema) {}
 export class TopicCollaboratorParamsDto extends createZodDto(
   topicCollaboratorParamsSchema,

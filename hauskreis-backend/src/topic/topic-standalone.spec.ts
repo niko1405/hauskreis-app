@@ -108,6 +108,10 @@ function setup(
       findFirst: jest.fn().mockResolvedValue(vorlage),
     },
     topic: { ...tx.topic, updateMany: topicUpdateMany },
+    // Die Crew der frisch gewählten Einheit — daraus füllt `choose` die
+    // Abend-Rolle nach. Leer: Auf diesen Wegen steht nur der Wählende darin,
+    // und der ist ohnehin zugeteilt.
+    topicSessionResponsible: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn((run: (client: unknown) => unknown) => run(tx)),
   };
 

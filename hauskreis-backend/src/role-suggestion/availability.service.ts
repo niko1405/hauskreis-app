@@ -39,6 +39,48 @@ export class AvailabilityService {
   ) {}
 
   /**
+   * Wer von diesen an dem Abend **dabei sein kann** — dieselbe Frage wie
+   * `assertAvailable`, nur als Antwort statt als Fehler.
+   *
+   * Für den einen Aufrufer, der nicht scheitern darf: Wer auf der Seite einer
+   * Einheit jemanden zur Vorbereitung dazunimmt, sagt damit nichts über dessen
+   * Anwesenheit — mitvorbereiten kann man auch, wenn man am Abend selbst fehlt.
+   * Die Kopplung in die Abend-Rolle überspringt so jemanden dann einfach, statt
+   * das Dazunehmen abzulehnen.
+   */
+  async findAvailable(
+    hauskreisId: string,
+    meetingId: string,
+    personIds: readonly string[],
+  ): Promise<string[]> {
+    if (personIds.length === 0) return [];
+
+    const meeting = await this.prisma.meeting.findFirst({
+      where: { id: meetingId, hauskreisId },
+      select: { date: true },
+    });
+
+    if (!meeting) return [];
+
+    const [away, angekommen] = await Promise.all([
+      this.findUnavailable(hauskreisId, meeting.date, meetingId, personIds),
+      this.prisma.person.findMany({
+        where: {
+          id: { in: [...personIds] },
+          hauskreisId,
+          acceptedAt: { not: null },
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    const weg = new Set(away.map((person) => person.id));
+    return angekommen
+      .map((person) => person.id)
+      .filter((personId) => !weg.has(personId));
+  }
+
+  /**
    * Wirft `400`, sobald jemand aus der Liste an diesem Abend nicht da ist.
    *
    * Die Meldung nennt Namen und Grund: „Mira ist an diesem Abend nicht dabei"

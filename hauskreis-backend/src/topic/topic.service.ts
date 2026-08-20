@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -220,6 +221,64 @@ export class TopicService {
       // die auf ihre Abende zeigen.
       await bumpMeetingsOfTopic(tx, id);
       await tx.topic.delete({ where: { id } });
+    });
+  }
+
+  /**
+   * Holt jemanden ausdrücklich zum Thema dazu — nur der Owner darf das.
+   *
+   * Bis eben gab es diesen Weg nicht, weil er nicht nötig war: Wer eine Einheit
+   * hielt, wurde automatisch Mitarbeiter:in. Genau das ist weggefallen — es gab
+   * jemandem, der einmal aushalf, Hoheit über ein Thema, das über Monate läuft.
+   * Ab jetzt ist das hier der **einzige** Weg zum themaweiten Schreibrecht, und
+   * er ist eine Entscheidung statt einer Nebenwirkung.
+   *
+   * Was diese Ebene von der Crew einer Einheit unterscheidet: Wer hier steht,
+   * darf **jede** Einheit des Themas ändern und neue anlegen.
+   */
+  async addCollaborator(
+    hauskreisId: string,
+    id: string,
+    personId: string,
+    viewer: Viewer,
+  ) {
+    const topic = await this.load(hauskreisId, id);
+
+    if (
+      !mayDeleteTopic({
+        isAdmin: viewer.isAdmin,
+        personId: viewer.personId,
+        topic: membershipOf(topic),
+      })
+    ) {
+      throw new ForbiddenException(
+        'Mitarbeitende verwaltet, wem das Thema gehört.',
+      );
+    }
+
+    // Die Mandantengrenze: der Fremdschlüssel allein ließe ein Thema auf eine
+    // Person aus einem anderen Hauskreis zeigen.
+    const person = await this.prisma.person.findFirst({
+      where: { id: personId, hauskreisId },
+      select: { id: true },
+    });
+
+    if (!person) {
+      throw new BadRequestException(
+        'Diese Person gehört nicht zu diesem Hauskreis',
+      );
+    }
+
+    // Der Owner braucht keine zweite Zeile — er ist der Owner.
+    if (topic.ownerPersonId === personId) return;
+
+    await this.prisma.$transaction(async (tx) => {
+      const result = await tx.topicCollaborator.createMany({
+        data: [{ topicId: id, personId }],
+        skipDuplicates: true,
+      });
+
+      if (result.count > 0) await touchTopic(tx, id);
     });
   }
 

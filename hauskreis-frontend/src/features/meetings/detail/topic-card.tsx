@@ -30,6 +30,7 @@ import { ArrowUpRight, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Button, PRESSABLE } from '@/components/ui/button';
+import { AvatarStack } from '@/components/ui/avatar';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { FieldLabel, InlineEdit } from '@/components/ui/field';
 import { cn } from '@/lib/cn';
@@ -125,6 +126,24 @@ export function TopicCard({
                 />
               </div>
             </Link>
+
+            {/* Wer sie vorbereitet — und **nicht** dasselbe wie die Rolle
+                oben. Die Rolle sagt, wer an dem Abend dafür einsteht; das hier
+                sagt, wer den Stoff gemacht hat. Beides kann auseinanderfallen,
+                und ohne diese Zeile sähe man nicht einmal, dass es zwei Dinge
+                sind. Geändert wird es auf der Seite der Einheit. */}
+            {session.responsibles.length > 0 && (
+              <div className="flex items-center gap-2">
+                <AvatarStack
+                  people={session.responsibles.map((row) => row.person)}
+                  size="xs"
+                />
+                <span className="text-[11px] text-stone-400">
+                  {session.held ? 'gehalten von' : 'vorbereitet von'}{' '}
+                  {namesOf(session.responsibles.map((row) => row.person))}
+                </span>
+              </div>
+            )}
 
             {/* Der Haken bleibt hier und wandert nicht mit: Er hängt am Termin
                 und gilt pro Person, während der Text der Einheit gehört. Er

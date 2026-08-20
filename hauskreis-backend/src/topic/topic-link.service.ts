@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
 import { GroupClockService } from '../meeting/group-clock.service';
 import { touchMeeting } from '../meeting/meeting-version';
-import { belongsTo } from './topic-visibility';
+import { preparesSession } from './topic-visibility';
 import { touchSession, touchTopic } from './topic-version';
 
 /**
@@ -35,54 +35,36 @@ export class TopicLinkService {
   /**
    * Was aus der gewählten Einheit wird, nachdem sich die Zuteilung geändert hat.
    *
-   * **Entkoppelt wird, wenn niemand mehr zugeteilt ist, der zum Thema gehört.**
-   * Die Regel steht so nicht in der Spec, folgt aber ihrem Sinn:
+   * **Entkoppelt wird, wenn niemand mehr zugeteilt ist, der zur Vorbereitung
+   * gehört** — also weder das Thema besitzt noch daran mitarbeitet noch an
+   * dieser Einheit steht. Sonst hinge am Abend etwas, das keiner der
+   * Zuständigen anfassen darf.
    *
-   * - Aus zwei Zugeteilten wird einer: der Übriggebliebene gehört zum Thema, die
-   *   Einheit bleibt. Eine Vorbereitung wegzureißen, weil jemand *anderes*
-   *   ausgetragen wurde, wäre offensichtlich falsch.
-   * - Statt A ist jetzt C dran: C hat mit dem Thema nichts zu tun, die Einheit
-   *   wird entkoppelt und wartet als Entwurf auf A (Spec §4).
+   * - Aus zwei Zugeteilten wird einer, und der gehört dazu: die Einheit bleibt.
+   * - **Es kommt jemand dazu: die Einheit bleibt.** Das ist der Unterschied zu
+   *   vorher, und der Grund für diese ganze Runde. Wer neu zugeteilt wird, ist
+   *   an dem Abend dabei — er entscheidet damit nicht über eine Vorbereitung,
+   *   die er nicht angefangen hat. Passt sie ihm nicht, steht „Anderes Thema
+   *   wählen" da wie eh und je.
+   * - Statt A ist jetzt C dran, C gehört nicht dazu: die Einheit wird
+   *   entkoppelt und wartet als Entwurf auf A.
    * - Niemand mehr zugeteilt: dasselbe.
-   * - **C kommt zu A dazu: die Wahl wird zurückgesetzt.** C hat sie nicht
-   *   getroffen und soll nicht still in eine fremde Vorbereitung hineinrutschen
-   *   — schon gar nicht mit Schreibrecht am ganzen Thema. Der Abend steht danach
-   *   wieder auf „Thema wählen", die Vorbereitung von A wartet als Entwurf, und
-   *   wer dann wählt, entscheidet mit dem Wissen, wer sonst noch dran ist.
-   * - Kommt C dazu und **gehört schon zum Thema**, bleibt die Einheit hängen und
-   *   C wird nur Verantwortliche:r dieses Abends. Dort ist nichts zu
-   *   entscheiden, was nicht schon entschieden wäre.
-   * - **Holt A selbst ihn dazu, bleibt sie ebenfalls hängen.** Das Zurücksetzen
-   *   schützt die Vorbereitung vor fremdem Zugriff — nicht vor der Person, der
-   *   sie gehört. Wer das Thema gewählt hat, zieht den Kreis darum selbst: A
-   *   nimmt C dazu, und C bereitet ab jetzt mit vor.
    *
-   * Die drei Angaben unten kommen von außen und lassen sich hier nicht
-   * ableiten: Wenn `reconcile` läuft, stehen die neuen Zeilen schon und die
-   * alten sind weg.
+   * Gemessen wird mit `preparesSession` und nicht mit `mayEditSession`: Admin
+   * und verwaistes Thema dürfen zwar hinein, gehören aber nicht dazu — ein
+   * zugeteilter Admin hielte sonst jede Einheit an jedem Abend fest.
+   *
+   * Aufgeräumt wird dabei **nichts**. Wer aus der Zuteilung fällt, bleibt an der
+   * Einheit stehen: Er hat sie vorbereitet, und krank zu werden nimmt ihm das
+   * nicht. Die Crew pflegt man auf der Seite der Einheit
+   * (`TopicSessionService.setSessionResponsibles`), nicht über den Umweg einer
+   * Rollenänderung.
    */
   async reconcile(
     tx: Prisma.TransactionClient,
     meetingId: string,
     assigned: readonly string[],
-    aenderung: {
-      /** Wer aus der Zuteilung **herausfällt**. */
-      departing?: readonly string[];
-      /** Wer **dazukommt**. */
-      arriving?: readonly string[];
-      /**
-       * Wer die Zuteilung ändert.
-       *
-       * Zählt nur für den einen Fall oben: Gehört ihm das Thema, das gerade am
-       * Abend hängt, setzt sein Eintragen nichts zurück. Ein Admin bekommt hier
-       * **keinen** Freifahrtschein — genau wie beim Wählen, und aus demselben
-       * Grund: Es geht nicht um Verwaltung, sondern um jemandes Vorbereitung.
-       */
-      actorPersonId?: string;
-    } = {},
   ): Promise<void> {
-    const { departing = [], arriving = [], actorPersonId } = aenderung;
-
     const meeting = await tx.meeting.findUnique({
       where: { id: meetingId },
       select: {
@@ -92,8 +74,6 @@ export class TopicLinkService {
           select: {
             id: true,
             topicId: true,
-            // Wer an ihr steht — gebraucht für den Fall, dass der Owner geht:
-            // Dann geht die Einheit mit, und die anderen kommen von ihr herunter.
             responsibles: { select: { personId: true } },
             topic: {
               select: {
@@ -114,70 +94,35 @@ export class TopicLinkService {
 
     if (!meeting || !session) return;
 
-    // Derselbe Riegel schützt zweierlei. Er lässt eine gehaltene Einheit an ihrem
-    // Abend hängen — und er nimmt niemandem nachträglich die Zeile, die
-    // festhält, dass er diesen Abend gehalten hat. Wer damals dabei war, war
-    // dabei; eine Rollenkorrektur von heute ändert daran nichts (Spec 8.5).
+    // Ein vergangener Abend ist das Protokoll dessen, was war. Ihn nachträglich
+    // von seiner Nachbereitung zu lösen, weil jemand eine Rolle korrigiert,
+    // nähme die Zusammenfassung aus dem Archiv (Spec 8.5).
     if (await this.clock.isPast(meeting.hauskreisId, meeting.date)) return;
 
-    const membership = {
+    const topic = {
       ownerPersonId: session.topic.ownerPersonId,
       collaboratorIds: session.topic.collaborators.map((row) => row.personId),
     };
 
-    // Wer neu dazukommt und zum Thema nicht gehört, hat es nicht gewählt. Die
-    // Wahl fällt deshalb zurück an die Zugeteilten — alle, gemeinsam. Nicht
-    // gelöscht, nur gelöst: darum geht es unten in denselben Zweig wie „niemand
-    // gehört mehr dazu".
-    //
-    // Es sei denn, der Owner selbst trägt ein. Dass er dafür auch zugeteilt sein
-    // muss, steht nicht hier: Ist er es nicht, entscheidet die Zeile darunter
-    // ohnehin nach der alten Regel.
-    const vomOwner = membership.ownerPersonId === actorPersonId;
+    const responsibleIds = session.responsibles.map((row) => row.personId);
 
-    const fremd = vomOwner
-      ? []
-      : arriving.filter((personId) => !belongsTo(membership, personId));
-
-    // **Mit dem Owner oder gar nicht.** Fällt der aus der Zuteilung, geht die
-    // Einheit mit — auch wenn jemand zugeteilt bleibt, den er dazugeholt hat.
-    // Die anderen sind an diesem Abend seine Mitwirkenden und nicht seine
-    // Nachfolger: Die Vorbereitung gehört ihm, und ohne ihn steht sie nicht.
-    //
-    // Ausdrücklich am **Herausfallen** und nicht an „der Owner ist nicht
-    // zugeteilt". Sonst löste jede beliebige Rollenänderung an einem Abend, den
-    // ein Mitarbeiter für das Thema hält, dessen Einheit ab — ein Thema über
-    // mehrere Abende darf aber reihum gehalten werden.
-    const ownerGeht =
-      membership.ownerPersonId !== null &&
-      departing.includes(membership.ownerPersonId);
+    // Ein Thema, an dem überhaupt niemand hängt — Altbestand aus der Zeit vor
+    // diesem Modell. Dort gäbe es keine Vorbereitung zu schützen, und die Regel
+    // löste es bei jeder Rollenänderung ab. Also stehen lassen.
+    if (topic.ownerPersonId === null && responsibleIds.length === 0) return;
 
     if (
-      !ownerGeht &&
-      fremd.length === 0 &&
-      assigned.some((personId) => belongsTo(membership, personId))
+      assigned.some((personId) =>
+        preparesSession({ personId, topic, responsibleIds }),
+      )
     ) {
-      await this.join(tx, session.id, session.topicId, assigned);
-
-      // Wer aus der Zuteilung fällt, bereitet diesen Abend nicht mehr vor — die
-      // Zeile an der Einheit wäre ab jetzt eine falsche Behauptung und keine
-      // Geschichte. Das Recht am *Thema* fällt nur mit, wenn er sonst nirgends
-      // mehr daran hängt; das entscheidet `leave`.
-      await this.leave(
-        tx,
-        session.id,
-        session.topicId,
-        departing.filter((personId) => !assigned.includes(personId)),
-      );
-
       return;
     }
 
-    // Sonst wird hier **nicht** aufgeräumt, und das ist der Punkt: der Entwurf
-    // wartet ab sofort auf genau die Leute, die eben herausgefallen sind. Nähme
-    // man ihnen die Zeile, verschwände er aus ihrem „Angefangenes" — und mit dem
-    // Mitarbeiter-Recht auch aus jeder anderen Liste. Ein Entwurf, den niemand
-    // mehr sehen kann, ist gelöscht, nur langsamer.
+    // Hier wird nur gelöst, nicht geräumt: Der Entwurf wartet ab sofort auf
+    // genau die Leute, die ihn vorbereitet haben. Nähme man ihnen die Zeile,
+    // verschwände er aus ihrem „Angefangenes" — ein Entwurf, den niemand mehr
+    // sehen kann, ist gelöscht, nur langsamer.
     await tx.topicSession.update({
       where: { id: session.id },
       data: { meetingId: null, version: { increment: 1 } },
@@ -185,37 +130,19 @@ export class TopicLinkService {
 
     await touchTopic(tx, session.topicId);
 
-    // Die eine Ausnahme davon: Geht der Owner, kommen die Mitwirkenden von
-    // seiner Einheit herunter. Ihm selbst nimmt das nichts — sein Zugang hängt
-    // an `topic.ownerPersonId` und nicht an dieser Tabelle, der Entwurf wartet
-    // also weiter auf ihn. `leave` lässt ihn ohnehin stehen.
-    if (ownerGeht) {
-      await this.leave(
-        tx,
-        session.id,
-        session.topicId,
-        session.responsibles.map((row) => row.personId),
-      );
-    }
-
     this.logger.log(
-      `Session ${session.id} detached from meeting ${meetingId}: ${
-        ownerGeht
-          ? 'the owner left the assignment'
-          : fremd.length > 0
-            ? `${fremd.join(', ')} joined the assignment without belonging to the topic`
-            : 'nobody assigned belongs to the topic'
-      }`,
+      `Session ${session.id} detached from meeting ${meetingId}: nobody assigned prepares it`,
     );
   }
 
   /**
-   * Trägt Personen als Verantwortliche einer Einheit **und** als Mitarbeitende
-   * ihres Themas ein.
+   * Trägt Personen als Verantwortliche **dieser Einheit** ein.
    *
-   * Beides zusammen, weil es dasselbe Ereignis ist: wer einen Abend hält,
-   * arbeitet am Thema mit und darf daran schreiben (Spec 8.4). Der Owner steht
-   * nicht zusätzlich in der Mitarbeiter-Liste — er ist ja der Owner.
+   * Und nur dort. Bis eben schrieb dieselbe Methode sie zusätzlich als
+   * Mitarbeitende ins **Thema** — der automatische Rechte-Aufstieg, der weg
+   * sollte: Wer einmal an einem Abend aushilft, bekommt damit keine Hoheit über
+   * ein Thema, das über Monate läuft. Das themaweite Recht vergibt ab jetzt
+   * ausschließlich der Owner, von Hand (`TopicService.addCollaborator`).
    */
   async join(
     tx: Prisma.TransactionClient,
@@ -225,20 +152,8 @@ export class TopicLinkService {
   ): Promise<void> {
     if (personIds.length === 0) return;
 
-    const topic = await tx.topic.findUnique({
-      where: { id: topicId },
-      select: { ownerPersonId: true },
-    });
-
     await tx.topicSessionResponsible.createMany({
       data: personIds.map((personId) => ({ sessionId, personId })),
-      skipDuplicates: true,
-    });
-
-    await tx.topicCollaborator.createMany({
-      data: personIds
-        .filter((personId) => personId !== topic?.ownerPersonId)
-        .map((personId) => ({ topicId, personId })),
       skipDuplicates: true,
     });
 
@@ -246,19 +161,16 @@ export class TopicLinkService {
   }
 
   /**
-   * Die Gegenbewegung zu `join`: jemand bereitet diesen Abend nicht mehr vor.
+   * Die Gegenbewegung: jemand bereitet diese Einheit nicht mehr vor.
    *
-   * Die Reihenfolge ist der ganze Trick. Erst fällt die Zeile an *dieser*
-   * Einheit, und erst danach lässt sich die eigentliche Frage überhaupt richtig
-   * stellen: hängt die Person noch an irgendeiner anderen Einheit des Themas?
-   * Wer noch an einer hängt — gehalten oder geplant — behält das Schreibrecht.
-   * Wer explizit als Mitwirkende:r an einer Einheit steht, ist dadurch geschützt.
+   * Ein `deleteMany` und sonst nichts. Die Nachfrage „hängt die Person noch an
+   * einer anderen Einheit des Themas" stand hier, solange `join` das
+   * Schreibrecht am Thema mitvergab und `leave` es wieder einsammeln musste.
+   * Ohne diesen Aufstieg gibt es nichts einzusammeln.
    *
-   * **Der Owner verliert nie etwas, auch nicht die Zeile an der Einheit.** Sein
-   * Schreibrecht käme ohnehin aus `topic.ownerPersonId` und nicht aus einer
-   * dieser Tabellen — aber unter „vorbereitet von" stünde er nicht mehr, und
-   * das wäre falsch: Die Einheit ist seine. Dass er an diesem einen Abend nicht
-   * mehr zugeteilt ist, sagt der Termin, nicht die Einheit.
+   * Auch der Owner ist nicht mehr ausgenommen. Ihm gehört das Thema, nicht jeder
+   * seiner Abende — dass er den dritten jemand anderem überlässt, ist ein
+   * gültiger Zustand, und sein Zugang hängt ohnehin an `topic.ownerPersonId`.
    */
   async leave(
     tx: Prisma.TransactionClient,
@@ -268,35 +180,8 @@ export class TopicLinkService {
   ): Promise<void> {
     if (personIds.length === 0) return;
 
-    const topic = await tx.topic.findUnique({
-      where: { id: topicId },
-      select: { ownerPersonId: true },
-    });
-
-    const kandidaten = personIds.filter(
-      (personId) => personId !== topic?.ownerPersonId,
-    );
-
-    if (kandidaten.length === 0) return;
-
     await tx.topicSessionResponsible.deleteMany({
-      where: { sessionId, personId: { in: kandidaten } },
-    });
-
-    const haltende = await tx.topicSessionResponsible.findMany({
-      where: { personId: { in: kandidaten }, session: { topicId } },
-      select: { personId: true },
-    });
-
-    const bleibt = new Set(haltende.map((row) => row.personId));
-
-    await tx.topicCollaborator.deleteMany({
-      where: {
-        topicId,
-        personId: {
-          in: kandidaten.filter((personId) => !bleibt.has(personId)),
-        },
-      },
+      where: { sessionId, personId: { in: [...personIds] } },
     });
 
     await this.touchAffected(tx, sessionId, topicId);
@@ -366,8 +251,9 @@ export class TopicLinkService {
    * Nimmt eine Person aus der Zuteilung eines Abends — weil sie abgesagt hat.
    *
    * Antwortet mit `true`, wenn sie überhaupt zugeteilt war. Die Einheit wird
-   * danach neu bewertet: bleibt niemand übrig, der zum Thema gehört, löst sie
-   * sich vom Abend und wartet als Entwurf.
+   * danach neu bewertet: bleibt niemand übrig, der sie vorbereitet, löst sie
+   * sich vom Abend und wartet als Entwurf. Ihre Crew bleibt dabei stehen — wer
+   * absagt, hat trotzdem vorbereitet.
    */
   async releaseFor(meetingId: string, personId: string): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
@@ -386,9 +272,6 @@ export class TopicLinkService {
         tx,
         meetingId,
         rest.map((row) => row.personId),
-        // Ohne `actorPersonId`: Wer absagt, trägt niemanden ein — und die
-        // Ausnahme für den Owner gilt nur für Ankommende.
-        { departing: [personId] },
       );
 
       return true;

@@ -12,10 +12,17 @@
  * - **Inhalt sichtbar** ist die Frage des einzelnen Abends: der Actionstep für
  *   nächste Woche gehört bis 18 Uhr denen, die ihn vorbereiten.
  *
- * Rechte kommen dazu, und sie hängen hier am **Thema** und nicht an der
- * Zuteilung eines einzelnen Abends: ein Thema zieht sich über mehrere Abende,
- * sein Bearbeitungsrecht deshalb auch. Wer zugeteilt ist, entscheidet nur, wer
- * an einem Abend *wählen* darf (`TopicSessionService.choose`).
+ * Rechte kommen dazu, und sie kennen **zwei Weiten**:
+ *
+ * - `mayEditTopic` — das ganze Thema, jede seiner Einheiten, neue anlegen. Das
+ *   haben der Owner und die ausdrücklich eingetragenen Mitarbeitenden.
+ * - `mayEditSession` — **eine** Einheit, nämlich die, die man vorbereitet.
+ *
+ * Die **Zuteilung eines Abends** (`MeetingTopicResponsible`) gibt keines von
+ * beidem. Sie sagt, wer an dem Abend dafür einsteht, und entscheidet allein, wer
+ * dort *wählen* darf (`TopicSessionService.choose`). Dass sie einmal auch das
+ * Schreibrecht mitbrachte, war der Fehler, den diese Trennung auflöst: Eine
+ * Rollenänderung musste dann an fremder Vorbereitung herumoperieren.
  */
 import { MeetingStatus } from '../../generated/prisma/enums';
 import { eveningReached } from '../common/time/local-evening';
@@ -115,6 +122,56 @@ export function mayEditTopic(options: {
 }
 
 /**
+ * Die zweite Ebene: **diese eine Einheit**.
+ *
+ * Wer einen Abend vorbereitet, muss ihn schreiben können — aber deshalb noch
+ * lange nicht das ganze Thema. Das war bis eben dasselbe: Wer eine Einheit
+ * hielt, wurde automatisch Mitarbeiter:in am Thema und durfte überall hinein.
+ * Für jemanden, der einmalig aushilft, ist das eine Zuschreibung, die niemand
+ * getroffen hat.
+ *
+ * Die Funktion ist trotzdem nicht neu, sie hatte nur keinen Namen:
+ * `resumeSession`, `promote` und `nameTopic` schrieben genau diesen Ausdruck
+ * schon je einmal aus („der eigene Entwurf bleibt der eigene, auch wenn der
+ * Owner einen als Mitarbeitenden entfernt hat"). Aus der Rettung für den
+ * Grenzfall ist die Regel geworden.
+ *
+ * Die **Abend-Rolle steht hier ausdrücklich nicht**: Wer an einem Abend fürs
+ * Thema zugeteilt ist, steht dort vorne. Lesen darf er deshalb
+ * (`isContentVisible`), schreiben nicht — sonst käme das Recht über eine
+ * Anwesenheit herein, und genau diese Vermischung soll weg.
+ */
+export function mayEditSession(options: {
+  isAdmin: boolean;
+  personId: string;
+  topic: TopicMembership;
+  /** Wer diese Einheit vorbereitet — `TopicSessionResponsible`. */
+  responsibleIds: readonly string[];
+}): boolean {
+  if (mayEditTopic(options)) return true;
+  return preparesSession(options);
+}
+
+/**
+ * Dasselbe ohne die beiden Freifahrtscheine: gehört diese Person **zu dieser
+ * Vorbereitung**?
+ *
+ * Der Unterschied zu `mayEditSession` sind Admin-Rolle und verwaistes Thema.
+ * Beide sagen „darf notfalls hinein", keines sagt „arbeitet daran mit" — und für
+ * `TopicLinkService.reconcile` ist genau das die Frage. Zählte der Admin mit,
+ * hielte allein seine Zuteilung jede Einheit an jedem Abend fest, und die Regel
+ * liefe in einer Gruppe mit einem Admin praktisch nie.
+ */
+export function preparesSession(options: {
+  personId: string;
+  topic: TopicMembership;
+  responsibleIds: readonly string[];
+}): boolean {
+  if (belongsTo(options.topic, options.personId)) return true;
+  return options.responsibleIds.includes(options.personId);
+}
+
+/**
  * Löschen ist enger als bearbeiten: nur der Owner (Spec 8.2). Ein Collaborator
  * darf jeden Text ändern, aber nicht die Arbeit aller wegräumen.
  */
@@ -150,12 +207,22 @@ export function isContentVisible(options: {
   meeting: TimedSessionMeeting | null;
   /** Wer an dem Abend der Rolle „Thema" zugeteilt ist. */
   assigned: readonly string[];
+  /**
+   * Wer **diese Einheit** vorbereitet.
+   *
+   * Seit die Vorbereitung nicht mehr am Thema hängt, ist das der Normalfall und
+   * nicht der Randfall: Wer eine fremde Einheit mit vorbereitet, gehört zum
+   * Thema nicht und ist vielleicht auch am Abend nicht zugeteilt. Ohne diese
+   * Zeile bekäme er seinen eigenen Text als `null` zurück.
+   */
+  responsibleIds?: readonly string[];
   /** Die Zeitzone der Gruppe — „hat der Abend angefangen" braucht sie. */
   zone: string;
   now?: Date;
 }): boolean {
   if (options.isAdmin) return true;
   if (belongsTo(options.topic, options.personId)) return true;
+  if (options.responsibleIds?.includes(options.personId)) return true;
   if (options.assigned.includes(options.personId)) return true;
 
   // Ohne Termin gibt es keinen Abend, an dem sie freigegeben würde: eine

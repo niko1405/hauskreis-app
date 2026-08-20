@@ -57,8 +57,10 @@ export const topicSessionResponseSchema = z.object({
   createdAt: isoDateTimeOut,
   updatedAt: isoDateTimeOut,
   version: z.number().int().nonnegative(),
-  /// Wer diese Einheit hält oder gehalten hat. Historisch: wer später als
-  /// Mitarbeiter:in entfernt wird, bleibt hier stehen — er war ja dabei.
+  /// Wer diese Einheit vorbereitet oder gehalten hat — und daran hängt seit der
+  /// Trennung von Vorbereitung und Abend-Rolle das Schreibrecht an *dieser*
+  /// Einheit. Gepflegt wird die Liste auf der Seite der Einheit, nicht am
+  /// Termin.
   responsibles: z.array(z.object({ person: personRefSchema })),
   /// Wer den Actionstep dieses Abends für sich abgehakt hat. Leer, solange die
   /// Einheit an keinem Abend hängt — abhaken lässt sich nur, was war.
@@ -72,14 +74,14 @@ export const topicSessionResponseSchema = z.object({
   held: z.boolean(),
   /// Ob die drei Textfelder oben gefüllt sind oder zurückgehalten wurden.
   contentVisible: z.boolean(),
-  /// Ob der Betrachter hier schreiben darf. Vom Server mitgeliefert, damit die
-  /// App die Regel nicht ein zweites Mal aufschreibt — und nicht anders auslegt.
-  /// Sie hängt am **Thema**, nicht am Abend: wer dazugehört, darf jede Einheit.
+  /// Ob der Betrachter **diese Einheit** schreiben darf — ihre Texte und die
+  /// Liste derer, die sie vorbereiten. Wahr für den Owner, die Mitarbeitenden am
+  /// Thema und alle, die an dieser Einheit stehen.
   mayEdit: z.boolean(),
-  /// Ob das Thema dem Betrachter **gehört** — enger als `mayEdit`, wo Mitarbeit
-  /// und Adminrolle mitzählen. Eine Stelle braucht es enger: Wer gewählt hat,
-  /// darf Mitwirkende ein- und austragen, ohne dass die Wahl zurückfällt.
-  owned: z.boolean(),
+  /// Ob er auch am **Thema darüber** darf: eine weitere Einheit anlegen, diese
+  /// hier löschen, ein Überthema vergeben. Enger als `mayEdit` — wer nur diesen
+  /// einen Abend vorbereitet, räumt nichts aus einem fremden Thema heraus.
+  mayEditTopic: z.boolean(),
 });
 
 /** Die Einheit ohne ihr Thema — für Listen, die schon unter dem Thema stehen. */
@@ -155,7 +157,8 @@ export const topicResponseSchema = z.object({
   /// Steht das Thema für alle im Archiv? Wahr, sobald eine Einheit gehalten
   /// wurde — und bleibt es dann, auch für alles, was danach dazukommt.
   publiclyVisible: z.boolean(),
-  /// Gehört es mir (Owner oder Mitarbeit)? Der Filter „nur eigene Themen".
+  /// Gehört es mir (Owner, Mitarbeit oder eine Einheit, die ich vorbereite)?
+  /// Der Filter „nur eigene Themen".
   mine: z.boolean(),
   /// Was der Betrachter darf. Vom Server mitgeliefert, damit die App die Regel
   /// nicht ein zweites Mal aufschreiben muss — und nicht anders auslegt.
@@ -187,6 +190,12 @@ export const singleTopicSessionSchema = z.object({
   id: z.uuid(),
   title: z.string().nullable(),
   createdAt: isoDateTimeOut,
+  /// Das Thema darüber — `null` bei einer alleinstehenden Einheit.
+  ///
+  /// Seit die Liste auch gebundene Einheiten trägt (jede, die ich vorbereite),
+  /// braucht die Zeile diese Herkunft: „Teil 3" ohne das Thema davor wäre
+  /// dasselbe Angebot wie ein einzelner Abend, und das ist es nicht.
+  topic: z.object({ id: z.uuid(), title: z.string().nullable() }).nullable(),
   meeting: z
     .object({ id: z.uuid(), date: isoDateOut, title: z.string().nullable() })
     .nullable(),
@@ -201,9 +210,10 @@ export const singleTopicSessionSchema = z.object({
  * mehreren Abenden, oder ein Abend für sich. Neu anfangen braucht keine Daten
  * und steht deshalb nicht hier.
  *
- * Themen-gebundene Entwürfe fehlen mit Absicht: Sie hängen unter ihrem Thema
- * und stehen dort, wo man es öffnet. Eine eigene Liste daneben zeigte dieselben
- * Zeilen zweimal.
+ * `singleSessions` heißt nicht mehr „ohne Thema", sondern **„meine offenen
+ * Einheiten"** — auch die unter einem fremden Thema, an denen ich als
+ * Verantwortliche:r stehe. Sonst wäre eine Einheit, zu der mich jemand
+ * dazugeholt hat, an meinem eigenen Abend nicht wählbar.
  */
 export const topicChoicesResponseSchema = z.object({
   /// Eigene Themen, laufende zuerst. Hüllen fallen heraus — sie tragen genau

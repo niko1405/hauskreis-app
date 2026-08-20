@@ -283,29 +283,35 @@ trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
   zugeteilt, dann wählt diese Person: ein neues Thema, eine Fortsetzung des
   eigenen, oder eine offene Einheit. **Wählen darf nur, wer an dem Abend
   zugeteilt ist** — auch kein Admin.
-- **Kommt jemand dazu, wird die Wahl zurückgesetzt.** Der Abend steht dann
-  wieder auf „Thema wählen"; deine Vorbereitung ist nicht weg, sie wartet als
-  Entwurf und lässt sich sofort wieder auswählen. Der Grund: Wer neu dran ist,
-  soll mitentscheiden, was drankommt, statt in eine fremde Vorbereitung
-  hineinzurutschen. Wählst du, während noch jemand zugeteilt ist, fragt die App
-  nach — ihr bereitet es dann zusammen vor, und beide dürfen am ganzen Thema
-  schreiben. Fällt die zweite Person wieder aus der Zuteilung, verschwindet sie
-  auch wieder aus der Einheit.
-- **Hast du das Thema selbst gewählt, gilt das für dich nicht.** Du holst dir
-  jemanden dazu oder nimmst ihn wieder heraus, und deine Wahl bleibt stehen —
-  zurückgesetzt wird nur, wenn jemand *anderes* dich dazuträgt. Was die
-  Zuteilung gerade bewirkt, steht jedes Mal oben im Sheet.
-- **Nimmst du dich selbst aus der Rolle, geht deine Einheit mit** — der Abend
-  steht wieder ohne Thema da, auch wenn jemand zugeteilt bleibt, den du
-  dazugeholt hattest. Wer mit vorbereitet hat, kommt dabei von der Einheit
-  herunter. Deine Vorbereitung selbst bleibt und wartet als Entwurf auf dich.
+- **Wer mit vorbereitet, steht auf der Seite der Einheit.** Wählst du an einem
+  Abend, kommst erst einmal nur du an die Einheit; wen du dazunimmst,
+  entscheidest du dort im Bearbeitungsmodus unter „Wer das vorbereitet". Wer
+  dazukommt, darf **diese eine Einheit** ändern — sonst nichts am Thema.
+- **Dazunehmen trägt auch für den Abend ein.** Hängt die Einheit an einem
+  kommenden Termin, steht die Person danach dort in der Rolle „Thema", damit du
+  dieselbe Liste nicht zweimal pflegst. Umgekehrt nicht: Nimmst du jemanden aus
+  der Vorbereitung heraus, bleibt er für den Abend eingetragen — er bereitet nur
+  nichts mehr vor. Austragen tust du ihn am Termin.
+- **Kommt jemand zur Rolle dazu, bleibt dein Thema stehen.** Zugeteilt zu sein
+  heißt, an dem Abend dafür einzustehen — es gibt kein Schreibrecht an deiner
+  Vorbereitung dazu. Wer etwas anderes will, nimmt „Anderes Thema wählen".
+- **Weg ist die Einheit nur, wenn niemand mehr zuständig ist, der sie
+  vorbereitet.** Dann steht der Abend wieder auf „Thema wählen", und deine
+  Vorbereitung wartet als Entwurf auf dich. Was die Zuteilung gerade bewirkt,
+  steht oben im Sheet.
+- **Aus der Rolle zu fallen nimmt dir nichts.** Sagst du für den Abend ab,
+  bleibst du an der Einheit stehen und darfst sie weiter schreiben.
 - Eine Einheit lässt sich auch **ohne Termin** anlegen, im Archiv auf der
   Themenseite. Sie wartet dann als „offen", bis sie an einem Abend ausgewählt
   wird. Das ist der Ort zum Vorbereiten.
 - Wählst du an einem Abend etwas anderes, ist deine Vorbereitung **nicht weg** —
   die alte Einheit löst sich vom Termin und wartet wieder als Entwurf.
-- Themen kann man **zu mehreren vorbereiten.** Wer eine Einheit hält, darf am
-  ganzen Thema schreiben. **Löschen darf nur, wer das Thema angelegt hat.**
+- Themen kann man **zu mehreren vorbereiten**, und das auf zwei Ebenen. Wer nur
+  bei *einer* Einheit hilft, darf genau sie ändern. Wer **am ganzen Thema**
+  mitarbeiten soll — jede Einheit ändern, neue anlegen —, wird auf der
+  Themenseite unter „Wer daran arbeitet" ausdrücklich als Mitwirkende:r
+  eingetragen; das darf nur, wer das Thema angelegt hat. **Löschen** darf
+  ebenfalls nur er.
 - Jede Einheit hat ihre **eigene Seite**, und dort wird sie auch geschrieben —
   Titel, Zusammenfassung, Actionstep, wer sie vorbereitet, der Weg zum Termin.
   Auf der Terminseite tippst du dafür einfach auf die Einheit; der Pfeil oben

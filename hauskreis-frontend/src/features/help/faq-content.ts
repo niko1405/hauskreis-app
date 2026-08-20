@@ -306,8 +306,14 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Kann ich ein Thema vorbereiten, ohne dass ein Abend feststeht?',
     answer:
-      'Ja, und das ist ausdrücklich vorgesehen. Im Archiv unter „Themen" legst du eines an, wann immer du Lust hast — du musst nicht auf einen Dienstag warten, an dem du zufällig dran bist.\n\nEine Einheit ohne Abend wartet unter **„Angefangenes"**. Sobald du (oder jemand anders, dem du sie überlässt) an einem Abend zugeteilt bist, kannst du sie dort aufnehmen.\n\nSolange sie an keinem Abend hängt, sehen sie nur die Leute, die am Thema mitarbeiten. Ein Entwurf ist nichts, was die ganze Gruppe schon lesen muss.',
-    keywords: ['angefangenes', 'entwurf', 'vorarbeiten', 'ohne termin'],
+      'Ja, und das ist ausdrücklich vorgesehen. Im Archiv unter „Themen" legst du eines an, wann immer du Lust hast — du musst nicht auf einen Dienstag warten, an dem du zufällig dran bist.\n\nEine Einheit ohne Abend wartet unter **„Angefangenes"**. Sobald du (oder jemand anders, dem du sie überlässt) an einem Abend zugeteilt bist, kannst du sie dort aufnehmen.\n\n**Zu zweit geht das auch.** Auf der Seite der Einheit steht im Bearbeitungsmodus „Wer das vorbereitet" — wen du dort dazunimmst, darf sie mit dir schreiben und findet sie unter „Angefangenes" wieder. Hängt sie schon an einem kommenden Abend, wird die Person dort gleich als zuständig eingetragen.\n\nSolange sie an keinem Abend hängt, sehen sie nur die Leute, die daran arbeiten. Ein Entwurf ist nichts, was die ganze Gruppe schon lesen muss.',
+    keywords: [
+      'angefangenes',
+      'entwurf',
+      'vorarbeiten',
+      'ohne termin',
+      'zusammen',
+    ],
   },
   {
     id: 'topics-einzeln',
@@ -340,9 +346,10 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
   {
     id: 'topics-dazugekommen',
     category: 'topics',
-    question: 'Jemand ist dazugekommen — wo ist mein Thema hin?',
+    question:
+      'Jemand ist zur Rolle dazugekommen — was passiert mit meinem Thema?',
     answer:
-      'Es wartet als Entwurf und lässt sich sofort wieder auswählen. Zurückgesetzt wird die Wahl mit Absicht: Wer neu für den Abend zugeteilt wird, soll mitentscheiden, was drankommt — statt still in eine Vorbereitung hineinzurutschen, die er nie gewählt hat.\n\nWählst du dann (wieder), fragt die App nach: **„Zusammen vorbereiten?"** Sagst du ja, seid ihr beide für die Einheit zuständig und dürft am ganzen Thema schreiben.\n\nFällt die zweite Person später wieder aus der Zuteilung, verschwindet sie auch wieder aus der Einheit.\n\n**Umgekehrt gilt: mit dem Owner oder gar nicht.** Nimmst du dich selbst aus der Rolle, geht deine Einheit mit vom Abend — auch wenn die zweite Person zugeteilt bleibt. Sie hat mit vorbereitet, aber gewählt hast du, und die Vorbereitung gehört dir. Sie wartet danach als Entwurf auf dich.\n\n**Hast du das Thema selbst gewählt, passiert dir das nicht.** Du holst dir jemanden dazu oder nimmst ihn wieder heraus, ohne deine Wahl zu verlieren — sie ist deine, und geschützt wird sie vor fremdem Zugriff, nicht vor dir. Was gerade passiert, steht jedes Mal oben im Zuteilungs-Sheet.\n\nZwei weitere Ausnahmen: Wer am selben Thema ohnehin schon mitschreibt, setzt nichts zurück — dort ist nichts mehr zu entscheiden. Und ein Abend, der schon war, bleibt unangetastet; was gehalten wurde, verliert sein Thema nicht.',
+      'Nichts. Es bleibt stehen.\n\nDas war einmal anders: Die Wahl sprang zurück auf „Thema wählen", sobald jemand Neues für den Abend zugeteilt wurde. Gedacht war es als Schutz — wer neu dran ist, sollte nicht still in eine fremde Vorbereitung hineinrutschen. In der Benutzung stand der Abend dann ohne Zutun leer da.\n\nDer Schutz ist überflüssig geworden, weil das Loch darunter zu ist: **Für den Abend zugeteilt zu sein gibt kein Schreibrecht an der Vorbereitung.** Wer dazukommt, steht an dem Abend mit dafür ein — mehr nicht. Wen du in *deine* Vorbereitung holst, entscheidest du auf der Seite der Einheit.\n\nPasst dir das Thema nicht, das schon dranhängt: „Anderes Thema wählen" steht da wie eh und je.\n\n**Weg ist die Einheit nur in einem Fall** — wenn am Ende niemand mehr zuständig ist, der sie vorbereitet. Dann hinge am Abend etwas, das keiner der Zuständigen anfassen darf, und das ist kein geplanter Abend. Sie löst sich und wartet als Entwurf; verloren ist nichts.',
     keywords: [
       'dazugekommen',
       'zurückgesetzt',
@@ -364,8 +371,16 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Wer darf an einem Thema schreiben, wer darf es löschen?',
     answer:
-      '**Schreiben** darf, wem das Thema gehört, und alle, die eine seiner Einheiten gehalten haben. Und zwar am **ganzen** Thema — auch an Abenden, an denen man selbst nicht dran war. Ein Thema ist ein gemeinsamer Bogen, kein Stapel Einzelabende.\n\n**Löschen** darf nur, wem es gehört (und ein Admin). Wer mitarbeitet, kann jeden Text ändern, aber nicht die Arbeit aller wegwerfen.\n\nDas Thema **gehört dem, der zuerst wählt** — nicht dem, der zuerst zugeteilt wurde. Oder dem, der es im Archiv anlegt.\n\nFällt jemand aus der Zuteilung, verliert er die Einheit dieses Abends. Das Schreibrecht am Thema verliert er nur, wenn er sonst nirgends mehr daran hängt.',
-    keywords: ['owner', 'besitzer', 'mitarbeiter', 'bearbeiten', 'löschen'],
+      'Drei Ebenen, und sie sind verschieden weit.\n\n**Wem das Thema gehört**, darf alles: jede Einheit ändern, neue anlegen, Leute verwalten, löschen. Es gehört dem, der zuerst wählt — nicht dem, der zuerst zugeteilt wurde. Oder dem, der es im Archiv anlegt.\n\n**Mitwirkende am Thema** dürfen ebenfalls jede Einheit ändern und neue anlegen. Dort steht man nicht von selbst: Der Owner trägt einen auf der Themenseite unter „Wer daran arbeitet" ein. Vorher passierte das automatisch, sobald jemand eine Einheit hielt — und gab damit jemandem, der einmal aushalf, Hoheit über ein Thema, das über Monate läuft.\n\n**Wer eine Einheit vorbereitet**, darf genau **sie** ändern. Das steht auf der Seite der Einheit unter „Wer das vorbereitet".\n\nDie **Zuteilung am Abend** gibt keines von alledem. Sie sagt, wer an dem Abend dafür einsteht. Lesen darf man deshalb, was man vorträgt — ändern nicht.\n\n**Löschen** darf nur, wem das Thema gehört (und ein Admin).',
+    keywords: [
+      'owner',
+      'besitzer',
+      'mitarbeiter',
+      'mitwirkende',
+      'bearbeiten',
+      'löschen',
+      'rechte',
+    ],
   },
   {
     id: 'topics-sichtbarkeit',

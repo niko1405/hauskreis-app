@@ -49,13 +49,11 @@ import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
 import {
   useChooseTopicSession,
-  useMe,
   useSetTopicResponsibles,
   useTopic,
   useTopicChoices,
 } from '@/lib/api/hooks';
 import { formatDay, isPast } from '@/lib/date';
-import { namesOf } from '@/lib/person';
 import type {
   ChooseTopicSessionInput,
   PersonRef,
@@ -116,7 +114,6 @@ export function TopicChoiceSheet({
   const choose = useChooseTopicSession(meetingId);
   const toast = useToast();
   const confirm = useConfirm();
-  const me = useMe();
 
   const schliessen = () => {
     setStep({ name: 'root' });
@@ -149,37 +146,19 @@ export function TopicChoiceSheet({
   };
 
   /**
-   * Die zweite Rückfrage: An diesem Abend ist noch jemand zuständig.
+   * Hier stand einmal eine zweite Rückfrage: „Bereitet ihr das zusammen vor?"
    *
-   * Wer wählt, wählt für alle, die am Abend dran sind — sie werden
-   * Verantwortliche dieser Einheit und dürfen danach am **ganzen** Thema
-   * schreiben. Das ist richtig so (es ist dieselbe Vorbereitung), aber es ist
-   * eine Entscheidung über andere Leute, und die trifft man nicht im
-   * Vorbeigehen.
-   *
-   * Umgekehrt gilt dasselbe: Kommt später jemand dazu, fällt die Wahl zurück,
-   * damit sie hier noch einmal bewusst getroffen wird (`TopicLinkService`).
+   * Sie war nötig, solange die Wahl **alle** Zugeteilten in die Einheit zog,
+   * samt Schreibrecht am ganzen Thema — eine Entscheidung über andere Leute,
+   * die man nicht im Vorbeigehen trifft. Genau das tut sie nicht mehr: An die
+   * Einheit kommt nur, wer wählt. Wen man dazunimmt, entscheidet man auf ihrer
+   * eigenen Seite, wo man dabei auch sieht, wen man vor sich hat.
    */
-  const zusammenVorbereiten = async (): Promise<boolean> => {
-    const andere = responsibles.filter((person) => person.id !== me.me?.id);
-    if (andere.length === 0) return true;
-
-    const namen = namesOf(andere);
-    const mehrere = andere.length > 1;
-
-    return confirm({
-      title: 'Zusammen vorbereiten?',
-      body: `Außer dir ${mehrere ? 'sind' : 'ist'} ${namen} an diesem Abend für das Thema zuständig. Mit dieser Wahl bereitet ihr es gemeinsam vor — ${namen} ${mehrere ? 'dürfen' : 'darf'} danach am ganzen Thema schreiben.`,
-      confirmLabel: 'Zusammen vorbereiten',
-    });
-  };
-
   const waehlen = async (
     input: ChooseTopicSessionInput,
     erfolg: string,
   ): Promise<void> => {
     if (!(await protokollAufgeben())) return;
-    if (!(await zusammenVorbereiten())) return;
 
     choose.mutate(input, {
       onSuccess: () => {
@@ -314,11 +293,7 @@ export function TopicChoiceSheet({
               <li key={session.id}>
                 <ChoiceRow
                   title={session.title ?? 'Einheit ohne Titel'}
-                  hint={
-                    session.meeting
-                      ? `hängt am ${formatDay(session.meeting.date)}`
-                      : 'noch an keinem Abend'
-                  }
+                  hint={einheitHint(session)}
                   onSelect={() => aufnehmen(session, session.meeting)}
                 />
               </li>
@@ -909,4 +884,22 @@ function topicHint(topic: TopicChoiceTopic): string {
   const status = topic.status === 'COMPLETED' ? ' · abgeschlossen' : '';
 
   return `${abende} · ${zuletzt}${status}`;
+}
+
+/**
+ * Die Herkunft einer offenen Einheit — Abend, Thema, oder beides.
+ *
+ * Die Liste trägt seit der Trennung von Vorbereitung und Abend-Rolle auch
+ * Einheiten unter einem **fremden** Thema: nämlich jede, die ich mit
+ * vorbereite. „Teil 3" ohne das Thema davor sähe aus wie ein einzelner Abend,
+ * und das ist es nicht.
+ */
+function einheitHint(session: SingleTopicSession): string {
+  const wo = session.meeting
+    ? `hängt am ${formatDay(session.meeting.date)}`
+    : 'noch an keinem Abend';
+
+  return session.topic
+    ? `aus „${session.topic.title ?? 'Thema ohne Titel'}" · ${wo}`
+    : wo;
 }

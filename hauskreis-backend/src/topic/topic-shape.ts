@@ -20,6 +20,7 @@ import {
   isHeld,
   isPubliclyVisible,
   mayDeleteTopic,
+  mayEditSession,
   mayEditTopic,
   type TopicMembership,
 } from './topic-visibility';
@@ -96,8 +97,12 @@ export const sessionSelect = {
   updatedAt: true,
   version: true,
   meeting: { select: sessionMeetingSelect },
+  // `personId` neben der Person: Daran hängt seit der Trennung von Vorbereitung
+  // und Abend-Rolle das Bearbeitungsrecht dieser einen Einheit
+  // (`mayEditSession`) — die Anzeige braucht nur den Namen, die Rechtefrage nur
+  // die Id.
   responsibles: {
-    select: { person: { select: personRefSelect } },
+    select: { personId: true, person: { select: personRefSelect } },
     orderBy: { person: { name: 'asc' } },
   },
 } satisfies Prisma.TopicSessionSelect;
@@ -178,7 +183,7 @@ type SessionRow = {
     topicResponsibles: { personId: string }[];
     actionstepDone: { person: unknown }[];
   } | null;
-  responsibles: { person: unknown }[];
+  responsibles: { personId: string; person: unknown }[];
 };
 
 /**
@@ -234,14 +239,18 @@ export function shapeSession(
   topic: TopicRow,
   viewer: Viewer,
 ) {
+  const membership = membershipOf(topic);
+  const responsibleIds = session.responsibles.map((row) => row.personId);
+
   const visible = isContentVisible({
     isAdmin: viewer.isAdmin,
     personId: viewer.personId,
-    topic: membershipOf(topic),
+    topic: membership,
     meeting: session.meeting,
     assigned: (session.meeting?.topicResponsibles ?? []).map(
       (row) => row.personId,
     ),
+    responsibleIds,
     zone: viewer.zone,
     now: viewer.now,
   });
@@ -279,7 +288,9 @@ export function shapeSession(
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
     version: session.version,
-    responsibles: session.responsibles,
+    // Ohne `personId`: Die Antwort zeigt Menschen, nicht Schlüssel. Gebraucht
+    // wurde die Id nur ein paar Zeilen weiter oben, für `mayEdit`.
+    responsibles: session.responsibles.map((row) => ({ person: row.person })),
     // Ohne Vorbehalt: wer abgehakt hat, ist keine Aussage über den Inhalt, und
     // vor dem Abend ist die Liste ohnehin leer. An einer Einheit ohne Abend
     // gibt es nichts abzuhaken — daher ein leeres Feld, nicht `null`: die Zahl
@@ -287,21 +298,29 @@ export function shapeSession(
     actionstepDone: session.meeting?.actionstepDone ?? [],
     held: isHeld(session.meeting, viewer.zone),
     contentVisible: visible,
-    mayEdit: mayEditTopic({
+    /**
+     * Diese **eine** Einheit ändern: ihre Texte und die Liste derer, die sie
+     * vorbereiten.
+     */
+    mayEdit: mayEditSession({
       isAdmin: viewer.isAdmin,
       personId: viewer.personId,
-      topic: membershipOf(topic),
+      topic: membership,
+      responsibleIds,
     }),
     /**
-     * Gehört mir das Thema dieser Einheit?
+     * Das **Thema** darüber: eine weitere Einheit anlegen, diese hier löschen,
+     * ein Überthema vergeben.
      *
-     * Keine Rechtefrage — `mayEdit` beantwortet die schon, und weiter gefasst:
-     * dort zählen Mitarbeit und Adminrolle mit. Hier geht es enger zu, weil eine
-     * Stelle es enger braucht: Wer das Thema gewählt hat, darf Mitwirkende ein-
-     * und austragen, **ohne dass die Wahl zurückfällt** (`TopicLinkService`).
-     * Die Zuteilung sagt es vorher an, und dafür muss sie es wissen.
+     * Steht neben `mayEdit`, seit die beiden auseinanderlaufen können: Wer nur
+     * an dieser Einheit mitarbeitet, schreibt sie — räumt sie aber nicht aus
+     * einem Thema heraus, das ihm nicht gehört.
      */
-    owned: topic.ownerPersonId === viewer.personId,
+    mayEditTopic: mayEditTopic({
+      isAdmin: viewer.isAdmin,
+      personId: viewer.personId,
+      topic: membership,
+    }),
   };
 }
 
@@ -314,9 +333,34 @@ export function shapeSession(
  */
 export function shapeTopic(topic: FullTopicRow, viewer: Viewer) {
   const membership = membershipOf(topic);
-  const mine = belongsTo(membership, viewer.personId);
+
+  /**
+   * „Meins" — und das geht seit der Trennung von Vorbereitung und Abend-Rolle
+   * einen Schritt weiter als die Mitgliedschaft am Thema: Wer eine seiner
+   * Einheiten vorbereitet, arbeitet daran, auch wenn ihn niemand als
+   * Mitarbeitenden eingetragen hat. Ohne diese Zeile stünde ein Thema, an dem
+   * man einen Abend hält, nicht unter „Eigene".
+   */
+  const mine =
+    belongsTo(membership, viewer.personId) ||
+    topic.sessions.some((session) =>
+      session.responsibles.some((row) => row.personId === viewer.personId),
+    );
+
+  /**
+   * Entwürfe je Einheit statt themaweit.
+   *
+   * Ein Entwurf ohne Abend gehört denen, die ihn angefangen haben (Spec §7).
+   * Wer nur *eine* Einheit des Themas vorbereitet, soll seine sehen — und nicht
+   * die Entwürfe der anderen. `mine` allein wäre hier zu grob in beide
+   * Richtungen.
+   */
   const sichtbareEinheiten = topic.sessions.filter(
-    (session) => session.meetingId !== null || mine || viewer.isAdmin,
+    (session) =>
+      session.meetingId !== null ||
+      viewer.isAdmin ||
+      belongsTo(membership, viewer.personId) ||
+      session.responsibles.some((row) => row.personId === viewer.personId),
   );
 
   return {
@@ -423,6 +467,9 @@ export function topicScopeWhere(
       OR: [
         { ownerPersonId: personId },
         { collaborators: { some: { personId } } },
+        // Der dritte Weg hinein: eine Einheit vorbereiten. Sie gibt kein Recht
+        // am Thema, macht es aber sehr wohl zu einem, an dem man arbeitet.
+        { sessions: { some: { responsibles: { some: { personId } } } } },
       ],
     };
   }
