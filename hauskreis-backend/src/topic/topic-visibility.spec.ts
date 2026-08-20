@@ -5,6 +5,7 @@ import {
   isContentVisible,
   isHeld,
   isPubliclyVisible,
+  mayDeleteSession,
   mayDeleteTopic,
   mayEditSession,
   mayEditTopic,
@@ -245,6 +246,56 @@ describe('mayDeleteTopic', () => {
     expect(
       mayDeleteTopic({ isAdmin: true, personId: COLLAB, topic: thema }),
     ).toBe(true);
+  });
+});
+
+/**
+ * Eine Einheit löschen — und der Grund, warum das nicht `mayEditTopic && !held`
+ * ist.
+ *
+ * Bei einer **Hülle** ist die Einheit das ganze Thema. Ohne diesen Zweig gäbe es
+ * dort gar keinen Weg: `TopicService.remove` kennt keinen Riegel für Gehaltenes,
+ * aber eine Hülle hat keine Themenseite, über die man ihn erreichte — ein
+ * Eintrag, den niemand mehr loswird.
+ */
+describe('mayDeleteSession', () => {
+  const darf = (
+    personId: string,
+    options: { standalone?: boolean; held?: boolean } = {},
+  ) =>
+    mayDeleteSession({
+      isAdmin: false,
+      personId,
+      topic: thema,
+      standalone: options.standalone ?? false,
+      held: options.held ?? false,
+    });
+
+  describe('solange der Abend bevorsteht', () => {
+    it('darf, wer am Thema mitarbeitet', () => {
+      expect(darf(OWNER)).toBe(true);
+      expect(darf(COLLAB)).toBe(true);
+    });
+
+    it('sonst niemand', () => {
+      expect(darf(FREMD)).toBe(false);
+    });
+  });
+
+  describe('wenn der Abend war', () => {
+    it('bleibt eine Einheit unter einem Thema stehen — auch für den Owner', () => {
+      expect(darf(OWNER, { held: true })).toBe(false);
+    });
+
+    /** Dort ist „die Einheit löschen" dasselbe wie „das Thema löschen". */
+    it('darf der Owner eine alleinstehende Einheit wegnehmen', () => {
+      expect(darf(OWNER, { held: true, standalone: true })).toBe(true);
+    });
+
+    /** Mitarbeit genügt dafür nicht: Löschen ist enger als Bearbeiten. */
+    it('eine Mitarbeiterin aber nicht', () => {
+      expect(darf(COLLAB, { held: true, standalone: true })).toBe(false);
+    });
   });
 });
 

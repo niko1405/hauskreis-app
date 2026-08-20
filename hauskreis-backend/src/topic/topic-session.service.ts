@@ -25,8 +25,14 @@ import {
   topicMembershipSelect,
   type Viewer,
 } from './topic-shape';
-import { isHeld, mayEditSession, mayEditTopic } from './topic-visibility';
-import { touchTopic } from './topic-version';
+import {
+  isHeld,
+  mayDeleteSession,
+  mayDeleteTopic,
+  mayEditSession,
+  mayEditTopic,
+} from './topic-visibility';
+import { touchSession, touchTopic } from './topic-version';
 import { TopicLinkService } from './topic-link.service';
 import type {
   ChooseTopicSessionDto,
@@ -1034,12 +1040,106 @@ export class TopicSessionService {
   }
 
   /**
+   * Und der Weg zurück: aus dem Thema wird wieder eine einzelne Einheit.
+   *
+   * Er fehlte lange mit Absicht, und die Begründung war richtig: „Das Thema doch
+   * wieder auflösen" ist nur dann eindeutig, wenn **genau eine** Einheit
+   * daranhängt — wer die zweite schon angelegt hat, meint mit dem Knopf etwas
+   * anderes als die App. Genau mit dieser Bedingung kommt er jetzt.
+   *
+   * Gezählt werden alle Einheiten, Entwürfe eingeschlossen: Ein Entwurf ist
+   * Arbeit, die jemand angefangen hat, und sie hinge danach an einer Hülle, die
+   * keine zweite tragen kann.
+   *
+   * Die **Bindung an den Abend bleibt** — angefasst wird nur die Zeile des
+   * Themas. Titel und Gesamt-Zusammenfassung fallen weg; eine Hülle hat keinen
+   * Ort, an dem sie stünden. Deshalb auch nur der Owner: Das ist Löschen und
+   * nicht Bearbeiten.
+   */
+  async unnameTopic(hauskreisId: string, sessionId: string, viewer: Viewer) {
+    const session = await this.prisma.topicSession.findFirst({
+      where: { id: sessionId, topic: { hauskreisId } },
+      select: {
+        id: true,
+        topicId: true,
+        meetingId: true,
+        topic: {
+          select: {
+            ...topicMembershipSelect,
+            // Nur die Ids: Gebraucht wird die Anzahl, und `sessions.length`
+            // ist dieselbe Zählung, die `shapeSession` für `mayUnname` macht.
+            sessions: { select: { id: true } },
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException(`Topic session ${sessionId} not found`);
+    }
+
+    if (session.topic.standalone) {
+      throw new BadRequestException(
+        'Diese Einheit hat gar kein Überthema — sie steht schon für sich.',
+      );
+    }
+
+    if (session.topic.sessions.length > 1) {
+      throw new BadRequestException(
+        'Ein Thema mit mehreren Einheiten lässt sich nicht auflösen — die anderen müssen erst weg.',
+      );
+    }
+
+    if (
+      !mayDeleteTopic({
+        isAdmin: viewer.isAdmin,
+        personId: viewer.personId,
+        topic: membershipOf(session.topic),
+      })
+    ) {
+      throw new ForbiddenException(
+        'Das Überthema nimmt weg, wem das Thema gehört.',
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // Spiegelbildlich zu `nameTopic`: der beobachtete Stand steht in der
+      // Bedingung, damit zwei gleichzeitige Griffe nicht beide durchgehen.
+      const { count } = await tx.topic.updateMany({
+        where: { id: session.topicId, standalone: false },
+        data: {
+          title: null,
+          summaryText: null,
+          standalone: true,
+          version: { increment: 1 },
+        },
+      });
+
+      if (count === 0) {
+        throw new ConflictException(
+          'Jemand war schneller — diese Einheit steht schon für sich.',
+        );
+      }
+
+      await touchSession(tx, session.id);
+
+      // Der Termin zeigt „Zugehöriges Thema" und „Einheit 2 von 3" allein aus
+      // `standalone`. Ohne den Sprung bliebe sein ETag stehen und dort stünde
+      // weiter ein Thema, das es nicht mehr gibt.
+      await touchMeeting(tx, session.meetingId);
+    });
+
+    return this.findSession(hauskreisId, sessionId, viewer);
+  }
+
+  /**
    * Eine Einheit löschen.
    *
-   * Nur, solange sie noch nicht gehalten wurde — `isHeld` beantwortet genau das
-   * („kein Abend, ein kommender, oder ein abgesagter"). Ein Abend, der war, ist
-   * das Protokoll dessen, was war; wer den loswerden will, löscht das ganze
-   * Thema und trifft damit eine sichtbar größere Entscheidung.
+   * Solange sie noch nicht gehalten wurde, gilt dieselbe Grenze wie fürs
+   * Anlegen. Ein Abend, der war, ist das Protokoll dessen, was war; wer den
+   * loswerden will, löscht das ganze Thema und trifft damit eine sichtbar
+   * größere Entscheidung — **bei einer Hülle ist das dieselbe Tat**, deshalb
+   * geht sie hier. Beides entscheidet `mayDeleteSession`.
    *
    * Die Mitarbeiter-Zeilen am Thema bleiben absichtlich stehen: eine Einheit zu
    * löschen ist kein Rollenwechsel. Wer jemandem das Schreibrecht nehmen will,
@@ -1065,19 +1165,28 @@ export class TopicSessionService {
       throw new NotFoundException(`Topic session ${sessionId} not found`);
     }
 
-    if (isHeld(session.meeting, viewer.zone)) {
-      throw new BadRequestException(ABEND_WAR_SCHON);
-    }
+    const held = isHeld(session.meeting, viewer.zone);
 
     if (
-      !mayEditTopic({
+      !mayDeleteSession({
         isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(session.topic),
+        standalone: session.topic.standalone,
+        held,
       })
     ) {
+      // Drei Gründe, drei Meldungen. „Der Abend ging vorbei" ist eine andere
+      // Auskunft als „du nicht", und bei einer gehaltenen Hülle ist es das
+      // zweite: dort ginge es, nur nicht für diese Person.
+      if (held && !session.topic.standalone) {
+        throw new BadRequestException(ABEND_WAR_SCHON);
+      }
+
       throw new ForbiddenException(
-        'Eine Einheit löscht, wer am Thema mitarbeitet.',
+        held
+          ? 'Einen Abend, der schon war, nimmt nur weg, wem das Thema gehört.'
+          : 'Eine Einheit löscht, wer am Thema mitarbeitet.',
       );
     }
 
@@ -1139,6 +1248,18 @@ export class TopicSessionService {
 
     if (!session) {
       throw new NotFoundException(`Topic session ${sessionId} not found`);
+    }
+
+    // Eine Einheit, die niemand vorbereitet, gibt es nicht. Bewusst an der
+    // **Liste** und nicht am Owner: Ein Thema über mehrere Abende darf reihum
+    // gehalten werden, und wer Einheit 3 abgibt, soll das können — was nicht
+    // gehen soll, ist der letzte Platz. Sonst stünde am Ende eine Vorbereitung
+    // da, zu der sich niemand bekennt, während im Hintergrund weiter jemand
+    // Schreibrecht hat.
+    if (dto.personIds.length === 0) {
+      throw new BadRequestException(
+        'Eine Einheit braucht jemanden, der sie vorbereitet — nimm erst jemand anderen dazu.',
+      );
     }
 
     const before = session.responsibles.map((row) => row.personId);
@@ -1210,7 +1331,15 @@ export class TopicSessionService {
     }
 
     return {
-      ...shapeSession(session, session.topic, viewer),
+      // `sessions` sind hier **alle** Geschwister, Entwürfe eingeschlossen —
+      // genau die Zahl, die `mayUnname` braucht. `sessionPosition` darunter
+      // zählt bewusst anders (nur die mit Abend).
+      ...shapeSession(
+        session,
+        session.topic,
+        viewer,
+        session.topic.sessions.length,
+      ),
       ...sessionPosition(session.id, session.topic.sessions),
     };
   }

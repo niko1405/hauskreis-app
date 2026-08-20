@@ -12,7 +12,7 @@
  *   aus einem Abend zu nehmen, an dem er eingeplant ist, wäre die
  *   überraschendere der beiden Möglichkeiten.
  */
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { TopicSessionService } from './topic-session.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { TopicLinkService } from './topic-link.service';
@@ -184,6 +184,46 @@ describe('setSessionResponsibles', () => {
     expect(links.leave).toHaveBeenCalledWith(expect.anything(), 's1', 't1', [
       'p2',
     ]);
+  });
+
+  /**
+   * Eine Einheit, die niemand vorbereitet, gibt es nicht.
+   *
+   * Der Fall kam aus der Benutzung: Der Owner nahm sich aus seiner eigenen
+   * alleinstehenden Einheit heraus — und hatte danach weiter Schreibrecht (das
+   * kommt aus `topic.owner_person_id`), stand aber nirgends mehr. Was dasteht,
+   * soll stimmen.
+   */
+  describe('der letzte Platz bleibt besetzt', () => {
+    it('weist eine leere Liste ab', async () => {
+      const { service } = setup({ responsibleIds: ['p1'] });
+
+      await expect(
+        service.setSessionResponsibles('hk', 's1', { personIds: [] }, ICH),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    /**
+     * Am **letzten Platz** und nicht am Owner: Ein Thema über mehrere Abende
+     * darf reihum gehalten werden, und wer Einheit 3 abgibt, soll das können.
+     */
+    it('lässt den Owner gehen, solange jemand bleibt', async () => {
+      const { service, links } = setup({
+        ownerPersonId: 'p1',
+        responsibleIds: ['p1', 'p2'],
+      });
+
+      await service.setSessionResponsibles(
+        'hk',
+        's1',
+        { personIds: ['p2'] },
+        ICH,
+      );
+
+      expect(links.leave).toHaveBeenCalledWith(expect.anything(), 's1', 't1', [
+        'p1',
+      ]);
+    });
   });
 
   describe('die Kopplung in die Abend-Rolle', () => {

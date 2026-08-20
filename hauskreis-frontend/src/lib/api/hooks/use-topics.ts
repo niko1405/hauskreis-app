@@ -196,6 +196,26 @@ export function useNameTopic(sessionId: string) {
   );
 }
 
+/**
+ * Und der Weg zurück — nur solange genau eine Einheit am Thema hängt; ob das
+ * geht, sagt `session.mayUnname`.
+ *
+ * `meetings.all` muss mit: Die Terminkarte zeigt „Zugehöriges Thema" allein
+ * daran, ob es eine Hülle ist.
+ */
+export function useUnnameTopic(sessionId: string) {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useApiMutation(() => topicsApi.unnameTopic(hauskreisId, sessionId), {
+    invalidateKeys: [
+      keys.topics.all,
+      keys.topics.session(sessionId),
+      keys.meetings.all,
+      ...derived,
+    ],
+  });
+}
+
 /** Nur, solange die Einheit noch nicht gehalten wurde. */
 export function useDeleteTopicSession() {
   const { hauskreisId, keys, derived } = useHk();

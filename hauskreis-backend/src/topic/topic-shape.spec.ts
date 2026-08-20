@@ -6,7 +6,7 @@
  * einsortieren ließen, und die Zahl spränge, sobald jemand nebenher einen
  * anfängt — für alle anderen sichtbar, obwohl sie den Entwurf gar nicht sehen.
  */
-import { sessionPosition } from './topic-shape';
+import { sessionPosition, shapeSession } from './topic-shape';
 
 const abend = (id: string, tag: string) => ({
   id,
@@ -51,5 +51,73 @@ describe('sessionPosition', () => {
       sessionIndex: 2,
       sessionCount: 2,
     });
+  });
+});
+
+/**
+ * Ob sich das Überthema wieder entfernen lässt.
+ *
+ * Der Grund, warum das ein eigenes Feld ist und nicht vorn aus `sessionCount`
+ * gerechnet wird: `sessionCount` zählt nur Einheiten **mit** Abend (siehe oben).
+ * Ein Entwurf daneben führte den Knopf also in eine Fehlermeldung.
+ */
+describe('shapeSession — mayUnname', () => {
+  const OWNER = 'p1';
+  const BERLIN = 'Europe/Berlin';
+
+  const session = {
+    id: 's1',
+    topicId: 't1',
+    meetingId: 'm1',
+    title: null,
+    actionstepText: null,
+    summaryText: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    version: 0,
+    meeting: null,
+    responsibles: [],
+  };
+
+  const thema = (standalone = false) => ({
+    id: 't1',
+    title: 'Apostelgeschichte',
+    status: 'RUNNING',
+    standalone,
+    ownerPersonId: OWNER,
+    collaborators: [{ personId: 'p2' }],
+  });
+
+  const darf = (
+    personId: string,
+    sessionTotal: number | undefined,
+    standalone = false,
+  ) =>
+    shapeSession(
+      session,
+      thema(standalone),
+      { personId, isAdmin: false, zone: BERLIN },
+      sessionTotal,
+    ).mayUnname;
+
+  it('geht bei genau einer Einheit', () => {
+    expect(darf(OWNER, 1)).toBe(true);
+  });
+
+  it('nicht mehr, sobald eine zweite dazukommt', () => {
+    expect(darf(OWNER, 2)).toBe(false);
+  });
+
+  it('nicht für eine Mitarbeiterin — Titel und Zusammenfassung fallen weg', () => {
+    expect(darf('p2', 1)).toBe(false);
+  });
+
+  it('nicht bei einer Hülle: dort gibt es kein Überthema', () => {
+    expect(darf(OWNER, 1, true)).toBe(false);
+  });
+
+  /** Wo die Zahl fehlt, lieber ein Knopf zu wenig als einer in den 400er. */
+  it('nicht, wo die Geschwisterzahl gar nicht mitkommt', () => {
+    expect(darf(OWNER, undefined)).toBe(false);
   });
 });

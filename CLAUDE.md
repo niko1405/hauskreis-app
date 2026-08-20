@@ -108,7 +108,10 @@ grundlegende Vorschläge für Kernentitäten:
 - Ein mehrteiliges Thema zählt in der Vorschlagslogik wie **ein einzelner Slot** (nicht mehrfach)
 - Ein Thema erscheint im Archiv, sobald einer seiner Abende vorbei ist. Titel, Actionstep und Zusammenfassung einer noch nicht gehaltenen Einheit sind **bis der Abend anfängt** nur für die Zuständigen sichtbar — maßgeblich ist die Treffpunktzeit dieses Termins, nicht mehr pauschal 18 Uhr
 - Ein vergangener Abend wird **eingefroren**: seine Einheit bleibt daran hängen, auch wenn die Rolle danach noch wechselt
-- Eine Einheit lässt sich auch **ohne Abend** anlegen — der Ort zum Vorarbeiten. Sie wartet unter „Angefangenes", bis jemand sie an einem Termin auswählt; dort zählt auch eine, die gerade an einem anderen kommenden Abend hängt (sie zieht dann um). Löschen geht nur, solange sie nicht gehalten wurde
+- **Eine Einheit hat immer jemanden, der sie vorbereitet** (`topic_session_responsible`); der letzte Platz lässt sich nicht räumen. Am *letzten Platz* und nicht am Owner: Ein Thema über mehrere Abende darf reihum gehalten werden. Sonst stünde eine Vorbereitung da, zu der sich niemand bekennt, während im Hintergrund weiter jemand Schreibrecht hat
+- **Das Überthema ist umkehrbar, solange genau eine Einheit daranhängt.** Aus der Hülle wird ein Thema und wieder eine Hülle; die **Bindung an den Abend bleibt** dabei stehen, Titel und Gesamt-Zusammenfassung fallen weg. Gezählt werden alle Einheiten, Entwürfe eingeschlossen — wer die zweite schon angelegt hat, meint mit dem Knopf etwas anderes als die App. Entfernen darf nur der Owner: Das ist Löschen, nicht Bearbeiten
+- **Löschen** geht, solange die Einheit nicht gehalten wurde. Danach nur mit dem ganzen Thema — und **bei einer Hülle ist die Einheit das ganze Thema**, dort darf der Owner sie also doch wegnehmen. Ohne diese Ausnahme gäbe es einen Eintrag, den niemand mehr loswird: Eine Hülle hat keine Themenseite, über die der übliche Weg liefe
+- Eine Einheit lässt sich auch **ohne Abend** anlegen — der Ort zum Vorarbeiten. Sie wartet unter „Angefangenes", bis jemand sie an einem Termin auswählt; dort zählt auch eine, die gerade an einem anderen kommenden Abend hängt (sie zieht dann um)
 
 ### `host_history` / abgeleitet aus `meetings`
 

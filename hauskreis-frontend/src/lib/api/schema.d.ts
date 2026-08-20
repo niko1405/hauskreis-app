@@ -1102,7 +1102,7 @@ export interface paths {
     get?: never;
     put?: never;
     post?: never;
-    delete?: never;
+    delete: operations['TopicController_unnameTopic'];
     options?: never;
     head?: never;
     patch: operations['TopicController_nameTopic'];
@@ -2420,6 +2420,8 @@ export interface components {
           contentVisible: boolean;
           mayEdit: boolean;
           mayEditTopic: boolean;
+          mayDelete: boolean;
+          mayUnname: boolean;
           sessionIndex: number;
           sessionCount: number;
         } | null;
@@ -2607,6 +2609,8 @@ export interface components {
         contentVisible: boolean;
         mayEdit: boolean;
         mayEditTopic: boolean;
+        mayDelete: boolean;
+        mayUnname: boolean;
         sessionIndex: number;
         sessionCount: number;
       } | null;
@@ -2867,6 +2871,8 @@ export interface components {
           contentVisible: boolean;
           mayEdit: boolean;
           mayEditTopic: boolean;
+          mayDelete: boolean;
+          mayUnname: boolean;
         }[];
         publiclyVisible: boolean;
         mine: boolean;
@@ -2956,6 +2962,8 @@ export interface components {
         contentVisible: boolean;
         mayEdit: boolean;
         mayEditTopic: boolean;
+        mayDelete: boolean;
+        mayUnname: boolean;
       }[];
       publiclyVisible: boolean;
       mine: boolean;
@@ -3036,6 +3044,8 @@ export interface components {
       contentVisible: boolean;
       mayEdit: boolean;
       mayEditTopic: boolean;
+      mayDelete: boolean;
+      mayUnname: boolean;
       sessionIndex: number;
       sessionCount: number;
     };
@@ -9409,6 +9419,64 @@ export interface operations {
         'application/json': components['schemas']['SetTopicResponsiblesDto'];
       };
     };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TopicSessionDetailDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  TopicController_unnameTopic: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        sessionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       200: {
         headers: {

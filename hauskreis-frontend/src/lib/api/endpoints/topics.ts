@@ -181,6 +181,19 @@ export function nameTopic(
   );
 }
 
+/**
+ * Und der Weg zurück — nur solange genau eine Einheit am Thema hängt.
+ *
+ * Titel und Gesamt-Zusammenfassung des Themas fallen dabei weg; die Bindung an
+ * den Abend bleibt.
+ */
+export function unnameTopic(
+  hauskreisId: string,
+  sessionId: string,
+): Promise<TopicSession> {
+  return apiDelete<TopicSession>(`${sessions(hauskreisId)}/${sessionId}/topic`);
+}
+
 /** Nur, solange die Einheit noch nicht gehalten wurde. */
 export function deleteTopicSession(
   hauskreisId: string,

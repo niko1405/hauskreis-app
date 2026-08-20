@@ -78,10 +78,17 @@ export const topicSessionResponseSchema = z.object({
   /// Liste derer, die sie vorbereiten. Wahr für den Owner, die Mitarbeitenden am
   /// Thema und alle, die an dieser Einheit stehen.
   mayEdit: z.boolean(),
-  /// Ob er auch am **Thema darüber** darf: eine weitere Einheit anlegen, diese
-  /// hier löschen, ein Überthema vergeben. Enger als `mayEdit` — wer nur diesen
-  /// einen Abend vorbereitet, räumt nichts aus einem fremden Thema heraus.
+  /// Ob er auch am **Thema darüber** darf: eine weitere Einheit anlegen, ein
+  /// Überthema vergeben. Enger als `mayEdit` — wer nur diesen einen Abend
+  /// vorbereitet, räumt nichts aus einem fremden Thema heraus.
   mayEditTopic: z.boolean(),
+  /// Ob er diese Einheit löschen darf. Enger als `mayEditTopic`, sobald ihr
+  /// Abend war: Gehaltenes geht nur mit dem ganzen Thema — und bei einer Hülle
+  /// **ist** die Einheit das ganze Thema, dort geht es also doch.
+  mayDelete: z.boolean(),
+  /// Ob sich das Überthema wieder entfernen lässt: nur der Owner, nur solange
+  /// genau eine Einheit daranhängt. Die Bindung an den Abend bleibt dabei.
+  mayUnname: z.boolean(),
 });
 
 /** Die Einheit ohne ihr Thema — für Listen, die schon unter dem Thema stehen. */

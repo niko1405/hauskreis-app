@@ -332,15 +332,17 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
   {
     id: 'topics-ueberthema',
     category: 'topics',
-    question: 'Aus einer einzelnen Einheit doch ein Thema machen?',
+    question: 'Aus einer einzelnen Einheit doch ein Thema machen — und zurück?',
     answer:
-      'Geht jederzeit — das ist genau der Fall, den man vorher nicht kommen sieht: Du hältst einen Abend und merkst danach, dass da mehr drinsteckt.\n\nAuf der Seite der Einheit steht dafür **„Überthema hinzufügen"**. Du gibst den Titel ein, den die Abende zusammen tragen; alles, was in der Einheit steht, bleibt genau so stehen, samt Termin und Beteiligten.\n\nAm Abend selbst geht es in einem Schritt: unter „Thema wählen" → **„Einheit fortsetzen"**. Dort stehen auch die schon gehaltenen. Die alte Einheit bleibt an ihrem Abend, und dieser wird die zweite.\n\nDeshalb braucht eine zweite Einheit immer erst ein Überthema: Zwei Abende, über denen nichts steht, sind kein Thema, sondern zwei Abende.',
+      'Beides geht — das erste ist genau der Fall, den man vorher nicht kommen sieht: Du hältst einen Abend und merkst danach, dass da mehr drinsteckt.\n\nAuf der Seite der Einheit steht dafür **„Überthema hinzufügen"**. Du gibst den Titel ein, den die Abende zusammen tragen; alles, was in der Einheit steht, bleibt genau so stehen, samt Termin und Beteiligten.\n\nAm Abend selbst geht es in einem Schritt: unter „Thema wählen" → **„Einheit fortsetzen"**. Dort stehen auch die schon gehaltenen. Die alte Einheit bleibt an ihrem Abend, und dieser wird die zweite.\n\n**Der Weg zurück** steht auf derselben Seite: „Überthema entfernen", solange es bei der einen Einheit geblieben ist. Sie steht danach wieder für sich, **am selben Abend wie vorher** — nur Titel und Zusammenfassung des Themas fallen weg. Entfernen darf, wer das Thema angelegt hat.\n\nSobald eine zweite Einheit dazugekommen ist, ist der Knopf weg: Was dann aufgelöst werden soll, wäre nicht mehr eindeutig. Und deshalb braucht eine zweite Einheit auch immer erst ein Überthema — zwei Abende, über denen nichts steht, sind kein Thema, sondern zwei Abende.',
     keywords: [
       'überthema',
       'fortsetzen',
       'zweite einheit',
       'thema machen',
       'zusammenfassen',
+      'entfernen',
+      'auflösen',
     ],
   },
   {
@@ -371,7 +373,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Wer darf an einem Thema schreiben, wer darf es löschen?',
     answer:
-      'Drei Ebenen, und sie sind verschieden weit.\n\n**Wem das Thema gehört**, darf alles: jede Einheit ändern, neue anlegen, Leute verwalten, löschen. Es gehört dem, der zuerst wählt — nicht dem, der zuerst zugeteilt wurde. Oder dem, der es im Archiv anlegt.\n\n**Mitwirkende am Thema** dürfen ebenfalls jede Einheit ändern und neue anlegen. Dort steht man nicht von selbst: Der Owner trägt einen auf der Themenseite unter „Wer daran arbeitet" ein. Vorher passierte das automatisch, sobald jemand eine Einheit hielt — und gab damit jemandem, der einmal aushalf, Hoheit über ein Thema, das über Monate läuft.\n\n**Wer eine Einheit vorbereitet**, darf genau **sie** ändern. Das steht auf der Seite der Einheit unter „Wer das vorbereitet".\n\nDie **Zuteilung am Abend** gibt keines von alledem. Sie sagt, wer an dem Abend dafür einsteht. Lesen darf man deshalb, was man vorträgt — ändern nicht.\n\n**Löschen** darf nur, wem das Thema gehört (und ein Admin).',
+      'Drei Ebenen, und sie sind verschieden weit.\n\n**Wem das Thema gehört**, darf alles: jede Einheit ändern, neue anlegen, Leute verwalten, löschen. Es gehört dem, der zuerst wählt — nicht dem, der zuerst zugeteilt wurde. Oder dem, der es im Archiv anlegt.\n\n**Mitwirkende am Thema** dürfen ebenfalls jede Einheit ändern und neue anlegen. Dort steht man nicht von selbst: Der Owner trägt einen auf der Themenseite unter „Wer daran arbeitet" ein. Vorher passierte das automatisch, sobald jemand eine Einheit hielt — und gab damit jemandem, der einmal aushalf, Hoheit über ein Thema, das über Monate läuft.\n\n**Wer eine Einheit vorbereitet**, darf genau **sie** ändern. Das steht auf der Seite der Einheit unter „Wer das vorbereitet".\n\nDie **Zuteilung am Abend** gibt keines von alledem. Sie sagt, wer an dem Abend dafür einsteht. Lesen darf man deshalb, was man vorträgt — ändern nicht.\n\n**Löschen** darf nur, wem das Thema gehört (und ein Admin). Eine einzelne Einheit löscht, wer am Thema mitarbeitet — aber nur, solange ihr Abend noch bevorsteht. Danach ist sie Protokoll; sie geht dann nur mit dem ganzen Thema, und bei einer Einheit, die für sich steht, ist das dieselbe Tat.\n\nWer ein Thema angelegt hat, **behält sein Schreibrecht auch dann**, wenn er einen einzelnen Abend abgibt. Das eine hängt am Thema, das andere an der Einheit.',
     keywords: [
       'owner',
       'besitzer',

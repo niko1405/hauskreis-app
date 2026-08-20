@@ -19,6 +19,7 @@ import {
   isContentVisible,
   isHeld,
   isPubliclyVisible,
+  mayDeleteSession,
   mayDeleteTopic,
   mayEditSession,
   mayEditTopic,
@@ -238,9 +239,19 @@ export function shapeSession(
   session: SessionRow,
   topic: TopicRow,
   viewer: Viewer,
+  /**
+   * Wie viele Einheiten das Thema **insgesamt** hat, Entwürfe eingeschlossen.
+   *
+   * Nur für `mayUnname` gebraucht und deshalb optional: Die Listen unter einem
+   * Thema kennen die Zahl ohnehin, `shapeSessionForMeeting` und die Themenseite
+   * reichen sie durch. Wo sie fehlt, steht `mayUnname` auf `false` — lieber ein
+   * Knopf zu wenig als einer, der in einen 400er führt.
+   */
+  sessionTotal?: number,
 ) {
   const membership = membershipOf(topic);
   const responsibleIds = session.responsibles.map((row) => row.personId);
+  const held = isHeld(session.meeting, viewer.zone);
 
   const visible = isContentVisible({
     isAdmin: viewer.isAdmin,
@@ -296,7 +307,7 @@ export function shapeSession(
     // gibt es nichts abzuhaken — daher ein leeres Feld, nicht `null`: die Zahl
     // „0 von 9" stimmt dort genauso.
     actionstepDone: session.meeting?.actionstepDone ?? [],
-    held: isHeld(session.meeting, viewer.zone),
+    held,
     contentVisible: visible,
     /**
      * Diese **eine** Einheit ändern: ihre Texte und die Liste derer, die sie
@@ -321,6 +332,36 @@ export function shapeSession(
       personId: viewer.personId,
       topic: membership,
     }),
+    /**
+     * Diese Einheit löschen — enger als `mayEditTopic`, sobald ihr Abend war.
+     *
+     * Gerechnet und nicht aus `mayEditTopic && !held` zusammengesetzt: Für eine
+     * **Hülle** ist die Antwort dann gerade nicht „nein", weil die Einheit dort
+     * das ganze Thema ist. Die Regel steht einmal, in `mayDeleteSession`.
+     */
+    mayDelete: mayDeleteSession({
+      isAdmin: viewer.isAdmin,
+      personId: viewer.personId,
+      topic: membership,
+      standalone: topic.standalone,
+      held,
+    }),
+    /**
+     * Ob sich das Überthema wieder entfernen lässt — der Zwilling zu
+     * `nameTopic`.
+     *
+     * Die ganze Bedingung an einer Stelle, statt sie vorn aus Einzelteilen
+     * zusammenzusetzen: `sessionCount` unten zählt nur Einheiten **mit** Abend,
+     * ein Entwurf daneben führte den Knopf also in eine Fehlermeldung.
+     */
+    mayUnname:
+      !topic.standalone &&
+      sessionTotal === 1 &&
+      mayDeleteTopic({
+        isAdmin: viewer.isAdmin,
+        personId: viewer.personId,
+        topic: membership,
+      }),
   };
 }
 
@@ -377,7 +418,7 @@ export function shapeTopic(topic: FullTopicRow, viewer: Viewer) {
     collaborators: topic.collaborators.map((row) => ({ person: row.person })),
     sessions: sichtbareEinheiten.map((session) =>
       // Das Thema steht schon darüber — in der Einheit wäre es doppelt.
-      omitTopic(shapeSession(session, topic, viewer)),
+      omitTopic(shapeSession(session, topic, viewer, topic.sessions.length)),
     ),
     publiclyVisible: isPubliclyVisible(topic.sessions, viewer.zone),
     mine,
@@ -444,7 +485,7 @@ export function shapeSessionForMeeting(
     meeting: _weg,
     actionstepDone: _auchWeg,
     ...rest
-  } = shapeSession(session, topic, viewer);
+  } = shapeSession(session, topic, viewer, topic.sessions.length);
 
   return { ...rest, ...sessionPosition(session.id, topic.sessions) };
 }

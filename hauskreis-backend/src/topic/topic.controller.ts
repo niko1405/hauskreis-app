@@ -262,6 +262,23 @@ export class TopicController {
     );
   }
 
+  /**
+   * Und der Weg zurück — nur solange genau eine Einheit am Thema hängt. Die
+   * Bindung an den Abend bleibt.
+   */
+  @Delete('topic-sessions/:sessionId/topic')
+  @ApiZodResponse(TopicSessionDetailDto)
+  async unnameTopic(
+    @Param() params: TopicSessionParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.sessions.unnameTopic(
+      params.hauskreisId,
+      params.sessionId,
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
+    );
+  }
+
   @Get('topic-sessions/:sessionId')
   @ApiZodResponse(TopicSessionDetailDto)
   async findSession(

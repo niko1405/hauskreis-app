@@ -186,6 +186,33 @@ export function mayDeleteTopic(options: {
 }
 
 /**
+ * Eine **Einheit** löschen.
+ *
+ * Zwei Fälle, und der zweite ist der Grund für diese Funktion. Solange der Abend
+ * noch bevorsteht, gilt dieselbe Grenze wie fürs Anlegen: `mayEditTopic`. Ein
+ * Abend, der **war**, ist das Protokoll dessen, was war — den bekommt man nur
+ * mit dem ganzen Thema weg, und dafür braucht es den Owner.
+ *
+ * Bei einer **Hülle** ist die Einheit das ganze Thema. Ohne diese Zeile gäbe es
+ * dort gar keinen Weg: `TopicService.remove` kennt keinen Riegel für Gehaltenes,
+ * aber eine Hülle hat keine Themenseite, über die man ihn erreichte. Das war
+ * keine Regel, sondern eine Lücke zwischen zweien — ein Eintrag, den niemand
+ * mehr loswird.
+ */
+export function mayDeleteSession(options: {
+  isAdmin: boolean;
+  personId: string;
+  topic: TopicMembership;
+  /** Ob das Thema nur die Hülle um diese eine Einheit ist. */
+  standalone: boolean;
+  /** Ob ihr Abend schon war. */
+  held: boolean;
+}): boolean {
+  if (!options.held) return mayEditTopic(options);
+  return options.standalone && mayDeleteTopic(options);
+}
+
+/**
  * Darf diese Person Titel, Actionstep und Zusammenfassung dieser Einheit *sehen*?
  *
  * Die alte Abendregel, nur genauer: bis der Abend anfängt, gehört der Inhalt

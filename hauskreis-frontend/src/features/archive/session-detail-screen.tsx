@@ -32,6 +32,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  Unlink,
   UserMinus,
   UserPlus,
 } from 'lucide-react';
@@ -59,6 +60,7 @@ import {
   useNameTopic,
   useSetSessionResponsibles,
   useTopicSession,
+  useUnnameTopic,
   useUpdateTopicSession,
 } from '@/lib/api/hooks';
 import { formatDay, hasStarted } from '@/lib/date';
@@ -94,6 +96,7 @@ function Loaded({
   const confirm = useConfirm();
   const update = useUpdateTopicSession(session.id);
   const remove = useDeleteTopicSession();
+  const unname = useUnnameTopic(session.id);
 
   const [editing, setEditing] = useState(false);
   const [benennen, setBenennen] = useState(false);
@@ -132,12 +135,37 @@ function Loaded({
         ? { href: '/archiv', label: 'Archiv' }
         : { href: `/thema?id=${session.topic.id}`, label: 'Zum Thema' };
 
+  /**
+   * Das Überthema wieder abgeben — die Einheit steht danach für sich.
+   *
+   * Der Satz über die Zusammenfassung steht unbedingt da, obwohl sie oft leer
+   * ist: Die Einheitenseite kennt `topic.summaryText` nicht (`topicRefSchema`
+   * trägt Id, Titel, Status und `standalone`), und ein Feld quer durch die
+   * ganze Kette zu reichen, nur um einen Halbsatz zu bedingen, wäre der
+   * teurere Weg.
+   */
+  const aufloesen = async () => {
+    const ok = await confirm({
+      title: 'Überthema entfernen?',
+      body: `„${session.topic.title ?? 'Das Thema'}" verschwindet damit, samt seiner Zusammenfassung über alle Abende. Die Einheit steht danach für sich — an demselben Abend wie jetzt.`,
+      confirmLabel: 'Entfernen',
+    });
+    if (!ok) return;
+
+    unname.mutate(undefined, {
+      onSuccess: () => toast.success('Steht jetzt für sich.'),
+      onError: (error) => toast.error(errorMessage(error)),
+    });
+  };
+
   const loeschen = async () => {
     const ok = await confirm({
       title: `„${session.title ?? 'Diese Einheit'}" löschen?`,
-      body: session.meeting
-        ? 'Der Abend steht danach wieder ohne Thema da — wer dafür zuständig ist, bleibt es.'
-        : 'Sie verschwindet samt allem, was darin steht.',
+      body: session.held
+        ? 'Dieser Abend war schon — er verschwindet damit aus dem Archiv, samt Zusammenfassung und Actionstep.'
+        : session.meeting
+          ? 'Der Abend steht danach wieder ohne Thema da — wer dafür zuständig ist, bleibt es.'
+          : 'Sie verschwindet samt allem, was darin steht.',
       confirmLabel: 'Löschen',
       tone: 'danger',
     });
@@ -302,10 +330,26 @@ function Loaded({
         </Button>
       )}
 
-      {/* Gehaltenes bleibt: ein Abend, der war, ist das Protokoll dessen, was
-          war. Und löschen darf, wem das Thema gehört — eine Einheit aus einem
-          fremden Thema räumt man nicht als Aushilfe weg. */}
-      {session.mayEditTopic && !session.held && (
+      {/* Der Weg zurück, und nur solange genau eine Einheit am Thema hängt —
+          das entscheidet der Server über `mayUnname`. Kein `text-alert`: Hier
+          wird nichts gelöscht, die Einheit bleibt samt ihrem Abend stehen. */}
+      {session.mayUnname && (
+        <Button
+          variant="ghost"
+          className="w-full"
+          loading={unname.isPending}
+          onClick={aufloesen}
+        >
+          <Unlink size={15} />
+          Überthema entfernen
+        </Button>
+      )}
+
+      {/* Wer und wann, entscheidet der Server (`mayDeleteSession`): vor dem
+          Abend, wer am Thema mitarbeitet; danach gar nicht mehr — außer bei
+          einer alleinstehenden Einheit, denn dort *ist* sie das ganze Thema,
+          und das darf sein Owner löschen. */}
+      {session.mayDelete && (
         <Button
           variant="ghost"
           className="w-full text-alert"
@@ -425,19 +469,35 @@ function Crew({
             <span className="flex-1 text-sm font-medium text-stone-700">
               {person.name}
             </span>
-            <IconButton
-              label={`${person.name} herausnehmen`}
-              disabled={setCrew.isPending}
-              onClick={() => heraus(person.id, person.name)}
-            >
-              <UserMinus size={14} />
-            </IconButton>
+            {/* Der letzte Platz bleibt besetzt. Ein sichtbarer Knopf, der nur
+                eine Fehlermeldung auslöst, wäre eine Einladung in eine
+                Sackgasse — deshalb steht darunter, warum er fehlt. */}
+            {leute.length > 1 && (
+              <IconButton
+                label={`${person.name} herausnehmen`}
+                disabled={setCrew.isPending}
+                onClick={() => heraus(person.id, person.name)}
+              >
+                <UserMinus size={14} />
+              </IconButton>
+            )}
           </div>
         ))}
 
+        {leute.length === 1 && (
+          <p className="text-[11px] leading-relaxed text-stone-400">
+            Eine Einheit braucht jemanden, der sie vorbereitet. Nimm erst jemand
+            anderen dazu.
+          </p>
+        )}
+
+        {/* Kann es noch geben, aus der Zeit vor dieser Regel. Der Satz stand
+            hier einmal als „dann darf jede:r etwas ändern" — von der
+            Themenseite kopiert, wo eine leere Liste tatsächlich verwaist heißt.
+            Hier heißt sie das nicht: Das Recht fällt auf das Thema zurück. */}
         {leute.length === 0 && (
           <p className="text-sm text-stone-400">
-            Niemand eingetragen — dann darf hier jede:r etwas ändern.
+            Niemand eingetragen — ändern darf, wer zum Thema gehört.
           </p>
         )}
 

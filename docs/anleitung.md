@@ -276,6 +276,11 @@ trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
   was drinsteht, bleibt stehen. Am Abend selbst geht es in einem Schritt über
   „Thema wählen" → „Einheit fortsetzen". Umgekehrt gilt: Eine zweite Einheit
   braucht immer erst ein Überthema.
+- **Und wieder zurück**, solange es bei der einen Einheit geblieben ist: Auf
+  ihrer Seite steht dann „Überthema entfernen", und danach steht sie wieder für
+  sich — **am selben Abend wie vorher**. Titel und Zusammenfassung des Themas
+  fallen dabei weg. Sobald eine zweite Einheit dazugekommen ist, geht es nicht
+  mehr; dann ist es ein Thema. Entfernen darf nur, wer es angelegt hat.
 - Das Thema hat einen Titel und eine Zusammenfassung über alle Einheiten hinweg
   (beides optional). Jede Einheit hat ihre eigene Zusammenfassung und ihren
   eigenen **Actionstep** — der gilt dann bis zum nächsten Treffen.
@@ -287,6 +292,10 @@ trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
   Abend, kommst erst einmal nur du an die Einheit; wen du dazunimmst,
   entscheidest du dort im Bearbeitungsmodus unter „Wer das vorbereitet". Wer
   dazukommt, darf **diese eine Einheit** ändern — sonst nichts am Thema.
+- **Einer bleibt immer stehen.** Eine Einheit braucht jemanden, der sie
+  vorbereitet; den letzten Platz kannst du nicht räumen. Bei einem Thema über
+  mehrere Abende gibst du deinen also ab, indem du erst jemand anderen
+  dazunimmst — das Schreibrecht am Thema behältst du als Owner ohnehin.
 - **Dazunehmen trägt auch für den Abend ein.** Hängt die Einheit an einem
   kommenden Termin, steht die Person danach dort in der Rolle „Thema", damit du
   dieselbe Liste nicht zweimal pflegst. Umgekehrt nicht: Nimmst du jemanden aus
@@ -317,6 +326,10 @@ trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
   Auf der Terminseite tippst du dafür einfach auf die Einheit; der Pfeil oben
   links bringt dich wieder zurück. Auf der Themenseite stehen die Einheiten als
   Zeitstrahl untereinander, ein Klick führt genauso hinein.
+- **Löschen** kannst du eine Einheit, solange ihr Abend noch bevorsteht. Danach
+  ist sie Protokoll und geht nur mit dem ganzen Thema — außer sie steht für
+  sich: Dann *ist* sie das ganze Thema, und wer sie angelegt hat, darf sie
+  wegnehmen.
 - Titel, Actionstep und Zusammenfassung einer noch nicht gehaltenen Einheit
   sehen nur die Zuständigen — bis der Abend anfängt.
 
