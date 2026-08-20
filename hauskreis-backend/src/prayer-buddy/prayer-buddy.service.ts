@@ -14,6 +14,9 @@ import type {
 const groupInclude = {
   members: {
     select: { person: { select: personRefSelect } },
+    // Die Reihenfolge **ist** der Kreis (siehe `PrayerBuddyGroupMember.position`).
+    // Ohne diese Zeile entschiede die Datenbank darüber, wer für wen betet.
+    orderBy: { position: 'asc' },
   },
 } as const;
 
@@ -23,6 +26,11 @@ export interface Assignment {
   periodEnd: string;
   groups: {
     id: string;
+    /**
+     * Die Besetzung **in Kreis-Reihenfolge**: Wer hier steht, betet für den
+     * Nächsten, der Letzte für den Ersten. Bei einem Paar heißt das
+     * „füreinander", beim Trio sagt es wirklich etwas.
+     */
     members: { id: string; name: string }[];
   }[];
 }

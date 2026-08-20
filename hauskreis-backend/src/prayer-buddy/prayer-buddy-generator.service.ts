@@ -221,7 +221,18 @@ export class PrayerBuddyGeneratorService {
           periodStart: { lte: today },
           periodEnd: { gte: today },
         },
-        select: { id: true, members: { select: { personId: true } } },
+        select: {
+          id: true,
+          periodStart: true,
+          periodEnd: true,
+          members: {
+            select: { personId: true },
+            // Die Reihenfolge **ist** der Kreis; ohne sie käme `repairGroups`
+            // eine Besetzung in beliebiger Ordnung, und „der zuletzt
+            // Dazugekommene" wäre irgendwer.
+            orderBy: { position: 'asc' },
+          },
+        },
         orderBy: { createdAt: 'asc' },
       }),
       this.prisma.person.findMany({
@@ -249,68 +260,95 @@ export class PrayerBuddyGeneratorService {
       new Set(people.map((person) => person.id)),
     );
 
-    const departures: { groupId: string; personIds: string[] }[] = [];
-    const arrivals: { groupId: string; personId: string }[] = [];
+    // Alle Gruppen der Runde teilen einen Zeitraum — eine beliebige von ihnen
+    // sagt also, wann eine **neue** beginnt und endet.
+    const { periodStart, periodEnd } = groups[0];
+
+    const geaendert: { group: (typeof after)[number]; neu: string[] }[] = [];
     const emptied: string[] = [];
-    const touched: string[] = [];
 
     for (const group of after) {
-      const was = before.get(group.id) as Set<string>;
+      // Ohne Id ist die Gruppe neu: alles daran ist eine Ankunft.
+      const was = group.id
+        ? (before.get(group.id) as Set<string>)
+        : new Set<string>();
       const now = new Set(group.memberIds);
 
       const gone = [...was].filter((personId) => !now.has(personId));
-      const came = [...now].filter((personId) => !was.has(personId));
+      const came = group.memberIds.filter((personId) => !was.has(personId));
 
       if (gone.length === 0 && came.length === 0) {
         continue;
       }
 
-      touched.push(group.id);
+      geaendert.push({ group, neu: came });
 
-      if (gone.length > 0) {
-        departures.push({ groupId: group.id, personIds: gone });
-      }
-
-      for (const personId of came) {
-        arrivals.push({ groupId: group.id, personId });
-      }
-
-      if (now.size === 0) {
+      if (now.size === 0 && group.id) {
         emptied.push(group.id);
       }
     }
 
-    if (touched.length === 0) {
+    if (geaendert.length === 0) {
       return { repaired: 0, notified: 0 };
     }
 
-    await this.prisma.$transaction([
-      ...departures.map((departure) =>
-        this.prisma.prayerBuddyGroupMember.deleteMany({
-          where: {
-            groupId: departure.groupId,
-            personId: { in: departure.personIds },
+    // Berührte Gruppen werden **komplett neu geschrieben** statt Zeile für
+    // Zeile ergänzt und gelöscht. Sonst müsste die Nummerierung nach jeder
+    // Lücke von Hand repariert werden, und der eindeutige Index auf
+    // `(Gruppe, Position)` fiele einem schon beim ersten Zwischenzustand auf
+    // die Füße. An einer Mitglieds-Zeile hängt nichts außer der Zugehörigkeit.
+    const angelegt = await this.prisma.$transaction(async (tx) => {
+      const ids: string[] = [];
+
+      for (const { group } of geaendert) {
+        if (group.memberIds.length === 0) {
+          continue;
+        }
+
+        const zeilen = group.memberIds.map((personId, position) => ({
+          personId,
+          position,
+        }));
+
+        const groupId = group.id;
+
+        if (groupId) {
+          await tx.prayerBuddyGroupMember.deleteMany({ where: { groupId } });
+
+          await tx.prayerBuddyGroupMember.createMany({
+            data: zeilen.map((zeile) => ({ ...zeile, groupId })),
+          });
+
+          ids.push(groupId);
+          continue;
+        }
+
+        const created = await tx.prayerBuddyGroup.create({
+          data: {
+            hauskreisId,
+            periodStart,
+            periodEnd,
+            members: { create: zeilen },
           },
-        }),
-      ),
-      ...arrivals.map((arrival) =>
-        this.prisma.prayerBuddyGroupMember.create({ data: arrival }),
-      ),
+          select: { id: true },
+        });
+
+        ids.push(created.id);
+      }
+
       // Eine Gruppe ohne Mitglieder ist keine mehr. Bliebe sie stehen, stünde
       // sie leer im Archiv und zählte als Zeitraum mit.
-      ...(emptied.length > 0
-        ? [
-            this.prisma.prayerBuddyGroup.deleteMany({
-              where: { id: { in: emptied } },
-            }),
-          ]
-        : []),
-    ]);
+      if (emptied.length > 0) {
+        await tx.prayerBuddyGroup.deleteMany({
+          where: { id: { in: emptied } },
+        });
+      }
 
-    const announce = touched.filter((id) => !emptied.includes(id));
+      return ids;
+    });
 
-    if (!options.notify || announce.length === 0) {
-      return { repaired: touched.length, notified: 0 };
+    if (!options.notify || angelegt.length === 0) {
+      return { repaired: geaendert.length, notified: 0 };
     }
 
     // `hasBeenSent` prüft auf `(Person, Art, Gruppe)`, und alle drei sind
@@ -320,14 +358,14 @@ export class PrayerBuddyGeneratorService {
     await this.prisma.notificationLog.deleteMany({
       where: {
         type: NotificationType.PRAYER_BUDDY_ASSIGNED,
-        relatedGroupId: { in: announce },
+        relatedGroupId: { in: angelegt },
       },
     });
 
     const current = await this.buddies.findCurrent(hauskreisId, today);
 
     if (!current) {
-      return { repaired: touched.length, notified: 0 };
+      return { repaired: geaendert.length, notified: 0 };
     }
 
     // Nur die berührten Gruppen. Für wen sich nichts geändert hat, ist das
@@ -335,10 +373,10 @@ export class PrayerBuddyGeneratorService {
     // in alle anderen.
     const notified = await this.announce({
       ...current,
-      groups: current.groups.filter((group) => announce.includes(group.id)),
+      groups: current.groups.filter((group) => angelegt.includes(group.id)),
     });
 
-    return { repaired: touched.length, notified };
+    return { repaired: geaendert.length, notified };
   }
 
   /**
@@ -563,8 +601,11 @@ export class PrayerBuddyGeneratorService {
             periodStart,
             periodEnd,
             members: {
-              create: group.members.map((member) => ({
+              // Die Reihenfolge aus `buildGroups` **ist** der Kreis: Wer hier
+              // steht, betet für den Nächsten, der Letzte für den Ersten.
+              create: group.members.map((member, position) => ({
                 personId: member.id,
+                position,
               })),
             },
           },
@@ -586,23 +627,19 @@ export class PrayerBuddyGeneratorService {
   private async announce(assignment: Assignment): Promise<number> {
     const results = await Promise.all(
       assignment.groups.flatMap((group) =>
-        group.members.map((member) => {
-          const others = group.members
-            .filter((other) => other.id !== member.id)
-            .map((other) => other.name);
-
-          return this.notifications.notify({
+        group.members.map((member, position) =>
+          this.notifications.notify({
             personId: member.id,
             type: NotificationType.PRAYER_BUDDY_ASSIGNED,
             // The group id is what makes each rotation its own notification.
             relatedGroupId: group.id,
             payload: {
               title: 'Neue Gebetsbuddys',
-              body: `Bis ${formatDate(assignment.periodEnd)} betest du mit ${formatNames(others)}.`,
+              body: `Bis ${formatDate(assignment.periodEnd)} ${circleFor(group.members, position)}.`,
               url: appPath.prayerBuddies(),
             },
-          });
-        }),
+          }),
+        ),
       ),
     );
 
@@ -625,11 +662,31 @@ function formatDate(iso: string): string {
   return dateFormat.format(new Date(`${iso}T00:00:00.000Z`));
 }
 
-/** "Anna und Ben", "Anna, Ben und Carla" — the warm tone from CLAUDE.md §9. */
-function formatNames(names: string[]): string {
-  if (names.length <= 1) {
-    return names[0] ?? 'niemandem';
+/**
+ * Wer für wen — aus der Sicht der Person auf `position`.
+ *
+ * Beim **Paar** bleibt es schlicht: „betest du mit Anna". Die Richtung trägt
+ * dort keine Information — ihr betet füreinander —, und sie auszuschreiben wäre
+ * eine Unterscheidung ohne Unterschied. Dann liest man sie beim Trio auch nicht
+ * mehr, und dort sagt sie etwas.
+ */
+function circleFor(
+  members: readonly { name: string }[],
+  position: number,
+): string {
+  const n = members.length;
+
+  if (n <= 1) {
+    return 'betest du allein';
   }
 
-  return `${names.slice(0, -1).join(', ')} und ${names[names.length - 1]}`;
+  const fuer = members[(position + 1) % n].name;
+
+  if (n === 2) {
+    return `betest du mit ${fuer}`;
+  }
+
+  const vonWem = members[(position - 1 + n) % n].name;
+
+  return `betest du für ${fuer} — ${vonWem} betet für dich`;
 }

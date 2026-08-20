@@ -1,3 +1,17 @@
+/**
+ * Zwei ist das Format, drei der Rest — und vier ist keins mehr.
+ *
+ * Ab vieren betet nicht mehr jede:r für jede:n, sondern jede:r für einen, und
+ * aus der Gruppe wird eine Kette, die niemand überblickt. Nebenbei hinge daran
+ * auch die Buchführung: Ein Kreis aus dreien deckt alle drei Paarungen ab, ein
+ * Kreis aus vieren nur vier der sechs — die Wiederholungs-Vermeidung würde dann
+ * Paarungen zählen, die es nie gab.
+ *
+ * `buildGroups` hält die Grenze von selbst ein (Paare plus höchstens ein Trio).
+ * Gebraucht wird sie beim **Nachrücken**, wo sie bis eben fehlte.
+ */
+export const MAX_GROUP_SIZE = 3;
+
 export interface GroupablePerson {
   id: string;
   name: string;
@@ -11,6 +25,11 @@ export interface PastGrouping {
 }
 
 export interface BuddyGroup {
+  /**
+   * Die Besetzung — und ihre **Reihenfolge ist der Kreis**: Wer hier steht,
+   * betet für den Nächsten, der Letzte für den Ersten. Bei einem Paar ist das
+   * dieselbe Aussage wie „füreinander"; beim Trio sagt sie wirklich etwas.
+   */
   members: GroupablePerson[];
   /**
    * Periods since the least-stale pairing inside this group. `null` when no two
@@ -110,7 +129,14 @@ export function buildGroups(params: {
 
 /** Eine Gruppe, wie sie in der Datenbank steht — Zeile plus Besetzung. */
 export interface StandingGroup {
-  id: string;
+  /**
+   * `null` heißt: gibt es noch nicht.
+   *
+   * Beim Nachrücken kann eine Gruppe **entstehen** — wenn alle bestehenden voll
+   * sind und jemand Neues dazukommt. Wer das Ergebnis schreibt, legt für sie
+   * eine Zeile an.
+   */
+  id: string | null;
   memberIds: string[];
 }
 
@@ -125,23 +151,37 @@ export interface StandingGroup {
  * Drei Regeln, und die Reihenfolge trägt:
  *
  * 1. Wer nicht mehr dabei ist, fällt heraus.
- * 2. Wer neu dabei ist, kommt in die **kleinste** Gruppe. Sie zuerst zu füllen
- *    fängt genau den Fall auf, in dem gerade jemand allein zurückblieb — aus
- *    zwei halben Problemen wird eine ganze Zweiergruppe.
- * 3. Wer danach noch allein dasteht, zieht in die kleinste andere Gruppe. Zu
- *    zweit beten ist das Format; allein ist keines.
+ * 2. Wer neu dabei ist, kommt in die kleinste Gruppe **mit Platz**. Sie zuerst
+ *    zu füllen fängt genau den Fall auf, in dem gerade jemand allein
+ *    zurückblieb — aus zwei halben Problemen wird eine ganze Zweiergruppe. Ist
+ *    keine Gruppe mehr frei, macht er eine neue auf.
+ * 3. Wer danach noch allein dasteht, zieht in die kleinste Gruppe mit Platz.
+ *    Gibt es keine — alle anderen sind Dreier —, kommt umgekehrt **der zuletzt
+ *    Dazugekommene aus der größten Gruppe zu ihm**: aus 3+1 wird 2+2.
+ *
+ * Die Obergrenze in Regel 2 fehlte, und daran lag der Fall aus der Praxis: In
+ * einer laufenden Zweierrunde kamen nacheinander zwei Leute dazu, und beide
+ * landeten in derselben Gruppe. Vier Menschen, von denen keiner mehr für jeden
+ * betet — und die nächste Runde stand längst als 2-2 daneben, weil
+ * `buildGroups` die Grenze immer schon kannte.
+ *
+ * Regel 3 ist die einzige Stelle, an der eine bestehende Paarung aufgeht, und
+ * sie ist bewusst so herum: Das ursprüngliche Paar bleibt zusammen, verschoben
+ * wird, wer ohnehin gerade erst dazugestoßen ist. Die Alternative wäre, den
+ * Neuen bis zur nächsten Runde ohne Buddy dastehen zu lassen — ein schlechter
+ * Einstieg für jemanden, der gerade erst gekommen ist.
  *
  * Bleibt am Ende eine einzige Person übrig, bleibt sie ohne Gruppe. Eine Gruppe
  * aus einem Menschen wäre eine Behauptung, keine Zuteilung.
  *
- * Gibt jede Gruppe zurück, auch die leer gewordenen — wer sie schreibt,
- * entscheidet, was mit ihnen geschieht.
+ * Gibt jede Gruppe zurück, auch die leer gewordenen und die neuen — wer sie
+ * schreibt, entscheidet, was mit ihnen geschieht.
  */
 export function repairGroups(
   groups: readonly StandingGroup[],
   active: ReadonlySet<string>,
 ): StandingGroup[] {
-  const repaired = groups.map((group) => ({
+  const repaired: StandingGroup[] = groups.map((group) => ({
     id: group.id,
     memberIds: group.memberIds.filter((personId) => active.has(personId)),
   }));
@@ -153,7 +193,14 @@ export function repairGroups(
     .toSorted();
 
   for (const personId of arriving) {
-    smallestOf(repaired)?.memberIds.push(personId);
+    const ziel = smallestWithRoom(repaired);
+
+    if (ziel) {
+      ziel.memberIds.push(personId);
+      continue;
+    }
+
+    repaired.push({ id: null, memberIds: [personId] });
   }
 
   for (const group of repaired) {
@@ -161,11 +208,29 @@ export function repairGroups(
       continue;
     }
 
-    // Kein Ziel heißt: außer dieser Person ist niemand mehr übrig. Dann endet
-    // die Runde still, statt eine Einer-Gruppe zu behaupten.
-    smallestOf(repaired.filter((other) => other !== group))?.memberIds.push(
-      ...group.memberIds,
-    );
+    const andere = repaired.filter((other) => other !== group);
+    const ziel = smallestWithRoom(andere);
+
+    if (ziel) {
+      ziel.memberIds.push(...group.memberIds);
+      group.memberIds = [];
+      continue;
+    }
+
+    // Alle anderen sind voll. Dann kommt jemand **zu** dieser Person: der
+    // zuletzt Dazugekommene aus der größten Gruppe. Er steht hinten, weil
+    // Neuzugänge hinten angehängt werden — das ursprüngliche Paar bleibt so
+    // zusammen.
+    const quelle = largestOf(andere);
+    const nachrueckend = quelle?.memberIds.pop();
+
+    if (nachrueckend !== undefined) {
+      group.memberIds.push(nachrueckend);
+      continue;
+    }
+
+    // Kein Ziel und keine Quelle heißt: außer dieser Person ist niemand mehr
+    // übrig. Dann endet die Runde still, statt eine Einer-Gruppe zu behaupten.
     group.memberIds = [];
   }
 
@@ -173,23 +238,40 @@ export function repairGroups(
 }
 
 /**
- * Die kleinste **besetzte** Gruppe. Leere zählen nicht mit: sie sind aufgelöst,
- * und jemanden dort einzusortieren hieße, ihn allein zurückzulassen.
+ * Die kleinste **besetzte** Gruppe, in die noch jemand passt.
+ *
+ * Leere zählen nicht mit: sie sind aufgelöst, und jemanden dort einzusortieren
+ * hieße, ihn allein zurückzulassen. Volle auch nicht — dafür steht die Grenze da.
  */
-function smallestOf(groups: StandingGroup[]): StandingGroup | null {
+function smallestWithRoom(groups: StandingGroup[]): StandingGroup | null {
   let best: StandingGroup | null = null;
 
   for (const group of groups) {
-    if (group.memberIds.length === 0) {
+    const size = group.memberIds.length;
+
+    if (size === 0 || size >= MAX_GROUP_SIZE) {
       continue;
     }
 
-    if (best === null || group.memberIds.length < best.memberIds.length) {
+    if (best === null || size < best.memberIds.length) {
       best = group;
     }
   }
 
   return best;
+}
+
+/** Die größte Gruppe — die, aus der sich am ehesten jemand entbehren lässt. */
+function largestOf(groups: StandingGroup[]): StandingGroup | null {
+  let best: StandingGroup | null = null;
+
+  for (const group of groups) {
+    if (best === null || group.memberIds.length > best.memberIds.length) {
+      best = group;
+    }
+  }
+
+  return best !== null && best.memberIds.length > 1 ? best : null;
 }
 
 /**

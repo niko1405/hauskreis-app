@@ -122,6 +122,9 @@ grundlegende Vorschläge für Kernentitäten:
 - Rotation alle 2 Wochen
 - 9 Personen → Gruppen zu 2 oder 3 (nicht alle Gruppen gleich groß)
 - `id`, `period_start`, `period_end`, `member_person_ids[]`
+- **Höchstens drei, auch beim Nachrücken.** Zwei ist das Format, drei der Rest — vier ist keins mehr. Die Grenze hielt `buildGroups` immer schon ein; sie fehlte beim **Reparieren** einer laufenden Runde, und deshalb wuchs eine Zweiergruppe, in die nacheinander zwei Leute stießen, still auf vier. Passt niemand mehr hinein, wird eine neue Gruppe aufgemacht; bleibt dabei jemand allein, zieht der zuletzt Dazugekommene aus einer vollen Dreiergruppe zu ihm (aus 3+1 wird 2+2)
+- **Im Trio wird reihum gebetet:** A für B, B für C, C für A. Die Richtung steht als `position` an der Mitgliedschaft — wer auf `i` steht, betet für den auf `(i + 1) % n`. Eine Zahl und kein Fremdschlüssel auf die Zielperson, weil dieselbe Regel damit beide Größen trägt: Ein Paar ist ein Kreis aus zwei und heißt „füreinander", ganz ohne Sonderfall
+- Die **Wiederholungs-Vermeidung bleibt davon unberührt**, und das ist kein Zufall: Ein Kreis aus dreien deckt alle drei Paarungen ab, und genau die merkt sie sich ohnehin. Bei vieren wären es nur vier von sechs — dann liefen Modell und Buchführung auseinander, und die Obergrenze verhindert genau das
 
 ## 6. Features
 
@@ -154,7 +157,8 @@ grundlegende Vorschläge für Kernentitäten:
 
 4. **Gebetsbuddys**
    - Rotierendes System, alle 2 Wochen neue Zuteilung
-   - 2er-/3er-Gruppen bei 9 Personen (geht nicht glatt auf → Logik für ungerade Verteilung nötig)
+   - 2er-/3er-Gruppen bei 9 Personen (geht nicht glatt auf → Logik für ungerade Verteilung nötig); **größer als drei wird keine**, auch nicht, wenn mitten in einer Runde jemand dazukommt
+   - **Zu dritt wird reihum gebetet.** Die Anzeige sagt dann „Du betest für X" und „Für dich betet Y" statt einer Namensliste, aus der man sich das selbst zusammenreimt; in der Übersicht steht die Kette mit Pfeilen. Beim **Paar** bleibt es schlicht bei „Du betest mit X" — dort trägt die Richtung keine Information, und sie auszuschreiben wäre eine Unterscheidung ohne Unterschied
    - Reminder/Benachrichtigung bei neuer Zuteilung
 
 5. **Actionsteps + Zusammenfassung**

@@ -138,6 +138,19 @@ Wer gerade mit dir betet, alle übrigen Gruppen der laufenden Runde, und unter
 Gruppen würfelt die App, standardmäßig alle **zwei Wochen** — ein Admin kann die
 Länge auf eine bis zwölf Wochen stellen. Fünf Runden stehen immer im Voraus.
 
+**Zu zweit oder zu dritt**, größer wird keine Gruppe. Bei einer geraden Zahl
+sind es lauter Paare; geht sie nicht auf, gibt es eine Dreiergruppe.
+
+- **Zu zweit** betet ihr füreinander. Oben steht schlicht „Du betest mit Anna".
+- **Zu dritt** wird **reihum** gebetet: Du betest für eine Person, eine andere
+  betet für dich. Beides steht oben mit eigener Beschriftung, und in der
+  Übersicht siehst du den Kreis als Kette — „Anna → Ben → Carla → Anna".
+
+Kommt jemand **mitten in einer Runde** dazu, wird nicht neu gewürfelt: Er rückt
+in die kleinste Gruppe nach, die noch Platz hat. Sind alle voll, macht er eine
+neue auf, und aus einer Dreiergruppe zieht der zuletzt Dazugekommene zu ihm —
+aus 3+1 wird so 2+2, statt dass jemand zwei Wochen ohne Buddy dasteht.
+
 ### 5.4 Archiv
 
 Vier Register — **Themen**, **Lieder**, **Orte**, **Termine** — mit einer Suche

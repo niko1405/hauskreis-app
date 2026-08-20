@@ -16,6 +16,7 @@ import { ScreenHeader } from '@/components/layout/screen-header';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
+import { FieldLabel } from '@/components/ui/field';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import {
   useCurrentPrayerBuddies,
@@ -24,7 +25,11 @@ import {
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { formatDayRange, formatRelativeDay } from '@/lib/date';
-import type { PrayerBuddyGroup, PrayerBuddyRound } from '@/lib/api/types';
+import type {
+  PersonRef,
+  PrayerBuddyGroup,
+  PrayerBuddyRound,
+} from '@/lib/api/types';
 
 type Scope = 'upcoming' | 'past';
 
@@ -84,28 +89,7 @@ export function PrayerScreen() {
           />
         )}
 
-        {myGroup && (
-          <section>
-            <SectionTitle>Du betest mit</SectionTitle>
-            <Card className="space-y-3">
-              {myGroup.members
-                .filter((member) => member.id !== me.me?.id)
-                .map((member) => (
-                  <div key={member.id} className="flex items-center gap-3">
-                    <Avatar person={member} />
-                    <span className="flex-1 font-bold text-stone-800">
-                      {member.name}
-                    </span>
-                  </div>
-                ))}
-              {myGroup.members.length <= 1 && (
-                <p className="text-sm text-stone-400 italic">
-                  Diese Runde bist du allein in deiner Gruppe.
-                </p>
-              )}
-            </Card>
-          </section>
-        )}
+        {myGroup && <MyGroup group={myGroup} myId={me.me?.id} />}
 
         {current.data && current.data.groups.length > 0 && (
           <section>
@@ -204,6 +188,87 @@ function RoundCard({ round }: { round: PrayerBuddyRound }) {
   );
 }
 
+/**
+ * Die eigene Gruppe — und der einzige Ort, an dem die Richtung persönlich wird.
+ *
+ * Zu **zweit** bleibt es schlicht: Ihr betet füreinander, die Richtung trägt
+ * keine Information, und sie auszuschreiben wäre eine Unterscheidung ohne
+ * Unterschied — man liest sie dann beim Trio auch nicht mehr.
+ *
+ * Zu **dritt** wird reihum gebetet, und das stand vorher nirgends: Aus „Anna
+ * und Ben" musste sich jede:r selbst zusammenreimen, für wen er betet. Jetzt
+ * stehen beide Rollen mit eigener Beschriftung da, denn beide sind gleich
+ * wichtig — die eine ist ein Auftrag, die andere ein Zuspruch.
+ */
+function MyGroup({
+  group,
+  myId,
+}: {
+  group: PrayerBuddyGroup;
+  myId: string | undefined;
+}) {
+  const { members } = group;
+  // `-1` gibt es hier nicht: Diese Karte steht nur da, wenn man in der Gruppe
+  // ist — genau danach hat der Aufrufer sie ausgesucht.
+  const index = members.findIndex((member) => member.id === myId);
+
+  // Die Reihenfolge **ist** der Kreis: Wer auf `i` steht, betet für `i + 1`,
+  // der Letzte für den Ersten (siehe `PrayerBuddyGroupMember.position`).
+  const betestFuer = members[(index + 1) % members.length];
+  const betetFuerDich = members[(index - 1 + members.length) % members.length];
+
+  if (members.length <= 1) {
+    return (
+      <section>
+        <SectionTitle>Du betest mit</SectionTitle>
+        <Card>
+          <p className="text-sm text-stone-400 italic">
+            Diese Runde bist du allein in deiner Gruppe.
+          </p>
+        </Card>
+      </section>
+    );
+  }
+
+  if (members.length === 2) {
+    return (
+      <section>
+        <SectionTitle>Du betest mit</SectionTitle>
+        <Card>
+          <Person person={betestFuer} />
+        </Card>
+      </section>
+    );
+  }
+
+  return (
+    <section>
+      <SectionTitle>Ihr betet reihum</SectionTitle>
+      <Card className="space-y-4">
+        <div>
+          <FieldLabel>Du betest für</FieldLabel>
+          <Person person={betestFuer} />
+        </div>
+        <div className="border-t border-line pt-4">
+          <FieldLabel>Für dich betet</FieldLabel>
+          <Person person={betetFuerDich} />
+        </div>
+      </Card>
+    </section>
+  );
+}
+
+function Person({ person }: { person: PersonRef | undefined }) {
+  if (!person) return null;
+
+  return (
+    <div className="flex items-center gap-3">
+      <Avatar person={person} />
+      <span className="flex-1 font-bold text-stone-800">{person.name}</span>
+    </div>
+  );
+}
+
 function GroupRow({
   group,
   highlight = false,
@@ -234,7 +299,23 @@ function GroupRow({
         ))}
       </div>
       <span className="min-w-0 flex-1 truncate text-xs font-semibold text-stone-600">
-        {group.members.map((member) => member.name).join(' & ')}
+        {/* Zu zweit betet man füreinander — da sagt ein Pfeil nichts, was ein
+            `&` nicht auch sagt. Ab dreien wird reihum gebetet, und dann ist die
+            Kette die Aussage. Der wiederholte erste Name am Ende schließt den
+            Kreis ohne Legende; er steht gedämpft, weil er nur eine Ansage über
+            die Form ist — und fällt beim Abschneiden der Zeile als Erstes weg,
+            wo er am wenigsten fehlt. */}
+        {group.members.length <= 2 ? (
+          group.members.map((member) => member.name).join(' & ')
+        ) : (
+          <>
+            {group.members.map((member) => member.name).join(' → ')}
+            <span className="text-stone-400">
+              {' → '}
+              {group.members[0]?.name}
+            </span>
+          </>
+        )}
       </span>
     </div>
   );

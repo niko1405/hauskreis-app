@@ -419,3 +419,30 @@ describe('PrayerBuddyGeneratorService.rotateNow', () => {
     expect(notify).toHaveBeenCalledTimes(2);
   });
 });
+
+/**
+ * Die Reihenfolge aus `buildGroups` **ist** der Kreis — wer auf `position`
+ * steht, betet für den auf `(position + 1) % n`. Sie muss also mitgeschrieben
+ * werden, sonst entscheidet später die Datenbank darüber, wer für wen betet.
+ */
+describe('PrayerBuddyGeneratorService.assign — der Kreis', () => {
+  it('schreibt die Positionen in der Reihenfolge der Gruppe', async () => {
+    const { service, prayerBuddyGroup } = setup();
+
+    await service.rotateNow('hk-1', { now: TODAY, notify: false });
+
+    const zeilen = (prayerBuddyGroup.create.mock.calls as any[][]).flatMap(
+      (call) => call[0].data.members.create as { position: number }[],
+    );
+
+    expect(zeilen.length).toBeGreaterThan(0);
+
+    for (const call of prayerBuddyGroup.create.mock.calls as any[][]) {
+      const plaetze = (
+        call[0].data.members.create as { position: number }[]
+      ).map((zeile) => zeile.position);
+
+      expect(plaetze).toEqual(plaetze.map((_platz, index) => index));
+    }
+  });
+});

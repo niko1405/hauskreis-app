@@ -201,11 +201,23 @@ describe('buildGroups', () => {
   });
 });
 
-/** Besetzung je Gruppe, sortiert — die einzige Frage, die hier zählt. */
-const shape = (groups: { id: string; memberIds: string[] }[]) =>
+/**
+ * Besetzung je Gruppe, sortiert — meist die einzige Frage, die hier zählt.
+ *
+ * Neue Gruppen haben noch keine Id und landen unter `neu`; mehr als eine
+ * entsteht beim Nachrücken nie.
+ */
+const shape = (groups: { id: string | null; memberIds: string[] }[]) =>
   Object.fromEntries(
-    groups.map((group) => [group.id, group.memberIds.toSorted()]),
+    groups.map((group) => [group.id ?? 'neu', group.memberIds.toSorted()]),
   );
+
+/** Nur die Größen, sortiert — für die Frage „wird keine Gruppe zu groß". */
+const groupSizes = (groups: { memberIds: string[] }[]) =>
+  groups
+    .map((group) => group.memberIds.length)
+    .filter((size) => size > 0)
+    .toSorted();
 
 /**
  * Die laufende Runde nachziehen ist eine andere Aufgabe als eine neue würfeln:
@@ -281,6 +293,68 @@ describe('repairGroups', () => {
 
     // Eine Gruppe aus einem Menschen wäre eine Behauptung, keine Zuteilung.
     expect(shape(repaired)).toEqual({ g1: [] });
+  });
+
+  /**
+   * Der Fall aus der Praxis: In einer laufenden Zweierrunde kamen nacheinander
+   * zwei Leute dazu — und beide landeten in derselben Gruppe, weil es keine
+   * Obergrenze gab. Vier Menschen, von denen keiner mehr für jeden betet.
+   */
+  describe('die Obergrenze von drei', () => {
+    it('macht aus zwei Neuzugängen auf ein Paar keine Vierergruppe', () => {
+      const repaired = repairGroups(
+        [{ id: 'g1', memberIds: ['a', 'b'] }],
+        new Set(['a', 'b', 'x', 'y']),
+      );
+
+      // Das ursprüngliche Paar bleibt zusammen; die beiden Neuen finden sich.
+      expect(shape(repaired)).toEqual({ g1: ['a', 'b'], neu: ['x', 'y'] });
+    });
+
+    /**
+     * Und wer dazu muss, ist der zuletzt Dazugekommene — nicht irgendwer aus
+     * dem Paar, das schon miteinander betet.
+     */
+    it('teilt eine volle Dreiergruppe zu 2+2, wenn jemand dazukommt', () => {
+      const repaired = repairGroups(
+        [{ id: 'g1', memberIds: ['a', 'b', 'c'] }],
+        new Set(['a', 'b', 'c', 'neuling']),
+      );
+
+      expect(shape(repaired)).toEqual({
+        g1: ['a', 'b'],
+        neu: ['c', 'neuling'],
+      });
+    });
+
+    it('lässt auch bei mehreren Gruppen keine über drei wachsen', () => {
+      const repaired = repairGroups(
+        [
+          { id: 'g1', memberIds: ['a', 'b'] },
+          { id: 'g2', memberIds: ['c', 'd'] },
+        ],
+        new Set(['a', 'b', 'c', 'd', 'x', 'y', 'z']),
+      );
+
+      expect(groupSizes(repaired)).toEqual([2, 2, 3]);
+      expect(repaired.flatMap((group) => group.memberIds)).toHaveLength(7);
+    });
+
+    /** Bei freiem Platz bleibt alles beim Alten — die Grenze greift nur oben. */
+    it('füllt weiterhin zuerst die kleinste Gruppe auf', () => {
+      const repaired = repairGroups(
+        [
+          { id: 'g1', memberIds: ['a', 'b', 'c'] },
+          { id: 'g2', memberIds: ['d', 'e'] },
+        ],
+        new Set(['a', 'b', 'c', 'd', 'e', 'neuling']),
+      );
+
+      expect(shape(repaired)).toEqual({
+        g1: ['a', 'b', 'c'],
+        g2: ['d', 'e', 'neuling'],
+      });
+    });
   });
 
   it('rührt eine unveränderte Runde nicht an', () => {

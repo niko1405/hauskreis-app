@@ -843,11 +843,25 @@ model PrayerBuddyGroup {
 model PrayerBuddyGroupMember {
   groupId  String @map("prayer_buddy_group_id") @db.Uuid
   personId String @map("person_id") @db.Uuid
+  /// Der Platz im Kreis: **wer hier steht, betet für den auf `(position + 1) %
+  /// n`.**
+  ///
+  /// Eine Zahl und kein Fremdschlüssel auf die Zielperson, weil dieselbe eine
+  /// Regel damit beide Gruppengrößen trägt. Ein Paar ist ein Kreis aus zwei —
+  /// 0 betet für 1, 1 für 0, also füreinander, ohne Sonderfall. Ein Trio ist
+  /// derselbe Kreis, nur länger, und dort sagt die Richtung dann wirklich etwas:
+  /// A betet für B, B für C, C für A.
+  ///
+  /// Ein zweites Feld „betet für" wäre ein zweiter Ort für dieselbe Aussage —
+  /// und damit eine Gelegenheit, dass beide auseinanderlaufen.
+  position Int
 
   group  PrayerBuddyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   person Person           @relation("PrayerBuddy", fields: [personId], references: [id], onDelete: Cascade)
 
   @@id([groupId, personId])
+  /// Ein Kreis ist nur dann einer, wenn jede Position genau einmal vorkommt.
+  @@unique([groupId, position])
   @@index([personId])
   @@map("prayer_buddy_group_member")
 }

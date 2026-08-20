@@ -61,6 +61,9 @@ function setup(options: {
 }) {
   let seq = 0;
   const rows: GroupRow[] = [];
+  /** Jede geschriebene Mitglieds-Zeile — daran hängt der Kreis. */
+  const positionen: { groupId: string; personId: string; position: number }[] =
+    [];
 
   for (const memberIds of options.running ?? []) {
     rows.push({
@@ -100,7 +103,7 @@ function setup(options: {
 
   const logDeletes: any[] = [];
 
-  const prisma = {
+  const prisma: any = {
     prayerBuddyGroup: {
       findMany: jest.fn(async (args: any) =>
         find(args).map((row) => ({
@@ -119,16 +122,18 @@ function setup(options: {
         ].map((time) => ({ periodStart: new Date(time) })),
       ),
       create: jest.fn(async (args: any) => {
+        const zeilen = args.data.members?.create ?? [];
         const row: GroupRow = {
           id: `new-${(seq += 1)}`,
           periodStart: args.data.periodStart,
           periodEnd: args.data.periodEnd,
           discardedAt: null,
-          memberIds: (args.data.members?.create ?? []).map(
-            (member: any) => member.personId,
-          ),
+          memberIds: zeilen.map((member: any) => member.personId),
         };
         rows.push(row);
+        for (const zeile of zeilen) {
+          positionen.push({ ...zeile, groupId: row.id });
+        }
         return row;
       }),
       deleteMany: jest.fn(async (args: any) => {
@@ -139,22 +144,23 @@ function setup(options: {
       updateMany: jest.fn(async () => ({ count: 0 })),
     },
     prayerBuddyGroupMember: {
-      create: jest.fn(async (args: any) => {
-        const row = rows.find(
-          (candidate) => candidate.id === args.data.groupId,
-        );
-        row?.memberIds.push(args.data.personId);
-        return args.data;
+      // Berührte Gruppen werden komplett neu geschrieben — erst leeren, dann
+      // in Kreis-Reihenfolge anlegen.
+      createMany: jest.fn(async (args: any) => {
+        for (const zeile of args.data) {
+          const row = rows.find((candidate) => candidate.id === zeile.groupId);
+          row?.memberIds.push(zeile.personId);
+          positionen.push(zeile);
+        }
+        return { count: args.data.length };
       }),
       deleteMany: jest.fn(async (args: any) => {
         const row = rows.find(
           (candidate) => candidate.id === args.where.groupId,
         );
-        const personIds: string[] = args.where.personId.in;
-        if (row) {
-          row.memberIds = row.memberIds.filter((id) => !personIds.includes(id));
-        }
-        return { count: personIds.length };
+        const count = row?.memberIds.length ?? 0;
+        if (row) row.memberIds = [];
+        return { count };
       }),
     },
     person: {
@@ -168,11 +174,13 @@ function setup(options: {
         return { count: 0 };
       }),
     },
-    // Prisma führt das Array der Reihe nach aus; die Fakes sind schon Promises.
-    $transaction: jest.fn((operations: Promise<unknown>[]) =>
-      Promise.all(operations),
+    // Zwei Formen: eine Liste von Operationen (die Fakes sind schon Promises)
+    // oder ein Rückruf, der den Client selbst braucht — `repairRunningRound`
+    // schreibt so, weil es zwischendrin lesen muss, was es gerade angelegt hat.
+    $transaction: jest.fn((arg: any) =>
+      typeof arg === 'function' ? arg(prisma) : Promise.all(arg),
     ),
-  } as unknown as PrismaService;
+  };
 
   const buddies = {
     findCurrent: jest.fn(async (_hauskreisId: string, on = new Date()) => {
@@ -210,9 +218,13 @@ function setup(options: {
     .mockResolvedValue({ delivered: 1, pruned: 0, failed: 0, skipped: 0 });
 
   const service = withClock(
-    new PrayerBuddyGeneratorService(prisma, buddies, {
-      notify,
-    } as unknown as NotificationService),
+    new PrayerBuddyGeneratorService(
+      prisma as unknown as PrismaService,
+      buddies,
+      {
+        notify,
+      } as unknown as NotificationService,
+    ),
   );
 
   /** Die Besetzung der laufenden Runde, jede Gruppe sortiert. */
@@ -223,7 +235,7 @@ function setup(options: {
 
   const future = () => rows.filter((row) => row.periodStart > TODAY);
 
-  return { service, rows, notify, runningNow, future, logDeletes };
+  return { service, rows, notify, runningNow, future, logDeletes, positionen };
 }
 
 describe('PrayerBuddyGeneratorService.replanAfterMembershipChange', () => {
@@ -384,5 +396,67 @@ describe('PrayerBuddyGeneratorService.replanAfterMembershipChange', () => {
     // darüber, mit wem man betet, hätte keinen Inhalt.
     expect(runningNow()).toEqual([]);
     expect(notify).not.toHaveBeenCalled();
+  });
+});
+
+/** Je Gruppe: die geschriebenen Positionen, sortiert. */
+function kreise(
+  positionen: { groupId: string; position: number }[],
+): number[][] {
+  const je = new Map<string, number[]>();
+
+  for (const zeile of positionen) {
+    je.set(zeile.groupId, [...(je.get(zeile.groupId) ?? []), zeile.position]);
+  }
+
+  return [...je.values()].map((plaetze) => plaetze.toSorted());
+}
+
+/**
+ * Der Kreis: Wer auf `position` steht, betet für den auf `(position + 1) % n`.
+ *
+ * Damit das stimmt, müssen die Positionen jeder Gruppe lückenlos bei 0
+ * beginnen — genau deshalb wird eine berührte Gruppe komplett neu geschrieben,
+ * statt Zeile für Zeile ergänzt und gelöscht zu werden. Eine Lücke wäre kein
+ * Kreis mehr, sondern eine Kette mit einem Loch.
+ */
+describe('PrayerBuddyGeneratorService — der Kreis', () => {
+  it('nummeriert eine reparierte Gruppe lückenlos durch', async () => {
+    const { service, positionen } = setup({
+      running: [['a', 'b', 'c']],
+      active: ['a', 'c'],
+    });
+
+    await service.replanAfterMembershipChange('hk', { now: TODAY });
+
+    // Aus dreien werden zwei — und die stehen danach auf 0 und 1, nicht auf
+    // 0 und 2.
+    for (const kreis of kreise(positionen)) {
+      expect(kreis).toEqual(kreis.map((_platz, index) => index));
+    }
+  });
+
+  /**
+   * Wird eine Gruppe neu aufgemacht — alle bestehenden sind voll —, bekommt sie
+   * ihre Positionen von Anfang an mit. Und aus 3+1 wird 2+2, keine Vierergruppe.
+   */
+  it('gibt auch einer neu entstandenen Gruppe ihren Kreis', async () => {
+    const { service, positionen, runningNow } = setup({
+      running: [['a', 'b', 'c']],
+      active: ['a', 'b', 'c', 'neuling'],
+    });
+
+    await service.replanAfterMembershipChange('hk', { now: TODAY });
+
+    expect(
+      runningNow()
+        .map((group) => group.length)
+        .toSorted(),
+    ).toEqual([2, 2]);
+
+    for (const kreis of kreise(positionen)) {
+      expect(kreis).toEqual(kreis.map((_platz, index) => index));
+      expect(kreis.length).toBeLessThanOrEqual(3);
+    }
   });
 });

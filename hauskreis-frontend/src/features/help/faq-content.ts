@@ -559,8 +559,23 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'prayer',
     question: 'Warum sind es Zweier und eine Dreier?',
     answer:
-      'Weil neun sich nicht durch zwei teilen lässt. Zweiergruppen sind das Format, das ihr eigentlich wollt — die eine Dreiergruppe gibt es nur, weil die Zahl nicht aufgeht. Bei neun Leuten also 2/2/2/3 und nicht 3/3/3.\n\n**Wer in die Dreiergruppe kommt, entscheidet die App zuerst**, und zwar nach der Frage, wer bisher am seltensten darin war. Sonst landete immer derjenige darin, der zufällig übrig bleibt — und das könnte dieselbe Person mehrmals hintereinander sein.',
+      'Weil sich eine ungerade Zahl nicht durch zwei teilen lässt. Zweiergruppen sind das Format, das ihr eigentlich wollt — die eine Dreiergruppe gibt es nur, weil die Zahl nicht aufgeht. Bei neun Leuten also 2/2/2/3 und nicht 3/3/3.\n\n**Größer als drei wird keine Gruppe.** Ab vier betet nicht mehr jede:r für jede:n, sondern jede:r für einen — dann ist es keine Gruppe mehr, sondern eine Kette, die niemand überblickt.\n\n**Wer in die Dreiergruppe kommt, entscheidet die App zuerst**, und zwar nach der Frage, wer bisher am seltensten darin war. Sonst landete immer derjenige darin, der zufällig übrig bleibt — und das könnte dieselbe Person mehrmals hintereinander sein.',
     keywords: ['dreier', 'zweier', 'gruppengröße', 'ungerade', 'neun'],
+  },
+  {
+    id: 'prayer-reihum',
+    category: 'prayer',
+    question: 'In meiner Dreiergruppe: für wen bete ich eigentlich?',
+    answer:
+      'Zu dritt wird **reihum** gebetet — im Kreis. Du betest für eine bestimmte Person, und eine andere betet für dich. Beides steht oben auf dem Gebet-Bildschirm, jedes mit eigener Beschriftung; in der Übersicht siehst du den ganzen Kreis als Kette: „Anna → Ben → Carla → Anna".\n\nVorher stand dort nur eine Namensliste, und jede:r musste sich selbst zusammenreimen, wie es gemeint ist. Zu dritt füreinander zu beten heißt in der Praxis eben nicht „jede:r für alle" — reihum ist konkreter, und konkret ist beim Beten die halbe Miete.\n\n**Zu zweit gibt es diese Frage nicht:** Ihr betet füreinander, und da steht schlicht „Du betest mit Anna".\n\nFür die Zuteilung der nächsten Runden zählt das übrigens genauso wie eine Zweiergruppe: Wer im Kreis für jemanden gebetet hat — oder für wen jemand gebetet hat —, war mit ihm zusammen, und die App meidet die Wiederholung entsprechend.',
+    keywords: [
+      'reihum',
+      'für wen',
+      'kreis',
+      'dreier',
+      'richtung',
+      'betet für dich',
+    ],
   },
   {
     id: 'prayer-wiederholung',

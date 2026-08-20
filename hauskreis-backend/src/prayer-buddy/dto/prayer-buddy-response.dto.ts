@@ -12,6 +12,7 @@ import {
  *
  * Neun Personen gehen nicht glatt in Zweiergruppen auf, deshalb sind nicht alle
  * Gruppen gleich groß — eine Dreiergruppe ist der Normalfall, kein Fehler.
+ * Größer als drei wird keine.
  *
  * Die Daten sind hier reine Kalendertage: der Dienst schneidet sie selbst zu,
  * anders als bei den Terminen.
@@ -23,6 +24,13 @@ export const prayerBuddyAssignmentSchema = z.object({
   groups: z.array(
     z.object({
       id: z.uuid(),
+      /// Die Besetzung **in Kreis-Reihenfolge** — das ist Teil der Zusage und
+      /// kein Zufall der Abfrage: Wer hier steht, betet für den Nächsten, der
+      /// Letzte für den Ersten.
+      ///
+      /// Bei einem Paar heißt das schlicht „füreinander". Bei einem Trio sagt
+      /// es wirklich etwas: A betet für B, B für C, C für A — und niemand muss
+      /// sich das aus einer Namensliste selbst zusammenreimen.
       members: z.array(personRefSchema),
     }),
   ),
