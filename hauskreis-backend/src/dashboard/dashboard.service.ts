@@ -41,9 +41,10 @@ export interface HomeScreen {
     startTime: number;
     endDate: string | null;
     type: string;
-    /** Ob der Abend überhaupt ein Thema bzw. Lieder vorsieht. */
+    /** Ob der Abend überhaupt ein Thema, Lieder bzw. ein Testimony vorsieht. */
     hasTopicSlot: boolean;
     hasSongSlot: boolean;
+    hasTestimonySlot: boolean;
     title: string | null;
     /**
      * Mit Position, damit der Home-Screen ein „In Maps öffnen" anbieten kann,
@@ -66,6 +67,8 @@ export interface HomeScreen {
     topic: { id: string; title: string | null } | null;
     /** Who is on for the music. Empty is valid — not every evening has songs. */
     songLeaders: { id: string; name: string }[];
+    /** Wer sein Testimony erzählt — an einem Lobpreisabend die tragende Rolle. */
+    testimonyPerson: { id: string; name: string } | null;
     /** What *you* answered for that evening. */
     myAttendance: string;
   } | null;
@@ -151,6 +154,7 @@ export class DashboardService {
             type: true,
             hasTopicSlot: true,
             hasSongSlot: true,
+            hasTestimonySlot: true,
             title: true,
             location: {
               select: {
@@ -163,6 +167,7 @@ export class DashboardService {
               },
             },
             host: { select: personRefSelect },
+            testimonyPerson: { select: personRefSelect },
             topicResponsibles: {
               select: { person: { select: personRefSelect } },
               orderBy: { person: { name: 'asc' } },
@@ -249,6 +254,7 @@ export class DashboardService {
             type: meeting.type,
             hasTopicSlot: meeting.hasTopicSlot,
             hasSongSlot: meeting.hasSongSlot,
+            hasTestimonySlot: meeting.hasTestimonySlot,
             title: meeting.title,
             location: meeting.location,
             host: meeting.host,
@@ -261,6 +267,7 @@ export class DashboardService {
               ? { id: nextSession.topic.id, title: nextSession.topic.title }
               : null,
             songLeaders: meeting.songLeaders.map((leader) => leader.person),
+            testimonyPerson: meeting.testimonyPerson,
             // No row means nobody answered yet, which is exactly UNKNOWN.
             myAttendance: meeting.attendances[0]?.status ?? 'UNKNOWN',
           }

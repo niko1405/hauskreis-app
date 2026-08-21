@@ -549,9 +549,9 @@ function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
         </div>
       </div>
 
-      {/* Alle drei Rollen, in derselben Form wie auf der Terminkarte — sonst
-          heißt „noch kein Host" auf zwei Bildschirmen zweierlei. Der Link führt
-          aufs Detail, weil dort das „+ … eintragen" auch einlösbar ist. */}
+      {/* Alle Rollen des Abends, in derselben Form wie auf der Terminkarte —
+          sonst heißt „noch kein Host" auf zwei Bildschirmen zweierlei. Der Link
+          führt aufs Detail, weil dort das „+ … eintragen" auch einlösbar ist. */}
       <Link
         href={`/termin?id=${meeting.id}`}
         className="flex flex-wrap items-center gap-2"
@@ -567,6 +567,12 @@ function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
         />
         {meeting.hasTopicSlot && (
           <RoleChip kind="TOPIC" people={meeting.topicResponsibles} />
+        )}
+        {meeting.hasTestimonySlot && (
+          <RoleChip
+            kind="TESTIMONY"
+            people={meeting.testimonyPerson ? [meeting.testimonyPerson] : []}
+          />
         )}
         {meeting.hasSongSlot && (
           <RoleChip kind="SONG" people={meeting.songLeaders} />

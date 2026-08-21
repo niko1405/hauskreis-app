@@ -59,6 +59,7 @@ export const homeScreenSchema = z.object({
       /// „Thema: noch niemand".
       hasTopicSlot: z.boolean(),
       hasSongSlot: z.boolean(),
+      hasTestimonySlot: z.boolean(),
       title: z.string().nullable(),
       /// Mit Position, damit „In Maps öffnen" ohne zweiten Aufruf geht.
       /// `latitude`/`longitude` sind entweder beide gesetzt oder beide `null`.
@@ -94,6 +95,9 @@ export const homeScreenSchema = z.object({
       /// dort spiegelt die Hülle die Verknüpfungstabelle, hier ist es eine
       /// eigens gebaute Ansicht und die Hülle wäre nur Ballast.
       songLeaders: z.array(personRefSchema),
+      /// Wer sein Testimony erzählt. `null` heißt „noch niemand" — der Chip
+      /// lädt dann zum Eintragen ein, wie bei den anderen Rollen auch.
+      testimonyPerson: personRefSchema.nullable(),
       /// Was *du* für diesen Abend geantwortet hast. Ohne Antwort `UNKNOWN`.
       myAttendance: z.enum(AttendanceStatus),
     })

@@ -278,7 +278,9 @@ den Abend trägt.
 Denn ein **Testimony erzählt man einmal**. Wer dran war, wird nicht mehr
 vorgeschlagen, und zwischen den anderen entscheidet allein, wer an dem Abend am
 wenigsten zu tun hat — „wer war am längsten nicht dran" ergibt hier keinen Sinn,
-weil niemand von ihnen je dran war. Warst du **vor dieser App** schon dran,
+weil niemand von ihnen je dran war. Trägst du jemanden ein, der für einen
+**anderen kommenden** Abend schon dafür vorgesehen war, zieht die Rolle einfach
+mit um: Der andere Abend ist danach wieder offen. Warst du **vor dieser App** schon dran,
 setz im Profil den Haken „Mein Testimony habe ich schon erzählt"; die Abende,
 die die App selbst kennt, zählt sie ohnehin.
 

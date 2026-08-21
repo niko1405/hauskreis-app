@@ -1647,6 +1647,15 @@ Ein **kommender** Abend zählt dabei nicht als „erzählt". Er ist eine Zuteilu
 wie jede andere und wirkt als Last: Wer am 25. dran ist, rutscht für den 18.
 nach unten, statt lautlos zu verschwinden.
 
+Wird er dann doch für den 18. genommen, **zieht die Rolle mit ihm um**
+(`MeetingService.moveTestimonyHere`): Die Zuteilung am 25. fällt weg. Sonst
+stünde dieselbe Person an zwei kommenden Abenden für etwas, das sie einmal
+erzählt — und der zweite Abend sähe geplant aus, bis jemand von Hand aufräumt.
+Nur kommende Abende, `updateMany` mit dem Versionssprung in einem Zug (der
+geleerte Abend zeigt die Rolle in seiner Antwort), und ohne Benachrichtigung:
+Es ist dieselbe Person, die gerade selbst umzieht, und im Vorschlag stand
+vorher, an welchem Abend sie schon dran war.
+
 **Die ausdrückliche Zusage sticht den Zeitraum.** „Doch, ich komme" ist eine
 Aussage über genau diesen Abend, der Urlaub eine über viele — überall sonst
 gewann deshalb die Antwort von Hand (`AbsenceSyncService` fasst eine

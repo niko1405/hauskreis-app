@@ -3466,6 +3466,7 @@ export interface components {
         type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
         hasTopicSlot: boolean;
         hasSongSlot: boolean;
+        hasTestimonySlot: boolean;
         title: string | null;
         location: {
           /** Format: uuid */
@@ -3502,6 +3503,13 @@ export interface components {
           /** Format: date-time */
           photoUpdatedAt: string | null;
         }[];
+        testimonyPerson: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
         /** @enum {string} */
         myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
       } | null;

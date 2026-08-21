@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { personRefSelect } from '../common/dto/response';
@@ -97,6 +98,8 @@ const meetingInclude = {
 
 @Injectable()
 export class MeetingService {
+  private readonly logger = new Logger(MeetingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly roleSuggestions: RoleSuggestionService,
@@ -252,6 +255,16 @@ export class MeetingService {
     // Auch ein von Hand angelegter Abend ist ein Abend: wer grundsätzlich dabei
     // ist, hat auch für ihn zugesagt.
     await this.autoAttendance.apply(hauskreisId);
+
+    // Wer hier fürs Testimony eingetragen wird, steht danach an keinem anderen
+    // kommenden Abend mehr dafür — man erzählt es einmal.
+    if (meeting.testimonyPersonId) {
+      await this.moveTestimonyHere(
+        hauskreisId,
+        meeting.id,
+        meeting.testimonyPersonId,
+      );
+    }
 
     // Und wer gleich beim Anlegen eingeteilt wird, ist dabei. Vor dem `findOne`
     // unten, damit die Antwort die frische Zusage und die neue Version schon
@@ -430,6 +443,15 @@ export class MeetingService {
       );
     }
 
+    // Dieselbe Person kann nicht an zwei kommenden Abenden ihr Testimony
+    // erzählen: Die Rolle zieht mit ihr um.
+    if (
+      updated.testimonyPersonId &&
+      updated.testimonyPersonId !== before.testimonyPersonId
+    ) {
+      await this.moveTestimonyHere(hauskreisId, id, updated.testimonyPersonId);
+    }
+
     // Und dasselbe fürs Testimony, wo es fehlte. Der Text dafür stand von
     // Anfang an in `RoleAssignmentNotifier` („Du erzählst dein Testimony"),
     // nur rief ihn niemand auf: Gastgeber, Thema und Musik sagten Bescheid,
@@ -476,6 +498,47 @@ export class MeetingService {
     // und trüge sonst die alte Version — der Aufrufer bekäme ein ETag, gegen
     // das seine nächste Änderung als Konflikt zurückkäme.
     return zugesagt > 0 ? this.findOne(hauskreisId, id, viewer) : updated;
+  }
+
+  /**
+   * Die Testimony-Rolle zieht mit der Person um.
+   *
+   * Sein Testimony erzählt man einmal. Wer dafür schon an einem anderen
+   * kommenden Abend steht und jetzt hier eingetragen wird, hat es nicht zweimal
+   * vor sich — er hat es an einem **anderen** Abend. Die alte Zuteilung fällt
+   * deshalb weg, statt als zweite stehen zu bleiben, die niemand mehr auflöst.
+   *
+   * Nur **kommende** Abende: Ein vergangener ist das Protokoll dessen, was war
+   * — und wer damals erzählt hat, taucht in den Vorschlägen ohnehin nicht mehr
+   * auf.
+   *
+   * `updateMany` mit dem Versionssprung in einem Zug: Der geleerte Abend zeigt
+   * die Rolle in seiner Antwort, sein ETag muss also mitaltern. Eine Nachricht
+   * geht dafür nicht raus — es ist dieselbe Person, die gerade selbst umzieht,
+   * und im Vorschlag stand vorher, an welchem Abend sie schon dran war.
+   */
+  private async moveTestimonyHere(
+    hauskreisId: string,
+    meetingId: string,
+    personId: string,
+  ): Promise<void> {
+    const today = await this.clock.today(hauskreisId);
+
+    const { count } = await this.prisma.meeting.updateMany({
+      where: {
+        hauskreisId,
+        id: { not: meetingId },
+        testimonyPersonId: personId,
+        date: { gte: today },
+      },
+      data: { testimonyPersonId: null, version: { increment: 1 } },
+    });
+
+    if (count > 0) {
+      this.logger.log(
+        `Testimony for person ${personId} moved to meeting ${meetingId}, cleared from ${count} upcoming meeting(s)`,
+      );
+    }
   }
 
   /**

@@ -363,6 +363,40 @@ describe('MeetingService.update — wer eingeteilt wird, hört davon', () => {
     );
   });
 
+  /**
+   * Sein Testimony erzählt man einmal. Wer dafür schon an einem anderen
+   * kommenden Abend stand, hat es nicht zweimal vor sich — die Rolle zieht mit
+   * ihm um, statt als zweite Zuteilung stehen zu bleiben, die niemand auflöst.
+   */
+  it('nimmt die Testimony-Rolle vom anderen Abend mit', async () => {
+    const { service, prisma } = setup(
+      meeting({ hasTopicSlot: false, hasTestimonySlot: true }),
+    );
+    prisma.person.findFirst.mockResolvedValue({ id: 'p-mira' });
+
+    await service.update(
+      'hk1',
+      'm1',
+      { testimonyPersonId: 'p-mira' },
+      ADMIN,
+      EGAL,
+    );
+
+    expect(prisma.meeting.updateMany).toHaveBeenCalledWith({
+      where: {
+        hauskreisId: 'hk1',
+        // Nicht dieser Abend, und nur, was noch bevorsteht: Ein vergangener
+        // ist das Protokoll dessen, was war.
+        id: { not: 'm1' },
+        testimonyPersonId: 'p-mira',
+        date: { gte: HEUTE },
+      },
+      // Der geleerte Abend zeigt die Rolle in seiner Antwort — sein ETag muss
+      // mitaltern.
+      data: { testimonyPersonId: null, version: { increment: 1 } },
+    });
+  });
+
   it('schweigt, wenn das Testimony dasselbe bleibt', async () => {
     const { service, roleAssignments } = setup(
       meeting({
