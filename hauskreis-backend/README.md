@@ -1611,10 +1611,11 @@ Regel 1 lautet „wer hat am wenigsten zu tun, **über alle Rollen**" — und st
 in keiner der vier Ranglisten ganz. Jede bekam ihre eigene Rolle, Gastgeber und
 Thema, und je nachdem fehlten Musik oder Testimony. Beim **Gastgeber** war es am
 schlimmsten: Er sah ausschließlich Gastgeber-Dienste. Damit stand, wer an dem
-Abend ohnehin das Thema vorbereitet, trotzdem ganz oben — und `HOUSEHOLD_BUSY`
-konnte gar nicht auftreten, weil `findBusyHomes` in derselben Liste nach
-fremden Diensten am Zieltag sucht und nie welche fand. Der Ablehnungsgrund war
-seit jeher toter Code samt seines Labels in der Oberfläche.
+Abend ohnehin das Thema vorbereitet, trotzdem ganz oben — und `findBusyHomes`
+suchte in derselben Liste nach fremden Diensten am Zieltag und fand nie welche.
+Die Regel war seit jeher toter Code; ihr erster scharfer Lauf hat gleich
+gezeigt, dass sie als _Ablehnungsgrund_ falsch aufgehängt war (siehe
+„Zurückstellen").
 
 `collectLoad(hauskreisId, role, …)` gibt seither jeder Liste dieselben vier.
 Auf die **Fairness** wirkt das nicht: `rankForRole` zählt für „zuletzt dran" und
@@ -1763,17 +1764,33 @@ fließt nicht in seine eigene Historie ein.
 der Liste (`deferred: true` samt `deferredReason`), statt zu verschwinden. Eine
 Verschiebung übersteht den Fall „keine bessere Option da", ein Filter nicht.
 
-| `deferredReason` | Wann                                                         |
-| ---------------- | ------------------------------------------------------------ |
-| `TOO_SMALL`      | Es kommen mehr Leute, als reinpassen — siehe unten           |
-| `HOUSEHOLD_BUSY` | Jeder Bewohner ist an dem Abend schon anderweitig eingeteilt |
+| `deferredReason` | Wann                                               |
+| ---------------- | -------------------------------------------------- |
+| `AWAY`           | Der ganze Haushalt ist an dem Abend verreist       |
+| `TOO_SMALL`      | Es kommen mehr Leute, als reinpassen — siehe unten |
 
-Für `HOUSEHOLD_BUSY` zählt bewusst **nur der Termintag selbst**. Eine Aufgabe
-drei Wochen später ist kein Konflikt, sondern Last — und Last ist ohnehin schon
-das erste Sortierkriterium innerhalb des Haushalts. Dadurch braucht es kein
-willkürliches „die nächsten N Wochen"-Fenster. Solange HOST die einzige Rolle
-ist, kann das gar nicht auslösen (ein Host pro Abend, ein Termin pro Datum); ab
-Phase 5 greift es.
+Beides sind **Unmöglichkeiten**, und das ist die ganze Regel für diese Spalte.
+
+**`HOUSEHOLD_BUSY` gab es einmal daneben und war keine.** Es sagte: jede:r, der
+hier wohnt, hat an dem Abend schon eine andere Rolle. Nur ist Gastgeber die eine
+Rolle, die man **bei sich zu Hause** macht — wer das Thema hält, kann trotzdem
+seine Tür aufmachen, und oft ist es sogar bequemer, sich bei ihm zu treffen. Als
+Ablehnungsgrund gelesen ergab es zudem einen Satz, den niemand parsen konnte:
+„im Haushalt ist schon jemand anders dran" war für Alleinwohnende weder jemand
+anders noch, in aller Regel, das Hosten.
+
+Geblieben ist die Sortierung, ohne Etikett: `HomeRanking.busy` reiht ein solches
+Zuhause **hinter** die freien und **vor** die zurückgestellten. Warum es dort
+steht, sagt der Vorschlag längst mit den Worten, die er überall benutzt — „an
+diesem Abend schon Thema" unter den Fakten. Ein zweiter Satz für dieselbe Sache,
+in der Form einer Ablehnung, war genau das Verwirrende daran.
+
+Gezählt wird dafür bewusst **nur der Termintag selbst**. Eine Aufgabe drei
+Wochen später ist kein Konflikt, sondern Last — und Last ist ohnehin schon das
+erste Sortierkriterium innerhalb des Haushalts. Dadurch braucht es kein
+willkürliches „die nächsten N Wochen"-Fenster. `every` und nicht `some`: Solange
+in einer geteilten Wohnung noch jemand frei ist, ist die Wohnung frei; wer allein
+wohnt, ist damit die ganze Wohnung.
 
 ### Platz: kleine Wohnungen kommen nur an kleine Abende
 

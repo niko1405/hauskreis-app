@@ -15314,7 +15314,6 @@
                   "enum": [
                     "AWAY",
                     "TOO_SMALL",
-                    "HOUSEHOLD_BUSY",
                     null
                   ],
                   "nullable": true

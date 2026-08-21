@@ -63,9 +63,8 @@ export class RoleSuggestionService {
         this.collectHomeUses(hauskreisId, options.excludeMeetingId),
         // Die Rangfolge sah einmal **nur** Gastgeber-Dienste. Damit war Regel 1
         // („wer hat am wenigsten zu tun, über alle Rollen") ausgerechnet beim
-        // Gastgeber außer Kraft — und `HOUSEHOLD_BUSY` konnte gar nicht
-        // auftreten, weil `findBusyHomes` in einer Liste ohne fremde Rollen
-        // nichts findet.
+        // Gastgeber außer Kraft — und `findBusyHomes` fand in einer Liste ohne
+        // fremde Rollen nie etwas.
         this.collectLoad(hauskreisId, AssignmentRole.HOST, {
           meetingId: options.excludeMeetingId,
         }),
@@ -633,6 +632,19 @@ export class RoleSuggestionService {
  * Nothing can trigger it while HOST is the only role (one host per evening, one
  * meeting per date). It starts doing work in Phase 5, when someone can be down
  * for the topic on the evening they would otherwise host.
+ */
+/**
+ * Die Wohnungen, in denen an dem Abend **jede:r** schon etwas anderes zu tun
+ * hat.
+ *
+ * Kein Ausschlussgrund und keine Zurückstellung: Gastgeber ist die eine Rolle,
+ * die man bei sich zu Hause macht — wer das Thema hält, kann trotzdem seine Tür
+ * aufmachen, und oft ist es sogar bequemer, sich bei ihm zu treffen. Es ist der
+ * zweite Platz, nicht das Aus.
+ *
+ * `every` und nicht `some`: Solange in einer geteilten Wohnung noch jemand frei
+ * ist, ist die Wohnung frei. Wer allein wohnt, ist damit die ganze Wohnung —
+ * das ist kein Sonderfall, sondern dieselbe Regel mit einer Person.
  */
 function findBusyHomes(
   households: Household[],

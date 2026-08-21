@@ -144,7 +144,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'suggestions',
     question: 'Was heißt „Zurückgestellt"?',
     answer:
-      'Der Vorschlag wäre an sich dran, aber gerade spricht etwas dagegen. Er verschwindet nicht — er rutscht nur ans Ende, damit du ihn trotzdem wählen kannst, wenn du es besser weißt.\n\nEs gibt drei Gründe:\n\n**„ist in dem Zeitraum weg"** — es ist eine Abwesenheit eingetragen.\n\n**„Wohnung zu klein für die erwartete Runde"** — für die Wohnung ist eine Kapazität hinterlegt, und es kommen an diesem Abend mehr Leute.\n\n**„im Haushalt ist schon jemand anders dran"** — jemand aus derselben Wohnung hat an diesem Abend bereits eine andere Aufgabe.',
+      'Der Vorschlag wäre an sich dran, aber es geht an diesem Abend schlicht nicht. Er verschwindet nicht — er rutscht nur ans Ende, damit du ihn trotzdem wählen kannst, wenn du es besser weißt.\n\nEs gibt genau zwei Gründe, und beide sind echte Hindernisse:\n\n**„ist in dem Zeitraum weg"** — es ist eine Abwesenheit eingetragen.\n\n**„Wohnung zu klein für die erwartete Runde"** — für die Wohnung ist eine Kapazität hinterlegt, und es kommen an diesem Abend mehr Leute.\n\nDass jemand an dem Abend **schon eine andere Rolle** hat, ist keiner davon. Das stand einmal als „im Haushalt ist schon jemand anders dran" hier und war für alle, die allein wohnen, doppelt falsch. Gastgeber ist die eine Rolle, die man bei sich zu Hause macht — wer das Thema hält, kann trotzdem seine Tür aufmachen. Es steht jetzt einfach als Fakt beim Vorschlag („an diesem Abend schon Thema"), und die Wohnung rutscht dafür hinter die freien.',
     keywords: ['grau', 'unten', 'ausgeblendet', 'weg', 'zu klein'],
   },
   {

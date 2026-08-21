@@ -163,7 +163,11 @@ describe('rankHomes', () => {
     expect(result[0].facts.credit).toBeLessThanOrEqual(MAX_CREDIT_MEETINGS);
   });
 
-  it('sends a household that is busy that evening to the back', () => {
+  /**
+   * Zweiter Platz, nicht Aus. Zurückgestellt wird nur, was wirklich nicht geht
+   * — wer das Thema hält, kann trotzdem seine Tür aufmachen.
+   */
+  it('ranks a household that is busy that evening below the free ones', () => {
     const homes = [home('a', 'Bei Anna', 3), home('b', 'Bei Ben', 1)];
 
     const result = rankHomes({
@@ -175,8 +179,24 @@ describe('rankHomes', () => {
 
     // 'a' has the higher weight and would otherwise lead.
     expect(order(result)).toEqual(['b', 'a']);
-    expect(result[1].deferred).toBe(true);
-    expect(result[1].deferredReason).toBe('HOUSEHOLD_BUSY');
+    expect(result[1].busy).toBe(true);
+    // Kein Ablehnungsgrund — die Begründung steht bei den Fakten der Person.
+    expect(result[1].deferred).toBe(false);
+    expect(result[1].deferredReason).toBeNull();
+  });
+
+  /** Aber hinter dem, was gar nicht geht: zu klein schlägt „hat zu tun". */
+  it('still ranks a busy home above one that is set aside', () => {
+    const result = rankHomes({
+      homes: [home('busy', 'Bei Anna', 1), home('eng', 'Bei Sofie', 1, 4)],
+      uses: [],
+      targetDate: TARGET,
+      expectedAttendance: 9,
+      busyHomeIds: new Set(['busy']),
+    });
+
+    expect(order(result)).toEqual(['busy', 'eng']);
+    expect(result[1].deferredReason).toBe('TOO_SMALL');
   });
 
   describe('capacity', () => {
@@ -269,7 +289,7 @@ describe('rankHomes', () => {
     });
   });
 
-  it('still returns a full list when every household is busy', () => {
+  it('falls back to the usual order when every household is busy', () => {
     const homes = [home('a', 'Bei Anna', 3), home('b', 'Bei Ben', 1)];
 
     const result = rankHomes({
@@ -279,8 +299,10 @@ describe('rankHomes', () => {
       busyHomeIds: new Set(['a', 'b']),
     });
 
+    // Alle gleich belastet, also entscheidet wieder das Guthaben.
     expect(order(result)).toEqual(['a', 'b']);
-    expect(result.every((entry) => entry.deferred)).toBe(true);
+    expect(result.every((entry) => entry.busy)).toBe(true);
+    expect(result.some((entry) => entry.deferred)).toBe(false);
   });
 
   it('ignores evenings at homes no longer in the running', () => {

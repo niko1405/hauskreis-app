@@ -75,7 +75,11 @@ Das alles passiert im Tab **Profil**, von oben nach unten:
    **Kapazität** darüber ist optional: Ohne Angabe heißt es „alle passen rein",
    nur enge Wohnungen brauchen eine Zahl. Kommen an einem Abend mehr Leute als
    angegeben, wird deine Wohnung für **diesen einen Abend** zurückgestellt —
-   sie fällt nicht heraus, sie rutscht ans Ende der Vorschläge.
+   sie fällt nicht heraus, sie rutscht ans Ende der Vorschläge. Zurückgestellt
+   wird nur, was wirklich nicht geht: zu klein oder verreist. Hast du an dem
+   Abend schon eine andere Rolle, steht das als Fakt beim Vorschlag und deine
+   Wohnung rutscht hinter die freien — hosten kannst du trotzdem, du bist ja
+   ohnehin zu Hause.
 4. **Abwesenheiten.** Trag hier deinen Urlaub ein, sobald du ihn kennst — die
    App sagt die Abende in diesem Zeitraum von selbst für dich ab, und niemand
    plant dich als Gastgeber ein.

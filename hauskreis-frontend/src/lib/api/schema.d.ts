@@ -2687,7 +2687,7 @@ export interface components {
         away: boolean;
         deferred: boolean;
         /** @enum {string|null} */
-        deferredReason: 'AWAY' | 'TOO_SMALL' | 'HOUSEHOLD_BUSY' | null;
+        deferredReason: 'AWAY' | 'TOO_SMALL' | null;
         home: {
           /** Format: uuid */
           locationId: string;

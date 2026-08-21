@@ -26,10 +26,19 @@ function isHostSuggestion(s: AnySuggestion): s is HostSuggestion {
   return 'away' in s.facts;
 }
 
+/**
+ * Nur noch die zwei, die wirklich nicht gehen.
+ *
+ * Hier stand einmal `HOUSEHOLD_BUSY: 'im Haushalt ist schon jemand anders
+ * dran'` — für alle, die allein wohnen, zweimal falsch: Es war niemand anders,
+ * sondern die Person selbst, und die andere Rolle war selten das Hosten. Dass
+ * jemand an dem Abend schon etwas hat, sagen die Fakten inzwischen in denselben
+ * Worten wie überall („an diesem Abend schon Thema"); im Ranking rutscht er
+ * dafür nach unten, aber zurückgestellt wird er nicht.
+ */
 const DEFERRED_REASON: Record<string, string> = {
   AWAY: 'ist in dem Zeitraum weg',
   TOO_SMALL: 'Wohnung zu klein für die erwartete Runde',
-  HOUSEHOLD_BUSY: 'im Haushalt ist schon jemand anders dran',
 };
 
 /** Die Fakten als kurze Sätze, in der Reihenfolge ihrer Wichtigkeit. */

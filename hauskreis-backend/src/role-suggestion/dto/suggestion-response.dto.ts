@@ -88,8 +88,13 @@ export const hostSuggestionSchema = roleSuggestionSchema.extend({
     /// Für diesen einen Abend zurückgestellt, aber weiterhin wählbar.
     deferred: z.boolean(),
     /// `AWAY` = der ganze Haushalt ist weg, `TOO_SMALL` = passt an dem Abend
-    /// nicht, `HOUSEHOLD_BUSY` = jemand aus dem Haushalt hat schon eine Rolle.
-    deferredReason: z.enum(['AWAY', 'TOO_SMALL', 'HOUSEHOLD_BUSY']).nullable(),
+    /// nicht. Beides sind Unmöglichkeiten — mehr steht hier nicht.
+    ///
+    /// `HOUSEHOLD_BUSY` gab es einmal daneben und war keine: Wer das Thema
+    /// hält, kann trotzdem seine Tür aufmachen. Dass jemand an dem Abend schon
+    /// etwas hat, sagt der Vorschlag in denselben Worten wie überall sonst
+    /// („an diesem Abend schon Thema") und rutscht dafür im Ranking nach unten.
+    deferredReason: z.enum(['AWAY', 'TOO_SMALL']).nullable(),
     home: homeFactsSchema,
   }),
 });

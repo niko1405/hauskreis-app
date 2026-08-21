@@ -32,14 +32,23 @@ export interface RankableHome {
  *
  * `AWAY` — nobody who could host there is in town.
  * `TOO_SMALL` — more people are coming than fit.
- * `HOUSEHOLD_BUSY` — every eligible resident already has another job that night.
+ *
+ * Both are *impossibilities*, and that is the whole membership rule. There was a
+ * third, `HOUSEHOLD_BUSY` — every eligible resident already has another job that
+ * night — and it did not belong: hosting is the one role you do **at your own
+ * home**. Preparing the topic does not stop you opening your door; if anything
+ * it is convenient to meet where the person who prepared it already is. It also
+ * read as an accusation nobody could parse ("im Haushalt ist schon jemand
+ * anders dran" — for someone living alone it was neither somebody else nor,
+ * usually, hosting). Having another job that night is now what it always was:
+ * a reason to rank lower, not a reason to be set aside (see `busy`).
  *
  * `AWAY` is the odd one out and the only one that also changes the arithmetic:
- * the other two keep earning credit while set aside, because the opportunity was
+ * `TOO_SMALL` keeps earning credit while set aside, because the opportunity was
  * denied by the circumstances. A household on holiday gave the evening up, so it
  * earns nothing — see `awayOn` below.
  */
-export type DeferralReason = 'AWAY' | 'TOO_SMALL' | 'HOUSEHOLD_BUSY';
+export type DeferralReason = 'AWAY' | 'TOO_SMALL';
 
 /** One past evening that took place at a host-bound home. */
 export interface HomeUse {
@@ -83,6 +92,16 @@ export interface HomeRanking {
    */
   deferred: boolean;
   deferredReason: DeferralReason | null;
+  /**
+   * Everyone who lives here already has another job that night.
+   *
+   * Ranks **below** the homes that are free and **above** the ones that are set
+   * aside, and carries no label of its own: the suggestion already says "an
+   * diesem Abend schon Thema" among its facts, in the same words as everywhere
+   * else. A second sentence for the same thing, in the shape of a rejection,
+   * was what made this confusing.
+   */
+  busy: boolean;
 }
 
 /**
@@ -105,10 +124,11 @@ export interface HomeRanking {
  * be. That is why the accrual is per meeting and not a closed formula.
  *
  * Being set aside for one evening is deliberately *not* that case. A home that
- * is too small for a full house, or whose residents are busy, keeps earning —
- * it was ready and the circumstances said no. That is what lets a small home
- * build up enough credit to win the rare evening it does fit, instead of
- * competing from scratch every time and effectively never hosting.
+ * is too small for a full house keeps earning — it was ready and the
+ * circumstances said no. That is what lets a small home build up enough credit
+ * to win the rare evening it does fit, instead of competing from scratch every
+ * time and effectively never hosting. The same goes for a home whose residents
+ * are busy: they were there, they just had their hands full.
  */
 export function rankHomes(params: {
   homes: RankableHome[];
@@ -120,7 +140,11 @@ export function rankHomes(params: {
    * too small on the night is the failure worth avoiding.
    */
   expectedAttendance?: number | null;
-  /** Homes whose every eligible resident is busy that evening. */
+  /**
+   * Homes whose **every** eligible resident already has another job that
+   * evening. Sorts below the free homes and above the ones set aside — it is a
+   * matter of degree, not an impossibility.
+   */
   busyHomeIds?: ReadonlySet<string>;
   /**
    * Whether a home was unavailable on a given date because its household was
@@ -212,7 +236,6 @@ export function rankHomes(params: {
       const reason = deferralReason(
         home,
         expectedAttendance,
-        busyHomeIds,
         awayOn(home.id, targetDate),
       );
 
@@ -220,6 +243,7 @@ export function rankHomes(params: {
         home,
         deferred: reason !== null,
         deferredReason: reason,
+        busy: busyHomeIds?.has(home.id) ?? false,
         facts: {
           credit: round(credit.get(home.id) as number),
           capacity: home.capacity,
@@ -242,17 +266,13 @@ export function rankHomes(params: {
 }
 
 /**
- * Away beats everything: an empty flat is not a matter of degree, and telling
+ * Away beats too small: an empty flat is not a matter of degree, and telling
  * someone on holiday that their place is merely "too small tonight" would be
  * misleading.
- *
- * Too small then beats busy: it is the fact the group can act on
- * ("erst wenn genug absagen"), while a busy household is a scheduling detail.
  */
 function deferralReason(
   home: RankableHome,
   expectedAttendance: number | null,
-  busyHomeIds: ReadonlySet<string> | undefined,
   away: boolean,
 ): DeferralReason | null {
   if (away) {
@@ -266,13 +286,22 @@ function deferralReason(
     return 'TOO_SMALL';
   }
 
-  return busyHomeIds?.has(home.id) ? 'HOUSEHOLD_BUSY' : null;
+  return null;
 }
 
 function compare(a: HomeRanking, b: HomeRanking): number {
   // A home nobody can host at that evening goes last, whatever it is owed.
   if (a.deferred !== b.deferred) {
     return a.deferred ? 1 : -1;
+  }
+
+  // Then the homes where everyone already has their hands full. **Before**
+  // credit and not as a tiebreaker behind it: two homes rarely stand at the
+  // same credit, so behind it the rule would never do anything, and "wer hat am
+  // wenigsten zu tun" is the first criterion everywhere else too. But not as a
+  // deferral either — they could host, they are simply the second choice.
+  if (a.busy !== b.busy) {
+    return a.busy ? 1 : -1;
   }
 
   if (a.facts.credit !== b.facts.credit) {
