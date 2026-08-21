@@ -11,7 +11,7 @@
  * Die Abzeichen sind deshalb die, nach denen man beim Planen sucht: Instrument,
  * hostet gerade nicht, gerade abwesend, Einladung offen.
  */
-import { Clock, Palmtree, Shield } from 'lucide-react';
+import { Ban, Clock, Guitar, Palmtree, Shield } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, SectionTitle } from '@/components/ui/card';
@@ -49,8 +49,8 @@ export function MembersCard() {
 /**
  * Eine Zeile: Avatar, Name, Abzeichen.
  *
- * **Wie viele Abzeichen es sind, entscheidet die Form der Zeile.** Bis zu zwei
- * stehen auch auf dem Telefon neben dem Namen: sie sind zusammen schmal genug,
+ * **Wie viele Abzeichen es sind, entscheidet die Form der Zeile.** Bis zu vier
+ * stehen auch auf dem Telefon neben dem Namen: als Icons sind sie schmal genug,
  * der Name weicht per `truncate` und bleibt lesbar, und eine zweite Zeile für
  * „Admin" allein wäre ein Absatz für ein Wort. Ab dem dritten wird es eng, und
  * dann rutschen sie darunter.
@@ -62,7 +62,7 @@ export function MembersCard() {
  * muss die Namensspalte. Bei fünf Abzeichen blieb vom Namen nichts übrig.
  *
  * `shrink-0` steht deshalb jetzt nur im Zweig, in dem es stimmt: bei höchstens
- * zwei Abzeichen ist die Breite beschränkt und das Nachgeben ist die richtige
+ * vier Abzeichen ist die Breite beschränkt und das Nachgeben ist die richtige
  * Aufgabe für den Namen. Ab `sm` ist ohnehin Platz für alles nebeneinander.
  */
 function MemberRow({ person }: { person: PersonListEntry }) {
@@ -81,31 +81,41 @@ function MemberRow({ person }: { person: PersonListEntry }) {
   if (person.awayToday) {
     badges.push(
       <Badge key="away" variant="alert">
-        <Palmtree size={11} />
-        unterwegs
+        <span role="img" aria-label="unterwegs" title="unterwegs">
+          <Palmtree size={14} />
+        </span>
       </Badge>,
     );
   }
   if (person.playsInstrument) {
     badges.push(
       <Badge key="instrument" variant="music">
-        Instrument
+        <span role="img" aria-label="Instrument" title="Instrument">
+          <Guitar size={14} />
+        </span>
       </Badge>,
     );
   }
   if (!person.canHost) {
-    badges.push(<Badge key="nohost">hostet nicht</Badge>);
+    badges.push(
+      <Badge key="nohost">
+        <span role="img" aria-label="hostet nicht" title="hostet nicht">
+          <Ban size={14} />
+        </span>
+      </Badge>,
+    );
   }
   if (person.role === 'ADMIN') {
     badges.push(
       <Badge key="admin" variant="terracotta">
-        <Shield size={11} />
-        Admin
+        <span role="img" aria-label="Admin" title="Admin">
+          <Shield size={14} />
+        </span>
       </Badge>,
     );
   }
 
-  const inline = badges.length <= 2;
+  const inline = badges.length < 5;
 
   return (
     <li
