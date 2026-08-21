@@ -57,38 +57,24 @@ export class RoleSuggestionService {
     targetDate: Date,
     options: { excludeMeetingId?: string } = {},
   ): Promise<HostSuggestion[]> {
-    const [
-      households,
-      uses,
-      hostEvents,
-      topicEvents,
-      songEvents,
-      attendance,
-      calendar,
-      declined,
-    ] = await Promise.all([
-      this.findHouseholds(hauskreisId),
-      this.collectHomeUses(hauskreisId, options.excludeMeetingId),
-      this.collectEvents(hauskreisId, options.excludeMeetingId),
-      // **Ohne** `excludeMeetingId`, anders als bei den Gastgeber-Ereignissen
-      // eine Zeile darüber: Wer an diesem Abend das Thema hat oder die Musik
-      // macht, hat genau deshalb schon zu tun. Das ist der Fall, den Regel 1
-      // meint — und der einzige Grund, aus dem `HOUSEHOLD_BUSY` je zuschlägt.
-      this.collectTopicEvents(hauskreisId),
-      this.collectSongEvents(hauskreisId),
-      this.countExpectedAttendance(hauskreisId, options.excludeMeetingId),
-      this.loadAbsences(hauskreisId),
-      this.availability.findDeclined(options.excludeMeetingId),
-    ]);
+    const [households, uses, events, attendance, calendar, declined] =
+      await Promise.all([
+        this.findHouseholds(hauskreisId),
+        this.collectHomeUses(hauskreisId, options.excludeMeetingId),
+        // Die Rangfolge sah einmal **nur** Gastgeber-Dienste. Damit war Regel 1
+        // („wer hat am wenigsten zu tun, über alle Rollen") ausgerechnet beim
+        // Gastgeber außer Kraft — und `HOUSEHOLD_BUSY` konnte gar nicht
+        // auftreten, weil `findBusyHomes` in einer Liste ohne fremde Rollen
+        // nichts findet.
+        this.collectLoad(hauskreisId, AssignmentRole.HOST, {
+          meetingId: options.excludeMeetingId,
+        }),
+        this.countExpectedAttendance(hauskreisId, options.excludeMeetingId),
+        this.loadAbsences(hauskreisId),
+        this.availability.findDeclined(options.excludeMeetingId),
+      ]);
 
     const { expected: expectedAttendance, groupSize } = attendance;
-
-    // Die Rangfolge sah bisher **nur** Gastgeber-Dienste. Damit war Regel 1
-    // („wer hat am wenigsten zu tun, über alle Rollen") beim Gastgeber außer
-    // Kraft: Wer an dem Abend ohnehin das Thema vorbereitet, stand trotzdem
-    // ganz oben — und `HOUSEHOLD_BUSY` konnte gar nicht auftreten, weil
-    // `findBusyHomes` in einer Liste ohne fremde Rollen nichts findet.
-    const events = [...hostEvents, ...topicEvents, ...songEvents];
 
     // Wer für diesen Abend abgesagt hat, ist **raus** — nicht bloß weiter
     // unten. Die Zuteilung lehnt ihn ab, also wäre ein Vorschlag eine Falle.
@@ -181,38 +167,35 @@ export class RoleSuggestionService {
    * Who should prepare the next topic, best fit first.
    *
    * No location involved, so this goes straight through `rankForRole` — the
-   * same function and the same four criteria as inside a household. Proof that
-   * the shared engine carries: the only new parts are the event adapter below
-   * and the eligibility filter here (everyone active).
+   * same function, the same four criteria and, since `collectLoad`, the same
+   * events as inside a household. What is left of this method is the
+   * eligibility filter (everyone active) and the exclusion of the topic being
+   * chosen.
    */
   async suggestTopicResponsibles(
     hauskreisId: string,
     targetDate: Date,
     options: { excludeTopicId?: string; meetingId?: string } = {},
   ): Promise<RoleSuggestion[]> {
-    const [people, hostEvents, topicEvents, calendar, declined] =
-      await Promise.all([
-        this.prisma.person.findMany({
-          where: { hauskreisId, ...ANGEKOMMEN },
-          select: { id: true, name: true, photoUpdatedAt: true },
-        }),
-        this.collectEvents(hauskreisId),
-        this.collectTopicEvents(hauskreisId, {
-          excludeTopicId: options.excludeTopicId,
-          excludeMeetingId: options.meetingId,
-        }),
-        this.loadAbsences(hauskreisId),
-        this.availability.findDeclined(options.meetingId),
-      ]);
+    const [people, events, calendar, declined] = await Promise.all([
+      this.prisma.person.findMany({
+        where: { hauskreisId, ...ANGEKOMMEN },
+        select: { id: true, name: true, photoUpdatedAt: true },
+      }),
+      this.collectLoad(hauskreisId, AssignmentRole.TOPIC, {
+        meetingId: options.meetingId,
+        excludeTopicId: options.excludeTopicId,
+      }),
+      this.loadAbsences(hauskreisId),
+      this.availability.findDeclined(options.meetingId),
+    ]);
 
     return rankForRole({
       people: people.filter(
         (person) =>
           !calendar.isAway(person.id, targetDate) && !declined.has(person.id),
       ),
-      // Hosting comes along for the ride: it does not count towards "wann warst
-      // du zuletzt mit dem Thema dran", but it does count as load.
-      events: [...hostEvents, ...topicEvents],
+      events,
       role: AssignmentRole.TOPIC,
       targetDate,
     });
@@ -234,21 +217,14 @@ export class RoleSuggestionService {
     targetDate: Date,
     options: { excludeMeetingId?: string } = {},
   ): Promise<RoleSuggestion[]> {
-    const [
-      people,
-      hostEvents,
-      topicEvents,
-      testimonyEvents,
-      calendar,
-      declined,
-    ] = await Promise.all([
+    const [people, events, calendar, declined] = await Promise.all([
       this.prisma.person.findMany({
         where: { hauskreisId, ...ANGEKOMMEN },
         select: { id: true, name: true, photoUpdatedAt: true },
       }),
-      this.collectEvents(hauskreisId),
-      this.collectTopicEvents(hauskreisId),
-      this.collectTestimonyEvents(hauskreisId, options.excludeMeetingId),
+      this.collectLoad(hauskreisId, AssignmentRole.TESTIMONY, {
+        meetingId: options.excludeMeetingId,
+      }),
       this.loadAbsences(hauskreisId),
       this.availability.findDeclined(options.excludeMeetingId),
     ]);
@@ -258,7 +234,7 @@ export class RoleSuggestionService {
         (person) =>
           !calendar.isAway(person.id, targetDate) && !declined.has(person.id),
       ),
-      events: [...hostEvents, ...topicEvents, ...testimonyEvents],
+      events,
       role: AssignmentRole.TESTIMONY,
       targetDate,
     });
@@ -267,10 +243,10 @@ export class RoleSuggestionService {
   /**
    * Who should look after the music, best fit first.
    *
-   * The only difference to the topic ranking is the eligibility filter: not
-   * everyone plays an instrument (CLAUDE.md §6). Four people do, so the pool is
-   * small and the "wer war am längsten nicht dran" criterion carries most of
-   * the weight.
+   * The only difference to the topic ranking is the eligibility filter, and
+   * that is now literally true: not everyone plays an instrument (CLAUDE.md §6).
+   * Four people do, so the pool is small and the "wer war am längsten nicht
+   * dran" criterion carries most of the weight.
    *
    * Note this is a *suggestion* filter, not a rule — `setLeaders` still accepts
    * whoever the group agreed on.
@@ -280,25 +256,24 @@ export class RoleSuggestionService {
     targetDate: Date,
     options: { excludeMeetingId?: string } = {},
   ): Promise<RoleSuggestion[]> {
-    const [people, hostEvents, topicEvents, songEvents, calendar, declined] =
-      await Promise.all([
-        this.prisma.person.findMany({
-          where: { hauskreisId, ...ANGEKOMMEN, playsInstrument: true },
-          select: { id: true, name: true, photoUpdatedAt: true },
-        }),
-        this.collectEvents(hauskreisId),
-        this.collectTopicEvents(hauskreisId),
-        this.collectSongEvents(hauskreisId, options.excludeMeetingId),
-        this.loadAbsences(hauskreisId),
-        this.availability.findDeclined(options.excludeMeetingId),
-      ]);
+    const [people, events, calendar, declined] = await Promise.all([
+      this.prisma.person.findMany({
+        where: { hauskreisId, ...ANGEKOMMEN, playsInstrument: true },
+        select: { id: true, name: true, photoUpdatedAt: true },
+      }),
+      this.collectLoad(hauskreisId, AssignmentRole.SONG, {
+        meetingId: options.excludeMeetingId,
+      }),
+      this.loadAbsences(hauskreisId),
+      this.availability.findDeclined(options.excludeMeetingId),
+    ]);
 
     return rankForRole({
       people: people.filter(
         (person) =>
           !calendar.isAway(person.id, targetDate) && !declined.has(person.id),
       ),
-      events: [...hostEvents, ...topicEvents, ...songEvents],
+      events,
       role: AssignmentRole.SONG,
       targetDate,
     });
@@ -430,6 +405,54 @@ export class RoleSuggestionService {
       expected: declined === null ? null : groupSize - declined,
       groupSize,
     };
+  }
+
+  /**
+   * Alles, was als **Last** zählt — die Dienste aller vier Rollen.
+   *
+   * Für jede der vier Ranglisten dieselbe Menge, und das ist der Punkt: Regel 1
+   * lautet „wer hat am wenigsten zu tun, über alle Rollen", und sie stimmte bis
+   * hierher in keiner einzigen Liste ganz. Jede sah ihre eigene Rolle, Gastgeber
+   * und Thema — und je nachdem fehlten Musik oder Testimony. Wer an einem Abend
+   * die Musik macht, hat an dem Abend zu tun, ob man ihn nun fürs Thema oder
+   * fürs Testimony ansieht.
+   *
+   * Auf die **Fairness** wirkt das nicht: `rankForRole` zählt für „zuletzt dran"
+   * und „wie oft insgesamt" nur die eigene Rolle. Die fremden Dienste schlagen
+   * ausschließlich in `upcomingCommitments` durch, also in der Auslastung.
+   *
+   * **`meetingId` gilt nur für die Rolle, die gerade eingeteilt wird.** Was man
+   * in diesem Moment überdenkt, darf den Eingetragenen nicht nach unten drücken;
+   * die anderen drei behalten den Abend, denn dort steht er ja wirklich. Ein
+   * Baustein, der an dem Abend gar nicht an ist, liefert von sich aus keine
+   * Zeile — deshalb braucht es dafür keine Abfrage.
+   */
+  private async collectLoad(
+    hauskreisId: string,
+    role: AssignmentRole,
+    options: { meetingId?: string; excludeTopicId?: string } = {},
+  ): Promise<RoleAssignmentEvent[]> {
+    /** Der Abend fällt genau dort heraus, wo er gerade bearbeitet wird. */
+    const bearbeitet = (kandidat: AssignmentRole) =>
+      kandidat === role ? options.meetingId : undefined;
+
+    const [host, topic, song, testimony] = await Promise.all([
+      this.collectEvents(hauskreisId, bearbeitet(AssignmentRole.HOST)),
+      this.collectTopicEvents(hauskreisId, {
+        excludeMeetingId: bearbeitet(AssignmentRole.TOPIC),
+        // Das ganze Thema, nicht nur dieser Abend: Ein Thema über drei Abende
+        // ist **ein** Dienst, und das ist der, den man gerade wählt.
+        excludeTopicId:
+          role === AssignmentRole.TOPIC ? options.excludeTopicId : undefined,
+      }),
+      this.collectSongEvents(hauskreisId, bearbeitet(AssignmentRole.SONG)),
+      this.collectTestimonyEvents(
+        hauskreisId,
+        bearbeitet(AssignmentRole.TESTIMONY),
+      ),
+    ]);
+
+    return [...host, ...topic, ...song, ...testimony];
   }
 
   /**

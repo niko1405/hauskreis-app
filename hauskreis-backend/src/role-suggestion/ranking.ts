@@ -43,7 +43,10 @@ function daysBetween(earlier: Date, later: Date): number {
  *    target date onwards, counted across *all* roles. Someone who is down for
  *    the topic that evening should not also be asked to host; that case is
  *    flagged as `thisEvening` so the UI can say so instead of printing a date
- *    the reader has to compare himself.
+ *    the reader has to compare himself. "All roles" was long an aspiration
+ *    rather than a fact — each list passed in its own role plus whatever the
+ *    author happened to think of; `RoleSuggestionService.collectLoad` now hands
+ *    every list the same four.
  * 2. **Wer war am längsten nicht dran** — longest since they last had *this*
  *    role; never had it wins outright. This is the fairness criterion.
  * 3. **Wer war insgesamt am seltensten dran** — breaks ties between two people

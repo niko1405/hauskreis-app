@@ -1605,20 +1605,37 @@ zwei Stufen und liefert beides zusammen:
 Haushalt, also teilen sich zwei Bewohner ein Gewicht statt je eines zu bekommen.
 Jeder von ihnen hostet dadurch etwa halb so oft wie jemand, der allein wohnt.
 
+### Alle vier Rollen zählen als Last, in jeder Liste
+
+Regel 1 lautet „wer hat am wenigsten zu tun, **über alle Rollen**" — und stimmte
+in keiner der vier Ranglisten ganz. Jede bekam ihre eigene Rolle, Gastgeber und
+Thema, und je nachdem fehlten Musik oder Testimony. Beim **Gastgeber** war es am
+schlimmsten: Er sah ausschließlich Gastgeber-Dienste. Damit stand, wer an dem
+Abend ohnehin das Thema vorbereitet, trotzdem ganz oben — und `HOUSEHOLD_BUSY`
+konnte gar nicht auftreten, weil `findBusyHomes` in derselben Liste nach
+fremden Diensten am Zieltag sucht und nie welche fand. Der Ablehnungsgrund war
+seit jeher toter Code samt seines Labels in der Oberfläche.
+
+`collectLoad(hauskreisId, role, …)` gibt seither jeder Liste dieselben vier.
+Auf die **Fairness** wirkt das nicht: `rankForRole` zählt für „zuletzt dran" und
+„wie oft insgesamt" nur die eigene Rolle, die fremden Dienste schlagen
+ausschließlich in `upcomingCommitments` durch.
+
 **Was gerade eingeteilt wird, zählt nicht als Last** — sonst drückte das
 Aufklappen des Pickers den bereits Eingetragenen nach unten, wegen genau der
-Zuteilung, die man gerade überdenkt. Gastgeber, Musik und Testimony hielten das
-über `excludeMeetingId` längst ein; beim **Thema** griff es nur, solange schon
-eine Einheit gewählt war (`excludeTopicId`), und ohne eine rutschte der bereits
-Zuständige in seiner eigenen Liste nach unten.
+Zuteilung, die man gerade überdenkt. Deshalb gilt `meetingId` in `collectLoad`
+**nur für die Rolle, die gerade eingeteilt wird**; die anderen drei behalten den
+Abend, denn dort steht die Person ja wirklich. Gastgeber, Musik und Testimony
+hielten das über `excludeMeetingId` längst ein; beim **Thema** griff es nur,
+solange schon eine Einheit gewählt war (`excludeTopicId`) — im häufigsten Fall
+also nicht.
 
-Umgekehrt zählen **fremde** Rollen am selben Abend sehr wohl, und die
-Gastgeber-Rangfolge sah sie bis zuletzt gar nicht: Sie bekam nur
-Gastgeber-Ereignisse. Damit war Regel 1 („wer hat am wenigsten zu tun, über alle
-Rollen") ausgerechnet dort außer Kraft, wo `HOUSEHOLD_BUSY` hängt — `findBusyHomes`
-sucht in derselben Liste nach Diensten am Zieltag und fand nie welche, der
-Ablehnungsgrund konnte also nicht auftreten. Jetzt gehen Themen- und
-Musik-Dienste mit hinein.
+Ein Baustein, der an einem Abend gar nicht an ist, liefert von sich aus keine
+Zeile; eine Abfrage „ist die Rolle dort überhaupt aktiv" braucht es also nicht.
+Geprüft wird das Ganze in
+[`load-across-roles.spec.ts`](src/role-suggestion/load-across-roles.spec.ts),
+über den Dienst und nicht über `rankForRole`: Die reine Funktion war nie das
+Problem, das Füttern war es.
 
 Orte **ohne** Host (Schlosspark) sind gar nicht Teil davon. Sie schulden der
 Gruppe nichts, sondern sind eine Wetterfrage — und werden schlicht aus

@@ -241,8 +241,8 @@ unter „Zuständigkeiten" auf das Personen-Symbol.
 Was du dort siehst, ist eine **Rangliste, von oben nach unten**: Die oberste
 Person passt am ehesten. Sortiert wird nach
 
-1. wer gerade am wenigsten zu tun hat (über alle Rollen der nächsten acht
-   Wochen),
+1. wer gerade am wenigsten zu tun hat — **über alle vier Rollen** der nächsten
+   acht Wochen, nicht nur über die, um die es gerade geht,
 2. wer am längsten nicht mehr genau diese Rolle hatte,
 3. wer sie insgesamt am seltensten hatte.
 
