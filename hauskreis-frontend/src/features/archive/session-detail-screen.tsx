@@ -401,6 +401,16 @@ function Crew({
   const ids = leute.map((person) => person.id);
   const darf = editing && session.mayEdit;
 
+  /**
+   * Bei einer einzelnen Einheit liegt der Platz dessen fest, der sie angelegt
+   * hat. Diese Liste ist dort alles, was man sieht — wer sich herausnahm,
+   * verschwand daraus und behielt trotzdem jedes Recht. Bei einem Thema geht es
+   * weiterhin: Da gibt man einen Abend ab und behält das Thema.
+   */
+  const festerPlatz = session.topic.standalone
+    ? session.topic.ownerPersonId
+    : null;
+
   const kommenderAbend =
     session.meeting && session.meeting.status !== 'CANCELLED' && !session.held
       ? session.meeting
@@ -469,10 +479,11 @@ function Crew({
             <span className="flex-1 text-sm font-medium text-stone-700">
               {person.name}
             </span>
-            {/* Der letzte Platz bleibt besetzt. Ein sichtbarer Knopf, der nur
-                eine Fehlermeldung auslöst, wäre eine Einladung in eine
-                Sackgasse — deshalb steht darunter, warum er fehlt. */}
-            {leute.length > 1 && (
+            {/* Der letzte Platz bleibt besetzt, und bei einer Hülle auch der
+                des Erstellers. Ein sichtbarer Knopf, der nur eine
+                Fehlermeldung auslöst, wäre eine Einladung in eine Sackgasse —
+                deshalb steht darunter, warum er fehlt. */}
+            {leute.length > 1 && person.id !== festerPlatz && (
               <IconButton
                 label={`${person.name} herausnehmen`}
                 disabled={setCrew.isPending}
@@ -488,6 +499,13 @@ function Crew({
           <p className="text-[11px] leading-relaxed text-stone-400">
             Eine Einheit braucht jemanden, der sie vorbereitet. Nimm erst jemand
             anderen dazu.
+          </p>
+        )}
+
+        {leute.length > 1 && festerPlatz !== null && (
+          <p className="text-[11px] leading-relaxed text-stone-400">
+            Wer die Einheit angelegt hat, bleibt dabei — es gibt hier kein Thema
+            darüber, an dem er sonst noch stünde.
           </p>
         )}
 
@@ -516,7 +534,11 @@ function Crew({
       {waehlen && (
         <PeoplePickerSheet
           title="Wer bereitet mit vor?"
-          subtitle="Sie darf danach diese Einheit ändern — sonst nichts am Thema."
+          subtitle={
+            session.topic.standalone
+              ? 'Sie darf danach alles an dieser Einheit — ein Thema darüber, von dem sie ausgeschlossen wäre, gibt es nicht.'
+              : 'Sie darf danach diese Einheit ändern — sonst nichts am Thema.'
+          }
           excludeIds={ids}
           saving={setCrew.isPending}
           onPick={dazu}

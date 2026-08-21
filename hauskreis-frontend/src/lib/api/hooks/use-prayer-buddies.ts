@@ -85,3 +85,16 @@ export function usePlanPrayerBuddyRounds() {
     { invalidateKeys: [keys.prayerBuddies.all, ...derived] },
   );
 }
+
+/**
+ * Nur Admin. Zieht die laufende Runde auf die aktuelle Besetzung nach — ohne
+ * neu zu würfeln. Nachts läuft dieselbe Prüfung ohnehin.
+ */
+export function useRepairPrayerBuddyRound() {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useApiMutation(
+    () => prayerBuddiesApi.repairPrayerBuddyRound(hauskreisId),
+    { invalidateKeys: [keys.prayerBuddies.all, ...derived] },
+  );
+}

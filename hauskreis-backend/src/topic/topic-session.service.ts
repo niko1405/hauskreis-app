@@ -540,28 +540,48 @@ export class TopicSessionService {
       tx,
       hauskreisId,
       meetingId,
-      dto.title ?? null,
+      dto,
       viewer.personId,
       mitwirkende,
     );
   }
 
-  /** A) Ein neues Thema. Wer wählt, wird Owner. */
+  /**
+   * A) Ein neues Thema samt seiner ersten Einheit. Wer wählt, wird Owner.
+   *
+   * **Zwei Ebenen, zwei Titel.** `topicTitle` spannt den Bogen, `title` gehört
+   * diesem Abend. Bis eben stand hier nur `dto.title`, und zwar als Titel des
+   * *Themas* — für die Einheit blieb dann nichts übrig, und Actionstep und
+   * Zusammenfassung fielen stillschweigend unter den Tisch. Ein frisch
+   * gewähltes Thema begann damit immer mit einem leeren Abend, obwohl das
+   * Formular danach gefragt hatte.
+   */
   private async createNew(
     tx: Prisma.TransactionClient,
     hauskreisId: string,
     meetingId: string,
-    title: string | null,
+    dto: ChooseTopicSessionDto,
     ownerPersonId: string,
     mitwirkende: string[],
   ): Promise<string> {
     const topic = await tx.topic.create({
-      data: { hauskreisId, title, ownerPersonId },
+      data: {
+        hauskreisId,
+        title: dto.topicTitle ?? null,
+        summaryText: dto.topicSummaryText ?? null,
+        ownerPersonId,
+      },
       select: { id: true },
     });
 
     const session = await tx.topicSession.create({
-      data: { topicId: topic.id, meetingId },
+      data: {
+        topicId: topic.id,
+        meetingId,
+        title: dto.title ?? null,
+        actionstepText: dto.actionstepText ?? null,
+        summaryText: dto.summaryText ?? null,
+      },
       select: { id: true },
     });
 
@@ -576,9 +596,9 @@ export class TopicSessionService {
    * weil daran Owner und Mitarbeitende hängen (siehe `Topic.standalone`); zu
    * sehen bekommt es niemand, es hat nicht einmal einen Titel.
    *
-   * Der Titel der **Einheit** ist hier optional, anders als beim Anlegen im
-   * Archiv: Dort hat sie nichts als ihn, hier steht sie unter ihrem Termin und
-   * ist auch namenlos auffindbar.
+   * Der Titel ist Pflicht — wie auf den beiden anderen Anlege-Wegen. Er war
+   * hier einmal optional („sie steht ja unter ihrem Termin"), und das Ergebnis
+   * war „Einheit ohne Titel" in jeder Liste, in der sie später auftauchte.
    */
   private async createStandalone(
     tx: Prisma.TransactionClient,
@@ -1158,6 +1178,7 @@ export class TopicSessionService {
         meetingId: true,
         meeting: { select: { date: true, status: true } },
         topic: { select: topicMembershipSelect },
+        responsibles: { select: { personId: true } },
       },
     });
 
@@ -1171,7 +1192,13 @@ export class TopicSessionService {
       !mayDeleteSession({
         isAdmin: viewer.isAdmin,
         personId: viewer.personId,
-        topic: membershipOf(session.topic),
+        // Die Crew mit: Bei einer Hülle ist sie die Mitwirkenden-Ebene, und
+        // eine noch nicht gehaltene Einheit darf löschen, wer am Thema
+        // mitarbeitet.
+        topic: membershipOf(
+          session.topic,
+          session.responsibles.map((row) => row.personId),
+        ),
         standalone: session.topic.standalone,
         held,
       })
@@ -1228,6 +1255,13 @@ export class TopicSessionService {
    * mehr vor, steht aber vielleicht trotzdem vorne — und jemanden still aus
    * einem Abend zu nehmen, an dem er eingeplant ist, wäre die überraschendere
    * der beiden Möglichkeiten.
+   *
+   * **Bei einer Hülle bleibt der Owner stehen.** Dort ist diese Liste alles,
+   * was man sieht — und wer sich herausnahm, verschwand daraus, behielt aber
+   * über `topic.owner_person_id` weiter jedes Recht. Zwei Aussagen über
+   * dieselbe Person, von denen die sichtbare falsch war. Bei einem richtigen
+   * Thema bleibt das Ausscheiden erlaubt: Da gibt man einen Abend ab und behält
+   * das Thema.
    */
   async setSessionResponsibles(
     hauskreisId: string,
@@ -1262,13 +1296,25 @@ export class TopicSessionService {
       );
     }
 
+    const owner = session.topic.ownerPersonId;
+
+    if (
+      session.topic.standalone &&
+      owner !== null &&
+      !dto.personIds.includes(owner)
+    ) {
+      throw new BadRequestException(
+        'Wer die Einheit angelegt hat, bleibt dabei — herausnehmen kannst du nur die anderen.',
+      );
+    }
+
     const before = session.responsibles.map((row) => row.personId);
 
     if (
       !mayEditSession({
         isAdmin: viewer.isAdmin,
         personId: viewer.personId,
-        topic: membershipOf(session.topic),
+        topic: membershipOf(session.topic, before),
         responsibleIds: before,
       })
     ) {

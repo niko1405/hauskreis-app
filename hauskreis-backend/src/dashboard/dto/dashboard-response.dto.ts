@@ -119,7 +119,12 @@ export const homeScreenSchema = z.object({
   prayerBuddies: z
     .object({
       until: isoDateOut,
-      withNames: z.array(z.string()),
+      /// Die ganze Gruppe, **du eingeschlossen**, und die Reihenfolge **ist der
+      /// Kreis**: Wer hier steht, betet für den Nächsten, der Letzte für den
+      /// Ersten. Dieselbe Zusage wie in `prayerBuddyAssignmentSchema` — hier
+      /// standen vorher nur die Namen der anderen, und damit ließ sich die
+      /// Richtung auf „Heute" nicht anzeigen.
+      members: z.array(personRefSchema),
     })
     .nullable(),
 });

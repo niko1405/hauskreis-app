@@ -1320,6 +1320,24 @@ Regel dafür steht in [`topic-visibility.ts`](src/topic/topic-visibility.ts). Ei
 Thema ohne Owner und ohne Mitarbeitende darf jede:r ändern, sonst wäre es für
 immer eingefroren.
 
+**Bei einer Hülle zählt die Crew der Einheit als Mitwirkende.** Eine einzelne
+Einheit hat kein Thema, von dem jemand ausgeschlossen sein könnte — die
+Unterscheidung, für die `topic_collaborator` gebaut wurde („hilft einmal aus"
+gegen „arbeitet am ganzen Thema"), hat dort keinen Gegenstand. Die Regel steht
+an genau einer Stelle, in `membershipOf`
+([`topic-shape.ts`](src/topic/topic-shape.ts)), und ist **abgeleitet statt
+gespeichert**: So bedeutet eine Zeile in `topic_collaborator` weiterhin genau
+eine Sache, und es gibt keine zweite Stelle, an der dieselbe Aussage steht und
+auseinanderlaufen kann. Die Aufrufer reichen die Crew mit, die sie ohnehin
+geladen haben; wer ohne sie fragt, fragt nach dem Thema allein.
+
+Dazu gehört die Gegenprobe in `setSessionResponsibles`: **Der Owner einer Hülle
+lässt sich nicht aus ihrer Crew nehmen.** Diese Liste ist dort alles, was man
+sieht — wer sich herausnahm, verschwand daraus und behielt über
+`owner_person_id` trotzdem jedes Recht. Bei einem Thema über mehrere Abende
+bleibt das Ausscheiden erlaubt: Da gibt man einen Abend ab und behält das
+Thema.
+
 Nicht geprüft wird die **Zuteilung** selbst — wer vorbereitet, wer hostet, wer
 Musik macht, bleibt eine Frage an die Gruppe und läuft weiter über das
 Vorschlagssystem.
@@ -1802,20 +1820,38 @@ zählt `NULL` als verschieden, unfertige Einheiten stören sich also nicht.
 | `POST`   | `…/meetings/:id/topic-session`      | **nur zugeteilt**              |
 | `DELETE` | `…/meetings/:id/topic-session`      | dito, nur vor dem Abend        |
 
-`POST …/topic-session` nimmt einen von drei Wegen:
+`POST …/topic-session` nimmt einen von fünf Wegen:
 
-- `{ "mode": "new", "title": "…" }` — neues Thema, die handelnde Person wird
-  sein **Owner**.
-- `{ "mode": "existing", "topicId": "…" }` — ein eigenes Thema um einen weiteren
-  Abend erweitern. `title`, `actionstepText` und `summaryText` dürfen gleich
-  mitkommen.
+- `{ "mode": "new", "topicTitle": "…", "title": "…" }` — neues Thema samt erstem
+  Abend, die handelnde Person wird sein **Owner**. `topicSummaryText` gehört zum
+  Thema, `actionstepText` und `summaryText` zur Einheit.
+- `{ "mode": "single", "title": "…" }` — eine einzelne Einheit ohne Thema
+  darüber; darunter entsteht trotzdem eine Hülle, die Owner und Mitwirkende
+  trägt.
+- `{ "mode": "existing", "topicId": "…", "title": "…" }` — ein eigenes Thema um
+  einen weiteren Abend erweitern. `actionstepText` und `summaryText` dürfen
+  gleich mitkommen.
+- `{ "mode": "promote", "sessionId": "…", "topicTitle": "…", "title": "…" }` —
+  aus einer einzelnen Einheit ein Thema machen; dieser Abend wird die zweite.
 - `{ "mode": "resume", "sessionId": "…" }` — eine eigene **offene** Einheit
   aufnehmen; ihr Inhalt bleibt vollständig erhalten. Hängt sie an einem anderen
   _kommenden_ Abend, zieht sie um.
 
+**Zwei Ebenen, zwei Titel.** `topicTitle` spannt den Bogen, `title` gehört dem
+Abend. Bei `mode: "new"` war `title` einmal der Titel des _Themas_ — für die
+Einheit blieb dann nichts übrig, und `actionstepText`/`summaryText` fielen
+stillschweigend unter den Tisch: Ein frisch gewähltes Thema begann immer mit
+einem leeren Abend, obwohl das Formular danach gefragt hatte.
+
+**`title` ist Pflicht, außer bei `resume`** — dort zieht eine bestehende Einheit
+um, und die hat ihren Titel schon. Die beiden anderen Anlege-Wege
+(`createTopicSessionSchema`) verlangen ihn längst; `choose` war der Ausreißer,
+und in jeder Liste stand danach „Einheit ohne Titel".
+
 **Owner wird, wer zuerst tatsächlich wählt**, nicht wer zuerst zugeteilt wurde.
-Alle, die in diesem Moment ebenfalls für den Abend zugeteilt sind, kommen als
-Verantwortliche der Einheit mit und werden damit Mitarbeitende des Themas.
+An die Einheit kommt dabei **nur er**; wen er dazunimmt, entscheidet er auf ihrer
+eigenen Seite (`PUT …/topic-sessions/:id/responsibles`). Für den Abend zugeteilt
+zu sein gibt kein Schreibrecht.
 
 **Wählen darf nur, wer an dem Abend zugeteilt ist.** Kein
 Admin-Freifahrtschein, und „niemand zugeteilt heißt jede:r darf" gilt hier auch
@@ -2500,6 +2536,7 @@ erfundene Geschichte.
 | `PUT`   | `…/prayer-buddies/config`  | `admin` (`If-Match`)            |
 | `POST`  | `…/prayer-buddies/rotate`  | `admin`                         |
 | `POST`  | `…/prayer-buddies/plan`    | `admin`                         |
+| `POST`  | `…/prayer-buddies/repair`  | `admin`                         |
 
 ### `scope` bestimmt Ausschnitt und Richtung
 
@@ -2561,18 +2598,45 @@ zwar für die zwei Zeiträume unterschiedlich.
 
 **Die laufende Runde wird repariert, nicht neu gewürfelt** (`repairGroups` in
 [`grouping.ts`](src/prayer-buddy/grouping.ts)). Sie läuft schon; alle neu zu
-verteilen nähme jedem etwas weg, um das Problem von zweien zu lösen. Drei
+verteilen nähme jedem etwas weg, um das Problem von zweien zu lösen. Vier
 Regeln, und die Reihenfolge trägt:
 
+0. Was über `MAX_GROUP_SIZE` steht, fällt herunter — und zählt danach als
+   Neuzugang.
 1. Wer nicht mehr dabei ist, fällt heraus.
-2. Wer neu dabei ist, kommt in die **kleinste** Gruppe.
-3. Wer danach noch allein dasteht, zieht in die kleinste andere.
+2. Wer neu dabei ist, kommt in die **kleinste Gruppe mit Platz**. Ist keine
+   mehr frei, macht er eine neue auf.
+3. Wer danach noch allein dasteht, zieht in die kleinste andere mit Platz. Gibt
+   es keine, kommt umgekehrt der zuletzt Dazugekommene aus der größten Gruppe zu
+   ihm: aus 3+1 wird 2+2.
 
 Zuzug **vor** Auflösung, weil das genau den häufigsten Fall auffängt: geht einer
 und kommt einer, wird aus zwei halben Problemen eine ganze Zweiergruppe, statt
 dass erst jemand umzieht und der Neuzugang danach eine Dreier erzwingt. Bleibt
 am Ende nur eine Person übrig, endet die Runde still — eine Gruppe aus einem
 Menschen wäre eine Behauptung, keine Zuteilung.
+
+Getrimmt wird **hinten**, in Regel 0 wie in Regel 3: Neuzugänge werden hinten
+angehängt, die Reihenfolge trägt also die Information „zuletzt dazugekommen",
+und die ursprüngliche Besetzung bleibt zusammen.
+
+**Regel 0 kam nach den anderen dreien**, und der Grund gehört dazu: Die
+Obergrenze galt zuerst nur fürs Hinzufügen. Eine Gruppe, die schon zu groß
+_war_ — entstanden, bevor es die Grenze gab —, wurde dadurch gerade
+festgeschrieben: Beim Nachrücken passte niemand mehr hinein, also sah sie nie
+wieder jemand an. Eine Regel, die nur nach vorn gilt, macht aus einem Fehler
+einen Bestand.
+
+Ausgelöst wird die Prüfung an drei Stellen: bei jeder Änderung an der
+Teilnehmerliste (siehe unten), im **nächtlichen Lauf** (`handleCron`) und über
+`POST …/prayer-buddies/repair` — den Knopf „Gebetsrunde prüfen" in der
+Verwaltung. Ist nichts zu tun, wird keine Gruppe berührt und niemand
+benachrichtigt; die Antwort lautet dann `{ "repaired": 0, "notified": 0 }`.
+
+Ausdrücklich **nicht** `rotate`: Das schließt die laufende Runde und zieht die
+nächste vor, gibt also allen neue Buddys, um das Problem von zweien zu lösen.
+Und die geplanten Runden bleiben stehen — sie kommen aus `buildGroups` und
+halten die Grenze längst ein.
 
 **Künftige Runden werden verworfen und neu geplant.** Sie sind gegen eine Gruppe
 gebaut, die es nicht mehr gibt. Verworfen heißt hier **gelöscht** — anders als
@@ -2717,6 +2781,14 @@ nächster Termin mit Ort, Host, Thema und eigenem Teilnahmestatus, eigene Rollen
 der nächsten acht Wochen, offener Actionstep, aktuelle Gebetsbuddys. Auf dem
 Handy sind die Round Trips der Preis. Neue Logik entsteht dabei nicht — der
 Actionstep folgt derselben Regel wie der Reminder.
+
+`prayerBuddies` liefert die **ganze Gruppe in Kreis-Reihenfolge**, den
+Betrachter eingeschlossen (`{ until, members }`). Vorher standen dort nur die
+Namen der anderen, und damit ließ sich die Richtung — „du betest für X, für dich
+betet Y" — auf dem Startbildschirm gar nicht anzeigen: Ohne die eigene Position
+im Kreis gibt es kein Vorher und kein Nachher. Gerechnet wird sie im Frontend
+mit derselben Funktion wie auf dem Gebet-Bildschirm (`circleOf`); zwei Kopien
+derselben Rechnung sagen irgendwann zwei verschiedene Dinge.
 
 ### Der nächste Termin trägt alle drei Rollen
 
@@ -3171,6 +3243,7 @@ beide aus derselben Variable ab.
 | `PUT`                   | `…/prayer-buddies/config`                    | `admin`                                      |
 | `POST`                  | `…/prayer-buddies/rotate`                    | `admin` (nächste Runde vorziehen)            |
 | `POST`                  | `…/prayer-buddies/plan`                      | `admin` (Vorlauf auf fünf auffüllen)         |
+| `POST`                  | `…/prayer-buddies/repair`                    | `admin` (laufende Runde nachziehen)          |
 | `GET`                   | `…/absences?scope=upcoming\|all`             | eingeloggt (paginiert)                       |
 | `GET`                   | `…/absences/:id`                             | eingeloggt                                   |
 | `POST`                  | `…/absences`                                 | eigene; fremde nur `admin`                   |

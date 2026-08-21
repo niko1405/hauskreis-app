@@ -16,6 +16,7 @@ import {
   useGenerateMeetings,
   useMeetingSchedule,
   usePlanPrayerBuddyRounds,
+  useRepairPrayerBuddyRound,
   usePrayerBuddyConfig,
   usePurgeAbandonedLocations,
   useRotatePrayerBuddies,
@@ -291,6 +292,7 @@ function JobsCard() {
   // von Hook-Aufrufen muss über Renderdurchläufe hinweg dieselbe sein.
   const generate = useGenerateMeetings();
   const planRounds = usePlanPrayerBuddyRounds();
+  const repairRound = useRepairPrayerBuddyRound();
   const syncAbsences = useSyncAbsences();
   const purgeLocations = usePurgeAbandonedLocations();
   const hostReminders = useRunHostReminders();
@@ -324,6 +326,21 @@ function JobsCard() {
               r.created > 0
                 ? `${r.created} Runde(n) ergänzt.`
                 : 'Der Vorlauf stand schon voll.',
+            ),
+          onError: fail,
+        }),
+    },
+    {
+      label: 'Gebetsrunde prüfen',
+      hint: 'Zieht die laufende Runde nach: niemand steht draußen, niemand bleibt allein, keine Gruppe größer als drei. Wird nicht neu gewürfelt.',
+      pending: repairRound.isPending,
+      run: () =>
+        repairRound.mutate(undefined, {
+          onSuccess: (r) =>
+            toast.success(
+              r.repaired > 0
+                ? `${r.repaired} Gruppe(n) neu aufgeteilt, ${r.notified} benachrichtigt.`
+                : 'Alles in Ordnung — nichts zu tun.',
             ),
           onError: fail,
         }),

@@ -183,9 +183,14 @@ describe('DashboardService.build', () => {
       doneCount: 0,
       peopleCount: 9,
     });
+    // Die ganze Gruppe, Niko eingeschlossen, in Kreis-Reihenfolge: Erst
+    // daraus liest die Karte ab, für wen er betet und wer für ihn.
     expect(home.prayerBuddies).toEqual({
       until: '2026-08-11',
-      withNames: ['Antonia'],
+      members: [
+        { id: 'niko', name: 'Niko' },
+        { id: 'antonia', name: 'Antonia' },
+      ],
     });
   });
 

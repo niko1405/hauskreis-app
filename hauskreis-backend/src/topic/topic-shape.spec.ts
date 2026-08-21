@@ -6,7 +6,7 @@
  * einsortieren ließen, und die Zahl spränge, sobald jemand nebenher einen
  * anfängt — für alle anderen sichtbar, obwohl sie den Entwurf gar nicht sehen.
  */
-import { sessionPosition, shapeSession } from './topic-shape';
+import { membershipOf, sessionPosition, shapeSession } from './topic-shape';
 
 const abend = (id: string, tag: string) => ({
   id,
@@ -119,5 +119,56 @@ describe('shapeSession — mayUnname', () => {
   /** Wo die Zahl fehlt, lieber ein Knopf zu wenig als einer in den 400er. */
   it('nicht, wo die Geschwisterzahl gar nicht mitkommt', () => {
     expect(darf(OWNER, undefined)).toBe(false);
+  });
+});
+
+/** Ein Thema, so weit `membershipOf` es braucht. */
+const thema = (standalone: boolean) => ({
+  id: 't1',
+  title: null,
+  status: 'RUNNING',
+  standalone,
+  ownerPersonId: 'p1',
+  collaborators: [] as { personId: string }[],
+});
+
+/**
+ * Bei einer Hülle ist die Crew der Einheit die Mitwirkenden-Ebene.
+ *
+ * Eine Hülle *ist* ihre eine Einheit — die Unterscheidung, für die
+ * `topic_collaborator` gebaut wurde („hilft einmal aus" gegen „arbeitet am
+ * ganzen Thema"), hat dort keinen Gegenstand. Bei einem richtigen Thema bleibt
+ * sie bestehen, und das ist der Punkt: Wer einmal aushilft, bekommt keine
+ * Hoheit über etwas, das über Monate läuft.
+ */
+describe('membershipOf', () => {
+  it('nimmt bei einer Hülle die Crew hinein', () => {
+    expect(membershipOf(thema(true), ['p1', 'p2']).collaboratorIds).toEqual([
+      'p1',
+      'p2',
+    ]);
+  });
+
+  it('bei einem richtigen Thema nicht', () => {
+    expect(membershipOf(thema(false), ['p1', 'p2']).collaboratorIds).toEqual(
+      [],
+    );
+  });
+
+  it('zählt niemanden doppelt', () => {
+    const mit = { ...thema(true), collaborators: [{ personId: 'p2' }] };
+
+    expect(membershipOf(mit, ['p2', 'p3']).collaboratorIds).toEqual([
+      'p2',
+      'p3',
+    ]);
+  });
+
+  /**
+   * Ohne Crew gefragt heißt: nach dem Thema allein gefragt. Die thema-weiten
+   * Operationen tun das, und für eine Hülle sind sie ohnehin Owner-gebunden.
+   */
+  it('bleibt ohne Crew beim Owner', () => {
+    expect(membershipOf(thema(true)).collaboratorIds).toEqual([]);
   });
 });

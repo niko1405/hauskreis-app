@@ -361,6 +361,7 @@ describe('die Hülle löschen', () => {
           collaborators: [],
           sessions: [{ id: 's-alt', meeting: null }],
         },
+        responsibles: [{ personId: 'p1' }],
       },
     });
 
@@ -388,6 +389,7 @@ describe('die Hülle löschen', () => {
           collaborators: [],
           sessions: [{ id: 's-alt', meeting: null }],
         },
+        responsibles: [{ personId: 'p1' }],
       },
     });
 

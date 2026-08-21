@@ -18,6 +18,12 @@ export const topicRefSchema = z.object({
   /// Datensatz existiert trotzdem — er trägt Owner und Mitarbeitende (siehe
   /// `Topic.standalone` im Schema). Wer ihn anzeigt, zeigt ihn nicht an.
   standalone: z.boolean(),
+  /// Wer das Thema angefangen hat — nur die Id, denn angezeigt wird er als
+  /// Teil der Crew. Gebraucht für die eine Stelle, an der sein Platz
+  /// festliegt: Bei einer Hülle lässt er sich nicht aus der Vorbereitung
+  /// nehmen, und einen Knopf zu zeigen, der mit 400 antwortet, wäre eine
+  /// Einladung ins Leere.
+  ownerPersonId: z.uuid().nullable(),
 });
 
 /**
@@ -155,8 +161,14 @@ export const topicResponseSchema = z.object({
   /// Wer das Thema angefangen hat. `null` bei Themen von vor diesem Modell und
   /// bei solchen, deren Owner den Hauskreis verlassen hat.
   owner: personRefSchema.nullable(),
-  /// Wer sonst noch daran arbeiten darf. Kommt automatisch dazu, wer eine
-  /// Einheit hält; entfernen darf nur der Owner.
+  /// Wer sonst noch daran arbeiten darf: jede Einheit ändern, neue anlegen.
+  /// Eintragen und entfernen darf nur der Owner — eine Einheit zu halten reicht
+  /// dafür nicht.
+  ///
+  /// Bei einer **Hülle** steht hier trotzdem nichts, obwohl die Crew der
+  /// Einheit dort dieselben Rechte hat: Diese Liste zeigt die eingetragenen
+  /// Zeilen, und die Hülle-Regel ist abgeleitet. Wer die Leute einer einzelnen
+  /// Einheit anzeigen will, liest `sessions[0].responsibles`.
   collaborators: z.array(z.object({ person: personRefSchema })),
   /// Chronologisch. Unfertige Einheiten stehen nur für Owner und Mitarbeitende
   /// darin — für alle anderen gibt es sie nicht.

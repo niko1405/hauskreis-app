@@ -17,7 +17,8 @@ headers {
 body:json {
   {
     "mode": "new",
-    "title": "Bruno-Testthema"
+    "topicTitle": "Bruno-Testthema",
+    "title": "Bruno-Testabend"
   }
 }
 
@@ -40,27 +41,40 @@ docs {
   Der **zweite** Schritt, und der einzige Weg, ein Thema anzulegen — ein
   `POST …/topics` gibt es nicht. Ein Thema ohne Anlass wäre ein leerer Datensatz.
 
-  Drei Wege:
+  Fünf Wege:
 
-  - `{ "mode": "new", "title": "…" }` — neues Thema, du wirst sein **Owner**.
-  - `{ "mode": "existing", "topicId": "…" }` — ein eigenes Thema um einen
-    weiteren Abend erweitern. `title`, `actionstepText` und `summaryText` dürfen
+  - `{ "mode": "new", "topicTitle": "…", "title": "…" }` — neues Thema samt
+    erstem Abend, du wirst sein **Owner**. Zwei Ebenen, zwei Titel:
+    `topicTitle` spannt den Bogen, `title` gehört diesem Abend. `topicSummaryText`
+    darf dazu, `actionstepText` und `summaryText` gehören der Einheit.
+  - `{ "mode": "single", "title": "…" }` — eine einzelne Einheit ohne Thema
+    darüber. Darunter liegt trotzdem eine Hülle, die Owner und Mitwirkende trägt.
+  - `{ "mode": "existing", "topicId": "…", "title": "…" }` — ein eigenes Thema um
+    einen weiteren Abend erweitern. `actionstepText` und `summaryText` dürfen
     gleich mitkommen; das Anlege-Sheet fragt sie ohnehin ab, und sie hinterher
     nachzuschieben ließe den Abend kurz mit einer leeren Einheit dastehen.
+  - `{ "mode": "promote", "sessionId": "…", "topicTitle": "…", "title": "…" }` —
+    aus einer einzelnen Einheit ein Thema machen; dieser Abend wird die zweite.
   - `{ "mode": "resume", "sessionId": "…" }` — eine eigene **offene** Einheit
     aufnehmen; ihr Inhalt bleibt vollständig erhalten. Hängt sie an einem anderen
     *kommenden* Abend, zieht sie um: jener fällt auf „zugeteilt, aber noch nichts
     gewählt" zurück und behält seine Zuteilung. Von einem vergangenen Abend geht
     es nicht — `400`.
 
+  **`title` ist überall Pflicht außer bei `resume`** — dort zieht eine bestehende
+  Einheit um, und die hat ihren Titel schon. Die beiden anderen Anlege-Wege
+  (`POST …/topic-sessions`, `POST …/topics/:id/sessions`) verlangen ihn längst;
+  ohne diese Regel stand in jeder Liste „Einheit ohne Titel".
+
   Wählen darf **nur, wer an dem Abend zugeteilt ist**. Kein Admin-Freifahrtschein,
   und „niemand zugeteilt heißt jede:r darf" gilt hier auch nicht: die Wahl ist
   kein Verwaltungsakt, sondern die Aussage „ich bereite das vor". Wer sie treffen
   will, trägt sich vorher über `PUT …/topic-responsibles` ein.
 
-  Owner wird, wer **zuerst wählt** — nicht wer zuerst zugeteilt wurde. Alle, die
-  in diesem Moment ebenfalls zugeteilt sind, kommen als Verantwortliche der
-  Einheit mit und dürfen ab dann am ganzen Thema schreiben.
+  Owner wird, wer **zuerst wählt** — nicht wer zuerst zugeteilt wurde. An die
+  Einheit kommt dabei nur er; wen er dazunimmt, entscheidet er auf ihrer eigenen
+  Seite (`PUT …/topic-sessions/:id/responsibles`). Zugeteilt zu sein gibt kein
+  Schreibrecht.
 
   Hängt am Abend schon eine Einheit, ist das kein Fehler, sondern ein **Wechsel**:
   die bisherige löst sich und wartet als Entwurf. An einem vergangenen Abend

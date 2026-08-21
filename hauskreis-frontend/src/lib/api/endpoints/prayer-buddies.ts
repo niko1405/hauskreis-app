@@ -13,6 +13,7 @@ import type {
   PlanningResult,
   PrayerBuddyConfig,
   PrayerBuddyRound,
+  RepairResult,
   RotationResult,
   UpdateCycleConfigInput,
 } from '../types';
@@ -90,4 +91,17 @@ export function planPrayerBuddyRounds(
   hauskreisId: string,
 ): Promise<PlanningResult> {
   return apiPost<PlanningResult>(`${base(hauskreisId)}/plan`, {});
+}
+
+/**
+ * Nur Admin. Zieht die **laufende** Runde auf die aktuelle Besetzung nach:
+ * niemand steht draußen, niemand bleibt allein, keine Gruppe ist größer als
+ * drei.
+ *
+ * Kein Neuwürfeln — wer schon miteinander betet, betet weiter miteinander.
+ */
+export function repairPrayerBuddyRound(
+  hauskreisId: string,
+): Promise<RepairResult> {
+  return apiPost<RepairResult>(`${base(hauskreisId)}/repair`, {});
 }

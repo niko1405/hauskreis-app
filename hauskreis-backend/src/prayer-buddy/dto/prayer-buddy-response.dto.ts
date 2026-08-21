@@ -67,6 +67,18 @@ export const planningResultSchema = z.object({
   created: z.number().int().nonnegative(),
 });
 
+/**
+ * Was das Nachziehen der laufenden Runde bewirkt hat.
+ *
+ * `repaired: 0` ist der Normalfall und keine Enttäuschung: Der Lauf fragt nach,
+ * und meistens ist nichts zu tun.
+ */
+export const repairResultSchema = z.object({
+  /// Gruppen, deren Besetzung sich geändert hat.
+  repaired: z.number().int().nonnegative(),
+  notified: z.number().int().nonnegative(),
+});
+
 export class PrayerBuddyAssignmentResponseDto extends createZodDto(
   prayerBuddyAssignmentSchema,
 ) {}
@@ -93,3 +105,4 @@ export class RotationResultResponseDto extends createZodDto(
 export class PlanningResultResponseDto extends createZodDto(
   planningResultSchema,
 ) {}
+export class RepairResultResponseDto extends createZodDto(repairResultSchema) {}

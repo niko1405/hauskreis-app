@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Die Wahl an einem Abend — vier Schritte in **einem** Sheet.
+ * Die Wahl an einem Abend — mehrere Schritte in **einem** Sheet.
  *
  * `Sheet` rendert ohne Portal auf derselben Ebene und registriert je einen
  * eigenen Escape-Handler; zwei übereinander schließen sich gegenseitig und
@@ -12,16 +12,25 @@
  *
  * 1. `root` — drei Abschnitte entlang der einen Frage, um die es hier geht:
  *    ein **Abend für sich**, ein **Thema** über mehreren, oder aus einem
- *    einzelnen Abend eins **machen**.
+ *    einzelnen Abend eins **machen**. Jeder Abschnitt hat unter seiner Liste
+ *    einen Knopf, der ins Formular führt.
  * 2. `topic` — dessen Abende, mit „gehalten" und „offen"; offene lassen sich
  *    direkt nehmen, darunter geht es zu einer neuen Einheit.
- * 3. `promote` — das Überthema für eine bisher alleinstehende Einheit, und
- *    gleich die zweite dazu.
- * 4. `create` — Titel, Actionstep, Zusammenfassung und mit wem zusammen.
+ * 3. `new-topic` — der Bogen über die Abende: Titel und Zusammenfassung des
+ *    Themas. Danach erst die erste Einheit — zwei Gedanken, zwei Schritte.
+ * 4. `create` — **das gemeinsame Formular** für alle vier Wege, an denen eine
+ *    Einheit entsteht. Titel, Zusammenfassung, Actionstep und mit wem
+ *    zusammen; beim Überthema steht der Titel des Themas obendrüber.
  * 5. `people` — der Personen-Picker aus der Rollenzuteilung. Er ist hier eine
- *    **Abkürzung**: was er einträgt, ist die Rolle „Thema" an diesem Abend, und
- *    daraus macht der Server die Mitwirkenden. So gibt es genau einen Weg,
- *    Mitarbeiter:in eines Themas zu werden.
+ *    **Abkürzung**: was er einträgt, ist die Rolle „Thema" an diesem Abend.
+ *    Schreibrecht an der Vorbereitung gibt sie nicht — das steht auf der Seite
+ *    der Einheit unter „Wer das vorbereitet".
+ *
+ * Hier stand einmal je ein Textfeld mit einem Knopf daneben, zweimal, für zwei
+ * verschiedene Dinge. Es passte in eine Zeile und fragte deshalb nur nach dem
+ * Titel — während dasselbe Anlegen im Archiv nach Zusammenfassung und
+ * Actionstep fragte. Zwei Formulare für dieselbe Sache, und das kürzere war
+ * das, das man öfter benutzt.
  *
  * **Themen-gebundene Entwürfe stehen nicht im `root`.** Sie hängen unter ihrem
  * Thema und stehen in Schritt 2, wo man es öffnet; eine eigene Liste daneben
@@ -42,7 +51,7 @@ import { AvatarStack } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/components/ui/confirm';
-import { TextArea, TextInput } from '@/components/ui/field';
+import { Field, FieldLabel, TextArea, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -65,18 +74,38 @@ import type {
 type Step =
   | { name: 'root' }
   | { name: 'topic'; topicId: string; title: string | null }
-  | { name: 'promote'; sessionId: string; sessionTitle: string | null }
-  | { name: 'create'; topicId: string; title: string | null }
-  | { name: 'people'; topicId: string; title: string | null };
+  | { name: 'new-topic' }
+  | { name: 'create' }
+  | { name: 'people' };
 
-/** Was im Anlege-Formular steht, solange es noch nicht abgeschickt wurde. */
+/**
+ * Wohin die Einheit gehört, die gerade entsteht — die vier Wege, die im
+ * Formular zusammenlaufen.
+ */
+type Ziel =
+  | { kind: 'single' }
+  | { kind: 'new' }
+  | { kind: 'existing'; topicId: string; topicTitle: string | null }
+  | { kind: 'promote'; sessionId: string; sessionTitle: string | null };
+
+/** Was in den Formularen steht, solange sie noch nicht abgeschickt sind. */
 interface Entwurf {
+  /** Nur bei `new` und `promote`: der Bogen über die Abende. */
+  topicTitle: string;
+  /** Nur bei `new`. */
+  topicSummary: string;
   title: string;
-  actionstep: string;
   summary: string;
+  actionstep: string;
 }
 
-const LEERER_ENTWURF: Entwurf = { title: '', actionstep: '', summary: '' };
+const LEERER_ENTWURF: Entwurf = {
+  topicTitle: '',
+  topicSummary: '',
+  title: '',
+  summary: '',
+  actionstep: '',
+};
 
 export function TopicChoiceSheet({
   meetingId,
@@ -103,11 +132,12 @@ export function TopicChoiceSheet({
 }) {
   const [step, setStep] = useState<Step>({ name: 'root' });
 
-  // Der Entwurf liegt **hier** und nicht in `CreateStep`: die Schritte lösen
-  // einander an derselben Stelle im Baum ab, ein Wechsel ist also ein Unmount.
-  // Wer zu den Mitwirkenden abbog und zurückkam, fand sein Formular vorher leer
-  // vor. Ein `key` hilft dagegen nicht — es gibt keine gemeinsame Position, an
-  // der die Felder gemountet bleiben könnten.
+  // Ziel und Entwurf liegen **hier** und nicht in den Schritten: die Schritte
+  // lösen einander an derselben Stelle im Baum ab, ein Wechsel ist also ein
+  // Unmount. Wer zu den Mitwirkenden abbog und zurückkam, fand sein Formular
+  // vorher leer vor. Ein `key` hilft dagegen nicht — es gibt keine gemeinsame
+  // Position, an der die Felder gemountet bleiben könnten.
+  const [ziel, setZiel] = useState<Ziel | null>(null);
   const [entwurf, setEntwurf] = useState(LEERER_ENTWURF);
 
   const choices = useTopicChoices(meetingId, open);
@@ -117,12 +147,23 @@ export function TopicChoiceSheet({
 
   const schliessen = () => {
     setStep({ name: 'root' });
+    setZiel(null);
     setEntwurf(LEERER_ENTWURF);
     onClose();
   };
 
-  /** Ein anderes Thema öffnen heißt: der Entwurf gehörte zum vorigen. */
+  /** Ein neues Ziel heißt: der bisherige Entwurf gehörte zu einem anderen. */
+  const anfangen = (
+    naechstes: Ziel,
+    name: 'create' | 'new-topic' = 'create',
+  ) => {
+    setZiel(naechstes);
+    setEntwurf(LEERER_ENTWURF);
+    setStep(name === 'create' ? { name: 'create' } : { name: 'new-topic' });
+  };
+
   const themaOeffnen = (topicId: string, title: string | null) => {
+    setZiel(null);
     setEntwurf(LEERER_ENTWURF);
     setStep({ name: 'topic', topicId, title });
   };
@@ -192,65 +233,107 @@ export function TopicChoiceSheet({
     );
   };
 
+  /** Das Formular abschicken — vier Ziele, eine Nutzlast je Ziel. */
+  const anlegen = () => {
+    if (!ziel) return;
+
+    const einheit = {
+      title: entwurf.title.trim(),
+      actionstepText: entwurf.actionstep.trim() || null,
+      summaryText: entwurf.summary.trim() || null,
+    };
+
+    if (ziel.kind === 'single') {
+      void waehlen(
+        { mode: 'single', ...einheit },
+        'Einheit angelegt — sie hängt am Abend.',
+      );
+      return;
+    }
+
+    if (ziel.kind === 'new') {
+      void waehlen(
+        {
+          mode: 'new',
+          topicTitle: entwurf.topicTitle.trim(),
+          topicSummaryText: entwurf.topicSummary.trim() || null,
+          ...einheit,
+        },
+        'Thema angelegt — dieser Abend ist die erste Einheit.',
+      );
+      return;
+    }
+
+    if (ziel.kind === 'existing') {
+      void waehlen(
+        { mode: 'existing', topicId: ziel.topicId, ...einheit },
+        'Angelegt — die Einheit hängt am Abend.',
+      );
+      return;
+    }
+
+    void waehlen(
+      {
+        mode: 'promote',
+        sessionId: ziel.sessionId,
+        topicTitle: entwurf.topicTitle.trim(),
+        ...einheit,
+      },
+      'Jetzt ein Thema — dieser Abend ist die zweite Einheit.',
+    );
+  };
+
+  /** Wohin „Zurück" aus dem Formular führt — dorthin, wo das Ziel herkam. */
+  const zurueckVomFormular = () => {
+    if (ziel?.kind === 'new') {
+      setStep({ name: 'new-topic' });
+      return;
+    }
+
+    if (ziel?.kind === 'existing') {
+      setStep({
+        name: 'topic',
+        topicId: ziel.topicId,
+        title: ziel.topicTitle,
+      });
+      return;
+    }
+
+    setStep({ name: 'root' });
+  };
+
   if (step.name === 'people') {
     return (
       <PeopleStep
         meetingId={meetingId}
         responsibles={responsibles}
-        onBack={() =>
-          setStep({ name: 'create', topicId: step.topicId, title: step.title })
-        }
+        onBack={() => setStep({ name: 'create' })}
       />
     );
   }
 
-  if (step.name === 'create') {
+  if (step.name === 'create' && ziel) {
     return (
       <CreateStep
-        topicTitle={step.title}
+        ziel={ziel}
         responsibles={responsibles}
         entwurf={entwurf}
         onChange={setEntwurf}
         saving={choose.isPending}
-        onPeople={() =>
-          setStep({ name: 'people', topicId: step.topicId, title: step.title })
-        }
-        onBack={() =>
-          setStep({ name: 'topic', topicId: step.topicId, title: step.title })
-        }
-        onCreate={() =>
-          void waehlen(
-            {
-              mode: 'existing',
-              topicId: step.topicId,
-              title: entwurf.title.trim(),
-              actionstepText: entwurf.actionstep.trim() || null,
-              summaryText: entwurf.summary.trim() || null,
-            },
-            'Angelegt — die Einheit hängt am Abend.',
-          )
-        }
+        onPeople={() => setStep({ name: 'people' })}
+        onBack={zurueckVomFormular}
+        onCreate={anlegen}
       />
     );
   }
 
-  if (step.name === 'promote') {
+  if (step.name === 'new-topic') {
     return (
-      <PromoteStep
-        sessionTitle={step.sessionTitle}
-        saving={choose.isPending}
+      <NewTopicStep
+        entwurf={entwurf}
+        onChange={setEntwurf}
         onBack={() => setStep({ name: 'root' })}
-        onPromote={(topicTitle, title) =>
-          void waehlen(
-            {
-              mode: 'promote',
-              sessionId: step.sessionId,
-              topicTitle,
-              title: title || null,
-            },
-            'Jetzt ein Thema — dieser Abend ist die zweite Einheit.',
-          )
-        }
+        onNext={() => setStep({ name: 'create' })}
       />
     );
   }
@@ -262,7 +345,11 @@ export function TopicChoiceSheet({
         onBack={() => setStep({ name: 'root' })}
         onPick={(session) => aufnehmen(session, session.meeting)}
         onCreate={() =>
-          setStep({ name: 'create', topicId: step.topicId, title: step.title })
+          anfangen({
+            kind: 'existing',
+            topicId: step.topicId,
+            topicTitle: step.title,
+          })
         }
       />
     );
@@ -301,16 +388,9 @@ export function TopicChoiceSheet({
           </ul>
         )}
 
-        <InlineCreate
-          placeholder="Worum geht es an diesem Abend?"
-          label="Titel der neuen Einheit"
-          saving={choose.isPending}
-          onCreate={(title) =>
-            void waehlen(
-              { mode: 'single', title: title || null },
-              'Einheit angelegt — sie hängt am Abend.',
-            )
-          }
+        <NeuKnopf
+          label="Neue Einheit anlegen"
+          onClick={() => anfangen({ kind: 'single' })}
         />
         <p className="mt-1.5 text-[11px] text-stone-400">
           Ein Abend ohne Bogen darüber. Ein Überthema lässt sich später
@@ -335,20 +415,12 @@ export function TopicChoiceSheet({
           </ul>
         )}
 
-        <InlineCreate
-          placeholder="Worum geht es?"
-          label="Titel des neuen Themas"
-          saving={choose.isPending}
-          onCreate={(title) =>
-            void waehlen(
-              { mode: 'new', title: title || null },
-              'Thema angelegt.',
-            )
-          }
+        <NeuKnopf
+          label="Neues Thema anlegen"
+          onClick={() => anfangen({ kind: 'new' }, 'new-topic')}
         />
         <p className="mt-1.5 text-[11px] text-stone-400">
-          Der Titel darf auch später kommen — dieser Abend wird die erste
-          Einheit.
+          Zieht sich über mehrere Abende — dieser wird die erste Einheit.
         </p>
       </section>
 
@@ -369,8 +441,8 @@ export function TopicChoiceSheet({
                       : 'noch an keinem Abend'
                   }
                   onSelect={() =>
-                    setStep({
-                      name: 'promote',
+                    anfangen({
+                      kind: 'promote',
                       sessionId: session.id,
                       sessionTitle: session.title,
                     })
@@ -405,80 +477,34 @@ export function TopicChoiceSheet({
   );
 }
 
-// ── Anlegen an Ort und Stelle ────────────────────────────────────────────────
+// ── Schritt: der Bogen über die Abende ───────────────────────────────────────
 
 /**
- * Ein Feld und ein Knopf, unter der Liste, zu der das Neue gehört.
+ * Titel und Zusammenfassung des Themas — und danach erst die erste Einheit.
  *
- * Zweimal dasselbe Bauteil für zwei verschiedene Dinge — einmal legt es eine
- * einzelne Einheit an, einmal ein Thema. Das steht nicht am Bauteil, sondern
- * darüber: Wer unter „Einzelne Einheit wählen" tippt, will eine, und ein
- * Abschnitt weiter unten will er ein Thema.
+ * Zwei Schritte und nicht ein langes Formular: Der Bogen über die Abende und
+ * der eine Abend sind zwei Gedanken, und der zweite fällt leichter, wenn der
+ * erste steht. Dieselbe Reihenfolge wie im Archiv unter „Neu anlegen".
  */
-function InlineCreate({
-  placeholder,
-  label,
-  saving,
-  onCreate,
-}: {
-  placeholder: string;
-  label: string;
-  saving: boolean;
-  onCreate: (title: string) => void;
-}) {
-  const [title, setTitle] = useState('');
-
-  return (
-    <div className="flex gap-2">
-      <TextInput
-        aria-label={label}
-        value={title}
-        placeholder={placeholder}
-        onChange={(event) => setTitle(event.target.value)}
-      />
-      <Button size="sm" loading={saving} onClick={() => onCreate(title)}>
-        <Plus size={14} />
-        Anlegen
-      </Button>
-    </div>
-  );
-}
-
-// ── Schritt: aus einer Einheit ein Thema machen ──────────────────────────────
-
-/**
- * Das Überthema, und gleich der zweite Abend dazu.
- *
- * Zwei Felder, und nur das erste ist Pflicht — der Bogen ist der Grund, warum
- * es jetzt ein Thema ist, der Titel dieses Abends kann warten. Was in der alten
- * Einheit steht, wird dabei nicht angefasst; sie bleibt an ihrem Abend.
- */
-function PromoteStep({
-  sessionTitle,
-  saving,
+function NewTopicStep({
+  entwurf,
+  onChange,
   onBack,
-  onPromote,
+  onNext,
 }: {
-  sessionTitle: string | null;
-  saving: boolean;
+  entwurf: Entwurf;
+  onChange: (entwurf: Entwurf) => void;
   onBack: () => void;
-  onPromote: (topicTitle: string, title: string) => void;
+  onNext: () => void;
 }) {
-  const [topicTitle, setTopicTitle] = useState('');
-  const [title, setTitle] = useState('');
-
-  const trimmed = topicTitle.trim();
+  const trimmed = entwurf.topicTitle.trim();
 
   return (
     <Sheet
       open
       onClose={onBack}
-      title="Überthema hinzufügen"
-      subtitle={
-        sessionTitle
-          ? `„${sessionTitle}" wird die erste Einheit, dieser Abend die zweite.`
-          : 'Diese Einheit wird die erste, dieser Abend die zweite.'
-      }
+      title="Neues Thema"
+      subtitle="Zieht sich über mehrere Abende — dieser wird die erste Einheit."
       footer={
         <div className="flex gap-2">
           <Button variant="ghost" className="flex-1" onClick={onBack}>
@@ -486,37 +512,41 @@ function PromoteStep({
           </Button>
           <Button
             className="flex-1"
-            loading={saving}
             disabled={trimmed.length === 0}
-            onClick={() => onPromote(trimmed, title.trim())}
+            onClick={onNext}
           >
-            Übernehmen
+            Weiter
           </Button>
         </div>
       }
     >
-      <Labelled label="Titel des Themas">
+      <Field label="Titel des Themas">
         <TextInput
-          aria-label="Titel des Themas"
-          value={topicTitle}
+          value={entwurf.topicTitle}
           placeholder="Worum geht es über die Abende hinweg?"
-          onChange={(event) => setTopicTitle(event.target.value)}
+          onChange={(event) =>
+            onChange({ ...entwurf, topicTitle: event.target.value })
+          }
         />
-      </Labelled>
+      </Field>
 
-      <Labelled label="Titel dieses Abends">
-        <TextInput
-          aria-label="Titel dieses Abends"
-          value={title}
-          placeholder="Optional — darf auch später kommen."
-          onChange={(event) => setTitle(event.target.value)}
+      <Field
+        label="Zusammenfassung"
+        hint="Optional — der Bogen über alle Abende. Kann auch später kommen."
+      >
+        <TextArea
+          rows={3}
+          value={entwurf.topicSummary}
+          onChange={(event) =>
+            onChange({ ...entwurf, topicSummary: event.target.value })
+          }
         />
-      </Labelled>
+      </Field>
     </Sheet>
   );
 }
 
-// ── Schritt 2: die Abende eines Themas ───────────────────────────────────────
+// ── Schritt: die Abende eines Themas ─────────────────────────────────────────
 
 /**
  * Mockup 2: welche Einheiten es schon gibt und welche davon noch frei sind.
@@ -645,11 +675,21 @@ function SessionRow({
   );
 }
 
-// ── Schritt 3: die neue Einheit ──────────────────────────────────────────────
+// ── Schritt: die neue Einheit ────────────────────────────────────────────────
 
-/** Mockup 1. Der Titel ist das einzige Pflichtfeld — ohne ihn kein Wiedererkennen. */
+/**
+ * Das gemeinsame Formular für alle vier Wege, an denen eine Einheit entsteht.
+ *
+ * Der Titel ist Pflicht — ohne ihn kein Wiedererkennen, und der Server verlangt
+ * ihn inzwischen ebenso. Beim Überthema kommt der Titel des Themas dazu, und
+ * auch der ist Pflicht: Ohne ihn wäre es kein Thema, sondern zwei Abende.
+ *
+ * Feldreihenfolge Titel → Zusammenfassung → Actionstep, wie im Archiv. Sie
+ * stand hier einmal andersherum, und zwei Anlege-Formulare mit vertauschten
+ * Feldern sind eine Stolperfalle für die, die beide benutzen.
+ */
 function CreateStep({
-  topicTitle,
+  ziel,
   responsibles,
   entwurf,
   onChange,
@@ -658,7 +698,7 @@ function CreateStep({
   onBack,
   onCreate,
 }: {
-  topicTitle: string | null;
+  ziel: Ziel;
   responsibles: PersonRef[];
   /** Liegt eine Ebene höher, damit der Umweg zu den Mitwirkenden ihn nicht frisst. */
   entwurf: Entwurf;
@@ -668,15 +708,17 @@ function CreateStep({
   onBack: () => void;
   onCreate: () => void;
 }) {
-  const { title, actionstep, summary } = entwurf;
-  const trimmed = title.trim();
+  const brauchtUeberthema = ziel.kind === 'promote';
+  const vollstaendig =
+    entwurf.title.trim().length > 0 &&
+    (!brauchtUeberthema || entwurf.topicTitle.trim().length > 0);
 
   return (
     <Sheet
       open
       onClose={onBack}
-      title="Neue Einheit anlegen"
-      subtitle={topicTitle ?? 'Thema ohne Titel'}
+      title={titelFuer(ziel)}
+      subtitle={untertitelFuer(ziel, entwurf)}
       footer={
         <div className="flex gap-2">
           <Button variant="ghost" className="flex-1" onClick={onBack}>
@@ -685,7 +727,7 @@ function CreateStep({
           <Button
             className="flex-1"
             loading={saving}
-            disabled={trimmed.length === 0}
+            disabled={!vollstaendig}
             onClick={onCreate}
           >
             Anlegen
@@ -693,42 +735,56 @@ function CreateStep({
         </div>
       }
     >
-      <Labelled label="Titel">
+      {brauchtUeberthema && (
+        <Field label="Titel des Überthemas">
+          <TextInput
+            value={entwurf.topicTitle}
+            placeholder="Worum geht es über die Abende hinweg?"
+            onChange={(event) =>
+              onChange({ ...entwurf, topicTitle: event.target.value })
+            }
+          />
+        </Field>
+      )}
+
+      <Field label={brauchtUeberthema ? 'Titel dieses Abends' : 'Titel'}>
         <TextInput
-          aria-label="Titel der Einheit"
-          value={title}
+          value={entwurf.title}
           placeholder="Worum geht es an diesem Abend?"
           onChange={(event) =>
             onChange({ ...entwurf, title: event.target.value })
           }
         />
-      </Labelled>
+      </Field>
 
-      <Labelled label="Actionstep">
+      <Field
+        label="Zusammenfassung"
+        hint="Optional — hilft allen, die nicht da waren. Kann auch nach dem Abend kommen."
+      >
         <TextArea
-          aria-label="Actionstep"
-          rows={2}
-          value={actionstep}
-          placeholder="Was nimmt die Gruppe mit in die Woche?"
-          onChange={(event) =>
-            onChange({ ...entwurf, actionstep: event.target.value })
-          }
-        />
-      </Labelled>
-
-      <Labelled label="Zusammenfassung">
-        <TextArea
-          aria-label="Zusammenfassung"
           rows={3}
-          value={summary}
-          placeholder="Kann auch nach dem Abend kommen."
+          value={entwurf.summary}
           onChange={(event) =>
             onChange({ ...entwurf, summary: event.target.value })
           }
         />
-      </Labelled>
+      </Field>
 
-      <Labelled label="Zusammen mit">
+      <Field
+        label="Actionstep"
+        hint="Optional — was die Gruppe mit in die Woche nimmt."
+      >
+        <TextArea
+          rows={2}
+          value={entwurf.actionstep}
+          onChange={(event) =>
+            onChange({ ...entwurf, actionstep: event.target.value })
+          }
+        />
+      </Field>
+
+      <div>
+        <FieldLabel>Zusammen mit</FieldLabel>
         <button
           type="button"
           onClick={onPeople}
@@ -740,15 +796,35 @@ function CreateStep({
           </span>
         </button>
         <p className="mt-1.5 text-[11px] leading-relaxed text-stone-400">
-          Wer hier steht, ist an diesem Abend für das Thema zuständig — und darf
-          ab dann am ganzen Thema schreiben.
+          Wer hier steht, ist an diesem Abend für das Thema zuständig. Wer die
+          Einheit mit vorbereiten darf, trägst du auf ihrer Seite ein.
         </p>
-      </Labelled>
+      </div>
     </Sheet>
   );
 }
 
-// ── Schritt 4: mit wem ───────────────────────────────────────────────────────
+function titelFuer(ziel: Ziel): string {
+  if (ziel.kind === 'promote') return 'Überthema hinzufügen';
+  if (ziel.kind === 'new') return 'Die erste Einheit';
+  return 'Neue Einheit anlegen';
+}
+
+function untertitelFuer(ziel: Ziel, entwurf: Entwurf): string {
+  if (ziel.kind === 'promote') {
+    return ziel.sessionTitle
+      ? `„${ziel.sessionTitle}" wird die erste Einheit, dieser Abend die zweite.`
+      : 'Diese Einheit wird die erste, dieser Abend die zweite.';
+  }
+
+  if (ziel.kind === 'new') return entwurf.topicTitle.trim();
+
+  if (ziel.kind === 'existing') return ziel.topicTitle ?? 'Thema ohne Titel';
+
+  return 'Ein Abend für sich, ohne Bogen darüber.';
+}
+
+// ── Schritt: mit wem ─────────────────────────────────────────────────────────
 
 /**
  * Die Abkürzung: statt nach dem Anlegen zurück in den Termin zu gehen und die
@@ -783,7 +859,7 @@ function PeopleStep({
     <Sheet
       open
       onClose={onBack}
-      title="Wer bereitet mit vor?"
+      title="Wer ist an dem Abend zuständig?"
       subtitle="Mehrere möglich"
       footer={
         <div className="flex gap-2">
@@ -814,6 +890,22 @@ function PeopleStep({
 
 // ── Kleinteile ───────────────────────────────────────────────────────────────
 
+/**
+ * Der Knopf unter einer Liste, der ins Formular führt.
+ *
+ * Hier stand ein Textfeld mit „Anlegen" daneben. Es passte in eine Zeile und
+ * fragte deshalb nur nach dem Titel — Zusammenfassung und Actionstep gab es auf
+ * diesem Weg gar nicht, obwohl dasselbe Anlegen im Archiv danach fragt.
+ */
+function NeuKnopf({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <Button variant="secondary" size="sm" className="w-full" onClick={onClick}>
+      <Plus size={14} />
+      {label}
+    </Button>
+  );
+}
+
 function Heading({
   icon,
   children,
@@ -826,23 +918,6 @@ function Heading({
       {icon}
       {children}
     </h3>
-  );
-}
-
-function Labelled({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-stone-500 uppercase">
-        {label}
-      </p>
-      {children}
-    </div>
   );
 }
 

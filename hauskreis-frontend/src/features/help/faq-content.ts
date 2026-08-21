@@ -298,7 +298,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Was ist der Unterschied zwischen zugeteilt und gewählt?',
     answer:
-      'Drei Dinge sind getrennt, und dazwischen liegt jeweils Zeit:\n\n**Zuständigkeit** — wer an diesem Abend das Thema macht. Steht am Termin.\n**Auswahl** — welches Thema es wird. Kommt später.\n**Inhalt** — Titel, Actionstep, Zusammenfassung. Kommt noch später.\n\n„Zugeteilt, aber noch nichts gewählt" ist deshalb ein völlig normaler Zustand und kein halbfertiger.\n\n**Wählen darf nur, wer an dem Abend zugeteilt ist** — auch kein Admin. Und „niemand ist zugeteilt" heißt hier nicht „alle dürfen": Dann trägt sich erst jemand ein.',
+      'Drei Dinge sind getrennt, und dazwischen liegt jeweils Zeit:\n\n**Zuständigkeit** — wer an diesem Abend das Thema macht. Steht am Termin.\n**Auswahl** — welches Thema es wird. Kommt später.\n**Inhalt** — Titel, Actionstep, Zusammenfassung. Kommt noch später.\n\n„Zugeteilt, aber noch nichts gewählt" ist deshalb ein völlig normaler Zustand und kein halbfertiger.\n\n**Wählen darf nur, wer an dem Abend zugeteilt ist** — auch kein Admin. Und „niemand ist zugeteilt" heißt hier nicht „alle dürfen": Dann trägt sich erst jemand ein.\n\nBeim Wählen legst du gleich an: ein Knopf, dann ein Formular mit Titel (Pflicht), Zusammenfassung und Actionstep. Bei einem neuen Thema kommt ein Schritt davor — Titel und Zusammenfassung des Themas, also der Bogen über die Abende.',
     keywords: ['unterschied', 'schritte', 'auswahl'],
   },
   {
@@ -320,7 +320,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Muss jede Einheit zu einem Thema gehören?',
     answer:
-      'Nein. Nicht jeder Abend spannt einen Bogen über mehrere — und wer nur einen vorbereiten will, sollte kein Thema erfinden müssen, das nie ein zweites Mal vorkommt.\n\nEine **einzelne Einheit** legst du im Archiv über „Neu anlegen" an, oder direkt an einem Abend unter „Thema wählen" → „Einzelne Einheit wählen".\n\nSie verhält sich sonst wie jede andere Einheit: eigener Titel, Zusammenfassung, Actionstep, eigene Seite. Im Archiv erkennst du sie am Symbol — ein Blatt für die einzelne Einheit, Ebenen für ein Thema über mehrere Abende.',
+      'Nein. Nicht jeder Abend spannt einen Bogen über mehrere — und wer nur einen vorbereiten will, sollte kein Thema erfinden müssen, das nie ein zweites Mal vorkommt.\n\nEine **einzelne Einheit** legst du im Archiv über „Neu anlegen" an, oder direkt an einem Abend unter „Thema wählen" → „Einzelne Einheit wählen" → **„Neue Einheit anlegen"**. Beide Wege führen in dasselbe Formular: Titel, Zusammenfassung, Actionstep. Der **Titel ist Pflicht**, die beiden anderen darfst du leer lassen und später nachtragen.\n\nAm Abend stand hier einmal nur ein Textfeld mit einem Knopf daneben — es passte in eine Zeile und fragte deshalb auch nur nach dem Titel.\n\nSie verhält sich sonst wie jede andere Einheit: eigener Titel, Zusammenfassung, Actionstep, eigene Seite. Im Archiv erkennst du sie am Symbol — ein Blatt für die einzelne Einheit, Ebenen für ein Thema über mehrere Abende.',
     keywords: [
       'einzeln',
       'ohne thema',
@@ -334,7 +334,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Aus einer einzelnen Einheit doch ein Thema machen — und zurück?',
     answer:
-      'Beides geht — das erste ist genau der Fall, den man vorher nicht kommen sieht: Du hältst einen Abend und merkst danach, dass da mehr drinsteckt.\n\nAuf der Seite der Einheit steht dafür **„Überthema hinzufügen"**. Du gibst den Titel ein, den die Abende zusammen tragen; alles, was in der Einheit steht, bleibt genau so stehen, samt Termin und Beteiligten.\n\nAm Abend selbst geht es in einem Schritt: unter „Thema wählen" → **„Einheit fortsetzen"**. Dort stehen auch die schon gehaltenen. Die alte Einheit bleibt an ihrem Abend, und dieser wird die zweite.\n\n**Der Weg zurück** steht auf derselben Seite: „Überthema entfernen", solange es bei der einen Einheit geblieben ist. Sie steht danach wieder für sich, **am selben Abend wie vorher** — nur Titel und Zusammenfassung des Themas fallen weg. Entfernen darf, wer das Thema angelegt hat.\n\nSobald eine zweite Einheit dazugekommen ist, ist der Knopf weg: Was dann aufgelöst werden soll, wäre nicht mehr eindeutig. Und deshalb braucht eine zweite Einheit auch immer erst ein Überthema — zwei Abende, über denen nichts steht, sind kein Thema, sondern zwei Abende.',
+      'Beides geht — das erste ist genau der Fall, den man vorher nicht kommen sieht: Du hältst einen Abend und merkst danach, dass da mehr drinsteckt.\n\nAuf der Seite der Einheit steht dafür **„Überthema hinzufügen"**. Du gibst den Titel ein, den die Abende zusammen tragen; alles, was in der Einheit steht, bleibt genau so stehen, samt Termin und Beteiligten.\n\nAm Abend selbst geht es in einem Schritt: unter „Thema wählen" → **„Einheit fortsetzen"**. Dort stehen auch die schon gehaltenen. Du gibst den Titel des Überthemas **und** den dieses Abends an — beide Pflicht —, dazu gleich Zusammenfassung und Actionstep der neuen Einheit. Die alte bleibt an ihrem Abend, und dieser wird die zweite.\n\n**Der Weg zurück** steht auf derselben Seite: „Überthema entfernen", solange es bei der einen Einheit geblieben ist. Sie steht danach wieder für sich, **am selben Abend wie vorher** — nur Titel und Zusammenfassung des Themas fallen weg. Entfernen darf, wer das Thema angelegt hat.\n\nSobald eine zweite Einheit dazugekommen ist, ist der Knopf weg: Was dann aufgelöst werden soll, wäre nicht mehr eindeutig. Und deshalb braucht eine zweite Einheit auch immer erst ein Überthema — zwei Abende, über denen nichts steht, sind kein Thema, sondern zwei Abende.',
     keywords: [
       'überthema',
       'fortsetzen',
@@ -381,6 +381,21 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
       'mitwirkende',
       'bearbeiten',
       'löschen',
+      'rechte',
+    ],
+  },
+  {
+    id: 'topics-einzeln-rechte',
+    category: 'topics',
+    question: 'Wer darf meine einzelne Einheit ändern?',
+    answer:
+      'Alle, die sie mit vorbereiten — und zwar gleichberechtigt. Bei einer einzelnen Einheit gibt es die mittlere Ebene nicht: Es steht kein Thema darüber, von dem jemand ausgeschlossen sein könnte. Wer unter „Wer das vorbereitet" steht, darf sie ändern, ihr ein Überthema geben und eine zweite Einheit anlegen.\n\n**Nur Löschen bleibt bei dem, der sie angefangen hat.** Und der bleibt auch in der Liste stehen: Sein Platz lässt sich nicht räumen, die anderen schon. Vorher ging das — man verschwand dann aus der einzigen Liste, die es dort gibt, und durfte trotzdem weiter alles ändern. Zwei Auskünfte über dieselbe Person, von denen die sichtbare falsch war.\n\nIm Archiv siehst du deshalb auch alle auf der Karte, nicht nur einen.\n\nBei einem **Thema über mehrere Abende** ist es anders herum: Dort darfst du als Mitvorbereitende:r genau diesen einen Abend ändern, und wer am ganzen Thema mitarbeiten soll, wird ausdrücklich eingetragen. Wer einmal aushilft, bekommt keine Hoheit über etwas, das über Monate läuft.',
+    keywords: [
+      'einzelne einheit',
+      'alleinstehend',
+      'gleichberechtigt',
+      'entfernen',
+      'ersteller',
       'rechte',
     ],
   },

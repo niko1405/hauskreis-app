@@ -544,15 +544,28 @@ function NewSessionStep({
  * sondern eine Selbstverständlichkeit.
  */
 function TopicEntry({ topic }: { topic: TopicListItem }) {
-  const leute = [
-    ...(topic.owner ? [topic.owner] : []),
-    ...topic.collaborators.map((c) => c.person),
-  ];
-
   // Bei einer Hülle ist die eine Einheit der ganze Eintrag. Sie kann fehlen,
   // wenn der Server sie zurückhält — dann bleibt die Zeile ohne Inhalt, und das
   // ist richtig so.
   const einzelne = topic.standalone ? topic.sessions[0] : undefined;
+
+  /**
+   * Wer daran arbeitet — und bei einer Hülle ist das die Crew der Einheit.
+   *
+   * `collaborators` ist dort immer leer: Die Mitwirkenden-Ebene einer Hülle ist
+   * abgeleitet, nicht eingetragen (siehe `membershipOf` im Backend). Vorher
+   * stand deshalb auf jeder einzelnen Einheit genau ein Gesicht — das des
+   * Erstellers —, ganz gleich, mit wie vielen er sie vorbereitet.
+   *
+   * Der Owner steht in der Crew, das hält der Server; die Reihenfolge kommt
+   * darum aus der Crew selbst und nicht aus einer Sonderbehandlung hier.
+   */
+  const leute = topic.standalone
+    ? (einzelne?.responsibles.map((row) => row.person) ?? [])
+    : [
+        ...(topic.owner ? [topic.owner] : []),
+        ...topic.collaborators.map((c) => c.person),
+      ];
 
   const titel = topic.standalone
     ? (einzelne?.title ?? 'Einheit ohne Titel')

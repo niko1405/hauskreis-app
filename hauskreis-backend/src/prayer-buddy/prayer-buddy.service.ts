@@ -20,6 +20,16 @@ const groupInclude = {
   },
 } as const;
 
+/**
+ * Eine Person, wie sie in einer Gebetsgruppe steht — dieselben drei Felder wie
+ * `personRefSchema`, damit der Avatar überall mitkommt.
+ */
+export interface BuddyRef {
+  id: string;
+  name: string;
+  photoUpdatedAt: Date | null;
+}
+
 /** All the groups sharing one period — together, one assignment. */
 export interface Assignment {
   periodStart: string;
@@ -31,7 +41,7 @@ export interface Assignment {
      * Nächsten, der Letzte für den Ersten. Bei einem Paar heißt das
      * „füreinander", beim Trio sagt es wirklich etwas.
      */
-    members: { id: string; name: string }[];
+    members: BuddyRef[];
   }[];
 }
 
@@ -225,7 +235,7 @@ function toAssignment(
     id: string;
     periodStart: Date;
     periodEnd: Date;
-    members: { person: { id: string; name: string } }[];
+    members: { person: BuddyRef }[];
   }[],
 ): Assignment {
   return {

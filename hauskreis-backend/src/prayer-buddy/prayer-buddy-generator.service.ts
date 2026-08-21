@@ -41,6 +41,12 @@ export interface PlanningResult {
   created: number;
 }
 
+export interface RepairResult {
+  /** Gruppen der laufenden Runde, deren Besetzung sich geändert hat. */
+  repaired: number;
+  notified: number;
+}
+
 export interface ReplanResult {
   /** Gruppen der laufenden Runde, deren Besetzung sich geändert hat. */
   repaired: number;
@@ -68,6 +74,12 @@ export class PrayerBuddyGeneratorService {
    * A fortnightly cron would silently skip a rotation if the server happened
    * to be down that morning. Asking "are five rounds planned" every day is
    * self-healing and costs one query when the answer is yes.
+   *
+   * Aus demselben Grund steht seit der Obergrenze auch `repairRunningRound`
+   * hier: Sie lief bis dahin nur beim Beitreten und Gehen, und eine Gruppe, die
+   * schon zu groß war, sah damit nie wieder jemand an. Fragen kostet nichts,
+   * solange die Antwort „passt" ist — dann wird keine Gruppe berührt und
+   * niemand benachrichtigt.
    */
   @Cron(CronExpression.EVERY_DAY_AT_4AM, {
     name: 'rotate-prayer-buddies',
@@ -78,13 +90,25 @@ export class PrayerBuddyGeneratorService {
       select: { id: true },
     });
 
+    let repaired = 0;
     let created = 0;
     let notified = 0;
 
     for (const hauskreis of hauskreise) {
+      const today = await this.clock.today(hauskreis.id);
+      const repair = await this.repairRunningRound(hauskreis.id, today, {
+        notify: true,
+      });
+      repaired += repair.repaired;
+      notified += repair.notified;
+
       const result = await this.ensureRoundsPlanned(hauskreis.id);
       created += result.created;
       notified += await this.announceCurrentRound(hauskreis.id);
+    }
+
+    if (repaired > 0) {
+      this.logger.log(`Repaired ${repaired} running prayer buddy group(s)`);
     }
 
     if (created > 0) {
@@ -207,12 +231,38 @@ export class PrayerBuddyGeneratorService {
     };
   }
 
-  /** Bringt die Runde, die heute läuft, auf die aktuelle Besetzung. */
+  /**
+   * Dasselbe von Hand — der Knopf „Gebetsrunde prüfen" in der Verwaltung.
+   *
+   * Ausdrücklich **nicht** `rotateNow`: das schließt die laufende Runde und
+   * zieht die nächste vor, gibt also allen neue Buddys, um das Problem von
+   * zweien zu lösen. Hier bleibt jede Gruppe stehen, die in Ordnung ist.
+   *
+   * Künftige Runden bleiben ebenfalls unangetastet: Sie kommen aus
+   * `buildGroups` und halten die Obergrenze längst ein.
+   */
+  async repairNow(
+    hauskreisId: string,
+    now = new Date(),
+  ): Promise<RepairResult> {
+    const today = await this.clock.today(hauskreisId, now);
+
+    return this.repairRunningRound(hauskreisId, today, { notify: true });
+  }
+
+  /**
+   * Bringt die Runde, die heute läuft, auf die aktuelle Besetzung.
+   *
+   * Still, wenn nichts zu tun ist: Berührt wird nur, wo `repairGroups` etwas
+   * ändert, und angekündigt nur, was berührt wurde. Genau darum steht sie
+   * inzwischen auch im nächtlichen Lauf — eine Gruppe zu viert aus der Zeit vor
+   * der Obergrenze verschwand sonst nie, weil nichts sie je wieder ansah.
+   */
   private async repairRunningRound(
     hauskreisId: string,
     today: Date,
     options: { notify: boolean },
-  ): Promise<{ repaired: number; notified: number }> {
+  ): Promise<RepairResult> {
     const [groups, people] = await Promise.all([
       this.prisma.prayerBuddyGroup.findMany({
         where: {

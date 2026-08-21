@@ -113,7 +113,8 @@ Das alles passiert im Tab **Profil**, von oben nach unten:
 ### 5.1 Heute
 
 - Der aktuelle **Actionstep** aus dem letzten Termin, mit deinem eigenen Haken.
-- Deine aktuellen **Gebetsbuddys**.
+- Deine aktuellen **Gebetsbuddys** — zu dritt mit der Richtung: „Du betest für
+  …" und „Für dich betet …", genau wie auf dem Gebet-Bildschirm.
 - **Deine Rollen**: oben, wofür du am nächsten Termin eingeteilt bist,
   darunter aufklappbar **„Weitere"** für alles danach.
 - **Nächstes Treffen** mit Uhrzeit, Ort (die Adresse ist verlinkt) und den
@@ -150,6 +151,12 @@ Kommt jemand **mitten in einer Runde** dazu, wird nicht neu gewürfelt: Er rück
 in die kleinste Gruppe nach, die noch Platz hat. Sind alle voll, macht er eine
 neue auf, und aus einer Dreiergruppe zieht der zuletzt Dazugekommene zu ihm —
 aus 3+1 wird so 2+2, statt dass jemand zwei Wochen ohne Buddy dasteht.
+
+Steht doch einmal eine Gruppe zu viert da — aus der Zeit, bevor es diese Grenze
+gab —, wird sie von selbst geteilt: Die App sieht jede Nacht nach, und ein Admin
+kann es unter **Verwaltung → Jobs → „Gebetsrunde prüfen"** sofort anstoßen. Neu
+gewürfelt wird dabei nichts; wer schon miteinander betet, betet weiter
+miteinander.
 
 ### 5.4 Archiv
 
@@ -294,9 +301,15 @@ trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
   sich — **am selben Abend wie vorher**. Titel und Zusammenfassung des Themas
   fallen dabei weg. Sobald eine zweite Einheit dazugekommen ist, geht es nicht
   mehr; dann ist es ein Thema. Entfernen darf nur, wer es angelegt hat.
-- Das Thema hat einen Titel und eine Zusammenfassung über alle Einheiten hinweg
-  (beides optional). Jede Einheit hat ihre eigene Zusammenfassung und ihren
-  eigenen **Actionstep** — der gilt dann bis zum nächsten Treffen.
+- Das Thema hat einen Titel und eine Zusammenfassung über alle Einheiten hinweg.
+  Jede Einheit hat ihre eigene Zusammenfassung und ihren eigenen **Actionstep** —
+  der gilt dann bis zum nächsten Treffen.
+- **Titel sind Pflicht, alles andere nicht.** Wenn du am Abend etwas anlegst,
+  führt ein Knopf ins Formular: Titel, Zusammenfassung, Actionstep — dieselben
+  Felder wie im Archiv unter „Neu anlegen". Bei einem neuen Thema kommt ein
+  Schritt davor, für Titel und Zusammenfassung des Themas. Zusammenfassung und
+  Actionstep darfst du leer lassen und später nachtragen; ohne Titel findet die
+  Einheit später niemand wieder.
 - **Zugeteilt und gewählt sind zwei Schritte.** Erst wird jemand für den Abend
   zugeteilt, dann wählt diese Person: ein neues Thema, eine Fortsetzung des
   eigenen, oder eine offene Einheit. **Wählen darf nur, wer an dem Abend
@@ -309,6 +322,15 @@ trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
   vorbereitet; den letzten Platz kannst du nicht räumen. Bei einem Thema über
   mehrere Abende gibst du deinen also ab, indem du erst jemand anderen
   dazunimmst — das Schreibrecht am Thema behältst du als Owner ohnehin.
+- **Bei einer einzelnen Einheit bleibst du selbst stehen.** Wer sie angelegt hat,
+  lässt sich nicht herausnehmen; die anderen schon. Dort ist diese Liste alles,
+  was man sieht — nimmst du dich heraus, verschwindest du daraus und dürftest
+  trotzdem weiter alles ändern.
+- **Und wer bei einer einzelnen Einheit mitmacht, ist gleichberechtigt.** Es gibt
+  kein Thema darüber, von dem er ausgeschlossen wäre: Er darf sie ändern, ihr ein
+  Überthema geben, eine zweite anlegen. Nur Löschen bleibt bei dem, der sie
+  angefangen hat. Im Archiv stehen deshalb auch alle auf der Karte, nicht nur
+  einer.
 - **Dazunehmen trägt auch für den Abend ein.** Hängt die Einheit an einem
   kommenden Termin, steht die Person danach dort in der Rolle „Thema", damit du
   dieselbe Liste nicht zweimal pflegst. Umgekehrt nicht: Nimmst du jemanden aus

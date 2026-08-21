@@ -48,12 +48,14 @@ import {
 import { firstName } from '@/lib/person';
 import { ScreenHeader } from '@/components/layout/screen-header';
 import { ReleaseBanner } from '@/features/releases/release-banner';
+import { circleOf } from '@/features/prayer/circle';
 import { greetingOf } from './greeting';
 import type {
   Assignment,
   AssignmentRole,
   HomeActionstep,
   HomeNextMeeting,
+  HomePrayerBuddies,
 } from '@/lib/api/types';
 
 export function HomeScreen() {
@@ -100,26 +102,7 @@ export function HomeScreen() {
 
         <ActionstepCard step={openActionstep} />
 
-        {prayerBuddies && (
-          <Link href="/gebet" className="block">
-            <Card className="transition-colors hover:border-line-strong">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">
-                    Deine Gebetsbuddys
-                  </p>
-                  <p className="text-[15px] font-bold text-stone-800">
-                    {prayerBuddies.withNames.join(' & ')}
-                  </p>
-                  <p className="mt-1 text-[11px] font-medium text-stone-500">
-                    noch bis {formatDayMonth(prayerBuddies.until)}
-                  </p>
-                </div>
-                <Users size={20} className="shrink-0 text-terracotta-500" />
-              </div>
-            </Card>
-          </Link>
-        )}
+        <PrayerBuddyCard buddies={prayerBuddies} myId={me.me?.id} />
 
         <section>
           <SectionTitle>Deine Rollen</SectionTitle>
@@ -167,6 +150,72 @@ export function HomeScreen() {
  * „habe ich diese Woche etwas vergessen?" bleibt unbeantwortet, statt ein Nein
  * zu bekommen.
  */
+/**
+ * Die Gebetsbuddys — und ab dreien auch die Richtung.
+ *
+ * Zu zweit steht dort ein Name, wie eh und je: „füreinander" ist beim Paar die
+ * ganze Aussage. Zu dritt wird reihum gebetet, und dann sind es zwei Zeilen mit
+ * eigener Beschriftung — dieselbe Unterscheidung wie auf dem Gebet-Bildschirm,
+ * und aus derselben Rechnung (`circleOf`).
+ *
+ * Ohne Kreis — allein in der Gruppe, oder gar nicht darin — bleibt es bei den
+ * Namen. Eine Richtung, die auf sich selbst zeigt, ist keine.
+ */
+function PrayerBuddyCard({
+  buddies,
+  myId,
+}: {
+  buddies: HomePrayerBuddies | null;
+  myId: string | undefined;
+}) {
+  if (!buddies) return null;
+
+  const kreis = circleOf(buddies.members, myId);
+
+  return (
+    <Link href="/gebet" className="block">
+      <Card className="transition-colors hover:border-line-strong">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">
+              Deine Gebetsbuddys
+            </p>
+
+            {kreis && kreis.size > 2 ? (
+              <div className="mt-0.5 space-y-0.5">
+                <p className="text-[15px] leading-snug font-bold text-stone-800">
+                  <span className="font-medium text-stone-500">
+                    Du betest für{' '}
+                  </span>
+                  {kreis.betestFuer.name}
+                </p>
+                <p className="text-[15px] leading-snug font-bold text-stone-800">
+                  <span className="font-medium text-stone-500">
+                    Für dich betet{' '}
+                  </span>
+                  {kreis.betetFuerDich.name}
+                </p>
+              </div>
+            ) : (
+              <p className="text-[15px] font-bold text-stone-800">
+                {buddies.members
+                  .filter((member) => member.id !== myId)
+                  .map((member) => member.name)
+                  .join(' & ')}
+              </p>
+            )}
+
+            <p className="mt-1 text-[11px] font-medium text-stone-500">
+              noch bis {formatDayMonth(buddies.until)}
+            </p>
+          </div>
+          <Users size={20} className="shrink-0 text-terracotta-500" />
+        </div>
+      </Card>
+    </Link>
+  );
+}
+
 function ActionstepCard({ step }: { step: HomeActionstep | null }) {
   if (!step) {
     return (

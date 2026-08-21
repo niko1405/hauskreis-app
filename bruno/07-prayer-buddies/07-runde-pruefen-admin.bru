@@ -1,0 +1,46 @@
+meta {
+  name: Runde prüfen (admin)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/prayer-buddies/repair
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("sagt, wie viele Gruppen sich geändert haben", function () {
+    expect(res.body.repaired).to.be.a("number");
+    expect(res.body.notified).to.be.a("number");
+  });
+
+  test("ist beim zweiten Mal still", function () {
+    // Idempotent: was einmal in Ordnung gebracht wurde, bleibt es.
+  });
+}
+
+docs {
+  Zieht die **laufende** Runde auf die aktuelle Besetzung nach: niemand
+  steht draußen, niemand bleibt allein, und keine Gruppe ist größer als
+  drei.
+
+  Ausdrücklich kein Neuwürfeln — wer schon miteinander betet, betet
+  weiter miteinander. Dafür gibt es `rotate`, und das ist eine andere
+  Frage.
+
+  Die geplanten Runden bleiben stehen: Sie kommen aus `buildGroups` und
+  halten die Obergrenze längst ein.
+
+  Idempotent: Ist alles in Ordnung, wird keine Gruppe berührt, niemand
+  benachrichtigt, und die Antwort lautet `repaired: 0`.
+
+  Nachts läuft dieselbe Prüfung ohnehin. Der Knopf ist für den Fall, in
+  dem man nicht bis vier Uhr warten will — etwa für eine Gruppe zu
+  viert, die noch aus der Zeit vor der Obergrenze stammt.
+}

@@ -932,6 +932,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/prayer-buddies/repair': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['PrayerBuddyController_repair'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/prayer-buddies/rotate': {
     parameters: {
       query?: never;
@@ -1894,6 +1910,10 @@ export interface components {
     PlanningResultResponseDto: {
       created: number;
     };
+    RepairResultResponseDto: {
+      repaired: number;
+      notified: number;
+    };
     NotificationSettingListResponseDto: {
       /** @enum {string} */
       type:
@@ -2396,6 +2416,8 @@ export interface components {
             /** @enum {string} */
             status: 'RUNNING' | 'COMPLETED';
             standalone: boolean;
+            /** Format: uuid */
+            ownerPersonId: string | null;
           };
           /** Format: uuid */
           meetingId: string | null;
@@ -2585,6 +2607,8 @@ export interface components {
           /** @enum {string} */
           status: 'RUNNING' | 'COMPLETED';
           standalone: boolean;
+          /** Format: uuid */
+          ownerPersonId: string | null;
         };
         /** Format: uuid */
         meetingId: string | null;
@@ -3001,6 +3025,8 @@ export interface components {
         /** @enum {string} */
         status: 'RUNNING' | 'COMPLETED';
         standalone: boolean;
+        /** Format: uuid */
+        ownerPersonId: string | null;
       };
       /** Format: uuid */
       meetingId: string | null;
@@ -3081,6 +3107,8 @@ export interface components {
         /** @enum {string} */
         status: 'RUNNING' | 'COMPLETED';
         standalone: boolean;
+        /** Format: uuid */
+        ownerPersonId: string | null;
         sessionCount: number;
         /** Format: date */
         lastHeldAt: string | null;
@@ -3112,6 +3140,7 @@ export interface components {
       mode: 'new' | 'existing' | 'resume' | 'single' | 'promote';
       title?: string | null;
       topicTitle?: string;
+      topicSummaryText?: string | null;
       actionstepText?: string | null;
       summaryText?: string | null;
       /** Format: uuid */
@@ -3505,7 +3534,13 @@ export interface components {
       prayerBuddies: {
         /** Format: date */
         until: string;
-        withNames: string[];
+        members: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        }[];
       } | null;
     };
     HeaderImageListResponseDto: {
@@ -8512,6 +8547,63 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PlanningResultResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  PrayerBuddyController_repair: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RepairResultResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */

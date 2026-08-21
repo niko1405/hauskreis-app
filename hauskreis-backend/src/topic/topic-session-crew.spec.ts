@@ -38,6 +38,8 @@ afterAll(() => {
 function setup(
   options: {
     ownerPersonId?: string | null;
+    /** Eine Hülle — dann *ist* die Crew die Mitwirkenden-Ebene. */
+    standalone?: boolean;
     collaboratorIds?: string[];
     responsibleIds?: string[];
     meetingId?: string | null;
@@ -62,7 +64,7 @@ function setup(
       id: 't1',
       title: 'Apostelgeschichte',
       status: 'RUNNING',
-      standalone: false,
+      standalone: options.standalone ?? false,
       ownerPersonId:
         options.ownerPersonId === undefined ? 'p1' : options.ownerPersonId,
       collaborators: (options.collaboratorIds ?? []).map((personId) => ({
@@ -222,6 +224,47 @@ describe('setSessionResponsibles', () => {
 
       expect(links.leave).toHaveBeenCalledWith(expect.anything(), 's1', 't1', [
         'p1',
+      ]);
+    });
+
+    /**
+     * Bei einer **Hülle** aber nicht, und das ist die Gegenprobe zum Test
+     * darüber: Dort ist diese Liste alles, was man sieht. Wer sich herausnahm,
+     * verschwand daraus und behielt über `topic.owner_person_id` trotzdem jedes
+     * Recht — zwei Aussagen über dieselbe Person, von denen die sichtbare
+     * falsch war.
+     */
+    it('lässt den Owner einer Hülle nicht gehen', async () => {
+      const { service, links } = setup({
+        standalone: true,
+        ownerPersonId: 'p1',
+        responsibleIds: ['p1', 'p2'],
+      });
+
+      await expect(
+        service.setSessionResponsibles('hk', 's1', { personIds: ['p2'] }, ICH),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(links.leave).not.toHaveBeenCalled();
+    });
+
+    /** Die anderen schon — nur der eigene Platz liegt fest. */
+    it('lässt aus einer Hülle jeden anderen herausnehmen', async () => {
+      const { service, links } = setup({
+        standalone: true,
+        ownerPersonId: 'p1',
+        responsibleIds: ['p1', 'p2'],
+      });
+
+      await service.setSessionResponsibles(
+        'hk',
+        's1',
+        { personIds: ['p1'] },
+        ICH,
+      );
+
+      expect(links.leave).toHaveBeenCalledWith(expect.anything(), 's1', 't1', [
+        'p2',
       ]);
     });
   });

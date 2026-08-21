@@ -399,6 +399,95 @@ describe('PrayerBuddyGeneratorService.replanAfterMembershipChange', () => {
   });
 });
 
+/**
+ * Der Knopf in der Verwaltung — und der nächtliche Lauf, der dasselbe tut.
+ *
+ * Anlass war eine Gruppe zu viert aus der Zeit vor der Obergrenze: Sie blieb
+ * stehen, weil die Grenze nur beim Hinzufügen galt und beim Nachrücken niemand
+ * mehr hineinpasste. Eine Regel, die nur nach vorn gilt, schreibt den Fehler
+ * fest.
+ */
+describe('PrayerBuddyGeneratorService.repairNow', () => {
+  it('teilt eine bestehende Vierergruppe zu 2+2 auf', async () => {
+    const { service, runningNow } = setup({
+      running: [['a', 'b', 'c', 'd']],
+      active: ['a', 'b', 'c', 'd'],
+    });
+
+    const result = await service.repairNow('hk-1', TODAY);
+
+    // Getrimmt wird hinten, und der Heruntergefallene holt sich den nächsten
+    // von hinten: Das erste Paar bleibt zusammen.
+    expect(runningNow().toSorted()).toEqual([
+      ['a', 'b'],
+      ['c', 'd'],
+    ]);
+    expect(result.repaired).toBe(2);
+  });
+
+  it('nummeriert die aufgeteilten Gruppen lückenlos durch', async () => {
+    const { service, positionen } = setup({
+      running: [['a', 'b', 'c', 'd']],
+      active: ['a', 'b', 'c', 'd'],
+    });
+
+    await service.repairNow('hk-1', TODAY);
+
+    for (const kreis of kreise(positionen)) {
+      expect(kreis).toEqual(kreis.map((_platz, index) => index));
+    }
+  });
+
+  it('sagt allen Bescheid, deren Gruppe sich geändert hat', async () => {
+    const { service, notify } = setup({
+      running: [['a', 'b', 'c', 'd']],
+      active: ['a', 'b', 'c', 'd'],
+    });
+
+    const result = await service.repairNow('hk-1', TODAY);
+
+    expect(notify).toHaveBeenCalled();
+    expect(result.notified).toBeGreaterThan(0);
+  });
+
+  /** Und wenn alles passt, passiert nichts — kein Schreiben, keine Nachricht. */
+  it('rührt eine Runde, die in Ordnung ist, nicht an', async () => {
+    const { service, runningNow, notify } = setup({
+      running: [
+        ['a', 'b'],
+        ['c', 'd', 'e'],
+      ],
+      active: ['a', 'b', 'c', 'd', 'e'],
+    });
+
+    const result = await service.repairNow('hk-1', TODAY);
+
+    expect(runningNow().toSorted()).toEqual([
+      ['a', 'b'],
+      ['c', 'd', 'e'],
+    ]);
+    expect(result).toEqual({ repaired: 0, notified: 0 });
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Künftige Runden bleiben stehen. Sie kommen aus `buildGroups` und halten die
+   * Grenze längst ein — sie zu verwerfen hieße, den Plan zu entwerten, um ein
+   * Problem von heute zu lösen.
+   */
+  it('lässt die geplanten Runden in Ruhe', async () => {
+    const { service, future } = setup({
+      running: [['a', 'b', 'c', 'd']],
+      plannedAhead: 3,
+      active: ['a', 'b', 'c', 'd'],
+    });
+
+    await service.repairNow('hk-1', TODAY);
+
+    expect(future()).toHaveLength(3);
+  });
+});
+
 /** Je Gruppe: die geschriebenen Positionen, sortiert. */
 function kreise(
   positionen: { groupId: string; position: number }[],

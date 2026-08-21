@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
-import { PrayerBuddyService } from '../prayer-buddy/prayer-buddy.service';
+import {
+  PrayerBuddyService,
+  type BuddyRef,
+} from '../prayer-buddy/prayer-buddy.service';
 import { AssignmentService, type Assignment } from './assignment.service';
 import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
 import { addDays } from '../meeting/meeting-schedule';
@@ -86,8 +89,18 @@ export interface HomeScreen {
     doneCount: number;
     peopleCount: number;
   } | null;
-  /** Who you are praying with right now. */
-  prayerBuddies: { until: string; withNames: string[] } | null;
+  /**
+   * Deine Gebetsgruppe, so wie sie auch der Gebet-Bildschirm bekommt.
+   *
+   * Die ganze Besetzung **einschließlich dir selbst**, in Kreis-Reihenfolge:
+   * Erst daraus lässt sich ablesen, für wen du betest und wer für dich. Vorher
+   * standen hier nur die Namen der anderen, und die Karte auf „Heute" konnte
+   * die Richtung deshalb gar nicht zeigen.
+   */
+  prayerBuddies: {
+    until: string;
+    members: BuddyRef[];
+  } | null;
 }
 
 /**
@@ -268,12 +281,7 @@ export class DashboardService {
           : null,
       prayerBuddies:
         buddies && myGroup
-          ? {
-              until: buddies.periodEnd,
-              withNames: myGroup.members
-                .filter((member) => member.id !== personId)
-                .map((member) => member.name),
-            }
+          ? { until: buddies.periodEnd, members: myGroup.members }
           : null,
     };
   }

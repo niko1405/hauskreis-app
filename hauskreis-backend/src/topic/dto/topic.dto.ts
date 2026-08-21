@@ -97,17 +97,28 @@ export const chooseTopicSessionSchema = z
     /// eine einzelne Einheit ohne Thema. `promote` — aus einer einzelnen
     /// Einheit ein Thema machen und diesen Abend als zweite anhängen.
     mode: z.enum(['new', 'existing', 'resume', 'single', 'promote']),
-    /// Bei `new` der Titel des Themas, sonst der des Abends. Immer optional —
-    /// den Titel trägt ein, wer sich vorbereitet, und das ist nicht immer schon
-    /// im Moment der Wahl.
+    /// Der Titel **des Abends** — in jedem Modus, auch bei `new`. Dort war es
+    /// einmal der des Themas, und das war die stille Ursache dafür, dass ein
+    /// neues Thema mit einer völlig leeren ersten Einheit begann: Für die blieb
+    /// kein Feld übrig.
+    ///
+    /// Pflicht überall, wo eine Einheit **entsteht** — also außer bei `resume`,
+    /// das eine bestehende nur umhängt. Die beiden anderen Anlege-Wege
+    /// (`createTopicSessionSchema`) verlangen ihn längst; `choose` war der
+    /// Ausreißer, und „Einheit ohne Titel" stand danach in jeder Liste.
     title: z.string().trim().min(1).max(200).nullish(),
-    /// Nur bei `promote`, und dort **Pflicht**: der Bogen, den die beiden
-    /// Abende von jetzt an spannen. Ohne ihn wäre es kein Thema, sondern zwei
-    /// Abende — genau der Zustand, aus dem man gerade herauswill.
+    /// Der Bogen über die Abende — bei `new` und `promote`, und dort jeweils
+    /// **Pflicht**. Ohne ihn wäre es kein Thema, sondern lauter einzelne
+    /// Abende: genau der Zustand, aus dem man mit diesen beiden Wegen
+    /// herauswill.
     topicTitle: z.string().trim().min(1).max(200).optional(),
-    /// Bei `existing`, `single` und `promote`: das Anlege-Sheet fragt beides ab,
-    /// und sie hinterher nachzuschieben ließe den Abend kurz mit einer leeren
-    /// Einheit dastehen.
+    /// Die Zusammenfassung des **Themas**, nur bei `new`. Bei `promote` gibt es
+    /// sie nicht: Dort steht schon eine Einheit, und was über beide hinweg
+    /// gilt, schreibt man, wenn man beide kennt.
+    topicSummaryText: z.string().trim().min(1).max(5000).nullish(),
+    /// Der Einheit, nicht des Themas. Überall außer bei `resume`: das
+    /// Anlege-Sheet fragt beides ab, und sie hinterher nachzuschieben ließe den
+    /// Abend kurz mit einer leeren Einheit dastehen.
     actionstepText: z.string().trim().min(1).max(2000).nullish(),
     summaryText: z.string().trim().min(1).max(5000).nullish(),
     topicId: z.uuid().optional(),
@@ -133,11 +144,32 @@ export const chooseTopicSessionSchema = z
       });
     }
 
-    if (value.mode === 'promote' && !value.topicTitle) {
+    if (
+      (value.mode === 'new' || value.mode === 'promote') &&
+      !value.topicTitle
+    ) {
       ctx.addIssue({
         code: 'custom',
         path: ['topicTitle'],
-        message: 'Bei mode=promote wird topicTitle gebraucht',
+        message: `Bei mode=${value.mode} wird topicTitle gebraucht`,
+      });
+    }
+
+    // `resume` fehlt hier: Dort entsteht keine Einheit, es zieht eine um, und
+    // die hat ihren Titel schon.
+    if (value.mode !== 'resume' && !value.title) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['title'],
+        message: 'Eine neue Einheit braucht einen Titel',
+      });
+    }
+
+    if (value.mode !== 'new' && value.topicSummaryText) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['topicSummaryText'],
+        message: 'topicSummaryText gibt es nur bei mode=new',
       });
     }
   });

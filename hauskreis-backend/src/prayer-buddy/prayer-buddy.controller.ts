@@ -31,6 +31,7 @@ import {
   PlanningResultResponseDto,
   PrayerBuddyConfigResponseDto,
   PrayerBuddyPageResponseDto,
+  RepairResultResponseDto,
   RotationResultResponseDto,
 } from './dto/prayer-buddy-response.dto';
 
@@ -116,5 +117,21 @@ export class PrayerBuddyController {
   @HauskreisAdmin()
   plan(@Param() params: HauskreisParamsDto) {
     return this.generator.ensureRoundsPlanned(params.hauskreisId);
+  }
+
+  /**
+   * Zieht die **laufende** Runde auf die aktuelle Besetzung nach: niemand steht
+   * draußen, niemand bleibt allein, und keine Gruppe ist größer als drei.
+   *
+   * Kein Neuwürfeln — wer schon miteinander betet, betet weiter miteinander.
+   * Gebraucht wurde der Knopf für eine Gruppe zu viert, die aus der Zeit vor
+   * der Obergrenze stammte; nachts läuft dieselbe Prüfung ohnehin.
+   */
+  @Post('repair')
+  @ApiZodResponse(RepairResultResponseDto)
+  @HauskreisAdmin()
+  @HttpCode(HttpStatus.OK)
+  repair(@Param() params: HauskreisParamsDto) {
+    return this.generator.repairNow(params.hauskreisId);
   }
 }

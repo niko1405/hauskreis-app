@@ -25,6 +25,7 @@ import {
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { formatDayRange, formatRelativeDay } from '@/lib/date';
+import { circleOf } from './circle';
 import type {
   PersonRef,
   PrayerBuddyGroup,
@@ -207,17 +208,9 @@ function MyGroup({
   group: PrayerBuddyGroup;
   myId: string | undefined;
 }) {
-  const { members } = group;
-  // `-1` gibt es hier nicht: Diese Karte steht nur da, wenn man in der Gruppe
-  // ist — genau danach hat der Aufrufer sie ausgesucht.
-  const index = members.findIndex((member) => member.id === myId);
+  const kreis = circleOf(group.members, myId);
 
-  // Die Reihenfolge **ist** der Kreis: Wer auf `i` steht, betet für `i + 1`,
-  // der Letzte für den Ersten (siehe `PrayerBuddyGroupMember.position`).
-  const betestFuer = members[(index + 1) % members.length];
-  const betetFuerDich = members[(index - 1 + members.length) % members.length];
-
-  if (members.length <= 1) {
+  if (!kreis) {
     return (
       <section>
         <SectionTitle>Du betest mit</SectionTitle>
@@ -230,12 +223,12 @@ function MyGroup({
     );
   }
 
-  if (members.length === 2) {
+  if (kreis.size === 2) {
     return (
       <section>
         <SectionTitle>Du betest mit</SectionTitle>
         <Card>
-          <Person person={betestFuer} />
+          <Person person={kreis.betestFuer} />
         </Card>
       </section>
     );
@@ -247,11 +240,11 @@ function MyGroup({
       <Card className="space-y-4">
         <div>
           <FieldLabel>Du betest für</FieldLabel>
-          <Person person={betestFuer} />
+          <Person person={kreis.betestFuer} />
         </div>
         <div className="border-t border-line pt-4">
           <FieldLabel>Für dich betet</FieldLabel>
-          <Person person={betetFuerDich} />
+          <Person person={kreis.betetFuerDich} />
         </div>
       </Card>
     </section>

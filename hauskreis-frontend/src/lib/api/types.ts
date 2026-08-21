@@ -216,6 +216,7 @@ export type PrayerBuddyConfig = S['PrayerBuddyConfigResponseDto'];
 export type UpdateCycleConfigInput = S['UpdateCycleConfigDto'];
 export type RotationResult = S['RotationResultResponseDto'];
 export type PlanningResult = S['PlanningResultResponseDto'];
+export type RepairResult = S['RepairResultResponseDto'];
 
 // ── Abwesenheiten ───────────────────────────────────────────────────────────
 

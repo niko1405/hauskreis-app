@@ -8,7 +8,8 @@
  * Paarungen zählen, die es nie gab.
  *
  * `buildGroups` hält die Grenze von selbst ein (Paare plus höchstens ein Trio).
- * Gebraucht wird sie beim **Nachrücken**, wo sie bis eben fehlte.
+ * Gebraucht wird sie beim **Nachrücken** und beim Aufräumen dessen, was vor der
+ * Grenze entstanden ist.
  */
 export const MAX_GROUP_SIZE = 3;
 
@@ -148,8 +149,10 @@ export interface StandingGroup {
  * etwas weg, um das Problem von zweien zu lösen. Es geht hier nur darum, dass
  * niemand draußen steht und niemand allein zurückbleibt.
  *
- * Drei Regeln, und die Reihenfolge trägt:
+ * Vier Regeln, und die Reihenfolge trägt:
  *
+ * 0. Was über der Grenze steht, fällt herunter — und danach zählt es als
+ *    Neuzugang.
  * 1. Wer nicht mehr dabei ist, fällt heraus.
  * 2. Wer neu dabei ist, kommt in die kleinste Gruppe **mit Platz**. Sie zuerst
  *    zu füllen fängt genau den Fall auf, in dem gerade jemand allein
@@ -164,6 +167,12 @@ export interface StandingGroup {
  * landeten in derselben Gruppe. Vier Menschen, von denen keiner mehr für jeden
  * betet — und die nächste Runde stand längst als 2-2 daneben, weil
  * `buildGroups` die Grenze immer schon kannte.
+ *
+ * **Regel 0 kam danach**, weil die Grenze allein nicht reichte: Sie galt fürs
+ * Hinzufügen, und eine Gruppe, die schon zu groß *war*, wurde dadurch gerade
+ * festgeschrieben — beim Nachrücken passte niemand mehr hinein, also rührte sie
+ * niemand mehr an. Eine Regel, die nur für die Zukunft gilt, macht aus einem
+ * Fehler einen Bestand.
  *
  * Regel 3 ist die einzige Stelle, an der eine bestehende Paarung aufgeht, und
  * sie ist bewusst so herum: Das ursprüngliche Paar bleibt zusammen, verschoben
@@ -185,6 +194,17 @@ export function repairGroups(
     id: group.id,
     memberIds: group.memberIds.filter((personId) => active.has(personId)),
   }));
+
+  // Regel 0. Getrimmt wird hinten, also trifft es die zuletzt Dazugekommenen —
+  // dieselbe Richtung wie in Regel 3, und aus demselben Grund: Die
+  // ursprüngliche Besetzung bleibt zusammen.
+  //
+  // Mehr als das Abschneiden braucht es nicht: `assigned` entsteht **danach**,
+  // die Heruntergefallenen stehen damit als aktiv-aber-unzugeteilt da und
+  // laufen durch dieselben zwei Regeln wie ein Neuzugang.
+  for (const group of repaired) {
+    group.memberIds.splice(MAX_GROUP_SIZE);
+  }
 
   const assigned = new Set(repaired.flatMap((group) => group.memberIds));
   // Sortiert, damit zwei gleichzeitige Neuzugänge immer gleich landen.

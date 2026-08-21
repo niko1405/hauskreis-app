@@ -191,11 +191,64 @@ describe('choose — A) neues Thema', () => {
   it('macht die handelnde Person zum Owner', async () => {
     const { service, topicCreate } = setup({ assigned: ['p1', 'p2'] });
 
-    await service.choose('hk', 'm1', { mode: 'new', title: 'Hoffnung' }, ICH);
+    await service.choose(
+      'hk',
+      'm1',
+      { mode: 'new', topicTitle: 'Hoffnung', title: 'Woher sie kommt' },
+      ICH,
+    );
 
     expect(topicCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { hauskreisId: 'hk', title: 'Hoffnung', ownerPersonId: 'p1' },
+        data: {
+          hauskreisId: 'hk',
+          title: 'Hoffnung',
+          summaryText: null,
+          ownerPersonId: 'p1',
+        },
+      }),
+    );
+  });
+
+  /**
+   * Zwei Ebenen, zwei Titel — und die Einheit bekommt ihre Felder.
+   *
+   * Vorher war `dto.title` der Titel des *Themas*, und für die erste Einheit
+   * blieb nichts übrig: Sie entstand leer, obwohl das Formular nach Actionstep
+   * und Zusammenfassung gefragt hatte.
+   */
+  it('füllt auch die erste Einheit', async () => {
+    const { service, topicCreate, sessionCreate } = setup({ assigned: ['p1'] });
+
+    await service.choose(
+      'hk',
+      'm1',
+      {
+        mode: 'new',
+        topicTitle: 'Hoffnung',
+        topicSummaryText: 'Vier Abende darüber, worauf wir warten.',
+        title: 'Woher sie kommt',
+        actionstepText: 'Einmal am Tag danken.',
+        summaryText: 'Röm 5.',
+      },
+      ICH,
+    );
+
+    expect(topicCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          title: 'Hoffnung',
+          summaryText: 'Vier Abende darüber, worauf wir warten.',
+        }),
+      }),
+    );
+    expect(sessionCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          title: 'Woher sie kommt',
+          actionstepText: 'Einmal am Tag danken.',
+          summaryText: 'Röm 5.',
+        }),
       }),
     );
   });

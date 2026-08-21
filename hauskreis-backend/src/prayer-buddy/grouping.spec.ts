@@ -355,6 +355,32 @@ describe('repairGroups', () => {
         g2: ['d', 'e', 'neuling'],
       });
     });
+
+    /**
+     * Regel 0, und der Grund, warum es sie gibt: Die Grenze galt zuerst nur
+     * fürs Hinzufügen. Damit war eine Gruppe, die schon zu groß war,
+     * unantastbar — es passte ja niemand mehr hinein.
+     */
+    it('teilt eine schon zu große Gruppe auf, auch ohne Veränderung', () => {
+      const repaired = repairGroups(
+        [{ id: 'g1', memberIds: ['a', 'b', 'c', 'd'] }],
+        new Set(['a', 'b', 'c', 'd']),
+      );
+
+      // Getrimmt wird hinten: `d` fällt herunter, findet keinen Platz, und
+      // holt sich den nächsten von hinten (`c`). Das erste Paar bleibt stehen.
+      expect(shape(repaired)).toEqual({ g1: ['a', 'b'], neu: ['c', 'd'] });
+    });
+
+    /** Und dabei bleibt niemand allein zurück, auch bei ungerader Zahl nicht. */
+    it('lässt beim Aufteilen einer Fünfergruppe keinen Einzelnen stehen', () => {
+      const repaired = repairGroups(
+        [{ id: 'g1', memberIds: ['a', 'b', 'c', 'd', 'e'] }],
+        new Set(['a', 'b', 'c', 'd', 'e']),
+      );
+
+      expect(groupSizes(repaired)).toEqual([2, 3]);
+    });
   });
 
   it('rührt eine unveränderte Runde nicht an', () => {

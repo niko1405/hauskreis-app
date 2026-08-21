@@ -610,8 +610,17 @@ model TopicSessionResponsible {
 /// Gespeichert und nicht aus den Einheiten abgeleitet: die Ableitung aus Spec 8.4
 /// ist „alle Verantwortlichen aller Einheiten **minus** die vom Owner Entfernten",
 /// und für dieses Minus bräuchte es ohnehin eine Tabelle. Dann lieber die Menge
-/// selbst. Eingetragen wird automatisch beim Wählen einer Einheit, entfernen darf
-/// nur der Owner.
+/// selbst.
+///
+/// Eingetragen und entfernt wird **nur vom Owner**, von Hand. Automatisch beim
+/// Wählen einer Einheit war es einmal, und das gab jemandem, der einmal aushalf,
+/// Hoheit über ein Thema, das über Monate läuft.
+///
+/// Eine Ausnahme, und sie steht im Code (`membershipOf`), nicht hier: Bei einer
+/// **Hülle** zählt die Crew der Einheit mit als Mitwirkende. Dort gibt es kein
+/// Thema, von dem jemand ausgeschlossen sein könnte — die Einheit *ist* das
+/// Ganze. Abgeleitet und nicht gespeichert, damit eine Zeile in dieser Tabelle
+/// weiterhin genau eine Sache bedeutet.
 model TopicCollaborator {
   topicId  String @map("topic_id") @db.Uuid
   personId String @map("person_id") @db.Uuid

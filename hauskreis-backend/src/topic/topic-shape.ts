@@ -220,10 +220,36 @@ type FullTopicRow = Omit<TopicRow, 'collaborators'> & {
   sessions: SessionRow[];
 };
 
-export function membershipOf(topic: TopicRow): TopicMembership {
+/**
+ * Woran das Bearbeitungsrecht eines Themas hängt — und bei einer Hülle hängt es
+ * mit an der Crew.
+ *
+ * Eine Hülle *ist* ihre eine Einheit. Die Unterscheidung, für die
+ * `topic_collaborator` gebaut wurde — „hilft einmal bei einem Abend aus" gegen
+ * „arbeitet am ganzen Thema" —, hat dort keinen Gegenstand: Es gibt kein
+ * Darüber, von dem jemand ausgeschlossen sein könnte. Wer die Einheit
+ * mitvorbereitet, ist damit gleichberechtigt.
+ *
+ * Abgeleitet und **nicht** gespeichert: So bedeutet eine Zeile in
+ * `topic_collaborator` weiterhin genau eine Sache („der Owner hat dich
+ * ausdrücklich dazugeholt"), und es gibt keine zweite Stelle, an der dieselbe
+ * Aussage steht und auseinanderlaufen kann.
+ *
+ * `crew` ist die Besetzung der Einheit, um die es gerade geht; die Aufrufer
+ * haben sie ohnehin geladen. Die Vorgabe `[]` ist bewusst: Wer ohne sie fragt,
+ * fragt nach dem Thema allein — bei einer Hülle also nach dem Owner.
+ */
+export function membershipOf(
+  topic: TopicRow,
+  crew: readonly string[] = [],
+): TopicMembership {
+  const collaboratorIds = topic.collaborators.map((row) => row.personId);
+
   return {
     ownerPersonId: topic.ownerPersonId,
-    collaboratorIds: topic.collaborators.map((row) => row.personId),
+    collaboratorIds: topic.standalone
+      ? [...new Set([...collaboratorIds, ...crew])]
+      : collaboratorIds,
   };
 }
 
@@ -249,8 +275,8 @@ export function shapeSession(
    */
   sessionTotal?: number,
 ) {
-  const membership = membershipOf(topic);
   const responsibleIds = session.responsibles.map((row) => row.personId);
+  const membership = membershipOf(topic, responsibleIds);
   const held = isHeld(session.meeting, viewer.zone);
 
   const visible = isContentVisible({
@@ -276,8 +302,10 @@ export function shapeSession(
       // Ohne Vorbehalt, und das ist Absicht: *dass* es kein Thema darüber gibt,
       // verrät nichts darüber, worum es geht. Die Anzeige braucht es dagegen
       // vor dem Abend — sonst stünde dort „Zugehöriges Thema" über einer
-      // Einheit, die keins hat.
+      // Einheit, die keins hat. Für den Owner gilt dasselbe: Wer etwas
+      // angefangen hat, ist keine Auskunft über den Inhalt.
       standalone: topic.standalone,
+      ownerPersonId: topic.ownerPersonId,
     },
     meetingId: session.meetingId,
     meeting: session.meeting
@@ -373,7 +401,15 @@ export function shapeSession(
  * alle anderen gibt es sie nicht (Spec §7).
  */
 export function shapeTopic(topic: FullTopicRow, viewer: Viewer) {
-  const membership = membershipOf(topic);
+  const membership = membershipOf(
+    topic,
+    // Bei einer Hülle ist die Crew ihrer Einheit die Mitwirkenden-Ebene. Über
+    // *alle* Einheiten, obwohl eine Hülle nur eine hat: Die Regel soll nicht
+    // davon abhängen, dass das stimmt.
+    topic.sessions.flatMap((session) =>
+      session.responsibles.map((row) => row.personId),
+    ),
+  );
 
   /**
    * „Meins" — und das geht seit der Trennung von Vorbereitung und Abend-Rolle
