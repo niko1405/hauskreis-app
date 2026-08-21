@@ -58,13 +58,29 @@ describe('AutoAttendanceService.apply', () => {
     expect(createMany.mock.calls[0][0].skipDuplicates).toBe(true);
   });
 
-  it('fragt nur nach denen, die den Schalter anhaben', async () => {
+  /**
+   * Der Fehler, den man als „die Terminkarte zählt eine Zusage zu viel"
+   * bemerkt.
+   *
+   * Hier stand `active: true` allein. Eine eingeladene Person ist aber von der
+   * ersten Sekunde an aktiv — ihre Zeile entsteht beim Einladen —, und
+   * `autoAttend` kann aus einer Voreinstellung kommen (der Seed setzt es). Sie
+   * sagte damit jeden Dienstag zu, ohne die App je geöffnet zu haben, während
+   * die Anwesenheitsliste sie über `ANGEKOMMEN` weglässt. Zwei Zahlen über
+   * denselben Abend, und die kleinere war die richtige.
+   */
+  it('fragt nur nach denen, die den Schalter anhaben — und da sind', async () => {
     const { service, personFindMany } = setup();
 
     await service.apply('hk-1', { now: TODAY });
 
     expect(personFindMany).toHaveBeenCalledWith({
-      where: { hauskreisId: 'hk-1', active: true, autoAttend: true },
+      where: {
+        hauskreisId: 'hk-1',
+        active: true,
+        acceptedAt: { not: null },
+        autoAttend: true,
+      },
       select: { id: true },
     });
   });

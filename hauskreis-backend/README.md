@@ -3418,8 +3418,20 @@ Daran hängt, was `DELETE …/people/:id` tut:
   dieser Gruppe.
 
 Überall sonst fragt `ANGEKOMMEN` (`src/person/angekommen.ts`) nach beidem
-zusammen — Mitglied **und** schon einmal angemeldet. Zuletzt fehlte es an den
-**Anwesenheitszeilen** eines Termins: `meetingInclude.attendances` lieferte
+zusammen — Mitglied **und** schon einmal angemeldet. Zuletzt fehlte es an zwei
+Stellen, und beide erzeugten dieselbe Verwirrung: eine Terminkarte, die mehr
+Zusagen zählt, als die Anwesenheitsliste desselben Abends kennt.
+
+**Beim Auffüllen der Zusagen.** `AutoAttendanceService` fragte nur nach
+`active` — und eine eingeladene Person ist von der ersten Sekunde an aktiv.
+Stand bei ihr `auto_attend` (der Seed setzt es), sagte sie jeden Dienstag zu,
+ohne die App je geöffnet zu haben. Die Zeile ist echt, sie steht in
+`meeting_attendance`, und nichts an ihr verrät, dass niemand sie gemeint hat.
+Die Migration `20260821160000_auto_attendance_only_for_arrived` räumt die
+bereits geschriebenen weg — eng gefasst auf `source = 'AUTO'`, denn `SELF` hat
+ein Mensch getippt und `ABSENCE` leitet sich aus einem Urlaub ab.
+
+**Und an den Anwesenheitszeilen** eines Termins: `meetingInclude.attendances` lieferte
 jede Zeile aus, also zählte die Terminkarte Eingeladene mit, die nie angenommen
 haben, und an vergangenen Abenden auch Ausgetretene — deren Zeilen bleiben dort
 stehen, `RoleReleaseService` räumt nur die kommenden. Die Detailseite sortierte

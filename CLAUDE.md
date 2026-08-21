@@ -198,6 +198,8 @@ grundlegende Vorschläge für Kernentitäten:
    - **Beim Lesen eines Links geht nur der Seitenkopf ans Modell**, nicht die Seite: Eine Ultimate-Guitar-Seite wiegt 36.000 Tokens, `<title>` und `og:`-Angaben rund 250. Nur wenn der eigene Abruf scheitert (Cloudflare), holt Google die Seite
    - Ohne `GEMINI_API_KEY` verschwinden nur die beiden Knöpfe, alles andere bleibt wie es ist
 
+   > **„Ich bin grundsätzlich dabei" gilt erst, wenn jemand einmal da war.** Der Lauf, der die Zusagen auffüllt, fragte nur nach „aktiv" — und eingeladen ist von der ersten Sekunde an aktiv. Wer sich nie angemeldet hatte, sagte damit jeden Dienstag zu; auf der Terminkarte stand eine Zusage mehr, als die Anwesenheitsliste desselben Abends kannte, denn die rechnet längst mit „angekommen".
+
 7. **Termin Absagen oder Rollen-Tausch**
    - Man soll Termine absagen können und auch angeben können in welchem Zeitraum man abwesend ist --> automatische absagen
    - Sagen **alle** ab, fällt der Abend von selbst aus. Der Weg zurück ist eine Zusage, kein Admin-Eingriff: in der „Fällt aus"-Meldung steht dafür ein Knopf, für jede:n

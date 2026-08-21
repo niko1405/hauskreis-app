@@ -5,6 +5,7 @@ import {
   AttendanceStatus,
 } from '../../generated/prisma/enums';
 import { GroupClockService } from '../meeting/group-clock.service';
+import { ANGEKOMMEN } from '../person/angekommen';
 
 /**
  * „Ich bin grundsätzlich dabei."
@@ -23,6 +24,15 @@ import { GroupClockService } from '../meeting/group-clock.service';
  * Schlüssel `(meeting, person)` ist die ganze Regel: eine vorhandene Antwort
  * wird nie überschrieben, egal woher sie kam. Der Schalter füllt Lücken, er
  * überschreibt keine Antworten.
+ *
+ * **Und nur für Leute, die auch da sind** (`ANGEKOMMEN`). Hier stand `active:
+ * true` allein, und das ist genau der stille Fehler, den `angekommen.ts`
+ * aufzählt: Eine eingeladene Person ist von der ersten Sekunde an `active` —
+ * ihre Zeile entsteht beim Einladen, `autoAttend` kann aus einer Voreinstellung
+ * kommen (der Seed setzt es), und wer sich nie angemeldet hat, sagte auf diesem
+ * Weg trotzdem jeden Dienstag zu. Auf der Terminkarte stand dann eine Zusage
+ * mehr, als die Anwesenheitsliste kannte — die rechnet längst mit `ANGEKOMMEN`,
+ * und die beiden Zahlen widersprachen sich.
  *
  * **Der Status des Abends spielt keine Rolle.** Auch ein abgesagter bekommt
  * seine Zeile: lebt er wieder auf, gilt „ich bin grundsätzlich dabei" auch für
@@ -53,8 +63,8 @@ export class AutoAttendanceService {
     const [people, meetings] = await Promise.all([
       this.prisma.person.findMany({
         where: {
+          ...ANGEKOMMEN,
           hauskreisId,
-          active: true,
           autoAttend: true,
           ...(options.personId ? { id: options.personId } : {}),
         },
