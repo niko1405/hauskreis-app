@@ -188,7 +188,7 @@ function Loaded({ personId }: { personId: string }) {
 
             <Checkbox
               label="Ich kann gerade hosten"
-              description="Nimm den Haken raus, wenn du für eine Weile nicht dran sein möchtest — dann schlägt dich die App nicht als Host vor."
+              description="Nimm den Haken raus, wenn du längerfristig den Umständen bedingt nicht hosten kannst. ACHTUNG: Nicht zu verwechseln mit dem Setzen einer Abwesenheit, die nur einzelne Abende betrifft!"
               checked={canHost}
               onChange={(event) => setCanHost(event.target.checked)}
             />

@@ -11,7 +11,7 @@
  */
 import { Check, Plane } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
-import { formatDay, formatRelativeDay } from '@/lib/date';
+import { formatDay, formatDayGap } from '@/lib/date';
 import { cn } from '@/lib/cn';
 import { ROLE_LABEL } from '@/lib/meeting';
 import type {
@@ -57,8 +57,16 @@ export function suggestionFacts(suggestion: AnySuggestion): string[] {
     lines.push(`an diesem Abend schon ${ROLE_LABEL[commitment.role]}`);
   }
 
-  if (facts.lastAssignedAt) {
-    lines.push(`zuletzt ${formatRelativeDay(facts.lastAssignedAt)}`);
+  // **Gemessen am Abend, nicht an heute.** Hier stand `formatRelativeDay`, und
+  // das rechnet gegen den heutigen Tag: Wer in vier Tagen die Musik macht, las
+  // sich beim Einteilen für einen Abend in vier Wochen als „zuletzt in vier
+  // Tagen" — ein Dienst, der aus Sicht dieses Abends dreieinhalb Wochen zurück
+  // liegt. Der Server rechnet den Abstand längst richtig aus, er stand nur
+  // ungenutzt daneben.
+  if (facts.lastAssignedAt && facts.daysSinceLastAssignment !== null) {
+    lines.push(
+      `zuletzt ${formatDayGap(facts.daysSinceLastAssignment)} vor diesem Abend`,
+    );
   } else {
     lines.push('war noch nie dran');
   }

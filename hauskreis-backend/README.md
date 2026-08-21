@@ -1604,6 +1604,13 @@ sonst nichts:
 - `groupSize` beantwortet **eine** Frage: ob `capacity` überhaupt eine ist. In
   eine Wohnung, in die die ganze Gruppe passt, passen auch heute Abend alle, und
   „Platz für 12, erwartet werden 7" nennt zwei Zahlen ohne Aussage.
+- `daysSinceLastAssignment` ist der Abstand zum **Zieldatum**, nicht zu heute —
+  und genau dafür steht die Zahl neben `lastAssignedAt`. Die Oberfläche nahm
+  lange das Datum und ließ es durch ihre Countdown-Formatierung laufen, die
+  gegen den heutigen Tag misst: Wer in vier Tagen die Musik macht, stand beim
+  Einteilen für einen Abend in vier Wochen als „zuletzt in vier Tagen" da. Die
+  Rangfolge selbst rechnete immer schon richtig; nur die Anzeige benutzte die
+  falsche der beiden Angaben.
 - `upcomingCommitments[].thisEvening` markiert den schärfsten Fall der
   Auslastung: einen Dienst am **selben** Abend. „hat am 11. August schon Thema"
   beim Einteilen für den 11. August lässt den Leser vergleichen; die Oberfläche

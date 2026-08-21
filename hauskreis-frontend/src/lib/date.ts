@@ -254,6 +254,37 @@ export function formatRelativeDay(day: CalendarDay): string {
   return months === 1 ? 'vor einem Monat' : `vor ${months} Monaten`;
 }
 
+/**
+ * Ein **Abstand** ohne Bezugspunkt: „5 Tage", „3 Wochen", „2 Monate".
+ *
+ * Für Aussagen, die sich nicht auf heute beziehen. Der Anlass war eine Zeile in
+ * den Vorschlägen: „zuletzt in 4 Tagen" stand unter einem Namen, weil dort
+ * `formatRelativeDay` lief — das misst gegen **heute**, gemeint war aber der
+ * Abstand zu dem Abend, für den gerade eingeteilt wird. Wer in vier Tagen die
+ * Musik macht, war für einen Abend in vier Wochen zuletzt dreieinhalb Wochen
+ * vorher dran, nicht „in vier Tagen".
+ *
+ * Eigene Funktion und keine Wiederverwendung von `formatRelativeDay`, weil das
+ * Deutsche die Fälle unterscheidet: dort „vor **einer** Woche" (Dativ), hier
+ * „**eine** Woche vor diesem Abend". Dieselben Schwellen, andere Endung.
+ */
+export function formatDayGap(days: number): string {
+  // Null Tage kann die Rangfolge nicht liefern — ein Dienst am Abend selbst
+  // zählt dort als anstehend, nicht als vergangen. Käme sie doch, wäre
+  // „0 Tage" das, was ein Leser für einen Fehler hielte.
+  const gap = Math.max(1, Math.round(days));
+
+  if (gap === 1) return 'einen Tag';
+  if (gap < 7) return `${gap} Tage`;
+
+  const weeks = Math.round(gap / 7);
+  if (weeks === 1) return 'eine Woche';
+  if (weeks < 9) return `${weeks} Wochen`;
+
+  const months = Math.round(gap / 30);
+  return months === 1 ? 'einen Monat' : `${months} Monate`;
+}
+
 /** Für `createdAt`, `updatedAt`, `sentAt` — echte Zeitpunkte. */
 export function formatTimestamp(iso: string): string {
   return TIMESTAMP.format(new Date(iso));

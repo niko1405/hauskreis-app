@@ -262,6 +262,10 @@ das, was an **diesem** Abend schon ansteht („an diesem Abend schon Thema") —
 der stärkste Grund, jemand anderen zu nehmen. Du kannst aber jederzeit
 eintragen, wen du willst; die Gruppe weiß Dinge, die die App nicht weiß.
 
+Alle Abstände zählen dabei **von dem Abend aus, den du gerade planst**, nicht
+von heute: „zuletzt 3 Wochen vor diesem Abend" heißt, dass zwischen den beiden
+Diensten drei Wochen liegen — auch wenn beide noch in der Zukunft liegen.
+
 Beim **Gastgeber** kommt eine Zeile über die Wohnung dazu, und die sagt ein
 Urteil statt einer Rechnung: „Bei Anna: seltener als üblich". Liegt eine
 Wohnung im Soll oder war die Gruppe noch nie dort, steht dort nichts — es gibt
