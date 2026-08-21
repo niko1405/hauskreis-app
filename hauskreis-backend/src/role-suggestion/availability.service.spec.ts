@@ -34,6 +34,8 @@ function setupAvailability(
   options: {
     date?: Date;
     declinedIds?: string[];
+    /** Wer für diesen Abend von Hand zugesagt hat. */
+    selfAttendingIds?: string[];
     periods?: { personId: string; startDate: Date; endDate: Date }[];
     /** Wer noch nicht angenommen hat — für `assertArrived`. */
     pendingIds?: string[];
@@ -46,11 +48,18 @@ function setupAvailability(
         .mockResolvedValue({ date: options.date ?? NAECHSTER_DIENSTAG }),
     },
     meetingAttendance: {
-      findMany: jest
-        .fn()
-        .mockResolvedValue(
-          (options.declinedIds ?? []).map((personId) => ({ personId })),
-        ),
+      findMany: jest.fn().mockResolvedValue([
+        ...(options.declinedIds ?? []).map((personId) => ({
+          personId,
+          status: 'ABSENT',
+          source: 'SELF',
+        })),
+        ...(options.selfAttendingIds ?? []).map((personId) => ({
+          personId,
+          status: 'ATTENDING',
+          source: 'SELF',
+        })),
+      ]),
     },
     absencePeriod: {
       findMany: jest.fn().mockResolvedValue(options.periods ?? []),
@@ -99,6 +108,46 @@ describe('AvailabilityService.assertAvailable', () => {
 
   it('weist auch ab, wer in dem Zeitraum verreist ist', async () => {
     const { service } = setupAvailability({
+      periods: [
+        {
+          personId: 'p2',
+          startDate: new Date('2026-08-09T00:00:00.000Z'),
+          endDate: new Date('2026-08-16T00:00:00.000Z'),
+        },
+      ],
+    });
+
+    await expect(service.assertAvailable('hk', 'm1', ['p2'])).rejects.toThrow(
+      /Mira ist an diesem Abend nicht dabei/,
+    );
+  });
+
+  /**
+   * Der Fall, den jemand tatsächlich hatte: Urlaub eingetragen, für einen
+   * einzelnen Abend daraus aber wieder zugesagt — und trotzdem aus jeder
+   * Vorschlagsliste gefallen, weil der Zeitraum getrennt gefragt wurde.
+   */
+  it('lässt durch, wer aus dem Zeitraum heraus ausdrücklich zusagt', async () => {
+    const { service } = setupAvailability({
+      selfAttendingIds: ['p2'],
+      periods: [
+        {
+          personId: 'p2',
+          startDate: new Date('2026-08-09T00:00:00.000Z'),
+          endDate: new Date('2026-08-16T00:00:00.000Z'),
+        },
+      ],
+    });
+
+    await expect(
+      service.assertAvailable('hk', 'm1', ['p2']),
+    ).resolves.toBeUndefined();
+  });
+
+  /** Die Absage bleibt die Absage — auch als eigene Antwort. */
+  it('weist trotzdem ab, wer für den Abend abgesagt hat', async () => {
+    const { service } = setupAvailability({
+      declinedIds: ['p2'],
       periods: [
         {
           personId: 'p2',

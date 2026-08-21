@@ -1624,6 +1624,25 @@ spielt** — und das ist der einzige dieser Gründe, der bloß ein Vorschlags-Fi
 ist: `setLeaders` nimmt an, worauf die Gruppe sich geeinigt hat, die anderen
 weist `assertAvailable` mit `400` ab.
 
+**Die ausdrückliche Zusage sticht den Zeitraum.** „Doch, ich komme" ist eine
+Aussage über genau diesen Abend, der Urlaub eine über viele — überall sonst
+gewann deshalb die Antwort von Hand (`AbsenceSyncService` fasst eine
+`SELF`-Zeile nie an, und die Hilfe sagt es genauso), nur hier nicht: Der
+Zeitraum wurde getrennt gefragt und schlug sie. Wer aus dem Urlaub heraus für
+einen einzelnen Abend wieder zusagte, fiel weiter aus jeder Liste — und
+`assertAvailable` hätte ihn ebenfalls abgelehnt.
+
+`AbsenceCalendar.exceptOn(date, personIds)` macht den Kalender für **einen**
+Abend an genau diesen Leuten stumm; die Menge kommt aus
+`AvailabilityService.findSelfAttending`. Zwei Einschränkungen, beide nötig:
+
+- Nur die **Zusage**, nicht jede eigene Antwort. Ein „weiß noch nicht" von Hand
+  sagt nicht, dass jemand zurück ist — und es entsteht sogar von selbst, denn
+  `uncancel` macht aus jeder Absage von Hand genau das.
+- Nur an **diesem** Abend. `rankHomes` spielt die ganze Historie durch und fragt
+  für jeden vergangenen Abend, wer damals weg war; eine Zusage von heute sagt
+  darüber nichts.
+
 Der Unterschied trägt die Liste „Nicht im Ranking" in der Oberfläche. Sie stand
 einmal für **alles**, was aus der Rangfolge fiel, mit dem Hinweis, eintragen
 ginge trotzdem — bei einem Abgesagten war das schlicht falsch. Jetzt steht dort

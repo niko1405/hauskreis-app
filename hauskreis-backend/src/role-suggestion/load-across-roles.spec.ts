@@ -98,6 +98,7 @@ function setup() {
     prisma as unknown as PrismaService,
     {
       findDeclined: jest.fn().mockResolvedValue(new Set<string>()),
+      findSelfAttending: jest.fn().mockResolvedValue(new Set<string>()),
     } as unknown as AvailabilityService,
   );
 }

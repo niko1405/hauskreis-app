@@ -69,7 +69,10 @@ export class RoleSuggestionService {
           meetingId: options.excludeMeetingId,
         }),
         this.countExpectedAttendance(hauskreisId, options.excludeMeetingId),
-        this.loadAbsences(hauskreisId),
+        this.loadAbsences(hauskreisId, {
+          meetingId: options.excludeMeetingId,
+          on: targetDate,
+        }),
         this.availability.findDeclined(options.excludeMeetingId),
       ]);
 
@@ -185,7 +188,10 @@ export class RoleSuggestionService {
         meetingId: options.meetingId,
         excludeTopicId: options.excludeTopicId,
       }),
-      this.loadAbsences(hauskreisId),
+      this.loadAbsences(hauskreisId, {
+        meetingId: options.meetingId,
+        on: targetDate,
+      }),
       this.availability.findDeclined(options.meetingId),
     ]);
 
@@ -224,7 +230,10 @@ export class RoleSuggestionService {
       this.collectLoad(hauskreisId, AssignmentRole.TESTIMONY, {
         meetingId: options.excludeMeetingId,
       }),
-      this.loadAbsences(hauskreisId),
+      this.loadAbsences(hauskreisId, {
+        meetingId: options.excludeMeetingId,
+        on: targetDate,
+      }),
       this.availability.findDeclined(options.excludeMeetingId),
     ]);
 
@@ -263,7 +272,10 @@ export class RoleSuggestionService {
       this.collectLoad(hauskreisId, AssignmentRole.SONG, {
         meetingId: options.excludeMeetingId,
       }),
-      this.loadAbsences(hauskreisId),
+      this.loadAbsences(hauskreisId, {
+        meetingId: options.excludeMeetingId,
+        on: targetDate,
+      }),
       this.availability.findDeclined(options.excludeMeetingId),
     ]);
 
@@ -316,14 +328,28 @@ export class RoleSuggestionService {
    * replay needs to know who was away on each *past* evening too. At nine
    * people and a handful of holidays a year that is a small table; filtering
    * per date would mean a query per meeting instead.
+   *
+   * Am **Zielabend** sticht die ausdrückliche Zusage den Zeitraum
+   * (`exceptOn`) — nur dort: Für die Vergangenheit sagt eine Antwort von heute
+   * nichts darüber, wer damals weg war.
    */
-  private async loadAbsences(hauskreisId: string): Promise<AbsenceCalendar> {
-    const periods = await this.prisma.absencePeriod.findMany({
-      where: { hauskreisId },
-      select: { personId: true, startDate: true, endDate: true },
-    });
+  private async loadAbsences(
+    hauskreisId: string,
+    abend: { meetingId?: string; on: Date },
+  ): Promise<AbsenceCalendar> {
+    const [periods, zugesagt] = await Promise.all([
+      this.prisma.absencePeriod.findMany({
+        where: { hauskreisId },
+        select: { personId: true, startDate: true, endDate: true },
+      }),
+      // Wer für genau diesen Abend von Hand zugesagt hat, ist da — auch wenn
+      // ein Zeitraum etwas anderes sagt. Sonst fiele aus jeder Liste heraus,
+      // wer seinen Urlaub zwar eingetragen, für den Abend aber ausdrücklich
+      // wieder zugesagt hat.
+      this.availability.findSelfAttending(abend.meetingId),
+    ]);
 
-    return new AbsenceCalendar(periods);
+    return new AbsenceCalendar(periods).exceptOn(abend.on, zugesagt);
   }
 
   /**

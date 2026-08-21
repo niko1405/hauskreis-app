@@ -79,3 +79,35 @@ describe('AbsenceCalendar.areAllAway', () => {
     expect(calendar.areAllAway([], utc('2026-08-12'))).toBe(false);
   });
 });
+
+describe('AbsenceCalendar.exceptOn', () => {
+  const calendar = new AbsenceCalendar([holiday]).exceptOn(
+    utc('2026-08-11'),
+    new Set(['niko']),
+  );
+
+  it('lässt die Zusage den Zeitraum stechen', () => {
+    expect(calendar.isAway('niko', utc('2026-08-11'))).toBe(false);
+  });
+
+  /**
+   * Nur an diesem einen Abend: Die Rangfolge spielt die ganze Historie durch
+   * und fragt für jeden vergangenen Abend, wer damals weg war. Eine Zusage von
+   * heute sagt darüber nichts.
+   */
+  it('gilt für keinen anderen Tag desselben Urlaubs', () => {
+    expect(calendar.isAway('niko', utc('2026-08-12'))).toBe(true);
+    expect(calendar.isAway('niko', utc('2026-08-24'))).toBe(true);
+  });
+
+  it('zieht die Wohnung mit, wenn alle Bewohner:innen zugesagt haben', () => {
+    expect(calendar.areAllAway(['niko'], utc('2026-08-11'))).toBe(false);
+    expect(calendar.areAllAway(['niko'], utc('2026-08-12'))).toBe(true);
+  });
+
+  it('gibt ohne Zusagen denselben Kalender zurück', () => {
+    const base = new AbsenceCalendar([holiday]);
+
+    expect(base.exceptOn(utc('2026-08-11'), new Set())).toBe(base);
+  });
+});

@@ -53,6 +53,52 @@ export class AbsenceCalendar {
       personIds.every((personId) => this.isAway(personId, date))
     );
   }
+
+  /**
+   * Derselbe Kalender, aber an **einem** Abend sticht die ausdrückliche Zusage.
+   *
+   * „Doch, ich komme" gewinnt gegen einen pauschalen Zeitraum — das galt
+   * überall sonst schon (`AbsenceSyncService` fasst eine `SELF`-Zeile nie an,
+   * und die Hilfe sagt es genauso), nur bei der Frage „wer kann eine Rolle
+   * übernehmen" nicht: Dort wurde der Zeitraum getrennt gefragt und schlug die
+   * eigene Antwort. Wer aus dem Urlaub heraus wieder zusagte, fiel weiter aus
+   * jeder Vorschlagsliste — und der Server hätte ihn auch abgelehnt.
+   *
+   * **Nur an diesem einen Abend**, und das ist der Grund für den Parameter: Die
+   * Rangfolge spielt die ganze Historie durch und fragt für jeden vergangenen
+   * Abend, wer damals weg war. Eine Zusage von heute darf darüber nichts sagen.
+   */
+  exceptOn(date: Date, personIds: ReadonlySet<string>): AbsenceCalendar {
+    if (personIds.size === 0) return this;
+
+    return new AnsweredCalendar(this, startOfUtcDay(date).getTime(), personIds);
+  }
+}
+
+/**
+ * Steht hier und nicht als Zweig in `isAway`: Der Normalfall — die Historie —
+ * soll die Ausnahme nicht bei jedem der Tausenden Aufrufe mitprüfen müssen.
+ */
+class AnsweredCalendar extends AbsenceCalendar {
+  constructor(
+    private readonly base: AbsenceCalendar,
+    private readonly day: number,
+    private readonly attending: ReadonlySet<string>,
+  ) {
+    // Die Fenster liegen im `base`; `super` bekommt deshalb keine.
+    super([]);
+  }
+
+  override isAway(personId: string, date: Date): boolean {
+    if (
+      startOfUtcDay(date).getTime() === this.day &&
+      this.attending.has(personId)
+    ) {
+      return false;
+    }
+
+    return this.base.isAway(personId, date);
+  }
 }
 
 function startOfUtcDay(date: Date): Date {

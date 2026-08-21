@@ -1,6 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AttendanceStatus } from '../../generated/prisma/enums';
+import {
+  AttendanceSource,
+  AttendanceStatus,
+} from '../../generated/prisma/enums';
 import { AbsenceCalendar } from '../absence/absence-window';
 import { GroupClockService } from '../meeting/group-clock.service';
 
@@ -30,6 +33,17 @@ import { GroupClockService } from '../meeting/group-clock.service';
  * schreibt Zeiträume in Absagen um. Trotzdem beide zu fragen kostet eine kleine
  * Abfrage und deckt das Fenster ab, in dem ein frisch erzeugter Termin noch
  * keine abgeleitete Zeile hat.
+ *
+ * **Und eine Ausnahme: die ausdrückliche Zusage sticht den Zeitraum.** „Doch,
+ * ich komme an dem Abend" ist eine Aussage über genau diesen Abend, der Urlaub
+ * eine über viele — überall sonst gewinnt deshalb die Antwort von Hand, und der
+ * Abgleich fasst eine `SELF`-Zeile nie an. Hier wurde der Zeitraum getrennt
+ * gefragt und schlug sie: Wer aus dem Urlaub heraus zusagte, fiel weiter aus
+ * jeder Vorschlagsliste, und das Eintragen wäre auch abgelehnt worden.
+ *
+ * Nur die **Zusage**, nicht jede eigene Antwort. Ein „weiß noch nicht" von Hand
+ * sagt nicht, dass jemand zurück ist — und es entsteht sogar von selbst: Wird
+ * ein Abend wiederbelebt, macht `uncancel` aus jeder Absage von Hand genau das.
  */
 @Injectable()
 export class AvailabilityService {
@@ -178,14 +192,12 @@ export class AvailabilityService {
   ): Promise<{ id: string; name: string }[]> {
     if (await this.clock.isPast(hauskreisId, date)) return [];
 
-    const [declined, periods, people] = await Promise.all([
+    const [answers, periods, people] = await Promise.all([
+      // Beide Antworten in einer Abfrage: die Absage sperrt, die ausdrückliche
+      // Zusage macht den Zeitraum stumm.
       this.prisma.meetingAttendance.findMany({
-        where: {
-          meetingId,
-          personId: { in: [...personIds] },
-          status: AttendanceStatus.ABSENT,
-        },
-        select: { personId: true },
+        where: { meetingId, personId: { in: [...personIds] } },
+        select: { personId: true, status: true, source: true },
       }),
       this.prisma.absencePeriod.findMany({
         where: { hauskreisId, personId: { in: [...personIds] } },
@@ -197,8 +209,16 @@ export class AvailabilityService {
       }),
     ]);
 
-    const calendar = new AbsenceCalendar(periods);
-    const declinedIds = new Set(declined.map((row) => row.personId));
+    const declinedIds = new Set(
+      answers
+        .filter((row) => row.status === AttendanceStatus.ABSENT)
+        .map((row) => row.personId),
+    );
+
+    const calendar = new AbsenceCalendar(periods).exceptOn(
+      date,
+      selfAttending(answers),
+    );
 
     return people.filter(
       (person) =>
@@ -220,4 +240,45 @@ export class AvailabilityService {
 
     return new Set(rows.map((row) => row.personId));
   }
+
+  /**
+   * Wer für diesen Abend **von Hand** zugesagt hat — die Menge, die einen
+   * Abwesenheitszeitraum sticht (`AbsenceCalendar.exceptOn`).
+   *
+   * Für die Vorschlagslisten, die den Kalender selbst befragen. Der Gegenpol zu
+   * `findDeclined`: die eine sperrt, die andere gibt frei.
+   */
+  async findSelfAttending(meetingId: string | undefined): Promise<Set<string>> {
+    if (!meetingId) return new Set();
+
+    const rows = await this.prisma.meetingAttendance.findMany({
+      where: {
+        meetingId,
+        status: AttendanceStatus.ATTENDING,
+        source: AttendanceSource.SELF,
+      },
+      select: { personId: true },
+    });
+
+    return new Set(rows.map((row) => row.personId));
+  }
+}
+
+/** Die Zusagen von Hand aus einer Liste roher Antworten. */
+function selfAttending(
+  rows: readonly {
+    personId: string;
+    status: AttendanceStatus;
+    source: AttendanceSource;
+  }[],
+): Set<string> {
+  return new Set(
+    rows
+      .filter(
+        (row) =>
+          row.status === AttendanceStatus.ATTENDING &&
+          row.source === AttendanceSource.SELF,
+      )
+      .map((row) => row.personId),
+  );
 }

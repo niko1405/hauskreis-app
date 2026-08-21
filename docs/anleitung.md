@@ -271,6 +271,11 @@ es auch ab. Unter der Rangliste steht deshalb nur noch einer: bei der **Musik**,
 wer kein Instrument spielt („spielt kein Instrument"). Eintragen kannst du ihn
 trotzdem — die Gruppe weiß besser, wer den Abend trägt.
 
+Ein **Abwesenheitszeitraum** wirkt dabei genauso — aber deine eigene Zusage
+sticht ihn. Wer im Urlaub für einen einzelnen Abend ausdrücklich zusagt („doch,
+ich bin da"), steht wieder ganz normal in der Liste. Der Zeitraum spricht nur
+dort, wo niemand für den einzelnen Abend geantwortet hat.
+
 Bei einem **vergangenen** Abend gilt das alles nicht: Dort stehen alle, denn
 nachgetragen wird, was war.
 
