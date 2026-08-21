@@ -104,7 +104,7 @@ function setup(groupStart = 1080, { anlegen = false } = {}) {
       {
         announceCreation: jest.fn(),
       } as unknown as CustomMeetingNotificationService,
-      { detachIfUpcoming: jest.fn() } as unknown as TopicLinkService,
+      { detach: jest.fn() } as unknown as TopicLinkService,
       { getRhythm } as unknown as MeetingScheduleConfigService,
     ),
   );

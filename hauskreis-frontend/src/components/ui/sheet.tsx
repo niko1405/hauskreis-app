@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { IconButton } from './button';
+import { lockOverlay } from './overlay-lock';
 
 export function Sheet({
   open,
@@ -55,13 +56,15 @@ export function Sheet({
     };
     document.addEventListener('keydown', onKeyDown);
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    // Der Hintergrund scrollt nicht mit — und „Ziehen zum Aktualisieren" hört
+    // nicht mehr zu, solange das hier oben liegt. Beides steckt in derselben
+    // Anmeldung, weil es dieselbe Aussage ist (`overlay-lock.ts`).
+    const release = lockOverlay();
     panel.current?.focus();
 
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
+      release();
     };
   }, [open]);
 

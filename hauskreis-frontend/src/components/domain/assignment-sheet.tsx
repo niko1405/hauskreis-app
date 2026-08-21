@@ -38,10 +38,12 @@ export interface AssignmentSheetProps {
   /**
    * Was diese Zuteilung sonst noch auslöst — steht über der Liste.
    *
-   * Für den einen Fall, in dem Eintragen mehr tut als eintragen: Hängt am Abend
-   * eine Einheit und bleibt niemand zuständig, der sie vorbereitet, löst sie
-   * sich. Das gehört **vor** die Entscheidung; eine Rückfrage danach erschiene
-   * auf dem schon geschlossenen Sheet.
+   * Für die Fälle, in denen Eintragen mehr tut als eintragen. Der eine
+   * geschieht **ohne** Nachfrage: Hängt am Abend eine Einheit und bleibt
+   * niemand zuständig, der sie vorbereitet, löst sie sich — das muss vorher
+   * dastehen, hinterher wäre das Sheet schon zu. Der andere ist die Rolle an
+   * einem vergangenen Abend zu leeren; dort **kommt** eine Rückfrage, und der
+   * Hinweis kündigt sie an, statt sie zu ersetzen.
    */
   hint?: React.ReactNode;
   onSubmit: (personIds: string[]) => void;

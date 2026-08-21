@@ -46,11 +46,15 @@ export interface ActionstepSource {
  * Der Actionstep dieses Abends, oder `null`.
  *
  * **Entschieden am Baustein**, nicht am ersten Feld, das nicht `null` ist. Beide
- * können gleichzeitig gefüllt sein: `TopicLinkService.detachIfUpcoming` löst nur
- * **kommende** Abende von ihrer Einheit, ein vergangener behält sie also auch
- * dann, wenn der Baustein danach abgeschaltet wurde. Ein `??` würde in dem Fall
- * den Text eines Themas ausspielen, das an diesem Abend gar nicht mehr dazu
- * gehört.
+ * können gleichzeitig gefüllt sein, und ein `??` spielte dann den Text eines
+ * Themas aus, das an diesem Abend gar nicht mehr dazugehört.
+ *
+ * Der Weg dorthin ist enger geworden — `TopicLinkService.detach` löst beim
+ * Abschalten des Bausteins inzwischen auch vergangene Abende —, aber es gibt
+ * ihn noch: Abende, an denen das früher unterblieben ist, tragen ihre Einheit
+ * weiterhin. Die Entscheidung am Baustein wäre ohnehin die richtige, auch wenn
+ * der Fall gar nicht mehr entstünde: Sie liest die Aussage des Abends statt zu
+ * raten, welches Feld gemeint ist.
  *
  * Ein leerer Text zählt als keiner: das Feld ist Freitext, und ein Leerzeichen
  * ist niemanden zu unterbrechen wert.

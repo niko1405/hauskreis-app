@@ -75,7 +75,7 @@ function setup(clash: { date: Date } | null = null) {
       {
         announceCreation,
       } as unknown as CustomMeetingNotificationService,
-      { detachIfUpcoming: jest.fn() } as unknown as TopicLinkService,
+      { detach: jest.fn() } as unknown as TopicLinkService,
       SCHEDULE,
     ),
   );
@@ -196,7 +196,7 @@ function setupRemove(type: MeetingType) {
       {} as unknown as RoleReleaseService,
       {} as unknown as AutoAttendanceService,
       {} as unknown as CustomMeetingNotificationService,
-      { detachIfUpcoming: jest.fn() } as unknown as TopicLinkService,
+      { detach: jest.fn() } as unknown as TopicLinkService,
       SCHEDULE,
     ),
   );

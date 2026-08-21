@@ -16,6 +16,7 @@ import {
 import { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
 import { AvailabilityService } from '../role-suggestion/availability.service';
 import { locationInclude } from '../location/location.service';
+import { ANGEKOMMEN } from '../person/angekommen';
 import { TopicLinkService } from '../topic/topic-link.service';
 import {
   sessionSelectWithTopic,
@@ -81,6 +82,13 @@ const meetingInclude = {
     orderBy: { doneAt: 'asc' },
   },
   attendances: {
+    // Dieselbe Menge wie überall sonst. Ohne diesen Filter zählte die
+    // Terminkarte Eingeladene mit, die nie angenommen haben, und an
+    // vergangenen Abenden auch Ausgetretene — deren Zeilen bleiben dort
+    // stehen, `RoleReleaseService` räumt nur die kommenden. Die Detailseite
+    // sortierte beide längst aus, also sagten die zwei Bildschirme über
+    // denselben Abend zwei verschiedene Zahlen.
+    where: { person: ANGEKOMMEN },
     select: { personId: true, status: true },
   },
   cancelledBy: { select: personRefSelect },
@@ -334,15 +342,18 @@ export class MeetingService {
 
     // Zweierlei, und mit Absicht ungleich behandelt. Die **Einheit** wird
     // gelöst, nicht geleert: sie trägt die Vorbereitung, und die soll ein
-    // versehentlich umgelegter Schalter nicht kosten (vergangene Abende
-    // ausgenommen — das entscheidet `detachIfUpcoming`). Die **Zuteilung**
+    // versehentlich umgelegter Schalter nicht kosten. Gelöst wird sie
+    // **auch an einem vergangenen Abend** — den Baustein wegzunehmen ist die
+    // ausdrückliche Aussage „der hatte kein Thema", und sie kommt nur mit
+    // Rückfrage; bliebe die Einheit hängen, hätte der Abend danach weder Thema
+    // noch Platz für eine Nachbereitung. Die **Zuteilung**
     // dagegen fällt, wie bei der Musik: sie blieb einmal aus Vorsicht stehen,
     // aber an einem Abend ohne Thema ist sie keine geduldige Notiz, sondern eine
     // falsche Aussage. `TopicReminderService` fragt nicht nach `hasTopicSlot`
     // und schrieb „Du bist dran mit dem Thema" für einen Abend, an dem keins
     // ist; auf dem Startbildschirm stand derselbe Rollen-Chip.
     if (before.hasTopicSlot && !slots.hasTopicSlot) {
-      await this.topicLinks.detachIfUpcoming(id);
+      await this.topicLinks.detach(id, { evenIfPast: true });
 
       await this.prisma.$transaction(async (tx) => {
         await tx.meetingTopicResponsible.deleteMany({

@@ -18,10 +18,19 @@ import { touchSession, touchTopic } from './topic-version';
  * aufgelöst hat. `PrismaModule` und `ClockModule` sind `@Global`, dieses Modul
  * importiert deshalb nichts.
  *
- * Eine Regel trägt alles hier: **entkoppelt wird nur, was noch bevorsteht.** Ein
- * vergangener Abend ist das Protokoll dessen, was war; ihn nachträglich von
- * seiner Nachbereitung zu lösen, weil jemand eine Rolle korrigiert, würde die
- * Zusammenfassung aus dem Archiv nehmen.
+ * Eine Regel trägt alles hier, und sie ist schärfer als „entkoppelt wird nur,
+ * was noch bevorsteht": **Ein vergangener Abend ist gegen die beiläufige
+ * Änderung geschützt, nicht gegen die ausdrückliche.** Er ist das Protokoll
+ * dessen, was war; ihn zu lösen, weil jemand eine Rolle korrigiert oder absagt,
+ * nähme die Zusammenfassung aus dem Archiv — `reconcile` und `releaseFor`
+ * rühren ihn deshalb nie an.
+ *
+ * Wer dagegen den Baustein „Thema" abschaltet, sagt gerade, dass dieser Abend
+ * keins hatte. Das ist keine Nebenwirkung, sondern die Aussage selbst, und sie
+ * hat ihre eigene Rückfrage. Bliebe die Einheit dabei hängen, entstünde ein
+ * Waisenkind: die Karte weg, `meetingId` noch gesetzt, die Einheit nie wieder
+ * an einen anderen Abend zu hängen — und der Abend ohne Ort für seine
+ * Nachbereitung, weil die beiden Bausteine einander ausschließen.
  */
 @Injectable()
 export class TopicLinkService {
@@ -210,13 +219,21 @@ export class TopicLinkService {
   }
 
   /**
-   * Löst die Einheit eines Abends, sofern er noch bevorsteht.
+   * Löst die Einheit eines Abends.
    *
    * Der Weg für alles, was einen Abend seine Auswahl verlieren lässt, ohne dass
    * jemand sie zurücknimmt — vor allem das Abschalten des Bausteins „Thema".
    * Antwortet mit `true`, wenn wirklich etwas gelöst wurde.
+   *
+   * `evenIfPast` ist die Ausnahme aus dem Kopf dieser Klasse und gehört genau
+   * einem Aufrufer: dem abgeschalteten Baustein. Wer ihn setzt, hat eine
+   * Rückfrage hinter sich; alle anderen Wege hierher sind beiläufig und lassen
+   * die Vergangenheit stehen.
    */
-  async detachIfUpcoming(meetingId: string): Promise<boolean> {
+  async detach(
+    meetingId: string,
+    options: { evenIfPast?: boolean } = {},
+  ): Promise<boolean> {
     const meeting = await this.prisma.meeting.findUnique({
       where: { id: meetingId },
       select: {
@@ -228,7 +245,10 @@ export class TopicLinkService {
 
     const session = meeting?.topicSession;
     if (!meeting || !session) return false;
-    if (await this.clock.isPast(meeting.hauskreisId, meeting.date)) {
+    if (
+      !options.evenIfPast &&
+      (await this.clock.isPast(meeting.hauskreisId, meeting.date))
+    ) {
       return false;
     }
 

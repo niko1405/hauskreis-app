@@ -63,6 +63,15 @@ export interface HomeFacts {
   expectedShare: number;
   /** Share it actually carried so far. 0–1. */
   actualShare: number;
+  /**
+   * How many past evenings the two shares were computed over.
+   *
+   * There so the UI can talk in evenings instead of percentages: "3 von 14,
+   * üblich wären 5" is countable, "21 statt 36 %" is not — and at zero it says
+   * plainly that there is nothing to compare yet, where a share would print a
+   * confident "0 statt 36 %" about a home nobody has ever been to.
+   */
+  meetingsCounted: number;
 }
 
 export interface HomeRanking {
@@ -222,6 +231,10 @@ export function rankHomes(params: {
             : null,
           expectedShare: round(earnPerMeeting(home)),
           actualShare: history.length > 0 ? round(used / history.length) : 0,
+          // Dieselbe Grundmenge wie `actualShare`: nur Abende an Zuhausen, die
+          // noch im Rennen sind (`known`). Ein stillgelegtes Zuhause darf den
+          // Nenner nicht aufblähen.
+          meetingsCounted: history.length,
         },
       };
     })

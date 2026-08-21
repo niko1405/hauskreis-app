@@ -58,6 +58,15 @@ const homeFactsSchema = z.object({
   expectedShare: z.number(),
   /// Anteil, den es bisher tatsächlich getragen hat.
   actualShare: z.number(),
+  /// Über wie viele vergangene Abende die beiden Anteile gerechnet sind.
+  /// Damit die Oberfläche in Abenden reden kann statt in Prozent — „3 von 14,
+  /// üblich wären 5" kann man nachzählen, „21 statt 36 %" nicht. Bei `0` gibt
+  /// es schlicht nichts zu vergleichen, und die Zeile entfällt.
+  meetingsCounted: z.number().int().nonnegative(),
+  /// Wie viele im Hauskreis überhaupt sind. Steht **nur** hier, um zu
+  /// entscheiden, ob `capacity` eine Frage aufwirft: In eine Wohnung, in die
+  /// alle passen, passen auch heute Abend alle.
+  groupSize: z.number().int().nonnegative(),
 });
 
 /**

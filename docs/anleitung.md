@@ -250,6 +250,13 @@ Neben jedem Namen stehen die Fakten, die zu dieser Reihenfolge geführt haben.
 Wer schon dran war, landet unten. Du kannst aber jederzeit jemand anderen
 eintragen — die Gruppe weiß Dinge, die die App nicht weiß.
 
+Beim **Gastgeber** kommt eine Zeile über die Wohnung dazu, und die redet in
+Abenden: „Bei Anna: seltener dran als üblich (3 von 14 Abenden, üblich wären
+5)". War eine Wohnung noch nie dran, steht dort nichts — es gibt nichts zu
+vergleichen. Eine Zeile zur **Größe** („Platz für 6, erwartet werden 8")
+erscheint nur, wenn nicht die ganze Gruppe hineinpasst; wo alle Platz haben,
+ist die Größe keine Frage.
+
 ### 6.6 Absagen und Abwesenheiten
 
 Zu- und absagen kannst du auf „Heute" oder in der Termin-Ansicht. Sagen **alle**
@@ -392,6 +399,13 @@ zusammenzufassen.
 
 **Beides zusammen geht nicht:** Hat der Abend ein Thema, gibt es keine
 Nachbereitung — sonst stünden Zusammenfassung und Actionstep zweimal da.
+
+**Nachträglich doch kein Thema?** Stellt sich hinterher heraus, dass der Abend
+gar keins hatte, leerst du in der Termin-Ansicht einfach die Rolle „Thema".
+Dann wird gefragt, ob der Abend gar kein Thema hatte — sagst du ja, fällt der
+Baustein weg und die Nachbereitung steht bereit. Eine Einheit, die daran hing,
+geht dabei **nicht verloren**: Sie löst sich vom Abend und wartet als Entwurf
+unter „Angefangenes", mit allem, was darin steht.
 
 Den **Haken** am Actionstep setzt jede:r für sich, auf „Heute". Er lässt sich
 erst setzen, wenn der Abend angefangen hat. Nachlesen kannst du alles später im

@@ -429,7 +429,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Kann sich ein vergangener Abend noch ändern?',
     answer:
-      'Nein. Ein Abend, der vorbei ist, ist eingefroren: Seine Einheit bleibt daran hängen, und wer sie gehalten hat, bleibt vermerkt — egal was danach mit den Zuteilungen passiert.\n\nDas gilt auch für Absagen und Rollenwechsel: Eine Korrektur von heute schreibt nicht um, was war.\n\nTexte lassen sich weiter bearbeiten — es geht um die Zuordnung, nicht um den Inhalt.',
+      'Gegen **beiläufige** Änderungen ist er eingefroren: Seine Einheit bleibt daran hängen, und wer sie gehalten hat, bleibt vermerkt. Eine Absage oder ein Rollenwechsel von heute schreibt nicht um, was war.\n\n**Ausdrücklich schon.** Stellt sich heraus, dass der Abend gar kein Thema hatte, leerst du in der Termin-Ansicht die Rolle „Thema" — dann wird gefragt, und ein Ja nimmt den Baustein weg. Die Einheit löst sich dabei vom Abend und wartet mit allem, was darin steht, unter „Angefangenes"; der Abend bekommt stattdessen seine Nachbereitung.\n\nTexte lassen sich ohnehin weiter bearbeiten — es geht um die Zuordnung, nicht um den Inhalt.',
     keywords: ['eingefroren', 'vergangen', 'ändern', 'nachträglich'],
   },
 
@@ -714,7 +714,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'notes',
     question: 'Warum kann ich die Nachbereitung erst am Abend hinzufügen?',
     answer:
-      'Weil man sie nicht vorplant. Stünde sie im Baukasten, hätte man sie **vor** dem Abend angehakt — also als es noch nichts nachzubereiten gab.\n\nAb der Treffpunktzeit steht an einem Abend ohne Thema der Hinweis „Nachbereitung hinzufügen?". Ein Klick legt die Karte an; im Bearbeitungsmodus kannst du sie auch wieder ganz entfernen, dann steht wieder der Hinweis da.\n\nNicht jeder Abend braucht eine. Eine leere Karte an jedem Termin wäre eine Aufforderung, der man meistens nicht nachkommt.',
+      'Weil man sie nicht vorplant. Stünde sie im Baukasten, hätte man sie **vor** dem Abend angehakt — also als es noch nichts nachzubereiten gab.\n\nAb der Treffpunktzeit steht an einem Abend ohne Thema der Hinweis „Nachbereitung hinzufügen?". Ein Klick legt die Karte an; im Bearbeitungsmodus kannst du sie auch wieder ganz entfernen, dann steht wieder der Hinweis da.\n\nNicht jeder Abend braucht eine. Eine leere Karte an jedem Termin wäre eine Aufforderung, der man meistens nicht nachkommt.\n\nHatte der Abend ein **Thema**, steht der Hinweis nicht da — dort tragen Zusammenfassung und Actionstep an der Einheit. War es nachträglich betrachtet doch keines, leer einfach die Rolle „Thema": Nach einer Rückfrage fällt der Baustein weg und der Hinweis erscheint.',
     keywords: ['hinzufügen', 'später', 'hinweis', 'karte'],
   },
   {

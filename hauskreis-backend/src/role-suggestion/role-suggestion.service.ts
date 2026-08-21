@@ -57,7 +57,7 @@ export class RoleSuggestionService {
     targetDate: Date,
     options: { excludeMeetingId?: string } = {},
   ): Promise<HostSuggestion[]> {
-    const [households, uses, events, expectedAttendance, calendar, declined] =
+    const [households, uses, events, attendance, calendar, declined] =
       await Promise.all([
         this.findHouseholds(hauskreisId),
         this.collectHomeUses(hauskreisId, options.excludeMeetingId),
@@ -66,6 +66,8 @@ export class RoleSuggestionService {
         this.loadAbsences(hauskreisId),
         this.availability.findDeclined(options.excludeMeetingId),
       ]);
+
+    const { expected: expectedAttendance, groupSize } = attendance;
 
     // Wer für diesen Abend abgesagt hat, ist **raus** — nicht bloß weiter
     // unten. Die Zuteilung lehnt ihn ab, also wäre ein Vorschlag eine Falle.
@@ -142,6 +144,10 @@ export class RoleSuggestionService {
               locationId: entry.home.id,
               locationName: entry.home.name,
               hostWeight: entry.home.hostWeight,
+              // Wie groß die Gruppe überhaupt ist. Steht hier und nicht in
+              // `rankHomes`, weil die Rangfolge sie nicht braucht: Sie sagt
+              // allein, ob `capacity` eine Frage aufwirft oder nicht.
+              groupSize,
               ...entry.facts,
             },
           },
@@ -286,10 +292,9 @@ export class RoleSuggestionService {
     hauskreisId: string,
     meetingId: string,
   ): Promise<Household[]> {
-    const [households, expected, fullGroup] = await Promise.all([
+    const [households, { expected, groupSize }] = await Promise.all([
       this.findHouseholds(hauskreisId),
       this.countExpectedAttendance(hauskreisId, meetingId),
-      this.prisma.person.count({ where: { hauskreisId, ...ANGEKOMMEN } }),
     ]);
 
     if (expected === null) {
@@ -300,7 +305,7 @@ export class RoleSuggestionService {
       ({ home }) =>
         home.capacity !== null &&
         // Would not have fit the whole group…
-        home.capacity < fullGroup &&
+        home.capacity < groupSize &&
         // …but fits the people who are actually coming.
         home.capacity >= expected,
     );
@@ -372,27 +377,35 @@ export class RoleSuggestionService {
    * evenings look full and the tight homes stay set aside until people actually
    * decline. The absence periods from Phase 9 will feed in here too, which is
    * what makes a holiday declared weeks ahead count at planning time.
+   *
+   * The full group size comes back alongside, because it was already counted
+   * here and two callers need it: `findHomesUnlockedByAbsences` asked for it in
+   * a query of its own, and the picker needs it to decide whether a capacity is
+   * a question at all — a flat that fits everyone never raises one.
    */
   private async countExpectedAttendance(
     hauskreisId: string,
     meetingId?: string,
-  ): Promise<number | null> {
-    if (!meetingId) {
-      return null;
-    }
-
-    const [active, declined] = await Promise.all([
+  ): Promise<{ expected: number | null; groupSize: number }> {
+    // Nebeneinander wie zuvor: Die Gruppengröße hängt nicht am Termin, und
+    // ohne einen bleibt die zweite Abfrage schlicht aus.
+    const [groupSize, declined] = await Promise.all([
       this.prisma.person.count({ where: { hauskreisId, ...ANGEKOMMEN } }),
-      this.prisma.meetingAttendance.count({
-        where: {
-          meetingId,
-          status: AttendanceStatus.ABSENT,
-          person: { hauskreisId, ...ANGEKOMMEN },
-        },
-      }),
+      meetingId
+        ? this.prisma.meetingAttendance.count({
+            where: {
+              meetingId,
+              status: AttendanceStatus.ABSENT,
+              person: { hauskreisId, ...ANGEKOMMEN },
+            },
+          })
+        : null,
     ]);
 
-    return active - declined;
+    return {
+      expected: declined === null ? null : groupSize - declined,
+      groupSize,
+    };
   }
 
   /**

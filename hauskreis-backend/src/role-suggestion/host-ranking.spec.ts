@@ -329,6 +329,56 @@ describe('rankHomes', () => {
     });
   });
 
+  /**
+   * The number the picker turns into "3 von 14 Abenden" instead of a
+   * percentage. It has to be the same denominator `actualShare` uses, or the
+   * two lines of the same sentence would contradict each other.
+   */
+  describe('meetingsCounted', () => {
+    it('counts the evenings the shares were computed over', () => {
+      const homes = [home('a', 'Bei Anna', 3), home('b', 'Bei Ben', 1)];
+
+      const result = rankHomes({
+        homes,
+        uses: weekly(['a', 'b', 'a', 'a']),
+        targetDate: TARGET,
+      });
+
+      expect(result.every((entry) => entry.facts.meetingsCounted === 4)).toBe(
+        true,
+      );
+
+      const anna = result.find((entry) => entry.home.id === 'a');
+      expect(anna?.facts.timesUsed).toBe(3);
+      expect(anna?.facts.actualShare).toBe(0.75);
+    });
+
+    it('leaves out evenings at a home the group has retired', () => {
+      // 'gone' is not in the running any more, so its evenings must not swell
+      // the denominator — otherwise everyone still listed looks underused.
+      const result = rankHomes({
+        homes: [home('a', 'Bei Anna', 1), home('b', 'Bei Ben', 1)],
+        uses: weekly(['a', 'gone', 'gone', 'b']),
+        targetDate: TARGET,
+      });
+
+      expect(result.every((entry) => entry.facts.meetingsCounted === 2)).toBe(
+        true,
+      );
+    });
+
+    it('is zero before anything has happened — nothing to compare', () => {
+      const result = rankHomes({
+        homes: [home('a', 'Bei Anna', 1)],
+        uses: [],
+        targetDate: TARGET,
+      });
+
+      expect(result[0].facts.meetingsCounted).toBe(0);
+      expect(result[0].facts.actualShare).toBe(0);
+    });
+  });
+
   it('never suggests a home weighted zero above one that is owed a turn', () => {
     const homes = [home('never', 'Bei Anna', 0), home('b', 'Bei Ben', 1)];
 

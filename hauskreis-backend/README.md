@@ -1529,11 +1529,29 @@ oben steht (CLAUDE.md §4: keine Blackbox):
       "lastUsedAt": "2026-12-08",
       "daysSinceLastUse": 7,
       "expectedShare": 0.2703,
-      "actualShare": 0.3
+      "actualShare": 0.3,
+      "meetingsCounted": 20,
+      "groupSize": 9
     }
   }
 }
 ```
+
+`meetingsCounted` und `groupSize` gibt es, damit die Oberfläche **in Abenden**
+reden kann statt in Prozent. Dort stand einmal „0 statt 25 % der Abende" — zwei
+gerundete Anteile nebeneinander, aus denen niemand ablas, ob das gut ist, und
+bei einem Zuhause ohne Historie eine selbstbewusste Aussage über gar nichts.
+Jetzt heißt es „seltener dran als üblich (3 von 14 Abenden, üblich wären 5)":
+
+- `meetingsCounted` ist der Nenner von `actualShare` — dieselbe Grundmenge, also
+  nur Abende an Zuhausen, die noch im Rennen sind. Bei `0` entfällt die Zeile.
+- `groupSize` beantwortet **eine** Frage: ob `capacity` überhaupt eine ist. In
+  eine Wohnung, in die die ganze Gruppe passt, passen auch heute Abend alle, und
+  „Platz für 12, erwartet werden 7" nennt zwei Zahlen ohne Aussage.
+- Das **Urteil** kommt aus `credit` und nicht aus den Anteilen: Danach wird
+  sortiert, und zwei Größen für dieselbe Aussage stünden irgendwann im
+  Widerspruch zur Reihenfolge. Gedruckt wird `credit` trotzdem nie — es ist auf
+  `MAX_CREDIT_MEETINGS` gedeckelt und misst die Länge eines Rückstands nicht.
 
 ### Host: Person und Ort sind eine Entscheidung
 
@@ -1876,13 +1894,28 @@ zugeteilt ist, der zum Thema gehört._
 - Aus zwei Zugeteilten wird einer → die Einheit bleibt, der Übriggebliebene
   gehört ja dazu.
 - Statt A ist jetzt C dran → entkoppelt, der Entwurf wartet auf A.
-- C kommt zu A dazu → die Einheit bleibt, C wird Verantwortliche und
-  Mitarbeiterin.
+- C kommt zu A dazu → die Einheit bleibt. C steht damit für den Abend ein und
+  bekommt **kein** Schreibrecht; wen A dazuholt, entscheidet er auf der Seite
+  der Einheit.
 
 Denselben Weg gehen das Abschalten des Bausteins „Thema" und die Absage einer
-zuständigen Person. **Ein vergangener Abend ist davon ausgenommen**: was war,
-war, und eine Zusammenfassung rückwirkend aus dem Archiv zu nehmen, weil jemand
-eine Rolle korrigiert, wäre der Preis für eine Aufräumaktion.
+zuständigen Person.
+
+**Ein vergangener Abend ist gegen die _beiläufige_ Änderung geschützt, nicht
+gegen die ausdrückliche.** Was war, war: `reconcile` und `releaseFor` rühren
+ihn nie an, denn eine Zusammenfassung rückwirkend aus dem Archiv zu nehmen,
+weil jemand eine Rolle korrigiert oder absagt, wäre der Preis für eine
+Aufräumaktion. Wer dagegen den **Baustein** wegnimmt, sagt gerade, dass dieser
+Abend kein Thema hatte — dafür gibt es `detach(meetingId, { evenIfPast: true })`
+und genau einen Aufrufer. Bliebe die Einheit dort hängen, entstünde ein
+Waisenkind: die Karte weg, `meeting_id` noch gesetzt, die Einheit nie wieder an
+einen anderen Abend zu hängen — und der Abend ohne Ort für seine Nachbereitung,
+weil die beiden Bausteine einander ausschließen.
+
+Im Frontend führt der Weg dorthin über die Rolle: Sie an einem vergangenen
+Abend zu **leeren** heißt fast immer „der hatte gar kein Thema", also wird
+gefragt, und ein Ja schaltet den Baustein ab. Ein Nein lässt alles stehen, auch
+die Namen.
 
 Wer aus der Zuteilung **herausfällt**, verliert dagegen etwas — aber nur im
 Zweig, in dem die Einheit hängen bleibt. `TopicLinkService.leave` nimmt ihm die
@@ -3297,6 +3330,16 @@ Daran hängt, was `DELETE …/people/:id` tut:
   eingetragen", und ein erneutes Einladen scheiterte an der belegten Adresse.
 - **Schon da gewesen** — das Konto bleibt. Es gehört einem Menschen, nicht
   dieser Gruppe.
+
+Überall sonst fragt `ANGEKOMMEN` (`src/person/angekommen.ts`) nach beidem
+zusammen — Mitglied **und** schon einmal angemeldet. Zuletzt fehlte es an den
+**Anwesenheitszeilen** eines Termins: `meetingInclude.attendances` lieferte
+jede Zeile aus, also zählte die Terminkarte Eingeladene mit, die nie angenommen
+haben, und an vergangenen Abenden auch Ausgetretene — deren Zeilen bleiben dort
+stehen, `RoleReleaseService` räumt nur die kommenden. Die Detailseite sortierte
+beide längst aus, und so nannten zwei Bildschirme über denselben Abend zwei
+verschiedene Zahlen. Der Filter sitzt jetzt im `include`, damit die fremden
+Zeilen gar nicht erst über die Leitung gehen.
 
 ### Wenn die Mail nicht rausgeht
 

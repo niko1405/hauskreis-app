@@ -113,7 +113,10 @@ export const meetingResponseSchema = z.object({
   actionstepDone: z.array(
     z.object({ person: personRefSchema, doneAt: isoDateTimeOut }),
   ),
-  /// Nur wer geantwortet hat, steht hier. Keine Zeile heißt `UNKNOWN`.
+  /// Nur wer dazugehört **und** geantwortet hat, steht hier. Keine Zeile heißt
+  /// `UNKNOWN` — und eine Eingeladene ohne `acceptedAt` oder eine Ausgetretene
+  /// steht gar nicht erst da, damit eine Zählung hier dasselbe ergibt wie eine
+  /// über die Mitgliederliste.
   attendances: z.array(
     z.object({
       personId: z.uuid(),

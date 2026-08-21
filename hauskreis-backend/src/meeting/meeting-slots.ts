@@ -105,8 +105,9 @@ const SLOT_LABEL: Record<keyof MeetingSlots, string> = {
  * Beim Thema steht hier nichts mehr, und das ist kein Versehen: Zusammenfassung
  * und Actionstep sind an die Einheit gewandert, und die wird beim Abschalten
  * **nicht geleert, sondern gelöst** — `MeetingService` ruft dafür
- * `TopicLinkService.detachIfUpcoming`. Die Vorbereitung bleibt erhalten, nur die
- * Sektion verschwindet.
+ * `TopicLinkService.detach`, und zwar mit `evenIfPast`: Den Baustein
+ * wegzunehmen ist die ausdrückliche Aussage „der Abend hatte kein Thema", auch
+ * rückwirkend. Die Vorbereitung bleibt erhalten, nur die Sektion verschwindet.
  *
  * Die **Zuteilung** dagegen fällt, wie bei der Musik. Sie blieb einmal aus
  * Vorsicht stehen, aber an einem Abend ohne Thema ist sie keine geduldige Notiz,

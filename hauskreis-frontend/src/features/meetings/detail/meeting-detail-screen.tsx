@@ -240,7 +240,7 @@ function Loaded({
 
   const submitFor = (role: SheetRole) => {
     if (role === 'TESTIMONY') return roles.assignTestimony;
-    if (role === 'TOPIC') return roles.assignTopicResponsibles;
+    if (role === 'TOPIC') return assignTopic;
     return roles.assignSongLeaders;
   };
 
@@ -329,13 +329,60 @@ function Loaded({
    *
    * Übrig bleibt die Kehrseite: Hängt am Abend etwas, das keiner der
    * Zuständigen anfassen darf, ist er in Wahrheit ungeplant — dann löst sich
-   * die Einheit und wartet als Entwurf. Das gehört **vor** die Entscheidung;
-   * eine Rückfrage danach erschiene auf dem schon geschlossenen Sheet.
+   * die Einheit und wartet als Entwurf. Das steht als Hinweis **vor** der
+   * Entscheidung, weil es beim Übernehmen ohne Nachfrage geschieht.
+   *
+   * Am **vergangenen** Abend ist es umgekehrt: Dort geschieht von allein gar
+   * nichts, und die Rolle zu leeren heißt fast immer „der hatte gar kein
+   * Thema". Danach wird also gefragt (`assignTopic`) — der Hinweis sagt hier
+   * nur an, dass die Frage kommt.
    */
-  const topicHint =
-    meeting.topicSession && !past
+  const topicHint = past
+    ? // Damit die Rückfrage niemanden überrumpelt: Sie kommt erst nach dem
+      // Übernehmen, also steht hier schon an, dass sie kommt. Ohne „der Abend
+      // ist vorbei" — das sagt der Picker eine Zeile weiter unten schon.
+      'Lässt du niemanden stehen, fragen wir, ob der Abend gar kein Thema hatte. Dann fällt der Baustein weg und du kannst stattdessen eine Nachbereitung eintragen.'
+    : meeting.topicSession
       ? 'Bleibt am Ende niemand zuständig, der diese Einheit vorbereitet, löst sie sich vom Abend — vorbereitet bleibt sie. Wer sie mit vorbereitet, steht auf ihrer eigenen Seite.'
       : undefined;
+
+  /**
+   * Die Thema-Rolle eintragen — mit einer Rückfrage für den vergangenen Abend.
+   *
+   * Sie dort zu **leeren** heißt fast immer „der hatte gar kein Thema"; sonst
+   * stünde ein anderer Name darin. Rückwärts wird nicht geplant, sondern
+   * protokolliert, und ein Abend ohne Thema braucht seine Nachbereitung — die
+   * es aber nur gibt, solange der Baustein „Thema" aus ist.
+   *
+   * Gefragt wird **auch ohne gebundene Einheit**: Das Ziel ist dasselbe, und
+   * eine leere Rolle unter einem eingeschalteten Baustein ist an einem Abend,
+   * der vorbei ist, ein Zustand, den niemand gemeint haben kann.
+   *
+   * Ein einziger `PATCH` erledigt danach beides — das Abschalten löscht die
+   * Zuteilung und löst die Einheit (`TopicLinkService.detach`). Ein `PUT` mit
+   * leerer Liste davor wäre derselbe Vorgang ein zweites Mal.
+   */
+  const assignTopic = async (personIds: string[]) => {
+    if (!past || personIds.length > 0) {
+      roles.assignTopicResponsibles(personIds);
+      return;
+    }
+
+    const bisher = meeting.topicSession;
+
+    const ok = await confirm({
+      title: 'Hatte der Abend gar kein Thema?',
+      body: bisher
+        ? `„${bisher.topic.title ?? bisher.title ?? 'Die bisherige Einheit'}" löst sich von diesem Abend und wartet als Entwurf — vorbereitet bleibt sie. Danach kannst du stattdessen eine Nachbereitung eintragen.`
+        : 'Der Baustein „Thema" fällt weg. Danach kannst du stattdessen eine Nachbereitung eintragen.',
+      confirmLabel: 'Thema wegnehmen',
+    });
+
+    // Abgelehnt heißt: gar nichts. Die Rolle bleibt, wie sie war — eine
+    // geleerte Rolle unter einem weiter eingeschalteten Baustein wäre genau
+    // der Zustand, den die Frage vermeiden soll.
+    if (ok) patch({ hasTopicSlot: false });
+  };
 
   /**
    * Ob die Nachbereitungs-Karte dasteht — und nicht bloß, ob der Baustein an

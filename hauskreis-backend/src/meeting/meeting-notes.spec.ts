@@ -68,6 +68,7 @@ function setup({
   };
 
   const deleteActionstepDone = jest.fn().mockResolvedValue({ count: 2 });
+  const topicLinks = { detach: jest.fn().mockResolvedValue(true) };
 
   const prisma = {
     meeting: {
@@ -109,12 +110,12 @@ function setup({
       {
         announceCreation: jest.fn(),
       } as unknown as CustomMeetingNotificationService,
-      { detachIfUpcoming: jest.fn() } as unknown as TopicLinkService,
+      topicLinks as unknown as TopicLinkService,
       {} as unknown as MeetingScheduleConfigService,
     ),
   );
 
-  return { service, state, deleteActionstepDone };
+  return { service, state, deleteActionstepDone, detach: topicLinks.detach };
 }
 
 afterEach(() => {
@@ -312,6 +313,30 @@ describe('Nachbereitung an- und abschalten', () => {
     expect(state.current.hasNotesSlot).toBe(false);
     expect(state.current.actionstepText).toBeNull();
     expect(deleteActionstepDone).toHaveBeenCalled();
+  });
+
+  /**
+   * Der Weg, den ein vergangener Abend braucht, um doch noch eine
+   * Nachbereitung zu bekommen: erst das Thema weg, dann ist der Platz frei.
+   *
+   * Das Lösen der Einheit geschieht dabei **auch rückwirkend**
+   * (`evenIfPast`) — bliebe sie hängen, hätte der Abend danach weder Thema
+   * noch Nachbereitung, und die Einheit wäre nie wieder an einen anderen Abend
+   * zu hängen.
+   */
+  it('gibt einen vergangenen Abend für die Nachbereitung frei', async () => {
+    // Eine Woche nach dem Abend — er ist vorbei.
+    jetzt(new Date('2026-08-18T09:00:00.000Z'));
+    const { service, state, detach } = setup({ hasTopicSlot: true });
+
+    await service.update('hk1', 'm1', { hasTopicSlot: false }, ICH, EGAL);
+
+    expect(state.current.hasTopicSlot).toBe(false);
+    expect(detach).toHaveBeenCalledWith('m1', { evenIfPast: true });
+
+    await service.update('hk1', 'm1', { hasNotesSlot: true }, ICH, EGAL);
+
+    expect(state.current.hasNotesSlot).toBe(true);
   });
 
   /** Beide zugleich bleibt verboten, auch am Abend selbst. */

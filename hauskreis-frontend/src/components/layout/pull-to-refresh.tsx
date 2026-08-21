@@ -16,21 +16,26 @@
  * liegen als eigene Ebene darüber, und ohne Netz soll gar nichts erst
  * anlaufen.
  *
- * **Warum am `<main>` und nicht am Fenster.** Ein offenes Sheet liegt als
- * eigene Ebene darüber; eine Berührung darin erreicht die Behandlung hier gar
- * nicht. Das erspart eine Abfrage, ob gerade ein Sheet offen ist — und damit
- * die Frage, wer sie aktuell hält.
+ * **Warum ein offenes Sheet die Geste abschaltet.** Hier stand einmal, eine
+ * Berührung im Sheet erreiche diese Behandlung gar nicht, und das erspare die
+ * Frage, ob gerade eines offen ist. Das war falsch: Die Sheets dieser App
+ * liegen im Seiteninhalt und **nicht in einem Portal** — `position: fixed`
+ * ändert, wo gemalt wird, nicht, woran ein Element hängt. Jeder Wisch darin
+ * lief also bis hierher, und weil man ein Sheet fast immer von ganz oben
+ * öffnet, griff auch `window.scrollY > 0` nicht: Das Sheet ließ sich nicht
+ * mehr scrollen, und beim Loslassen lud die Seite dahinter nach. Gefragt wird
+ * jetzt wirklich — `useOverlayOpen` aus `overlay-lock.ts`.
  *
- * **Warum sich nur der Kringel bewegt und nicht der Inhalt.** Das ist die
- * Android-Auslegung der Geste, und sie ist hier die einzig mögliche: Ein
- * `transform` am Inhalt — und sei es `translateY(0)` — macht das Element zum
- * Bezugsrahmen für alles `position: fixed` darin. Die Sheets dieser App sind
- * genau das und liegen im Seiteninhalt, nicht in einem Portal. Sie säßen
- * danach im Kasten statt im Fenster.
+ * **Warum sich nur der Kringel bewegt und nicht der Inhalt.** Dieselbe
+ * Eigenheit, andere Folge: Ein `transform` am Inhalt — und sei es
+ * `translateY(0)` — macht das Element zum Bezugsrahmen für alles
+ * `position: fixed` darin. Die Sheets säßen danach im Kasten statt im Fenster.
+ * Also die Android-Auslegung der Geste, bei der nur der Kringel wandert.
  */
 import { Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useOverlayOpen } from '@/components/ui/overlay-lock';
 import { useToast } from '@/components/ui/toast';
 import { useOnline } from '@/lib/use-online';
 import { cn } from '@/lib/cn';
@@ -60,6 +65,7 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const toast = useToast();
   const online = useOnline();
+  const overlay = useOverlayOpen();
 
   const [pull, setPull] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -87,8 +93,8 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
   // Die letzten Werte, ohne die Effekt-Abhängigkeiten zu bewegen: würde der
   // Effekt bei jedem `pull` neu laufen, hinge die Behandlung ständig neu am
   // Element und `touchmove` verlöre sein `passive: false`.
-  const state = useRef({ online, refreshing });
-  state.current = { online, refreshing };
+  const state = useRef({ online, refreshing, overlay });
+  state.current = { online, refreshing, overlay };
 
   useEffect(() => {
     const element = host.current;
@@ -96,8 +102,10 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
 
     const start = (event: TouchEvent) => {
       // Nur von ganz oben. Mitten im Dokument ist ein Zug nach unten das
-      // gewöhnliche Scrollen.
+      // gewöhnliche Scrollen — und liegt ein Sheet darüber, gehört jeder Wisch
+      // ihm, nicht der Seite dahinter.
       if (window.scrollY > 0 || state.current.refreshing) return;
+      if (state.current.overlay) return;
 
       const touch = event.touches[0];
       if (!touch || event.touches.length > 1) return;
@@ -131,6 +139,16 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
 
       // Nach oben gezogen heißt: doch scrollen. Die Geste gibt auf.
       if (dy <= 0) {
+        gesture.current = null;
+        pulled.current = 0;
+        setPull(0);
+        setDragging(false);
+        return;
+      }
+
+      // Öffnet sich mitten in der Geste ein Sheet, gibt sie auf, statt es
+      // festzuhalten: Der Finger ist dann schon auf dem neuen Inhalt.
+      if (state.current.overlay) {
         gesture.current = null;
         pulled.current = 0;
         setPull(0);

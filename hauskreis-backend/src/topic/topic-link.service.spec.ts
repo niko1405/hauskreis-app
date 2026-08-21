@@ -287,6 +287,109 @@ describe('TopicLinkService.reconcile', () => {
 });
 
 /**
+ * Der zweite Weg, eine Einheit von ihrem Abend zu lösen: nicht weil die
+ * Zuteilung es hergibt, sondern weil der Baustein „Thema" weggenommen wurde.
+ *
+ * Hier gilt die Sperre für die Vergangenheit **nicht** — sie schützt gegen die
+ * beiläufige Änderung, und den Baustein abzuschalten ist die ausdrückliche
+ * Aussage „der Abend hatte kein Thema". Bliebe die Einheit hängen, hätte er
+ * danach weder Thema noch Platz für eine Nachbereitung.
+ */
+function setupDetach(date: Date) {
+  const sessionUpdate = jest.fn().mockResolvedValue({});
+  const topicTouch = jest.fn().mockResolvedValue({ count: 1 });
+  const meetingTouch = jest.fn().mockResolvedValue({ count: 1 });
+
+  const tx = {
+    topicSession: { update: sessionUpdate },
+    topic: { updateMany: topicTouch },
+    meeting: { updateMany: meetingTouch },
+  };
+
+  const prisma = {
+    meeting: {
+      findUnique: jest.fn().mockResolvedValue({
+        hauskreisId: 'hk-1',
+        date,
+        topicSession: { id: 's1', topicId: 't1' },
+      }),
+    },
+    $transaction: jest.fn((run: (client: unknown) => unknown) => run(tx)),
+  };
+
+  const service = withClock(
+    new TopicLinkService(prisma as unknown as PrismaService),
+  );
+
+  return { service, sessionUpdate, topicTouch, meetingTouch };
+}
+
+describe('TopicLinkService.detach', () => {
+  it('löst einen kommenden Abend von seiner Einheit', async () => {
+    const { service, sessionUpdate } = setupDetach(KOMMENDER_DIENSTAG);
+
+    await expect(service.detach('m1')).resolves.toBe(true);
+    expect(sessionUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 's1' },
+        data: { meetingId: null, version: { increment: 1 } },
+      }),
+    );
+  });
+
+  it('lässt einen vergangenen Abend in Ruhe, solange niemand es verlangt', async () => {
+    const { service, sessionUpdate } = setupDetach(LETZTER_DIENSTAG);
+
+    await expect(service.detach('m1')).resolves.toBe(false);
+    expect(sessionUpdate).not.toHaveBeenCalled();
+  });
+
+  it('löst ihn mit `evenIfPast` trotzdem', async () => {
+    const { service, sessionUpdate, topicTouch, meetingTouch } =
+      setupDetach(LETZTER_DIENSTAG);
+
+    await expect(service.detach('m1', { evenIfPast: true })).resolves.toBe(
+      true,
+    );
+
+    // Gelöst, nicht geleert: geschrieben wird ausschließlich `meetingId`.
+    // Titel, Zusammenfassung, Actionstep und die Crew bleiben, wo sie sind —
+    // die Einheit wartet ab jetzt als Entwurf bei denen, die sie gemacht haben.
+    expect(sessionUpdate).toHaveBeenCalledWith({
+      where: { id: 's1' },
+      data: { meetingId: null, version: { increment: 1 } },
+    });
+
+    // Beide Seiten ändern ihre Antwort, also müssen beide Revisionen steigen —
+    // sonst kommt der alte Stand als `304` zurück.
+    expect(topicTouch).toHaveBeenCalled();
+    expect(meetingTouch).toHaveBeenCalled();
+  });
+
+  it('tut nichts an einem Abend ohne Einheit', async () => {
+    const prisma = {
+      meeting: {
+        findUnique: jest.fn().mockResolvedValue({
+          hauskreisId: 'hk-1',
+          date: LETZTER_DIENSTAG,
+          topicSession: null,
+        }),
+      },
+      $transaction: jest.fn(),
+    };
+
+    const service = withClock(
+      new TopicLinkService(prisma as unknown as PrismaService),
+    );
+
+    await expect(service.detach('m1', { evenIfPast: true })).resolves.toBe(
+      false,
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+/**
  * Die beiden Griffe an der Crew einer Einheit.
  *
  * Sie schreiben genau eine Tabelle. Dass `join` daneben auch noch das

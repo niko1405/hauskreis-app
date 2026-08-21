@@ -2701,6 +2701,8 @@ export interface components {
           daysSinceLastUse: number | null;
           expectedShare: number;
           actualShare: number;
+          meetingsCounted: number;
+          groupSize: number;
         };
       };
     }[];

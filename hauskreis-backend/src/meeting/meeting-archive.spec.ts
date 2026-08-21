@@ -4,6 +4,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
 import type { MeetingNotificationService } from './meeting-notification.service';
 import { withClock } from './group-clock.testing';
+import { ANGEKOMMEN } from '../person/angekommen';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const TODAY = utc('2026-07-29');
@@ -55,6 +56,26 @@ const vorbeiSeit = (day: Date) => ({
 });
 
 describe('MeetingService.findAll for the archive', () => {
+  /**
+   * Wer auf einer Terminkarte als „dabei" zählt, ist dieselbe Menge wie
+   * überall sonst — `ANGEKOMMEN`.
+   *
+   * Ohne den Filter zählten Eingeladene mit, die nie angenommen haben, und an
+   * vergangenen Abenden auch Ausgetretene: Deren Zeilen bleiben dort stehen,
+   * `RoleReleaseService` räumt nur die kommenden. Die Detailseite sortierte
+   * beide längst aus, also nannten die zwei Bildschirme über denselben Abend
+   * zwei verschiedene Zahlen.
+   */
+  it('lässt Anwesenheitszeilen von Nicht-Mitgliedern weg', async () => {
+    const { service, findMany } = setup();
+
+    await service.findAll('hk-1', query);
+
+    expect(findMany.mock.calls[0][0].include.attendances.where).toEqual({
+      person: ANGEKOMMEN,
+    });
+  });
+
   it('reads newest first', async () => {
     const { service, findMany } = setup();
 

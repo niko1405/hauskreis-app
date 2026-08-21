@@ -14,7 +14,11 @@ import { Avatar } from '@/components/ui/avatar';
 import { formatDay, formatRelativeDay } from '@/lib/date';
 import { cn } from '@/lib/cn';
 import { ROLE_LABEL } from '@/lib/meeting';
-import type { HostSuggestion, RoleSuggestion } from '@/lib/api/types';
+import type {
+  HostHomeFacts,
+  HostSuggestion,
+  RoleSuggestion,
+} from '@/lib/api/types';
 
 type AnySuggestion = RoleSuggestion | HostSuggestion;
 
@@ -51,12 +55,18 @@ export function suggestionFacts(suggestion: AnySuggestion): string[] {
 
   if (isHostSuggestion(suggestion)) {
     const home = suggestion.facts.home;
-    lines.push(
-      `${home.locationName}: ${Math.round(home.actualShare * 100)} statt ${Math.round(
-        home.expectedShare * 100,
-      )} % der Abende`,
-    );
-    if (home.capacity !== null && home.expectedAttendance !== null) {
+
+    const share = shareLine(home);
+    if (share) lines.push(share);
+
+    // Nur wenn die Größe überhaupt eine Frage aufwirft. Bisher stand die Zeile
+    // an jedem Zuhause mit gesetzter Kapazität — auch bei „Platz für 12,
+    // erwartet werden 7", wo sie zwei Zahlen nennt und nichts sagt.
+    if (
+      home.capacity !== null &&
+      home.capacity < home.groupSize &&
+      home.expectedAttendance !== null
+    ) {
       lines.push(
         `Platz für ${home.capacity}, erwartet werden ${home.expectedAttendance}`,
       );
@@ -64,6 +74,42 @@ export function suggestionFacts(suggestion: AnySuggestion): string[] {
   }
 
   return lines;
+}
+
+/**
+ * Wie dieses Zuhause zu seinem Anteil steht.
+ *
+ * Hier standen zwei gerundete Prozentwerte nebeneinander („0 statt 25 % der
+ * Abende"), und niemand konnte sagen, was davon gut ist. Jetzt zuerst das
+ * Urteil, dahinter die Zahlen — und die sind **Abende**, keine Anteile.
+ *
+ * Das Urteil kommt aus `credit`, weil die Rangfolge daraus entsteht: Zwei
+ * Größen für dieselbe Aussage liefen früher oder später auseinander, und dann
+ * stünde „öfter als üblich" über dem obersten Vorschlag. Gedruckt wird die Zahl
+ * trotzdem nicht — sie ist auf ±1,5 gedeckelt (`MAX_CREDIT_MEETINGS`) und wäre
+ * als „1,5 Abende im Rückstand" eine Aussage über eine Länge, die sie gar nicht
+ * misst.
+ */
+function shareLine(home: HostHomeFacts): string | null {
+  // Ohne Historie gibt es nichts zu vergleichen. Dass hier noch nie jemand war,
+  // steht schon in der ersten Zeile („war noch nie dran").
+  if (home.meetingsCounted === 0) return null;
+
+  const zahlen = `${home.timesUsed} von ${home.meetingsCounted} Abenden`;
+  const üblich = Math.round(home.expectedShare * home.meetingsCounted);
+
+  // Eine halbe Runde: ungestört bleibt das Guthaben unter ±0,8, der Deckel
+  // liegt bei ±1,5 — dazwischen ist „merklich daneben" und alles darunter
+  // Rauschen, über das man kein Urteil fällen sollte.
+  if (home.credit >= 0.5) {
+    return `${home.locationName}: seltener dran als üblich (${zahlen}, üblich wären ${üblich})`;
+  }
+
+  if (home.credit <= -0.5) {
+    return `${home.locationName}: öfter dran als üblich (${zahlen}, üblich wären ${üblich})`;
+  }
+
+  return `${home.locationName}: ${zahlen}`;
 }
 
 export function SuggestionRow({

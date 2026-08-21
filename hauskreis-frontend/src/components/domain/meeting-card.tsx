@@ -33,6 +33,10 @@ export function MeetingCard({
 
   const cancelled = meeting.status === 'CANCELLED';
   const past = isPast(meeting.date);
+  // Wer zugesagt hat, sonst niemand: „weiß noch nicht" ist keine Zusage, und
+  // wer gar keine Zeile hat, zählt als eben das. Dass hier dieselbe Menge
+  // steht wie unter „Wer kommt" auf der Detailseite, sorgt der Server —
+  // Eingeladene und Ausgetretene kommen nicht mit.
   const attending = meeting.attendances.filter(
     (a) => a.status === 'ATTENDING',
   ).length;

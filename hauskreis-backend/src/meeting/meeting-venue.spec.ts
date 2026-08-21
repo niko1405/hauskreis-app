@@ -99,7 +99,7 @@ function setup(before = meeting()) {
   // Das Lösen der Einheit beim Abschalten des Bausteins hat seinen eigenen
   // Spec; hier soll es den anderen Tests nicht im Weg stehen.
   const topicLinks = {
-    detachIfUpcoming: jest.fn().mockResolvedValue(false),
+    detach: jest.fn().mockResolvedValue(false),
   };
 
   const service = withClock(
