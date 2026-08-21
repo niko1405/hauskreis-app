@@ -2682,6 +2682,7 @@ export interface components {
           role: 'HOST' | 'TOPIC' | 'SONG' | 'TESTIMONY';
           /** Format: date */
           date: string;
+          thisEvening: boolean;
         }[];
         away: boolean;
         deferred: boolean;
@@ -2723,6 +2724,7 @@ export interface components {
           role: 'HOST' | 'TOPIC' | 'SONG' | 'TESTIMONY';
           /** Format: date */
           date: string;
+          thisEvening: boolean;
         }[];
       };
     }[];

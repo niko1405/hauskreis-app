@@ -160,8 +160,8 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'suggestions',
     question: 'Warum taucht jemand gar nicht in den Vorschlägen auf?',
     answer:
-      'Wer für den Abend **abgesagt** hat, wird nicht vorgeschlagen — sonst würde die App etwas anbieten, das sie danach selbst ablehnt.\n\nBei der **Musik** kommen nur Leute vor, die im Profil angegeben haben, dass sie ein Instrument spielen. Eintragen lässt sich trotzdem jede:r — der Haken steuert nur den Vorschlag.\n\nBeim **Gastgeber** fällt heraus, wer keine Adresse hinterlegt hat oder den Haken „Ich kann gerade hosten" herausgenommen hat.\n\nBeim **Testimony** gibt es keine Einschränkung. Eine Geschichte hat jede:r.',
-    keywords: ['fehlt', 'nicht dabei', 'unsichtbar', 'instrument'],
+      'Wer für den Abend **abgesagt** hat oder in der Zeit **verreist** ist, steht gar nicht zur Auswahl — in keiner der vier Rollen. Wer nicht da ist, kann sie nicht übernehmen, und die App würde sonst etwas anbieten, das sie danach selbst ablehnt.\n\nBei der **Musik** werden nur Leute vorgeschlagen, die im Profil angegeben haben, dass sie ein Instrument spielen. Die anderen stehen weiter unten unter „Nicht im Ranking" mit dem Vermerk „spielt kein Instrument" — eintragen lässt sich jede:r, der Haken steuert nur den Vorschlag.\n\nBeim **Gastgeber** fällt zusätzlich heraus, wer keine Adresse hinterlegt oder den Haken „Ich kann gerade hosten" herausgenommen hat.\n\nBeim **vergangenen** Abend gilt nichts davon: Dort stehen alle, denn nachgetragen wird, was war.',
+    keywords: ['fehlt', 'nicht dabei', 'unsichtbar', 'instrument', 'abgesagt'],
   },
   {
     id: 'suggestions-wohnungen',
@@ -488,7 +488,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     question:
       'Muss man ein Instrument spielen, um für die Musik eingetragen zu werden?',
     answer:
-      'Für den **Vorschlag** ja — vorgeschlagen wird nur, wer im Profil angehakt hat, dass er ein Instrument spielt.\n\nFür den **Eintrag** nein. Die Gruppe bleibt frei, einzutragen, worauf sie sich geeinigt hat; die App redet da nicht hinein.\n\nWas sie prüft, ist die Anwesenheit: Wer für den Abend abgesagt hat, kann die Rolle nicht übernehmen. Bei einem vergangenen Abend prüft sie auch das nicht mehr — Nachtragen ist Buchführung, keine Planung.',
+      'Für den **Vorschlag** ja — vorgeschlagen wird nur, wer im Profil angehakt hat, dass er ein Instrument spielt. Alle anderen stehen darunter unter „Nicht im Ranking", mit „spielt kein Instrument" als Grund.\n\nFür den **Eintrag** nein. Die Gruppe bleibt frei, einzutragen, worauf sie sich geeinigt hat; die App redet da nicht hinein.\n\nWas sie prüft, ist die Anwesenheit: Wer für den Abend abgesagt hat, kann die Rolle nicht übernehmen — das gilt inzwischen für alle vier Rollen, auch fürs Testimony. Bei einem vergangenen Abend prüft sie auch das nicht mehr; Nachtragen ist Buchführung, keine Planung.',
     keywords: ['instrument', 'spielen', 'musik', 'zuteilen'],
   },
   {

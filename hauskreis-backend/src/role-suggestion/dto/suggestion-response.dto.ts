@@ -22,6 +22,10 @@ const suggestionFactsSchema = z.object({
     z.object({
       role: z.enum(['HOST', 'TOPIC', 'SONG', 'TESTIMONY']),
       date: isoDateOut,
+      /// Liegt am **selben Abend**, für den gerade eingeteilt wird — der
+      /// schärfste Fall der Auslastung und der einzige, den ein Datum nicht
+      /// ausdrückt. Hier entschieden, damit „derselbe Abend" eine Regel bleibt.
+      thisEvening: z.boolean(),
     }),
   ),
 });
@@ -59,9 +63,12 @@ const homeFactsSchema = z.object({
   /// Anteil, den es bisher tatsächlich getragen hat.
   actualShare: z.number(),
   /// Über wie viele vergangene Abende die beiden Anteile gerechnet sind.
-  /// Damit die Oberfläche in Abenden reden kann statt in Prozent — „3 von 14,
-  /// üblich wären 5" kann man nachzählen, „21 statt 36 %" nicht. Bei `0` gibt
-  /// es schlicht nichts zu vergleichen, und die Zeile entfällt.
+  ///
+  /// Die Oberfläche druckt daraus **keine Zahl** mehr: „3 von 14, üblich wären
+  /// 5" war zwar nachzählbar, aber unter einem Namen in einer Liste liest
+  /// niemand eine Rechnung. Sie sagt jetzt nur noch „seltener als üblich".
+  /// Gebraucht wird der Wert trotzdem — als Prüfung, ob es überhaupt eine
+  /// Historie gibt: bei `0` ist auch das Urteil eine Behauptung über nichts.
   meetingsCounted: z.number().int().nonnegative(),
   /// Wie viele im Hauskreis überhaupt sind. Steht **nur** hier, um zu
   /// entscheiden, ob `capacity` eine Frage aufwirft: In eine Wohnung, in die

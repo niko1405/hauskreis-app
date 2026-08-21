@@ -57,17 +57,38 @@ export class RoleSuggestionService {
     targetDate: Date,
     options: { excludeMeetingId?: string } = {},
   ): Promise<HostSuggestion[]> {
-    const [households, uses, events, attendance, calendar, declined] =
-      await Promise.all([
-        this.findHouseholds(hauskreisId),
-        this.collectHomeUses(hauskreisId, options.excludeMeetingId),
-        this.collectEvents(hauskreisId, options.excludeMeetingId),
-        this.countExpectedAttendance(hauskreisId, options.excludeMeetingId),
-        this.loadAbsences(hauskreisId),
-        this.availability.findDeclined(options.excludeMeetingId),
-      ]);
+    const [
+      households,
+      uses,
+      hostEvents,
+      topicEvents,
+      songEvents,
+      attendance,
+      calendar,
+      declined,
+    ] = await Promise.all([
+      this.findHouseholds(hauskreisId),
+      this.collectHomeUses(hauskreisId, options.excludeMeetingId),
+      this.collectEvents(hauskreisId, options.excludeMeetingId),
+      // **Ohne** `excludeMeetingId`, anders als bei den Gastgeber-Ereignissen
+      // eine Zeile darüber: Wer an diesem Abend das Thema hat oder die Musik
+      // macht, hat genau deshalb schon zu tun. Das ist der Fall, den Regel 1
+      // meint — und der einzige Grund, aus dem `HOUSEHOLD_BUSY` je zuschlägt.
+      this.collectTopicEvents(hauskreisId),
+      this.collectSongEvents(hauskreisId),
+      this.countExpectedAttendance(hauskreisId, options.excludeMeetingId),
+      this.loadAbsences(hauskreisId),
+      this.availability.findDeclined(options.excludeMeetingId),
+    ]);
 
     const { expected: expectedAttendance, groupSize } = attendance;
+
+    // Die Rangfolge sah bisher **nur** Gastgeber-Dienste. Damit war Regel 1
+    // („wer hat am wenigsten zu tun, über alle Rollen") beim Gastgeber außer
+    // Kraft: Wer an dem Abend ohnehin das Thema vorbereitet, stand trotzdem
+    // ganz oben — und `HOUSEHOLD_BUSY` konnte gar nicht auftreten, weil
+    // `findBusyHomes` in einer Liste ohne fremde Rollen nichts findet.
+    const events = [...hostEvents, ...topicEvents, ...songEvents];
 
     // Wer für diesen Abend abgesagt hat, ist **raus** — nicht bloß weiter
     // unten. Die Zuteilung lehnt ihn ab, also wäre ein Vorschlag eine Falle.
@@ -176,7 +197,10 @@ export class RoleSuggestionService {
           select: { id: true, name: true, photoUpdatedAt: true },
         }),
         this.collectEvents(hauskreisId),
-        this.collectTopicEvents(hauskreisId, options.excludeTopicId),
+        this.collectTopicEvents(hauskreisId, {
+          excludeTopicId: options.excludeTopicId,
+          excludeMeetingId: options.meetingId,
+        }),
         this.loadAbsences(hauskreisId),
         this.availability.findDeclined(options.meetingId),
       ]);
@@ -480,17 +504,27 @@ export class RoleSuggestionService {
    *
    * Abende ohne Thema-Baustein bleiben draußen. Ein Geburtstagsabend soll in der
    * Fairness-Rechnung des Themas nicht mitzählen.
+   *
+   * `excludeMeetingId` ist dieselbe Vorsichtsmaßnahme wie bei Gastgeber, Musik
+   * und Testimony, die sie längst hatten: **Was gerade eingeteilt wird, zählt
+   * nicht als Last.** Hier fehlte sie, solange noch keine Einheit gewählt war —
+   * `excludeTopicId` greift dann ins Leere, und wer für diesen Abend schon
+   * zuständig war, bekam durch genau diese Zuteilung eine Aufgabe angerechnet
+   * und rutschte in seiner eigenen Liste nach unten.
    */
   private async collectTopicEvents(
     hauskreisId: string,
-    excludeTopicId?: string,
+    options: { excludeTopicId?: string; excludeMeetingId?: string } = {},
   ): Promise<RoleAssignmentEvent[]> {
+    const { excludeTopicId, excludeMeetingId } = options;
+
     const meetings = await this.prisma.meeting.findMany({
       where: {
         hauskreisId,
         status: { not: MeetingStatus.CANCELLED },
         hasTopicSlot: true,
         topicResponsibles: { some: {} },
+        ...(excludeMeetingId ? { id: { not: excludeMeetingId } } : {}),
         ...(excludeTopicId
           ? { NOT: { topicSession: { topicId: excludeTopicId } } }
           : {}),

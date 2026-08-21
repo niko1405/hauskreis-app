@@ -41,7 +41,9 @@ function daysBetween(earlier: Date, later: Date): number {
  *
  * 1. **Wer hat am wenigsten zu tun** — fewest jobs already booked from the
  *    target date onwards, counted across *all* roles. Someone who is down for
- *    the topic that evening should not also be asked to host.
+ *    the topic that evening should not also be asked to host; that case is
+ *    flagged as `thisEvening` so the UI can say so instead of printing a date
+ *    the reader has to compare himself.
  * 2. **Wer war am längsten nicht dran** — longest since they last had *this*
  *    role; never had it wins outright. This is the fairness criterion.
  * 3. **Wer war insgesamt am seltensten dran** — breaks ties between two people
@@ -97,7 +99,14 @@ export function rankForRole(params: {
       // A topic running over several evenings is one job, dated at the first
       // of them — CLAUDE.md §5: ein mehrteiliges Thema zählt wie ein Slot.
       if (!existing || date < existing.date) {
-        tally.upcoming.set(key, { role: event.role, date });
+        tally.upcoming.set(key, {
+          role: event.role,
+          date,
+          // Am Zieltag selbst: der Grund, aus dem diese Person gerade *nicht*
+          // auch noch das hier übernehmen sollte. Zwei Termine am selben Tag
+          // schließt `assertNoOverlap` aus, das Datum ist also eindeutig.
+          thisEvening: event.date.getTime() === targetDate.getTime(),
+        });
       }
       continue;
     }

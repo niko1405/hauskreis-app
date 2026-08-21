@@ -37,6 +37,17 @@ export function suggestionFacts(suggestion: AnySuggestion): string[] {
   const facts = suggestion.facts;
   const lines: string[] = [];
 
+  // **Zuerst**, was an diesem Abend schon ansteht. Das ist der schärfste Grund,
+  // jemanden nicht zu nehmen, und in der knappen Fassung sind nur die ersten
+  // zwei Zeilen zu sehen — hinten angestellt wäre es genau dort unsichtbar, wo
+  // es am meisten zählt.
+  const heute = facts.upcomingCommitments.filter((c) => c.thisEvening);
+  const spaeter = facts.upcomingCommitments.filter((c) => !c.thisEvening);
+
+  for (const commitment of heute) {
+    lines.push(`an diesem Abend schon ${ROLE_LABEL[commitment.role]}`);
+  }
+
   if (facts.lastAssignedAt) {
     lines.push(`zuletzt ${formatRelativeDay(facts.lastAssignedAt)}`);
   } else {
@@ -47,7 +58,7 @@ export function suggestionFacts(suggestion: AnySuggestion): string[] {
     lines.push(`${facts.timesAssigned}× insgesamt`);
   }
 
-  for (const commitment of facts.upcomingCommitments.slice(0, 2)) {
+  for (const commitment of spaeter.slice(0, 2)) {
     lines.push(
       `hat am ${formatDay(commitment.date)} schon ${ROLE_LABEL[commitment.role]}`,
     );
@@ -77,39 +88,32 @@ export function suggestionFacts(suggestion: AnySuggestion): string[] {
 }
 
 /**
- * Wie dieses Zuhause zu seinem Anteil steht.
+ * Wie dieses Zuhause zu seinem Anteil steht — **als Urteil, ohne Zahlen**.
  *
- * Hier standen zwei gerundete Prozentwerte nebeneinander („0 statt 25 % der
- * Abende"), und niemand konnte sagen, was davon gut ist. Jetzt zuerst das
- * Urteil, dahinter die Zahlen — und die sind **Abende**, keine Anteile.
+ * Zuerst standen hier zwei gerundete Prozentwerte nebeneinander („0 statt 25 %
+ * der Abende"), dann dieselbe Aussage in Abenden („3 von 14, üblich wären 5").
+ * Auch das war eine Zeile zu viel: Unter einem Namen in einer Liste rechnet
+ * niemand nach, und wer es täte, käme zu keinem anderen Schluss als dem, der
+ * ohnehin danebensteht. Übrig bleibt der Schluss.
  *
- * Das Urteil kommt aus `credit`, weil die Rangfolge daraus entsteht: Zwei
- * Größen für dieselbe Aussage liefen früher oder später auseinander, und dann
- * stünde „öfter als üblich" über dem obersten Vorschlag. Gedruckt wird die Zahl
- * trotzdem nicht — sie ist auf ±1,5 gedeckelt (`MAX_CREDIT_MEETINGS`) und wäre
- * als „1,5 Abende im Rückstand" eine Aussage über eine Länge, die sie gar nicht
- * misst.
+ * Er kommt aus `credit`, weil die Rangfolge daraus entsteht: Zwei Größen für
+ * dieselbe Aussage liefen früher oder später auseinander, und dann stünde
+ * „öfter als üblich" über dem obersten Vorschlag.
  */
 function shareLine(home: HostHomeFacts): string | null {
-  // Ohne Historie gibt es nichts zu vergleichen. Dass hier noch nie jemand war,
-  // steht schon in der ersten Zeile („war noch nie dran").
+  // Ohne Historie gibt es nichts zu vergleichen — ein Urteil wäre hier eine
+  // Behauptung über nichts. Dass noch nie jemand dort war, steht ohnehin schon
+  // in der Zeile darüber („war noch nie dran").
   if (home.meetingsCounted === 0) return null;
-
-  const zahlen = `${home.timesUsed} von ${home.meetingsCounted} Abenden`;
-  const üblich = Math.round(home.expectedShare * home.meetingsCounted);
 
   // Eine halbe Runde: ungestört bleibt das Guthaben unter ±0,8, der Deckel
   // liegt bei ±1,5 — dazwischen ist „merklich daneben" und alles darunter
-  // Rauschen, über das man kein Urteil fällen sollte.
-  if (home.credit >= 0.5) {
-    return `${home.locationName}: seltener dran als üblich (${zahlen}, üblich wären ${üblich})`;
-  }
+  // Rauschen, über das man kein Urteil fällen sollte. Im Soll steht gar nichts:
+  // „genau richtig" ist keine Information, nach der man jemanden auswählt.
+  if (home.credit >= 0.5) return `${home.locationName}: seltener als üblich`;
+  if (home.credit <= -0.5) return `${home.locationName}: öfter als üblich`;
 
-  if (home.credit <= -0.5) {
-    return `${home.locationName}: öfter dran als üblich (${zahlen}, üblich wären ${üblich})`;
-  }
-
-  return `${home.locationName}: ${zahlen}`;
+  return null;
 }
 
 export function SuggestionRow({
@@ -148,6 +152,26 @@ export function SuggestionRow({
       )}
     >
       <div className="flex min-w-0 items-start gap-3">
+        {/* Der Platz in der Rangfolge, als Zahl.
+
+            Ohne ihn las sich die Rangliste wie eine Liste: dass die oberste
+            Person die ist, die am ehesten dran wäre, stand nirgends — und ein
+            Satz, der es erklärt, wäre eine Zeile, die man einmal liest und
+            danach überspringt. Die Ziffern laufen bewusst über beide
+            Abschnitte durch (`rank` kommt vom Server), damit auch „Restliche"
+            als das erkennbar bleibt, was sie sind: Plätze weiter unten. Für
+            die Zahl selbst reicht eine schmale Spalte — ein Abzeichen wäre so
+            groß wie die Aussage nicht ist. */}
+        <span
+          aria-hidden
+          className={cn(
+            'mt-0.5 w-4 shrink-0 text-center font-serif font-bold tabular-nums',
+            compact ? 'text-xs' : 'text-sm',
+            suggestion.rank === 1 ? 'text-terracotta-500' : 'text-stone-300',
+          )}
+        >
+          {suggestion.rank}
+        </span>
         <Avatar
           person={{
             id: suggestion.personId,
@@ -158,6 +182,9 @@ export function SuggestionRow({
         />
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 font-bold text-stone-800">
+            {/* Ein farbloser Zähler ist für den Screenreader nichts. Hier
+                steht, was die Ziffer daneben meint. */}
+            <span className="sr-only">Platz {suggestion.rank}:</span>
             {suggestion.name}
             {away && (
               <span

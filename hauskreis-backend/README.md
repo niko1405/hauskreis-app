@@ -1537,21 +1537,58 @@ oben steht (CLAUDE.md §4: keine Blackbox):
 }
 ```
 
-`meetingsCounted` und `groupSize` gibt es, damit die Oberfläche **in Abenden**
-reden kann statt in Prozent. Dort stand einmal „0 statt 25 % der Abende" — zwei
-gerundete Anteile nebeneinander, aus denen niemand ablas, ob das gut ist, und
-bei einem Zuhause ohne Historie eine selbstbewusste Aussage über gar nichts.
-Jetzt heißt es „seltener dran als üblich (3 von 14 Abenden, üblich wären 5)":
+Die Oberfläche druckt aus alldem **keine Zahl**. Dort stand einmal „0 statt
+25 % der Abende" — zwei gerundete Anteile nebeneinander, aus denen niemand
+ablas, ob das gut ist —, dann dieselbe Aussage in Abenden („3 von 14, üblich
+wären 5"). Auch das war eine Zeile zu viel: Unter einem Namen in einer Liste
+rechnet niemand nach, und wer es täte, käme zu keinem anderen Schluss als dem,
+der ohnehin danebenstand. Übrig bleibt der Schluss — „seltener als üblich",
+sonst nichts:
 
+- Das **Urteil** kommt aus `credit` und nicht aus den Anteilen: Danach wird
+  sortiert, und zwei Größen für dieselbe Aussage stünden irgendwann im
+  Widerspruch zur Reihenfolge. Ab `±0,5` Abenden gilt es als merklich daneben;
+  im Soll entfällt die Zeile, denn „genau richtig" ist nichts, wonach man
+  auswählt.
 - `meetingsCounted` ist der Nenner von `actualShare` — dieselbe Grundmenge, also
-  nur Abende an Zuhausen, die noch im Rennen sind. Bei `0` entfällt die Zeile.
+  nur Abende an Zuhausen, die noch im Rennen sind. Gebraucht wird er als Prüfung,
+  ob es überhaupt eine Historie gibt: bei `0` wäre auch das Urteil eine
+  Behauptung über nichts.
 - `groupSize` beantwortet **eine** Frage: ob `capacity` überhaupt eine ist. In
   eine Wohnung, in die die ganze Gruppe passt, passen auch heute Abend alle, und
   „Platz für 12, erwartet werden 7" nennt zwei Zahlen ohne Aussage.
-- Das **Urteil** kommt aus `credit` und nicht aus den Anteilen: Danach wird
-  sortiert, und zwei Größen für dieselbe Aussage stünden irgendwann im
-  Widerspruch zur Reihenfolge. Gedruckt wird `credit` trotzdem nie — es ist auf
-  `MAX_CREDIT_MEETINGS` gedeckelt und misst die Länge eines Rückstands nicht.
+- `upcomingCommitments[].thisEvening` markiert den schärfsten Fall der
+  Auslastung: einen Dienst am **selben** Abend. „hat am 11. August schon Thema"
+  beim Einteilen für den 11. August lässt den Leser vergleichen; die Oberfläche
+  schreibt daraus „an diesem Abend schon Thema" und stellt es an die erste
+  Stelle. Entschieden wird es hier, damit „derselbe Abend" eine Regel bleibt und
+  nicht zwei — eine mit `Date`, eine mit Zeichenketten.
+
+Angezeigt wird außerdem `rank`, als Ziffer vor jedem Namen. Ohne sie las sich
+die Rangliste wie eine Liste; ein erklärender Satz darüber wäre eine Zeile, die
+man einmal liest und danach überspringt.
+
+### Wer gar nicht erst vorgeschlagen wird
+
+Alle vier Endpunkte lassen dieselben Leute weg: wer für den Abend **abgesagt**
+hat und wer in dem Zeitraum **verreist** ist (`AvailabilityService.findDeclined`
+plus `AbsenceCalendar`). Bei der Musik zusätzlich, wer **kein Instrument
+spielt** — und das ist der einzige dieser Gründe, der bloß ein Vorschlags-Filter
+ist: `setLeaders` nimmt an, worauf die Gruppe sich geeinigt hat, die anderen
+weist `assertAvailable` mit `400` ab.
+
+Der Unterschied trägt die Liste „Nicht im Ranking" in der Oberfläche. Sie stand
+einmal für **alles**, was aus der Rangfolge fiel, mit dem Hinweis, eintragen
+ginge trotzdem — bei einem Abgesagten war das schlicht falsch. Jetzt steht dort
+nur, wen der Server auch annähme; bei Thema und Testimony bleibt danach niemand
+übrig und der Abschnitt verschwindet.
+
+Das **Testimony** war dabei das Loch: Gastgeber (`MeetingService.update`), Musik
+(`MeetingSongService.setLeaders`) und Thema (`TopicSessionService.setResponsibles`)
+riefen `assertAvailable` längst, beim Testimony kam nur `assertArrived` vorbei.
+Ausgerechnet dort ist die Frage am eindeutigsten — seine Geschichte erzählt
+niemand in Abwesenheit. Für einen vergangenen Abend gibt `findUnavailable` von
+sich aus nichts zurück, Nachtragen bleibt also möglich.
 
 ### Host: Person und Ort sind eine Entscheidung
 
@@ -1567,6 +1604,21 @@ zwei Stufen und liefert beides zusammen:
 `hostWeight` hängt am **Zuhause**, nicht an der Person: Hosten kostet den
 Haushalt, also teilen sich zwei Bewohner ein Gewicht statt je eines zu bekommen.
 Jeder von ihnen hostet dadurch etwa halb so oft wie jemand, der allein wohnt.
+
+**Was gerade eingeteilt wird, zählt nicht als Last** — sonst drückte das
+Aufklappen des Pickers den bereits Eingetragenen nach unten, wegen genau der
+Zuteilung, die man gerade überdenkt. Gastgeber, Musik und Testimony hielten das
+über `excludeMeetingId` längst ein; beim **Thema** griff es nur, solange schon
+eine Einheit gewählt war (`excludeTopicId`), und ohne eine rutschte der bereits
+Zuständige in seiner eigenen Liste nach unten.
+
+Umgekehrt zählen **fremde** Rollen am selben Abend sehr wohl, und die
+Gastgeber-Rangfolge sah sie bis zuletzt gar nicht: Sie bekam nur
+Gastgeber-Ereignisse. Damit war Regel 1 („wer hat am wenigsten zu tun, über alle
+Rollen") ausgerechnet dort außer Kraft, wo `HOUSEHOLD_BUSY` hängt — `findBusyHomes`
+sucht in derselben Liste nach Diensten am Zieltag und fand nie welche, der
+Ablehnungsgrund konnte also nicht auftreten. Jetzt gehen Themen- und
+Musik-Dienste mit hinein.
 
 Orte **ohne** Host (Schlosspark) sind gar nicht Teil davon. Sie schulden der
 Gruppe nichts, sondern sind eine Wetterfrage — und werden schlicht aus

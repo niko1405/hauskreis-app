@@ -20,17 +20,25 @@
  * wegzuwerfen — und wer nicht den ersten Vorschlag nimmt, ist genau die Person,
  * die eine Begründung braucht.
  *
- * Wer im Ranking gar nicht auftaucht, steht trotzdem unten: bei Musik jemand
- * ohne Instrument, beim Thema jemand, der an dem Tag weg ist. Beim Host ist die
- * Liste dagegen vollständig — ohne eigene Adresse geht es nicht, und der Server
- * lehnt es auch ab.
+ * **Unten steht nur, wen der Server auch annähme.** Das war einmal weiter
+ * gefasst und darum falsch: Wer für den Abend abgesagt hatte, fiel aus dem
+ * Ranking und tauchte darunter wieder auf — mit dem Hinweis, eintragen ginge
+ * trotzdem. Ging es nicht; `assertAvailable` lehnt genau das ab. Beim Host fiel
+ * es nie auf, weil es dort gar keine Liste darunter gibt.
+ *
+ * Übrig bleibt der eine Grund, der wirklich nur ein Vorschlags-Filter ist: **bei
+ * Musik, wer kein Instrument spielt.** Die Gruppe darf eintragen, worauf sie
+ * sich geeinigt hat, und `setLeaders` fragt nicht nach Instrumenten. Bei Thema
+ * und Testimony bleibt danach niemand übrig — dort ist jede:r bewertet, der an
+ * dem Abend kann —, und der Abschnitt verschwindet von selbst.
  */
-import { Guitar, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { cn } from '@/lib/cn';
 import {
   useHostSuggestions,
+  useMeeting,
   usePeople,
   useSongLeaderSuggestions,
   useTestimonySuggestions,
@@ -62,11 +70,9 @@ export type AssignmentKind = Exclude<
  */
 const UNRANKED_HINT: Record<AssignmentKind, string> = {
   HOST: '',
-  TOPIC:
-    'Wer an dem Abend abwesend ist, taucht oben nicht auf — eintragen lässt sich trotzdem, etwa wenn jemand vorbereitet und nur selbst nicht kommt.',
+  TOPIC: '',
   SONG: 'Vorgeschlagen wird nur, wer ein Instrument spielt. Eintragen kann man jede:n — die Gruppe weiß besser, wer den Abend trägt.',
-  TESTIMONY:
-    'Wer an dem Abend abwesend ist, taucht oben nicht auf. Eintragen lässt sich trotzdem jede:r — eine Geschichte hat schließlich jede:r.',
+  TESTIMONY: '',
 };
 
 export function AssignmentPicker({
@@ -93,6 +99,7 @@ export function AssignmentPicker({
   onClear?: () => void;
 }) {
   const people = usePeople();
+  const meeting = useMeeting(meetingId);
   const suggestions = useSuggestions(
     kind,
     meetingId,
@@ -108,9 +115,9 @@ export function AssignmentPicker({
    *
    * Bei einem vergangenen Abend gibt es keine Rangliste, dann sind es alle.
    * Beim Host ist es niemand: die Rangliste **ist** dort die vollständige Menge
-   * der gültigen Antworten. Bei Thema und Musik gibt es welche, weil der
-   * Endpunkt nach Instrument filtert und Abwesende weglässt; eintragen darf die
-   * Gruppe trotzdem, worauf sie sich geeinigt hat.
+   * der gültigen Antworten. Bei der Musik ist es, wer kein Instrument spielt —
+   * eintragen darf die Gruppe trotzdem, worauf sie sich geeinigt hat. Bei Thema
+   * und Testimony bleibt niemand übrig, und der Abschnitt fällt weg.
    *
    * **Eingeladene stehen hier nicht**, auch nicht beim Nachtragen. Der Server
    * lehnt sie ab — eine offene Einladung ist niemand, dem man einen Abend
@@ -121,12 +128,39 @@ export function AssignmentPicker({
     (person) => person.acceptedAt !== null,
   );
 
+  /**
+   * Wer für diesen Abend abgesagt hat.
+   *
+   * Aus dem Termin, der auf dieser Seite ohnehin schon geladen ist — eine
+   * eigene Abfrage bekäme dieselbe Antwort. Der Server rechnet daneben noch die
+   * Abwesenheitszeiträume dazu; die schreibt `AbsenceSyncService` aber in genau
+   * diese Zeilen um, es bleibt also höchstens das schmale Fenster zwischen
+   * einem frisch erzeugten Termin und dem nächsten Abgleich.
+   */
+  const abgesagt = new Set(
+    (meeting.data?.data.attendances ?? [])
+      .filter((row) => row.status === 'ABSENT')
+      .map((row) => row.personId),
+  );
+
   const rankedIds = new Set(ranked.map((s) => s.personId));
+
   const unranked = withoutSuggestions
-    ? assignable
+    ? // Ein vergangener Abend: hier wird nachgetragen, was war. Der Server
+      // prüft die Anwesenheit dann auch nicht mehr, also stehen alle da — wer
+      // damals absagte, kann trotzdem gehostet haben.
+      assignable
     : kind === 'HOST'
       ? []
-      : assignable.filter((person) => !rankedIds.has(person.id));
+      : assignable.filter(
+          (person) =>
+            !rankedIds.has(person.id) &&
+            !abgesagt.has(person.id) &&
+            // Der einzige Grund, der bleibt: ein Vorschlags-Filter und keine
+            // Regel. Alles andere, was jemanden aus dem Ranking hält, hält ihn
+            // auch aus der Zuteilung.
+            (kind === 'SONG' ? !person.playsInstrument : true),
+        );
 
   return (
     <>
@@ -188,7 +222,9 @@ export function AssignmentPicker({
           <h3 className="mb-1 text-[10px] font-bold tracking-widest text-stone-400 uppercase">
             {withoutSuggestions ? 'Alle Personen' : 'Nicht im Ranking'}
           </h3>
-          {!withoutSuggestions && (
+          {/* Nur wo es etwas zu erklären gibt — bei Musik. Sonst stand hier
+              ein leerer Absatz mit Abstand darüber und darunter. */}
+          {!withoutSuggestions && UNRANKED_HINT[kind] && (
             <p className="mb-3 text-[11px] leading-relaxed text-stone-400">
               {UNRANKED_HINT[kind]}
             </p>
@@ -207,23 +243,31 @@ export function AssignmentPicker({
                       'hover:border-line-strong focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
                     )}
                   >
-                    <span className="flex items-center gap-3">
+                    <span className="flex min-w-0 items-center gap-3">
                       <Avatar person={person} size="sm" />
-                      <span className="font-bold text-stone-800">
-                        {person.name}
-                      </span>
-                      {person.playsInstrument && (
-                        <Guitar
-                          size={14}
-                          className="text-music"
-                          aria-label="spielt ein Instrument"
-                        />
-                      )}
-                      {!person.active && (
-                        <span className="text-[10px] text-stone-400">
-                          inaktiv
+                      <span className="min-w-0 text-left">
+                        <span className="flex items-center gap-2">
+                          <span className="truncate font-bold text-stone-800">
+                            {person.name}
+                          </span>
+                          {!person.active && (
+                            <span className="shrink-0 text-[10px] text-stone-400">
+                              inaktiv
+                            </span>
+                          )}
                         </span>
-                      )}
+                        {/* Warum diese Person nicht bewertet wurde — als Satz
+                            und nicht als Symbol. Hier hing eine Gitarre an
+                            allen, die eins spielen, in **jeder** Rolle: beim
+                            Thema war sie nur ein Rätsel, und bei der Musik
+                            markierte sie ausgerechnet die Falschen, denn oben
+                            steht ja, wer spielt. */}
+                        {kind === 'SONG' && !person.playsInstrument && (
+                          <span className="block text-[11px] leading-snug text-stone-400">
+                            spielt kein Instrument
+                          </span>
+                        )}
+                      </span>
                     </span>
                     <span
                       className={cn(

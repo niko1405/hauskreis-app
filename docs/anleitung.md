@@ -246,16 +246,29 @@ Person passt am ehesten. Sortiert wird nach
 2. wer am längsten nicht mehr genau diese Rolle hatte,
 3. wer sie insgesamt am seltensten hatte.
 
-Neben jedem Namen stehen die Fakten, die zu dieser Reihenfolge geführt haben.
-Wer schon dran war, landet unten. Du kannst aber jederzeit jemand anderen
-eintragen — die Gruppe weiß Dinge, die die App nicht weiß.
+Vor jedem Namen steht seine **Platzziffer** — die 1 ist die naheliegende Wahl.
+Sie läuft über „Vorschläge" und „Restliche" durch: Es ist eine Rangfolge und
+keine zwei Listen.
 
-Beim **Gastgeber** kommt eine Zeile über die Wohnung dazu, und die redet in
-Abenden: „Bei Anna: seltener dran als üblich (3 von 14 Abenden, üblich wären
-5)". War eine Wohnung noch nie dran, steht dort nichts — es gibt nichts zu
-vergleichen. Eine Zeile zur **Größe** („Platz für 6, erwartet werden 8")
-erscheint nur, wenn nicht die ganze Gruppe hineinpasst; wo alle Platz haben,
-ist die Größe keine Frage.
+Daneben stehen die Fakten, die zu dieser Reihenfolge geführt haben. Ganz oben
+das, was an **diesem** Abend schon ansteht („an diesem Abend schon Thema") —
+der stärkste Grund, jemand anderen zu nehmen. Du kannst aber jederzeit
+eintragen, wen du willst; die Gruppe weiß Dinge, die die App nicht weiß.
+
+Beim **Gastgeber** kommt eine Zeile über die Wohnung dazu, und die sagt ein
+Urteil statt einer Rechnung: „Bei Anna: seltener als üblich". Liegt eine
+Wohnung im Soll oder war die Gruppe noch nie dort, steht dort nichts — es gibt
+nichts zu sagen. Eine Zeile zur **Größe** („Platz für 6, erwartet werden 8")
+erscheint nur, wenn nicht die ganze Gruppe hineinpasst.
+
+**Wer für den Abend abgesagt hat, steht gar nicht zur Auswahl** — in keiner der
+vier Rollen. Wer nicht da ist, kann sie nicht übernehmen, und der Server lehnt
+es auch ab. Unter der Rangliste steht deshalb nur noch einer: bei der **Musik**,
+wer kein Instrument spielt („spielt kein Instrument"). Eintragen kannst du ihn
+trotzdem — die Gruppe weiß besser, wer den Abend trägt.
+
+Bei einem **vergangenen** Abend gilt das alles nicht: Dort stehen alle, denn
+nachgetragen wird, was war.
 
 ### 6.6 Absagen und Abwesenheiten
 

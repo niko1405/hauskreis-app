@@ -376,6 +376,74 @@ describe('MeetingService — Absage vergangener Abende', () => {
   });
 });
 
+/**
+ * Wer nicht da ist, kann die Rolle nicht übernehmen — auch beim Testimony.
+ *
+ * Gastgeber, Musik und Thema prüften das längst; hier kam nur `assertArrived`
+ * vorbei, also ließ sich jemand eintragen, der für genau diesen Abend abgesagt
+ * hatte. Ausgerechnet dort ist die Frage am eindeutigsten: seine Geschichte
+ * erzählt niemand in Abwesenheit.
+ */
+describe('MeetingService — Testimony und Anwesenheit', () => {
+  it('prüft die Anwesenheit beim Eintragen', async () => {
+    const { service, availability, prisma } = setup(
+      meeting({ hasTopicSlot: false, hasTestimonySlot: true }),
+    );
+    // Die Mandantengrenze läuft davor und ist hier nicht die Frage.
+    prisma.person.findFirst.mockResolvedValue({ id: 'p-mira' });
+
+    await service.update(
+      'hk1',
+      'm1',
+      { testimonyPersonId: 'p-mira' },
+      ICH,
+      EGAL,
+    );
+
+    expect(availability.assertAvailable).toHaveBeenCalledWith('hk1', 'm1', [
+      'p-mira',
+    ]);
+  });
+
+  it('lässt einen PATCH ohne Wechsel in Ruhe', async () => {
+    // Wie beim Gastgeber: Wer nur den Info-Text ändert, soll nicht daran
+    // scheitern, dass der Eingetragene inzwischen abgesagt hat.
+    const { service, availability, prisma } = setup(
+      meeting({
+        hasTopicSlot: false,
+        hasTestimonySlot: true,
+        testimonyPersonId: 'p-mira',
+      }),
+    );
+    prisma.person.findFirst.mockResolvedValue({ id: 'p-mira' });
+
+    await service.update(
+      'hk1',
+      'm1',
+      { testimonyPersonId: 'p-mira', infoText: 'Bringt Kuchen mit' },
+      ICH,
+      EGAL,
+    );
+
+    expect(availability.assertAvailable).not.toHaveBeenCalled();
+  });
+
+  it('gibt die Absage des Servers weiter', async () => {
+    const { service, availability, prisma } = setup(
+      meeting({ hasTopicSlot: false, hasTestimonySlot: true }),
+    );
+    prisma.person.findFirst.mockResolvedValue({ id: 'p-mira' });
+
+    availability.assertAvailable.mockRejectedValueOnce(
+      new BadRequestException('Mira ist an diesem Abend nicht dabei'),
+    );
+
+    await expect(
+      service.update('hk1', 'm1', { testimonyPersonId: 'p-mira' }, ICH, EGAL),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
 describe('MeetingService — wer abgesagt hat, steht dabei', () => {
   it('schreibt Zeitpunkt, Person, Herkunft und Grund', async () => {
     const { service, prisma } = setup();

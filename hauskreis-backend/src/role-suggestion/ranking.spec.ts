@@ -73,8 +73,37 @@ describe('rankForRole', () => {
 
     expect(order(result)).toEqual(['carla', 'ben', 'anna']);
     expect(result[2].facts.upcomingCommitments).toEqual([
-      { role: 'HOST', date: '2026-09-08' },
-      { role: 'HOST', date: '2026-09-15' },
+      { role: 'HOST', date: '2026-09-08', thisEvening: false },
+      { role: 'HOST', date: '2026-09-15', thisEvening: false },
+    ]);
+  });
+
+  /**
+   * Der schärfste Fall von Regel 1, und der einzige, den ein Datum nicht
+   * ausdrückt: „hat am 1. September schon Thema" beim Einteilen für den
+   * 1. September lässt den Leser vergleichen.
+   */
+  it('marks a job on the target date as `thisEvening`', () => {
+    const onTopic = (iso: string, slotKey: string): RoleAssignmentEvent => ({
+      personId: 'anna',
+      role: AssignmentRole.TOPIC,
+      date: utc(iso),
+      slotKey,
+    });
+
+    const result = rankForRole({
+      people: [people[0]],
+      events: [
+        onTopic('2026-09-01', 'topic-1'),
+        onTopic('2026-09-15', 'topic-2'),
+      ],
+      role: AssignmentRole.HOST,
+      targetDate: TARGET,
+    });
+
+    expect(result[0].facts.upcomingCommitments).toEqual([
+      { role: 'TOPIC', date: '2026-09-01', thisEvening: true },
+      { role: 'TOPIC', date: '2026-09-15', thisEvening: false },
     ]);
   });
 
@@ -219,7 +248,7 @@ describe('rankForRole', () => {
 
       // One job to prepare, dated at the evening it starts.
       expect(result[0].facts.upcomingCommitments).toEqual([
-        { role: 'TOPIC', date: '2026-09-08' },
+        { role: 'TOPIC', date: '2026-09-08', thisEvening: false },
       ]);
     });
 

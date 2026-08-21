@@ -48,6 +48,16 @@ export interface UpcomingCommitment {
   role: AssignmentRole;
   /** ISO date (`YYYY-MM-DD`). */
   date: string;
+  /**
+   * Dieser Dienst liegt am **selben Abend**, für den gerade eingeteilt wird.
+   *
+   * Der wichtigste Fall der ganzen Liste und der einzige, den ein Datum nicht
+   * ausdrückt: „hat am 11. August schon Thema" beim Einteilen für den
+   * 11. August lässt den Leser rechnen, ob das derselbe Abend ist. Hier
+   * entschieden und nicht im Frontend, damit „derselbe Abend" eine Regel
+   * bleibt und nicht zwei — eine mit `Date`, eine mit Zeichenketten.
+   */
+  thisEvening: boolean;
 }
 
 /**

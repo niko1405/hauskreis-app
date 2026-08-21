@@ -309,6 +309,21 @@ export class MeetingService {
       ]);
     }
 
+    // Dasselbe fürs **Testimony**, wo es bisher fehlte: Gastgeber, Musik und
+    // Thema prüften längst, ob die Person an dem Abend überhaupt da ist, hier
+    // kam nur `assertArrived` vorbei. Ausgerechnet dort ist die Frage am
+    // eindeutigsten — seine Geschichte erzählt niemand in Abwesenheit. Für
+    // einen vergangenen Abend geht die Prüfung von selbst durch, Nachtragen
+    // bleibt also möglich.
+    if (
+      dto.testimonyPersonId &&
+      dto.testimonyPersonId !== before.testimonyPersonId
+    ) {
+      await this.availability.assertAvailable(hauskreisId, id, [
+        dto.testimonyPersonId,
+      ]);
+    }
+
     const updated = await updateWithVersionCheck({
       condition,
       update: (versionConstraint) =>
