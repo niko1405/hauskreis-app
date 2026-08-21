@@ -480,12 +480,26 @@ einer Themenänderung gelesen hat, schreibt gegen ein veraltetes Bild.
 **Die Regel gilt in beide Richtungen**, und das war die Lücke, die beim ersten
 Mal übrig blieb. Nicht nur „Thema ändert sich → Termin altern lassen":
 
-| Was sich ändert        | Was mit altern muss                     | Warum                                      |
-| ---------------------- | --------------------------------------- | ------------------------------------------ |
-| Titel einer Einheit    | Termin **und** Thema                    | Der Termin zeigt sie, das Thema listet sie |
-| Titel eines Themas     | jeder Termin mit einer seiner Einheiten | Dort steht er als „Zugehöriges Thema"      |
-| Mitarbeitende entfernt | Thema                                   | Sie stehen in seiner Antwort               |
-| Thema gelöscht         | seine bisherigen Termine                | Die stehen danach ohne Thema da            |
+| Was sich ändert         | Was mit altern muss                     | Warum                                      |
+| ----------------------- | --------------------------------------- | ------------------------------------------ |
+| Titel einer Einheit     | Termin **und** Thema                    | Der Termin zeigt sie, das Thema listet sie |
+| Titel eines Themas      | jeder Termin mit einer seiner Einheiten | Dort steht er als „Zugehöriges Thema"      |
+| Mitarbeitende entfernt  | Thema                                   | Sie stehen in seiner Antwort               |
+| Thema gelöscht          | seine bisherigen Termine                | Die stehen danach ohne Thema da            |
+| Anwesenheit geschrieben | jeder betroffene Termin                 | Sie steht in seiner Antwort                |
+
+**Auch die Läufe, die niemand angestoßen hat.** Zwei schrieben Anwesenheit ohne
+den Griff: das Auffüllen der Auto-Zusagen (`AutoAttendanceService`) und der
+Abwesenheits-Abgleich (`AbsenceSyncService`). Beide fassen viele Abende auf
+einmal an — dafür gibt es
+[`touchMeetings`](src/meeting/meeting-version.ts) in der Mehrzahl. Zu bemerken
+war es als „mal ist die Person dabei, mal nicht": Die **Terminliste** zeigte die
+frische Zusage, weil ihr ETag ein Inhalts-Hash von Express ist, die
+**Detailseite** antwortete `304` und blieb beim alten Stand — und welcher der
+beiden Bildschirme recht zu haben schien, hing daran, welcher gerade neu geladen
+hatte. Damit `touchMeetings` weiß, _welche_ Abende, sucht `apply` die fehlenden
+Zeilen jetzt selbst heraus, statt sie von `skipDuplicates` verschlucken zu
+lassen.
 
 Der Weg dahin ist immer derselbe: **wer ein Feld ändert, das in der Antwort
 einer anderen Ressource steht, hebt deren Version mit an.** Ein Wächter je Pfad
@@ -2501,10 +2515,48 @@ Die Zeilen tragen deshalb `source`:
   aufgebaut.
 - **`AUTO`** — aus „ich bin grundsätzlich dabei" vorab zugesagt. Weicht einem
   Zeitraum, siehe unten.
+- **`ROLE`** — zugesagt, weil die Person an dem Abend eine Rolle bekommen hat.
+  Verhält sich wie `AUTO` und ist trotzdem ein eigener Wert: `AUTO` ist eine
+  **Einstellung der Person**, `ROLE` eine **Tatsache dieses Abends**.
 
 Ohne diese Spalte ginge ein „doch, ich komme an dem Abend" verloren, sobald der
 Urlaub später bearbeitet wird. Eine Antwort von Hand beansprucht die Zeile
 deshalb auch dann, wenn ein Zeitraum sie angelegt hat.
+
+> Der Abwesenheits-Abgleich räumt vor der abgeleiteten Absage deshalb alles weg,
+> was **nicht** `SELF` ist, statt die Quellen aufzuzählen. Die Aufzählung stand
+> einmal da und nannte nur `AUTO`; ein neuer Wert daneben hätte den Urlaub still
+> wirkungslos gemacht, weil `skipDuplicates` die Absage auf die stehen gebliebene
+> Zeile fallen lässt.
+
+### „Wer eingeteilt ist, ist dabei"
+
+Eine Rolle zu bekommen und daneben auf „weiß noch nicht" zu stehen ist kein
+Zustand, den jemand gemeint hat. `RoleAttendanceService.confirm` setzt die
+Zugeteilten auf `ATTENDING/ROLE` — aufgerufen an den vier Stellen, an denen eine
+Zuteilung entsteht: `MeetingService.create`/`update` (Gastgeber, Testimony),
+`TopicSessionService.setResponsibles` und die Übernahme der Crew in die
+Abend-Rolle, `MeetingSongService.setLeaders`.
+
+Drei Grenzen, und jede hat ihren Grund:
+
+- **Nur aus dem Schweigen heraus.** Eine Absage bleibt stehen — beim Thema wird
+  die Crew der Einheit auf die Abend-Rolle übertragen, und wer an dem Abend
+  fehlt, wird dort übersprungen statt abgelehnt; mitvorbereiten kann man auch in
+  Abwesenheit. Eine vorhandene Zusage bleibt, wie sie ist, samt ihrer Quelle.
+- **Nur nach vorn und nur für Abende, die stattfinden.** Wer nachträgt, wer im
+  Mai das Thema hatte, schreibt Protokoll. Dieselben zwei Regeln hat
+  `RoleAssignmentNotifier` — anders als er überspringt `confirm` allerdings
+  **nicht**, wer sich selbst einträgt: Die Nachricht wüsste er schon, die Zusage
+  ist trotzdem fällig.
+- **Der Weg zurück ist keiner.** Wer aus einer Rolle fällt, behält seine Zusage.
+  Sie stillschweigend zurückzunehmen wäre eine Absage, die niemand ausgesprochen
+  hat — dasselbe Argument wie beim ausgeschalteten Schalter unten.
+
+Weil die Anwesenheit in der Antwort des Termins steht, hebt `confirm` dessen
+Version. `MeetingService.update` lädt danach neu, wenn etwas geschrieben wurde:
+sonst bekäme der Aufrufer ein ETag, gegen das seine nächste Änderung als Konflikt
+zurückkäme.
 
 ### „Ich bin grundsätzlich dabei"
 

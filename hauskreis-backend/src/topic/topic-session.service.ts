@@ -11,6 +11,7 @@ import { Prisma } from '../../generated/prisma/client';
 import { AssignmentRole } from '../../generated/prisma/enums';
 import { personRefSelect } from '../common/dto/response';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
+import { RoleAttendanceService } from '../attendance/role-attendance.service';
 import { AvailabilityService } from '../role-suggestion/availability.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import type { IfMatchCondition } from '../common/http/etag';
@@ -98,6 +99,7 @@ export class TopicSessionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly roleAssignments: RoleAssignmentNotifier,
+    private readonly roleAttendance: RoleAttendanceService,
     private readonly availability: AvailabilityService,
     private readonly links: TopicLinkService,
     private readonly clock: GroupClockService,
@@ -172,6 +174,10 @@ export class TopicSessionService {
     });
 
     if (arriving.length > 0) {
+      // Wer dazukommt, ist an dem Abend dabei — und anders als die Nachricht
+      // gilt das auch für die Person, die sich selbst einträgt.
+      await this.roleAttendance.confirm(meetingId, arriving);
+
       await this.roleAssignments.announce(
         meetingId,
         AssignmentRole.TOPIC,
@@ -476,6 +482,8 @@ export class TopicSessionService {
 
       await touchMeeting(tx, meetingId);
     });
+
+    await this.roleAttendance.confirm(meetingId, dazu);
 
     await this.roleAssignments.announce(
       meetingId,

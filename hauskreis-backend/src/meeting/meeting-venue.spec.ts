@@ -14,6 +14,7 @@ import type { RoleAssignmentNotifier } from '../notification/role-assignment-not
 import type { AvailabilityService } from '../role-suggestion/availability.service';
 import type { RoleReleaseService } from './role-release.service';
 import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
+import type { RoleAttendanceService } from '../attendance/role-attendance.service';
 import type { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import type { TopicLinkService } from '../topic/topic-link.service';
 import type { IfMatchCondition } from '../common/http/etag';
@@ -101,6 +102,7 @@ function setup(before = meeting()) {
   const topicLinks = {
     detach: jest.fn().mockResolvedValue(false),
   };
+  const roleAttendance = { confirm: jest.fn().mockResolvedValue(0) };
 
   const service = withClock(
     new MeetingService(
@@ -112,6 +114,7 @@ function setup(before = meeting()) {
       availability as unknown as AvailabilityService,
       roleRelease as unknown as RoleReleaseService,
       {} as unknown as AutoAttendanceService,
+      roleAttendance as unknown as RoleAttendanceService,
       {} as unknown as CustomMeetingNotificationService,
       topicLinks as unknown as TopicLinkService,
     ),
@@ -126,6 +129,7 @@ function setup(before = meeting()) {
     availability,
     roleRelease,
     topicLinks,
+    roleAttendance,
     state,
   };
 }
@@ -345,6 +349,63 @@ describe('MeetingService.update — wer eingeteilt wird, hört davon', () => {
     await service.update('hk1', 'm1', { hostPersonId: null }, ADMIN, EGAL);
 
     expect(roleAssignments.announce).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Eine Rolle zu bekommen und daneben auf „weiß noch nicht" zu stehen ist kein
+ * Zustand, den jemand gemeint hat — für den Gastgeber beim Einkaufen ist ein
+ * „weiß noch nicht" dasselbe wie ein Nein. Was genau dabei geschrieben wird,
+ * steht in `role-attendance.service.spec.ts`; hier zählt nur, dass die vier
+ * Zuteilungswege es überhaupt anstoßen.
+ */
+describe('MeetingService.update — wer eingeteilt wird, ist dabei', () => {
+  it('sagt für den neuen Gastgeber zu', async () => {
+    const { service, prisma, roleAttendance } = setup();
+    withHost(prisma);
+
+    await service.update('hk1', 'm1', { hostPersonId: 'p1' }, ADMIN, EGAL);
+
+    expect(roleAttendance.confirm).toHaveBeenCalledWith('m1', ['p1']);
+  });
+
+  it('sagt für das neue Testimony zu', async () => {
+    const { service, prisma, roleAttendance } = setup(
+      meeting({ hasTopicSlot: false, hasTestimonySlot: true }),
+    );
+    prisma.person.findFirst.mockResolvedValue({ id: 'p-mira' });
+
+    await service.update(
+      'hk1',
+      'm1',
+      { testimonyPersonId: 'p-mira' },
+      ADMIN,
+      EGAL,
+    );
+
+    expect(roleAttendance.confirm).toHaveBeenCalledWith('m1', ['p-mira']);
+  });
+
+  /** Ein `PATCH` mit dem Info-Text ist keine Zuteilung. */
+  it('lässt eine Änderung ohne Wechsel in Ruhe', async () => {
+    const { service, prisma, roleAttendance } = setup(
+      meeting({
+        hostPersonId: 'p1',
+        locationId: 'l-niko',
+        location: { requiresHost: true },
+      }),
+    );
+    withHost(prisma);
+
+    await service.update(
+      'hk1',
+      'm1',
+      { infoText: 'Bitte pünktlich' },
+      ADMIN,
+      EGAL,
+    );
+
+    expect(roleAttendance.confirm).toHaveBeenCalledWith('m1', []);
   });
 });
 

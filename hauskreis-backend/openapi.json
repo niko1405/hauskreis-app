@@ -15726,7 +15726,8 @@
             "enum": [
               "SELF",
               "ABSENCE",
-              "AUTO"
+              "AUTO",
+              "ROLE"
             ]
           },
           "updatedAt": {

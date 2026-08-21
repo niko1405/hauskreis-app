@@ -17,6 +17,7 @@ import type { RoleAssignmentNotifier } from '../notification/role-assignment-not
 import type { AvailabilityService } from '../role-suggestion/availability.service';
 import type { RoleReleaseService } from './role-release.service';
 import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
+import type { RoleAttendanceService } from '../attendance/role-attendance.service';
 import type { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import type { TopicLinkService } from '../topic/topic-link.service';
 import type { MeetingScheduleConfigService } from './meeting-schedule-config.service';
@@ -67,6 +68,7 @@ function setup(startMinutes = 1080) {
       {} as unknown as AvailabilityService,
       {} as unknown as RoleReleaseService,
       {} as unknown as AutoAttendanceService,
+      { confirm: jest.fn() } as unknown as RoleAttendanceService,
       {} as unknown as CustomMeetingNotificationService,
       {} as unknown as TopicLinkService,
       {} as unknown as MeetingScheduleConfigService,

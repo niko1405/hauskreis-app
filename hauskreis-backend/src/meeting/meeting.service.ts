@@ -30,6 +30,7 @@ import { MeetingNotificationService } from './meeting-notification.service';
 import { RoleReleaseService } from './role-release.service';
 import { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
+import { RoleAttendanceService } from '../attendance/role-attendance.service';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import { eveningReached } from '../common/time/local-evening';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
@@ -105,6 +106,7 @@ export class MeetingService {
     private readonly availability: AvailabilityService,
     private readonly roleRelease: RoleReleaseService,
     private readonly autoAttendance: AutoAttendanceService,
+    private readonly roleAttendance: RoleAttendanceService,
     private readonly customMeetingNotifications: CustomMeetingNotificationService,
     private readonly topicLinks: TopicLinkService,
     private readonly schedule: MeetingScheduleConfigService,
@@ -250,6 +252,16 @@ export class MeetingService {
     // Auch ein von Hand angelegter Abend ist ein Abend: wer grundsätzlich dabei
     // ist, hat auch für ihn zugesagt.
     await this.autoAttendance.apply(hauskreisId);
+
+    // Und wer gleich beim Anlegen eingeteilt wird, ist dabei. Vor dem `findOne`
+    // unten, damit die Antwort die frische Zusage und die neue Version schon
+    // enthält.
+    await this.roleAttendance.confirm(
+      meeting.id,
+      [meeting.hostPersonId, meeting.testimonyPersonId].filter(
+        (personId): personId is string => personId !== null,
+      ),
+    );
 
     // Der Dienstagabend steht jede Woche und braucht keine Ankündigung. Ein
     // Geburtstag oder eine Freizeit fallen aus dem Rhythmus — genau die gingen
@@ -429,7 +441,23 @@ export class MeetingService {
       );
     }
 
-    return updated;
+    // Wer neu eingeteilt ist, ist an dem Abend dabei. Nur beim echten Wechsel,
+    // wie bei der Nachricht darüber: ein `PATCH` mit dem Info-Text ist keine
+    // Zuteilung und soll niemandes Antwort ändern.
+    const zugesagt = await this.roleAttendance.confirm(id, [
+      ...(updated.hostPersonId && updated.hostPersonId !== before.hostPersonId
+        ? [updated.hostPersonId]
+        : []),
+      ...(updated.testimonyPersonId &&
+      updated.testimonyPersonId !== before.testimonyPersonId
+        ? [updated.testimonyPersonId]
+        : []),
+    ]);
+
+    // Nachladen, wenn dabei etwas geschrieben wurde: `updated` entstand davor
+    // und trüge sonst die alte Version — der Aufrufer bekäme ein ETag, gegen
+    // das seine nächste Änderung als Konflikt zurückkäme.
+    return zugesagt > 0 ? this.findOne(hauskreisId, id, viewer) : updated;
   }
 
   /**

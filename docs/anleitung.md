@@ -281,6 +281,14 @@ ab, fällt der Abend von selbst aus — und **jede:r** holt ihn mit einer einzig
 Zusage wieder zurück, dafür braucht es keinen Admin. Längere Abwesenheiten
 trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
 
+**Wer eingeteilt wird, steht danach auf „dabei".** Wer die Tür aufmacht, das
+Thema vorbereitet, die Lieder übt oder sein Testimony erzählt, kommt — ein
+„weiß noch nicht" daneben ist für den Gastgeber beim Einkaufen dasselbe wie ein
+Nein. Umgedreht wird dabei nur das Schweigen: Eine **Absage** bleibt stehen (die
+kann man haben und trotzdem mitvorbereiten), und wer schon zugesagt hat, merkt
+gar nichts. Fällst du später aus der Rolle, bleibt die Zusage — zurücknehmen
+kannst nur du sie selbst.
+
 > Mehr dazu: Profil → Hilfe → „Termine".
 
 ---

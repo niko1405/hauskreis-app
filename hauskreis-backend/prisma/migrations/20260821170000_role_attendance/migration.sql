@@ -1,0 +1,11 @@
+-- „Wer eingeteilt ist, ist dabei."
+--
+-- Eine Rolle zu bekommen und daneben auf „weiß noch nicht" zu stehen ist kein
+-- Zustand, den jemand gemeint hat: Der Gastgeber rechnet beim Einkaufen mit
+-- denen, die zugesagt haben, und wer das Thema vorbereitet, kommt.
+--
+-- Ein eigener Wert und nicht `AUTO`: Der sagt „ich bin grundsätzlich dabei" und
+-- ist eine Einstellung der Person; dieser hier ist eine Tatsache dieses Abends.
+-- Für `AbsenceSyncService` verhalten sich beide gleich — ein eingetragener
+-- Urlaub sticht sie, eine Antwort von Hand bleibt unangetastet.
+ALTER TYPE "attendance_source" ADD VALUE 'ROLE';

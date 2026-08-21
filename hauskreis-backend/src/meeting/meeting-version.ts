@@ -36,6 +36,33 @@ export async function touchMeeting(
 }
 
 /**
+ * Dasselbe für mehrere Abende auf einmal.
+ *
+ * Die Anwesenheit steht mit in `MeetingResponseDto`, und **wer sie schreibt,
+ * schreibt am Termin** — auch wenn er die Zeile in einer anderen Tabelle
+ * anlegt. Zwei Läufe taten das bisher nicht: das Auffüllen der Auto-Zusagen und
+ * der Abwesenheits-Abgleich. Beide fassen viele Abende auf einmal an, und für
+ * beide sah man dieselbe Folge — die Terminliste zeigte die neue Zusage (ihr
+ * ETag ist ein Inhalts-Hash), die Detailseite antwortete `304` und blieb beim
+ * alten Stand. Mal war die Person dabei, mal nicht, je nachdem, welcher der
+ * beiden Bildschirme gerade frisch geladen hatte.
+ *
+ * Doppelte Ids schaden nicht (`in` fasst sie zusammen), eine leere Liste spart
+ * die Abfrage.
+ */
+export async function touchMeetings(
+  db: Prisma.TransactionClient,
+  meetingIds: readonly string[],
+): Promise<void> {
+  if (meetingIds.length === 0) return;
+
+  await db.meeting.updateMany({
+    where: { id: { in: [...new Set(meetingIds)] } },
+    data: { version: { increment: 1 } },
+  });
+}
+
+/**
  * Nimmt die Lied-Auswahl eines Abends zurück, sobald für die Musik niemand mehr
  * zuständig ist.
  *

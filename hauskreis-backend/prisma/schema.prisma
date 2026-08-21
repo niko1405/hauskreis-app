@@ -159,6 +159,12 @@ enum AttendanceSource {
   /// Abwesenheitszeitraum, und als `SELF` gespeichert machte die Voreinstellung
   /// jeden Urlaub still wirkungslos. Eine Antwort von Hand gewinnt weiter.
   AUTO
+  /// Zugesagt, weil die Person an diesem Abend eine Rolle bekommen hat. Wie
+  /// `AUTO` eine abgeleitete Zusage: Sie weicht einem Abwesenheitszeitraum, und
+  /// eine Antwort von Hand gewinnt. Ein eigener Wert, damit `AUTO` weiter genau
+  /// eine Sache heißt — „ich bin grundsätzlich dabei" ist eine Einstellung der
+  /// Person, „ich bin eingeteilt" eine Tatsache dieses Abends.
+  ROLE
 
   @@map("attendance_source")
 }

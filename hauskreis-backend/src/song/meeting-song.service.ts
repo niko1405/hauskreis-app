@@ -6,6 +6,7 @@ import {
 import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
+import { RoleAttendanceService } from '../attendance/role-attendance.service';
 import { AssignmentRole } from '../../generated/prisma/enums';
 import { AvailabilityService } from '../role-suggestion/availability.service';
 import { EditRightsService } from '../meeting/edit-rights.service';
@@ -37,6 +38,7 @@ export class MeetingSongService {
     private readonly prisma: PrismaService,
     private readonly songs: SongService,
     private readonly roleAssignments: RoleAssignmentNotifier,
+    private readonly roleAttendance: RoleAttendanceService,
     private readonly availability: AvailabilityService,
     private readonly editRights: EditRightsService,
     private readonly clock: GroupClockService,
@@ -219,10 +221,16 @@ export class MeetingSongService {
       await touchMeeting(tx, meetingId);
     });
 
+    const dazu = dto.personIds.filter((personId) => !known.has(personId));
+
+    // Wer die Lieder übt, kommt auch. Anders als die Nachricht gilt das auch
+    // für die Person, die sich selbst einträgt.
+    await this.roleAttendance.confirm(meetingId, dazu);
+
     await this.roleAssignments.announce(
       meetingId,
       AssignmentRole.SONG,
-      dto.personIds.filter((personId) => !known.has(personId)),
+      dazu,
       actorPersonId,
     );
 

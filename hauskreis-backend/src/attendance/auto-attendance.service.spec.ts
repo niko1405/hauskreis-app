@@ -11,7 +11,14 @@ import { withClock } from '../meeting/group-clock.testing';
 
 const TODAY = new Date('2026-08-05T09:00:00.000Z');
 
-function setup(options: { people?: string[]; meetings?: string[] } = {}) {
+function setup(
+  options: {
+    people?: string[];
+    meetings?: string[];
+    /** Wo schon eine Antwort steht, als `meetingId:personId`. */
+    beantwortet?: string[];
+  } = {},
+) {
   const createMany = jest.fn().mockResolvedValue({ count: 3 });
   const personFindMany = jest
     .fn()
@@ -19,16 +26,32 @@ function setup(options: { people?: string[]; meetings?: string[] } = {}) {
   const meetingFindMany = jest
     .fn()
     .mockResolvedValue((options.meetings ?? ['m1']).map((id) => ({ id })));
+  const attendanceFindMany = jest.fn().mockResolvedValue(
+    (options.beantwortet ?? []).map((key) => {
+      const [meetingId, personId] = key.split(':');
+      return { meetingId, personId };
+    }),
+  );
+  const meetingUpdateMany = jest.fn().mockResolvedValue({ count: 0 });
+
+  const db = {
+    person: { findMany: personFindMany },
+    meeting: { findMany: meetingFindMany, updateMany: meetingUpdateMany },
+    meetingAttendance: { createMany, findMany: attendanceFindMany },
+    $transaction: (fn: (tx: unknown) => unknown) => fn(db),
+  };
 
   const service = withClock(
-    new AutoAttendanceService({
-      person: { findMany: personFindMany },
-      meeting: { findMany: meetingFindMany },
-      meetingAttendance: { createMany },
-    } as unknown as PrismaService),
+    new AutoAttendanceService(db as unknown as PrismaService),
   );
 
-  return { service, createMany, personFindMany, meetingFindMany };
+  return {
+    service,
+    createMany,
+    personFindMany,
+    meetingFindMany,
+    meetingUpdateMany,
+  };
 }
 
 describe('AutoAttendanceService.apply', () => {
@@ -106,6 +129,63 @@ describe('AutoAttendanceService.apply', () => {
     expect(meetingFindMany.mock.calls[0][0].where.date.gte).toEqual(
       new Date('2026-08-05T00:00:00.000Z'),
     );
+  });
+
+  /**
+   * Der Fehler, den man als „mal ist die Person dabei, mal nicht" bemerkt.
+   *
+   * Die Zusage steht mit in der Antwort des Termins, dessen ETag allein an
+   * `meeting.version` hängt. Ohne diesen Griff blieb er stehen: Die
+   * Terminliste zeigte die frische Zusage (dort ist der ETag ein
+   * Inhalts-Hash), die Detailseite antwortete `304` und ließ die Person unter
+   * „weiß noch nicht" stehen.
+   */
+  it('hebt die Version der Abende, in die es geschrieben hat', async () => {
+    const { service, meetingUpdateMany } = setup({
+      people: ['p1'],
+      meetings: ['m1', 'm2'],
+    });
+
+    await service.apply('hk-1', { now: TODAY });
+
+    expect(meetingUpdateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['m1', 'm2'] } },
+      data: { version: { increment: 1 } },
+    });
+  });
+
+  /** Und nur die: ein Abend, an dem sich nichts ändert, springt nicht. */
+  it('lässt einen Abend in Ruhe, an dem schon geantwortet wurde', async () => {
+    const { service, createMany, meetingUpdateMany } = setup({
+      people: ['p1'],
+      meetings: ['m1', 'm2'],
+      beantwortet: ['m1:p1'],
+    });
+
+    await service.apply('hk-1', { now: TODAY });
+
+    expect(createMany.mock.calls[0][0].data).toEqual([
+      {
+        meetingId: 'm2',
+        personId: 'p1',
+        status: 'ATTENDING',
+        source: 'AUTO',
+      },
+    ]);
+    expect(meetingUpdateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['m2'] } },
+      data: { version: { increment: 1 } },
+    });
+  });
+
+  it('schreibt nichts, wenn alle Lücken schon gefüllt sind', async () => {
+    const { service, createMany, meetingUpdateMany } = setup({
+      beantwortet: ['m1:p1'],
+    });
+
+    await expect(service.apply('hk-1', { now: TODAY })).resolves.toBe(0);
+    expect(createMany).not.toHaveBeenCalled();
+    expect(meetingUpdateMany).not.toHaveBeenCalled();
   });
 
   it('schreibt nichts, wenn niemand den Schalter anhat', async () => {

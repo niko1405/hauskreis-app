@@ -37,6 +37,7 @@ function setup(options: {
 
   const createMany = jest.fn().mockResolvedValue({ count: 0 });
   const deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+  const meetingUpdateMany = jest.fn().mockResolvedValue({ count: 0 });
   const handleDecline = jest.fn().mockResolvedValue(undefined);
   const reconcile = jest.fn().mockResolvedValue(undefined);
   const autoAttendanceApply = jest.fn().mockResolvedValue(0);
@@ -46,7 +47,7 @@ function setup(options: {
     new AbsenceSyncService(
       {
         absencePeriod: { findMany: absenceFindMany },
-        meeting: { findMany: meetingFindMany },
+        meeting: { findMany: meetingFindMany, updateMany: meetingUpdateMany },
         meetingAttendance: { createMany, deleteMany },
       } as unknown as PrismaService,
       { handleDecline } as unknown as MeetingNotificationService,
@@ -64,6 +65,7 @@ function setup(options: {
     handleDecline,
     reconcile,
     meetingFindMany,
+    meetingUpdateMany,
     autoAttendanceApply,
   };
 }
@@ -92,6 +94,28 @@ describe('AbsenceSyncService.syncPerson', () => {
     expect(createMany.mock.calls[0][0].data[0]).toMatchObject({
       status: AttendanceStatus.ABSENT,
       source: AttendanceSource.ABSENCE,
+    });
+  });
+
+  /**
+   * Die Antwort steht mit in der Antwort des Termins, und dessen ETag hängt
+   * allein an `meeting.version`. Ohne diesen Griff blieb er stehen: Die
+   * Detailseite antwortete `304` und zeigte weiter, wer laut altem Stand kommt.
+   */
+  it('hebt die Version der Abende, die es angefasst hat', async () => {
+    const { service, meetingUpdateMany } = setup({
+      periods: [holiday],
+      meetings: [
+        { id: 'before', date: utc('2026-08-04') },
+        { id: 'inside', date: utc('2026-08-11') },
+      ],
+    });
+
+    await service.syncPerson('hk-1', 'niko', { now: NOW, notify: false });
+
+    expect(meetingUpdateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['inside'] } },
+      data: { version: { increment: 1 } },
     });
   });
 
@@ -257,12 +281,14 @@ describe('AbsenceSyncService und die automatische Zusage', () => {
 
     await service.syncPerson('hk', 'niko', { now: NOW, notify: false });
 
-    // Erst weg, dann neu: `skipDuplicates` ließe die Zeile sonst stehen.
+    // Erst weg, dann neu: `skipDuplicates` ließe die Zeile sonst stehen. Und
+    // `not: SELF` statt einer Aufzählung — gemeint ist jede Zusage, die niemand
+    // ausgesprochen hat, also auch die aus einer Rolle.
     expect(deleteMany).toHaveBeenCalledWith({
       where: {
         personId: 'niko',
         meetingId: { in: ['inside'] },
-        source: AttendanceSource.AUTO,
+        source: { not: AttendanceSource.SELF },
       },
     });
     expect(createMany.mock.calls[0][0].data).toEqual([
@@ -273,6 +299,37 @@ describe('AbsenceSyncService und die automatische Zusage', () => {
         source: AttendanceSource.ABSENCE,
       },
     ]);
+  });
+
+  /**
+   * Dasselbe für die Zusage, die aus einer Zuteilung entstand. Sie stand hier
+   * einmal nicht — die Löschung zählte `AUTO` namentlich auf, und ein neuer
+   * Wert daneben hätte den Urlaub still wirkungslos gemacht: Die Zeile bliebe
+   * stehen, `skipDuplicates` ließe die Absage fallen.
+   */
+  it('überschreibt auch eine Zusage aus einer Rolle', async () => {
+    const { service, createMany, deleteMany } = setup({
+      periods: [holiday],
+      meetings: [
+        {
+          id: 'inside',
+          date: utc('2026-08-11'),
+          attendance: {
+            status: AttendanceStatus.ATTENDING,
+            source: AttendanceSource.ROLE,
+          },
+        },
+      ],
+    });
+
+    await service.syncPerson('hk', 'niko', { now: NOW, notify: false });
+
+    expect(deleteMany.mock.calls[0][0].where.source).toEqual({
+      not: AttendanceSource.SELF,
+    });
+    expect(createMany.mock.calls[0][0].data[0].status).toBe(
+      AttendanceStatus.ABSENT,
+    );
   });
 
   it('lässt eine Antwort von Hand auch dann in Ruhe', async () => {

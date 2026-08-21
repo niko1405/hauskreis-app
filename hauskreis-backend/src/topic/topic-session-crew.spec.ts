@@ -17,6 +17,7 @@ import { TopicSessionService } from './topic-session.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { TopicLinkService } from './topic-link.service';
 import type { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
+import type { RoleAttendanceService } from '../attendance/role-attendance.service';
 import type { AvailabilityService } from '../role-suggestion/availability.service';
 import { withClock } from '../meeting/group-clock.testing';
 
@@ -132,6 +133,8 @@ function setup(
 
   const links = { join: jest.fn(), leave: jest.fn(), reconcile: jest.fn() };
 
+  const roleAttendance = { confirm: jest.fn().mockResolvedValue(0) };
+
   const availability = {
     assertAvailable: jest.fn(),
     findAvailable: jest.fn((_h: string, _m: string, ids: string[]) =>
@@ -143,12 +146,13 @@ function setup(
     new TopicSessionService(
       prisma as unknown as PrismaService,
       { announce } as unknown as RoleAssignmentNotifier,
+      roleAttendance as unknown as RoleAttendanceService,
       availability as unknown as AvailabilityService,
       links as unknown as TopicLinkService,
     ),
   );
 
-  return { service, links, roleCreate, announce, availability };
+  return { service, links, roleCreate, announce, availability, roleAttendance };
 }
 
 /** Wen `createMany` in die Abend-Rolle schreiben wollte. */
@@ -300,6 +304,26 @@ describe('setSessionResponsibles', () => {
       );
 
       expect(announce).toHaveBeenCalledWith('m1', 'TOPIC', ['p2'], 'p1');
+    });
+
+    /**
+     * Und trägt sie als „dabei" ein. Anders als die Nachricht gilt das auch
+     * für die Person, die sich selbst einträgt: Wer vorbereitet, kommt.
+     */
+    it('und sagt für sie zu', async () => {
+      const { service, roleAttendance } = setup({
+        responsibleIds: ['p1', 'p2'],
+        imTermin: ['p1'],
+      });
+
+      await service.setSessionResponsibles(
+        'hk',
+        's1',
+        { personIds: ['p1', 'p2'] },
+        ICH,
+      );
+
+      expect(roleAttendance.confirm).toHaveBeenCalledWith('m1', ['p2']);
     });
 
     /**

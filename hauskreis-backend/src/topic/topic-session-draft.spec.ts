@@ -14,6 +14,7 @@ import { TopicSessionService } from './topic-session.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { TopicLinkService } from './topic-link.service';
 import type { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
+import type { RoleAttendanceService } from '../attendance/role-attendance.service';
 import type { AvailabilityService } from '../role-suggestion/availability.service';
 import { withClock } from '../meeting/group-clock.testing';
 
@@ -88,6 +89,7 @@ function setup(
     new TopicSessionService(
       prisma as unknown as PrismaService,
       { announce: jest.fn() } as unknown as RoleAssignmentNotifier,
+      { confirm: jest.fn() } as unknown as RoleAttendanceService,
       { assertAvailable: jest.fn() } as unknown as AvailabilityService,
       links as unknown as TopicLinkService,
     ),

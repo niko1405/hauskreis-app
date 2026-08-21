@@ -2790,7 +2790,7 @@ export interface components {
       /** @enum {string} */
       status: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
       /** @enum {string} */
-      source: 'SELF' | 'ABSENCE' | 'AUTO';
+      source: 'SELF' | 'ABSENCE' | 'AUTO' | 'ROLE';
       /** Format: date-time */
       updatedAt: string;
     };

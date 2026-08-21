@@ -5,6 +5,7 @@ import {
   AttendanceStatus,
 } from '../../generated/prisma/enums';
 import { GroupClockService } from '../meeting/group-clock.service';
+import { touchMeetings } from '../meeting/meeting-version';
 import { ANGEKOMMEN } from '../person/angekommen';
 
 /**
@@ -33,6 +34,13 @@ import { ANGEKOMMEN } from '../person/angekommen';
  * Weg trotzdem jeden Dienstag zu. Auf der Terminkarte stand dann eine Zusage
  * mehr, als die Anwesenheitsliste kannte — die rechnet längst mit `ANGEKOMMEN`,
  * und die beiden Zahlen widersprachen sich.
+ *
+ * **Wer die Anwesenheit schreibt, schreibt am Termin.** Sie steht mit in seiner
+ * Antwort, und ihr ETag hängt allein an `meeting.version`. Ohne den Griff blieb
+ * er stehen: Die Terminliste zeigte die frische Zusage (dort ist der ETag ein
+ * Inhalts-Hash), die Detailseite antwortete `304` und ließ die Person unter
+ * „weiß noch nicht" stehen — mal so, mal so, je nachdem, welcher Bildschirm
+ * gerade neu geladen hatte.
  *
  * **Der Status des Abends spielt keine Rolle.** Auch ein abgesagter bekommt
  * seine Zeile: lebt er wieder auf, gilt „ich bin grundsätzlich dabei" auch für
@@ -80,16 +88,52 @@ export class AutoAttendanceService {
       return 0;
     }
 
-    const { count } = await this.prisma.meetingAttendance.createMany({
-      data: meetings.flatMap((meeting) =>
-        people.map((person) => ({
+    // Welche Zeilen wirklich fehlen. `skipDuplicates` allein täte dasselbe,
+    // verschluckt aber die Antwort **welche** — und die brauchen wir: jeder
+    // angefasste Abend muss eine neue Version bekommen, sonst zeigt seine
+    // Detailseite die frische Zusage nicht (`touchMeetings`).
+    const vorhanden = await this.prisma.meetingAttendance.findMany({
+      where: {
+        meetingId: { in: meetings.map((meeting) => meeting.id) },
+        personId: { in: people.map((person) => person.id) },
+      },
+      select: { meetingId: true, personId: true },
+    });
+
+    const beantwortet = new Set(
+      vorhanden.map((row) => `${row.meetingId}:${row.personId}`),
+    );
+
+    const fehlend = meetings.flatMap((meeting) =>
+      people
+        .filter((person) => !beantwortet.has(`${meeting.id}:${person.id}`))
+        .map((person) => ({
           meetingId: meeting.id,
           personId: person.id,
           status: AttendanceStatus.ATTENDING,
           source: AttendanceSource.AUTO,
         })),
-      ),
-      skipDuplicates: true,
+    );
+
+    if (fehlend.length === 0) {
+      return 0;
+    }
+
+    const count = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.meetingAttendance.createMany({
+        // `skipDuplicates` bleibt trotz der Vorauswahl: zwischen Lesen und
+        // Schreiben kann eine Antwort dazwischenkommen, und ein gleichzeitiger
+        // zweiter Lauf ist genau der Fall, für den es da ist.
+        data: fehlend,
+        skipDuplicates: true,
+      });
+
+      await touchMeetings(
+        tx,
+        fehlend.map((row) => row.meetingId),
+      );
+
+      return created.count;
     });
 
     if (count > 0) {

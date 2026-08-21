@@ -11,6 +11,7 @@ import { PersonModule } from '../person/person.module';
 import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module';
 import { NotificationModule } from '../notification/notification.module';
 import { EditRightsModule } from '../meeting/edit-rights.module';
+import { AttendanceModule } from '../attendance/attendance.module';
 
 /**
  * The song database and everything songs-related on a meeting.
@@ -31,6 +32,7 @@ import { EditRightsModule } from '../meeting/edit-rights.module';
     RoleSuggestionModule,
     NotificationModule,
     EditRightsModule,
+    AttendanceModule,
   ],
   controllers: [SongController, MeetingSongController, SongLookupController],
   providers: [

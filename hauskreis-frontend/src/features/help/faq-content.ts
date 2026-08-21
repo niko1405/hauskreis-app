@@ -239,6 +239,14 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     keywords: ['grundsätzlich', 'automatisch zusagen', 'haken'],
   },
   {
+    id: 'meetings-rolle-zusage',
+    category: 'meetings',
+    question: 'Warum stehe ich plötzlich auf „dabei"?',
+    answer:
+      'Weil du für den Abend eingeteilt wurdest. Wer die Tür aufmacht, das Thema vorbereitet, die Lieder übt oder sein Testimony erzählt, kommt — ein „weiß noch nicht" daneben ist für den Gastgeber beim Einkaufen dasselbe wie ein Nein.\n\nGedreht wird dabei nur das Schweigen:\n\n**Eine Absage bleibt stehen.** Beim Thema kann man in der Crew stehen und am Abend selbst fehlen — mitvorbereiten geht auch von unterwegs.\n\n**Eine Zusage bleibt, wie sie ist.** Auch ein vergangener Abend wird nicht angefasst, und ein abgesagter auch nicht.\n\nFällst du später wieder aus der Rolle, bleibt die Zusage stehen. Sie stillschweigend zurückzunehmen wäre eine Absage, die niemand ausgesprochen hat — zurücknehmen kannst nur du sie selbst.',
+    keywords: ['dabei', 'eingeteilt', 'zusage', 'rolle', 'automatisch'],
+  },
+  {
     id: 'meetings-abwesenheit',
     category: 'meetings',
     question: 'Wie trage ich eine Abwesenheit ein — und was passiert dann?',

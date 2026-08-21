@@ -10,6 +10,7 @@ import {
   AttendanceSource,
   AttendanceStatus,
 } from '../../generated/prisma/enums';
+import { touchMeetings } from '../meeting/meeting-version';
 import { AbsenceCalendar } from './absence-window';
 import { GroupClockService } from '../meeting/group-clock.service';
 import { CRON_TIME_ZONE } from '../common/time/local-evening';
@@ -128,6 +129,10 @@ export class AbsenceSyncService {
         },
       });
 
+      // Die Antwort steht mit in der Antwort des Termins — ohne den Griff
+      // bliebe sein ETag stehen und die Detailseite mit ihm (`touchMeetings`).
+      await touchMeetings(this.prisma, toWithdraw);
+
       // Ein gelöschter Urlaub gibt den Abend wieder frei — und wer
       // grundsätzlich dabei ist, ist es dann auch wieder. Ohne das bliebe nach
       // einem zurückgenommenen Urlaub „weiß noch nicht" stehen, obwohl der
@@ -136,14 +141,22 @@ export class AbsenceSyncService {
     }
 
     if (toDecline.length > 0) {
-      // Erst die automatische Zusage wegräumen: `skipDuplicates` unten ließe
-      // sie sonst stehen, und der Abend bliebe auf „dabei", obwohl die Person
+      // Erst die abgeleitete Zusage wegräumen: `skipDuplicates` unten ließe sie
+      // sonst stehen, und der Abend bliebe auf „dabei", obwohl die Person
       // verreist ist.
+      //
+      // `not: SELF` und keine Aufzählung: Gemeint ist jede Zusage, die niemand
+      // ausgesprochen hat — die Voreinstellung (`AUTO`) wie die aus einer Rolle
+      // (`ROLE`). Eine Aufzählung müsste beim nächsten Wert nachgezogen werden,
+      // und wird sie es nicht, bleibt die Zeile stehen, `skipDuplicates` lässt
+      // die Absage fallen und der Urlaub ist still wirkungslos. Eine
+      // `ABSENCE`-Zeile kommt hier ohnehin nicht an: Die zählt oben als
+      // `derived` und landet gar nicht erst in dieser Liste.
       await this.prisma.meetingAttendance.deleteMany({
         where: {
           personId,
           meetingId: { in: toDecline },
-          source: AttendanceSource.AUTO,
+          source: { not: AttendanceSource.SELF },
         },
       });
 
@@ -156,6 +169,9 @@ export class AbsenceSyncService {
         })),
         skipDuplicates: true,
       });
+
+      // Wie oben: die neue Absage steht in der Antwort des Termins.
+      await touchMeetings(this.prisma, toDecline);
     }
 
     // Ein Urlaub macht Rollen genauso frei wie eine Absage von Hand — sonst

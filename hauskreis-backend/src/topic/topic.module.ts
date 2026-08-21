@@ -7,6 +7,7 @@ import { TopicReminderService } from './topic-reminder.service';
 import { TopicLinkModule } from './topic-link.module';
 import { NotificationModule } from '../notification/notification.module';
 import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module';
+import { AttendanceModule } from '../attendance/attendance.module';
 
 /**
  * Themen, ihre Einheiten und die Rolle „Thema" am einzelnen Abend.
@@ -26,7 +27,12 @@ import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module'
  * wer zuerst wählt.
  */
 @Module({
-  imports: [NotificationModule, RoleSuggestionModule, TopicLinkModule],
+  imports: [
+    NotificationModule,
+    RoleSuggestionModule,
+    TopicLinkModule,
+    AttendanceModule,
+  ],
   controllers: [TopicController, MeetingTopicController],
   providers: [TopicService, TopicSessionService, TopicReminderService],
   exports: [TopicService, TopicSessionService, TopicReminderService],
