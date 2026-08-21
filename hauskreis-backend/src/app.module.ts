@@ -10,6 +10,7 @@ import { ClockModule } from './meeting/group-clock.service';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { ZodValidationPipe } from './common/pipes/zod-validation.pipe';
 import { EtagInterceptor } from './common/http/etag.interceptor';
+import { NoStoreInterceptor } from './common/http/no-store.interceptor';
 import { ResponseSerializerInterceptor } from './common/http/response-serializer.interceptor';
 import { HealthController } from './health/health.controller';
 import { AuthModule } from './auth/auth.module';
@@ -86,6 +87,7 @@ import { ReleaseModule } from './release/release.module';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    { provide: APP_INTERCEPTOR, useClass: NoStoreInterceptor },
     { provide: APP_INTERCEPTOR, useClass: EtagInterceptor },
     // Nach dem ETag-Interceptor eingetragen und damit weiter innen: auf dem
     // Rückweg läuft dieser hier zuerst, der ETag wird also aus der bereits

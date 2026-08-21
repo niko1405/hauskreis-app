@@ -430,6 +430,24 @@ export class MeetingService {
       );
     }
 
+    // Und dasselbe fürs Testimony, wo es fehlte. Der Text dafür stand von
+    // Anfang an in `RoleAssignmentNotifier` („Du erzählst dein Testimony"),
+    // nur rief ihn niemand auf: Gastgeber, Thema und Musik sagten Bescheid,
+    // die vierte Rolle schwieg. Ausgerechnet die, auf die man sich am ehesten
+    // vorbereiten muss.
+    if (
+      updated.testimonyPersonId &&
+      updated.testimonyPersonId !== before.testimonyPersonId &&
+      updated.status !== MeetingStatus.CANCELLED
+    ) {
+      await this.roleAssignments.announce(
+        id,
+        AssignmentRole.TESTIMONY,
+        [updated.testimonyPersonId],
+        viewer.personId,
+      );
+    }
+
     // Eine verschobene Uhrzeit ist die eine Änderung an einem Abend, die man
     // erfahren muss, ohne die App zu öffnen: wer um 18 Uhr vor der Tür steht,
     // während die anderen um 19:30 kommen, hat davon nichts gelesen.

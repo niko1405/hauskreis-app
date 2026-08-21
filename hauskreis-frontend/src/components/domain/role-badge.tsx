@@ -64,7 +64,6 @@ export function RoleChip({
   const content = filled ? (
     <>
       <Icon size={12} className="shrink-0" />
-      <span className="opacity-80">{ROLE_LABEL[kind]}:</span>
       <span className="font-extrabold">
         {people.map((p) => p.name).join(', ')}
       </span>

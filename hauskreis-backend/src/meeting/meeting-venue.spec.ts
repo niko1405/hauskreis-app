@@ -337,6 +337,46 @@ describe('MeetingService.update — wer eingeteilt wird, hört davon', () => {
     expect(roleAssignments.announce).not.toHaveBeenCalled();
   });
 
+  /**
+   * Die vierte Rolle schwieg, während die drei anderen längst Bescheid sagten —
+   * ausgerechnet die, auf die man sich am ehesten vorbereiten muss.
+   */
+  it('meldet ein neues Testimony', async () => {
+    const { service, prisma, roleAssignments } = setup(
+      meeting({ hasTopicSlot: false, hasTestimonySlot: true }),
+    );
+    prisma.person.findFirst.mockResolvedValue({ id: 'p-mira' });
+
+    await service.update(
+      'hk1',
+      'm1',
+      { testimonyPersonId: 'p-mira' },
+      ADMIN,
+      EGAL,
+    );
+
+    expect(roleAssignments.announce).toHaveBeenCalledWith(
+      'm1',
+      'TESTIMONY',
+      ['p-mira'],
+      'admin',
+    );
+  });
+
+  it('schweigt, wenn das Testimony dasselbe bleibt', async () => {
+    const { service, roleAssignments } = setup(
+      meeting({
+        hasTopicSlot: false,
+        hasTestimonySlot: true,
+        testimonyPersonId: 'p-mira',
+      }),
+    );
+
+    await service.update('hk1', 'm1', { infoText: 'Kurz' }, ADMIN, EGAL);
+
+    expect(roleAssignments.announce).not.toHaveBeenCalled();
+  });
+
   it('schweigt, wenn der Gastgeber herausgenommen wird', async () => {
     const { service, roleAssignments } = setup(
       meeting({

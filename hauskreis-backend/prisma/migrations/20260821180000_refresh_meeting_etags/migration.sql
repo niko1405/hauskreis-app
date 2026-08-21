@@ -1,0 +1,21 @@
+-- Einmal alle Termin-ETags ungültig machen.
+--
+-- Der ETag eines Termins ist `W/"<version>"`. Zwei Läufe schrieben Anwesenheit,
+-- ohne die Version anzuheben (`AutoAttendanceService`, `AbsenceSyncService`) —
+-- ab jetzt tun sie es. Für die Abende, die es schon getroffen hat, reicht das
+-- nicht: Dort ist der Stand im Browser mit *demselben* ETag abgelegt, den der
+-- Server weiterhin nennt. Jede Nachfrage bekommt also weiter ein `304`, und der
+-- alte Stand bleibt stehen — bis irgendjemand zufällig etwas an dem Abend
+-- ändert.
+--
+-- Ein Sprung der Version löst das für alle auf einmal: Die nächste Nachfrage
+-- bekommt `200` samt frischem Körper.
+--
+-- Ohne `WHERE`, und das ist Absicht. Welche Abende betroffen sind, lässt sich
+-- nachträglich nicht sagen — die Zeilen, um die es geht, tragen kein Datum
+-- ihrer Entstehung, und beim Abwesenheits-Abgleich wurden auch welche
+-- *gelöscht*. Ein Versionssprung kostet nichts: Er zählt Revisionen, keine
+-- Änderungen. Wer in genau diesem Moment ein Bearbeiten-Formular offen hat,
+-- bekommt einmal die Meldung „jemand anders hat gespeichert" — beim Deploy
+-- startet der Server ohnehin neu.
+UPDATE "meeting" SET "version" = "version" + 1;

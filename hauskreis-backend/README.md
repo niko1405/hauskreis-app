@@ -508,6 +508,33 @@ steht in
 Regression ist sonst nicht zu bemerken, weil das Symptom ein _veralteter_
 Bildschirm ist und kein Fehler.
 
+### Der Zwischenspeicher darunter
+
+Die JSON-Antworten trugen **keinen** `Cache-Control`. Eine Antwort ohne diesen
+Kopf, aber mit `ETag`, darf ein Browser trotzdem behalten: Er legt sie in seinen
+eigenen Speicher, fragt beim nächsten Mal mit seinem eigenen `If-None-Match`
+nach — und wenn der Server `304` sagt, reicht er den **selbst gespeicherten**
+Körper heraus. Der liegt auf der Platte und überlebt das Schließen der App.
+
+Damit gab es zwei Zwischenspeicher übereinander, von denen nur der obere
+(`@tanstack/react-query`) weiß, wann er zu leeren ist. Zu bemerken war es so:
+Beim Öffnen ein alter Stand, nach dem Zug zum Aktualisieren der richtige, nach
+dem nächsten Start wieder der alte.
+
+[`NoStoreInterceptor`](src/common/http/no-store.interceptor.ts) setzt deshalb
+`Cache-Control: no-store`, sofern der Endpunkt nichts anderes sagt — die beiden
+Bild-Endpunkte behalten ihr `private, max-age=3600`. Die Ersparnis durch `304`
+bleibt vollständig: Sie hing nie am Browser, der Client legt den ETag neben die
+Daten in seinen eigenen Cache und schickt ihn selbst mit. Und nebenbei ist es
+das Richtige für die Sache: Wer wann wo ist und wer welches Geschenk besorgt,
+gehört nicht in einen Plattenspeicher, aus dem es niemand mehr herausbekommt.
+
+> Für die Abende, die es schon getroffen hatte, reichte der Kopf nicht: Dort lag
+> der alte Stand unter **demselben** ETag, den der Server weiterhin nennt.
+> Die Migration `20260821180000_refresh_meeting_etags` hebt deshalb einmalig die
+> Version **aller** Termine an — die nächste Nachfrage bekommt `200` samt
+> frischem Körper, und mit ihm den neuen `Cache-Control`.
+
 ### Für neue Endpunkte
 
 1. Entität im Prisma-Schema mit `version Int @default(0)` versehen.
@@ -631,17 +658,23 @@ Vorlauf als aufräumen. Der Freitag beim Actionstep liegt mittig zwischen zwei
 Dienstagen und lässt das Wochenende noch übrig — montags käme die Nachfrage, wenn
 die Woche schon vorbei ist.
 
-### `ROLE_ASSIGNED`: ein Schalter für drei Rollen
+### `ROLE_ASSIGNED`: ein Schalter für vier Rollen
 
 Man erfuhr von einer Zuteilung bisher erst durch die Erinnerung drei bis fünf
 Tage vorher. Bis dahin stand sie nur in der App — und wer nicht hineinsieht,
 erfährt sie nicht. Genau das ist das Problem aus CLAUDE.md §2 („geht unter,
 niemand hat den Überblick").
 
-Ein Eintrag für Gastgeber, Thema und Musik zusammen, nicht drei. Die
+Ein Eintrag für Gastgeber, Thema, Musik und Testimony zusammen, nicht vier. Die
 _Erinnerungen_ sind einzeln einstellbar, weil man sie unterschiedlich früh
-braucht; hier gibt es nichts einzustellen, und drei Schalter für dieselbe Frage
+braucht; hier gibt es nichts einzustellen, und vier Schalter für dieselbe Frage
 machen die Liste schlechter.
+
+> **Das Testimony kam später dazu — die Nachricht fehlte.** Der Text stand von
+> Anfang an hier („Du erzählst dein Testimony"), nur rief ihn niemand auf:
+> `MeetingService.update` meldete den Gastgeber, `TopicSessionService` das Thema,
+> `MeetingSongService` die Musik, und die vierte Rolle schwieg. Ausgerechnet die,
+> auf die man sich am ehesten vorbereiten muss.
 
 Damit das trotzdem funktioniert, hat `notification_log` eine Spalte
 `related_role` bekommen. Ohne sie hielte `hasBeenSent` die Musik-Einteilung für
