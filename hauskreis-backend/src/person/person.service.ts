@@ -49,6 +49,7 @@ const personSelect = {
   playsInstrument: true,
   canHost: true,
   autoAttend: true,
+  testimonyToldBefore: true,
   photoUpdatedAt: true,
   locationId: true,
   active: true,
@@ -244,6 +245,7 @@ export class PersonService {
         playsInstrument: dto.playsInstrument,
         canHost: dto.canHost,
         autoAttend: dto.autoAttend,
+        testimonyToldBefore: dto.testimonyToldBefore,
         locationId: dto.locationId ?? null,
       },
     });
@@ -311,6 +313,7 @@ export class PersonService {
             playsInstrument: dto.playsInstrument,
             canHost: dto.canHost,
             autoAttend: dto.autoAttend,
+            testimonyToldBefore: dto.testimonyToldBefore,
             // `undefined` leaves it alone, `null` moves the person out of the
             // hosting rotation without touching anything else.
             locationId: dto.locationId,

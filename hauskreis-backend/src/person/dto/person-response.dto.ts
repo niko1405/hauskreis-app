@@ -33,6 +33,10 @@ export const personResponseSchema = z.object({
   /// „Ich bin grundsätzlich dabei." Kommende Abende werden im Voraus zugesagt,
   /// solange nichts anderes dasteht.
   autoAttend: z.boolean(),
+  /// „Mein Testimony habe ich schon erzählt" — **außerhalb dieser App**. Wer
+  /// es an einem Abend erzählt hat, den die App kennt, ist ohnehin aus den
+  /// Vorschlägen; das Häkchen ist für alles davor.
+  testimonyToldBefore: z.boolean(),
   /// Was diese Person **in diesem Hauskreis** darf. Vorher war „Admin" eine
   /// Realm-Rolle und galt überall; wer sich einen eigenen Hauskreis anlegt,
   /// ist dort Admin und im alten Mitglied.

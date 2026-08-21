@@ -62,7 +62,7 @@ Das alles passiert im Tab **Profil**, von oben nach unten:
    **Speichern**. Ohne Geburtsdatum stehst du bei den Geburtstagen nirgends —
    auch nicht als jemand, der ein Geschenk besorgt (mehr dazu in Kapitel 10).
 
-   In derselben Karte stehen drei Häkchen. Zwei davon ändern wirklich etwas:
+   In derselben Karte stehen vier Häkchen:
    - **„Ich kann ein Instrument spielen"** — nur wer das anhakt, wird für die
      Musik überhaupt vorgeschlagen.
    - **„Ich bin grundsätzlich dabei"** — sagt kommende Abende gleich für dich
@@ -71,6 +71,9 @@ Das alles passiert im Tab **Profil**, von oben nach unten:
    - **„Ich kann gerade hosten"** — nimm den Haken raus, wenn du eine Weile
      nicht dran sein möchtest. Dann schlägt dich die App nicht als Gastgeber
      vor.
+   - **„Mein Testimony habe ich schon erzählt"** — für alles **vor** dieser
+     App. Man erzählt es einmal; mit dem Haken schlägt dich die App dafür nicht
+     mehr vor. Abende, an denen du es hier erzählt hast, kennt sie selbst.
 3. **Wo du wohnst.** Adresse eintragen, dann **Adresse speichern**. Die
    **Kapazität** darüber ist optional: Ohne Angabe heißt es „alle passen rein",
    nur enge Wohnungen brauchen eine Zahl. Kommen an einem Abend mehr Leute als
@@ -267,9 +270,17 @@ erscheint nur, wenn nicht die ganze Gruppe hineinpasst.
 
 **Wer für den Abend abgesagt hat, steht gar nicht zur Auswahl** — in keiner der
 vier Rollen. Wer nicht da ist, kann sie nicht übernehmen, und der Server lehnt
-es auch ab. Unter der Rangliste steht deshalb nur noch einer: bei der **Musik**,
-wer kein Instrument spielt („spielt kein Instrument"). Eintragen kannst du ihn
-trotzdem — die Gruppe weiß besser, wer den Abend trägt.
+es auch ab. Unter der Rangliste stehen deshalb nur noch zwei Sorten: bei der
+**Musik**, wer kein Instrument spielt, und beim **Testimony**, wer seines schon
+erzählt hat. Eintragen kannst du beide trotzdem — die Gruppe weiß besser, wer
+den Abend trägt.
+
+Denn ein **Testimony erzählt man einmal**. Wer dran war, wird nicht mehr
+vorgeschlagen, und zwischen den anderen entscheidet allein, wer an dem Abend am
+wenigsten zu tun hat — „wer war am längsten nicht dran" ergibt hier keinen Sinn,
+weil niemand von ihnen je dran war. Warst du **vor dieser App** schon dran,
+setz im Profil den Haken „Mein Testimony habe ich schon erzählt"; die Abende,
+die die App selbst kennt, zählt sie ohnehin.
 
 Ein **Abwesenheitszeitraum** wirkt dabei genauso — aber deine eigene Zusage
 sticht ihn. Wer im Urlaub für einen einzelnen Abend ausdrücklich zusagt („doch,

@@ -195,8 +195,8 @@ model Hauskreis {
 }
 
 model Person {
-  id              String     @id @default(uuid()) @db.Uuid
-  hauskreisId     String     @map("hauskreis_id") @db.Uuid
+  id                  String     @id @default(uuid()) @db.Uuid
+  hauskreisId         String     @map("hauskreis_id") @db.Uuid
   /// **Global** eindeutig, und das ist die Regel, nicht ein Hindernis: ein
   /// Mensch gehört zu genau einem Hauskreis. Ein Wechsel ist ein Umzug.
   ///
@@ -204,7 +204,7 @@ model Person {
   /// — die Zeile bleibt, damit vergangene Abende weiter zeigen, wer gehostet
   /// hat. Eine offene Einladung hat aus demselben Grund noch keine Id: sie
   /// nimmt niemandem seine Mitgliedschaft weg, bis sie angenommen wird.
-  keycloakUserId  String?    @unique @map("keycloak_user_id")
+  keycloakUserId      String?    @unique @map("keycloak_user_id")
   /// Der Name, mit dem man sich anmeldet — derselbe wie in Keycloak.
   ///
   /// **Global** eindeutig, weil Keycloak es realmweit erzwingt: zwei Wahrheiten
@@ -214,9 +214,9 @@ model Person {
   ///
   /// Getrennt von `name`, weil Keycloak auf Kleinschreibung normalisiert —
   /// „niko" stünde sonst auf jeder Karte und in jeder Benachrichtigung.
-  username        String?    @unique
+  username            String?    @unique
   /// Der **Anzeigename**: was auf Karten, Avataren und in „Du bist dran" steht.
-  name            String
+  name                String
   /// Wann das Profilbild zuletzt geschrieben wurde — `null` heißt: keins, dann
   /// zeigt die App Initialen mit einer aus der Id abgeleiteten Farbe.
   ///
@@ -224,7 +224,7 @@ model Person {
   /// heißt immer `{id}.webp`, und ein Name, der sich nie ändert, wäre für den
   /// Browser für immer dasselbe Bild. So hängt er als Query-Parameter an der
   /// URL und das Zwischenspeichern erledigt sich von selbst.
-  photoUpdatedAt  DateTime?  @map("photo_updated_at")
+  photoUpdatedAt      DateTime?  @map("photo_updated_at")
   /// `null` heißt **anonymisiert** — jemand hat sein Konto gelöscht.
   ///
   /// Nullable, damit die Zeile bleiben kann, wenn die Person geht. Ein hartes
@@ -236,37 +236,49 @@ model Person {
   /// Der zusammengesetzte Index trägt beliebig viele davon: in Postgres ist
   /// `NULL` in einem eindeutigen Index von jedem anderen `NULL` verschieden —
   /// dieselbe Eigenschaft, auf der schon `topic_session.meeting_id` steht.
-  email           String?
+  email               String?
   /// Wann das Konto gelöscht wurde. Neben `active = false` nötig, weil ein
   /// **Austritt** den Namen im Archiv behält und ein Löschen nicht.
-  anonymizedAt    DateTime?  @map("anonymized_at")
+  anonymizedAt        DateTime?  @map("anonymized_at")
   /// Gilt nur hier. Siehe `PersonRole`.
-  role            PersonRole @default(MEMBER)
-  birthdate       DateTime?  @db.Date
-  playsInstrument Boolean    @default(false) @map("plays_instrument")
-  canHost         Boolean    @default(true) @map("can_host")
+  role                PersonRole @default(MEMBER)
+  birthdate           DateTime?  @db.Date
+  playsInstrument     Boolean    @default(false) @map("plays_instrument")
+  canHost             Boolean    @default(true) @map("can_host")
   /// „Ich bin grundsätzlich dabei." Sagt kommende Abende im Voraus zu, solange
   /// nichts anderes dasteht — ein Abwesenheitszeitraum sticht weiter, eine
   /// Antwort von Hand erst recht. Vorgabe `false`: eine Zusage, die man nie
   /// gegeben hat, ist keine.
-  autoAttend      Boolean    @default(false) @map("auto_attend")
+  autoAttend          Boolean    @default(false) @map("auto_attend")
+  /// „Ich habe mein Testimony schon erzählt" — **außerhalb dieser App**.
+  ///
+  /// Sein Testimony erzählt man einmal. Wer dran war, gehört deshalb nicht mehr
+  /// in die Vorschläge, und wer schon dran war, weiß die App aus den Abenden,
+  /// die sie kennt (`testimonies`). Die kennt sie aber erst, seit es sie gibt —
+  /// in einem Hauskreis, der Jahre älter ist als die App, hätte sonst die halbe
+  /// Gruppe ihr Testimony ein zweites Mal vor sich.
+  ///
+  /// Deshalb nur dieses eine Häkchen und keine gespeicherte Gesamtantwort: Was
+  /// die App selbst weiß, rechnet sie aus — zwei Aufschriebe derselben Tatsache
+  /// liefen auseinander, sobald jemand eine Zuteilung korrigiert.
+  testimonyToldBefore Boolean    @default(false) @map("testimony_told_before")
   /// Where this person hosts. Null for anyone who brings no home into the
   /// rotation — they can still take every other role.
   ///
   /// Only ever answers "who lives here *now*". Past evenings are attributed via
   /// `meeting.location_id`, so moving house does not rewrite history.
-  locationId      String?    @map("location_id") @db.Uuid
-  active          Boolean    @default(true)
+  locationId          String?    @map("location_id") @db.Uuid
+  active              Boolean    @default(true)
   /// Wann sich diese Person zum ersten Mal angemeldet hat.
   ///
   /// `null` heißt „eingeladen, aber noch nicht da". Die `keycloakUserId` taugt
   /// dafür nicht: die steht schon ab dem Einladen drin, weil das Konto vor der
   /// Person angelegt wird. Gesetzt wird es in `resolveForUser` — der einzige
   /// Moment, in dem feststeht, dass wirklich jemand vor dem Bildschirm saß.
-  acceptedAt      DateTime?  @map("accepted_at")
-  createdAt       DateTime   @default(now()) @map("created_at")
+  acceptedAt          DateTime?  @map("accepted_at")
+  createdAt           DateTime   @default(now()) @map("created_at")
   /// Optimistic locking counter, see docs/conditional requests.
-  version         Int        @default(0)
+  version             Int        @default(0)
 
   hauskreis               Hauskreis                 @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
   location                Location?                 @relation(fields: [locationId], references: [id], onDelete: SetNull)

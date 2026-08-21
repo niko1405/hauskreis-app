@@ -39,6 +39,10 @@ export const createPersonSchema = z.object({
   canHost: z.boolean().default(true),
   /// „Ich bin grundsätzlich dabei." Sagt kommende Abende im Voraus zu.
   autoAttend: z.boolean().default(false),
+  /// „Mein Testimony habe ich schon erzählt", und zwar vor dieser App. Nimmt
+  /// die Person aus den Testimony-Vorschlägen — eintragen lässt sie sich
+  /// trotzdem.
+  testimonyToldBefore: z.boolean().default(false),
   /// The home this person brings into the hosting rotation, if any.
   locationId: z.uuid().nullish(),
 });
@@ -78,6 +82,7 @@ export const updatePersonSchema = createPersonSchema.partial().extend({
   playsInstrument: z.boolean().optional(),
   canHost: z.boolean().optional(),
   autoAttend: z.boolean().optional(),
+  testimonyToldBefore: z.boolean().optional(),
   active: z.boolean().optional(),
   /// Wandert bei Änderung nach Keycloak zurück, damit die Anmeldung mit dem
   /// neuen Namen funktioniert.

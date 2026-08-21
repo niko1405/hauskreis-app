@@ -247,6 +247,14 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     keywords: ['dabei', 'eingeteilt', 'zusage', 'rolle', 'automatisch'],
   },
   {
+    id: 'meetings-testimony-einmal',
+    category: 'meetings',
+    question: 'Warum werde ich fürs Testimony nicht vorgeschlagen?',
+    answer:
+      'Weil man sein Testimony einmal erzählt. Wer dran war, steht nicht mehr in den Vorschlägen — und zwischen allen anderen entscheidet nur, wer an dem Abend am wenigsten zu tun hat. „Wer war am längsten nicht dran" ergibt hier keinen Sinn: Von denen, die noch dastehen, war niemand je dran.\n\nDie App zählt dazu die Abende, die sie selbst kennt. Warst du **vorher** schon dran — der Hauskreis ist ja älter als die App —, setz im Profil den Haken **„Mein Testimony habe ich schon erzählt"**.\n\nEintragen lässt sich trotzdem jede:r. Wer ein zweites erzählen will, darf; unter der Rangliste stehen die anderen mit genau diesem Hinweis.\n\nEin Testimony, für das du an einem **kommenden** Abend schon eingeteilt bist, nimmt dich nicht heraus — es zählt wie jede andere Aufgabe und rutscht dich nur nach unten.',
+    keywords: ['testimony', 'erzählen', 'vorschlag', 'einmal', 'schon dran'],
+  },
+  {
     id: 'meetings-abwesenheit',
     category: 'meetings',
     question: 'Wie trage ich eine Abwesenheit ein — und was passiert dann?',

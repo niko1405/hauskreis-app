@@ -305,6 +305,11 @@ const CATEGORIES: Exclude<AssignmentRole, 'PRAYER_BUDDY'>[] = [
   'HOST',
   'TOPIC',
   'SONG',
+  // Fehlte hier, und damit stand ein Testimony an einem *späteren* Abend
+  // nirgends auf dem Startbildschirm — ausgerechnet die Rolle, für die man am
+  // meisten Vorlauf braucht. Der Typ deckt das nicht auf: `Exclude` verlangt
+  // nicht, dass die Liste vollständig ist.
+  'TESTIMONY',
   'BIRTHDAY_GIFT',
 ];
 

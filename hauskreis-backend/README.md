@@ -1619,10 +1619,33 @@ man einmal liest und danach überspringt.
 
 Alle vier Endpunkte lassen dieselben Leute weg: wer für den Abend **abgesagt**
 hat und wer in dem Zeitraum **verreist** ist (`AvailabilityService.findDeclined`
-plus `AbsenceCalendar`). Bei der Musik zusätzlich, wer **kein Instrument
-spielt** — und das ist der einzige dieser Gründe, der bloß ein Vorschlags-Filter
-ist: `setLeaders` nimmt an, worauf die Gruppe sich geeinigt hat, die anderen
-weist `assertAvailable` mit `400` ab.
+plus `AbsenceCalendar`). Dazu zwei Gründe, die nur je eine Liste kennt: bei der
+Musik, wer **kein Instrument spielt**, und beim Testimony, wer **schon dran
+war**. Die beiden sind bloß Vorschlags-Filter — `setLeaders` und
+`MeetingService.update` nehmen an, worauf die Gruppe sich geeinigt hat; die
+anderen weist `assertAvailable` mit `400` ab.
+
+**Sein Testimony erzählt man einmal.** Damit ist diese Liste anders als die drei
+übrigen: „Wer war am längsten nicht dran" ist keine Frage, wer dran war, steht
+gar nicht mehr zur Wahl. Eine eigene Rangfolge braucht das trotzdem nicht — für
+alle, die noch dastehen, sind `lastAssignedAt` und `timesAssigned` leer, die
+Kriterien 2 und 3 in `rankForRole` laufen von selbst ins Leere, und übrig bleibt
+die Auslastung an dem Abend. Zwei Quellen sagen „schon erzählt":
+
+| Quelle                                  | Was sie weiß                         |
+| --------------------------------------- | ------------------------------------ |
+| `person.testimonies` mit `date < heute` | die Abende, die die App selbst kennt |
+| `person.testimonyToldBefore`            | alles davor — das Häkchen im Profil  |
+
+Das Häkchen ist kein Beiwerk: Ein Hauskreis ist älter als seine App, und ohne
+es hätte beim Umstieg die halbe Gruppe ihr Testimony ein zweites Mal vor sich.
+Gespeichert wird deshalb **nur** das, was die Daten nicht hergeben; alles andere
+rechnet die Abfrage aus, sonst liefen zwei Aufschriebe derselben Tatsache
+auseinander, sobald jemand eine Zuteilung korrigiert.
+
+Ein **kommender** Abend zählt dabei nicht als „erzählt". Er ist eine Zuteilung
+wie jede andere und wirkt als Last: Wer am 25. dran ist, rutscht für den 18.
+nach unten, statt lautlos zu verschwinden.
 
 **Die ausdrückliche Zusage sticht den Zeitraum.** „Doch, ich komme" ist eine
 Aussage über genau diesen Abend, der Urlaub eine über viele — überall sonst

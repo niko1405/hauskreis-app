@@ -10725,6 +10725,9 @@
           "autoAttend": {
             "type": "boolean"
           },
+          "testimonyToldBefore": {
+            "type": "boolean"
+          },
           "role": {
             "type": "string",
             "enum": [
@@ -10774,6 +10777,7 @@
           "playsInstrument",
           "canHost",
           "autoAttend",
+          "testimonyToldBefore",
           "role",
           "locationId",
           "active",
@@ -10825,6 +10829,9 @@
               "type": "boolean"
             },
             "autoAttend": {
+              "type": "boolean"
+            },
+            "testimonyToldBefore": {
               "type": "boolean"
             },
             "role": {
@@ -10879,6 +10886,7 @@
             "playsInstrument",
             "canHost",
             "autoAttend",
+            "testimonyToldBefore",
             "role",
             "locationId",
             "active",
@@ -10986,6 +10994,9 @@
           "autoAttend": {
             "type": "boolean"
           },
+          "testimonyToldBefore": {
+            "type": "boolean"
+          },
           "role": {
             "type": "string",
             "enum": [
@@ -11035,6 +11046,7 @@
           "playsInstrument",
           "canHost",
           "autoAttend",
+          "testimonyToldBefore",
           "role",
           "locationId",
           "active",
@@ -11071,6 +11083,10 @@
             "type": "boolean"
           },
           "autoAttend": {
+            "default": false,
+            "type": "boolean"
+          },
+          "testimonyToldBefore": {
             "default": false,
             "type": "boolean"
           },
@@ -11152,6 +11168,9 @@
           "autoAttend": {
             "type": "boolean"
           },
+          "testimonyToldBefore": {
+            "type": "boolean"
+          },
           "role": {
             "type": "string",
             "enum": [
@@ -11204,6 +11223,7 @@
           "playsInstrument",
           "canHost",
           "autoAttend",
+          "testimonyToldBefore",
           "role",
           "locationId",
           "active",
@@ -11239,6 +11259,9 @@
             "type": "boolean"
           },
           "autoAttend": {
+            "type": "boolean"
+          },
+          "testimonyToldBefore": {
             "type": "boolean"
           },
           "locationId": {
@@ -11443,6 +11466,9 @@
           "autoAttend": {
             "type": "boolean"
           },
+          "testimonyToldBefore": {
+            "type": "boolean"
+          },
           "role": {
             "type": "string",
             "enum": [
@@ -11495,6 +11521,7 @@
           "playsInstrument",
           "canHost",
           "autoAttend",
+          "testimonyToldBefore",
           "role",
           "locationId",
           "active",

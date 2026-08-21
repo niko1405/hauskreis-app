@@ -4,6 +4,7 @@ import { AttendanceStatus, MeetingStatus } from '../../generated/prisma/enums';
 import { rankForRole } from './ranking';
 import { rankHomes, type HomeUse, type RankableHome } from './host-ranking';
 import { AbsenceCalendar } from '../absence/absence-window';
+import { GroupClockService } from '../meeting/group-clock.service';
 // Vorschlagen, was der Server danach ablehnt, wäre eine Falle — und eine
 // eingeladene Person stünde hier sogar ganz oben, weil sie noch nie dran war.
 import { ANGEKOMMEN } from '../person/angekommen';
@@ -33,6 +34,10 @@ export class RoleSuggestionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly availability: AvailabilityService,
+    // Für die eine Frage, die ein Datum braucht: ob der Abend, an dem jemand
+    // sein Testimony erzählt hat, vorbei ist. Der Kalendertag der Gruppe, nicht
+    // der des Servers.
+    private readonly clock: GroupClockService,
   ) {}
 
   /**
@@ -209,9 +214,26 @@ export class RoleSuggestionService {
   /**
    * Wer als Nächstes sein Testimony erzählt, bester Vorschlag zuerst.
    *
-   * Dieselbe Rangfolge wie beim Thema und mit demselben Grund: es ist ein
-   * Beitrag, den jemand vorbereitet, und die Frage lautet „wer war am längsten
-   * nicht dran". Kein Eignungsfilter — eine Geschichte hat jede:r.
+   * **Sein Testimony erzählt man einmal**, und darin unterscheidet sich diese
+   * Liste von den drei anderen. „Wer war am längsten nicht dran" ist hier keine
+   * Frage: Wer dran war, ist fertig — er steht gar nicht mehr zur Wahl. Übrig
+   * bleiben lauter Leute, die es noch nie erzählt haben, und zwischen denen
+   * entscheidet allein, wer an diesem Abend am wenigsten zu tun hat.
+   *
+   * Das ergibt sich von selbst und braucht keine eigene Rangfolge: Für alle,
+   * die hier noch stehen, sind „zuletzt dran" und „wie oft insgesamt"
+   * `null` beziehungsweise `0` — die Kriterien 2 und 3 in `rankForRole` laufen
+   * damit ins Leere, und übrig bleibt die Auslastung.
+   *
+   * **Zwei Quellen sagen „schon erzählt"**, und die zweite ist der Grund, aus
+   * dem es sie gibt: die Abende, die die App kennt — und das Häkchen
+   * `testimonyToldBefore` für alles davor. Ein Hauskreis ist älter als seine
+   * App; ohne das Häkchen hätte beim Umstieg die halbe Gruppe ihr Testimony ein
+   * zweites Mal vor sich.
+   *
+   * Kein Eignungsfilter darüber hinaus — eine Geschichte hat jede:r. Und weil
+   * es ein Vorschlags-Filter ist und keine Regel, nimmt `MeetingService` weiter
+   * an, worauf die Gruppe sich einigt: Wer ein zweites erzählen will, darf.
    *
    * Anders als das Thema **ohne** `slotKey` bei den Ereignissen: ein Thema kann
    * sich über drei Abende ziehen und zählt trotzdem als ein Dienst; ein
@@ -222,9 +244,20 @@ export class RoleSuggestionService {
     targetDate: Date,
     options: { excludeMeetingId?: string } = {},
   ): Promise<RoleSuggestion[]> {
+    const today = await this.clock.today(hauskreisId);
+
     const [people, events, calendar, declined] = await Promise.all([
       this.prisma.person.findMany({
-        where: { hauskreisId, ...ANGEKOMMEN },
+        where: {
+          hauskreisId,
+          ...ANGEKOMMEN,
+          testimonyToldBefore: false,
+          // Ein Abend, an dem sie es erzählt hat und der vorbei ist. Ein
+          // **kommender** zählt nicht als „erzählt": Er ist eine Zuteilung wie
+          // jede andere und wirkt als Last — wer am 25. dran ist, rutscht für
+          // den 18. nach unten, statt lautlos zu verschwinden.
+          testimonies: { none: { date: { lt: today } } },
+        },
         select: { id: true, name: true, photoUpdatedAt: true },
       }),
       this.collectLoad(hauskreisId, AssignmentRole.TESTIMONY, {

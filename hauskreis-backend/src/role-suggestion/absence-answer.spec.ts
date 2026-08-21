@@ -14,6 +14,7 @@
 import { RoleSuggestionService } from './role-suggestion.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AvailabilityService } from './availability.service';
+import { withClock } from '../meeting/group-clock.testing';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -45,12 +46,14 @@ function setup(zugesagt: string[]) {
     location: { findMany: jest.fn().mockResolvedValue([]) },
   };
 
-  return new RoleSuggestionService(
-    prisma as unknown as PrismaService,
-    {
-      findDeclined: jest.fn().mockResolvedValue(new Set<string>()),
-      findSelfAttending: jest.fn().mockResolvedValue(new Set(zugesagt)),
-    } as unknown as AvailabilityService,
+  return withClock(
+    new RoleSuggestionService(
+      prisma as unknown as PrismaService,
+      {
+        findDeclined: jest.fn().mockResolvedValue(new Set<string>()),
+        findSelfAttending: jest.fn().mockResolvedValue(new Set(zugesagt)),
+      } as unknown as AvailabilityService,
+    ),
   );
 }
 

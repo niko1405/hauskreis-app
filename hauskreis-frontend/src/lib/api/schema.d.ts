@@ -1520,6 +1520,7 @@ export interface components {
       playsInstrument: boolean;
       canHost: boolean;
       autoAttend: boolean;
+      testimonyToldBefore: boolean;
       /** @enum {string} */
       role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
@@ -1547,6 +1548,7 @@ export interface components {
       playsInstrument: boolean;
       canHost: boolean;
       autoAttend: boolean;
+      testimonyToldBefore: boolean;
       /** @enum {string} */
       role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
@@ -1588,6 +1590,7 @@ export interface components {
       playsInstrument: boolean;
       canHost: boolean;
       autoAttend: boolean;
+      testimonyToldBefore: boolean;
       /** @enum {string} */
       role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
@@ -1613,6 +1616,8 @@ export interface components {
       canHost: boolean;
       /** @default false */
       autoAttend: boolean;
+      /** @default false */
+      testimonyToldBefore: boolean;
       /** Format: uuid */
       locationId?: string | null;
     };
@@ -1641,6 +1646,7 @@ export interface components {
       playsInstrument: boolean;
       canHost: boolean;
       autoAttend: boolean;
+      testimonyToldBefore: boolean;
       /** @enum {string} */
       role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */
@@ -1664,6 +1670,7 @@ export interface components {
       playsInstrument?: boolean;
       canHost?: boolean;
       autoAttend?: boolean;
+      testimonyToldBefore?: boolean;
       /** Format: uuid */
       locationId?: string | null;
       active?: boolean;
@@ -1720,6 +1727,7 @@ export interface components {
       playsInstrument: boolean;
       canHost: boolean;
       autoAttend: boolean;
+      testimonyToldBefore: boolean;
       /** @enum {string} */
       role: 'MEMBER' | 'ADMIN';
       /** Format: uuid */

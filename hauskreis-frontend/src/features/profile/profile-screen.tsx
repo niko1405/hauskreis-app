@@ -68,6 +68,7 @@ function Loaded({ personId }: { personId: string }) {
   const [playsInstrument, setPlaysInstrument] = useState(false);
   const [canHost, setCanHost] = useState(true);
   const [autoAttend, setAutoAttend] = useState(false);
+  const [testimonyToldBefore, setTestimonyToldBefore] = useState(false);
   const [birthdate, setBirthdate] = useState('');
 
   // Den Serverstand übernehmen, sobald er da ist — und nach jedem Speichern.
@@ -77,6 +78,7 @@ function Loaded({ personId }: { personId: string }) {
     setPlaysInstrument(current.playsInstrument);
     setCanHost(current.canHost);
     setAutoAttend(current.autoAttend);
+    setTestimonyToldBefore(current.testimonyToldBefore);
     setBirthdate(current.birthdate ?? '');
   }, [current]);
 
@@ -93,6 +95,7 @@ function Loaded({ personId }: { personId: string }) {
     playsInstrument !== current.playsInstrument ||
     canHost !== current.canHost ||
     autoAttend !== current.autoAttend ||
+    testimonyToldBefore !== current.testimonyToldBefore ||
     birthdate !== (current.birthdate ?? '');
 
   const save = () => {
@@ -105,6 +108,7 @@ function Loaded({ personId }: { personId: string }) {
         playsInstrument,
         canHost,
         autoAttend,
+        testimonyToldBefore,
         ...(birthdate === '' ? {} : { birthdate }),
       },
       {
@@ -197,6 +201,19 @@ function Loaded({ personId }: { personId: string }) {
               }
               checked={autoAttend}
               onChange={(event) => setAutoAttend(event.target.checked)}
+            />
+
+            {/* Steht als Letztes, weil man es genau einmal anfasst: Ein
+                Testimony erzählt man einmal, und wer es hier erzählt hat, ist
+                ohnehin raus — dieser Haken ist für alles davor. */}
+            <Checkbox
+              label="Mein Testimony habe ich schon erzählt"
+              description={
+                'Setz den Haken, wenn du vor dieser App dran warst — dann schlägt sie dich ' +
+                'dafür nicht mehr vor. Abende, an denen du es hier erzählt hast, kennt sie selbst.'
+              }
+              checked={testimonyToldBefore}
+              onChange={(event) => setTestimonyToldBefore(event.target.checked)}
             />
 
             <Button

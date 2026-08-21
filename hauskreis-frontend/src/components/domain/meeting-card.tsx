@@ -129,6 +129,15 @@ export function MeetingCard({
           }
         />
         {meeting.hasTopicSlot && <RoleChip kind="TOPIC" people={topicPeople} />}
+        {/* Und das Testimony, das an derselben Stelle des Abends steht — es
+            fehlte hier wie die Musik davor. Auf einem Lobpreisabend zeigte die
+            Karte damit Gastgeber und Musik, aber nicht, wer erzählt. */}
+        {meeting.hasTestimonySlot && (
+          <RoleChip
+            kind="TESTIMONY"
+            people={meeting.testimonyPerson ? [meeting.testimonyPerson] : []}
+          />
+        )}
         {/* Musik fehlte hier, obwohl sie eine der drei Rollen ist — auf einem
             Lobpreisabend sogar die tragende. */}
         {meeting.hasSongSlot && (

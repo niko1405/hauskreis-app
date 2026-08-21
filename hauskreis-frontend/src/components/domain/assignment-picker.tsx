@@ -72,7 +72,8 @@ const UNRANKED_HINT: Record<AssignmentKind, string> = {
   HOST: '',
   TOPIC: '',
   SONG: 'Vorgeschlagen wird nur, wer ein Instrument spielt. Eintragen kann man jede:n — die Gruppe weiß besser, wer den Abend trägt.',
-  TESTIMONY: '',
+  TESTIMONY:
+    'Sein Testimony erzählt man einmal — vorgeschlagen wird deshalb nur, wer noch nicht dran war. Eintragen kann man trotzdem jede:n.',
 };
 
 export function AssignmentPicker({
@@ -115,9 +116,10 @@ export function AssignmentPicker({
    *
    * Bei einem vergangenen Abend gibt es keine Rangliste, dann sind es alle.
    * Beim Host ist es niemand: die Rangliste **ist** dort die vollständige Menge
-   * der gültigen Antworten. Bei der Musik ist es, wer kein Instrument spielt —
-   * eintragen darf die Gruppe trotzdem, worauf sie sich geeinigt hat. Bei Thema
-   * und Testimony bleibt niemand übrig, und der Abschnitt fällt weg.
+   * der gültigen Antworten. Bei der Musik ist es, wer kein Instrument spielt,
+   * beim Testimony, wer es schon erzählt hat — eintragen darf die Gruppe
+   * trotzdem, worauf sie sich geeinigt hat. Beim Thema bleibt niemand übrig,
+   * und der Abschnitt fällt weg.
    *
    * **Eingeladene stehen hier nicht**, auch nicht beim Nachtragen. Der Server
    * lehnt sie ab — eine offene Einladung ist niemand, dem man einen Abend
