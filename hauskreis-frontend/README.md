@@ -364,6 +364,73 @@ eines, für das noch niemand einen festgelegt hat. Ein Lobpreisabend hat gar kei
 Thema. Solche Zustände bekommen ihren eigenen Text — nicht `—` und nicht die
 Fehlerdarstellung.
 
+## Die Kopfleiste über den Tabs
+
+`components/layout/smart-header.tsx`. Sie gibt es, weil die Leiste **unten** mit
+fünf Zielen voll ist: Der Gruppen-Bildschirm musste irgendwo hin, und ein
+sechster Tab machte sie eng. Ein starrer Balken oben wäre aber das Ende der
+Kopfbilder, die auf drei Bildschirmen die halbe Gestaltung tragen — also eine
+Leiste, die sich zum Scrollen verhält.
+
+**Zwei Zustände** (`use-header-scroll.ts` beantwortet beide getrennt, und das
+ist kein Zufall — beim Zurückwischen mitten in der Seite ist sie da und trotzdem
+nicht oben):
+
+|        | ganz oben (`atTop`)                      | gescrollt                               |
+| ------ | ---------------------------------------- | --------------------------------------- |
+| Fläche | `.header-veil` — zwei Lagen, siehe unten | Terracotta-Verlauf, `/95` + `blur`      |
+| Links  | Bild + Name frei auf dem Foto, weiß      | dieselben, weiß auf dem Balken          |
+| Knöpfe | Glas: `bg-black/25…30` + `backdrop-blur` | Glocke `bg-white/15`, `Gruppe` Leinwand |
+
+**Der Schleier hat zwei Lagen, und die Reihenfolge ist die Aussage.**
+`.header-veil` in `globals.css` stapelt zwei `linear-gradient`:
+
+1. **Schwarz obenauf.** Er trägt die Lesbarkeit von Name und Knöpfen — und er
+   ist die Fläche, die dem `StatusBarScrim` begegnet. Der liegt im Wurzel-Layout
+   auf **derselben** z-Ebene darüber und ist ebenfalls schwarz. Zwei schwarze
+   Verläufe werden zusammen dunkler, eine schwarze über einer farbigen Fläche
+   wird schmutzig; als die Leiste flächig in Terracotta lag, stand oben ein
+   trüber Braunton.
+2. **Terracotta darunter**, gut ein Fünftel Deckkraft, auf halber Höhe
+   verschwunden. Er **färbt** das Foto, statt es zuzudecken.
+
+Rein schwarz war er auch schon einmal, und dann sah es aus, als gehörten Bild,
+Name und Knöpfe zur Seite statt zu einer Leiste — die Farbe ist das, was sie
+zusammenhält. Als eigene CSS-Regel und nicht als Utilities: Zwei Verläufe
+übereinander kennt `bg-gradient-to-b` nicht, und `color-mix` auf
+`--color-header-bar-deep` nimmt den Dunkelmodus von selbst mit.
+
+**Links steht kein Knopf, ganz rechts die Glocke.** Bild und Name trugen einmal
+eine Pille mit eigenem Hintergrund — eine zweite Fläche über dem Foto und der
+zweite Grund für den Overlay-Eindruck. Sie sind jetzt Identität; daneben der
+hervorgehobene `Gruppe`-Knopf. Die äußerste Ecke gehört der Glocke: Sie ist die
+wiederkehrende Aktion, auf allen fünf Bildschirmen dieselbe, und der Platz, den
+der Daumen ohne Hinsehen findet. Zur Gruppe geht man einmal.
+
+Drei Dinge daran sind es wert, aufgeschrieben zu werden:
+
+- **`sticky`, nicht `fixed`.** Ab `md` ist die App eine zentrierte Spalte mit
+  Seitenleiste; `fixed` müsste diese Geometrie ein zweites Mal nachbauen. Die
+  Höhe im Fluss nimmt ihr eine negative Untermarge (`.header-inset` in
+  `globals.css`), sodass das Kopfbild nahtlos darunter durchläuft.
+- **Die Nachrichten-Blase steht _neben_ der Leiste, nicht darin.** Ein
+  `transform` macht ein Element zum Bezugsrahmen für jedes `position: fixed`
+  darin — dieselbe Eigenschaft, wegen der `pull-to-refresh.tsx` den Inhalt nie
+  verschiebt. Sonst säße sie in einem 56 Pixel hohen Kasten statt unter der
+  Glocke.
+- **Weg ohne Übergang, zurück mit.** Sie fuhr einmal erst nach 96 Pixeln weg,
+  und in diesem Fenster war sie sichtbar _und_ schon im Balken-Zustand: Beim
+  Runterscrollen blitzte genau das auf, was erst beim Hochwischen erscheinen
+  soll. Jetzt versteckt `DIRECTION_THRESHOLD` (6 px) sie, **bevor**
+  `TOP_THRESHOLD` (8 px) das Aussehen umschaltet — die Reihenfolge der beiden
+  Konstanten _ist_ die Reparatur. Dazu fällt die Transform-Transition beim
+  Verstecken weg, damit man das Hinausschieben gar nicht erst sieht.
+
+`PageHeader` fragt selbst, ob er darunter steht (`useHasSmartHeader`), und
+wählt `pt-header-6` statt `pt-safe-6`. Über eine Prop ginge es auch — dann
+müssten Termine und Archiv es sich merken und Verwaltung, Hilfe und „Was ist
+neu" das Gegenteil.
+
 ## Der Kopfbereich mit Bild
 
 `components/layout/screen-header.tsx` trägt vier Bildschirme: Heute, Gebet,
@@ -387,13 +454,64 @@ Das `-mt-2` am `<header>` frisst das `pt-2`, das `AppShell` seinem `<main>`
 gibt: sonst bliebe über dem Bild ein Streifen Leinwand stehen.
 
 Das Bild gilt für die **ganze Gruppe**, und jede:r darf es tauschen. Der Knopf
-oben rechts öffnet `header-image-sheet.tsx` — ein Sheet und nicht direkt der
+**unten rechts** öffnet `header-image-sheet.tsx` — ein Sheet und nicht direkt der
 Dateidialog, weil es zwei Sachen sind: auswählen und wieder wegnehmen. Dass es
 für alle gilt, steht als Untertitel dabei.
+
+Er stand einmal oben rechts. Dort liegt jetzt die Glocke der Kopfleiste, und
+zwei runde Knöpfe übereinander wären eine Verwechslung mit Ansage.
 
 Geladen wird wie ein Profilbild (`useHeaderImage`): eine Liste der Zeitstempel,
 und der Zeitstempel wandert in den Schlüssel der Datei-Abfrage. Ein neues Bild
 ist damit ein neuer Schlüssel, und der alte Eintrag verfällt von selbst.
+
+## Der Gruppen-Bildschirm
+
+`/hauskreis` — Bild, Beschreibung, Ideen, Mitglieder. Erreichbar über die Pille
+in der Kopfleiste, **kein Tab**: Deshalb trägt er einen Zurück-Pfeil wie die
+Detailseiten und keine zweite Navigationsleiste darüber.
+
+Die Gruppe hatte vorher keinen Ort. Ihr Name stand als Untertitel im Profil, die
+Mitgliederliste als achte Karte darunter — auf einem Bildschirm, der von _dir_
+handelt. `members-card.tsx` ist deshalb nach `features/group/` gezogen;
+`HauskreisCard` bleibt im Profil, denn sie ist der Austritt aus einer
+**Mitgliedschaft** und nicht die Gruppe selbst.
+
+**Ändern darf jede:r** — Bild, Name, Beschreibung —, wie beim Kopfbild: Bei
+neun Leuten ist die Selbstbeschreibung keine Verwaltungsangelegenheit.
+
+Die **Beschreibung** trägt dafür statt des Stifts ein Wort: „Bearbeiten",
+terracotta und ohne Fläche, unter dem Text (`editLabel` an `InlineEdit`). Ein
+Bleistift neben einem Absatz Fließtext ist ein Symbol, das man deuten muss, und
+er sitzt oben rechts — also am Anfang von etwas, das man erst zu Ende liest. Der
+**Name** darüber behält seinen Stift: Ein Textknopf unter einer einzeiligen,
+zentrierten Überschrift wöge mehr als die Überschrift.
+
+Die Ideen sind eine Liste mit Haken und nichts weiter: kein Zustimmen, keine
+Kommentare. Ein Kommentarfaden wäre ein zweiter Chat neben WhatsApp, und gegen
+den ist diese App gebaut. Anlegen, abhaken und **ändern** darf jede:r — wer beim
+Grillen dabei war, darf sagen, dass es stattgefunden hat; **löschen** nur der
+Urheber oder ein Admin. Die Regel steht im Frontend ein zweites Mal, weil der
+Papierkorb sonst dastünde und mit `403` antwortete.
+
+**Stift und Papierkorb liegen hinter einem langen Druck** (`useLongPress`),
+genau wie an der Liederliste im Archiv und aus demselben Grund: Der Papierkorb
+stand dauerhaft neben jedem Eintrag — ein Ziel am Rand einer Liste, durch die
+man scrollt, und der Daumen fand es zuverlässiger als den Text. Ein Stift
+daneben hätte das verdoppelt. Ändern gab es dabei bis dahin überhaupt nicht:
+Server und `useUpdateIdea` konnten `title`/`note` längst, nur die Bedienung
+fehlte. Anlegen und Ändern teilen sich jetzt `IdeaForm` — zwei Formulare wären
+zwei Meinungen darüber, was eine Idee ausmacht.
+
+Der Zuschnitt des Gruppenbilds benutzt `AVATAR_CROP` — rund, quadratisch, 512.
+Eine eigene Konstante daneben wäre dieselbe Zahlenreihe mit einem zweiten Namen.
+
+Eine Besonderheit in der Datenschicht: `useUpdateIdea` baut die Vorbedingung mit
+`etagOfVersion` aus dem Listeneintrag, statt sie wie sonst über
+`useResourceUpdate` aus dem Cache zu lesen. Ideen haben keinen Detail-Endpunkt,
+und acht davon einzeln zu laden, nur um acht Haken setzen zu können, wäre die
+falsche Antwort darauf. Der ETag ist bei dieser App ohnehin kein Hash, sondern
+die Fassungsnummer.
 
 ## Der Startbildschirm
 
@@ -411,43 +529,58 @@ Daumen wegspringen. Die Personen-Id geht mit ein, damit nicht alle neun am
 selben Tag denselben Satz lesen. Tag und Uhrzeit kommen aus `groupNow()` —
 dieselbe Uhr wie überall.
 
-**„Deine Rollen" ist eine Karte mit zwei Stufen, nicht acht Wochen am Stück.**
+**„Deine Rollen" sind zwei Register, nicht acht Wochen am Stück**
+(`features/home/my-roles.tsx`).
 
-|                          |                                                              |
-| ------------------------ | ------------------------------------------------------------ |
-| **oben, immer sichtbar** | alle eigenen Rollen am nächsten Abend                        |
-| **„Weitere (n)", zu**    | je Kategorie (Host, Thema, Musik) nur die **nächste** danach |
+|                      |                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------- |
+| **„Nächstes"**       | alle eigenen Rollen am nächsten Abend — die Vorgabe                               |
+| **„Zukünftige (n)"** | je Kategorie (Host, Thema, Musik, Testimony, Geschenk) nur die **nächste** danach |
 
-Eine Karte, nicht zwei: die zweite Stufe klappt in derselben aus, unter einem
-grauen Balken mit der Zahl. Vorher standen beide Gruppen als eigene Listen
-untereinander, jede Zeile mit eigenem Rahmen — zwei Blöcke, die gleich aussehen
-und verschieden dringend sind. Was zählt, ist der nächste Dienstag; der Rest ist
-zum Nachsehen da, nicht zum Lesen.
+Das Spätere lag einmal unter einem „Weitere (n)"-Balken am Fuß derselben Karte.
+Das stellte die beiden Hälften untereinander, als wäre die zweite ein Anhang
+der ersten — es sind aber zwei gleichrangige Fragen: „Was ist am Dienstag?" und
+„Was kommt danach?". Als Register stehen sie nebeneinander, und die Zahl
+daneben beantwortet die zweite schon halb, ohne dass man umschaltet.
 
-Der Bezugspunkt der ersten Gruppe ist der **Termin**, nicht die Kalenderwoche.
-Der Hauskreis ist dienstags: ab Mittwoch wäre eine Kalenderwoche fast immer
-leer, und ausgerechnet der Abend, um den es geht, stünde unter „Weitere".
+Der Bezugspunkt des ersten Registers ist der **Termin**, nicht die
+Kalenderwoche. Der Hauskreis ist dienstags: ab Mittwoch wäre eine Kalenderwoche
+fast immer leer, und ausgerechnet der Abend, um den es geht, stünde hinten.
 Gefiltert wird deshalb über `nextMeeting.id` aus derselben Antwort — der Server
 entscheidet einmal, welcher Abend der nächste ist, und beide Abschnitte des
 Bildschirms folgen ihm.
 
-Hat man an dem Abend nichts zu tun, verschwindet die Gruppe ganz, statt „nichts
-geplant" zu behaupten. Dasselbe gilt für Kategorien ohne Zuteilung: eine Zeile
-„Musik: nichts" hilft niemandem.
+Im zweiten Register steht bewusst nur die nächste je Kategorie. Wer dreimal in
+acht Wochen hostet, muss das hier nicht dreimal lesen — die zweite und dritte
+Zeile ändern nichts an dem, was man heute tun kann. Der vollständige Vorlauf
+steht in der Planungstabelle.
 
-Bei „Weitere" steht bewusst nur die nächste je Kategorie. Wer dreimal in acht
-Wochen hostet, muss das hier nicht dreimal lesen — die zweite und dritte Zeile
-ändern nichts an dem, was man heute tun kann. Der vollständige Vorlauf steht in
-der Planungstabelle.
+Jedes Register hat **seinen eigenen** Leerzustand, gestrichelt wie der leere
+Actionstep. Drei, nicht zwei: „Du hast frei!" wäre ohne geplanten Termin eine
+Aussage über einen Abend, den es gar nicht gibt — dort steht stattdessen „Kein
+Termin geplant".
 
 Die Zeile nennt erst die Rolle, dann den Zusatz: „**Host** · Bei Chris". Vorher
 stand da nur „Bei Chris", was nicht verrät, dass _du_ derjenige bist, der
 aufschließt.
 
-**Gebetsbuddys tauchen unter „Deine Rollen" nicht mehr auf.** Sie haben ihre
-eigene Karte weiter oben und ihren eigenen Bildschirm, und mit jemandem zu
-beten ist keine Aufgabe, die man abarbeitet. Weggelassen werden sie schon vom
-Server, nicht erst hier — siehe `myRoles` im Backend-README.
+**Gebetsbuddys tauchen unter „Deine Rollen" nicht auf.** Sie haben ihren eigenen
+Abschnitt weiter oben und ihren eigenen Bildschirm, und mit jemandem zu beten
+ist keine Aufgabe, die man abarbeitet. Weggelassen werden sie schon vom Server,
+nicht erst hier — siehe `myRoles` im Backend-README.
+
+**Und sie haben Gesichter** (`features/home/prayer-buddy-card.tsx`). Zu dritt
+sind es zwei Karten nebeneinander, denn es sind zwei verschiedene Dinge: Für
+wen du betest, ist ein Auftrag; wer für dich betet, ein Zuspruch.
+Untereinander in einer Karte lasen sie sich als Aufzählung, obwohl sie keine
+sind. Zu zweit bleibt es eine Karte — „füreinander", und eine Richtung
+auszuschreiben, die auf sich selbst zeigt, wäre eine Unterscheidung ohne
+Unterschied.
+
+Das Bild kostet keine Zusatzabfrage: `personRefSchema` liefert `photoUpdatedAt`
+überall dort mit, wo jemand benannt wird, genau dafür. Gerechnet wird mit
+`circleOf` — dieselbe Funktion wie auf dem Gebets-Bildschirm, weil zwei Kopien
+derselben Rechnung irgendwann zwei verschiedene Dinge sagen.
 
 **Der Actionstep hat einen Haken — pro Person.** Ein Häkchen am Termin hätte
 geheißen „einer hakt ab, für alle"; den Vorsatz nimmt sich aber jede:r selbst.
@@ -543,16 +676,8 @@ Dazu drei kleinere Umbauten:
   gibt es noch nichts.
 - **Der Info-Text steht oben.** Dort steht, was man _vor_ dem Abend wissen muss;
   unten zwischen Zusammenfassung und Actionstep las es niemand rechtzeitig.
-- **„Wer kommt" zeigt, wer kommt.** Vorher ließ sich für jede Person
-  durchtippen, was wie eine Anwesenheitskontrolle aussah und mit einem Fehlgriff
-  wildfremd absagte; danach standen alle neun Kacheln gleich groß nebeneinander,
-  Zusagen, Absagen und Schweigen. Das beantwortet die Frage nicht, die man an
-  die Karte hat — „mit wie vielen rechne ich?". Jetzt zeigt das Raster die
-  Zusagen, Absagen und Unbeantwortete stehen als aufklappbare Zeile darunter.
-  Der Nenner zählt nur noch **aktive** Personen.
-  Die eigene Antwort ist eine eigene Zeile ganz unten und der einzige Weg, für
-  einen einzelnen Abend abzusagen: „Bist du dabei?" auf dem Startbildschirm gilt
-  nur fürs nächste Treffen, und Abwesenheiten im Profil decken Zeiträume ab.
+- **„Wer kommt" beantwortet „mit wie vielen rechne ich?"** — siehe unten, das
+  ist inzwischen ein eigener Abschnitt.
 
 ### Das Thema: zuteilen, dann wählen
 
@@ -707,6 +832,25 @@ ohne Musik-Zuteilung ist keiner, an dem alle bestimmen dürfen. Wer die Auswahl
 treffen will, trägt sich eine Zeile weiter oben ein. Der Server hält dieselbe
 Grenze.
 
+**Wer nicht darf, sieht den Haken gar nicht mehr.** Er stand für alle da,
+ausgegraut, und brauchte darunter einen Satz, der erklärte, warum er nicht geht
+— ein toter Knopf ist kein Hinweis, sondern ein Fehler. Ersetzt wird er durch
+nichts: In welcher Gruppe eine Zeile steht, sagt schon die Überschrift darüber,
+und die Setlist ist zusätzlich getönt. Unter der Karte steht statt der
+verschlossenen Tür die Erklärung von der Leserseite her — „Das Musik-Team wählt
+aus diesen Vorschlägen die finale Setlist".
+
+**Setlist und Vorschläge stehen getrennt**, je mit Überschrift und Zahl. Vorher
+war es eine Liste, in der sich beides nur durch den Haken unterschied — „was
+singen wir" und „was wurde vorgeschlagen" sind aber zwei Fragen, und die erste
+ist die, mit der die meisten die Karte aufmachen. Die zweite Gruppe lässt sich
+zuklappen, ist aber offen voreingestellt: Ein Vorschlag ist zum Lesen da.
+
+**Das Gewählte ist terracotta und nicht mehr `music`-grün.** Grün ist in dieser
+App die Farbe der _Rolle_ — das SONG-Abzeichen, die Person, die die Musik macht.
+„Im Set" ist keine Rolle, sondern eine **Auswahl**, und Auswahl ist überall
+terracotta: der aktive Tab, der gewählte Chip, der erste Platz einer Rangliste.
+
 Vergangene Abende sind fürs Abhaken damit wieder bedienbar, obwohl sie sonst
 gesperrt bleiben. Das ist Absicht: wer am nächsten Tag nachträgt, was
 tatsächlich dran war, tut der Liederdatenbank einen Gefallen.
@@ -717,6 +861,62 @@ daneben. Dass die beiden auseinanderliefen, war der Fehler: die App rechnete in
 der Gerätezone, der Server in UTC, und um halb eins nachts zeigte sie die
 Kästchen frei, während er mit `403` antwortete. Beide rechnen jetzt in der Zone
 der Gruppe.
+
+### „Wer kommt": mit wie vielen rechne ich?
+
+`detail/attendance-card.tsx`, drei Teile — Liste, Abgesagte, eigene Antwort.
+
+**„Weiß noch nicht" zählt in die Planung.** Die Überschrift sagte „3 von 9" und
+meinte nur die ausdrücklichen Zusagen. Der Server rechnet für die
+Kapazitätsregel seit jeher mit `groupSize − declined`
+(`countExpectedAttendance`), also mit 8: Zwei Zahlen über denselben Abend, und
+die sichtbare war die knappere. Als Gastgeber plant man lieber mit einem zu viel
+als mit einem zu wenig. Jetzt steht dort „Geplant für 8 Personen" — dieselbe
+Menge, nach der auch eingeteilt wird.
+
+**Eine Liste statt eines Rasters.** Vorher standen die Zusagen als Kacheln da,
+und Absagen wie Schweigen verschwanden gemeinsam hinter einer aufklappbaren
+Zeile mit Namen in einer Reihe. Wer plant, will sie nebeneinander sehen: oben
+die Zusagen, darunter die Unentschiedenen. Die **Abgesagten** stehen für sich in
+einer zugeklappten Gruppe (dasselbe Muster wie `OtherSessions` im Themen-Kasten)
+— sie beantworten eine andere Frage.
+
+An einem vergangenen oder abgesagten Abend heißt die Überschrift weiter „Wer war
+da" und zählt nur die Zusagen: „geplant für" ist keine Aussage über gestern.
+
+**Zu jeder Antwort gehört ein Satz** — genau das, was vorher in WhatsApp stand.
+Eine Spalte für alle drei Status (`meeting_attendance.note`) und nicht drei: Es
+ist immer dieselbe Sache, was jemand den anderen zu diesem Abend noch sagen
+will. Nur die Beschriftung wechselt:
+
+| Status      | Beschriftung                           | Beispiel                            |
+| ----------- | -------------------------------------- | ----------------------------------- |
+| `ATTENDING` | Verspätung oder Info (optional)        | „Komme 20 Min später"               |
+| `UNKNOWN`   | Woran liegt's? (hilft bei der Planung) | „Muss schauen, wann Feierabend ist" |
+| `ABSENT`    | Grund (optional)                       | „Bin im Urlaub, euch viel Spaß!"    |
+
+In der Liste hebt sich nur die Verspätung farblich ab: Sie ändert etwas am Abend
+selbst, während die anderen beiden erklären.
+
+**Der Status schreibt sofort, die Notiz auf Knopfdruck.** Ein Tipp auf „Dabei"
+ist überall sonst — Startbildschirm, Terminkarte, Kalender — augenblicklich
+verbindlich; erst nach einem zweiten Knopf zu speichern hieße, man könnte
+antippen, weggehen und nichts gesagt haben. Die Notiz braucht den Knopf dagegen,
+sonst ginge bei jedem Buchstaben eine Anfrage raus. Er steht immer da und ist
+nur untätig, solange nichts zu speichern ist — ihn verschwinden zu lassen ließe
+die Karte beim ersten Buchstaben springen.
+
+**Der optimistische Patch kennt die Regel des Servers.** Fehlt die Notiz im
+Aufruf, bleibt sie stehen, solange der Status derselbe ist, und fällt weg, sobald
+er wechselt — eine Verspätung gehört nicht auf eine Absage. Die kompakten
+Umschalter in Liste, Kalender und auf „Heute" schicken nur den Status; ohne
+dieselbe Rechnung in `useSetAttendance` bliebe „komme 20 Min später" nach dem
+Absagen sichtbar, bis die Antwort eintrifft — also genau in dem Moment, in dem
+man hinsieht.
+
+Die eigene Antwort ist außerdem weiterhin der einzige Weg, für einen **einzelnen**
+Abend abzusagen: „Bist du dabei?" auf dem Startbildschirm gilt nur fürs nächste
+Treffen, und Abwesenheiten im Profil decken Zeiträume ab.
 
 ### Die Nachbereitung entsteht am Abend, nicht davor
 
@@ -785,11 +985,33 @@ Am Termin gab es nur das Eintragen: tippen, warten, aus höchstens acht Treffern
 wählen. Wer wissen wollte, was die Gruppe eigentlich singt, musste ins Archiv —
 und von dort führte kein Weg zurück an den Abend.
 
-`components/domain/song-picker-sheet.tsx` ist dieselbe Datenbank mit demselben
+`components/domain/song-picker-body.tsx` ist dieselbe Datenbank mit demselben
 Suchfeld und denselben drei Sortierungen wie im Archiv, nur mit dem Knopf
 daneben. Was schon am Abend hängt, steht mit Haken da und lässt sich nicht
-doppeln. Der Knopf steht **vor** dem Eintrag-Formular, weil er meistens der
-richtige ist — die Gruppe singt vieles wieder.
+doppeln. Er steht **vor** dem Eintrag-Formular, weil er meistens der richtige
+ist — die Gruppe singt vieles wieder.
+
+**Beide Wege liegen jetzt hinter einem Knopf.** „Aus dem Archiv" und „Lied
+vorschlagen" standen untereinander: zwei Knöpfe für **eine** Absicht, dazu in
+zwei Bauformen — der eine öffnete ein Sheet, der andere klappte ein Formular
+mitten in der Karte auf. `song-suggest-sheet.tsx` fragt jetzt zuerst, worum es
+geht.
+
+Drei Dinge daran sind Absicht:
+
+- **Ein `Sheet` mit Schritten, keine gestapelten.** `Sheet` rendert ohne Portal
+  auf derselben Ebene und meldet seinen eigenen Escape-Handler an; zwei
+  übereinander schließen einander und fangen den Fokus im falschen Panel.
+  Dieselbe Lösung wie in `venue-sheet.tsx` und `topic-choice-sheet.tsx`.
+- **Ein Element und nicht drei.** Würde je Schritt ein eigenes `Sheet` gerendert,
+  verschwände es beim Schließen aus einem Schritt heraus schlagartig —
+  `AnimatePresence` braucht das Element, um es hinausfahren zu können. Deshalb
+  kommt der Formular-Rumpf als Haken herein (`useNewSongForm`), wie bei
+  `useLocationForm` und aus demselben Grund: Er füllt Inhalt **und** Fußzeile,
+  und das sind zwei Attribute.
+- **Die Suche ist an den Schritt gebunden** (`active`). Das Sheet bleibt
+  geschlossen mit im Baum; ein Titelfeld, das jemand beim Zurückgehen stehen
+  lässt, fragte sonst weiter.
 
 Nebenbei: die Suche im Eintrag-Formular feuerte pro Tastendruck ab zwei Zeichen.
 Ein `useDeferredValue` bringt sie auf dieselbe Hausregel wie Archiv und
@@ -1056,6 +1278,61 @@ Push braucht: HTTPS (oder localhost), das Manifest mit `display: standalone`,
 einen registrierten Service Worker — und **auf iOS zusätzlich**, dass die App
 über „Zum Home-Bildschirm hinzufügen" installiert wurde. Das Einschalten geht
 nur per Klick; die Oberfläche sagt, woran es liegt, wenn es nicht geht.
+
+### Die Box hinter der Glocke
+
+Eine Push-Nachricht ist weg, sobald jemand sie wegwischt. Dieselbe Nachricht
+steht deshalb auch in der Box (`notification-inbox.tsx`) — und zwar **auch
+dann, wenn die Art in den Einstellungen abgeschaltet ist**. In der Box zu stehen
+stört niemanden. Sie liegt darum unter `/api/notifications` und nicht unter
+`/api/push`.
+
+Gelesenes verschwindet aus der Box, aber nicht aus der Welt: Es wandert nach
+„Früher", aufklappbar, die letzten dreißig.
+
+**Sie ist eine Sprechblase unter der Glocke, kein Sheet von unten.** Ein
+Bottom-Sheet beantwortet „wähle etwas aus", nicht „was ist neu" — und es fuhr
+aus der Ecke gegenüber dem Knopf herein, den man gerade gedrückt hatte.
+
+Dafür ist **keine Positionierungs-Bibliothek** dazugekommen, und es fehlt auch
+keine: Die App kennt weder Portale noch `getBoundingClientRect`, braucht hier
+aber beides nicht. Die Glocke sitzt in einer Leiste über die volle Breite, ihr
+Mittelpunkt liegt damit fest bei 2,125 rem vom rechten Rand (`px-4` der Leiste
+plus halbe Knopfbreite). Das Panel steht bei `right-3`, der Zipfel bei
+`right-[1.375rem]` — dieselbe Kante, eine Subtraktion, keine Messung. Ein
+allgemeines `Popover` wäre eine Positionierungs-Maschine für genau einen
+Aufrufer.
+
+Vom `Sheet` übernommen ist, was dieselbe Frage beantwortet: Escape schließt,
+`role="dialog"` mit Fokus beim Öffnen, und `lockOverlay()`. Das sagt hier drei
+Dinge auf einmal — der Hintergrund scrollt nicht, „Ziehen zum Aktualisieren"
+hört nicht zu, und **die Kopfleiste bleibt stehen** (`useHeaderScroll` fragt
+`useOverlayOpen`). Ohne das führe sie beim ersten Wischen weg und ließe die
+Blase samt Zipfel im Nichts hängen.
+
+Zwei Wege dorthin, und der zweite ist der interessante:
+
+1. **Antippen in der Box** — `markRead`, dann `router.push(url)`.
+2. **Antippen der Push-Nachricht.** Der Service Worker hat kein Token und kann
+   den Eintrag nicht selbst schreiben. Er hängt deshalb `gelesen=<id>` an die
+   Ziel-Adresse (die `notificationId` kommt in der Payload mit), und
+   `use-inbox-deeplink.ts` löst das beim Start ein — auch aus dem geschlossenen
+   Zustand, denn dann steht der Parameter in der allerersten Adresse. Danach
+   räumt ein `history.replaceState` ihn weg: Es ist Aufräumen und kein
+   Ortswechsel, ein Eintrag in der Verlaufsliste dafür wäre einer zu viel.
+
+Gelesen wird er aus `window.location` und **nicht** mit `useSearchParams`: Das
+verlangt beim statischen Export eine `<Suspense>`-Hülle um jede Seite, die es
+benutzt — und dieser Haken hängt im Gerüst, beträfe also alle.
+
+Kommt eine Nachricht an, während die App offen ist, meldet sich der Worker per
+`postMessage`; `useInboxLiveUpdates` invalidiert daraufhin die Box. Ohne das
+stünde die alte Zahl bis zum nächsten Ziehen-zum-Aktualisieren da — das
+`push`-Ereignis erreicht die Seite nicht.
+
+Dieselbe Zahl steht über `navigator.setAppBadge` am App-Symbol, in `try/catch`:
+Die Schnittstelle gibt es nur in installierten Apps, und in manchen Browsern
+wirft schon der Zugriff.
 
 ## Was das Frontend bewusst nicht tut
 

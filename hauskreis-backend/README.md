@@ -583,18 +583,60 @@ Credentials.
 | `GET`    | `/api/push/settings`       | eigene Einstellungen, alle Typen           |
 | `PUT`    | `/api/push/settings/:type` | einen Typ ein-/ausschalten oder umstellen  |
 
+Dazu die **Box** hinter der Glocke — bewusst unter einem eigenen Präfix, weil
+das, was dort steht, nicht auf Push angewiesen ist:
+
+| Methode | Pfad                          | Zweck                               |
+| ------- | ----------------------------- | ----------------------------------- |
+| `GET`   | `/api/notifications`          | `{ unreadCount, unread[], read[] }` |
+| `POST`  | `/api/notifications/:id/read` | gelesen, idempotent                 |
+| `POST`  | `/api/notifications/read-all` | Box räumen                          |
+
 Die Routen liegen bewusst außerhalb von `/hauskreise/:id` — eine Subscription
 gehört zur eingeloggten Person, nicht zur Gruppe. `POST` nimmt das Objekt
 entgegen, das `PushSubscription.toJSON()` im Browser liefert, und kann
 unverändert durchgereicht werden.
 
-### Warum ein Notification-Log
+### Warum ein Notification-Log — und wie daraus die Box wurde
 
 Reminder-Jobs laufen täglich und würden dieselbe Nachricht sonst jeden Tag
 erneut schicken. `NotificationService.notify()` schreibt deshalb einen
 Log-Eintrag pro (Person, Typ, Termin) und überspringt alles, was dort schon
 steht. Der Eintrag entsteht **vor** dem Versand: stürzt der Prozess mitten drin
 ab, kostet das eine ausgefallene Erinnerung statt einer täglichen Wiederholung.
+
+Dieselbe Zeile trägt inzwischen auch die Box hinter der Glocke — sie wusste
+lange nur, _dass_ etwas rausging, nicht _was_. Mit `title`, `body` und `url` ist
+sie der Eintrag selbst; eine zweite Tabelle dafür wäre eine zweite Wahrheit über
+dasselbe Ereignis gewesen.
+
+Damit mussten **Eintrag und Zustellung auseinander**, und das ist die eine
+Stelle, an der man beim Lesen aufpassen muss:
+
+|                      | wovon es abhängt                                                   |
+| -------------------- | ------------------------------------------------------------------ |
+| Der Eintrag entsteht | **immer** — auch bei abgeschalteter Art, auch ohne VAPID-Schlüssel |
+| Der Push geht raus   | Einstellung an, Schlüssel da, und `pushed_at` noch leer            |
+
+In der Box zu stehen stört niemanden; wer die Erinnerung ans Hosten
+stummgeschaltet hat, will trotzdem nachlesen können, dass er dran ist. Hinge
+das Weiterschicken weiter an der bloßen Existenz der Zeile, ginge dabei die
+Eigenschaft verloren, auf die die täglichen Läufe gebaut sind: **wieder
+eingeschaltet heißt, der nächste Lauf stellt noch zu.** Deshalb `pushed_at` und
+nicht `findFirst() !== null`.
+
+Der Text einer Zeile wird aufgefrischt, solange nichts zugestellt wurde — was
+jemand gelesen hat, steht morgen unverändert da.
+
+> **Migration:** `20260830090000_notification_inbox` setzt `pushed_at = sent_at`
+> für den Altbestand. Ohne diese eine Zeile hielte der nächste nächtliche Lauf
+> jede Erinnerung seit Juli für unzugestellt und schickte sie noch einmal.
+
+Wer die Push-Nachricht antippt, landet als gelesen in der Box: Der Service
+Worker hat kein Token und kann nicht selbst schreiben, also hängt er
+`gelesen=<id>` an die Ziel-Adresse und die App löst es beim Start ein — auch
+aus dem geschlossenen Zustand. Die `notificationId` dafür geht in der
+Push-Payload mit.
 
 ### Wohin eine Benachrichtigung springt
 
@@ -2620,6 +2662,40 @@ deshalb auch dann, wenn ein Zeitraum sie angelegt hat.
 > wirkungslos gemacht, weil `skipDuplicates` die Absage auf die stehen gebliebene
 > Zeile fallen lässt.
 
+### Der eine Satz zur Antwort
+
+`meeting_attendance.note` — freiwillig, höchstens 200 Zeichen, ohne Bedeutung
+für die Logik. „Komme 20 Min später", „muss schauen, wann Feierabend ist", „bin
+im Urlaub, euch viel Spaß": genau das, was vorher in WhatsApp stand.
+
+**Eine Spalte für alle drei Status und nicht drei.** Es ist immer dieselbe
+Sache — was jemand den anderen zu diesem Abend noch sagen will; nur die
+Beschriftung des Feldes wechselt, und das ist Sache der Oberfläche.
+
+**Fehlt sie im `PUT`, entscheidet der Status:**
+
+| Was ankommt                | Was passiert         |
+| -------------------------- | -------------------- |
+| `note` mitgeschickt        | gilt (`null` löscht) |
+| weggelassen, Status gleich | bleibt stehen        |
+| weggelassen, Status anders | wird geleert         |
+
+Die letzte Zeile ist der Normalfall: Die kompakten Umschalter in Terminliste,
+Kalender und auf dem Startbildschirm schicken nur `status`, und eine Verspätung
+hat auf einer Absage nichts verloren.
+
+Die drei Läufe fassen sie von selbst richtig an, ohne eigene Regel:
+
+- `AutoAttendanceService.apply` legt nur an, wo noch nichts steht — die Notiz
+  ist dort leer.
+- `AbsenceSyncService` löscht vor der abgeleiteten Absage alles, was nicht
+  `SELF` ist. Eine Notiz entsteht nur beim Antworten von Hand, sitzt also auf
+  einer `SELF`-Zeile, und die fasst der Lauf grundsätzlich nicht an.
+- `RoleAttendanceService.confirm` ändert `UNKNOWN`-Zeilen an Ort und Stelle und
+  **lässt die Notiz stehen**. Das ist Absicht: Wer „muss schauen, wann
+  Feierabend ist" geschrieben hat und danach eingeteilt wird, hat nichts
+  Falsches gesagt — der Satz gilt weiter.
+
 ### „Wer eingeteilt ist, ist dabei"
 
 Eine Rolle zu bekommen und daneben auf „weiß noch nicht" zu stehen ist kein
@@ -3454,6 +3530,11 @@ beide aus derselben Variable ab.
 | `PUT`/`DELETE`          | `/api/me/home`                               | eingeloggt (`409` ohne `joinExisting`)       |
 | `PATCH`                 | `/api/me/email`                              | eingeloggt (Keycloak **und** `person`)       |
 | `GET`/`POST`            | `/api/hauskreise`                            | eingeloggt                                   |
+| `PATCH`                 | `/api/hauskreise/:hauskreisId`               | eingeloggt (Name/Beschreibung, `If-Match`)   |
+| `GET`/`POST`/`DELETE`   | `/api/hauskreise/:hauskreisId/photo`         | eingeloggt (Gruppenbild, wie das Kopfbild)   |
+| `GET`/`POST`            | `…/ideas`                                    | eingeloggt                                   |
+| `PATCH`                 | `…/ideas/:id`                                | eingeloggt (`If-Match`)                      |
+| `DELETE`                | `…/ideas/:id`                                | Urheber oder `admin`                         |
 | `GET`                   | `/api/hauskreise/:hauskreisId/people`        | eingeloggt                                   |
 | `POST`                  | `/api/hauskreise/:hauskreisId/people`        | `admin`                                      |
 | `POST`                  | `/api/hauskreise/:hauskreisId/people/invite` | `admin`                                      |
@@ -3516,10 +3597,13 @@ beide aus derselben Variable ab.
 | `GET`                   | `…/home`                                     | eingeloggt (Home-Screen in einem Aufruf)     |
 | `GET`                   | `/api/push/settings`                         | eingeloggt (eigene Einstellungen)            |
 | `PUT`                   | `/api/push/settings/:type`                   | eingeloggt (eigene Einstellungen)            |
+| `GET`                   | `/api/notifications`                         | eingeloggt (die eigene Box)                  |
+| `POST`                  | `/api/notifications/:id/read`, `…/read-all`  | eingeloggt (nur eigene Zeilen)               |
 
 Alle `GET`s beantworten `If-None-Match` mit `304`. Die `PATCH`-Endpunkte auf
-Personen, Locations, Terminen, Themen, Songs und Abwesenheiten,
-`PUT …/prayer-buddies/config` sowie `…/meetings/:id/cancel` **verlangen**
+Personen, Locations, Terminen, Themen, Songs, Abwesenheiten, dem Hauskreis
+selbst und den Gruppen-Ideen, `PUT …/prayer-buddies/config` sowie
+`…/meetings/:id/cancel` **verlangen**
 `If-Match` (`428` ohne, `412` bei veralteter Version) — Details siehe
 [Conditional Requests](#conditional-requests-etag-304-412).
 
@@ -3670,6 +3754,36 @@ Die Selbstheilung aus `PhotoService` ist mitgenommen: fehlt die **Datei**,
 obwohl die Zeile steht (Volume weg, Backup zurückgespielt), verschwindet die
 Zeile und der Verlauf ist zurück — statt dass ein `404` auf ein versprochenes
 Bild für immer stehen bliebe.
+
+### Die Gruppe als Gegenstand
+
+Ein Hauskreis hatte lange nur einen Namen. Dazugekommen sind **Beschreibung**
+und **Gruppenbild** — als zwei Spalten an `hauskreis` und nicht als eigene
+Tabelle, anders als `meeting_schedule_config` und Verwandte: Die halten fest,
+wer wann eine _Einstellung_ geändert hat. Bild und Beschreibung sind keine
+Einstellung, sondern Identität, dieselbe Sorte Feld wie `name`.
+
+|              |                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------- |
+| Lesen/Ändern | `GET`/`PATCH /api/hauskreise/:id` — `PATCH` mit `If-Match`                            |
+| Bild         | `GET`/`POST`/`DELETE …/photo`, `UPLOAD_DIR/hauskreise/{id}.webp`, 512², max. **5 MB** |
+| Ideen        | `GET`/`POST …/ideas`, `PATCH`/`DELETE …/ideas/:id`                                    |
+
+**Kein `@HauskreisAdmin()` an irgendeiner dieser Routen** — dieselbe Begründung
+wie beim Kopfbild eine Ebene höher. Die einzige engere Regel steht beim Löschen
+einer Idee: Das darf nur ihr Urheber oder ein Admin. Abhaken sagt etwas über
+die Welt („haben wir gemacht"), Löschen etwas über die Liste („das wollten wir
+nie") — und die zweite Aussage gehört dem, der den Eintrag gemacht hat.
+
+Die Ideen sind bewusst eine **Liste mit Haken** und nichts weiter: kein
+Zustimmen, keine Kommentare. Ein Kommentarfaden wäre ein zweiter Chat neben
+WhatsApp, und gegen den ist diese App gebaut (CLAUDE.md §7). `done_at` statt
+eines `Boolean`, weil der Zeitpunkt zugleich die Sortierung der erledigten
+Hälfte trägt.
+
+Die `sharp`-Verarbeitung teilen sich Profil- und Gruppenbild über
+`common/images/webp.ts` — sie stand zweimal Wort für Wort da, bis hin zur
+Fehlermeldung. Das Kopfbild bleibt außen vor: 1280×640 ist kein Quadrat.
 
 ### Nutzername und Anzeigename
 
