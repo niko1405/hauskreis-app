@@ -1,0 +1,28 @@
+meta {
+  name: Als gelesen markieren
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/notifications/{{notificationId}}/read
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 204", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Der übliche Weg hierher ist ein Antippen der Push-Nachricht: Der Service
+  Worker hängt `gelesen=<id>` an die Ziel-Adresse, und die App löst das beim
+  Start ein. Er selbst kann es nicht — ihm fehlt das Token.
+
+  **Idempotent.** Dieselbe Nachricht auf zwei Geräten wegzutippen ist Alltag,
+  und der zweite Aufruf soll nichts tun statt zu scheitern. Eine fremde oder
+  erfundene Id ändert nichts und meldet trotzdem `204`: Was sie bewirken
+  sollte, ist ja eingetreten.
+}

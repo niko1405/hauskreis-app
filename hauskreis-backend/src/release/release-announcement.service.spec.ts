@@ -84,9 +84,31 @@ describe('ReleaseAnnouncementService', () => {
       where: {
         type: 'RELEASE_NOTES',
         relatedReleaseVersion: release.version,
+        pushedAt: { not: null },
       },
       select: { id: true },
     });
+  });
+
+  /**
+   * Die Frage lautet „ist das je **rausgegangen**?" und nicht „steht dazu eine
+   * Zeile?".
+   *
+   * Seit die Box hinter der Glocke aus derselben Tabelle liest, entsteht ein
+   * Eintrag immer — auch ohne VAPID-Schlüssel. Auf die bloße Existenz zu
+   * schauen hieße: Wer die Schlüssel nachträgt und neu startet, bekäme die
+   * Ankündigung nie, weil sie als erledigt gilt.
+   */
+  it('holt eine Ankündigung nach, die nie zugestellt wurde', async () => {
+    const { service, notificationLog, person, notify } = setup();
+    person.findMany.mockResolvedValue([{ id: 'p1' }]);
+    // Zeilen gibt es, `pushedAt` ist bei allen leer — die Abfrage filtert
+    // genau darauf und findet deshalb nichts.
+    notificationLog.findFirst.mockResolvedValue(null);
+
+    await service.announceLatest();
+
+    expect(notify).toHaveBeenCalled();
   });
 
   it('lässt ein stummes Gerät die anderen nicht aufhalten', async () => {

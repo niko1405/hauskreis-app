@@ -17,6 +17,18 @@ export interface NotificationPayload {
   url?: string;
 }
 
+/**
+ * Was tatsächlich über die Leitung geht.
+ *
+ * Die Id kommt erst beim Zustellen dazu und steht deshalb nicht in
+ * `NotificationPayload`: Kein Aufrufer kennt sie, sie entsteht in `notify()`.
+ * Der Service Worker hängt sie beim Antippen an die Ziel-Adresse — er hat kein
+ * Token und kann den Eintrag nicht selbst auf gelesen setzen.
+ */
+interface PushBody extends NotificationPayload {
+  notificationId?: string;
+}
+
 export interface DeliveryResult {
   /** Push messages actually accepted by a push service. */
   delivered: number;
@@ -83,18 +95,30 @@ export class NotificationService implements OnModuleInit {
   }
 
   /**
-   * Sends a notification to one person, at most once per subject.
+   * Legt den Eintrag in der Box an und schickt ihn, wenn er geschickt werden
+   * darf — höchstens einmal je Gegenstand.
    *
-   * The reminder jobs run daily and would otherwise re-send the same message
-   * every day until the meeting passes. Writing the log entry *before*
-   * delivering means a crash mid-send costs one missed reminder rather than a
-   * repeat every day.
+   * **Zwei Dinge, die einmal eines waren.** Bis hierher entschied die bloße
+   * Existenz einer Log-Zeile beides: ob die Nachricht schon rausging *und* ob
+   * es sie überhaupt gab. Seit hinter der Glocke eine Box hängt, sind das
+   * verschiedene Fragen. Der **Eintrag** entsteht immer — auch bei
+   * abgeschalteter Art, auch ohne VAPID-Schlüssel: In der Box zu stehen stört
+   * niemanden, und wer die Erinnerung ans Hosten stummgeschaltet hat, will
+   * trotzdem nachlesen können, dass er dran ist. Der **Push** hängt ab jetzt
+   * an `pushedAt`.
    *
-   * The recipient's setting is checked here rather than in each caller, so a
-   * notification switched off in the settings cannot leak through a job that
-   * forgot to ask. What "once per subject" means is up to the caller: pass the
-   * meeting, the prayer buddy group, or the person the message is about — the
-   * combination is the deduplication key.
+   * Ohne diese Trennung ginge die Eigenschaft verloren, auf die die täglichen
+   * Läufe gebaut sind: Eine abgeschaltete Art schrieb bewusst *nichts*, damit
+   * ein späteres Wiedereinschalten noch zustellt. Schriebe sie jetzt eine
+   * Zeile und hänge die Entdopplung weiter daran, wäre die Nachricht für immer
+   * verschluckt.
+   *
+   * Geschrieben wird *vor* dem Zustellen: Ein Absturz mitten im Senden kostet
+   * so eine ausgefallene Erinnerung statt einer täglichen Wiederholung.
+   *
+   * Was „einmal je Gegenstand" heißt, entscheidet der Aufrufer: Termin,
+   * Gebetsgruppe oder die Person, um die es geht — die Kombination ist der
+   * Schlüssel.
    */
   async notify(params: {
     personId: string;
@@ -119,14 +143,18 @@ export class NotificationService implements OnModuleInit {
     relatedOccasionId?: string | null;
     payload: NotificationPayload;
   }): Promise<SendResult> {
+    // Erst der Eintrag, dann die Frage nach dem Push. Die Reihenfolge ist die
+    // Aussage: In der Box steht es unabhängig davon, ob es auch klingelt.
+    const entry = await this.record(params);
+
     const setting = await this.preferences.resolve(
       params.personId,
       params.type,
     );
 
     if (!setting.enabled) {
-      // Nothing is logged: switching the notification back on should let the
-      // next run deliver, not find a row saying it was already handled.
+      // `pushedAt` bleibt leer, und genau daran hängt es: Wer die Art später
+      // wieder einschaltet, bekommt beim nächsten Lauf noch zugestellt.
       this.logger.debug(
         `Person ${params.personId} has ${params.type} switched off`,
       );
@@ -134,22 +162,77 @@ export class NotificationService implements OnModuleInit {
     }
 
     if (!this.enabled) {
-      // Deliberately returns before writing the log: nothing was attempted, so
-      // nothing is recorded as sent. Once VAPID keys are configured the
-      // reminder still goes out rather than having been silently swallowed.
+      // Dasselbe ohne VAPID-Schlüssel: nichts versucht, also nichts vermerkt.
+      // Sobald die Schlüssel stehen, geht die Erinnerung noch raus, statt
+      // stillschweigend verschluckt worden zu sein.
       this.logger.debug(
         `Push disabled, not sending ${params.type} to person ${params.personId}`,
       );
       return { delivered: 0, skipped: 1, pruned: 0, failed: 0 };
     }
 
-    const alreadySent = await this.hasBeenSent(params);
-
-    if (alreadySent) {
+    if (entry.pushedAt !== null) {
       return { delivered: 0, skipped: 1, pruned: 0, failed: 0 };
     }
 
-    await this.prisma.notificationLog.create({
+    // Vor dem Senden, aus demselben Grund wie eh und je: Ein Absturz mitten im
+    // Zustellen kostet eine ausgefallene Erinnerung und nicht eine tägliche
+    // Wiederholung.
+    await this.prisma.notificationLog.update({
+      where: { id: entry.id },
+      data: { pushedAt: new Date() },
+    });
+
+    const result = await this.sendToPerson(params.personId, {
+      ...params.payload,
+      notificationId: entry.id,
+    });
+    return { ...result, skipped: 0 };
+  }
+
+  /**
+   * Die Zeile für die Box — vorhandene gefunden oder neue angelegt.
+   *
+   * Der Text wird aufgefrischt, **solange nichts zugestellt wurde**. Läuft die
+   * Erinnerung täglich und stand am ersten Tag „in fünf Tagen", während sie
+   * erst am dritten rausgehen darf, soll in der Box nicht die alte Fassung
+   * stehen. War sie dagegen schon draußen, bleibt sie, wie sie ankam: Was
+   * jemand gelesen hat, soll morgen nicht anders dastehen — und ein Schreiben
+   * je Person und Tag, das nichts ändert, wäre ohnehin eines zu viel.
+   *
+   * `sentAt` bleibt in beiden Fällen, wo es war: Es sagt, wann die Sache
+   * aufkam, und trägt die Sortierung der Box.
+   */
+  private async record(params: {
+    personId: string;
+    type: NotificationType;
+    relatedMeetingId?: string | null;
+    relatedGroupId?: string | null;
+    relatedPersonId?: string | null;
+    relatedRole?: AssignmentRole | null;
+    relatedReleaseVersion?: string | null;
+    relatedOccasionId?: string | null;
+    payload: NotificationPayload;
+  }): Promise<{ id: string; pushedAt: Date | null }> {
+    const content = {
+      title: params.payload.title,
+      body: params.payload.body,
+      url: params.payload.url ?? null,
+    };
+
+    const existing = await this.findEntry(params);
+
+    if (existing) {
+      if (existing.pushedAt === null) {
+        await this.prisma.notificationLog.update({
+          where: { id: existing.id },
+          data: content,
+        });
+      }
+      return existing;
+    }
+
+    return this.prisma.notificationLog.create({
       data: {
         personId: params.personId,
         type: params.type,
@@ -159,17 +242,16 @@ export class NotificationService implements OnModuleInit {
         relatedRole: params.relatedRole ?? null,
         relatedReleaseVersion: params.relatedReleaseVersion ?? null,
         relatedOccasionId: params.relatedOccasionId ?? null,
+        ...content,
       },
+      select: { id: true, pushedAt: true },
     });
-
-    const result = await this.sendToPerson(params.personId, params.payload);
-    return { ...result, skipped: 0 };
   }
 
   /** Delivers to every device of a person, without touching the log. */
   async sendToPerson(
     personId: string,
-    payload: NotificationPayload,
+    payload: PushBody,
   ): Promise<DeliveryResult> {
     if (!this.enabled) {
       this.logger.debug(
@@ -203,7 +285,7 @@ export class NotificationService implements OnModuleInit {
 
   private async deliver(
     subscription: { endpoint: string; p256dhKey: string; authKey: string },
-    payload: NotificationPayload,
+    payload: PushBody,
   ): Promise<DeliveryOutcome> {
     await webpush.sendNotification(
       {
@@ -248,11 +330,13 @@ export class NotificationService implements OnModuleInit {
   }
 
   /**
-   * The real deduplication check. The unique index cannot do it: Postgres
-   * treats rows with a NULL anywhere in the tuple as distinct, and both
-   * subject columns are nullable by design.
+   * Die Zeile zu diesem Gegenstand, wenn es sie schon gibt.
+   *
+   * Die eigentliche Entdopplung — der eindeutige Index kann sie nicht leisten:
+   * Postgres hält Zeilen mit einem NULL irgendwo im Tupel für verschieden, und
+   * die Gegenstands-Spalten sind mit Absicht alle nullable.
    */
-  private async hasBeenSent(params: {
+  private findEntry(params: {
     personId: string;
     type: NotificationType;
     relatedMeetingId?: string | null;
@@ -261,8 +345,8 @@ export class NotificationService implements OnModuleInit {
     relatedRole?: AssignmentRole | null;
     relatedReleaseVersion?: string | null;
     relatedOccasionId?: string | null;
-  }): Promise<boolean> {
-    const existing = await this.prisma.notificationLog.findFirst({
+  }): Promise<{ id: string; pushedAt: Date | null } | null> {
+    return this.prisma.notificationLog.findFirst({
       where: {
         personId: params.personId,
         type: params.type,
@@ -273,8 +357,7 @@ export class NotificationService implements OnModuleInit {
         relatedReleaseVersion: params.relatedReleaseVersion ?? null,
         relatedOccasionId: params.relatedOccasionId ?? null,
       },
+      select: { id: true, pushedAt: true },
     });
-
-    return existing !== null;
   }
 }
