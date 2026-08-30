@@ -10,7 +10,7 @@ export default function AdminPage() {
     <RequireAdmin>
       <PageHeader
         title="Verwaltung"
-        subtitle="Personen, Gewichtung und die Läufe, die sonst der Zeitplaner anstößt"
+        subtitle="Verwalte hier deine Hauskreis-Gruppe."
       />
       <div className="space-y-6 px-5">
         <PeopleAdmin />

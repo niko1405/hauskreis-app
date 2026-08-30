@@ -98,13 +98,13 @@ export class PrayerRequestService {
 
     if (meeting.status === MeetingStatus.CANCELLED) {
       throw new BadRequestException(
-        'Dieser Abend fällt aus — Gebetsanliegen lassen sich dafür nicht mehr eintragen.',
+        'Dieser Termin fällt aus — Gebetsanliegen lassen sich dafür nicht mehr eintragen.',
       );
     }
 
     if (await this.clock.isPast(hauskreisId, meeting.date)) {
       throw new BadRequestException(
-        'Dieser Abend ist vorbei — was dasteht, bleibt stehen.',
+        'Dieser Termin ist vorbei — was dasteht, bleibt stehen.',
       );
     }
   }

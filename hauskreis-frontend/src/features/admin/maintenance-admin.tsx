@@ -105,6 +105,14 @@ function MeetingScheduleCard() {
           <ConflictBanner onResolve={update.resolveConflict} />
         )}
 
+        <p className="text-[11px] leading-relaxed text-stone-400">
+          Die App erstellt Hauskreis-Termine pro Woche automtisch für dich -
+          hier kannst du den Rhythmus deiner Treffen einstellen. Gilt für
+          Termine, die der Zeitplaner ab jetzt anlegt. Was schon im Kalender
+          steht, behält seinen Tag und seine Zeit — dafür hat längst jemand
+          zugesagt.
+        </p>
+
         <Field label="Wochentag">
           <Select
             value={wert.weekday}
@@ -179,12 +187,6 @@ function MeetingScheduleCard() {
           Speichern
         </Button>
 
-        <p className="text-[11px] leading-relaxed text-stone-400">
-          Gilt für Termine, die der Zeitplaner ab jetzt anlegt. Was schon im
-          Kalender steht, behält seinen Tag und seine Zeit — dafür hat längst
-          jemand zugesagt.
-        </p>
-
         {current?.updatedBy && (
           <p className="text-[11px] text-stone-400">
             Zuletzt geändert von {current.updatedBy.name}.
@@ -213,10 +215,13 @@ function PrayerBuddyConfigCard() {
           <ConflictBanner onResolve={update.resolveConflict} />
         )}
 
-        <Field
-          label="Länge einer Runde"
-          hint="In Wochen. Vorgabe sind zwei — neun Personen ergeben Gruppen zu zwei und drei."
-        >
+        <p className="text-[11px] leading-relaxed text-stone-400">
+          Hier kannst du einstellen, wie viele Wochen eine Gebetsrunde dauert.
+          Vorgabe sind zwei Wochen. Die Änderung gilt für die Runden, die ab
+          jetzt angelegt werden.
+        </p>
+
+        <Field label="Länge einer Runde" hint="Angabe in Wochen">
           <TextInput
             type="number"
             min="1"
@@ -395,7 +400,7 @@ function JobsCard() {
     },
     {
       label: 'Song-Erinnerungen',
-      hint: 'Erinnert an die Songauswahl vor dem Abend.',
+      hint: 'Erinnert an die Songauswahl vor dem Termin.',
       pending: songReminders.isPending,
       run: () =>
         songReminders.mutate(undefined, {

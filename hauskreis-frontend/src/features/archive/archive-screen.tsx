@@ -20,7 +20,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDeferredValue, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
-import { Avatar, AvatarStack } from '@/components/ui/avatar';
+import { AvatarStack } from '@/components/ui/avatar';
 import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -187,12 +187,6 @@ function TopicArchive({ search }: { search: string }) {
         </TopicTab>
       </div>
 
-      <p className="px-1 text-[11px] text-stone-400">
-        {nurEigene
-          ? '— auch die, die noch niemand gesehen hat'
-          : '— alles, wovon schon ein Abend war'}
-      </p>
-
       {/* Ein Thema entstand lange nur beim Wählen an einem Abend. Wer eines
           vorbereiten wollte, musste also erst auf einen Dienstag warten. */}
       <Button
@@ -214,8 +208,8 @@ function TopicArchive({ search }: { search: string }) {
           title={nurEigene ? 'Du hast noch kein Thema' : 'Noch keine Themen'}
           hint={
             nurEigene
-              ? 'Sobald du für einen Abend zugeteilt bist, kannst du dort eines anfangen.'
-              : 'Hier stehen Themen, sobald ein Abend dazu vorbei ist.'
+              ? 'Sobald du für ein Thema zugeteilt bist, kannst du dort eines anfangen.'
+              : 'Hier stehen Themen, sobald ein Termin dazu vorbei ist.'
           }
         />
       )}
@@ -312,13 +306,13 @@ function NewEntrySheet({
         <ArtRow
           icon={<Layers size={18} />}
           title="Ein Thema"
-          hint="Zieht sich über mehrere Abende. Die Einheiten kommen danach dazu."
+          hint="Zieht sich über mehrere Termine. Die Einheiten kommen danach dazu."
           onSelect={() => setArt('thema')}
         />
         <ArtRow
           icon={<FileText size={18} />}
           title="Eine einzelne Einheit"
-          hint="Ein Abend für sich, ohne Bogen darüber. Ein Überthema lässt sich später jederzeit ergänzen."
+          hint="Ein Termin für sich, ohne weitere Termine darüber hinaus. Ein Überthema lässt sich später jederzeit ergänzen."
           onSelect={() => setArt('einheit')}
         />
       </div>
@@ -468,7 +462,7 @@ function NewSessionStep({
       open
       onClose={onDone}
       title="Neue Einheit"
-      subtitle="Ein Abend für sich. Ein Überthema lässt sich später jederzeit ergänzen."
+      subtitle="Ein Termin für sich. Ein Überthema lässt sich später jederzeit ergänzen."
       footer={
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1" onClick={onBack}>
@@ -488,7 +482,7 @@ function NewSessionStep({
                 },
                 {
                   onSuccess: (session) => {
-                    toast.success('Angelegt — wählbar an jedem Abend.');
+                    toast.success('Angelegt — wählbar an jedem Termin.');
                     onDone();
                     router.push(`/einheit?id=${session.id}`);
                   },
@@ -505,7 +499,7 @@ function NewSessionStep({
       <Field label="Titel">
         <TextInput
           value={title}
-          placeholder="Worum geht es an diesem Abend?"
+          placeholder="Worum geht es an diesem Termin?"
           onChange={(event) => setTitle(event.target.value)}
         />
       </Field>
@@ -613,7 +607,7 @@ function TopicEntry({ topic }: { topic: TopicListItem }) {
             {topic.standalone
               ? einzelne?.meeting
                 ? formatDay(einzelne.meeting.date)
-                : 'noch an keinem Abend'
+                : 'noch keinem Termin zugeordnet'
               : topic.sessions.length === 1
                 ? '1 Einheit'
                 : `${topic.sessions.length} Einheiten`}
@@ -773,9 +767,6 @@ function SongRow({ song, rank }: { song: SongListItem; rank?: number }) {
             `, zuletzt ${formatRelativeDay(song.lastPlayedAt)}`}
         </p>
       </div>
-      {song.createdBy && !revealed && (
-        <Avatar person={song.createdBy} size="xs" />
-      )}
       {!revealed && <LyricsLink url={song.lyricsUrl} title={song.title} />}
 
       {revealed && (
@@ -800,7 +791,14 @@ function SongRow({ song, rank }: { song: SongListItem; rank?: number }) {
       )}
 
       {editing && (
-        <SongSheet open onClose={() => setEditing(false)} song={song} />
+        <SongSheet
+          open
+          onClose={() => {
+            setEditing(false);
+            setRevealed(false);
+          }}
+          song={song}
+        />
       )}
     </li>
   );

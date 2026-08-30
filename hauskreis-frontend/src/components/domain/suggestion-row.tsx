@@ -54,7 +54,7 @@ export function suggestionFacts(suggestion: AnySuggestion): string[] {
   const spaeter = facts.upcomingCommitments.filter((c) => !c.thisEvening);
 
   for (const commitment of heute) {
-    lines.push(`an diesem Abend schon ${ROLE_LABEL[commitment.role]}`);
+    lines.push(`an diesem Termin schon ${ROLE_LABEL[commitment.role]}`);
   }
 
   // **Gemessen am Abend, nicht an heute.** Hier stand `formatRelativeDay`, und
@@ -65,7 +65,7 @@ export function suggestionFacts(suggestion: AnySuggestion): string[] {
   // ungenutzt daneben.
   if (facts.lastAssignedAt && facts.daysSinceLastAssignment !== null) {
     lines.push(
-      `zuletzt ${formatDayGap(facts.daysSinceLastAssignment)} vor diesem Abend`,
+      `zuletzt ${formatDayGap(facts.daysSinceLastAssignment)} vor diesem Termin`,
     );
   } else {
     lines.push('war noch nie dran');

@@ -108,7 +108,7 @@ function WeightRow({ location }: { location: Location }) {
         disabled={setWeight.isPending}
         onChange={(event) => setDraft(event.target.value)}
         onBlur={save}
-        className="w-20 shrink-0 rounded-md border border-line bg-white px-2 py-1.5 text-right text-sm font-bold text-stone-800 tabular-nums"
+        className="w-20 shrink-0 rounded-md border border-line px-2 py-1.5 text-right text-sm font-bold text-stone-800 tabular-nums"
       />
     </li>
   );

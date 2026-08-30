@@ -119,15 +119,20 @@ export function MeetingCard({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-3">
-        <RoleChip
-          kind="HOST"
-          people={meeting.host ? [meeting.host] : []}
-          emptyLabel={
-            meeting.location && !meeting.location.requiresHost
-              ? 'Kein Host nötig'
-              : undefined
-          }
-        />
+        {meeting.location && !meeting.location.requiresHost ? (
+          <p
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors',
+              'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+              'bg-terracotta-50 text-terracotta-700 border-terracotta-100',
+            )}
+          >
+            <MapPin size={12} className="shrink-0" />
+            <span>{meeting.location.name}</span>
+          </p>
+        ) : (
+          <RoleChip kind="HOST" people={meeting.host ? [meeting.host] : []} />
+        )}
         {meeting.hasTopicSlot && <RoleChip kind="TOPIC" people={topicPeople} />}
         {/* Und das Testimony, das an derselben Stelle des Abends steht — es
             fehlte hier wie die Musik davor. Auf einem Lobpreisabend zeigte die
