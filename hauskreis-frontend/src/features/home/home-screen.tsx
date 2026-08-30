@@ -7,25 +7,17 @@
  */
 import {
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   Circle,
+  CircleCheckBig,
   Clock,
   Map,
   MapPin,
-  Users,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
-import {
-  ROLE_ICON,
-  ROLE_STYLE,
-  RoleChip,
-} from '@/components/domain/role-badge';
+import { RoleChip } from '@/components/domain/role-badge';
 import {
   useHome,
   useMe,
@@ -33,30 +25,15 @@ import {
   useSetAttendance,
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import {
-  formatDay,
-  formatDayMonth,
-  formatRelativeDay,
-  groupNow,
-} from '@/lib/date';
-import {
-  ROLE_LABEL,
-  actionstepProgress,
-  mapsUrl,
-  meetingHeadline,
-} from '@/lib/meeting';
+import { formatDay, formatRelativeDay, groupNow } from '@/lib/date';
+import { actionstepProgress, mapsUrl, meetingHeadline } from '@/lib/meeting';
 import { firstName } from '@/lib/person';
 import { ScreenHeader } from '@/components/layout/screen-header';
 import { ReleaseBanner } from '@/features/releases/release-banner';
-import { circleOf } from '@/features/prayer/circle';
 import { greetingOf } from './greeting';
-import type {
-  Assignment,
-  AssignmentRole,
-  HomeActionstep,
-  HomeNextMeeting,
-  HomePrayerBuddies,
-} from '@/lib/api/types';
+import { MyRoles } from './my-roles';
+import { PrayerBuddyCard } from './prayer-buddy-card';
+import type { HomeActionstep, HomeNextMeeting } from '@/lib/api/types';
 
 export function HomeScreen() {
   const me = useMe();
@@ -95,7 +72,7 @@ export function HomeScreen() {
     <div>
       <ScreenHeader screen="home" title={gruß.hallo} subtitle={gruß.zeile} />
 
-      <div className="space-y-6 px-5">
+      <div className="space-y-8 px-5">
         {/* Ganz oben und nur einmal: Wer es angesehen oder weggeklickt hat,
             sieht hier nichts mehr. */}
         <ReleaseBanner />
@@ -150,79 +127,13 @@ export function HomeScreen() {
  * „habe ich diese Woche etwas vergessen?" bleibt unbeantwortet, statt ein Nein
  * zu bekommen.
  */
-/**
- * Die Gebetsbuddys — und ab dreien auch die Richtung.
- *
- * Zu zweit steht dort ein Name, wie eh und je: „füreinander" ist beim Paar die
- * ganze Aussage. Zu dritt wird reihum gebetet, und dann sind es zwei Zeilen mit
- * eigener Beschriftung — dieselbe Unterscheidung wie auf dem Gebet-Bildschirm,
- * und aus derselben Rechnung (`circleOf`).
- *
- * Ohne Kreis — allein in der Gruppe, oder gar nicht darin — bleibt es bei den
- * Namen. Eine Richtung, die auf sich selbst zeigt, ist keine.
- */
-function PrayerBuddyCard({
-  buddies,
-  myId,
-}: {
-  buddies: HomePrayerBuddies | null;
-  myId: string | undefined;
-}) {
-  if (!buddies) return null;
-
-  const kreis = circleOf(buddies.members, myId);
-
-  return (
-    <Link href="/gebet" className="block">
-      <Card className="transition-colors hover:border-line-strong">
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">
-              Deine Gebetsbuddys
-            </p>
-
-            {kreis && kreis.size > 2 ? (
-              <div className="mt-0.5 space-y-0.5">
-                <p className="text-[15px] leading-snug font-bold text-stone-800">
-                  <span className="font-medium text-stone-500">
-                    Du betest für{' '}
-                  </span>
-                  {kreis.betestFuer.name}
-                </p>
-                <p className="text-[15px] leading-snug font-bold text-stone-800">
-                  <span className="font-medium text-stone-500">
-                    Für dich betet{' '}
-                  </span>
-                  {kreis.betetFuerDich.name}
-                </p>
-              </div>
-            ) : (
-              <p className="text-[15px] font-bold text-stone-800">
-                {buddies.members
-                  .filter((member) => member.id !== myId)
-                  .map((member) => member.name)
-                  .join(' & ')}
-              </p>
-            )}
-
-            <p className="mt-1 text-[11px] font-medium text-stone-500">
-              noch bis {formatDayMonth(buddies.until)}
-            </p>
-          </div>
-          <Users size={20} className="shrink-0 text-terracotta-500" />
-        </div>
-      </Card>
-    </Link>
-  );
-}
-
 function ActionstepCard({ step }: { step: HomeActionstep | null }) {
   if (!step) {
     return (
       <Card className="border-dashed bg-transparent shadow-none">
         <div className="flex items-center gap-4">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-canvas text-stone-300">
-            <Circle size={22} />
+            <CircleCheckBig size={24} />
           </span>
           <div className="min-w-0">
             <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">
@@ -289,199 +200,6 @@ function OpenActionstepCard({ step }: { step: HomeActionstep }) {
         </div>
       </div>
     </Card>
-  );
-}
-
-/**
- * Was unter „Weitere" auftauchen kann — je Sorte die nächste.
- *
- * Die Gebetsbuddys lässt schon der Server weg (mit jemandem gepaart zu sein ist
- * keine Aufgabe). Der **Geschenk-Termin** steht dagegen bewusst dabei: Er hängt
- * an keinem Abend, kann also nie in der oberen Liste landen, und ohne diesen
- * Eintrag wäre er auf dem Startbildschirm gar nicht zu sehen — obwohl er die
- * Rolle mit der längsten Vorlaufzeit ist.
- */
-const CATEGORIES: Exclude<AssignmentRole, 'PRAYER_BUDDY'>[] = [
-  'HOST',
-  'TOPIC',
-  'SONG',
-  // Fehlte hier, und damit stand ein Testimony an einem *späteren* Abend
-  // nirgends auf dem Startbildschirm — ausgerechnet die Rolle, für die man am
-  // meisten Vorlauf braucht. Der Typ deckt das nicht auf: `Exclude` verlangt
-  // nicht, dass die Liste vollständig ist.
-  'TESTIMONY',
-  'BIRTHDAY_GIFT',
-];
-
-/**
- * Die eigenen Aufgaben — **eine** Karte, zwei Stufen.
- *
- * **Oben** stehen die Rollen an genau dem Abend, der als Nächstes ansteht —
- * nicht die der laufenden Kalenderwoche. Der Hauskreis ist dienstags: ab
- * Mittwoch wäre eine Kalenderwoche fast immer leer, und der Abend, um den es
- * tatsächlich geht, stünde unter „Weitere". Der Bezugspunkt ist deshalb der
- * Termin, nicht der Wochenwechsel.
- *
- * **Weitere** ist bewusst kein vollständiger Kalender, sondern je Kategorie die
- * *nächste* danach. Wer dreimal in acht Wochen hostet, muss das hier nicht
- * dreimal lesen — die zweite und dritte Zeile ändern an nichts, was man heute
- * tun kann. Der ganze Vorlauf steht in der Planungstabelle.
- *
- * Eingeklappt, weil es sonst zwei Listen wären, die gleich aussehen und
- * verschieden dringend sind. Was zählt, ist der nächste Dienstag; der Rest ist
- * zum Nachsehen da, nicht zum Lesen.
- *
- * Steht nichts an, ist das eine gute Nachricht und wird auch so formuliert.
- */
-function MyRoles({
-  roles,
-  nextMeetingId,
-}: {
-  roles: Assignment[];
-  nextMeetingId: string | null;
-}) {
-  const [showRest, setShowRest] = useState(false);
-
-  // Der Vergleich nur mit gesetztem `nextMeetingId`: sonst würde `null === null`
-  // eine terminlose Rolle zur Rolle „am nächsten Treffen" machen.
-  const atNextMeeting = nextMeetingId
-    ? roles.filter((role) => role.meetingId === nextMeetingId)
-    : [];
-  // `roles` kommt chronologisch — das erste Vorkommen *ist* das nächste.
-  const later = CATEGORIES.map((kind) =>
-    roles.find(
-      (role) => role.meetingId !== nextMeetingId && role.role === kind,
-    ),
-  ).filter((role) => role !== undefined);
-
-  if (atNextMeeting.length === 0 && later.length === 0) {
-    return (
-      <Card>
-        <p className="text-sm text-stone-500">
-          In den nächsten Wochen bist du nirgends eingeteilt. Genieß es.
-        </p>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="overflow-hidden p-0">
-      {atNextMeeting.length > 0 ? (
-        <ul className="divide-y divide-line">
-          {atNextMeeting.map((role) => (
-            <li key={roleKey(role)}>
-              <RoleRow role={role} urgent />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="px-4 py-3.5 text-sm text-stone-400">
-          Beim nächsten Treffen bist du nicht eingeteilt.
-        </p>
-      )}
-
-      {later.length > 0 && (
-        <>
-          <button
-            type="button"
-            aria-expanded={showRest}
-            onClick={() => setShowRest((current) => !current)}
-            className="flex w-full items-center justify-between gap-3 border-t border-line bg-canvas px-4 py-2.5 text-left transition-colors hover:bg-stone-100"
-          >
-            <span className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">
-              Weitere ({later.length})
-            </span>
-            <ChevronDown
-              className={cn(
-                'size-4 shrink-0 text-stone-400 transition-transform',
-                showRest && 'rotate-180',
-              )}
-            />
-          </button>
-
-          {showRest && (
-            <ul className="divide-y divide-line border-t border-line">
-              {later.map((role) => (
-                <li key={roleKey(role)}>
-                  <RoleRow role={role} urgent={false} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
-    </Card>
-  );
-}
-
-/** Rolle *und* Abend: dieselbe Rolle kann an mehreren Terminen dranstehen. */
-function roleKey(role: Assignment): string {
-  return `${role.role}-${role.date}-${role.meetingId ?? role.occasionId}`;
-}
-
-function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
-  const Icon = ROLE_ICON[role.role];
-  const Style = ROLE_STYLE[role.role];
-
-  const content = (
-    <span className="flex items-center justify-between gap-3">
-      <span className="flex min-w-0 items-center gap-3">
-        <span
-          className={cn(
-            'flex h-9 w-9 shrink-0 items-center justify-center rounded-md',
-            Style,
-          )}
-        >
-          <Icon size={20} />
-        </span>
-        <span className="min-w-0">
-          <span className="block truncate text-sm font-bold text-stone-800">
-            {/* Die Rolle zuerst: „Bei Chris" allein sagt nicht, dass *du*
-                hostest. Das Label ist der Zusatz, nicht der Ersatz. */}
-            {ROLE_LABEL[role.role]}
-            {role.label && (
-              <span className="font-medium text-stone-500">
-                {' '}
-                · {role.label}
-              </span>
-            )}
-          </span>
-          <span className="block text-[11px] text-stone-500">
-            {formatDay(role.date)}
-          </span>
-        </span>
-      </span>
-      <Badge variant={urgent ? 'terracotta' : 'neutral'}>
-        {formatRelativeDay(role.date)}
-      </Badge>
-    </span>
-  );
-
-  // Die Zeile trägt ihren eigenen Rand nicht mehr — sie liegt jetzt *in* einer
-  // Karte, und ein Rahmen im Rahmen war genau das Unruhige daran.
-  // Zwei Sorten Ziel: Termin-Rollen führen zum Abend, der Geschenk-Termin zu
-  // seinem Geburtstag. Ohne Ziel bleibt es eine Zeile — ein Link ins Nichts
-  // wäre schlechter als keiner.
-  const href = role.meetingId
-    ? `/termin?id=${role.meetingId}`
-    : role.occasionId
-      ? `/geburtstag?id=${role.occasionId}`
-      : null;
-
-  if (!href) {
-    return <div className="px-4 py-3.5">{content}</div>;
-  }
-
-  return (
-    <Link
-      href={href}
-      className={cn(
-        'block px-4 py-3.5 transition-colors hover:bg-canvas active:bg-canvas',
-        PRESSABLE,
-      )}
-    >
-      {content}
-    </Link>
   );
 }
 
@@ -556,25 +274,29 @@ function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
         href={`/termin?id=${meeting.id}`}
         className="flex flex-wrap items-center gap-2"
       >
-        <RoleChip
-          kind="HOST"
-          people={meeting.host ? [meeting.host] : []}
-          emptyLabel={
-            meeting.location && !meeting.location.requiresHost
-              ? 'Kein Host nötig'
-              : undefined
-          }
-        />
-        {meeting.hasTopicSlot && (
+        {meeting.location && !meeting.location.requiresHost ? (
+          <p
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors',
+              'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+              'bg-terracotta-50 text-terracotta-700 border-terracotta-100',
+            )}
+          >
+            <MapPin size={12} className="shrink-0" />
+            <span>{meeting.location.name}</span>
+          </p>
+        ) : (
+          meeting.host && (
+            <RoleChip kind="HOST" people={meeting.host ? [meeting.host] : []} />
+          )
+        )}
+        {meeting.hasTopicSlot && meeting.topicResponsibles.length > 0 && (
           <RoleChip kind="TOPIC" people={meeting.topicResponsibles} />
         )}
-        {meeting.hasTestimonySlot && (
-          <RoleChip
-            kind="TESTIMONY"
-            people={meeting.testimonyPerson ? [meeting.testimonyPerson] : []}
-          />
+        {meeting.hasTestimonySlot && meeting.testimonyPerson && (
+          <RoleChip kind="TESTIMONY" people={[meeting.testimonyPerson]} />
         )}
-        {meeting.hasSongSlot && (
+        {meeting.hasSongSlot && meeting.songLeaders.length > 0 && (
           <RoleChip kind="SONG" people={meeting.songLeaders} />
         )}
       </Link>
