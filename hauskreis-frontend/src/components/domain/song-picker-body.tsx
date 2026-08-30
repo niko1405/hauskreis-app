@@ -10,10 +10,14 @@
  *
  * Dieselben drei Sortierungen wie im Archiv, weil es dieselbe Frage ist: was
  * singen wir oft, was zuletzt, wie hieß das nochmal.
+ *
+ * **Nur der Rumpf, ohne `Sheet` darum.** Er sitzt als Schritt in
+ * `song-suggest-sheet.tsx`, und zwei gestapelte Sheets schließen einander und
+ * fangen den Fokus im falschen Panel. Eine eigene Hülle hätte hier ohnehin
+ * niemanden mehr gehabt: Diese Datei hatte genau einen Aufrufer.
  */
 import { useDeferredValue, useState } from 'react';
 import { Check, Music, Search } from 'lucide-react';
-import { Sheet } from '@/components/ui/sheet';
 import { TextInput } from '@/components/ui/field';
 import { EmptyState, LoadMore, Skeleton } from '@/components/ui/states';
 import { useAddMeetingSong, useSongList } from '@/lib/api/hooks';
@@ -30,15 +34,11 @@ const SORTS: { key: Sort; label: string }[] = [
   { key: 'title', label: 'A–Z' },
 ];
 
-export function SongPickerSheet({
-  open,
-  onClose,
+export function SongPickerBody({
   meetingId,
   /** Was schon am Abend hängt — steht dabei, aber lässt sich nicht doppeln. */
   alreadyPicked,
 }: {
-  open: boolean;
-  onClose: () => void;
   meetingId: string;
   alreadyPicked: readonly string[];
 }) {
@@ -54,105 +54,98 @@ export function SongPickerSheet({
   const picked = new Set(alreadyPicked);
 
   return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      title="Aus dem Archiv"
-      subtitle="Lieder, die die Gruppe schon kennt"
-    >
-      <div className="space-y-3">
-        <div className="relative">
-          <Search
-            size={15}
-            className="absolute top-1/2 left-3 -translate-y-1/2 text-stone-400"
-          />
-          <TextInput
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Titel oder Artist"
-            aria-label="Lieder durchsuchen"
-            className="pl-9"
-          />
-        </div>
-
-        <div className="flex gap-2">
-          {SORTS.map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setSort(key)}
-              aria-pressed={sort === key}
-              className={cn(
-                'rounded-full px-3 py-1 text-[11px] font-semibold transition-colors',
-                sort === key
-                  ? 'bg-inverse text-inverse-fg'
-                  : 'bg-stone-100 text-stone-500 hover:bg-stone-200',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {query.isLoading && <Skeleton className="h-24 w-full" />}
-
-        {!query.isLoading && query.items.length === 0 && (
-          <EmptyState
-            title={deferred ? 'Nichts gefunden' : 'Noch keine Lieder'}
-            hint={
-              deferred
-                ? 'Trag es unten als neues Lied ein — dann kennt die Gruppe es ab jetzt.'
-                : 'Die Datenbank wächst mit jedem Vorschlag an einem Termin.'
-            }
-          />
-        )}
-
-        <ul className="space-y-1.5">
-          {query.items.map((song) => {
-            const alreadyThere = picked.has(song.id);
-
-            return (
-              <li key={song.id} className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={alreadyThere || add.isPending}
-                  onClick={() => add.mutate({ songId: song.id })}
-                  className={cn(
-                    'flex min-w-0 flex-1 items-center gap-2.5 rounded-md border p-2.5 text-left transition-colors',
-                    alreadyThere
-                      ? 'cursor-default border-music-line bg-music-bg/50'
-                      : 'border-line bg-card hover:border-terracotta-400',
-                  )}
-                >
-                  {alreadyThere ? (
-                    <Check
-                      size={14}
-                      strokeWidth={3}
-                      className="shrink-0 text-music"
-                    />
-                  ) : (
-                    <Music size={14} className="shrink-0 text-stone-300" />
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold text-stone-800">
-                      {song.title}
-                    </span>
-                    <span className="block truncate text-[11px] text-stone-400">
-                      {song.artist ?? 'Unbekannt'} · {song.timesPlayed}×
-                      {song.lastPlayedAt &&
-                        `, zuletzt ${formatRelativeDay(song.lastPlayedAt)}`}
-                    </span>
-                  </span>
-                </button>
-
-                <LyricsLink url={song.lyricsUrl} title={song.title} />
-              </li>
-            );
-          })}
-        </ul>
-
-        <LoadMore query={query} label="Mehr Lieder" />
+    <div className="space-y-3">
+      <div className="relative">
+        <Search
+          size={15}
+          className="absolute top-1/2 left-3 -translate-y-1/2 text-stone-400"
+        />
+        <TextInput
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Titel oder Artist"
+          aria-label="Lieder durchsuchen"
+          className="pl-9"
+        />
       </div>
-    </Sheet>
+
+      <div className="flex gap-2">
+        {SORTS.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setSort(key)}
+            aria-pressed={sort === key}
+            className={cn(
+              'rounded-full px-3 py-1 text-[11px] font-semibold transition-colors',
+              sort === key
+                ? 'bg-inverse text-inverse-fg'
+                : 'bg-stone-100 text-stone-500 hover:bg-stone-200',
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {query.isLoading && <Skeleton className="h-24 w-full" />}
+
+      {!query.isLoading && query.items.length === 0 && (
+        <EmptyState
+          title={deferred ? 'Nichts gefunden' : 'Noch keine Lieder'}
+          hint={
+            deferred
+              ? 'Trag es unten als neues Lied ein — dann kennt die Gruppe es ab jetzt.'
+              : 'Die Datenbank wächst mit jedem Vorschlag an einem Termin.'
+          }
+        />
+      )}
+
+      <ul className="space-y-1.5">
+        {query.items.map((song) => {
+          const alreadyThere = picked.has(song.id);
+
+          return (
+            <li key={song.id} className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={alreadyThere || add.isPending}
+                onClick={() => add.mutate({ songId: song.id })}
+                className={cn(
+                  'flex min-w-0 flex-1 items-center gap-2.5 rounded-md border p-2.5 text-left transition-colors',
+                  alreadyThere
+                    ? 'cursor-default border-music-line bg-music-bg/50'
+                    : 'border-line bg-card hover:border-terracotta-400',
+                )}
+              >
+                {alreadyThere ? (
+                  <Check
+                    size={14}
+                    strokeWidth={3}
+                    className="shrink-0 text-music"
+                  />
+                ) : (
+                  <Music size={14} className="shrink-0 text-stone-300" />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-bold text-stone-800">
+                    {song.title}
+                  </span>
+                  <span className="block truncate text-[11px] text-stone-400">
+                    {song.artist ?? 'Unbekannt'} · {song.timesPlayed}×
+                    {song.lastPlayedAt &&
+                      `, zuletzt ${formatRelativeDay(song.lastPlayedAt)}`}
+                  </span>
+                </span>
+              </button>
+
+              <LyricsLink url={song.lyricsUrl} title={song.title} />
+            </li>
+          );
+        })}
+      </ul>
+
+      <LoadMore query={query} label="Mehr Lieder" />
+    </div>
   );
 }
