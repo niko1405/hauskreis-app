@@ -152,6 +152,10 @@ export class AbsenceSyncService {
       // die Absage fallen und der Urlaub ist still wirkungslos. Eine
       // `ABSENCE`-Zeile kommt hier ohnehin nicht an: Die zählt oben als
       // `derived` und landet gar nicht erst in dieser Liste.
+      //
+      // Eine **Notiz** geht dabei nie verloren: Sie entsteht nur beim
+      // Antworten von Hand, sitzt also auf einer `SELF`-Zeile — und die fasst
+      // dieser Lauf grundsätzlich nicht an.
       await this.prisma.meetingAttendance.deleteMany({
         where: {
           personId,

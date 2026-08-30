@@ -18,7 +18,7 @@ import { withClock } from './group-clock.testing';
  * next sync considered the row its own and would have deleted a deliberate
  * "doch, ich komme" as soon as the holiday was shortened.
  */
-function setup() {
+function setup(previousStatus: AttendanceStatus = AttendanceStatus.ABSENT) {
   const upsert = jest.fn().mockResolvedValue({});
 
   const db = {
@@ -32,9 +32,7 @@ function setup() {
     },
     person: { findFirst: jest.fn().mockResolvedValue({ id: 'niko' }) },
     meetingAttendance: {
-      findUnique: jest
-        .fn()
-        .mockResolvedValue({ status: AttendanceStatus.ABSENT }),
+      findUnique: jest.fn().mockResolvedValue({ status: previousStatus }),
       upsert,
     },
   };
@@ -52,6 +50,13 @@ function setup() {
       {} as unknown as RoleSuggestionService,
       { handleDecline: jest.fn() } as unknown as MeetingNotificationService,
       { reconcile } as unknown as MeetingCancellationService,
+      // Position 5 und 6 (Zuteilungs-Benachrichtigung, Verfügbarkeit) spielen
+      // beim Antworten keine Rolle. Die Freigabe dahinter schon: Sie läuft
+      // beim Wechsel in eine Absage, und genau der ist der interessante Fall
+      // für die Notiz.
+      undefined as never,
+      undefined as never,
+      { releaseFor: jest.fn().mockResolvedValue([]) } as never,
     ),
   );
 
@@ -68,12 +73,56 @@ describe('MeetingService.setAttendance', () => {
     });
 
     // Both branches: the row may already exist because a holiday wrote it.
-    expect(upsert.mock.calls[0][0].update).toEqual({
+    expect(upsert.mock.calls[0][0].update).toMatchObject({
       status: AttendanceStatus.ATTENDING,
       source: AttendanceSource.SELF,
     });
     expect(upsert.mock.calls[0][0].create).toMatchObject({
       source: AttendanceSource.SELF,
     });
+  });
+
+  /**
+   * Die Notiz gehört zu **dieser** Antwort.
+   *
+   * Der dritte Fall ist der, um den es eigentlich geht: Die kompakten
+   * Umschalter auf Startbildschirm, Terminkarte und Kalender schicken nur
+   * `status`. Ohne die Regel bliebe „komme 20 Min später" auf einer Absage
+   * stehen — und in der Teilnehmerliste stünde es auch noch da.
+   */
+  it('writes the note that came with the answer', async () => {
+    const { service, upsert } = setup(AttendanceStatus.UNKNOWN);
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.ATTENDING,
+      note: 'Komme 20 Min später',
+    });
+
+    expect(upsert.mock.calls[0][0].update.note).toBe('Komme 20 Min später');
+    expect(upsert.mock.calls[0][0].create.note).toBe('Komme 20 Min später');
+  });
+
+  it('keeps the note when only the note itself is missing', async () => {
+    const { service, upsert } = setup(AttendanceStatus.ATTENDING);
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.ATTENDING,
+    });
+
+    // `undefined` heißt bei Prisma „nicht anfassen".
+    expect(upsert.mock.calls[0][0].update.note).toBeUndefined();
+  });
+
+  it('drops the note when the status changes without a new one', async () => {
+    const { service, upsert } = setup(AttendanceStatus.ATTENDING);
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.ABSENT,
+    });
+
+    expect(upsert.mock.calls[0][0].update.note).toBeNull();
   });
 });

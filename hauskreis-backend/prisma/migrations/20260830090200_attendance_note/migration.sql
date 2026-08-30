@@ -1,0 +1,17 @@
+-- Ein Satz zur eigenen Antwort.
+--
+-- „Wer kommt" kannte bisher drei Zustände und kein Wort dazu. Genau das Wort
+-- ist aber die Auskunft, die der Gastgeber braucht: „komme 20 Min später"
+-- ändert nichts an der Zusage und alles am Abendessen; „muss schauen, wann
+-- Feierabend ist" macht aus einem Schweigen eine Planungsgrundlage; und eine
+-- Absage ohne Grund erzeugt in WhatsApp die Rückfrage, gegen die diese App
+-- gebaut ist.
+--
+-- **Eine Spalte für alle drei Status und nicht drei Spalten.** Es ist immer
+-- dieselbe Sache — was jemand den anderen zu diesem Abend noch sagen will.
+-- Nur die Beschriftung des Feldes wechselt, und das ist Sache der Oberfläche.
+--
+-- Nullable und ohne Vorbelegung: Der Normalfall ist, dass es nichts zu sagen
+-- gibt. Ein leerer String und „nichts gesagt" wären zwei Schreibweisen für
+-- denselben Zustand.
+ALTER TABLE "meeting_attendance" ADD COLUMN "note" TEXT;

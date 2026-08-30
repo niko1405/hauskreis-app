@@ -102,6 +102,10 @@ export class RoleAttendanceService {
           status: AttendanceStatus.ATTENDING,
           source: AttendanceSource.ROLE,
         },
+        // `note` steht bewusst nicht dabei: Wer „muss schauen, wann Feierabend
+        // ist" geschrieben hat und danach eingeteilt wird, hat damit nichts
+        // Falsches gesagt — der Satz gilt weiter. Ihn wegzuräumen hieße, eine
+        // Auskunft an die Gruppe zu löschen, um die niemand gebeten hat.
       });
 
       if (neu.length > 0) {

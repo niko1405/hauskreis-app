@@ -121,6 +121,9 @@ export const meetingResponseSchema = z.object({
     z.object({
       personId: z.uuid(),
       status: z.enum(AttendanceStatus),
+      /// Freiwillig und für alle sichtbar: Der Satz ist an die Gruppe
+      /// gerichtet, nicht an die App.
+      note: z.string().nullable(),
     }),
   ),
 });
@@ -155,6 +158,7 @@ export const attendanceResponseSchema = z.object({
   personId: z.uuid(),
   status: z.enum(AttendanceStatus),
   source: z.enum(AttendanceSource),
+  note: z.string().nullable(),
   updatedAt: isoDateTimeOut,
 });
 

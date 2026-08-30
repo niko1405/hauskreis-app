@@ -92,6 +92,16 @@ export const updateMeetingSchema = z.object({
 export const setAttendanceSchema = z.object({
   personId: z.uuid(),
   status: attendanceStatus,
+  /// Der eine Satz zur Antwort — freiwillig, und dieselbe Spalte für alle drei
+  /// Status: „komme 20 Min später", „muss schauen, wann Feierabend ist", „bin
+  /// im Urlaub". Nur die Beschriftung des Feldes wechselt, und das ist Sache
+  /// der Oberfläche.
+  ///
+  /// **Fehlt sie, bleibt die gespeicherte stehen — außer der Status wechselt.**
+  /// Die kompakten Umschalter (Startbildschirm, Terminkarte, Kalender)
+  /// schicken nur `status`, und eine Verspätung gehört nicht auf eine Absage.
+  /// Ausdrücklich `null` löscht sie.
+  note: z.string().trim().min(1).max(200).nullish(),
 });
 
 /**
