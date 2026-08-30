@@ -227,7 +227,10 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
         // angesagt.
         aria-label={refreshing ? 'Wird aktualisiert' : undefined}
         aria-hidden={!refreshing}
-        className="pointer-events-none absolute inset-x-0 top-[env(safe-area-inset-top)] z-10 flex justify-center"
+        // `z-50` und nicht `z-10`: Die Kopfleiste liegt auf `z-40` und über
+        // genau diesem Bereich. Der Kringel verschwand sonst hinter ihr —
+        // ausgerechnet in der Geste, deren einzige Rückmeldung er ist.
+        className="pointer-events-none absolute inset-x-0 top-[env(safe-area-inset-top)] z-50 flex justify-center"
         style={{
           transform: `translateY(${offset - 34}px)`,
           opacity: offset > 4 ? 1 : 0,

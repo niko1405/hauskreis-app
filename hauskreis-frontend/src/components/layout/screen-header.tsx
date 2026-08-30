@@ -58,7 +58,12 @@ export function ScreenHeader({
   screen: HeaderScreen;
   title: string;
   subtitle?: string;
-  /** Wie bei `PageHeader`: die eine Aktion dieser Seite, rechts neben dem Titel. */
+  /**
+   * Wie bei `PageHeader`: die eine Aktion dieser Seite, rechts neben dem Titel.
+   *
+   * Zurzeit gibt keiner der drei Bildschirme eine mit. Wer die erste einsetzt,
+   * muss den Kamera-Knopf mitdenken — der sitzt unten rechts in derselben Ecke.
+   */
   action?: React.ReactNode;
 }) {
   const image = useHeaderImage(screen);
@@ -100,11 +105,16 @@ export function ScreenHeader({
         {action}
       </div>
 
-      {/* Oben rechts und zurückhaltend: das Bild zu tauschen ist etwas, das man
-          einmal tut und dann lange nicht wieder. */}
+      {/* Unten rechts und zurückhaltend: das Bild zu tauschen ist etwas, das
+          man einmal tut und dann lange nicht wieder.
+
+          Er stand einmal oben rechts. Dort liegt jetzt die Glocke der
+          Kopfleiste — zwei runde Knöpfe übereinander wären eine Verwechslung
+          mit Ansage. Auf gleicher Höhe mit dem Titel steht er außerdem dort,
+          wo das Bild aufhört, also bei dem, worauf er sich bezieht. */}
       <IconButton
         label="Hintergrundbild ändern"
-        className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-4 bg-card/70 backdrop-blur-sm"
+        className="absolute right-4 bottom-4 bg-card/70 backdrop-blur-sm"
         onClick={() => setOpen(true)}
       >
         <Camera size={17} strokeWidth={2} />

@@ -35,6 +35,18 @@
   --color-terracotta-600: #c26b50;
   --color-terracotta-700: #b16248;
 
+  /* Der Balken der Kopfleiste, sobald gescrollt wurde — zwei Töne für einen
+     Verlauf von oben nach unten.
+     Tiefer als `terracotta-500`, weil er weiße Schrift trägt, und deutlich
+     ruhiger als das frühere flache `#d96b42`: Ein Verlauf mit ein bisschen
+     Durchsicht liest sich als Teil der Seite, eine grelle Fläche als Folie
+     darauf.
+     Für den Zustand ganz oben gibt es **kein** Token mehr. Der Schleier dort
+     ist neutrales Schwarz — er liegt unter demselben `StatusBarScrim`, und
+     zwei verschiedene Farben übereinander werden schmutzig statt dunkler. */
+  --color-header-bar: #c2694c;
+  --color-header-bar-deep: #ab5a40;
+
   /* Flächen */
   --color-shell: #f5efe9;
   --color-canvas: #faf6f3;
@@ -170,6 +182,12 @@
   --color-terracotta-500: #d07a56;
   --color-terracotta-600: #dc8a68;
   --color-terracotta-700: #e79b7c;
+
+  /* Kopfleiste: deutlich tiefer, damit der Balken im Dunkeln nicht die
+     hellste Fläche der App ist. Der Verlauf bleibt derselbe — oben satter,
+     unten dunkler. */
+  --color-header-bar: #8a4429;
+  --color-header-bar-deep: #6d3520;
 
   /* Rollenfarben */
   --color-music: #7fc5a1;
@@ -332,6 +350,66 @@ label,
 .px-safe {
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Die Kopfleiste (`smart-header.tsx`).
+ *
+ * Drei Regeln um dieselbe Höhe — sicherer Rand plus 3.5rem —, und aus dem
+ * gleichen Grund wie `pt-safe-6` einzeln: `calc` mit `env()` lässt sich nicht
+ * aus zwei Utilities zusammensetzen.
+ *
+ * `.header-inset` ist der eigentliche Kniff. Die Leiste ist `sticky` und
+ * bekommt eine negative Untermarge in genau ihrer Höhe: Sie liegt damit **über**
+ * dem Inhalt statt vor ihm, und das Kopfbild läuft nahtlos darunter durch, so
+ * wie es ohne sie durchlief. `fixed` hätte dasselbe getan, aber die zentrierte
+ * Spalte samt Seitenleiste ab `md` ein zweites Mal nachbauen müssen. */
+.h-header {
+  height: calc(env(safe-area-inset-top, 0px) + 3.5rem);
+}
+.header-inset {
+  margin-bottom: calc((env(safe-area-inset-top, 0px) + 3.5rem) * -1);
+}
+/* Der Anfang der Sprechblase hinter der Glocke: genau unter der Leiste. */
+.top-header {
+  top: calc(env(safe-area-inset-top, 0px) + 3.5rem);
+}
+
+/* Der Schleier ganz oben, solange nicht gescrollt wurde.
+ *
+ * **Zwei gestapelte Verläufe, und die Reihenfolge ist die Aussage.** Oben liegt
+ * der schwarze: Er trägt die Lesbarkeit von Name und Knöpfen, und er ist die
+ * Fläche, die dem `StatusBarScrim` begegnet — der ist ebenfalls schwarz, und
+ * zwei schwarze Verläufe werden zusammen dunkler, während Schwarz über einer
+ * farbigen Fläche schmutzig wird. Genau daran ist der erste Versuch gescheitert,
+ * der die Leiste flächig in Terracotta legte.
+ *
+ * Darunter liegt der Terracotta-Anteil, mit gut einem Fünftel Deckkraft und
+ * spätestens auf halber Höhe verschwunden. Er **färbt** das Foto, statt es
+ * zuzudecken — und das ist der Unterschied zwischen „ein paar Elemente schweben
+ * über der Seite" und „hier ist eine Leiste".
+ *
+ * Als eigene Regel und nicht als Utilities: Zwei Verläufe übereinander kennt
+ * `bg-gradient-to-b` nicht, und `color-mix` auf dem Token nimmt den Dunkelmodus
+ * von selbst mit. */
+.header-veil {
+  background-image:
+    linear-gradient(
+      to bottom,
+      rgb(0 0 0 / 0.36),
+      rgb(0 0 0 / 0.12) 55%,
+      transparent
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-header-bar-deep) 60%, transparent),
+      color-mix(in srgb, var(--color-header-bar-deep) 22%, transparent) 55%,
+      transparent
+    );
+}
+/* Für die Kopfzeilen ohne Bild (Termine, Archiv): ihr eigener Abstand plus die
+   Leiste darüber. Ohne das stünde der Titel dahinter. */
+.pt-header-6 {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 3.5rem + 1.5rem);
 }
 
 @media (prefers-reduced-motion: reduce) {

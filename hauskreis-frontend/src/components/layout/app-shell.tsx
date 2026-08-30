@@ -4,11 +4,19 @@
  * Das Gerüst: mobil eine Telefon-Leinwand mit Leiste unten, ab `md` eine
  * Spalte links und mehr Breite für Tabelle und Kalender.
  */
+import { cn } from '@/lib/cn';
 import { GlobalProgress } from './global-progress';
 import { PullToRefresh } from './pull-to-refresh';
+import { SmartHeader } from './smart-header';
+import { useHasSmartHeader } from './use-header-scroll';
+import { useInboxDeeplink } from './use-inbox-deeplink';
 import { Sidebar, TabBar } from './nav';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  // Steht hier und nicht in der Glocke: Der Haken muss auch dann greifen, wenn
+  // die Push-Nachricht auf einen Bildschirm ohne Kopfleiste führt.
+  useInboxDeeplink();
+
   return (
     // `min-h-dvh` statt `min-h-screen`: `100vh` rechnet auf mobilen Browsern
     // mit ausgefahrener Adressleiste und ist deshalb zu hoch.
@@ -17,6 +25,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex w-full max-w-md flex-col border-line-strong/50 bg-canvas shadow-xl md:max-w-5xl md:flex-row md:border-x">
         <Sidebar />
         <div className="flex min-h-dvh flex-1 flex-col">
+          {/* Über dem Inhalt und nicht davor: Die Leiste trägt eine negative
+              Untermarge in ihrer eigenen Höhe (`header-inset`), sodass das
+              Kopfbild nahtlos darunter durchläuft.
+
+              **Neben `<main>` und nicht darin.** `main` trägt `pt-2`, und
+              innen läge die Leiste acht Pixel tiefer als die Oberkante — auf
+              einem Gerät ohne Notch stünde darüber ein Streifen ungeschleiertes
+              Foto. Hier beginnt sie an der Kante, und `main` behält seinen
+              Abstand für den Inhalt. */}
+          <SmartHeader />
           <main className="flex-1 overflow-x-hidden pt-2 pb-6">
             <PullToRefresh>{children}</PullToRefresh>
           </main>
@@ -44,10 +62,21 @@ export function PageHeader({
   subtitle?: string;
   action?: React.ReactNode;
 }) {
+  // Auf den Tabs liegt die Kopfleiste darüber, sonst stünde der Titel dahinter.
+  // Gefragt wird hier und nicht über eine Prop: Termine und Archiv tragen sie,
+  // Verwaltung, Hilfe und „Was ist neu" nicht — und keine dieser Seiten sollte
+  // sich das merken müssen.
+  const underHeader = useHasSmartHeader();
+
   return (
     // `pt-safe-6` ist der sichere Rand **plus** 1.5rem in einer Regel; warum es
     // nicht `pt-safe pt-6` sein kann, steht bei der Klasse in `globals.css`.
-    <header className="flex items-end justify-between gap-4 px-5 pt-safe-6 pb-4">
+    <header
+      className={cn(
+        'flex items-end justify-between gap-4 px-5 pb-4',
+        underHeader ? 'pt-header-6' : 'pt-safe-6',
+      )}
+    >
       <div>
         <h1 className="font-serif text-3xl leading-tight font-bold text-stone-900">
           {title}
