@@ -16,6 +16,17 @@ export const qk = {
   me: ['me'] as const,
   health: ['health'] as const,
   hauskreise: ['hauskreise'] as const,
+  /**
+   * Der einzelne Hauskreis **mit ETag**, für das Schreiben von Name und
+   * Beschreibung.
+   *
+   * Neben `hauskreise` und nicht statt dessen: Die Liste versorgt den
+   * Kontext-Provider beim Start und kommt ohne ETag (sie ist ein Array). Wer
+   * schreiben will, braucht die Fassungsnummer — also einen zweiten Schlüssel
+   * für dieselbe Zeile in anderer Form.
+   */
+  hauskreisDetail: (hauskreisId: string) =>
+    ['hauskreise', 'detail', hauskreisId] as const,
   invitations: ['invitations'] as const,
   /** Ändert sich nur mit einem Deploy — deshalb außerhalb des Hauskreis-Baums. */
   releases: ['releases'] as const,
@@ -26,6 +37,14 @@ export const qk = {
     settings: ['push', 'settings'] as const,
     subscriptions: ['push', 'subscriptions'] as const,
   },
+
+  /**
+   * Die Box hinter der Glocke.
+   *
+   * Außerhalb des Hauskreis-Baums, wie `push`: Benachrichtigungen hängen am
+   * angemeldeten Menschen und nicht an der Gruppe.
+   */
+  inbox: ['notifications'] as const,
 
   hk: (hauskreisId: string) => {
     const root = ['hk', hauskreisId] as const;
@@ -115,6 +134,22 @@ export const qk = {
           [...root, 'absences', 'list', params] as const,
         detail: (absenceId: string) =>
           [...root, 'absences', 'detail', absenceId] as const,
+      },
+
+      /**
+       * Die Gruppe selbst — Bild und Ideen.
+       *
+       * Der Hauskreis-Datensatz *nicht*: der hängt an `qk.hauskreise` und wird
+       * vom `HauskreisProvider` geladen, lange bevor jemand diesen Bildschirm
+       * öffnet.
+       */
+      group: {
+        all: [...root, 'group'] as const,
+        /// Der Zeitstempel steckt im Schlüssel: ein neues Bild ist ein neuer
+        /// Schlüssel, der alte Eintrag verfällt von selbst.
+        photo: (updatedAt: string) =>
+          [...root, 'group', 'photo', updatedAt] as const,
+        ideas: [...root, 'group', 'ideas'] as const,
       },
 
       headerImages: {

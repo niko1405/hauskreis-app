@@ -13,6 +13,15 @@ import { PersonRole } from '../../../generated/prisma/enums';
 export const hauskreisResponseSchema = z.object({
   id: z.uuid(),
   name: z.string(),
+  /// Wer ihr seid, in ein paar Sätzen. `null`, solange es niemand geschrieben
+  /// hat — ein Hauskreis, der sich nicht beschreibt, ist immer noch einer.
+  description: z.string().nullable(),
+  /// Wann das Gruppenbild zuletzt gesetzt wurde; `null` heißt „keins".
+  ///
+  /// Derselbe Kniff wie bei `person.photoUpdatedAt`: Der Zeitstempel hängt als
+  /// Query-Parameter an der Bild-URL, damit ein neues Bild nicht hinter dem
+  /// Zwischenspeicher des Browsers verschwindet.
+  photoUpdatedAt: isoDateTimeOut.nullable(),
   createdAt: isoDateTimeOut,
   version: z.number().int().nonnegative(),
 });

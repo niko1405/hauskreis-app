@@ -10,6 +10,11 @@
  *
  * Die Abzeichen sind deshalb die, nach denen man beim Planen sucht: Instrument,
  * hostet gerade nicht, gerade abwesend, Einladung offen.
+ *
+ * **Sie stand einmal im Profil.** Dort war sie die achte Karte, zwischen den
+ * eigenen Abwesenheiten und dem Erscheinungsbild — auf einem Bildschirm über
+ * *dich*. Wer dabei ist, gehört zur Gruppe, und die hat jetzt ihren eigenen
+ * Ort.
  */
 import { Ban, Clock, Guitar, Palmtree, Shield } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';

@@ -1,0 +1,44 @@
+meta {
+  name: Idee abhaken
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/ideas/{{ideaId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{ideaEtag}}
+}
+
+body:json {
+  {
+    "done": true
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("hält fest, wann und von wem", function () {
+    expect(res.body.doneAt).to.be.a("string");
+    expect(res.body.doneBy).to.not.equal(null);
+  });
+}
+
+docs {
+  Abhaken darf jede:r, auch wer die Idee nicht aufgeschrieben hat: Wer beim
+  Grillen dabei war, darf sagen, dass es stattgefunden hat.
+
+  **Löschen** darf nur der Urheber oder ein Admin (`DELETE …/ideas/:id`, sonst
+  `403`). Der Unterschied ist keine Förmlichkeit: Abhaken sagt etwas über die
+  Welt, Löschen etwas über die Liste.
+
+  Ein zweites `done: true` lässt den ursprünglichen Zeitpunkt stehen — sonst
+  wanderte die Idee bei jedem Speichern eines Titels wieder nach oben.
+}

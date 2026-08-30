@@ -7,7 +7,7 @@
 import { Check, Pencil, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
-import { IconButton } from './button';
+import { IconButton, PRESSABLE } from './button';
 
 const CONTROL =
   'w-full rounded-md border border-line bg-card px-4 py-2.5 text-sm text-stone-800 ' +
@@ -133,8 +133,10 @@ export function InlineEdit({
   placeholder,
   saving = false,
   className,
+  inputClassName,
   startOpen = false,
   onDiscard,
+  editLabel,
 }: {
   value: string | null;
   /**
@@ -150,6 +152,7 @@ export function InlineEdit({
   placeholder?: string;
   saving?: boolean;
   className?: string;
+  inputClassName?: string;
   /** Zeigt gleich das Eingabefeld — ohne den Umweg über den Stift. */
   startOpen?: boolean;
   /**
@@ -158,6 +161,15 @@ export function InlineEdit({
    * weg; wer den letzten Satz gelöscht hat, ebenso.
    */
   onDiscard?: () => void;
+  /**
+   * Statt des Stifts ein Textknopf mit diesem Wort, unter dem Text.
+   *
+   * Für die langen Felder. Ein Bleistift neben einem Absatz Fließtext ist ein
+   * Symbol, das man deuten muss, und er sitzt oben rechts — also am Anfang von
+   * etwas, das man erst zu Ende liest. Ein Wort am Fuß steht da, wo man
+   * ankommt, und sagt sich selbst.
+   */
+  editLabel?: string;
 }) {
   const [editing, setEditing] = useState(startOpen);
   const [draft, setDraft] = useState(value ?? '');
@@ -203,11 +215,13 @@ export function InlineEdit({
         {multiline ? (
           <TextArea
             ref={inputRef as React.Ref<HTMLTextAreaElement>}
+            className={inputClassName}
             {...shared}
           />
         ) : (
           <TextInput
             ref={inputRef as React.Ref<HTMLInputElement>}
+            className={inputClassName}
             {...shared}
           />
         )}
@@ -233,19 +247,44 @@ export function InlineEdit({
     );
   }
 
+  const text = (
+    <p
+      className={cn(
+        'text-sm leading-relaxed whitespace-pre-line',
+        value ? 'text-stone-700' : 'text-stone-400 italic',
+        className,
+      )}
+    >
+      {value ?? emptyLabel}
+    </p>
+  );
+
+  if (editLabel) {
+    return (
+      <div className={cn('flex flex-col gap-3', className)}>
+        {text}
+        {onSave && (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            disabled={saving}
+            className={cn(
+              'self-end text-xs font-bold text-terracotta-600 disabled:opacity-50',
+              PRESSABLE,
+            )}
+          >
+            {editLabel}
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn('group flex items-start justify-between gap-3', className)}
     >
-      <p
-        className={cn(
-          'text-sm leading-relaxed whitespace-pre-line',
-          value ? 'text-stone-700' : 'text-stone-400 italic',
-          className,
-        )}
-      >
-        {value ?? emptyLabel}
-      </p>
+      {text}
       {onSave && (
         <IconButton
           label={`${label} bearbeiten`}

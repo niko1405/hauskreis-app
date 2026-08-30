@@ -63,6 +63,25 @@ export const UNCONDITIONAL = Symbol('unconditional');
 
 export type Precondition = { etag: string | undefined } | typeof UNCONDITIONAL;
 
+/**
+ * Die Vorbedingung aus der `version` eines Listeneintrags.
+ *
+ * Der übliche Weg ist `useResourceUpdate`: Es liest den ETag neben den Daten
+ * aus dem Cache, weil die Antwort eines Detail-Endpunkts ihn im Kopf trägt.
+ * Manche Dinge haben aber gar keinen Detail-Endpunkt — die Ideen der Gruppe
+ * etwa stehen nur in ihrer Liste. Acht Detail-Abfragen aufzumachen, nur um
+ * acht Haken setzen zu können, wäre die falsche Antwort darauf.
+ *
+ * Der ETag ist bei dieser App kein Hash, sondern die Fassungsnummer
+ * (`formatEtag` im Server: `W/"3"`), und die steht an jedem Eintrag. Also wird
+ * sie hier zusammengesetzt statt aufgegeben — ein `UNCONDITIONAL` an dieser
+ * Stelle hieße, zwei gleichzeitige Umbenennungen stillschweigend zu einer zu
+ * machen.
+ */
+export function etagOfVersion(version: number): Precondition {
+  return { etag: `W/"${version}"` };
+}
+
 // ── Einhängepunkte, die die App beim Start setzt ────────────────────────────
 
 type TokenGetter = () => string | undefined;

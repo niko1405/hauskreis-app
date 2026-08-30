@@ -1,6 +1,7 @@
 export * from './use-birthdays';
 export * from './use-absences';
 export * from './use-dashboard';
+export * from './use-group';
 export * from './use-header-images';
 export * from './use-hk';
 export * from './use-locations';
@@ -9,6 +10,7 @@ export * from './use-meeting-prayer-requests';
 export * from './use-meeting-songs';
 export * from './use-meeting-topics';
 export * from './use-meetings';
+export * from './use-notifications';
 export * from './use-paginated';
 export * from './use-people';
 export * from './use-prayer-buddies';

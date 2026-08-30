@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { HauskreisController } from './hauskreis.controller';
+import { HauskreisPhotoController } from './hauskreis-photo.controller';
+import { HauskreisPhotoService } from './hauskreis-photo.service';
 import { HauskreisService } from './hauskreis.service';
 import { MembershipService } from './membership.service';
 import { InvitationController } from './invitation.controller';
@@ -31,9 +33,14 @@ import { MEMBERSHIP_SERVICE } from './membership.token';
     MeetingModule,
     NotificationModule,
   ],
-  controllers: [HauskreisController, InvitationController],
+  controllers: [
+    HauskreisController,
+    HauskreisPhotoController,
+    InvitationController,
+  ],
   providers: [
     HauskreisService,
+    HauskreisPhotoService,
     MembershipService,
     // Zusätzlich unter einer Zeichenkette, damit `PersonService.remove` den
     // Dienst nachschlagen kann, ohne die Klasse zu importieren — die

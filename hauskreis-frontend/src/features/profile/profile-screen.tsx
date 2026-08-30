@@ -6,7 +6,7 @@
  * `canHost` ist die wichtigste Einstellung hier: sie steuert, ob man in den
  * Host-Vorschlägen überhaupt auftaucht (CLAUDE.md §5).
  */
-import { LogOut, Shield } from 'lucide-react';
+import { Ban, Guitar, LogOut, Shield } from 'lucide-react';
 import { HauskreisCard } from './hauskreis-card';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -30,7 +30,6 @@ import { AppCard } from './app-card';
 import { AppearanceCard } from './appearance-card';
 import { HomeCard } from './home-card';
 import { PhotoPicker } from './photo-picker';
-import { MembersCard } from './members-card';
 import { NotificationsCard } from './notifications-card';
 
 export function ProfileScreen() {
@@ -146,13 +145,33 @@ function Loaded({ personId }: { personId: string }) {
                   </Badge>
                 )}
                 {current.playsInstrument && (
-                  <Badge variant="music">Instrument</Badge>
+                  <Badge variant="music">
+                    <Guitar size={11} />
+                    Instrument
+                  </Badge>
                 )}
-                {!current.canHost && <Badge>hostet gerade nicht</Badge>}
+                {!current.canHost && (
+                  <Badge>
+                    <Ban size={11} />
+                    hostet nicht
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
         </Card>
+
+        {me.isAdmin && (
+          <section>
+            <SectionTitle>Verwaltung</SectionTitle>
+            <Link href="/admin">
+              <Button variant="secondary" className="w-full">
+                <Shield size={14} />
+                Admin-Bereich
+              </Button>
+            </Link>
+          </section>
+        )}
 
         <section>
           <SectionTitle>Deine Angaben</SectionTitle>
@@ -232,20 +251,6 @@ function Loaded({ personId }: { personId: string }) {
         <AbsencesCard personId={personId} />
 
         <NotificationsCard />
-
-        <MembersCard />
-
-        {me.isAdmin && (
-          <section>
-            <SectionTitle>Verwaltung</SectionTitle>
-            <Link href="/admin">
-              <Button variant="secondary" className="w-full">
-                <Shield size={14} />
-                Admin-Bereich
-              </Button>
-            </Link>
-          </section>
-        )}
 
         <AccountCard person={current} />
 
