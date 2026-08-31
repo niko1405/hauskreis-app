@@ -7,7 +7,6 @@
 import { BookOpen, Gift, House, Mic, Music, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { ROLE_LABEL } from '@/lib/meeting';
 import type { AssignmentRole, PersonRef } from '@/lib/api/types';
 
 export const ROLE_ICON: Record<AssignmentRole, LucideIcon> = {
@@ -71,7 +70,7 @@ export function RoleChip({
   ) : (
     <>
       <Icon size={12} className="shrink-0" />
-      <span>{emptyLabel ?? `+ ${ROLE_LABEL[kind]} eintragen`}</span>
+      <span>{emptyLabel ?? `+ `}</span>
     </>
   );
 

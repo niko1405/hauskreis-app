@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/layout/app-shell';
 import { RequireAdmin } from '@/components/layout/require-admin';
 import { BirthdayGiftAdmin } from '@/features/admin/birthday-gift-admin';
+import { GuideCard } from '@/features/admin/guide-card';
 import { HostWeightsAdmin } from '@/features/admin/host-weights-admin';
 import { MaintenanceAdmin } from '@/features/admin/maintenance-admin';
 import { MarkAdminSeen } from '@/features/admin/mark-admin-seen';
@@ -15,6 +16,7 @@ export default function AdminPage() {
         subtitle="Verwalte hier deine Hauskreis-Gruppe."
       />
       <div className="space-y-6 px-5">
+        <GuideCard />
         <PeopleAdmin />
         {/* Orte stehen im Archiv: sie brauchen keine Admin-Rechte mehr, und
             dort liegt schon alles andere, was die Gruppe gesammelt hat. Nur
