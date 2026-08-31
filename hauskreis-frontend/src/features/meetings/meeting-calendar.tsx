@@ -19,9 +19,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { IconButton } from '@/components/ui/button';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
-import { AttendanceToggle } from '@/components/domain/attendance-toggle';
-import { useAttendanceAnswer } from '@/components/domain/use-attendance-answer';
-import { useBirthdays, useMe, useMeetingList } from '@/lib/api/hooks';
+import { useBirthdays, useMeetingList } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import {
   addDays,
@@ -38,7 +36,7 @@ import {
   toDay,
   today,
 } from '@/lib/date';
-import { isMeetingPast, meetingHeadline } from '@/lib/meeting';
+import { meetingHeadline } from '@/lib/meeting';
 import type { BirthdayOccasion, MeetingListItem } from '@/lib/api/types';
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
@@ -245,19 +243,18 @@ export function MeetingCalendar() {
 }
 
 /**
- * Eine Zeile der Monatsliste. Dieselbe Antwort wie in der Terminliste, nur
- * schmaler — die drei Ansichten zeigen dieselben Termine, also darf die Frage
- * nicht davon abhängen, welche man gerade offen hat.
+ * Eine Zeile der Monatsliste.
+ *
+ * Hier stand einmal derselbe Zusage-Umschalter wie in der Terminliste. Er ist
+ * weg: Geantwortet wird seit dem Antwort-Balken nur noch am Termin, und drei
+ * Fassungen derselben Frage waren zwei zu viel.
+ *
+ * Auch **keine Teilnehmerzahl**, anders als auf der Terminkarte: Diese Zeile
+ * ist schon drei Zeilen hoch und beantwortet „was ist wann", nicht „mit wie
+ * vielen".
  */
 function MonthRow({ meeting }: { meeting: MeetingListItem }) {
-  const { me } = useMe();
-  // Wie in der Terminliste: Ein zweiter Tipp schickt hier `UNKNOWN`, und der
-  // Hook fragt vorher nach, wenn dadurch eine Rolle frei würde.
-  const attendance = useAttendanceAnswer(meeting);
-
   const cancelled = meeting.status === 'CANCELLED';
-  const myStatus =
-    meeting.attendances.find((a) => a.personId === me?.id)?.status ?? 'UNKNOWN';
 
   return (
     <li>
@@ -286,10 +283,6 @@ function MonthRow({ meeting }: { meeting: MeetingListItem }) {
               : (meeting.location?.name ?? 'Ort noch offen')}
           </span>
         </span>
-
-        {me && !cancelled && !isMeetingPast(meeting) && (
-          <AttendanceToggle status={myStatus} onAnswer={attendance.answer} />
-        )}
       </Link>
     </li>
   );

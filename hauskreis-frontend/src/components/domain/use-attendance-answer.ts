@@ -17,11 +17,15 @@
  * er bräuchte ein zusätzliches Feld an der API, damit der Server wüsste, was
  * gemeint war.
  *
- * **Warum als Hook und nicht in der Karte.** Ein `UNKNOWN` kann an drei Stellen
- * entstehen: in der Antwort-Karte auf der Terminseite und über den kompakten
- * Umschalter in Terminliste und Kalender (dort schickt ein zweiter Tipp auf den
- * gewählten Knopf `UNKNOWN`). Eine davon auszulassen hieße, dass dieselbe Geste
- * je nach Bildschirm etwas anderes tut.
+ * **Warum als Hook und nicht im Balken.** Ein `UNKNOWN` konnte an drei Stellen
+ * entstehen: am Termin und über den kompakten Umschalter in Terminliste und
+ * Kalender. Die beiden Umschalter sind weg — geantwortet wird nur noch am
+ * Termin (`answer-bar.tsx`), und damit gibt es die Geste genau einmal.
+ *
+ * Der Hook bleibt trotzdem einer: Die Rückfrage ist eine Regel über die Daten
+ * („eine Rolle ist die Aussage: ich bin da und mache das") und nicht über einen
+ * Bildschirm. Sie in den Balken zu schreiben hieße, sie beim nächsten zweiten
+ * Ort wieder herauszuholen.
  *
  * Gefragt wird **nur, wenn wirklich etwas dranhängt**. Die Rollen stehen in
  * jeder Termin-Antwort, es braucht also keine zweite Abfrage — und bei
@@ -75,9 +79,18 @@ export function useAttendanceAnswer(meeting: { id: string } & RolesAtMeeting) {
   const me = useMe();
   const myId = me.me?.id;
 
+  /**
+   * Antwortet — und sagt, ob es dazu gekommen ist.
+   *
+   * Der Rückgabewert ist für den Antwort-Balken am Termin: Ein Druck auf eine
+   * Antwort klappt ihn auf, damit man gleich eine Verspätung dazuschreiben
+   * kann. Wer die Rollen-Rückfrage abbricht, hat aber nichts geantwortet — ein
+   * Feld für die Notiz zu einer nicht gegebenen Antwort wäre die falsche
+   * Frage. Die übrigen Aufrufer sehen davon nichts.
+   */
   const answer = useCallback(
-    async (status: AttendanceStatus) => {
-      if (!myId) return;
+    async (status: AttendanceStatus): Promise<boolean> => {
+      if (!myId) return false;
 
       if (status === 'UNKNOWN') {
         const roles = rolesOf(meeting, myId);
@@ -88,11 +101,12 @@ export function useAttendanceAnswer(meeting: { id: string } & RolesAtMeeting) {
             body: `${join(roles).replace(/^./, (c) => c.toUpperCase())}. Auf „Weiß noch nicht“ zu gehen gibt ${roles.length === 1 ? 'die Rolle' : 'diese Rollen'} wieder frei.`,
             confirmLabel: 'Weiß noch nicht',
           });
-          if (!ok) return;
+          if (!ok) return false;
         }
       }
 
       setAttendance.mutate({ personId: myId, status });
+      return true;
     },
     [confirm, meeting, myId, setAttendance],
   );

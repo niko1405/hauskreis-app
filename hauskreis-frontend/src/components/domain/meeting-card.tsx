@@ -7,7 +7,6 @@
 import { MapPin, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { useMe } from '@/lib/api/hooks';
 import { PRESSABLE } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import { formatDay, formatDayRange, formatRelativeDay } from '@/lib/date';
@@ -17,8 +16,6 @@ import {
   meetingHeadline,
 } from '@/lib/meeting';
 import type { MeetingListItem } from '@/lib/api/types';
-import { AttendanceToggle } from './attendance-toggle';
-import { useAttendanceAnswer } from './use-attendance-answer';
 import { RoleChip } from './role-badge';
 
 export function MeetingCard({
@@ -28,13 +25,6 @@ export function MeetingCard({
   meeting: MeetingListItem;
   onPrefetch?: (meetingId: string) => void;
 }) {
-  const { me } = useMe();
-  // Nicht `useSetAttendance` direkt: Ein zweiter Tipp auf den gewählten Knopf
-  // schickt hier `UNKNOWN`, und wer an dem Abend eingeteilt ist, soll das nicht
-  // im Vorbeiscrollen tun. Die Rückfrage steckt im Hook, damit dieselbe Geste
-  // auf allen drei Bildschirmen dasselbe tut.
-  const attendance = useAttendanceAnswer(meeting);
-
   const cancelled = meeting.status === 'CANCELLED';
   const past = isMeetingPast(meeting);
   // Wer zugesagt hat, sonst niemand: „weiß noch nicht" ist keine Zusage, und
@@ -46,11 +36,6 @@ export function MeetingCard({
   ).length;
   const topicPeople = meeting.topicResponsibles.map((r) => r.person);
   const isWorship = meeting.type === 'LOBPREIS_GEBET';
-
-  const myStatus =
-    meeting.attendances.find((a) => a.personId === me?.id)?.status ?? 'UNKNOWN';
-  // An einem vergangenen oder abgesagten Abend gibt es nichts mehr zuzusagen.
-  const answerable = me !== undefined && !past && !cancelled;
 
   return (
     <Link
@@ -95,12 +80,6 @@ export function MeetingCard({
               {/* Ein Termin ohne Ort ist kein Fehler — z. B. draußen im Park. */}
               {meeting.location?.name ?? 'Ort noch offen'}
             </span>
-            {attending > 0 && (
-              <span className="flex items-center gap-1">
-                <Users size={12} className="text-stone-400" />
-                {attending} dabei
-              </span>
-            )}
             {meeting.type !== 'STANDARD' && (
               <span className="text-stone-400">
                 {MEETING_TYPE_LABEL[meeting.type]}
@@ -109,11 +88,25 @@ export function MeetingCard({
           </div>
         </div>
 
-        {/* Hier stand der Gastgeber-Avatar — und damit doppelt, was in der
-            Fußzeile ohnehin als Rollen-Chip steht. Der Platz gehört jetzt der
-            Frage, die man beim Durchgehen der Liste wirklich hat. */}
-        {answerable && (
-          <AttendanceToggle status={myStatus} onAnswer={attendance.answer} />
+        {/* Hier stand erst der Gastgeber-Avatar, dann der Zusage-Umschalter.
+            Beide sind weg: Der Avatar stand doppelt (unten als Rollen-Chip),
+            und geantwortet wird seit dem Antwort-Balken nur noch am Termin —
+            drei Fassungen derselben Frage waren zwei zu viel.
+
+            Was bleibt, ist die Zahl, die vorher klein zwischen Ort und
+            Terminart stand und dort unterging. Sie zählt **nur die Zusagen**;
+            „geplant für" auf der Detailseite meint bewusst etwas anderes
+            (Zusagen plus Unentschiedene, die Menge, mit der der Server
+            rechnet). Zwei Zahlen mit demselben Wort wären genau der Fehler,
+            den die Detailseite einmal hatte.
+
+            Anders als der Umschalter steht sie auch an vergangenen und
+            abgesagten Abenden: „wer war da" ist dort die bessere Frage. */}
+        {attending > 0 && (
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-canvas px-2.5 py-1 text-xs font-bold text-stone-600">
+            <Users size={13} className="text-terracotta-500" />
+            {attending} dabei
+          </span>
         )}
       </div>
 
