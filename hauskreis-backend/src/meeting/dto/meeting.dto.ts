@@ -27,6 +27,9 @@ const slotFields = {
   hasTestimonySlot: z.boolean().optional(),
   /// Zusammenfassung und Actionstep ohne Thema. Schließt `hasTopicSlot` aus.
   hasNotesSlot: z.boolean().optional(),
+  /// Wofür ihr an dem Abend beten wollt. Als einziger überall voreingestellt
+  /// an, und der einzige, der nichts ausschließt.
+  hasPrayerSlot: z.boolean().optional(),
 };
 
 /**
@@ -133,22 +136,44 @@ export const setActionstepDoneSchema = z.object({
  * eigenem Speichern-Knopf machten daraus drei Entscheidungen, von denen man die
  * letzte vergisst.
  */
-export const updateMeetingScheduleSchema = z.object({
-  /// 0 = Sonntag … 6 = Samstag, dieselbe Zählung wie `Date.getUTCDay()`.
-  weekday: z.coerce.number().int().min(0).max(6),
-  /// Die Uhrzeit neuer Abende, `"18:00"`. Ändert keinen bestehenden Termin.
-  startTime: wallClockIn,
-  /// Die Zone, in der diese Uhrzeit gilt — und in der „heute" gezählt wird.
-  ///
-  /// Geprüft gegen die Liste, die Node ohnehin mitbringt: eine handgepflegte
-  /// veraltete, und ein freies Textfeld ließe `Europe/Kölln` durch, woran
-  /// später jede Datumsrechnung stumm scheiterte.
-  timeZone: z
-    .string()
-    .refine((zone) => Intl.supportedValuesOf('timeZone').includes(zone), {
-      message: 'Diese Zeitzone kenne ich nicht',
-    }),
-});
+export const updateMeetingScheduleSchema = z
+  .object({
+    /// 0 = Sonntag … 6 = Samstag, dieselbe Zählung wie `Date.getUTCDay()`.
+    weekday: z.coerce.number().int().min(0).max(6).optional(),
+    /// Die Uhrzeit neuer Abende, `"18:00"`. Ändert keinen bestehenden Termin.
+    startTime: wallClockIn.optional(),
+    /// Die Zone, in der diese Uhrzeit gilt — und in der „heute" gezählt wird.
+    ///
+    /// Geprüft gegen die Liste, die Node ohnehin mitbringt: eine handgepflegte
+    /// veraltete, und ein freies Textfeld ließe `Europe/Kölln` durch, woran
+    /// später jede Datumsrechnung stumm scheiterte.
+    timeZone: z
+      .string()
+      .refine((zone) => Intl.supportedValuesOf('timeZone').includes(zone), {
+        message: 'Diese Zeitzone kenne ich nicht',
+      })
+      .optional(),
+    /// Ob der Vorsatz der letzten Woche auf dem Startbildschirm steht.
+    ///
+    /// **Gehört nicht zum Satz darüber** und kommt deshalb allein: Er ist keine
+    /// Aussage darüber, wann ihr euch trefft, sondern darüber, was danach
+    /// stehen bleibt. Er steht nur deshalb in derselben Zeile, weil „die Woche"
+    /// die zwischen zwei Terminen ist.
+    weeklyActionstep: z.coerce.boolean().optional(),
+  })
+  .refine(
+    (dto) =>
+      [dto.weekday, dto.startTime, dto.timeZone].every(
+        (value) => value === undefined,
+      ) ||
+      [dto.weekday, dto.startTime, dto.timeZone].every(
+        (value) => value !== undefined,
+      ),
+    {
+      message:
+        'Wochentag, Uhrzeit und Zeitzone gehören zusammen — schick sie gemeinsam',
+    },
+  );
 
 export const listMeetingsQuerySchema = paginationSchema.extend({
   /// 'upcoming' (default) hides past meetings; 'past' powers the archive view.

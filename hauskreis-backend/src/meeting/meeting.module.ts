@@ -6,6 +6,8 @@ import { MeetingScheduleConfigService } from './meeting-schedule-config.service'
 import { HostReminderService } from './host-reminder.service';
 import { ActionstepReminderService } from './actionstep-reminder.service';
 import { TestimonyReminderService } from './testimony-reminder.service';
+import { MeetingTodayService } from './meeting-today.service';
+import { NotesReminderService } from './notes-reminder.service';
 import { MeetingCancellationService } from './meeting-cancellation.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { RoleReleaseService } from './role-release.service';
@@ -38,6 +40,8 @@ import { TopicLinkModule } from '../topic/topic-link.module';
     HostReminderService,
     ActionstepReminderService,
     TestimonyReminderService,
+    MeetingTodayService,
+    NotesReminderService,
     MeetingNotificationService,
     MeetingCancellationService,
     RoleReleaseService,
@@ -49,6 +53,9 @@ import { TopicLinkModule } from '../topic/topic-link.module';
     HostReminderService,
     ActionstepReminderService,
     TestimonyReminderService,
+    // Für den Wartungs-Bildschirm, wie die anderen Läufe: von Hand anstoßbar.
+    MeetingTodayService,
+    NotesReminderService,
     // For AbsenceModule: a holiday produces ordinary drop-outs, and the host
     // should hear about them exactly as about a manual cancellation.
     MeetingNotificationService,

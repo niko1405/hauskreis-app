@@ -25,6 +25,15 @@
  * eigenem Hintergrund — eine zweite Fläche über dem Foto, und damit der zweite
  * Grund für den Overlay-Eindruck.
  *
+ * **Und ganz oben steht auch links nichts.** Über dem Kopfbild trugen Bild,
+ * Name, Gruppe-Knopf und Glocke gemeinsam auf — vier Dinge über einem Foto, das
+ * selbst schon sagt, wo man ist. Die Identität blendet deshalb mit dem Balken
+ * ein: Dort liegt kein Bild darunter, das sie verdecken könnte, und dort ist sie
+ * das Einzige, was den Balken einer Seite zuordnet.
+ *
+ * Ausgeblendet und nicht entfernt — der Block trägt `flex-1` und hält die
+ * beiden Knöpfe rechts. Nähme man ihn heraus, sprängen sie beim Umschalten.
+ *
  * **`sticky` und nicht `fixed`.** Die App ist ab `md` eine zentrierte Spalte
  * mit Seitenleiste; `fixed` müsste diese Geometrie ein zweites Mal nachbauen.
  * Die negative Untermarge (`header-inset`) nimmt ihr die Höhe im Fluss, sodass
@@ -46,16 +55,6 @@ import { GroupAvatar } from './group-avatar';
 import { NotificationBell } from './notification-bell';
 import { NotificationInbox } from './notification-inbox';
 import { useHasSmartHeader, useHeaderScroll } from './use-header-scroll';
-
-/**
- * Der Schatten unter dem Namen.
- *
- * Der erste `text-shadow` im Projekt, und er hat einen Anlass: Hier steht zum
- * ersten Mal Text **ohne eigene Fläche** über einem beliebigen Foto. Der
- * Schleier trägt das Meiste; das hier ist die Rückversicherung für ein helles
- * Bild, auf dem er allein nicht reicht.
- */
-const OVER_PHOTO = '[text-shadow:0_1px_3px_rgb(0_0_0/0.45)]';
 
 export function SmartHeader() {
   const show = useHasSmartHeader();
@@ -82,22 +81,17 @@ export function SmartHeader() {
         )}
       >
         <div className="h-header flex items-end gap-3 px-4 pb-2.5">
-          {/* Identität, kein Ziel. Der Ring hält das Bild von einem hellen
-              Foto ab, in das es sonst ausliefe. */}
-          <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <GroupAvatar
-              size="sm"
-              className={cn(
-                'ring-1',
-                atTop ? 'ring-white/30' : 'ring-white/25',
-              )}
-            />
-            <span
-              className={cn(
-                'min-w-0 flex-1 truncate text-sm font-bold text-white',
-                atTop && OVER_PHOTO,
-              )}
-            >
+          {/* Identität, kein Ziel — und erst auf dem Balken. Der Ring hält das
+              Bild von einem hellen Untergrund ab, in den es sonst ausliefe. */}
+          <div
+            aria-hidden={atTop}
+            className={cn(
+              'flex min-w-0 flex-1 items-center gap-2.5 transition-opacity duration-200',
+              atTop && 'pointer-events-none opacity-0',
+            )}
+          >
+            <GroupAvatar size="sm" className="ring-1 ring-white/25" />
+            <span className="min-w-0 flex-1 truncate text-sm font-bold text-white">
               {hauskreis?.name ?? 'Hauskreis'}
             </span>
           </div>

@@ -65,6 +65,10 @@ export function viewerOf(
 const sessionMeetingSelect = {
   id: true,
   date: true,
+  // Ebenfalls für eine Grenze und nicht fürs Anzeigen: „vorbei" heißt den
+  // ganzen Zeitraum, und ohne dieses Feld hielte die Einheiten-Liste eine
+  // laufende Freizeit ab ihrem zweiten Tag für Vergangenheit.
+  endDate: true,
   // Nicht fürs Anzeigen, sondern für die Sichtbarkeitsgrenze: der Inhalt einer
   // Einheit wird frei, wenn der Abend anfängt — und der fängt an, wann die
   // Gruppe sich trifft, nicht um 18 Uhr.
@@ -178,6 +182,7 @@ type SessionRow = {
   meeting: {
     id: string;
     date: Date;
+    endDate: Date | null;
     startMinutes: number;
     status: MeetingStatus;
     title: string | null;
@@ -312,6 +317,7 @@ export function shapeSession(
       ? {
           id: session.meeting.id,
           date: session.meeting.date,
+          endDate: session.meeting.endDate,
           // Die Zahl wurde schon immer gelesen (sie trägt die
           // Sichtbarkeitsgrenze), ging aber nie hinaus. Die Themenseite braucht
           // sie: dort hängt das Abhaken des Actionsteps an derselben Uhrzeit wie

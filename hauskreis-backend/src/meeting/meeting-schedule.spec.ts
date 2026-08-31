@@ -4,6 +4,7 @@ import {
   isLastOfMonth,
   isPast,
   nextWeekdayAfter,
+  spanIsPast,
   toUtcDate,
   upcomingWeekdays,
 } from './meeting-schedule';
@@ -169,5 +170,53 @@ describe('isPast', () => {
     expect(isPast(abend, BERLIN, new Date('2026-08-11T22:30:00.000Z'))).toBe(
       true,
     );
+  });
+});
+
+/**
+ * „Vorbei" heißt den **ganzen** Zeitraum — dieselbe Aussage, die
+ * `finishedBefore` in den Listen-Abfragen längst macht. Die punktuellen
+ * Vergleiche lasen dagegen nur den Anfangstag und erklärten den zweiten Tag
+ * einer laufenden Freizeit zur Vergangenheit.
+ */
+describe('spanIsPast', () => {
+  const freizeit = {
+    date: new Date('2026-08-14T00:00:00.000Z'),
+    endDate: new Date('2026-08-16T00:00:00.000Z'),
+  };
+
+  it('zählt einen mehrtägigen Termin bis zu seinem letzten Tag', () => {
+    // Samstag, mittendrin.
+    expect(
+      spanIsPast(freizeit, BERLIN, new Date('2026-08-15T10:00:00.000Z')),
+    ).toBe(false);
+    // Sonntag ist der letzte Tag und zählt noch dazu.
+    expect(
+      spanIsPast(freizeit, BERLIN, new Date('2026-08-16T18:00:00.000Z')),
+    ).toBe(false);
+    // Montag.
+    expect(
+      spanIsPast(freizeit, BERLIN, new Date('2026-08-17T10:00:00.000Z')),
+    ).toBe(true);
+  });
+
+  it('verhält sich bei einem eintägigen wie isPast', () => {
+    const abend = { date: new Date('2026-08-11T00:00:00.000Z') };
+    const jetzt = new Date('2026-08-11T20:00:00.000Z');
+
+    expect(spanIsPast(abend, BERLIN, jetzt)).toBe(
+      isPast(abend.date, BERLIN, jetzt),
+    );
+  });
+
+  /** `endDate: null` ist die Schreibweise aus der Datenbank, nicht „fehlt". */
+  it('nimmt ein ausdrückliches null wie einen eintägigen Termin', () => {
+    expect(
+      spanIsPast(
+        { date: new Date('2026-08-11T00:00:00.000Z'), endDate: null },
+        BERLIN,
+        new Date('2026-08-12T10:00:00.000Z'),
+      ),
+    ).toBe(true);
   });
 });

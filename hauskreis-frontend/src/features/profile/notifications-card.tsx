@@ -1,38 +1,31 @@
 'use client';
 
 /**
- * Benachrichtigungen: erst das Gerät anmelden, dann je Art einstellen, ob und
- * wie früh erinnert wird.
+ * Benachrichtigungen im Profil — das Gerät und der Weg zu den Präferenzen.
  *
- * Die Zeitplanung ist je Art anders aufgebaut (`schedule.kind`) — Vorlauftage,
- * fester Wochentag oder gar nichts, weil sie an ein Ereignis hängt. Die Spec
- * hat dafür zwar eine Union, aber keinen `discriminator`; unterschieden wird
- * hier von Hand.
+ * **Was hier steht, stellt man einmal ein.** Ob dieses Gerät überhaupt
+ * Nachrichten bekommt, und ob die Zustellung funktioniert. Beides ist eine
+ * Frage an das Telefon in der Hand und nicht an den Hauskreis — und beides
+ * beantwortet man einmal und danach nie wieder.
+ *
+ * **Was man nachschlägt, steht auf einem eigenen Bildschirm.** Die zwanzig
+ * Arten standen hier als eine ungegliederte Liste, mitten zwischen
+ * Abwesenheiten und Konto. Zwanzig Schalter untereinander sind keine Liste
+ * mehr, sondern eine Wand: Man findet den einen nicht, den man sucht, und
+ * scrollt an allem anderen vorbei. Sie liegen jetzt unter
+ * `/benachrichtigungen`, nach Bereichen sortiert und durchsuchbar.
  */
-import { BellOff, BellRing, Send } from 'lucide-react';
+import { Bell, BellOff, BellRing, ChevronRight, Send } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { Select } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import {
   useNotificationSettings,
   useSendTestNotification,
-  useUpdateNotificationSetting,
 } from '@/lib/api/hooks';
 import { usePushSetup } from '@/lib/push/use-push-setup';
-import { cn } from '@/lib/cn';
-import type { NotificationSetting } from '@/lib/api/types';
-
-const WEEKDAYS = [
-  'Sonntag',
-  'Montag',
-  'Dienstag',
-  'Mittwoch',
-  'Donnerstag',
-  'Freitag',
-  'Samstag',
-];
 
 const BLOCKER_TEXT: Record<string, string> = {
   'ios-not-installed':
@@ -49,6 +42,9 @@ export function NotificationsCard() {
   const settings = useNotificationSettings();
   const test = useSendTestNotification();
   const toast = useToast();
+
+  const alle = settings.data ?? [];
+  const an = alle.filter((setting) => setting.enabled).length;
 
   return (
     <section>
@@ -89,15 +85,26 @@ export function NotificationsCard() {
           </Button>
         )}
 
-        {settings.isLoading && <Skeleton className="h-24 w-full" />}
-
-        <ul className="space-y-4">
-          {(settings.data ?? []).map((setting) => (
-            <li key={setting.type}>
-              <SettingRow setting={setting} />
-            </li>
-          ))}
-        </ul>
+        {/* Der Weg zur Liste, nicht die Liste. Die Zahl darunter ist der Grund,
+            warum man überhaupt hinsieht: Sie beantwortet „habe ich eigentlich
+            etwas abgeschaltet?", ohne dass man dafür scrollen muss. */}
+        <Link
+          href="/benachrichtigungen"
+          className="flex items-center justify-between gap-3 border-t border-line pt-4 transition-colors hover:text-terracotta-500"
+        >
+          <span className="shrink-0 text-stone-400">
+            <Bell size={16} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-stone-800">Präferenzen</p>
+            <p className="text-[11px] text-stone-400">
+              {settings.isLoading || alle.length === 0
+                ? 'Welche Nachrichten du bekommst — nach Bereichen sortiert'
+                : `${an} von ${alle.length} Arten sind an`}
+            </p>
+          </div>
+          <ChevronRight size={16} className="shrink-0 text-stone-400" />
+        </Link>
 
         {push.subscribedHere && (
           <Button
@@ -123,135 +130,4 @@ export function NotificationsCard() {
       </Card>
     </section>
   );
-}
-
-function SettingRow({ setting }: { setting: NotificationSetting }) {
-  const update = useUpdateNotificationSetting();
-
-  const change = (input: Parameters<typeof update.mutate>[0]['input']) =>
-    update.mutate({ type: setting.type, input });
-
-  return (
-    <div className="space-y-2">
-      <label className="flex items-start justify-between gap-3">
-        <span className="min-w-0">
-          <span className="block text-sm font-bold text-stone-800">
-            {setting.label}
-          </span>
-          <span className="block text-[11px] leading-relaxed text-stone-400">
-            {setting.description}
-          </span>
-        </span>
-        <input
-          type="checkbox"
-          aria-label={setting.label}
-          checked={setting.enabled}
-          onChange={(event) => change({ enabled: event.target.checked })}
-          className="mt-1 h-5 w-5 shrink-0 rounded border-line-strong text-terracotta-500 focus:ring-terracotta-500"
-        />
-      </label>
-
-      {setting.enabled && setting.schedule.kind === 'LEAD_TIME' && (
-        <Select
-          aria-label={`Vorlauf für ${setting.label}`}
-          value={String(setting.leadDays ?? setting.schedule.defaultLeadDays)}
-          onChange={(event) => change({ leadDays: Number(event.target.value) })}
-          className="text-xs"
-        >
-          {leadDayOptions(
-            setting.schedule.minLeadDays,
-            setting.schedule.maxLeadDays,
-          ).map((days) => (
-            <option key={days} value={days}>
-              {days === 0
-                ? 'am selben Tag'
-                : days === 1
-                  ? '1 Tag vorher'
-                  : `${days} Tage vorher`}
-            </option>
-          ))}
-        </Select>
-      )}
-
-      {setting.enabled && setting.schedule.kind === 'WEEKLY' && (
-        <WeekdayPicker
-          label={setting.label}
-          chosen={setting.weekdays}
-          onChange={(weekdays) => change({ weekdays })}
-        />
-      )}
-      {/* `kind === 'EVENT'` hat nichts einzustellen — sie kommt, wenn sie kommt. */}
-    </div>
-  );
-}
-
-/**
- * Mehrere Tage statt einem.
- *
- * Ein Actionstep verträgt mehr als eine Nachfrage pro Woche — einmal zur
- * Wochenmitte und einmal kurz vor dem nächsten Abend sind zwei verschiedene
- * Erinnerungen, nicht dieselbe zweimal. Deshalb Schalter statt Auswahlliste:
- * bei sieben kurzen Möglichkeiten sieht man so auf einen Blick, was gilt.
- *
- * Den letzten Tag abzuwählen ist erlaubt und heißt „wieder wie voreingestellt";
- * wer gar nichts hören will, schaltet die Art selbst aus.
- */
-function WeekdayPicker({
-  label,
-  chosen,
-  onChange,
-}: {
-  label: string;
-  chosen: number[];
-  onChange: (weekdays: number[]) => void;
-}) {
-  const toggle = (day: number) => {
-    const next = chosen.includes(day)
-      ? chosen.filter((entry) => entry !== day)
-      : [...chosen, day];
-
-    onChange(next.toSorted((a, b) => a - b));
-  };
-
-  return (
-    <div>
-      <div
-        className="flex flex-wrap gap-1.5"
-        role="group"
-        aria-label={`Wochentage für ${label}`}
-      >
-        {WEEKDAYS.map((day, index) => {
-          const active = chosen.includes(index);
-
-          return (
-            <button
-              key={day}
-              type="button"
-              aria-pressed={active}
-              onClick={() => toggle(index)}
-              className={cn(
-                'rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors',
-                active
-                  ? 'border-terracotta-500 bg-terracotta-500 text-white'
-                  : 'border-line bg-card text-stone-500 hover:border-line-strong',
-              )}
-            >
-              {day.slice(0, 2)}
-            </button>
-          );
-        })}
-      </div>
-      <p className="mt-1.5 text-[11px] text-stone-400">
-        {chosen.length === 0
-          ? 'Kein Tag gewählt — es gilt die Voreinstellung.'
-          : `Jeden ${chosen.map((day) => WEEKDAYS[day]).join(' und ')}`}
-      </p>
-    </div>
-  );
-}
-
-function leadDayOptions(min: number, max: number): number[] {
-  const options: number[] = [];
-  for (let day = min; day <= max; day += 1) options.push(day);
-  return options;
 }

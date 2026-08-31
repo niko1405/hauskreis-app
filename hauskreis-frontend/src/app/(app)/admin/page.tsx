@@ -3,11 +3,13 @@ import { RequireAdmin } from '@/components/layout/require-admin';
 import { BirthdayGiftAdmin } from '@/features/admin/birthday-gift-admin';
 import { HostWeightsAdmin } from '@/features/admin/host-weights-admin';
 import { MaintenanceAdmin } from '@/features/admin/maintenance-admin';
+import { MarkAdminSeen } from '@/features/admin/mark-admin-seen';
 import { PeopleAdmin } from '@/features/admin/people-admin';
 
 export default function AdminPage() {
   return (
     <RequireAdmin>
+      <MarkAdminSeen />
       <PageHeader
         title="Verwaltung"
         subtitle="Verwalte hier deine Hauskreis-Gruppe."

@@ -4,6 +4,8 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { AssignmentService } from './assignment.service';
 import type { PrayerBuddyService } from '../prayer-buddy/prayer-buddy.service';
 import { withClock } from '../meeting/group-clock.testing';
+import { withFeatures } from '../hauskreis/group-features.testing';
+import type { GroupFeatures } from '../hauskreis/group-features.service';
 
 /** Die Zone der Gruppe — in den Tests immer dieselbe. */
 const BERLIN = 'Europe/Berlin';
@@ -79,6 +81,10 @@ const pastWithNotes = {
 function setup(
   options: {
     meeting?: typeof nextMeeting | null;
+    /** Die kommenden Abende, wenn es auf mehr als einen ankommt. */
+    meetings?: (typeof nextMeeting)[];
+    /** Die vergangenen Abende, jüngster zuerst. */
+    lastMeetings?: unknown[];
     actionstep?: {
       id: string;
       date: Date;
@@ -93,19 +99,32 @@ function setup(
     } | null;
     roles?: unknown[];
     peopleCount?: number;
+    /** Womit die Gruppe arbeitet — voreingestellt mit allem. */
+    features?: Partial<GroupFeatures>;
   } = {},
 ) {
-  // Two calls to meeting.findFirst: the next evening, then the last actionstep.
-  const findFirst = jest
+  // Zwei Aufrufe von `meeting.findMany`: erst die nächsten beiden Abende
+  // (läuft einer, steht er vorn), dann die vergangenen für den Actionstep.
+  const kommende =
+    options.meetings ??
+    (options.meeting === undefined
+      ? [nextMeeting]
+      : options.meeting
+        ? [options.meeting]
+        : []);
+
+  const vergangene =
+    options.lastMeetings ??
+    (options.actionstep === undefined
+      ? [pastWithActionstep]
+      : options.actionstep
+        ? [options.actionstep]
+        : []);
+
+  const findMany = jest
     .fn()
-    .mockResolvedValueOnce(
-      options.meeting === undefined ? nextMeeting : options.meeting,
-    )
-    .mockResolvedValueOnce(
-      options.actionstep === undefined
-        ? pastWithActionstep
-        : options.actionstep,
-    );
+    .mockResolvedValueOnce(kommende)
+    .mockResolvedValueOnce(vergangene);
 
   const findAssignments = jest.fn().mockResolvedValue(options.roles ?? []);
   const findCurrent = jest.fn().mockResolvedValue(
@@ -124,29 +143,32 @@ function setup(
       : options.buddies,
   );
 
-  const service = withClock(
-    new DashboardService(
-      {
-        meeting: { findFirst },
-        person: {
-          count: jest.fn().mockResolvedValue(options.peopleCount ?? 9),
-        },
-      } as unknown as PrismaService,
-      { findAssignments } as unknown as AssignmentService,
-      { findCurrent } as unknown as PrayerBuddyService,
-      // Die Uhr kommt gleich über `withClock` — hier steht nur ihr Platz, damit
-      // die Reihenfolge stimmt.
-      undefined as unknown as GroupClockService,
-      // Nur für eine Zahl: ab wie vielen Tagen vorher ein Geburtstag als
-      // eigene Rolle gilt. Dieselbe Einstellung, die auch die Push-Nachricht
-      // auslöst — deshalb wird sie hier nachgeschlagen und nicht geraten.
-      {
-        resolve: jest.fn().mockResolvedValue({ enabled: true, leadDays: 14 }),
-      } as unknown as NotificationPreferenceService,
+  const service = withFeatures(
+    withClock(
+      new DashboardService(
+        {
+          meeting: { findMany },
+          person: {
+            count: jest.fn().mockResolvedValue(options.peopleCount ?? 9),
+          },
+        } as unknown as PrismaService,
+        { findAssignments } as unknown as AssignmentService,
+        { findCurrent } as unknown as PrayerBuddyService,
+        // Die Uhr kommt gleich über `withClock` — hier steht nur ihr Platz, damit
+        // die Reihenfolge stimmt.
+        undefined as unknown as GroupClockService,
+        // Nur für eine Zahl: ab wie vielen Tagen vorher ein Geburtstag als
+        // eigene Rolle gilt. Dieselbe Einstellung, die auch die Push-Nachricht
+        // auslöst — deshalb wird sie hier nachgeschlagen und nicht geraten.
+        {
+          resolve: jest.fn().mockResolvedValue({ enabled: true, leadDays: 14 }),
+        } as unknown as NotificationPreferenceService,
+      ),
     ),
+    options.features,
   );
 
-  return { service, findFirst, findAssignments };
+  return { service, findMany, findAssignments };
 }
 
 describe('DashboardService.build', () => {
@@ -339,19 +361,66 @@ describe('DashboardService.build', () => {
   });
 
   it('uses the same actionstep rule as the reminder', async () => {
-    const { service, findFirst } = setup();
+    const { service, findMany } = setup();
 
     await service.build('hk-1', NIKO, { now: NOW });
 
-    // Most recent past evening that has one — not simply the last evening.
-    const where = findFirst.mock.calls[1][0].where;
-    expect(where.date).toEqual({ lt: utc('2026-07-29') });
-    // Beide Quellen, wörtlich das Fragment aus `actionstep-source.ts`: die
-    // Einheit eines Themas und die Nachbereitung des Abends.
+    // Dieselbe Abfrage wie in `latestActionstep`: die letzten vergangenen
+    // Abende, jüngster zuerst — und dann entscheidet die Schleife. Vorher stand
+    // hier „der jüngste, **der einen hat**", und damit blieb der Vorsatz von
+    // vorletzter Woche über einen leeren Dienstag hinweg stehen.
+    const where = findMany.mock.calls[1][0].where;
     expect(where.OR).toEqual([
-      { topicSession: { actionstepText: { not: null } } },
-      { actionstepText: { not: null } },
+      { endDate: null, date: { lt: utc('2026-07-29') } },
+      { endDate: { lt: utc('2026-07-29') } },
     ]);
-    expect(findFirst.mock.calls[1][0].orderBy).toEqual({ date: 'desc' });
+    expect(findMany.mock.calls[1][0].orderBy).toEqual({ date: 'desc' });
+  });
+
+  /**
+   * Der laufende Abend steht oben, der nächste darunter. Zwei Fragen — „wo bin
+   * ich jetzt" und „was kommt" —, und vorher gab es eine Karte, die den
+   * laufenden Abend unter „Nächstes Treffen" führte.
+   */
+  it('trennt den laufenden Abend vom nächsten', async () => {
+    const laufend = {
+      ...nextMeeting,
+      id: 'm-heute',
+      date: utc('2026-07-29'),
+      // 8 Uhr morgens: um 12 Uhr Ortszeit läuft der Abend längst.
+      startMinutes: 480,
+    };
+    const { service } = setup({ meetings: [laufend, nextMeeting] });
+
+    const home = await service.build('hk-1', NIKO, {
+      now: new Date('2026-07-29T12:00:00.000Z'),
+    });
+
+    expect(home.currentMeeting?.id).toBe('m-heute');
+    expect(home.nextMeeting?.id).toBe('m1');
+  });
+
+  it('lässt „Aktueller Termin" leer, solange der Abend noch nicht anfing', async () => {
+    const { service } = setup();
+
+    const home = await service.build('hk-1', NIKO, { now: NOW });
+
+    expect(home.currentMeeting).toBeNull();
+    expect(home.nextMeeting?.id).toBe('m1');
+  });
+
+  /**
+   * Abgeschaltet heißt „gibt es hier nicht", und beide Karten fallen im
+   * Frontend an genau diesem `null` von selbst weg.
+   */
+  it('lässt Gebetsbuddys und Wochen-Actionstep weg, wenn sie aus sind', async () => {
+    const { service } = setup({
+      features: { prayerBuddies: false, weeklyActionstep: false },
+    });
+
+    const home = await service.build('hk-1', NIKO, { now: NOW });
+
+    expect(home.prayerBuddies).toBeNull();
+    expect(home.openActionstep).toBeNull();
   });
 });

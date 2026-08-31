@@ -25,6 +25,7 @@ import {
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { formatDayRange, formatRelativeDay } from '@/lib/date';
+import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { circleOf } from './circle';
 import type {
   PersonRef,
@@ -45,6 +46,33 @@ const SCOPE_EMPTY: Record<Scope, string> = {
 };
 
 export function PrayerScreen() {
+  const { hauskreis } = useHauskreis();
+
+  // Ohne Gebetsbuddys steht dieser Bildschirm nicht in der Leiste — aber ein
+  // Lesezeichen führt trotzdem hierher, und dort ist eine leere Runden-Liste
+  // eine Behauptung („noch nichts geplant") statt einer Auskunft.
+  if (hauskreis && !hauskreis.features.prayerBuddies) {
+    return <PrayerBuddiesOff />;
+  }
+
+  return <Rounds />;
+}
+
+function PrayerBuddiesOff() {
+  return (
+    <div>
+      <ScreenHeader screen="prayer" title="Gebet" />
+      <div className="px-5">
+        <EmptyState
+          title="Gebetsbuddys sind ausgeschaltet"
+          hint="Euer Hauskreis arbeitet gerade ohne feste Gebetspartner. Ein Admin kann sie in der Verwaltung wieder einschalten."
+        />
+      </div>
+    </div>
+  );
+}
+
+function Rounds() {
   const me = useMe();
   const current = useCurrentPrayerBuddies();
   const [scope, setScope] = useState<Scope>('upcoming');

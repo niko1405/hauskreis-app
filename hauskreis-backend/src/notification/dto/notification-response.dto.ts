@@ -2,6 +2,7 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import { isoDateTimeOut } from '../../common/dto/response';
 import { NotificationType } from '../../../generated/prisma/enums';
+import { NOTIFICATION_CATEGORIES } from '../notification-catalog';
 
 /**
  * Wie oft eine Benachrichtigung kommt — drei Formen, danach richtet sich, was
@@ -38,6 +39,12 @@ const scheduleSchema = z.discriminatedUnion('kind', [
  */
 export const notificationSettingSchema = z.object({
   type: z.enum(NotificationType),
+  /// Unter welcher Überschrift der Schalter steht — „Deine Rollen", „Termine",
+  /// „Nach dem Abend", „Gebet", „Geburtstage", „Gruppe & App".
+  ///
+  /// Kommt vom Server und nicht aus einer Liste im Frontend: Eine zweite
+  /// Aufzählung dort wäre die, die beim nächsten neuen Eintrag vergessen wird.
+  category: z.enum(NOTIFICATION_CATEGORIES),
   /// Überschrift in der Einstellungsliste.
   label: z.string(),
   /// Beantwortet „warum bekomme ich das", im Ton der App.

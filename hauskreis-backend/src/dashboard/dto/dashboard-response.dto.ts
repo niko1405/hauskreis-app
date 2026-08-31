@@ -35,6 +35,72 @@ export const assignmentSchema = z.object({
 });
 
 /**
+ * Ein Termin, wie ihn der Startbildschirm zeigt.
+ *
+ * Einmal beschrieben und zweimal benutzt — für den laufenden und den nächsten.
+ * Als der Abschnitt „Aktueller Termin" dazukam, war die Alternative, dieses
+ * Objekt abzuschreiben: zwei Fassungen desselben Termins, die beim nächsten
+ * neuen Feld auseinanderlaufen.
+ */
+const homeMeetingSchema = z.object({
+  id: z.uuid(),
+  /// Hier nur der Tag: der Dienst schneidet ihn selbst zu, anders als bei
+  /// `…/meetings`.
+  date: isoDateOut,
+  /// Wann es losgeht, `"19:30"` — dieselbe Schreibweise wie am Termin.
+  startTime: wallClockOut,
+  /// Gesetzt, wenn sich der Termin über mehrere Tage zieht.
+  endDate: isoDateOut.nullable(),
+  type: z.enum(MeetingType),
+  /// Nur die zwei, die der Startbildschirm braucht: er zeigt Rollen-Chips
+  /// für Thema und Musik, und ohne sie stünde an einem Geburtstagsabend
+  /// „Thema: noch niemand".
+  hasTopicSlot: z.boolean(),
+  hasSongSlot: z.boolean(),
+  hasTestimonySlot: z.boolean(),
+  title: z.string().nullable(),
+  /// Mit Position, damit „In Maps öffnen" ohne zweiten Aufruf geht.
+  /// `latitude`/`longitude` sind entweder beide gesetzt oder beide `null`.
+  location: z
+    .object({
+      id: z.uuid(),
+      name: z.string(),
+      latitude: z.number().nullable(),
+      longitude: z.number().nullable(),
+      address: z.string().nullable(),
+      /// Damit „kein Host nötig" nicht wie ein vergessener Host aussieht.
+      requiresHost: z.boolean(),
+    })
+    .nullable(),
+  host: personRefSchema.nullable(),
+  /// Wer an diesem Abend das Thema vorbereitet — die Zuteilung. Steht für
+  /// sich, weil sie schon dasteht, bevor jemand ein Thema gewählt hat: „Lena
+  /// ist dran" ist die Nachricht, auch wenn noch offen ist, womit.
+  ///
+  /// Flach, nicht `{ person }` wie im Termin-DTO: dort spiegelt die Hülle
+  /// die Verknüpfungstabelle, hier ist es eine eigens gebaute Ansicht.
+  topicResponsibles: z.array(personRefSchema),
+  /// Was gewählt wurde. `null` heißt entweder „noch nichts" oder „geht dich
+  /// vor dem Abend nichts an" — beides sieht von außen gleich aus, und das
+  /// ist gewollt.
+  topic: z
+    .object({
+      id: z.uuid(),
+      title: z.string().nullable(),
+    })
+    .nullable(),
+  /// Wer die Musik macht. Flach, nicht `{ person }` wie im Termin-DTO —
+  /// dort spiegelt die Hülle die Verknüpfungstabelle, hier ist es eine
+  /// eigens gebaute Ansicht und die Hülle wäre nur Ballast.
+  songLeaders: z.array(personRefSchema),
+  /// Wer sein Testimony erzählt. `null` heißt „noch niemand" — der Chip
+  /// lädt dann zum Eintragen ein, wie bei den anderen Rollen auch.
+  testimonyPerson: personRefSchema.nullable(),
+  /// Was *du* für diesen Abend geantwortet hast. Ohne Antwort `UNKNOWN`.
+  myAttendance: z.enum(AttendanceStatus),
+});
+
+/**
  * Der ganze Home-Screen in einer Antwort.
  *
  * Serverseitig zusammengesetzt statt aus vier Aufrufen: auf dem Handy sind die
@@ -42,69 +108,21 @@ export const assignmentSchema = z.object({
  * Backend ohnehin schon beantworten kann (CLAUDE.md §9).
  */
 export const homeScreenSchema = z.object({
+  /// Der Abend, an dem man **gerade steht** — ab seiner Treffpunktzeit und bis
+  /// sein letzter Tag um ist. `null` ist der Normalfall.
+  ///
+  /// Getrennt vom nächsten, weil es zwei Fragen sind: „wo bin ich jetzt" und
+  /// „was kommt". Vorher gab es nur eine Karte, und die zeigte den laufenden
+  /// Abend unter der Überschrift „Nächstes Treffen" — keine Auskunft mehr,
+  /// wenn man schon dort sitzt.
+  currentMeeting: homeMeetingSchema.nullable(),
   /// `null`, wenn nichts geplant ist — ein gültiger Zustand, kein Fehler.
-  nextMeeting: z
-    .object({
-      id: z.uuid(),
-      /// Hier nur der Tag: der Dienst schneidet ihn selbst zu, anders als bei
-      /// `…/meetings`.
-      date: isoDateOut,
-      /// Wann es losgeht, `"19:30"` — dieselbe Schreibweise wie am Termin.
-      startTime: wallClockOut,
-      /// Gesetzt, wenn sich der Termin über mehrere Tage zieht.
-      endDate: isoDateOut.nullable(),
-      type: z.enum(MeetingType),
-      /// Nur die zwei, die der Startbildschirm braucht: er zeigt Rollen-Chips
-      /// für Thema und Musik, und ohne sie stünde an einem Geburtstagsabend
-      /// „Thema: noch niemand".
-      hasTopicSlot: z.boolean(),
-      hasSongSlot: z.boolean(),
-      hasTestimonySlot: z.boolean(),
-      title: z.string().nullable(),
-      /// Mit Position, damit „In Maps öffnen" ohne zweiten Aufruf geht.
-      /// `latitude`/`longitude` sind entweder beide gesetzt oder beide `null`.
-      location: z
-        .object({
-          id: z.uuid(),
-          name: z.string(),
-          latitude: z.number().nullable(),
-          longitude: z.number().nullable(),
-          address: z.string().nullable(),
-          /// Damit „kein Host nötig" nicht wie ein vergessener Host aussieht.
-          requiresHost: z.boolean(),
-        })
-        .nullable(),
-      host: personRefSchema.nullable(),
-      /// Wer an diesem Abend das Thema vorbereitet — die Zuteilung. Steht für
-      /// sich, weil sie schon dasteht, bevor jemand ein Thema gewählt hat: „Lena
-      /// ist dran" ist die Nachricht, auch wenn noch offen ist, womit.
-      ///
-      /// Flach, nicht `{ person }` wie im Termin-DTO: dort spiegelt die Hülle
-      /// die Verknüpfungstabelle, hier ist es eine eigens gebaute Ansicht.
-      topicResponsibles: z.array(personRefSchema),
-      /// Was gewählt wurde. `null` heißt entweder „noch nichts" oder „geht dich
-      /// vor dem Abend nichts an" — beides sieht von außen gleich aus, und das
-      /// ist gewollt.
-      topic: z
-        .object({
-          id: z.uuid(),
-          title: z.string().nullable(),
-        })
-        .nullable(),
-      /// Wer die Musik macht. Flach, nicht `{ person }` wie im Termin-DTO —
-      /// dort spiegelt die Hülle die Verknüpfungstabelle, hier ist es eine
-      /// eigens gebaute Ansicht und die Hülle wäre nur Ballast.
-      songLeaders: z.array(personRefSchema),
-      /// Wer sein Testimony erzählt. `null` heißt „noch niemand" — der Chip
-      /// lädt dann zum Eintragen ein, wie bei den anderen Rollen auch.
-      testimonyPerson: personRefSchema.nullable(),
-      /// Was *du* für diesen Abend geantwortet hast. Ohne Antwort `UNKNOWN`.
-      myAttendance: z.enum(AttendanceStatus),
-    })
-    .nullable(),
+  nextMeeting: homeMeetingSchema.nullable(),
   /// Die eigenen Aufgaben der nächsten acht Wochen, früheste zuerst.
   myRoles: z.array(assignmentSchema),
-  /// Vom jüngsten vergangenen Abend, der einen hat.
+  /// Vom jüngsten vergangenen Abend. Ein leerer Abend beendet den Vorsatz von
+  /// davor; nur ein besonderer Termin ohne Actionstep wird übersprungen
+  /// (`latestActionstep`).
   openActionstep: z
     .object({
       text: z.string(),

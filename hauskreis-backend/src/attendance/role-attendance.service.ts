@@ -61,11 +61,11 @@ export class RoleAttendanceService {
       where: { id: meetingId },
       // Die Zone der Gruppe entscheidet, ob dieser Abend vorbei ist — nicht die
       // des Servers.
-      select: { hauskreisId: true, date: true, status: true },
+      select: { hauskreisId: true, date: true, endDate: true, status: true },
     });
 
     if (!meeting || meeting.status === MeetingStatus.CANCELLED) return 0;
-    if (await this.clock.isPast(meeting.hauskreisId, meeting.date)) return 0;
+    if (await this.clock.isPast(meeting.hauskreisId, meeting)) return 0;
 
     const ids = [...new Set(personIds)];
 

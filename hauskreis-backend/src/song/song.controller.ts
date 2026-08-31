@@ -11,7 +11,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { SongService } from './song.service';
-import { SongReminderService } from './song-reminder.service';
 import { PersonService } from '../person/person.service';
 import {
   CreateSongDto,
@@ -31,7 +30,6 @@ import {
   ApiZodResponse,
 } from '../common/http/api-response.decorator';
 import { SongPageResponseDto, SongResponseDto } from './dto/song-response.dto';
-import { ReminderRunResultResponseDto } from '../meeting/dto/meeting-response.dto';
 
 /** The group's growing song database, also the archive view (CLAUDE.md §8). */
 @Controller('hauskreise/:hauskreisId/songs')
@@ -39,19 +37,7 @@ export class SongController {
   constructor(
     private readonly songs: SongService,
     private readonly people: PersonService,
-    private readonly reminders: SongReminderService,
   ) {}
-
-  /** Manual trigger for the daily song reminders, scoped to this group. */
-  @Post('reminders')
-  @ApiZodResponse(ReminderRunResultResponseDto)
-  @HauskreisAdmin()
-  @HttpCode(HttpStatus.OK)
-  runReminders(@Param() params: HauskreisParamsDto) {
-    return this.reminders.sendDueReminders({
-      hauskreisId: params.hauskreisId,
-    });
-  }
 
   @Get()
   @ApiZodResponse(SongPageResponseDto, {

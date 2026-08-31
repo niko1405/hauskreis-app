@@ -32,6 +32,7 @@ import { ScreenHeader } from '@/components/layout/screen-header';
 import { ReleaseBanner } from '@/features/releases/release-banner';
 import { greetingOf } from './greeting';
 import { MyRoles } from './my-roles';
+import { OwnerWelcomeSheet } from './owner-welcome-sheet';
 import { PrayerBuddyCard } from './prayer-buddy-card';
 import type { HomeActionstep, HomeNextMeeting } from '@/lib/api/types';
 
@@ -56,7 +57,13 @@ export function HomeScreen() {
     );
   }
 
-  const { nextMeeting, myRoles, openActionstep, prayerBuddies } = home.data;
+  const {
+    currentMeeting,
+    nextMeeting,
+    myRoles,
+    openActionstep,
+    prayerBuddies,
+  } = home.data;
 
   // Wechselt täglich und passt zur Tageszeit. Die Personen-Id geht mit ein,
   // damit nicht alle neun am selben Tag denselben Satz lesen.
@@ -70,6 +77,10 @@ export function HomeScreen() {
 
   return (
     <div>
+      {/* Nur beim allerersten Start nach dem Gründen, und nur auf dem Gerät,
+          auf dem gegründet wurde. */}
+      <OwnerWelcomeSheet />
+
       <ScreenHeader screen="home" title={gruß.hallo} subtitle={gruß.zeile} />
 
       <div className="space-y-8 px-5">
@@ -83,8 +94,31 @@ export function HomeScreen() {
 
         <section>
           <SectionTitle>Deine Rollen</SectionTitle>
-          <MyRoles roles={myRoles} nextMeetingId={nextMeeting?.id ?? null} />
+          {/* Der Abend, um den es gerade geht: der laufende, sonst der
+              nächste. Ohne den Vorrang fiele die eigene Rolle **an dem Abend,
+              an dem man sitzt** aus dem Register „Nächstes" heraus und stünde
+              unter „Zukünftige" — genau verkehrt herum. */}
+          <MyRoles
+            roles={myRoles}
+            nextMeetingId={currentMeeting?.id ?? nextMeeting?.id ?? null}
+          />
         </section>
+
+        {/* Zwei Fragen und zwei Karten: „wo bin ich jetzt" und „was kommt".
+            Vorher gab es nur eine, und die zeigte den laufenden Abend unter der
+            Überschrift „Nächstes Treffen" — keine Auskunft mehr, wenn man schon
+            dort sitzt. Läuft nichts, bleibt alles wie bisher. */}
+        {currentMeeting && (
+          <section>
+            <SectionTitle>Aktueller Termin</SectionTitle>
+            {/* Grün wie das „Läuft"-Abzeichen am Termin und wie der abgehakte
+                Actionstep darüber: die Farbe von „gilt gerade". */}
+            <NextMeetingCard
+              meeting={currentMeeting}
+              className="border-music-line bg-music-bg/30"
+            />
+          </section>
+        )}
 
         <section>
           <SectionTitle
@@ -97,14 +131,20 @@ export function HomeScreen() {
               </Link>
             }
           >
-            Nächstes Treffen
+            {/* „Nächstes Treffen" hieß es, solange es nur eine Karte gab.
+                Unter „Aktueller Termin" liest sich „Nächster Termin" als das
+                Gegenstück — zwei Wörter für dieselbe Sache untereinander wären
+                eines zu viel. */}
+            Nächster Termin
           </SectionTitle>
           {nextMeeting ? (
             <NextMeetingCard meeting={nextMeeting} />
           ) : (
             <Card>
               <p className="text-sm text-stone-400 italic">
-                Gerade ist kein Termin geplant.
+                {currentMeeting
+                  ? 'Danach ist noch nichts geplant.'
+                  : 'Gerade ist kein Termin geplant.'}
               </p>
             </Card>
           )}
@@ -203,7 +243,14 @@ function OpenActionstepCard({ step }: { step: HomeActionstep }) {
   );
 }
 
-function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
+function NextMeetingCard({
+  meeting,
+  className,
+}: {
+  meeting: HomeNextMeeting;
+  /** Der laufende Abend bekommt hier seine grüne Tönung. */
+  className?: string;
+}) {
   const attendance = useSetAttendance(meeting.id);
   const me = useMe();
 
@@ -213,7 +260,7 @@ function NextMeetingCard({ meeting }: { meeting: HomeNextMeeting }) {
   };
 
   return (
-    <Card className="space-y-4">
+    <Card className={cn('space-y-4', className)}>
       {/* Die Uhrzeit steht nur hier — auf dieser einen Karte geht man auf einen
           Abend zu. In den Terminlisten liest man quer über Wochen, dort wäre sie
           an jeder Zeile Rauschen. Seit sich die Zeit einstellen lässt, ist

@@ -7,18 +7,18 @@
 import { MapPin, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { useMe, useSetAttendance } from '@/lib/api/hooks';
+import { useMe } from '@/lib/api/hooks';
 import { PRESSABLE } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
+import { formatDay, formatDayRange, formatRelativeDay } from '@/lib/date';
 import {
-  formatDay,
-  formatDayRange,
-  formatRelativeDay,
-  isPast,
-} from '@/lib/date';
-import { MEETING_TYPE_LABEL, meetingHeadline } from '@/lib/meeting';
+  MEETING_TYPE_LABEL,
+  isMeetingPast,
+  meetingHeadline,
+} from '@/lib/meeting';
 import type { MeetingListItem } from '@/lib/api/types';
 import { AttendanceToggle } from './attendance-toggle';
+import { useAttendanceAnswer } from './use-attendance-answer';
 import { RoleChip } from './role-badge';
 
 export function MeetingCard({
@@ -29,10 +29,14 @@ export function MeetingCard({
   onPrefetch?: (meetingId: string) => void;
 }) {
   const { me } = useMe();
-  const setAttendance = useSetAttendance(meeting.id);
+  // Nicht `useSetAttendance` direkt: Ein zweiter Tipp auf den gewählten Knopf
+  // schickt hier `UNKNOWN`, und wer an dem Abend eingeteilt ist, soll das nicht
+  // im Vorbeiscrollen tun. Die Rückfrage steckt im Hook, damit dieselbe Geste
+  // auf allen drei Bildschirmen dasselbe tut.
+  const attendance = useAttendanceAnswer(meeting);
 
   const cancelled = meeting.status === 'CANCELLED';
-  const past = isPast(meeting.date);
+  const past = isMeetingPast(meeting);
   // Wer zugesagt hat, sonst niemand: „weiß noch nicht" ist keine Zusage, und
   // wer gar keine Zeile hat, zählt als eben das. Dass hier dieselbe Menge
   // steht wie unter „Wer kommt" auf der Detailseite, sorgt der Server —
@@ -73,7 +77,7 @@ export function MeetingCard({
                 ? formatDayRange(meeting.date, meeting.endDate)
                 : formatDay(meeting.date)}
             </span>
-            {!isPast(meeting.date) && (
+            {!past && (
               <span className="text-[10px] font-semibold text-stone-400">
                 {formatRelativeDay(meeting.date)}
               </span>
@@ -109,12 +113,7 @@ export function MeetingCard({
             Fußzeile ohnehin als Rollen-Chip steht. Der Platz gehört jetzt der
             Frage, die man beim Durchgehen der Liste wirklich hat. */}
         {answerable && (
-          <AttendanceToggle
-            status={myStatus}
-            onAnswer={(status) =>
-              me && setAttendance.mutate({ personId: me.id, status })
-            }
-          />
+          <AttendanceToggle status={myStatus} onAnswer={attendance.answer} />
         )}
       </div>
 

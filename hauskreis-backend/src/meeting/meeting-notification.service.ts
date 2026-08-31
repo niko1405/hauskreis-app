@@ -86,6 +86,7 @@ export class MeetingNotificationService {
         id: true,
         hauskreisId: true,
         date: true,
+        endDate: true,
         title: true,
         status: true,
         startMinutes: true,
@@ -95,7 +96,7 @@ export class MeetingNotificationService {
     if (
       !meeting ||
       meeting.status !== MeetingStatus.PLANNED ||
-      (await this.clock.isPast(meeting.hauskreisId, meeting.date))
+      (await this.clock.isPast(meeting.hauskreisId, meeting))
     ) {
       return 0;
     }
@@ -156,13 +157,16 @@ export class MeetingNotificationService {
   ): Promise<number> {
     const meeting = await this.prisma.meeting.findUnique({
       where: { id: meetingId },
-      select: { id: true, hauskreisId: true, date: true, title: true },
+      select: {
+        id: true,
+        hauskreisId: true,
+        date: true,
+        endDate: true,
+        title: true,
+      },
     });
 
-    if (
-      !meeting ||
-      (await this.clock.isPast(meeting.hauskreisId, meeting.date))
-    ) {
+    if (!meeting || (await this.clock.isPast(meeting.hauskreisId, meeting))) {
       return 0;
     }
 
@@ -224,6 +228,7 @@ export class MeetingNotificationService {
         id: true,
         hauskreisId: true,
         date: true,
+        endDate: true,
         status: true,
         hostPersonId: true,
         locationId: true,
@@ -233,7 +238,7 @@ export class MeetingNotificationService {
     if (
       !meeting ||
       meeting.status !== MeetingStatus.PLANNED ||
-      (await this.clock.isPast(meeting.hauskreisId, meeting.date))
+      (await this.clock.isPast(meeting.hauskreisId, meeting))
     ) {
       return;
     }
@@ -243,6 +248,53 @@ export class MeetingNotificationService {
       this.announceReleasedRoles(meeting, personId, released),
       this.offerUnlockedHomes(meeting),
     ]);
+  }
+
+  /**
+   * Nur die Rollen-Meldung, ohne den Rest — für „weiß noch nicht".
+   *
+   * Wer auf unentschieden zurückgeht, gibt seine Rollen frei wie bei einer
+   * Absage: Am Dienstag soll im Plan niemand stehen, der selbst nicht weiß, ob
+   * er kommt. Die beiden **anderen** Folgen einer Absage gelten hier aber
+   * nicht, und darum geht dieser Weg an `handleDecline` vorbei:
+   *
+   * - Der Gastgeber bekommt **nichts**. „Weiß noch nicht" ist keine Absage, und
+   *   wer einkauft, plant ohnehin mit den Unentschiedenen mit
+   *   (`countExpectedAttendance`).
+   * - Es wird **keine zu kleine Wohnung frei**. Genau deshalb: Die Zahl der
+   *   erwarteten Gäste sinkt nicht, wenn jemand von „dabei" auf „weiß noch
+   *   nicht" geht.
+   *
+   * Dass eine Rolle offen ist, geht dagegen die ganze Gruppe an — dafür ist es
+   * gleichgültig, warum sie offen wurde.
+   */
+  async announceRelease(
+    meetingId: string,
+    personId: string,
+    released: ReleasedRoles,
+  ): Promise<void> {
+    if (!describeReleased(released)) return;
+
+    const meeting = await this.prisma.meeting.findUnique({
+      where: { id: meetingId },
+      select: {
+        id: true,
+        hauskreisId: true,
+        date: true,
+        endDate: true,
+        status: true,
+      },
+    });
+
+    if (
+      !meeting ||
+      meeting.status !== MeetingStatus.PLANNED ||
+      (await this.clock.isPast(meeting.hauskreisId, meeting))
+    ) {
+      return;
+    }
+
+    await this.announceReleasedRoles(meeting, personId, released);
   }
 
   /**

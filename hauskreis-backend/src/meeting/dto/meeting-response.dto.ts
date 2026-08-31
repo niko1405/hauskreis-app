@@ -49,11 +49,13 @@ export const meetingResponseSchema = z.object({
   /// dieser Rolle nicht mit.
   ///
   /// Thema und Testimony sind nie beide an, Thema und Nachbereitung auch nicht.
+  /// Die Gebetsanliegen schließen nichts aus und sind überall voreingestellt.
   /// Einen Gastgeber-Schalter gibt es nicht — man trifft sich immer irgendwo.
   hasTopicSlot: z.boolean(),
   hasSongSlot: z.boolean(),
   hasTestimonySlot: z.boolean(),
   hasNotesSlot: z.boolean(),
+  hasPrayerSlot: z.boolean(),
   locationId: z.uuid().nullable(),
   hostPersonId: z.uuid().nullable(),
   /// Wie der Abend überschrieben ist. Gilt für jede Terminart; bleibt er leer,
@@ -182,6 +184,8 @@ export const meetingScheduleSchema = z.object({
   /// (`setGroupZone` im Frontend), sonst zeigte ein Gerät in einer anderen Zone
   /// „Vorbei" an einem Abend, den der Server noch als kommend führt.
   timeZone: z.string(),
+  /// Ob der Actionstep der Woche auf dem Startbildschirm steht.
+  weeklyActionstep: z.boolean(),
   updatedByPersonId: z.uuid().nullable(),
   updatedAt: isoDateTimeOut,
   version: z.number().int().nonnegative(),

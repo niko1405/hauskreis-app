@@ -115,6 +115,7 @@ export class MeetingScheduleConfigService {
             weekday: dto.weekday,
             startMinutes: dto.startTime,
             timeZone: dto.timeZone,
+            weeklyActionstep: dto.weeklyActionstep,
             updatedByPersonId,
             version: { increment: 1 },
           },

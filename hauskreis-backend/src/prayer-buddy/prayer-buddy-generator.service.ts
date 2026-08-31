@@ -10,6 +10,7 @@ import { addDays } from '../meeting/meeting-schedule';
 import { ANGEKOMMEN } from '../person/angekommen';
 import { GroupClockService } from '../meeting/group-clock.service';
 import { CRON_TIME_ZONE } from '../common/time/local-evening';
+import { GroupFeaturesService } from '../hauskreis/group-features.service';
 
 /**
  * How many rounds should always be planned, the running one included.
@@ -66,6 +67,7 @@ export class PrayerBuddyGeneratorService {
     private readonly buddies: PrayerBuddyService,
     private readonly notifications: NotificationService,
     private readonly clock: GroupClockService,
+    private readonly features: GroupFeaturesService,
   ) {}
 
   /**
@@ -95,6 +97,13 @@ export class PrayerBuddyGeneratorService {
     let notified = 0;
 
     for (const hauskreis of hauskreise) {
+      // Wer keine Gebetsbuddys hat, bekommt auch keine gewürfelt. Die
+      // Zeile steht hier und nicht in den drei Methoden darunter: Es ist eine
+      // Frage je Gruppe und Nacht, nicht drei.
+      if (!(await this.features.prayerBuddies(hauskreis.id))) {
+        continue;
+      }
+
       const today = await this.clock.today(hauskreis.id);
       const repair = await this.repairRunningRound(hauskreis.id, today, {
         notify: true,
@@ -136,6 +145,10 @@ export class PrayerBuddyGeneratorService {
     hauskreisId: string,
     now = new Date(),
   ): Promise<PlanningResult> {
+    if (!(await this.features.prayerBuddies(hauskreisId))) {
+      return { created: 0 };
+    }
+
     const today = await this.clock.today(hauskreisId, now);
     let created = 0;
 
@@ -203,6 +216,12 @@ export class PrayerBuddyGeneratorService {
     hauskreisId: string,
     options: { now?: Date; notify?: boolean } = {},
   ): Promise<ReplanResult> {
+    if (!(await this.features.prayerBuddies(hauskreisId))) {
+      // Bestehende Runden bleiben stehen — sie sind Geschichte, sobald der
+      // Zeitraum vorbei ist, und wieder da, wenn jemand den Schalter umlegt.
+      return { repaired: 0, discarded: 0, planned: 0, notified: 0 };
+    }
+
     const now = options.now ?? new Date();
     const today = await this.clock.today(hauskreisId, now);
 
@@ -245,6 +264,10 @@ export class PrayerBuddyGeneratorService {
     hauskreisId: string,
     now = new Date(),
   ): Promise<RepairResult> {
+    if (!(await this.features.prayerBuddies(hauskreisId))) {
+      return { repaired: 0, notified: 0 };
+    }
+
     const today = await this.clock.today(hauskreisId, now);
 
     return this.repairRunningRound(hauskreisId, today, { notify: true });

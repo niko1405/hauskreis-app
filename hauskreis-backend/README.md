@@ -290,6 +290,40 @@ aus dem Token und galt in **jedem** Hauskreis. `RolesGuard` und `@Roles` sind
 ersatzlos entfallen — zwei sich widersprechende Berechtigungswege nebeneinander
 sind genau das, was später versehentlich benutzt wird.
 
+### Was die Gruppe benutzt
+
+Zwei Bausteine lassen sich abschalten, und jeder wohnt bei **seiner eigenen**
+Einstellung:
+
+| Baustein             | Spalte                                      | Vorgabe |
+| -------------------- | ------------------------------------------- | ------- |
+| Gebetsbuddys         | `prayer_buddy_cycle_config.enabled`         | `true`  |
+| Actionstep der Woche | `meeting_schedule_config.weekly_actionstep` | `true`  |
+
+Keine gemeinsame Tabelle dafür: Beide bestehenden halten schon fest, _wer_ wann
+etwas umgestellt hat — genau der Grund, aus dem sie eigene Tabellen sind. Eine
+dritte für zwei Boolesche wäre ein dritter Ort für dieselbe Frage.
+
+Gefragt wird über [`GroupFeaturesService`](src/hauskreis/group-features.service.ts),
+gebaut wie `GroupClockService`: `@Global`, hängt außer Prisma an nichts, liest
+die Spalte, wo sie steht. Nötig, weil die Frage überall auftaucht — Dashboard,
+nächtliche Läufe, Benachrichtigungsliste, Hauskreis-Antwort — und jede dieser
+Stellen an den jeweiligen Fachdienst zu hängen den Modulgraphen zu Kreisen
+zusammenzöge (`DashboardModule` → `PrayerBuddyModule` → `NotificationModule` → …).
+**Ohne Zwischenspeicher**, anders als die Uhr: Hier fällt je Vorgang genau eine
+Frage an, und ein Schalter, den man gerade umgelegt hat und der noch eine Minute
+lang alt antwortet, wäre schlimmer als eine Abfrage mehr. Fehlt die Zeile — beide
+Tabellen entstehen erst beim ersten Lesen in der Verwaltung —, gilt die Vorgabe.
+
+Nach außen stehen beide als `features` an der **Hauskreis-Antwort**, abgeleitet
+und nicht dort gespeichert: `hauskreis` trägt Identität, keine Einstellungen. Sie
+hängen dort, weil sie genau da gebraucht werden, wo ohnehin schon der Name steht
+— in der Navigation des Frontends und auf dem Startbildschirm. Ein eigener
+Endpunkt wäre ein zweiter Ladezustand für ein Ja/Nein.
+
+Weil `hauskreis.version` bei einer Config-Änderung nicht springt, entwerten die
+beiden Admin-Mutationen im Frontend `qk.hauskreise` mit.
+
 ### Ein Wechsel ist ein Umzug
 
 Ein Mensch gehört zu genau einem Hauskreis. Das lässt
@@ -683,12 +717,40 @@ jeder mit Label, Begründung und Default-Rhythmus.
 | `ATTENDANCE_DECLINED`    | jemand sagt ab                                | der Host — und alle, wenn dadurch eine Rolle frei wird | sofort        |
 | `HOST_CAPACITY_UNLOCKED` | genug Absagen, dass eine kleine Wohnung passt | Bewohner:innen dieser Wohnung                          | sofort        |
 | `MEMBER_LEFT`            | jemand verlässt den Hauskreis                 | alle Verbleibenden                                     | sofort        |
+| `MEETING_TODAY`          | heute ist Hauskreis                           | alle — der Text richtet sich nach der eigenen Antwort  | morgens       |
+| `NOTES_REMINDER`         | Abend **ohne Thema** ohne Nachbereitung       | wer zugesagt hatte                                     | am Tag danach |
+| `ADMIN_GRANTED`          | jemand macht dich zum Admin                   | die ernannte Person                                    | sofort        |
+
+Die Tabelle ist nicht vollständig — Geburtstage, Testimony, besondere Termine
+und die Release-Ankündigung stehen ebenfalls im Katalog. Jeder Eintrag trägt
+außerdem eine **`category`**, und die ist der Grund, warum sie im Backend steht:
+Der Präferenzen-Bildschirm sortiert danach, und eine zweite Aufzählung im
+Frontend wäre die, die beim nächsten neuen Eintrag vergessen wird.
+
+**`ADMIN_GRANTED` hat kein Gegenstück.** Ernannt zu werden ist eine Nachricht,
+entlassen zu werden ist ein Gespräch: „Du bist kein Admin mehr" beantwortet keine
+Frage, die es nicht selbst aufwirft — und wer das entscheidet, sollte es selbst
+sagen. Verschickt aus `PersonService.update`, wenn die Rolle wirklich wechselt
+(nicht schon, wenn `ADMIN` unverändert mitgeschickt wird), und über `moduleRef`
+nachgeschlagen statt importiert: `NotificationModule` importiert `PersonModule`,
+ein Import zurück schlösse den Kreis. Ohne `related*`-Feld kommt sie **einmal je
+Person** — wer ein zweites Mal ernannt wird, weiß schon, wo die Verwaltung steht.
 
 Ein Eintrag kann ein optionales `appliesTo(context)` tragen und erscheint dann
-nur bei den Leuten, für die er überhaupt etwas bewirken kann. Bisher genau einer:
-`HOST_CAPACITY_UNLOCKED` kann niemanden erreichen, dessen Wohnung für die volle
-Gruppe reicht — bei allen anderen stand ein Schalter, der nie etwas tat, und ein
-Schalter ohne Wirkung ist schlimmer als keiner, weil man ihm glaubt.
+nur bei den Leuten, für die er überhaupt etwas bewirken kann. Drei tun das:
+
+- `HOST_CAPACITY_UNLOCKED` kann niemanden erreichen, dessen Wohnung für die
+  volle Gruppe reicht
+- `PRAYER_BUDDY_ASSIGNED` und `ACTIONSTEP_REMINDER` fallen weg, wenn die Gruppe
+  den jeweiligen Baustein abgeschaltet hat
+
+Bei allen anderen stünde ein Schalter, der nie etwas tut, und ein Schalter ohne
+Wirkung ist schlimmer als keiner, weil man ihm glaubt.
+
+`appliesTo` regelt allerdings nur die **Anzeige**. Der Versand fragt nicht danach
+— dort entscheidet der Anlass selbst, ob er eintritt, und ein zweiter Filter wäre
+eine zweite Wahrheit über dieselbe Frage. Ein abgeschalteter Baustein wird
+deshalb an der Quelle abgestellt, im jeweiligen nächtlichen Lauf.
 
 Gefiltert wird **nur die Anzeige** (`listForPerson`), nie `resolve()`. Andernfalls
 verschwände mit dem Schalter auch die Nachricht: wer heute keine Kapazität gesetzt
@@ -1242,7 +1304,17 @@ und über einen Import auf `MeetingModule` zöge sich das zu Kreisen zusammen.
 Die Regel für Aufrufer lautet: **einmal pro Vorgang auflösen**
 (`await this.clock.zoneOf(hauskreisId)`), danach die reinen Funktionen
 benutzen. Ein `await` in einer Schleife holt immer dieselbe Antwort. Wer genau
-einen Vergleich braucht, nimmt `clock.isPast(hauskreisId, date)`.
+einen Vergleich braucht, nimmt `clock.isPast(hauskreisId, meeting)`.
+
+**„Vorbei" heißt den ganzen Zeitraum.** `clock.isPast` nimmt einen
+`MeetingSpan` (`{ date, endDate }`) und nicht ein einzelnes Datum: Eine Freizeit
+von Freitag bis Sonntag galt am Samstag als vergangen, obwohl sie lief — Lieder
+waren für alle abhakbar, Rollen ließen sich nicht mehr freigeben, der Inhalt
+eines Themas stand offen. Neu ist die Regel nicht: `finishedBefore` und
+`notFinishedBefore` in [`meeting-schedule.ts`](src/meeting/meeting-schedule.ts)
+rechnen seit jeher so, und die Archiv-Spec schreibt sie hin. Es waren die
+**punktuellen** Vergleiche, die den Anfangstag lasen — zwei Wahrheiten über
+dasselbe Wort. Wer einen Termin lädt, nimmt deshalb `endDate` mit ins `select`.
 
 Nächtliche Läufe, die **alle** Gruppen abdecken, gehen Gruppe für Gruppe
 (`closePastMeetings`) oder ziehen ihr Vorauswahl-Fenster einen Tag weiter als
@@ -1260,16 +1332,18 @@ unverändert, `null` löscht die Zuordnung.
 
 ### Woraus ein Abend besteht
 
-Vier Schalter am Termin — `hasTopicSlot`, `hasNotesSlot`, `hasSongSlot`,
-`hasTestimonySlot` — und die Terminart ist nur noch ihre **Voreinstellung**:
+Fünf Schalter am Termin — `hasTopicSlot`, `hasNotesSlot`, `hasSongSlot`,
+`hasTestimonySlot`, `hasPrayerSlot` — und die Terminart ist nur noch ihre
+**Voreinstellung**:
 
-| Typ              | Thema | Nachbereitung¹ | Lieder | Testimony |
-| ---------------- | ----- | -------------- | ------ | --------- |
-| `STANDARD`       | ✓     | –              | ✓      | –         |
-| `LOBPREIS_GEBET` | –     | –              | ✓      | ✓         |
-| `CUSTOM`         | –     | –              | –      | –         |
+| Typ              | Thema | Nachbereitung¹ | Lieder | Testimony | Gebetsanliegen² |
+| ---------------- | ----- | -------------- | ------ | --------- | --------------- |
+| `STANDARD`       | ✓     | –              | ✓      | –         | ✓               |
+| `LOBPREIS_GEBET` | –     | –              | ✓      | ✓         | ✓               |
+| `CUSTOM`         | –     | –              | –      | –         | ✓               |
 
 ¹ überall aus und erst **ab Terminbeginn** anschaltbar — siehe unten.
+² überall an, schließt nichts aus, teilt niemanden ein — siehe unten.
 
 Vorher war der Typ eine **Behauptung**: er stand in der Antwort, geprüft wurde
 nichts. Man konnte einem Lobpreisabend ein Thema geben und einem Geburtstag ein
@@ -1296,6 +1370,21 @@ Zusammenfassung von etwas, das noch nicht stattgefunden hat. Deshalb steht sie i
 Frontend auch nicht im Bausteinkasten, sondern hinter einem Hinweis am Abend
 selbst. Abschalten geht dagegen jederzeit — wer sich vertut, wäre sonst damit
 eingesperrt.
+
+**Die Gebetsanliegen** sind der jüngste Baustein und in mehr als einer Hinsicht
+die Ausnahme: der einzige, der überall **voreingestellt an** ist, der einzige,
+der nichts ausschließt, und der einzige, den auch jemand füllt, der an dem Abend
+gar nicht da ist. Er kam dazu, weil sie der letzte Abschnitt eines Termins ohne
+Schalter waren — sie standen am Geburtstag wie an der Freizeit. `@default(true)`
+gilt auch **rückwirkend**: Alles andere hieße, dass an jedem Abend im Archiv die
+Anliegen verschwinden, die dort stehen. In `SLOT_FIELDS` steht er mit leerer
+Feldliste, weil die Anliegen in einer eigenen Tabelle liegen; weggeräumt werden
+sie beim Abschalten in `MeetingService.update`, wie die Lieder.
+
+**Umschalten geht auch an einem vergangenen Termin**, nur an einem abgesagten
+nicht. Die einzige Sperre gilt der Richtung nach vorn (`assertNotesSlotNotAhead`).
+Das Frontend hielt das lange enger als der Server; wem hinterher auffällt, dass
+am Dienstag doch Lieder waren, kam damit nicht mehr heran.
 
 **Zwei Paare schließen einander aus, ein drittes nicht.** Thema und Testimony,
 weil beides der Beitrag ist, um den sich der Abend dreht. Thema und
@@ -2464,11 +2553,20 @@ Budget (300/min) schützt den Server; hier geht es um eine fremde Rechnung.
 Drei Erinnerungen laufen täglich um 9 Uhr und unterscheiden sich in genau zwei
 Dingen — wer gemeint ist und was drinsteht:
 
-| Job                    | Empfänger              | Manuell auslösen (`admin`)       |
-| ---------------------- | ---------------------- | -------------------------------- |
-| `HostReminderService`  | Host                   | `POST …/meetings/host-reminders` |
-| `TopicReminderService` | Themen-Verantwortliche | `POST …/topics/reminders`        |
-| `SongReminderService`  | Musik-Verantwortliche  | `POST …/songs/reminders`         |
+| Job                    | Empfänger              |
+| ---------------------- | ---------------------- |
+| `HostReminderService`  | Host                   |
+| `TopicReminderService` | Themen-Verantwortliche |
+| `SongReminderService`  | Musik-Verantwortliche  |
+
+> **Von Hand auslösen geht nicht mehr.** Jeder dieser Läufe hatte einen
+> `POST`-Endpunkt und einen Knopf in der Verwaltung — sieben insgesamt, die alle
+> dasselbe taten: eine Nachricht anstoßen, die der Cron um neun ohnehin
+> schickt. Sie waren zum Ausprobieren da; was blieb, waren sieben Gelegenheiten,
+> der Gruppe versehentlich etwas zu schicken. Die Endpunkte sind mit den Knöpfen
+> weg, die Cron-Jobs unverändert da. Übrig in der Verwaltung sind die fünf
+> Läufe, die etwas **anlegen oder aufräumen** — Termine, Gebetsrunden,
+> Gebetsrunde prüfen, Abwesenheiten, verwaiste Orte.
 
 Alles andere — Fenster, Vorlauf pro Person, Deduplizierung, Zählung — liegt einmal
 in `MeetingReminderService`. Antwort jeweils `{ "notified": 1, "skipped": 0 }`;
@@ -2487,10 +2585,20 @@ werden.
 ## Actionstep
 
 `ActionstepReminderService` fragt mitten in der Woche nach, was aus dem Actionstep
-geworden ist. Genommen wird der **jüngste vergangene Termin, der einen hat** —
-nicht schlicht „der letzte Termin". Hat vorletzte Woche niemand einen
-eingetragen, bleibt die Woche still, statt einen zwei Wochen alten Schritt
-aufzuwärmen.
+geworden ist. **Welcher gilt, entscheidet `latestActionstep`**
+([`actionstep-source.ts`](src/meeting/actionstep-source.ts)), und die Regel liest
+sich von hinten nach vorn: Gehe die vergangenen Abende rückwärts durch,
+überspringe dabei einen **besonderen** Termin ohne Actionstep, und bleib beim
+ersten stehen, der übrig bleibt. Hat der einen, gilt er; hat er keinen, gilt
+keiner.
+
+Gesucht wurde einmal „der jüngste vergangene Abend, _der einen hat_" — ein leerer
+Dienstag wurde also übersprungen, und der Vorsatz von vorletzter Woche stand eine
+Woche zu lang da, als wäre er frisch. Ein neuer Abend beendet den alten Vorsatz,
+auch wenn er selbst keinen hinterlässt: Was besprochen wurde, ist besprochen. Die
+Ausnahme ist der besondere Termin — zwischen zwei Dienstagen einen Kuchen zu
+essen beendet nicht, was man sich am Dienstag vorgenommen hat; bringt er selbst
+einen Actionstep mit, gilt er wie jeder andere Abend.
 
 Ein leerer String zählt als „keiner": das Feld ist Freitext, und Leerzeichen sind
 nichts, wofür man neun Leute unterbricht.
@@ -2505,9 +2613,41 @@ Datei benutzt der Startbildschirm — zwei Stellen, die dieselbe Frage verschied
 beantworten, wären ein Fehler, den niemand meldet, weil beide Seiten für sich
 plausibel aussehen.
 
-Manuell über `POST …/meetings/actionstep-reminders`. Der Knopf hält sich an den
-eingestellten Wochentag und meldet an anderen Tagen `notified: 0` — er dient dazu,
-den Job zu prüfen, nicht dazu, die Einstellung zu übergehen.
+**Abschaltbar für die ganze Gruppe** (`meeting_schedule_config.weekly_actionstep`).
+Aus heißt: keine Karte auf „Heute" _und_ keine Erinnerung — beides an einem
+Schalter, sonst hätte man den Vorsatz vom Startbildschirm geräumt und bekäme
+mittwochs trotzdem eine Nachricht dazu. Der Actionstep an der Einheit und über
+die Nachbereitung bleibt davon unberührt: Er wird weiter geschrieben, nur nicht
+mehr die Woche über vor sich hergetragen. Geprüft wird am Anfang von
+`sendDueReminders`, also bevor überhaupt gesucht wird.
+
+### Zwei Läufe rund um den Abend selbst
+
+Beide liegen im selben Neun-Uhr-Cron und sind `EVENT` im Katalog: Es gibt nichts
+einzustellen außer an und aus.
+
+| Job                    | Wann                       | Empfänger          |
+| ---------------------- | -------------------------- | ------------------ |
+| `MeetingTodayService`  | am Morgen des Termintags   | alle Angekommenen  |
+| `NotesReminderService` | am Morgen nach einem Abend | wer zugesagt hatte |
+
+**`MEETING_TODAY` stellt die Frage gleich mit.** „Heute um 19:30 bei Lena" wüsste
+man auch so; was am Termintag wirklich passiert, ist, dass sich Zusagen ändern.
+Deshalb hängt der zweite Satz an der eigenen Antwort — „Bis später!", „Bist du
+dabei?", „Du hast abgesagt — stimmt das noch?". Das war der eine Tag, an dem die
+App bisher schwieg: Die Erinnerungen davor gehen an die, die etwas vorbereiten
+müssen; am Tag selbst hat niemand mehr etwas vorzubereiten, aber alle müssen sich
+entscheiden. Entdoppelt über `relatedMeetingId`, ein mehrtägiger Termin meldet
+sich also einmal.
+
+**`NOTES_REMINDER` gilt nur Abenden ohne Thema.** Hat der Abend eines, gehören
+Zusammenfassung und Actionstep der Einheit, und schreiben darf sie nur deren Crew
+— eine Aufforderung an alle wäre dort eine Einladung in ein `403`. Dazu drei
+weitere Bedingungen: nichts steht schon da, der Abend ist höchstens drei Tage her
+(sonst erinnert der Lauf im Mai an den Februar, wenn eine Gruppe pausiert hat),
+und die Person hatte zugesagt — wer nicht da war, kann nicht zusammenfassen. Der
+Baustein selbst muss **nicht** an sein: Er lässt sich auf der Terminseite mit
+einem Klick dazuschalten, und genau dorthin führt die Nachricht.
 
 ### Abgehakt wird pro Person
 
@@ -2585,6 +2725,19 @@ gehört dazu**. Es fehlte in `describeReleased`, obwohl es längst freigegeben
 wurde: wer nur dafür zugeteilt war und absagte, ließ den Satz auf `null` fallen
 und der ganze Zweig schwieg. Ein Fehler, den man nur daran merkt, dass nichts
 passiert.
+
+**Die Rollen werden auch bei „weiß noch nicht" frei** — bei jedem Weg aus einer
+Zusage heraus. Eine Rolle ist die Aussage „ich bin da und mache das"; wer auf
+unentschieden zurückgeht, nimmt genau sie zurück, und am Dienstag stand sonst im
+Plan jemand, der selbst nicht weiß, ob er kommt. Die **Nachrichten** trennen sich
+dabei: `handleDecline` (Host-Meldung plus freie Wohnungen) läuft nur bei einer
+Absage, `announceRelease` bei beiden. Der Grund ist nicht Höflichkeit, sondern
+Arithmetik — `countExpectedAttendance` rechnet mit allen außer den Absagen, ein
+„weiß noch nicht" ändert die erwartete Zahl also gar nicht und kann keine zu
+kleine Wohnung freischalten.
+
+Gerechnet wird nur der **Übergang**: Dieselbe Antwort ein zweites Mal zu
+speichern — etwa nur, um die Notiz zu ändern — gibt nichts frei.
 
 **`MEETING_TIME_CHANGED`** geht raus, wenn sich `startMinutes` ändert — aber
 **nur beim nächsten** geplanten Abend der Gruppe (dieselbe Abfrage wie der
@@ -2940,10 +3093,10 @@ verteilen nähme jedem etwas weg, um das Problem von zweien zu lösen. Vier
 Regeln, und die Reihenfolge trägt:
 
 0. Was über `MAX_GROUP_SIZE` steht, fällt herunter — und zählt danach als
-   Neuzugang.
+   Neuzugang. Dasselbe trifft **jedes zweite Trio**: es wird auf zwei gestutzt.
 1. Wer nicht mehr dabei ist, fällt heraus.
-2. Wer neu dabei ist, kommt in die **kleinste Gruppe mit Platz**. Ist keine
-   mehr frei, macht er eine neue auf.
+2. Wer neu dabei ist, kommt in die **kleinste Gruppe mit Platz** — solange
+   daraus nicht ein zweites Trio wird. Ist keine frei, macht er eine neue auf.
 3. Wer danach noch allein dasteht, zieht in die kleinste andere mit Platz. Gibt
    es keine, kommt umgekehrt der zuletzt Dazugekommene aus der größten Gruppe zu
    ihm: aus 3+1 wird 2+2.
@@ -2958,12 +3111,36 @@ Getrimmt wird **hinten**, in Regel 0 wie in Regel 3: Neuzugänge werden hinten
 angehängt, die Reihenfolge trägt also die Information „zuletzt dazugekommen",
 und die ursprüngliche Besetzung bleibt zusammen.
 
+**„Höchstens ein Trio" kam aus demselben Vergleich mit `buildGroups`.** Drei zu
+erlauben hieß noch lange nicht, drei zu _bevorzugen_: Aus 3+2 wurde beim nächsten
+Zugang 3+3, obwohl 2+2+2 danebenstand — der Neue fiel eben in „die kleinste
+Gruppe mit Platz", und das war die Zweiergruppe. `buildGroups` hätte dieselben
+sechs Menschen längst in drei Paare gelegt; dort steht der Satz, mit dem
+`grouping.ts` anfängt: **Zwei ist das Format, drei der Rest.** Ein Trio, das die
+Zahl nicht erzwingt, ist keiner.
+
+Durchgerechnet, jeweils aus dem Bestand plus einem Zugang:
+
+| vorher | vorher ergab | ergibt jetzt                       |
+| ------ | ------------ | ---------------------------------- |
+| 3+2    | 3+3          | 2+2+2                              |
+| 2+2    | 3+2          | 3+2 (fünf Menschen brauchen eines) |
+| 3+3    | 3+2+2        | 3+2+2                              |
+| 3+2+2  | 3+3+2        | 2+2+2+2                            |
+
 **Regel 0 kam nach den anderen dreien**, und der Grund gehört dazu: Die
 Obergrenze galt zuerst nur fürs Hinzufügen. Eine Gruppe, die schon zu groß
 _war_ — entstanden, bevor es die Grenze gab —, wurde dadurch gerade
 festgeschrieben: Beim Nachrücken passte niemand mehr hinein, also sah sie nie
 wieder jemand an. Eine Regel, die nur nach vorn gilt, macht aus einem Fehler
-einen Bestand.
+einen Bestand. Aus genau demselben Grund stutzt sie auch das zweite Trio: Eine
+Runde, die einmal als 3+3 entstanden ist, bliebe sonst für immer so.
+
+**Abgeschaltete Gebetsbuddys überspringen das alles.** `handleCron`,
+`ensureRoundsPlanned`, `replanAfterMembershipChange` und `repairNow` fragen
+zuerst `GroupFeaturesService.prayerBuddies` und tun nichts, wenn die Gruppe
+keine hat. Bestehende Runden bleiben dabei stehen — Wiedereinschalten holt sie
+zurück; sie zu löschen wäre eine Entscheidung, die kein Schalter treffen sollte.
 
 Ausgelöst wird die Prüfung an drei Stellen: bei jeder Änderung an der
 Teilnehmerliste (siehe unten), im **nächtlichen Lauf** (`handleCron`) und über

@@ -14,6 +14,47 @@
  * Abend niemand gastgebend eingetragen ist, bleibt davon unberührt.
  */
 import type { AssignmentRole, MeetingStatus, MeetingType } from './api/types';
+import { hasStarted, isPast, type CalendarDay } from './date';
+
+/**
+ * In welchem Zustand ein Termin gerade ist.
+ *
+ * **Drei und nicht zwei.** Bis hierher gab es „kommend" und „vorbei", gelesen
+ * aus `isPast(meeting.date)` — also aus dem **ersten** Tag. Zwei Dinge stimmten
+ * damit nicht: Eine Freizeit von Freitag bis Sonntag stand ab Samstag als
+ * „Vorbei" da, obwohl sie lief; und ein ganz normaler Dienstag sah um 20 Uhr
+ * aus wie um 8 Uhr morgens.
+ *
+ * Die Grenzen sind dieselben, die der Server zieht: `spanIsPast` für „ganz
+ * vorbei" (der letzte Tag, nicht der erste) und `eveningReached` für
+ * „angefangen" (die Treffpunktzeit, nicht der Kalendertag).
+ */
+export type MeetingPhase = 'upcoming' | 'running' | 'past';
+
+export interface MeetingWhen {
+  date: CalendarDay;
+  endDate: CalendarDay | null;
+  startTime: string;
+}
+
+export function meetingPhase(meeting: MeetingWhen): MeetingPhase {
+  // Vorbei heißt **ganz** vorbei. Bis dahin läuft ein mehrtägiger Termin, auch
+  // an seinem letzten Tag.
+  if (isPast(meeting.endDate ?? meeting.date)) return 'past';
+
+  return hasStarted(meeting.date, meeting.startTime) ? 'running' : 'upcoming';
+}
+
+/**
+ * Die häufigste der drei Fragen, als eigener Name.
+ *
+ * Fast überall interessiert nur „darf man daran noch etwas ändern" — und das
+ * ist genau `phase === 'past'`. Ein `meetingPhase(m) === 'past'` an zwanzig
+ * Stellen läse sich wie eine Rechnung statt wie eine Auskunft.
+ */
+export function isMeetingPast(meeting: MeetingWhen): boolean {
+  return meetingPhase(meeting) === 'past';
+}
 
 export const MEETING_TYPE_LABEL: Record<MeetingType, string> = {
   STANDARD: 'Hauskreis-Abend',
@@ -22,10 +63,14 @@ export const MEETING_TYPE_LABEL: Record<MeetingType, string> = {
 };
 
 export type MeetingSlotKey =
-  'hasTopicSlot' | 'hasSongSlot' | 'hasTestimonySlot' | 'hasNotesSlot';
+  | 'hasTopicSlot'
+  | 'hasSongSlot'
+  | 'hasTestimonySlot'
+  | 'hasNotesSlot'
+  | 'hasPrayerSlot';
 
 /**
- * Wie jeder Baustein heißt — **alle vier**, auch der, den man nicht anhakt.
+ * Wie jeder Baustein heißt — **alle fünf**, auch der, den man nicht anhakt.
  *
  * Getrennt von `MEETING_SLOTS`, weil die Rückfrage beim Umschalten benennen
  * muss, was verlorengeht: wer „Thema" anhakt, verliert die Nachbereitung. Käme
@@ -37,6 +82,7 @@ export const SLOT_LABEL: Record<MeetingSlotKey, string> = {
   hasNotesSlot: 'Nachbereitung',
   hasSongSlot: 'Lieder',
   hasTestimonySlot: 'Testimony',
+  hasPrayerSlot: 'Gebetsanliegen',
 };
 
 export const MEETING_SLOT_KEYS = Object.keys(SLOT_LABEL) as MeetingSlotKey[];
@@ -44,7 +90,7 @@ export const MEETING_SLOT_KEYS = Object.keys(SLOT_LABEL) as MeetingSlotKey[];
 /**
  * Die Bausteine, die man beim **Planen** eines Abends anhakt.
  *
- * Drei, nicht vier: die **Nachbereitung** steht bewusst nicht dabei. Sie gehört
+ * Vier, nicht fünf: die **Nachbereitung** steht bewusst nicht dabei. Sie gehört
  * nicht zur Planung, sondern zu dem, was danach übrig bleibt — hier stand sie
  * neben Thema und Liedern und fragte damit vor dem Abend nach der
  * Zusammenfassung von etwas, das noch nicht stattgefunden hatte. Sie kommt
@@ -66,6 +112,11 @@ export const MEETING_SLOTS = [
     key: 'hasTestimonySlot',
     label: SLOT_LABEL.hasTestimonySlot,
     hint: 'Statt eines Themas — jemand erzählt.',
+  },
+  {
+    key: 'hasPrayerSlot',
+    label: SLOT_LABEL.hasPrayerSlot,
+    hint: 'Wofür ihr an dem Abend beten wollt.',
   },
 ] as const satisfies readonly {
   key: MeetingSlotKey;
@@ -90,6 +141,7 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
       hasSongSlot: true,
       hasTestimonySlot: false,
       hasNotesSlot: false,
+      hasPrayerSlot: true,
     };
   }
 
@@ -99,6 +151,7 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
       hasSongSlot: true,
       hasTestimonySlot: true,
       hasNotesSlot: false,
+      hasPrayerSlot: true,
     };
   }
 
@@ -107,6 +160,9 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
     hasSongSlot: false,
     hasTestimonySlot: false,
     hasNotesSlot: false,
+    // Auch hier an, als einziger: Ein besonderer Termin muss nichts erfüllen —
+    // aber beten kann man an einem Geburtstag genauso.
+    hasPrayerSlot: true,
   };
 }
 
@@ -130,7 +186,7 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
  * `summaryText`, während `hasNotesSlot` gerade auf `false` ging: der Server
  * antwortete „Dieser Termin hat keine Nachbereitung — schalte das erst dazu",
  * und das Anhaken von „Thema" tat nichts. Was hier herauskommt, sind genau die
- * vier Schalter.
+ * fünf Schalter.
  */
 export function applySlotToggle(
   slots: MeetingSlots,
@@ -142,6 +198,9 @@ export function applySlotToggle(
     hasSongSlot: slots.hasSongSlot,
     hasTestimonySlot: slots.hasTestimonySlot,
     hasNotesSlot: slots.hasNotesSlot,
+    // Schließt nichts aus und wird von nichts ausgeschlossen — er fährt einfach
+    // unverändert mit.
+    hasPrayerSlot: slots.hasPrayerSlot,
   };
   next[key] = value;
 

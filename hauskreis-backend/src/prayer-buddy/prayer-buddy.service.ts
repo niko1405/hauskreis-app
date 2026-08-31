@@ -94,6 +94,10 @@ export class PrayerBuddyService {
         this.prisma.prayerBuddyCycleConfig.updateMany({
           where: { hauskreisId, ...versionConstraint },
           data: {
+            // Beide Felder sind einzeln schreibbar: Der Schalter und die
+            // Rundenlänge stehen zwar in derselben Zeile, werden aber aus zwei
+            // verschiedenen Anlässen angefasst.
+            enabled: dto.enabled,
             periodLengthWeeks: dto.periodLengthWeeks,
             updatedByPersonId,
             version: { increment: 1 },

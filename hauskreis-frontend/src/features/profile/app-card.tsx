@@ -4,7 +4,8 @@
  * Die App über sich selbst: was neu ist, wie sie funktioniert, und wer sie
  * gebaut hat.
  *
- * Drei Zeilen, die nirgends sonst hingehören. „Was ist neu" trägt denselben
+ * Vier Zeilen, die nirgends sonst hingehören — dazu das **Konto**, das hier
+ * ganz oben steht, seit es einen eigenen Bildschirm hat. „Was ist neu" trägt denselben
  * Punkt wie das Profil-Symbol in der Leiste, damit der Weg dorthin nicht in der
  * Karte endet, ohne zu sagen, warum man hier ist. „Hilfe" ist der eigentliche
  * Zuwachs: Das Baukasten-System, die Vorschlagslogik und das Themen-System
@@ -26,6 +27,7 @@ import {
   Mail,
   ShieldCheck,
   Sparkles,
+  UserCog,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, SectionTitle } from '@/components/ui/card';
@@ -77,15 +79,29 @@ export function AppCard() {
     <section>
       <SectionTitle>Rechtliches &amp; Über die App</SectionTitle>
       <Card className="space-y-4">
+        {/* Das Konto steht als **erste** Zeile: Von allem hier ist es die
+            einzige, hinter der etwas zu tun ist — Datenschutz, Impressum und
+            „Was ist neu" liest man. Es stand einmal als eigene Karte im Profil,
+            zwischen lauter Einstellungen zum Anhaken; Kontosachen fasst man
+            aber zweimal im Jahr an. */}
+        <LinkRow
+          href="/konto"
+          icon={<UserCog size={16} />}
+          title="Konto"
+          hint="Anmeldename, E-Mail, Passwort und Konto löschen"
+        />
+
         {/* Rechtliches steht **oben** und nicht als Nachtrag unter „Gebaut von
             Niko". Wer es sucht, sucht es zuerst — und wer es nicht sucht,
             überliest zwei Zeilen. */}
-        <LinkRow
-          href="/datenschutz"
-          icon={<ShieldCheck size={16} />}
-          title="Datenschutzerklärung"
-          hint="Welche Daten Acts2 verarbeitet — und welche nicht"
-        />
+        <div className="border-t border-line pt-4">
+          <LinkRow
+            href="/datenschutz"
+            icon={<ShieldCheck size={16} />}
+            title="Datenschutzerklärung"
+            hint="Alles über die Datenverarbeitung in der App"
+          />
+        </div>
 
         <div className="border-t border-line pt-4">
           <LinkRow
@@ -127,8 +143,7 @@ export function AppCard() {
         <div className="space-y-1 border-t border-line pt-4">
           <p className="text-sm font-bold text-stone-800">Gebaut von Niko</p>
           <p className="text-[11px] leading-relaxed text-stone-400">
-            Hey! Wenn etwas fehlt, klemmt oder anders sein sollte — schreib mir
-            einfach.
+            Hey! Wenn etwas fehlt oder anders sein sollte — schreib mir einfach.
           </p>
           <a
             href="mailto:niko.vix@icloud.com"

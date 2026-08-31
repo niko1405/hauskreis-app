@@ -14,6 +14,9 @@
  * den niemand meldet, weil beide Seiten für sich plausibel aussehen.
  */
 import { Prisma } from '../../generated/prisma/client';
+import { MeetingStatus, MeetingType } from '../../generated/prisma/enums';
+import type { PrismaService } from '../prisma/prisma.service';
+import { finishedBefore } from './meeting-schedule';
 
 /**
  * „Hat dieser Abend überhaupt einen Actionstep?" — als `where`-Fragment.
@@ -65,4 +68,84 @@ export function actionstepOf(meeting: ActionstepSource): string | null {
     : meeting.actionstepText;
 
   return text && text.trim() !== '' ? text : null;
+}
+
+/**
+ * Wie viele vergangene Abende zurück gesucht wird, bis aufgegeben wird.
+ *
+ * Zehn, und die Zahl ist großzügig: Gebraucht werden sie nur, wenn hintereinander
+ * lauter besondere Termine ohne Actionstep standen. Bei wöchentlichen Treffen
+ * sind zehn Zeilen zweieinhalb Monate — jede Pause, die länger ist, ist ohnehin
+ * ein anderes Thema.
+ */
+const LOOKBACK = 10;
+
+const stepSelect = {
+  id: true,
+  date: true,
+  type: true,
+  ...actionstepSelect,
+  // Nur die Ids: Der Startbildschirm zeigt eine Zahl und den eigenen Haken, die
+  // Erinnerung überspringt damit, wer schon abgehakt hat. Die Namen stehen auf
+  // der Detailseite.
+  actionstepDone: { select: { personId: true } },
+} satisfies Prisma.MeetingSelect;
+
+export type LatestActionstep = Prisma.MeetingGetPayload<{
+  select: typeof stepSelect;
+}> & { text: string };
+
+/**
+ * Der Actionstep, der **diese Woche** gilt — oder keiner.
+ *
+ * Die Regel liest sich von hinten nach vorn: Gehe die vergangenen Abende
+ * rückwärts durch, überspringe dabei einen **besonderen** Termin ohne
+ * Actionstep, und bleib beim ersten stehen, der übrig bleibt. Hat der einen,
+ * gilt er; hat er keinen, gilt keiner.
+ *
+ * **Warum überhaupt stehen bleiben.** Gesucht wurde bisher „der jüngste
+ * vergangene Abend, *der einen hat*" — ein leerer Dienstag wurde also
+ * übersprungen, und der Vorsatz von vorletzter Woche stand eine Woche zu lang
+ * da, als wäre er frisch. Ein neuer Abend beendet den alten Vorsatz, auch wenn
+ * er selbst keinen hinterlässt: Was besprochen wurde, ist besprochen.
+ *
+ * **Warum der besondere Termin die Ausnahme ist.** Ein Geburtstag oder eine
+ * Freizeit ist kein Hauskreis-Abend im Sinne dieses Vorsatzes. Zwischen zwei
+ * Dienstagen einen Kuchen zu essen beendet nicht, was man sich am Dienstag
+ * vorgenommen hat. Bringt der besondere Termin selbst einen Actionstep mit,
+ * gilt er dagegen wie jeder andere — dann war es ein Abend, an dem etwas
+ * beschlossen wurde.
+ *
+ * Steht hier und nicht zweimal, weil `DashboardService` und
+ * `ActionstepReminderService` dieselbe Frage stellen: Beantworteten sie sie
+ * verschieden, stünde auf dem Startbildschirm ein anderer Vorsatz als in der
+ * Benachrichtigung — ein Fehler, den niemand meldet, weil beide Seiten für sich
+ * plausibel aussehen.
+ */
+export async function latestActionstep(
+  prisma: PrismaService,
+  hauskreisId: string,
+  today: Date,
+): Promise<LatestActionstep | null> {
+  const meetings = await prisma.meeting.findMany({
+    where: {
+      hauskreisId,
+      ...finishedBefore(today),
+      status: { not: MeetingStatus.CANCELLED },
+    },
+    orderBy: { date: 'desc' },
+    take: LOOKBACK,
+    select: stepSelect,
+  });
+
+  for (const meeting of meetings) {
+    const text = actionstepOf(meeting);
+
+    if (text) return { ...meeting, text };
+    // Nur der besondere Termin wird übersprungen. Jeder andere leere Abend
+    // beendet den Vorsatz von davor.
+    if (meeting.type !== MeetingType.CUSTOM) return null;
+  }
+
+  return null;
 }

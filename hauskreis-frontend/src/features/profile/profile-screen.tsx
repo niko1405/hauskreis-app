@@ -6,7 +6,7 @@
  * `canHost` ist die wichtigste Einstellung hier: sie steuert, ob man in den
  * Host-Vorschlägen überhaupt auftaucht (CLAUDE.md §5).
  */
-import { Ban, Guitar, LogOut, Shield } from 'lucide-react';
+import { Ban, Guitar, LogOut, Shield, Users } from 'lucide-react';
 import { HauskreisCard } from './hauskreis-card';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -23,14 +23,15 @@ import {
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { useMe, usePerson, useUpdatePerson } from '@/lib/api/hooks';
+import { useHeaderPreference } from '@/lib/header-preference';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { AbsencesCard } from './absences-card';
-import { AccountCard } from './account-card';
 import { AppCard } from './app-card';
 import { AppearanceCard } from './appearance-card';
 import { HomeCard } from './home-card';
 import { PhotoPicker } from './photo-picker';
 import { NotificationsCard } from './notifications-card';
+import { useUnreadAdmin } from '@/features/admin/use-unread-admin';
 
 export function ProfileScreen() {
   const me = useMe();
@@ -60,6 +61,8 @@ function Loaded({ personId }: { personId: string }) {
   const person = usePerson(personId);
   const update = useUpdatePerson(personId);
   const toast = useToast();
+  const header = useHeaderPreference();
+  const { unread: adminUnread } = useUnreadAdmin();
 
   const current = person.data?.data;
 
@@ -161,6 +164,21 @@ function Loaded({ personId }: { personId: string }) {
           </div>
         </Card>
 
+        {/* Nur ohne Kopfleiste. Ist sie an, führt der hervorgehobene Knopf
+            dort zur Gruppe, und zwei Wege zum selben Ziel auf einem Bildschirm
+            sind einer zu viel. */}
+        {!header.shown && (
+          <section>
+            <SectionTitle>Euer Hauskreis</SectionTitle>
+            <Link href="/hauskreis">
+              <Button variant="secondary" className="w-full">
+                <Users size={14} />
+                Zur Gruppe
+              </Button>
+            </Link>
+          </section>
+        )}
+
         {me.isAdmin && (
           <section>
             <SectionTitle>Verwaltung</SectionTitle>
@@ -168,6 +186,12 @@ function Loaded({ personId }: { personId: string }) {
               <Button variant="secondary" className="w-full">
                 <Shield size={14} />
                 Admin-Bereich
+                {/* Bis man einmal drin war. Wer gerade ernannt wurde, sieht
+                    hier einen Knopf mehr und sonst nichts, das ihm sagt, was
+                    dahinter steht. */}
+                {adminUnread && (
+                  <span className="size-1.5 rounded-full bg-terracotta-500" />
+                )}
               </Button>
             </Link>
           </section>
@@ -251,8 +275,6 @@ function Loaded({ personId }: { personId: string }) {
         <AbsencesCard personId={personId} />
 
         <NotificationsCard />
-
-        <AccountCard person={current} />
 
         <AppearanceCard />
 

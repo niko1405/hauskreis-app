@@ -13,7 +13,6 @@ import {
 } from '@nestjs/common';
 import { TopicService } from './topic.service';
 import { TopicSessionService } from './topic-session.service';
-import { TopicReminderService } from './topic-reminder.service';
 import {
   AddCollaboratorDto,
   CreateTopicDto,
@@ -28,7 +27,6 @@ import {
   UpdateTopicSessionDto,
 } from './dto/topic.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
-import { HauskreisAdmin } from '../auth/hauskreis-admin.decorator';
 import { CurrentMembership } from '../auth/current-membership.decorator';
 import type { HauskreisMembership } from '../auth/auth.types';
 import { IfMatch } from '../common/http/if-match.decorator';
@@ -43,7 +41,6 @@ import {
   TopicResponseDto,
   TopicSessionDetailDto,
 } from './dto/topic-response.dto';
-import { ReminderRunResultResponseDto } from '../meeting/dto/meeting-response.dto';
 import { viewerOf } from './topic-shape';
 import { GroupClockService } from '../meeting/group-clock.service';
 
@@ -52,7 +49,6 @@ export class TopicController {
   constructor(
     private readonly topics: TopicService,
     private readonly sessions: TopicSessionService,
-    private readonly reminders: TopicReminderService,
     private readonly clock: GroupClockService,
   ) {}
 
@@ -106,17 +102,6 @@ export class TopicController {
       dto,
       viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
     );
-  }
-
-  /** Von Hand ausgelöste Themen-Erinnerungen, auf diese Gruppe beschränkt. */
-  @Post('topics/reminders')
-  @ApiZodResponse(ReminderRunResultResponseDto)
-  @HauskreisAdmin()
-  @HttpCode(HttpStatus.OK)
-  runReminders(@Param() params: HauskreisParamsDto) {
-    return this.reminders.sendDueReminders({
-      hauskreisId: params.hauskreisId,
-    });
   }
 
   /** Auch der Weg zu „abgeschlossen" — `{ "status": "COMPLETED" }`. */

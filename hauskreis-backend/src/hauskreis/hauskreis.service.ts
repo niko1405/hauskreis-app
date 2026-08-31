@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { GroupFeaturesService } from './group-features.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import type { IfMatchCondition } from '../common/http/etag';
 import type {
@@ -9,7 +10,10 @@ import type {
 
 @Injectable()
 export class HauskreisService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly features: GroupFeaturesService,
+  ) {}
 
   /**
    * Nur die eigenen. Vorher gab diese Route **alle** Hauskreise samt Ids
@@ -20,11 +24,15 @@ export class HauskreisService {
    * Liste bleibt trotzdem eine Liste, damit der leere Fall („noch nirgends
    * dabei") kein Sonderweg ist.
    */
-  findMine(keycloakUserId: string) {
-    return this.prisma.hauskreis.findMany({
+  async findMine(keycloakUserId: string) {
+    const rows = await this.prisma.hauskreis.findMany({
       where: { people: { some: { keycloakUserId, active: true } } },
       orderBy: { name: 'asc' },
     });
+
+    // Praktisch genau einer — die Schleife ist die Ehrlichkeit der Liste, nicht
+    // ein Fächer aus Abfragen.
+    return Promise.all(rows.map((row) => this.withFeatures(row)));
   }
 
   async findOne(id: string) {
@@ -36,7 +44,19 @@ export class HauskreisService {
       throw new NotFoundException(`Hauskreis ${id} not found`);
     }
 
-    return hauskreis;
+    return this.withFeatures(hauskreis);
+  }
+
+  /**
+   * Hängt an, was die Gruppe benutzt.
+   *
+   * Nachgeschlagen statt mitgeladen: Die beiden Schalter stehen in zwei
+   * verschiedenen Tabellen, von denen keine existieren muss. Ein `include`
+   * bräuchte hier zweimal dieselbe Fallunterscheidung, die im Dienst schon
+   * steht.
+   */
+  private async withFeatures<T extends { id: string }>(hauskreis: T) {
+    return { ...hauskreis, features: await this.features.of(hauskreis.id) };
   }
 
   create(dto: CreateHauskreisDto) {

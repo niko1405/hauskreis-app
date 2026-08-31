@@ -79,6 +79,7 @@ export class TopicLinkService {
       select: {
         hauskreisId: true,
         date: true,
+        endDate: true,
         topicSession: {
           select: {
             id: true,
@@ -106,7 +107,7 @@ export class TopicLinkService {
     // Ein vergangener Abend ist das Protokoll dessen, was war. Ihn nachträglich
     // von seiner Nachbereitung zu lösen, weil jemand eine Rolle korrigiert,
     // nähme die Zusammenfassung aus dem Archiv (Spec 8.5).
-    if (await this.clock.isPast(meeting.hauskreisId, meeting.date)) return;
+    if (await this.clock.isPast(meeting.hauskreisId, meeting)) return;
 
     const topic = {
       ownerPersonId: session.topic.ownerPersonId,
@@ -239,6 +240,7 @@ export class TopicLinkService {
       select: {
         hauskreisId: true,
         date: true,
+        endDate: true,
         topicSession: { select: { id: true, topicId: true } },
       },
     });
@@ -247,7 +249,7 @@ export class TopicLinkService {
     if (!meeting || !session) return false;
     if (
       !options.evenIfPast &&
-      (await this.clock.isPast(meeting.hauskreisId, meeting.date))
+      (await this.clock.isPast(meeting.hauskreisId, meeting))
     ) {
       return false;
     }

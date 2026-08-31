@@ -84,7 +84,37 @@ describe('GroupClockService', () => {
       new Date('2026-08-12T00:00:00.000Z'),
     );
     await expect(
-      service.isPast('hk-1', new Date('2026-08-11T00:00:00.000Z'), halbEins),
+      service.isPast(
+        'hk-1',
+        { date: new Date('2026-08-11T00:00:00.000Z') },
+        halbEins,
+      ),
+    ).resolves.toBe(true);
+  });
+
+  /**
+   * Und der zweite Zweck: „vorbei" heißt den ganzen Zeitraum. Eine Freizeit von
+   * Freitag bis Sonntag galt hier am Samstag als vergangen, weil nur ihr
+   * Anfangstag gelesen wurde.
+   */
+  it('zählt einen mehrtägigen Termin bis zu seinem letzten Tag', async () => {
+    const { service } = setup('Europe/Berlin');
+    const freizeit = {
+      date: new Date('2026-08-14T00:00:00.000Z'),
+      endDate: new Date('2026-08-16T00:00:00.000Z'),
+    };
+
+    // Samstag, mittendrin.
+    await expect(
+      service.isPast('hk-1', freizeit, new Date('2026-08-15T10:00:00.000Z')),
+    ).resolves.toBe(false);
+    // Sonntag ist der letzte Tag und zählt noch dazu.
+    await expect(
+      service.isPast('hk-1', freizeit, new Date('2026-08-16T18:00:00.000Z')),
+    ).resolves.toBe(false);
+    // Montag.
+    await expect(
+      service.isPast('hk-1', freizeit, new Date('2026-08-17T10:00:00.000Z')),
     ).resolves.toBe(true);
   });
 });

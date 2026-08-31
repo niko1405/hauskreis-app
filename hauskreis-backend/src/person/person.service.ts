@@ -9,13 +9,14 @@ import {
 import { ModuleRef } from '@nestjs/core';
 import { MeetingCancellationService } from '../meeting/meeting-cancellation.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { PersonRole } from '../../generated/prisma/enums';
+import { NotificationType, PersonRole } from '../../generated/prisma/enums';
 import { GroupClockService } from '../meeting/group-clock.service';
 import { KeycloakAdminService } from '../auth/keycloak-admin.service';
 import { LocationService } from '../location/location.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
 import { BirthdayPlannerService } from '../birthday/birthday-planner.service';
+import { NotificationService } from '../notification/notification.service';
 import { MEMBERSHIP_SERVICE } from '../hauskreis/membership.token';
 import type { MembershipService } from '../hauskreis/membership.service';
 import type {
@@ -291,6 +292,10 @@ export class PersonService {
         // Vorher — und ein Lauf bei jedem Speichern des Profils wäre einer zu
         // viel.
         birthdate: true,
+        // Und für die Admin-Nachricht: `dto.role === ADMIN` allein hieße auch
+        // dann „ernannt", wenn jemand nur seinen Namen speichert und die Rolle
+        // unverändert mitschickt.
+        role: true,
       },
     });
 
@@ -364,7 +369,45 @@ export class PersonService {
       await this.reviveEmptyMeetings(hauskreisId);
     }
 
+    if (
+      dto.role === PersonRole.ADMIN &&
+      before &&
+      before.role !== PersonRole.ADMIN
+    ) {
+      await this.announceAdminRole(id);
+    }
+
     return updated;
+  }
+
+  /**
+   * Sagt Bescheid, dass jemand ab jetzt die Verwaltung machen darf.
+   *
+   * **Nur diese Richtung.** Etwas bekommen ist eine Nachricht, etwas verlieren
+   * ist ein Gespräch: „Du bist kein Admin mehr" beantwortet keine Frage, die es
+   * nicht selbst aufwirft — und wer es tut, sollte es selbst sagen.
+   *
+   * Nachgeschlagen statt hineingereicht, wie die Gebetsrotation weiter oben und
+   * aus demselben Grund: `NotificationModule` importiert `PersonModule`, ein
+   * Import zurück schlösse den Kreis.
+   *
+   * Ohne `related*`-Feld, also **einmal je Person**. Wer ein zweites Mal
+   * ernannt wird, hört nichts — er weiß dann schon, wo die Verwaltung steht.
+   */
+  private async announceAdminRole(personId: string): Promise<void> {
+    const notifications = this.moduleRef.get(NotificationService, {
+      strict: false,
+    });
+
+    await notifications.notify({
+      personId,
+      type: NotificationType.ADMIN_GRANTED,
+      payload: {
+        title: 'Du bist jetzt Admin',
+        body: 'Du kannst ab jetzt Leute einladen und einstellen, wie euer Hauskreis läuft.',
+        url: '/admin',
+      },
+    });
   }
 
   /**

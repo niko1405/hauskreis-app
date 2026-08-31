@@ -13,10 +13,6 @@ import {
 } from '@nestjs/common';
 import { MeetingService } from './meeting.service';
 import { MeetingGeneratorService } from './meeting-generator.service';
-import { HostReminderService } from './host-reminder.service';
-import { ActionstepReminderService } from './actionstep-reminder.service';
-import { CustomMeetingNotificationService } from './custom-meeting-notification.service';
-import { TestimonyReminderService } from './testimony-reminder.service';
 import { MeetingScheduleConfigService } from './meeting-schedule-config.service';
 import { GroupClockService } from './group-clock.service';
 import {
@@ -43,13 +39,11 @@ import {
 } from '../common/http/api-response.decorator';
 import {
   ActionstepDoneResponseDto,
-  ActionstepRunResultResponseDto,
   AttendanceResponseDto,
   GenerationResultResponseDto,
   MeetingPageResponseDto,
   MeetingResponseDto,
   MeetingScheduleResponseDto,
-  ReminderRunResultResponseDto,
 } from './dto/meeting-response.dto';
 import {
   HostSuggestionListResponseDto,
@@ -61,10 +55,6 @@ export class MeetingController {
   constructor(
     private readonly meetingService: MeetingService,
     private readonly generator: MeetingGeneratorService,
-    private readonly hostReminders: HostReminderService,
-    private readonly actionstepReminders: ActionstepReminderService,
-    private readonly customMeetingNotifications: CustomMeetingNotificationService,
-    private readonly testimonyReminders: TestimonyReminderService,
     private readonly schedule: MeetingScheduleConfigService,
     private readonly clock: GroupClockService,
   ) {}
@@ -302,53 +292,5 @@ export class MeetingController {
   @HauskreisAdmin()
   generate(@Param() params: HauskreisParamsDto) {
     return this.generator.generateFor(params.hauskreisId);
-  }
-
-  /** Manual trigger for the daily host reminders, scoped to this group. */
-  @Post('host-reminders')
-  @ApiZodResponse(ReminderRunResultResponseDto)
-  @HauskreisAdmin()
-  @HttpCode(HttpStatus.OK)
-  runHostReminders(@Param() params: HauskreisParamsDto) {
-    return this.hostReminders.sendDueReminders({
-      hauskreisId: params.hauskreisId,
-    });
-  }
-
-  /** Dasselbe für die Erinnerung an das eigene Testimony. */
-  @Post('testimony-reminders')
-  @ApiZodResponse(ReminderRunResultResponseDto)
-  @HauskreisAdmin()
-  @HttpCode(HttpStatus.OK)
-  runTestimonyReminders(@Param() params: HauskreisParamsDto) {
-    return this.testimonyReminders.sendDueReminders({
-      hauskreisId: params.hauskreisId,
-    });
-  }
-
-  /** Dasselbe für die Erinnerung an besondere Termine. */
-  @Post('custom-meeting-reminders')
-  @ApiZodResponse(ReminderRunResultResponseDto)
-  @HauskreisAdmin()
-  @HttpCode(HttpStatus.OK)
-  runCustomMeetingReminders(@Param() params: HauskreisParamsDto) {
-    return this.customMeetingNotifications.sendDueReminders({
-      hauskreisId: params.hauskreisId,
-    });
-  }
-
-  /**
-   * Manual trigger for the actionstep nudge.
-   *
-   * Still respects each person's chosen weekday, so off-day this reports zero
-   * rather than surprising the group — the button exists to check the job, not
-   * to bypass the setting.
-   */
-  @Post('actionstep-reminders')
-  @ApiZodResponse(ActionstepRunResultResponseDto)
-  @HauskreisAdmin()
-  @HttpCode(HttpStatus.OK)
-  runActionstepReminders(@Param() params: HauskreisParamsDto) {
-    return this.actionstepReminders.sendDueReminders(params.hauskreisId);
   }
 }

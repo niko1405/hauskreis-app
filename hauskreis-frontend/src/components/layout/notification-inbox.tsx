@@ -43,7 +43,9 @@ import {
   Home,
   ListChecks,
   Megaphone,
+  NotebookPen,
   MessageSquareX,
+  ShieldCheck,
   Sparkles,
   UserMinus,
   Users,
@@ -78,6 +80,8 @@ const ICONS: Record<NotificationEntry['type'], typeof Bell> = {
   PRAYER_BUDDY_ASSIGNED: Users,
   MEETING_CANCELLED: CalendarX,
   MEETING_TIME_CHANGED: CalendarClock,
+  MEETING_TODAY: CalendarClock,
+  NOTES_REMINDER: NotebookPen,
   ATTENDANCE_DECLINED: MessageSquareX,
   HOST_CAPACITY_UNLOCKED: Home,
   MEMBER_LEFT: UserMinus,
@@ -86,6 +90,7 @@ const ICONS: Record<NotificationEntry['type'], typeof Bell> = {
   BIRTHDAY_GIFT_ASSIGNED: Gift,
   BIRTHDAY_GIFT_REMINDER: CakeSlice,
   BIRTHDAY_GIFT_DECIDED: Gift,
+  ADMIN_GRANTED: ShieldCheck,
   RELEASE_NOTES: Megaphone,
 };
 

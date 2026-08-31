@@ -20,6 +20,11 @@
  * an der Anwesenheitszeile (`note`), gilt für alle drei Status und wechselt nur
  * seine Beschriftung: eine Verspätung, ein „muss schauen, wann Feierabend ist",
  * ein Grund fürs Fehlen.
+ *
+ * **„Weiß noch nicht" gibt die eigenen Rollen dieses Abends frei** — deshalb
+ * läuft der Statuswechsel über `useAttendanceAnswer` und nicht direkt über
+ * `useSetAttendance`. Der Hook fragt vorher nach, und zwar nur, wenn wirklich
+ * etwas dranhängt.
  */
 import { useState } from 'react';
 import { ChevronDown, Clock, HelpCircle, MessageSquare } from 'lucide-react';
@@ -28,6 +33,7 @@ import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { TextArea } from '@/components/ui/field';
 import { useMe, usePeople, useSetAttendance } from '@/lib/api/hooks';
+import { useAttendanceAnswer } from '@/components/domain/use-attendance-answer';
 import { cn } from '@/lib/cn';
 import type { AttendanceStatus, Meeting, Person } from '@/lib/api/types';
 
@@ -204,8 +210,7 @@ export function AttendanceCard({
 
       {!readOnly && me.me && (
         <OwnAnswer
-          meetingId={meeting.id}
-          personId={me.me.id}
+          meeting={meeting}
           status={statusOf(me.me.id)}
           note={rowOf(me.me.id)?.note ?? null}
         />
@@ -229,8 +234,21 @@ function PersonRow({
   const NoteIcon = NOTE_FIELD[status].icon;
 
   return (
-    <li className="flex items-start gap-3 px-4 py-3">
-      <Avatar person={person} size="sm" className="mt-0.5 shrink-0" />
+    // Ohne Notiz ist die Zeile eine Zeile, und dann sitzt der Name mittig neben
+    // dem Bild. Die Ausrichtung nach oben samt der beiden Ausgleichs-Margen gilt
+    // dem zweizeiligen Fall — ohne zweite Zeile war sie nur eine Leerfläche
+    // unter dem Namen.
+    <li
+      className={cn(
+        'flex gap-3 px-4 py-3',
+        note ? 'items-start' : 'items-center',
+      )}
+    >
+      <Avatar
+        person={person}
+        size="sm"
+        className={cn('shrink-0', note && 'mt-0.5')}
+      />
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-stone-800">
@@ -254,7 +272,8 @@ function PersonRow({
 
       <span
         className={cn(
-          'mt-1 flex shrink-0 items-center gap-1.5 text-[11px] font-semibold',
+          'flex shrink-0 items-center gap-1.5 text-[11px] font-semibold',
+          note && 'mt-1',
           answer.text,
         )}
       >
@@ -276,17 +295,22 @@ function PersonRow({
  * eine Anfrage raus.
  */
 function OwnAnswer({
-  meetingId,
-  personId,
+  meeting,
   status,
   note,
 }: {
-  meetingId: string;
-  personId: string;
+  meeting: Meeting;
   status: AttendanceStatus;
   note: string | null;
 }) {
-  const setAttendance = useSetAttendance(meetingId);
+  // Der Status läuft über den gemeinsamen Hook: Auf „Weiß noch nicht" zu gehen
+  // gibt die eigenen Rollen dieses Abends frei, und danach wird gefragt. Die
+  // **Notiz** geht direkt raus — sie ändert am Status nichts und braucht
+  // deshalb auch keine Rückfrage.
+  const { answer } = useAttendanceAnswer(meeting);
+  const setAttendance = useSetAttendance(meeting.id);
+  const me = useMe();
+  const personId = me.me?.id;
   const [draft, setDraft] = useState(note ?? '');
   // Der Entwurf folgt dem Server, solange niemand tippt — sonst stünde nach
   // einem Statuswechsel (der die Notiz löscht) der alte Satz noch im Feld.
@@ -303,23 +327,23 @@ function OwnAnswer({
       <SectionTitle>Deine Antwort</SectionTitle>
       <Card className="space-y-3">
         <div className="flex gap-2">
-          {ANSWERS.map((answer) => (
+          {ANSWERS.map((option) => (
             <button
-              key={answer.status}
+              key={option.status}
               type="button"
-              aria-pressed={status === answer.status}
+              aria-pressed={status === option.status}
               onClick={() => {
                 setTouched(false);
-                setAttendance.mutate({ personId, status: answer.status });
+                void answer(option.status);
               }}
               className={cn(
                 'flex-1 rounded-md border px-2 py-2.5 text-xs font-bold transition-colors',
-                status === answer.status
-                  ? answer.active
+                status === option.status
+                  ? option.active
                   : 'border-line bg-card text-stone-500 hover:border-line-strong',
               )}
             >
-              {answer.label}
+              {option.label}
             </button>
           ))}
         </div>
@@ -348,6 +372,7 @@ function OwnAnswer({
               disabled={!changed}
               loading={setAttendance.isPending}
               onClick={() => {
+                if (!personId) return;
                 setTouched(false);
                 setAttendance.mutate({
                   personId,

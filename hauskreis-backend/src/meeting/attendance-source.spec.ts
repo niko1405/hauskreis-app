@@ -20,6 +20,14 @@ import { withClock } from './group-clock.testing';
  */
 function setup(previousStatus: AttendanceStatus = AttendanceStatus.ABSENT) {
   const upsert = jest.fn().mockResolvedValue({});
+  const releaseFor = jest.fn().mockResolvedValue({
+    host: false,
+    song: false,
+    testimony: false,
+    topic: false,
+  });
+  const handleDecline = jest.fn();
+  const announceRelease = jest.fn();
 
   const db = {
     meeting: {
@@ -48,7 +56,10 @@ function setup(previousStatus: AttendanceStatus = AttendanceStatus.ABSENT) {
     new MeetingService(
       prisma,
       {} as unknown as RoleSuggestionService,
-      { handleDecline: jest.fn() } as unknown as MeetingNotificationService,
+      {
+        handleDecline,
+        announceRelease,
+      } as unknown as MeetingNotificationService,
       { reconcile } as unknown as MeetingCancellationService,
       // Position 5 und 6 (Zuteilungs-Benachrichtigung, Verfügbarkeit) spielen
       // beim Antworten keine Rolle. Die Freigabe dahinter schon: Sie läuft
@@ -56,11 +67,18 @@ function setup(previousStatus: AttendanceStatus = AttendanceStatus.ABSENT) {
       // für die Notiz.
       undefined as never,
       undefined as never,
-      { releaseFor: jest.fn().mockResolvedValue([]) } as never,
+      { releaseFor } as never,
     ),
   );
 
-  return { service, upsert, reconcile };
+  return {
+    service,
+    upsert,
+    reconcile,
+    releaseFor,
+    handleDecline,
+    announceRelease,
+  };
 }
 
 describe('MeetingService.setAttendance', () => {
@@ -124,5 +142,72 @@ describe('MeetingService.setAttendance', () => {
     });
 
     expect(upsert.mock.calls[0][0].update.note).toBeNull();
+  });
+});
+
+/**
+ * Eine Rolle ist die Aussage „ich bin da und mache das". Wer sie zurücknimmt,
+ * gibt sie frei — und zwar bei beiden Wegen aus einer Zusage heraus.
+ */
+describe('MeetingService.setAttendance und die Rollen', () => {
+  it('gibt sie auch bei „weiß noch nicht" frei', async () => {
+    const { service, releaseFor, handleDecline, announceRelease } = setup(
+      AttendanceStatus.ATTENDING,
+    );
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.UNKNOWN,
+    });
+
+    expect(releaseFor).toHaveBeenCalledWith('m-1', 'niko');
+    // Aber ohne Absage-Nachricht: „weiß noch nicht" geht den Gastgeber nichts
+    // an, und es macht auch keine zu kleine Wohnung frei — die erwartete Zahl
+    // ändert sich dadurch gar nicht.
+    expect(handleDecline).not.toHaveBeenCalled();
+    expect(announceRelease).toHaveBeenCalled();
+  });
+
+  it('gibt bei einer Absage frei und sagt dem Gastgeber Bescheid', async () => {
+    const { service, releaseFor, handleDecline, announceRelease } = setup(
+      AttendanceStatus.ATTENDING,
+    );
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.ABSENT,
+    });
+
+    expect(releaseFor).toHaveBeenCalledWith('m-1', 'niko');
+    expect(handleDecline).toHaveBeenCalled();
+    expect(announceRelease).not.toHaveBeenCalled();
+  });
+
+  it('gibt nichts frei, wenn jemand zusagt', async () => {
+    const { service, releaseFor } = setup(AttendanceStatus.UNKNOWN);
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.ATTENDING,
+    });
+
+    expect(releaseFor).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Nur der Übergang zählt. Wer bei „weiß noch nicht" bleibt und dazu einen
+   * Satz schreibt, verliert nichts — und bekäme sonst bei jedem Speichern eine
+   * Rollen-Meldung an die Gruppe hinterher.
+   */
+  it('lässt sie stehen, wenn sich der Status nicht ändert', async () => {
+    const { service, releaseFor } = setup(AttendanceStatus.UNKNOWN);
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.UNKNOWN,
+      note: 'Muss schauen, wann Feierabend ist',
+    });
+
+    expect(releaseFor).not.toHaveBeenCalled();
   });
 });

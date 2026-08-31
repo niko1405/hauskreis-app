@@ -8,6 +8,13 @@
  * „was wurde vorgeschlagen" sind aber nicht dieselbe, und die erste ist die,
  * mit der die meisten hierherkommen.
  *
+ * **Die Setlist steht auch dann da, wenn sie leer ist** — sobald es überhaupt
+ * Lieder gibt. Sie erschien zuerst erst mit dem ersten Haken, und damit fehlte
+ * die Frage genau in dem Zustand, in dem sie offen ist: Man sah zwölf
+ * Vorschläge und musste selbst darauf kommen, dass noch nichts gewählt ist.
+ * Was an ihrer Stelle steht, hängt daran, wer liest: für das Musik-Team eine
+ * Aufforderung, für alle anderen eine Auskunft.
+ *
  * **Der Haken gehört denen, die ihn drücken dürfen.** Er stand für alle da,
  * ausgegraut, und brauchte darunter einen Satz, der erklärte, warum er nicht
  * geht — ein toter Knopf ist kein Hinweis, sondern ein Fehler. Wer nicht die
@@ -112,11 +119,36 @@ export function SongsCard({
           />
         )}
 
-        {setlist.length > 0 && (
+        {/* Der Block steht, sobald es überhaupt Lieder gibt — und nicht erst,
+            wenn schon etwas ausgewählt ist. Genau dann ist die Frage „was
+            singen wir" ja offen, und vorher stand sie an dieser Stelle gar
+            nicht: Man sah zwölf Vorschläge und musste selbst darauf kommen,
+            dass die Setlist noch leer ist. */}
+        {all.length > 0 && (
           <div>
             <Heading icon={<ListMusic size={12} />}>
               Feste Setlist ({setlist.length})
             </Heading>
+
+            {setlist.length === 0 && (
+              <div className="rounded-md border border-dashed border-line-strong px-4 py-5 text-center">
+                <p className="text-sm font-bold text-stone-700">
+                  {readOnly
+                    ? 'Nicht notiert, was gesungen wurde'
+                    : mayPick
+                      ? 'Noch nichts ausgewählt'
+                      : 'Die Setlist steht noch nicht fest'}
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-stone-400">
+                  {readOnly
+                    ? 'Hak unten ab, was dran war — das hilft der Liederliste.'
+                    : mayPick
+                      ? 'Hakt unten die Lieder ab, die ihr singen wollt — sie erscheinen dann hier.'
+                      : 'Das Musik-Team wählt aus den Vorschlägen aus.'}
+                </p>
+              </div>
+            )}
+
             <ul className="space-y-2">
               {setlist.map((entry) => (
                 <SongRow
@@ -186,8 +218,10 @@ export function SongsCard({
             </Button>
 
             {/* Die Auskunft von der Leserseite her: nicht „du darfst nicht",
-                sondern „dafür ist jemand zuständig". */}
-            {!mayPick && all.length > 0 && (
+                sondern „dafür ist jemand zuständig". Steht die leere Setlist
+                oben, sagt sie dasselbe schon — dann entfällt der Satz, statt
+                zweimal dazustehen. */}
+            {!mayPick && all.length > 0 && setlist.length > 0 && (
               <p className="mt-3 text-center text-[11px] text-stone-400">
                 Das Musik-Team wählt aus diesen Vorschlägen die finale Setlist.
               </p>

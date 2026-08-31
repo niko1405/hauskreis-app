@@ -420,3 +420,41 @@ label,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Was aufs Papier kommt.
+   
+   Gebraucht von der Anleitung (`/anleitung`), die man ausdruckt oder über den
+   Druckdialog als PDF sichert. Alles, was zur App gehört und nicht zum Text,
+   fällt weg: die Navigation an beiden Rändern, die Kopfleiste, der
+   Zurück-Pfeil und der Druckknopf selbst — ein Knopf auf Papier ist ein Fehler.
+
+   Farben und Flächen gehen mit: Ein Terracotta-Verlauf kostet auf einem
+   Tintendrucker mehr, als er auf dem Blatt sagt. */
+@media print {
+  nav,
+  header.sticky,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  body,
+  main {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Die App ist am Bildschirm eine schmale, zentrierte Spalte mit Rahmen und
+     Schatten — auf dem Blatt wäre das ein Kasten mitten auf der Seite. */
+  main,
+  main > * {
+    max-width: none !important;
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+
+  /* Ein Abschnitt, der über den Seitenumbruch hinweg zerrissen wird, ist genau
+     der, den man danach zweimal liest. */
+  .break-inside-avoid {
+    break-inside: avoid;
+  }
+}

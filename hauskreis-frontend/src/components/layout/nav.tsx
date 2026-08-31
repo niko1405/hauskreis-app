@@ -9,7 +9,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUnreadFirstSteps } from '@/features/help/use-unread-help';
 import { useUnreadRelease } from '@/features/releases/use-unread-release';
+import { useUnreadAdmin } from '@/features/admin/use-unread-admin';
+import { useMe } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
+import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 
 export const NAV_ITEMS = [
   { href: '/', label: 'Heute', icon: Home },
@@ -30,17 +33,39 @@ export const NAV_ITEMS = [
 const UNREAD_HREF = '/profil';
 
 /**
- * Zwei Gründe, ein Punkt.
+ * Drei Gründe, ein Punkt.
  *
- * Beide Wege enden im Profil — „Was ist neu" und „Hilfe" stehen dort in
- * derselben Karte. Ein zweiter Punkt daneben würde die Leiste nicht genauer
- * machen, sondern nur unruhiger; welcher der beiden gemeint ist, sagt die
- * Karte eine Ebene tiefer.
+ * Alle drei Wege enden im Profil — „Was ist neu", „Hilfe" und der
+ * Admin-Bereich. Ein zweiter Punkt daneben würde die Leiste nicht genauer
+ * machen, sondern nur unruhiger; welcher gemeint ist, sagt der Bildschirm eine
+ * Ebene tiefer.
+ *
+ * Der dritte gilt **nur Admins**: Bei allen anderen steht der Knopf gar nicht
+ * da, und ein Punkt, der auf etwas Unsichtbares zeigt, bliebe für immer stehen.
  */
 function useUnreadProfile(): boolean {
   const release = useUnreadRelease();
   const firstSteps = useUnreadFirstSteps();
-  return release.unread || firstSteps.unread;
+  const admin = useUnreadAdmin();
+  const me = useMe();
+
+  return release.unread || firstSteps.unread || (me.isAdmin && admin.unread);
+}
+
+/**
+ * Die Ziele, die dieser Hauskreis tatsächlich hat.
+ *
+ * `NAV_ITEMS` bleibt die **vollständige** Liste, denn sie beantwortet noch eine
+ * zweite Frage: ob ein Bildschirm die Kopfleiste trägt (`useHasSmartHeader`).
+ * Filterte man dort, verlöre `/gebet` sie in dem Moment, in dem jemand mit
+ * einem Lesezeichen darauf landet — und zwar auf einer Seite, die es dann
+ * erklären müsste.
+ */
+function useNavItems(): readonly (typeof NAV_ITEMS)[number][] {
+  const { hauskreis } = useHauskreis();
+  const prayer = hauskreis?.features.prayerBuddies ?? true;
+
+  return prayer ? NAV_ITEMS : NAV_ITEMS.filter(({ href }) => href !== '/gebet');
 }
 
 function useIsActive() {
@@ -86,6 +111,7 @@ function NavIcon({
 export function TabBar() {
   const isActive = useIsActive();
   const unread = useUnreadProfile();
+  const items = useNavItems();
 
   return (
     <nav
@@ -93,7 +119,7 @@ export function TabBar() {
       className="pb-safe sticky bottom-0 z-30 border-t border-line bg-canvas/95 backdrop-blur md:hidden"
     >
       <ul className="flex items-stretch justify-around">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (
             <li key={href} className="flex-1">
@@ -124,6 +150,7 @@ export function TabBar() {
 export function Sidebar() {
   const isActive = useIsActive();
   const unread = useUnreadProfile();
+  const items = useNavItems();
 
   return (
     <nav
@@ -137,7 +164,7 @@ export function Sidebar() {
         Hauskreis
       </p>
       <ul className="space-y-1">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (
             <li key={href}>

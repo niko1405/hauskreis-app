@@ -415,6 +415,18 @@ export class MeetingService {
       });
     }
 
+    // Und die Gebetsanliegen, aus demselben Grund wie die Lieder: Sie stehen in
+    // einer eigenen Tabelle, die `data`-Block oben erreicht sie nicht. Anders
+    // als die Einheit eines Themas warten sie nirgends als Entwurf — sie
+    // gehören diesem einen Abend. Was sie kostet, sagt die Rückfrage im
+    // Frontend vorher an.
+    if (before.hasPrayerSlot && !slots.hasPrayerSlot) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.meetingPrayerRequest.deleteMany({ where: { meetingId: id } });
+        await touchMeeting(tx, id);
+      });
+    }
+
     // Dasselbe für die Haken unter dem Actionstep: die beiden Texte hat
     // `clearedByTurningOff` schon geleert, die Haken stehen in einer eigenen
     // Tabelle. Stehenzulassen wäre nicht bloß Unordnung — wer den Baustein
@@ -648,7 +660,7 @@ export class MeetingService {
     // vor etwas, das längst vorbei ist.
     if (
       before.status !== MeetingStatus.CANCELLED &&
-      !(await this.clock.isPast(hauskreisId, before.date))
+      !(await this.clock.isPast(hauskreisId, before))
     ) {
       await this.meetingNotifications.announceCancellation(id);
     }
@@ -702,7 +714,7 @@ export class MeetingService {
 
     if (
       before.status === MeetingStatus.CANCELLED &&
-      !(await this.clock.isPast(hauskreisId, before.date))
+      !(await this.clock.isPast(hauskreisId, before))
     ) {
       await this.meetingNotifications.announceRevival(id);
     }
@@ -905,17 +917,47 @@ export class MeetingService {
       return row;
     });
 
-    // Only on the transition into "absent": re-saving the same answer, or
-    // switching between attending and undecided, is nobody's business.
-    if (
-      dto.status === AttendanceStatus.ABSENT &&
-      previous?.status !== AttendanceStatus.ABSENT
-    ) {
+    /**
+     * **Wer nicht mehr zusagt, gibt seine Rollen frei** — bei einer Absage wie
+     * bei einem „weiß noch nicht".
+     *
+     * Lange galt das nur für die Absage. Aber eine Rolle ist die Aussage „ich
+     * bin an dem Abend da und mache das" (CLAUDE.md §6.7: „Wer eingeteilt wird,
+     * ist dabei"), und wer auf unentschieden zurückgeht, nimmt genau diese
+     * Aussage zurück. Am Dienstag stand sonst im Plan jemand, der selbst nicht
+     * weiß, ob er kommt.
+     *
+     * Nur beim **Übergang**: dieselbe Antwort ein zweites Mal zu speichern —
+     * etwa nur um eine Notiz zu ändern — gibt nichts frei.
+     */
+    const zurückgenommen =
+      dto.status !== AttendanceStatus.ATTENDING &&
+      previous?.status !== dto.status;
+
+    if (zurückgenommen) {
       // Erst freigeben, dann Bescheid sagen: sonst ginge die Nachricht „jemand
       // hat für deinen Abend abgesagt" noch an den Gastgeber, der genau in
       // diesem Moment aufhört, einer zu sein.
       const released = await this.roleRelease.releaseFor(id, dto.personId);
-      await this.meetingNotifications.handleDecline(id, dto.personId, released);
+
+      // Und hier trennen sich die beiden wieder. Eine **Absage** geht den
+      // Gastgeber an und kann eine zu kleine Wohnung freischalten; ein „weiß
+      // noch nicht" tut beides nicht — es ändert die erwartete Zahl gar nicht
+      // (`countExpectedAttendance` rechnet mit allen außer den Absagen). Was
+      // beide gemeinsam haben, ist die frei gewordene Rolle.
+      if (dto.status === AttendanceStatus.ABSENT) {
+        await this.meetingNotifications.handleDecline(
+          id,
+          dto.personId,
+          released,
+        );
+      } else {
+        await this.meetingNotifications.announceRelease(
+          id,
+          dto.personId,
+          released,
+        );
+      }
     }
 
     // Diese Antwort kann die letzte gewesen sein, die den Abend noch hielt —

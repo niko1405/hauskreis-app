@@ -15,6 +15,8 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { PrayerBuddyService } from './prayer-buddy.service';
 import type { NotificationService } from '../notification/notification.service';
 import { withClock } from '../meeting/group-clock.testing';
+import { withFeatures } from '../hauskreis/group-features.testing';
+import type { GroupFeatures } from '../hauskreis/group-features.service';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const iso = (date: Date) => date.toISOString().slice(0, 10);
@@ -58,6 +60,8 @@ function setup(options: {
   plannedAhead?: number;
   /** Wer jetzt noch aktiv ist. */
   active: string[];
+  /** Womit die Gruppe arbeitet — voreingestellt mit allem. */
+  features?: Partial<GroupFeatures>;
 }) {
   let seq = 0;
   const rows: GroupRow[] = [];
@@ -217,14 +221,17 @@ function setup(options: {
     .fn()
     .mockResolvedValue({ delivered: 1, pruned: 0, failed: 0, skipped: 0 });
 
-  const service = withClock(
-    new PrayerBuddyGeneratorService(
-      prisma as unknown as PrismaService,
-      buddies,
-      {
-        notify,
-      } as unknown as NotificationService,
+  const service = withFeatures(
+    withClock(
+      new PrayerBuddyGeneratorService(
+        prisma as unknown as PrismaService,
+        buddies,
+        {
+          notify,
+        } as unknown as NotificationService,
+      ),
     ),
+    options.features,
   );
 
   /** Die Besetzung der laufenden Runde, jede Gruppe sortiert. */
@@ -252,8 +259,13 @@ describe('PrayerBuddyGeneratorService.replanAfterMembershipChange', () => {
     await service.replanAfterMembershipChange('hk-1', { now: TODAY });
 
     expect(runningNow().flat()).not.toContain('b');
-    // Und die Gruppen, die nichts damit zu tun hatten, bleiben, wie sie waren.
-    expect(runningNow()).toContainEqual(['e', 'f', 'g']);
+    // `a` bleibt allein zurück — und weil sechs Menschen drei Paare sind,
+    // gibt das Trio seinen Letzten an ihn ab, statt ihn ins Paar zu setzen.
+    expect(runningNow()).toEqual([
+      ['a', 'g'],
+      ['c', 'd'],
+      ['e', 'f'],
+    ]);
   });
 
   it('lässt niemanden allein zurück', async () => {
@@ -283,7 +295,9 @@ describe('PrayerBuddyGeneratorService.replanAfterMembershipChange', () => {
 
     await service.replanAfterMembershipChange('hk-1', { now: TODAY });
 
-    expect(runningNow()).toContainEqual(['a', 'b', 'neu']);
+    // Nicht ins Paar — das gäbe ein zweites Trio, obwohl die Zahl aufgeht.
+    expect(runningNow()).toContainEqual(['e', 'neu']);
+    expect(runningNow().flat()).toHaveLength(6);
   });
 
   it('benachrichtigt nur die Gruppe, in der sich etwas geändert hat', async () => {

@@ -198,7 +198,7 @@ export class MeetingSongService {
 
     // Ob dieser Abend noch bevorsteht — entscheidet unten, ob eine verwaiste
     // Auswahl aufgeräumt wird oder als Protokoll stehen bleibt.
-    const past = await this.clock.isPast(hauskreisId, meeting.date);
+    const past = await this.clock.isPast(hauskreisId, meeting);
 
     await this.prisma.$transaction(async (tx) => {
       await tx.meetingSongLeader.deleteMany({
@@ -237,14 +237,17 @@ export class MeetingSongService {
     return this.findLeaders(hauskreisId, meetingId);
   }
 
-  /** Antwortet mit dem Datum, weil `setLeaders` wissen muss, ob der Abend vorbei ist. */
+  /**
+   * Antwortet mit dem Zeitraum, weil `setLeaders` wissen muss, ob der Abend
+   * vorbei ist — und „vorbei" heißt bei einer Freizeit: nach ihrem letzten Tag.
+   */
   private async assertMeetingBelongsToHauskreis(
     hauskreisId: string,
     meetingId: string,
-  ): Promise<{ date: Date }> {
+  ): Promise<{ date: Date; endDate: Date | null }> {
     const meeting = await this.prisma.meeting.findFirst({
       where: { id: meetingId, hauskreisId },
-      select: { date: true },
+      select: { date: true, endDate: true },
     });
 
     if (!meeting) {

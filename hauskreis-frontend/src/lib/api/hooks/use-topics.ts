@@ -281,9 +281,3 @@ export function useSetSessionResponsibles(sessionId: string) {
  * bei einem Konflikt passiert — `useResourceUpdate` zeigt ihn an, die
  * Kurzfassung verschluckte ihn.
  */
-
-/** Nur Admin. */
-export function useRunTopicReminders() {
-  const { hauskreisId } = useHk();
-  return useApiMutation(() => topicsApi.runTopicReminders(hauskreisId));
-}

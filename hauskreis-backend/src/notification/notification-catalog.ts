@@ -44,10 +44,39 @@ export interface NotificationContext {
   homeCapacity: number | null;
   /** Wie viele Menschen der Hauskreis gerade hat. */
   activeMembers: number;
+  /** Ob die Gruppe Gebetsbuddys hat. */
+  prayerBuddies: boolean;
+  /** Ob der Actionstep der Woche auf dem Startbildschirm steht. */
+  weeklyActionstep: boolean;
 }
+
+/**
+ * Wohin eine Nachricht in der Einstellungsliste gehört.
+ *
+ * Zwanzig Arten untereinander sind keine Liste mehr, sondern eine Wand — man
+ * findet den einen Schalter nicht, den man sucht. Die Kategorie steht **hier**
+ * und nicht im Frontend: Eine zweite Aufzählung dort wäre die, die beim nächsten
+ * neuen Eintrag vergessen wird, und der Schalter stünde dann unter „Sonstiges"
+ * oder gar nicht.
+ *
+ * Die Reihenfolge ist die der Anzeige und geht von innen nach außen: erst, was
+ * man selbst zu tun hat, dann der Abend, dann sein Nachklang, dann die Gruppe.
+ */
+export const NOTIFICATION_CATEGORIES = [
+  'Deine Rollen',
+  'Termine',
+  'Nach dem Abend',
+  'Gebet',
+  'Geburtstage',
+  'Gruppe & App',
+] as const;
+
+export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 
 export interface NotificationDefinition {
   type: NotificationType;
+  /** Unter welcher Überschrift der Schalter steht. */
+  category: NotificationCategory;
   /** Heading in the settings list. */
   label: string;
   /** Answers "why am I getting this", in the app's own voice. */
@@ -89,6 +118,7 @@ export interface NotificationDefinition {
 export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   {
     type: NotificationType.HOST_REMINDER,
+    category: 'Deine Rollen',
     label: 'Du hostest',
     description: 'Erinnerung, bevor der Hauskreis bei dir stattfindet.',
     // Saturday for the Tuesday: enough time to tidy up and shop, not so early
@@ -103,6 +133,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.TESTIMONY_REMINDER,
+    category: 'Deine Rollen',
     label: 'Du erzählst dein Testimony',
     description:
       'Erinnerung, bevor du an einem Lobpreis- und Gebetsabend deine Geschichte erzählst.',
@@ -118,6 +149,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.TOPIC_REMINDER,
+    category: 'Deine Rollen',
     label: 'Du bereitest das Thema vor',
     description:
       'Erinnerung, bevor du mit dem Thema dran bist — auch wenn es sich über mehrere Abende zieht.',
@@ -133,6 +165,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.SONG_REMINDER,
+    category: 'Deine Rollen',
     label: 'Du machst Musik',
     description:
       'Erinnerung, bevor du für die Lieder eines Abends zuständig bist.',
@@ -146,6 +179,10 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.ACTIONSTEP_REMINDER,
+    category: 'Nach dem Abend',
+    // Hat die Gruppe den Wochen-Actionstep abgeschaltet, gibt es hier nichts
+    // einzustellen — der Lauf schickt ohnehin nichts mehr.
+    appliesTo: (context) => context.weeklyActionstep,
     label: 'Actionstep der Woche',
     description:
       'Nachfrage mitten in der Woche, was aus dem Actionstep vom letzten Mal geworden ist.',
@@ -156,6 +193,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.ROLE_ASSIGNED,
+    category: 'Deine Rollen',
     label: 'Du wurdest eingeteilt',
     // Ein Eintrag für Gastgeber, Thema und Musik zusammen, nicht drei. Die
     // Erinnerungen darüber sind einzeln einstellbar, weil man sie
@@ -167,7 +205,34 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     defaultEnabled: true,
   },
   {
+    type: NotificationType.MEETING_TODAY,
+    category: 'Termine',
+    label: 'Heute ist Hauskreis',
+    // Der eine Tag, an dem die App bisher schwieg — obwohl an ihm alles
+    // entschieden wird. Die Nachricht sagt Uhrzeit und Ort und stellt gleich
+    // die Frage nach: Wer abgesagt hat, wird gefragt, ob das noch stimmt.
+    description:
+      'Am Morgen des Termintags — mit Uhrzeit, Ort und der Nachfrage, ob deine Antwort noch gilt.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
+    type: NotificationType.NOTES_REMINDER,
+    category: 'Nach dem Abend',
+    label: 'Nachbereitung eintragen',
+    // Nur an Abenden ohne Thema, und das steht auch in der Beschreibung: Am
+    // Themen-Abend gehören Zusammenfassung und Actionstep der Einheit, und
+    // schreiben darf sie deren Crew. Eine Aufforderung an alle wäre dort eine
+    // Einladung in eine Fehlermeldung.
+    description:
+      'Am Tag nach einem Abend ohne Thema, an dem noch keine Zusammenfassung und kein Actionstep stehen.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
     type: NotificationType.PRAYER_BUDDY_ASSIGNED,
+    category: 'Gebet',
+    appliesTo: (context) => context.prayerBuddies,
     label: 'Neue Gebetsbuddys',
     description: 'Wer in der neuen Runde mit dir betet.',
     schedule: { kind: 'EVENT' },
@@ -175,6 +240,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.MEETING_CANCELLED,
+    category: 'Termine',
     label: 'Hauskreis fällt aus',
     // Beide Richtungen, ein Abo: wer wissen will, dass der Abend ausfällt, will
     // auch wissen, dass er doch stattfindet. Ein zweiter Schalter dafür wäre
@@ -186,6 +252,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.MEETING_TIME_CHANGED,
+    category: 'Termine',
     label: 'Der nächste Abend fängt anders an',
     // Nur der nächste, und deshalb steht das auch in der Beschreibung: eine
     // verschobene Uhrzeit in fünf Wochen liest man, wenn man hinschaut. Beim
@@ -197,6 +264,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.ATTENDANCE_DECLINED,
+    category: 'Termine',
     label: 'Jemand sagt ab',
     // Zwei Nachrichten, ein Schalter — beschrieben werden deshalb auch beide.
     // Die zweite geht an alle und ist die einzige Absage, die etwas zu tun
@@ -209,6 +277,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.HOST_CAPACITY_UNLOCKED,
+    category: 'Termine',
     label: 'Bei euch wäre jetzt Platz',
     description:
       'Wenn genug Leute abgesagt haben, dass der Hauskreis auch in eure Wohnung passt.',
@@ -224,6 +293,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.MEMBER_LEFT,
+    category: 'Gruppe & App',
     label: 'Jemand verlässt den Hauskreis',
     // Auch die Nachfolge hängt hier mit drin: „du bist jetzt Admin" ist ein
     // Satz mehr in derselben Nachricht und kein zehnter Eintrag in dieser
@@ -236,6 +306,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.CUSTOM_MEETING_CREATED,
+    category: 'Termine',
     label: 'Ein besonderer Termin kommt dazu',
     description:
       'Sobald jemand einen Geburtstag, eine Freizeit oder Ähnliches einträgt.',
@@ -244,6 +315,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.CUSTOM_MEETING_REMINDER,
+    category: 'Termine',
     label: 'Ein besonderer Termin steht an',
     // Getrennt von der Ankündigung, weil es zwei verschiedene Fragen sind: „gibt
     // es etwas Neues" beantwortet man einmal, „ich muss daran denken" braucht
@@ -262,6 +334,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.BIRTHDAY_GIFT_ASSIGNED,
+    category: 'Geburtstage',
     label: 'Du besorgst ein Geschenk',
     // Ein Ereignis und keine Vorlaufzeit: Der Anlass ist nicht der Geburtstag,
     // sondern dass sich die Zuteilung geändert hat. Wann das passiert, weiß
@@ -273,6 +346,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.BIRTHDAY_GIFT_REMINDER,
+    category: 'Geburtstage',
     label: 'Ein Geburtstag steht an',
     description:
       'Rechtzeitig vorher, damit noch Zeit zum Besorgen bleibt. Bestimmt auch, ab wann der Geburtstag unter „Deine Rollen“ auftaucht.',
@@ -291,6 +365,7 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   },
   {
     type: NotificationType.BIRTHDAY_GIFT_DECIDED,
+    category: 'Geburtstage',
     label: 'Ein Geschenk steht fest',
     description:
       'Wenn entschieden ist, was es wird, oder was es gekostet hat. Wer Geburtstag hat, bekommt davon nichts mit.',
@@ -298,7 +373,19 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     defaultEnabled: true,
   },
   {
+    type: NotificationType.ADMIN_GRANTED,
+    category: 'Gruppe & App',
+    label: 'Du wirst Admin',
+    // Nur diese Richtung. Der Katalog trägt keinen Gegeneintrag, weil es keine
+    // Nachricht gibt: Etwas bekommen ist eine Ankündigung, etwas verlieren ist
+    // ein Gespräch.
+    description: 'Wenn dir jemand die Verwaltung des Hauskreises anvertraut.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
     type: NotificationType.RELEASE_NOTES,
+    category: 'Gruppe & App',
     label: 'Neues in der App',
     // Steht als letzte in der Liste, weil sie als einzige nichts mit dem
     // Hauskreis zu tun hat, sondern mit der App darüber.

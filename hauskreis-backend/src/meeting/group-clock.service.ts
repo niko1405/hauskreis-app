@@ -1,7 +1,7 @@
 import { Global, Injectable, Module } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DEFAULT_TIME_ZONE } from '../common/time/local-evening';
-import { currentDay, isPast } from './meeting-schedule';
+import { currentDay, spanIsPast, type MeetingSpan } from './meeting-schedule';
 
 /**
  * Die Uhr einer Gruppe — welche Zone sie hat, und welchen Tag sie gerade hat.
@@ -60,14 +60,22 @@ export class GroupClockService {
   }
 
   /**
-   * Liegt dieser Termintag hinter uns?
+   * Liegt dieser Termin hinter uns — **ganz**, nicht nur angefangen?
+   *
+   * Nimmt den Termin und nicht seinen Anfangstag: Eine Freizeit von Freitag bis
+   * Sonntag galt hier am Samstag als vergangen, obwohl sie lief. Warum das die
+   * richtige Frage ist, steht bei `spanIsPast`.
    *
    * Für Stellen mit genau einem Vergleich. Wer mehrere hat, holt sich einmal
-   * `zoneOf` und ruft `isPast` aus `meeting-schedule` direkt — sonst stünde in
-   * einer Schleife ein `await`, das immer dieselbe Antwort holt.
+   * `zoneOf` und ruft `spanIsPast` aus `meeting-schedule` direkt — sonst stünde
+   * in einer Schleife ein `await`, das immer dieselbe Antwort holt.
    */
-  async isPast(hauskreisId: string, date: Date, now?: Date): Promise<boolean> {
-    return isPast(date, await this.zoneOf(hauskreisId), now);
+  async isPast(
+    hauskreisId: string,
+    span: MeetingSpan,
+    now?: Date,
+  ): Promise<boolean> {
+    return spanIsPast(span, await this.zoneOf(hauskreisId), now);
   }
 
   /** Nach jedem Schreiben der Konfiguration zu rufen. */

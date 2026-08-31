@@ -62,7 +62,8 @@ import {
   useTopic,
   useTopicChoices,
 } from '@/lib/api/hooks';
-import { formatDay, isPast } from '@/lib/date';
+import { formatDay } from '@/lib/date';
+import { isMeetingPast } from '@/lib/meeting';
 import type {
   ChooseTopicSessionInput,
   PersonRef,
@@ -635,7 +636,7 @@ function SessionRow({
 }) {
   // Ein Abend, der war, lässt sich nicht mehr umhängen — der Server weist es
   // ab, und ein Knopf, der nur Fehler erzeugt, ist ein falsches Versprechen.
-  const vorbei = Boolean(session.meeting && isPast(session.meeting.date));
+  const vorbei = Boolean(session.meeting && isMeetingPast(session.meeting));
 
   const inhalt = (
     <>

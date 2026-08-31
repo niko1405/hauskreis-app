@@ -60,6 +60,7 @@ export class RoleReleaseService {
         // ihrem Kalendertag, nicht an dem des Servers.
         hauskreisId: true,
         date: true,
+        endDate: true,
         status: true,
         hostPersonId: true,
         locationId: true,
@@ -71,7 +72,7 @@ export class RoleReleaseService {
     if (
       !meeting ||
       meeting.status === MeetingStatus.CANCELLED ||
-      (await this.clock.isPast(meeting.hauskreisId, meeting.date))
+      (await this.clock.isPast(meeting.hauskreisId, meeting))
     ) {
       return { host: false, song: false, testimony: false, topic: false };
     }

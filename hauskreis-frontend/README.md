@@ -357,12 +357,34 @@ gleich danach umspringt.
 `parseDay`/`toDay` bleiben absichtlich gerätelokal: `addDays`, `daysBetween` und
 `startOfWeek` sind symmetrisch und rechnen dadurch in jeder Zone richtig.
 
+**Ein Termin hat drei Zustände, nicht zwei** (`meetingPhase` in
+`lib/meeting.ts`): `upcoming`, `running`, `past`. „Vorbei" wurde überall aus
+`isPast(meeting.date)` gelesen — also aus dem **ersten** Tag —, und das war an
+zwei Enden falsch: Eine Freizeit von Freitag bis Sonntag stand ab Samstag als
+„Vorbei" da, obwohl sie lief, und ein ganz normaler Dienstag sah um 20 Uhr aus
+wie um 8 Uhr morgens. Die Grenzen sind dieselben, die der Server zieht: der
+**letzte** Tag für „vorbei", die **Treffpunktzeit** für „läuft". Wer nur die
+häufigste der drei Fragen hat, nimmt `isMeetingPast(meeting)` — dafür braucht ein
+Termin `date`, `endDate` und `startTime`.
+
 ### Leere Felder
 
 Ein Termin ohne Host ist ein Treffen im Schlosspark. Ein Thema ohne Titel ist
 eines, für das noch niemand einen festgelegt hat. Ein Lobpreisabend hat gar kein
 Thema. Solche Zustände bekommen ihren eigenen Text — nicht `—` und nicht die
 Fehlerdarstellung.
+
+## Eine Klasse, die den Rechner rettet
+
+`app-shell.tsx`: Die Inhaltsspalte ist ab `md` ein Flex-Kind einer Zeile
+(Seitenleiste plus Inhalt) und trägt `flex-1` — aber ohne `min-w-0` verbietet
+`min-width: auto` ihr, unter ihre Inhaltsbreite zu schrumpfen. Eine einzige
+breite Zeile — eine Pillenreihe, eine Tabelle, ein langes Wort — drückte damit
+die **ganze** Spalte auf, und die Karten liefen darüber hinaus; das
+`overflow-x-hidden` an `<main>` schnitt danach nur noch ab, was längst zu breit
+war. Dieselbe Klasse steht aus demselben Grund in `CONTROL` (`ui/field.tsx`):
+Die Mindestbreite eines Eingabefelds ist seine eingebaute Feldbreite, und
+`w-full` allein kommt dagegen nicht an.
 
 ## Die Kopfleiste über den Tabs
 
@@ -372,6 +394,15 @@ sechster Tab machte sie eng. Ein starrer Balken oben wäre aber das Ende der
 Kopfbilder, die auf drei Bildschirmen die halbe Gestaltung tragen — also eine
 Leiste, die sich zum Scrollen verhält.
 
+**Abschaltbar** (Profil → Darstellung). Die Wahl liegt im Gerät
+(`lib/header-preference.ts`, gebaut wie `lib/theme.ts`) und hängt an genau einer
+Zeile in `useHasSmartHeader` — von dort fällt alles andere ab: `SmartHeader`
+rendert nichts, `PageHeader` nimmt wieder `pt-safe-6` statt `pt-header-6`, und
+die Nachrichten-Box verschwindet mit der Glocke, die sie öffnet. Der Weg zur
+Gruppe steht dann als Knopf im Profil. `useInboxDeeplink` bleibt trotzdem in der
+Hülle: Der Haken „angetippt heißt gelesen" muss auch dann greifen, wenn es keine
+Box gibt, in der die Zeile stünde.
+
 **Zwei Zustände** (`use-header-scroll.ts` beantwortet beide getrennt, und das
 ist kein Zufall — beim Zurückwischen mitten in der Seite ist sie da und trotzdem
 nicht oben):
@@ -379,8 +410,17 @@ nicht oben):
 |        | ganz oben (`atTop`)                      | gescrollt                               |
 | ------ | ---------------------------------------- | --------------------------------------- |
 | Fläche | `.header-veil` — zwei Lagen, siehe unten | Terracotta-Verlauf, `/95` + `blur`      |
-| Links  | Bild + Name frei auf dem Foto, weiß      | dieselben, weiß auf dem Balken          |
+| Links  | **nichts** — das Foto trägt sich selbst  | Bild + Name, weiß auf dem Balken        |
 | Knöpfe | Glas: `bg-black/25…30` + `backdrop-blur` | Glocke `bg-white/15`, `Gruppe` Leinwand |
+
+**Über dem Foto steht nur, was man drückt.** Bild und Name standen dort einmal
+mit — vier Dinge über einem Bild, das selbst schon sagt, wo man ist. Sie blenden
+jetzt mit dem Balken ein, und dort tragen sie auch etwas bei: Er hat kein Foto
+unter sich, das ihn einer Seite zuordnet. Ausgeblendet (`opacity-0` +
+`pointer-events-none`) und **nicht entfernt** — der Block trägt `flex-1` und hält
+die beiden Knöpfe rechts; nähme man ihn heraus, sprängen sie beim Umschalten.
+Damit fiel auch der `text-shadow` weg, der bis dahin den Namen auf hellen Fotos
+lesbar hielt: Er steht ab jetzt nur noch da, wo eine Kante ist.
 
 **Der Schleier hat zwei Lagen, und die Reihenfolge ist die Aussage.**
 `.header-veil` in `globals.css` stapelt zwei `linear-gradient`:
@@ -480,12 +520,23 @@ handelt. `members-card.tsx` ist deshalb nach `features/group/` gezogen;
 **Ändern darf jede:r** — Bild, Name, Beschreibung —, wie beim Kopfbild: Bei
 neun Leuten ist die Selbstbeschreibung keine Verwaltungsangelegenheit.
 
-Die **Beschreibung** trägt dafür statt des Stifts ein Wort: „Bearbeiten",
-terracotta und ohne Fläche, unter dem Text (`editLabel` an `InlineEdit`). Ein
-Bleistift neben einem Absatz Fließtext ist ein Symbol, das man deuten muss, und
-er sitzt oben rechts — also am Anfang von etwas, das man erst zu Ende liest. Der
-**Name** darüber behält seinen Stift: Ein Textknopf unter einer einzeiligen,
-zentrierten Überschrift wöge mehr als die Überschrift.
+**Ein Knopf für Name und Beschreibung.** Beide hatten einen eigenen Weg hinein —
+oben ein Stift am Namen, unten ein „Bearbeiten" unter dem Text. Es sind aber zwei
+Felder derselben Sache: wer ihr seid. Also ein Zustand (`Identity`), ein Knopf
+und **ein** `update.mutate({ name, description })`; zwei getrennte Schreiber auf
+dieselbe Zeile wären zwei Gelegenheiten für einen Versionskonflikt, und zwei
+Toasts für einen Vorgang.
+
+Der Knopf ist ein Wort und kein Bleistift: „Bearbeiten", terracotta und ohne
+Fläche, am **Fuß** der Beschreibung. Ein Symbol muss man deuten, und ein Stift
+sitzt oben rechts — also am Anfang von etwas, das man erst zu Ende liest. Am Fuß
+ist man beim Lesen angekommen, und er meint ohnehin beides.
+
+Leerer Name heißt „unverändert" — einen Hauskreis ohne Namen gibt es nicht;
+leere Beschreibung heißt `null`, denn dort ist Leeren eine Aussage. Der
+`key={hauskreis.version}` an `Identity` wirft den Entwurf weg, sobald von außen
+eine neue Fassung kommt: Sonst stünde nach dem Speichern der eigene Text noch im
+Zustand und beim nächsten Öffnen wieder da.
 
 Die Ideen sind eine Liste mit Haken und nichts weiter: kein Zustimmen, keine
 Kommentare. Ein Kommentarfaden wäre ein zweiter Chat neben WhatsApp, und gegen
@@ -515,8 +566,22 @@ die Fassungsnummer.
 
 ## Der Startbildschirm
 
-Ein Aufruf (`…/home`), vier Blöcke. Zwei Entscheidungen darin sind es wert,
+Ein Aufruf (`…/home`), vier Blöcke. Drei Entscheidungen darin sind es wert,
 aufgeschrieben zu werden.
+
+**Läuft gerade ein Abend, steht er über dem nächsten** — „Aktueller Termin",
+grün getönt, darunter „Nächster Termin". „Wo bin ich jetzt" und „was kommt" sind
+zwei Fragen; vorher gab es eine Karte, und die zeigte den laufenden Abend unter
+der Überschrift „Nächstes Treffen", was keine Auskunft mehr ist, wenn man schon
+dort sitzt. Beide kommen aus derselben Antwort (`currentMeeting`,
+`nextMeeting`) und aus derselben Komponente — die Tönung ist der einzige
+Unterschied.
+
+„Deine Rollen" richtet sich nach **demselben** Abend (`currentMeeting?.id ??
+nextMeeting?.id`): Sonst fiele die eigene Rolle an dem Abend, an dem man sitzt,
+aus dem Register „Nächstes" heraus und stünde unter „Zukünftige". Und der
+optimistische Patch von `useSetAttendance` fasst beide Karten an — wer während
+des Abends antwortet, tut es auf der oberen.
 
 **Die Begrüßung wechselt.** „Hallo Niko! Schön, dass du da bist." stand dort
 jeden Tag, und einen Satz, den man jeden Tag liest, liest man irgendwann nicht
@@ -846,6 +911,13 @@ singen wir" und „was wurde vorgeschlagen" sind aber zwei Fragen, und die erste
 ist die, mit der die meisten die Karte aufmachen. Die zweite Gruppe lässt sich
 zuklappen, ist aber offen voreingestellt: Ein Vorschlag ist zum Lesen da.
 
+**Die Setlist steht auch dann da, wenn sie leer ist** — sobald es überhaupt
+Lieder gibt. Sie erschien zuerst erst mit dem ersten Haken, und damit fehlte die
+Frage genau in dem Zustand, in dem sie offen ist: Man sah zwölf Vorschläge und
+musste selbst darauf kommen, dass noch nichts gewählt ist. Was an ihrer Stelle
+steht, hängt daran, wer liest — für das Musik-Team eine Aufforderung, für alle
+anderen eine Auskunft.
+
 **Das Gewählte ist terracotta und nicht mehr `music`-grün.** Grün ist in dieser
 App die Farbe der _Rolle_ — das SONG-Abzeichen, die Person, die die Musik macht.
 „Im Set" ist keine Rolle, sondern eine **Auswahl**, und Auswahl ist überall
@@ -918,11 +990,31 @@ Die eigene Antwort ist außerdem weiterhin der einzige Weg, für einen **einzeln
 Abend abzusagen: „Bist du dabei?" auf dem Startbildschirm gilt nur fürs nächste
 Treffen, und Abwesenheiten im Profil decken Zeiträume ab.
 
+**„Weiß noch nicht" gibt die eigenen Rollen dieses Abends frei** — deshalb läuft
+der Statuswechsel über `components/domain/use-attendance-answer.ts` und nicht
+direkt über `useSetAttendance`. Der Hook fragt vorher nach, und zwar nur, wenn
+wirklich etwas dranhängt; die Rollen stehen in jeder Termin-Antwort, es braucht
+also keine zweite Abfrage. Die Rückfrage gilt dem **ganzen Schritt**: Abbrechen
+lässt Status und Rolle stehen.
+
+Er hängt an **allen drei** Stellen, an denen ein `UNKNOWN` entstehen kann — der
+Antwort-Karte hier und dem kompakten `AttendanceToggle` in Terminliste und
+Kalender, wo ein zweiter Tipp auf den gewählten Knopf die Antwort zurücknimmt.
+Eine davon auszulassen hieße, dass dieselbe Geste je nach Bildschirm etwas
+anderes tut. Die **Notiz** geht weiter direkt raus: Sie ändert am Status nichts.
+
 ### Die Nachbereitung entsteht am Abend, nicht davor
 
 Zusammenfassung und Actionstep eines Abends **ohne** Thema hängen am Baustein
 `hasNotesSlot` — dem einzigen, der nicht im Bausteinkasten steht. Dort hätte man
 ihn _vor_ dem Abend angehakt, also als es noch nichts nachzubereiten gab.
+
+**Der Hinweis steht ganz oben, die Karte unten.** Er saß einmal am Seitenende,
+hinter Anwesenheit, Gebetsanliegen und Thema — also hinter allem, woran man
+gerade nicht denkt, wenn man vom Abend heimkommt. Ab Terminbeginn ist er die
+Hauptsache dieses Bildschirms. Die Karte bleibt, wo sie war: Sobald etwas
+drinsteht, ist es Inhalt und gehört zum Nachklang des Abends. Beides zugleich
+gibt es nie — `showNotes` und `mayAddNotes` schließen einander aus.
 
 Stattdessen ein Ablauf in drei Zuständen, und keiner davon zeigt ein leeres Feld:
 
@@ -1333,6 +1425,103 @@ stünde die alte Zahl bis zum nächsten Ziehen-zum-Aktualisieren da — das
 Dieselbe Zahl steht über `navigator.setAppBadge` am App-Symbol, in `try/catch`:
 Die Schnittstelle gibt es nur in installierten Apps, und in manchen Browsern
 wirft schon der Zugriff.
+
+## Was die Gruppe benutzt, entscheidet, was dasteht
+
+Zwei Bausteine sind abschaltbar (Verwaltung), und beide kommen als `features` an
+der **Hauskreis-Antwort** — also aus dem Kontext, den ohnehin jeder Bildschirm
+hat (`useHauskreis`). Kein eigener Hook, keine zweite Abfrage: ein zweiter
+Ladezustand für ein Ja/Nein wäre einer zu viel.
+
+**Gebetsbuddys aus** nimmt den Tab weg, die Karte auf „Heute" (der Server
+schickt dann `prayerBuddies: null`), die Benachrichtigungsart und die
+Hilfe-Antworten dazu.
+
+`NAV_ITEMS` bleibt dabei die **vollständige** Liste — sie beantwortet noch eine
+zweite Frage, nämlich ob ein Bildschirm die Kopfleiste trägt
+(`useHasSmartHeader`). Filterte man dort, verlöre `/gebet` sie in dem Moment, in
+dem jemand mit einem Lesezeichen darauf landet, und zwar auf einer Seite, die
+das dann erklären müsste. Gefiltert wird deshalb erst in `useNavItems`, das nur
+`TabBar` und `Sidebar` benutzen; der Bildschirm selbst zeigt einen `EmptyState`
+statt einer leeren Runden-Liste, denn „noch nichts geplant" wäre dort eine
+Behauptung statt einer Auskunft.
+
+**Actionstep der Woche aus** nimmt nur die Karte auf „Heute" (`openActionstep:
+null`) und die wöchentliche Erinnerung. An der Einheit und über die
+Nachbereitung bleibt er, wie er war.
+
+## Die Anleitung zum Weiterschicken
+
+`features/help/guide-screen.tsx`, Route `/anleitung`. Wer gründet, steht vor
+einer leeren App und acht Leuten, denen er erklären soll, was sie damit sollen —
+und „lies mal die Hilfe" ist keine Erklärung.
+
+**Aus den vorhandenen Texten**: die `start`-Einträge aus `faq-content.ts`,
+dieselben, die in der Hilfe stehen. Ein zweiter Text, der dasselbe erklärt,
+liegt beim nächsten Umbau daneben. Dafür ist der Absatz-Renderer aus dem
+Hilfe-Bildschirm in `features/help/faq-answer.tsx` gezogen — zwei Abschriften
+wären zwei Gelegenheiten, dass ein Absatz hier fett wird und dort mit Sternchen
+dasteht.
+
+**Gedruckt statt heruntergeladen.** Eine feste PDF müsste jemand von Hand
+nachziehen; der Druckdialog erzeugt sie aus dieser Seite, und iOS wie Android
+bieten darin „In Dateien sichern" an. Die Regeln stehen im `@media print`-Block
+in `globals.css`: Navigation, Kopfleiste, Zurück-Pfeil und der Druckknopf selbst
+verschwinden — ein Knopf auf Papier ist ein Fehler —, Rahmen und Schatten fallen
+weg, und `break-inside: avoid` hält einen Abschnitt zusammen.
+
+## Der erste Start nach dem Gründen
+
+`features/home/owner-welcome-sheet.tsx` plus `lib/owner-welcome.ts`. Nach dem
+Gründen war der Admin-Bereich ein Knopf im Profil — zwei Ebenen tief, und nichts
+sagte, dass es ihn gibt. Das Sheet nennt die zwei Wege heraus: einladen und
+einstellen, und den anderen erklären, worum es geht.
+
+Ein **Einmal-Merker** und kein „schon gesehen": Das Gründen stellt ihn scharf
+(`armOwnerWelcome`), das Anzeigen verbraucht ihn (`dismiss`). `useLocalFlag`
+kann nur setzen und nie zurücknehmen — beides in dieselbe Bauart zu zwängen
+hieße, zwei Merker zu führen („soll noch" und „schon gehabt") und beim Lesen zu
+raten, welcher gemeint ist. Er steht trotzdem im `localStorage` und nicht bloß im
+Zustand: Zwischen Gründen und Ankommen liegt ein Seitenwechsel, und wer die App
+dazwischen zuklappt, soll den Hinweis trotzdem bekommen.
+
+Die **Verwaltung trägt einen Punkt**, bis man einmal drin war
+(`features/admin/use-unread-admin.ts`, wortgleich zu `use-unread-help.ts`).
+Weggenommen wird er von `MarkAdminSeen` — einem Bauteil, das nichts zeichnet,
+weil die Seite selbst ein Server-Bauteil ist und `useEffect` nicht kennt; die
+Aussage bleibt so an einer Stelle: **diese Seite** wurde gesehen, nicht „die
+Läufe wurden gesehen". Weil der Merker im Gerät liegt und nichts über Rollen
+weiß, stimmt er für später Ernannte von selbst. In der Tab-Leiste läuft er mit
+„Was ist neu" und „Erste Schritte" in **einen** Punkt zusammen, aber nur bei
+Admins: Ein Punkt, der auf etwas Unsichtbares zeigt, bliebe für immer stehen.
+
+## Das Profil trägt, was man anhakt
+
+Zwei Blöcke sind ausgezogen, und beide aus demselben Grund: Sie standen als
+Karten zwischen lauter Einstellungen, die man anhakt, obwohl man sie zweimal im
+Jahr anfasst.
+
+**Die Benachrichtigungs-Arten** (`features/profile/notification-preferences-screen.tsx`,
+Route `/benachrichtigungen`). Zwanzig Schalter untereinander sind keine Liste
+mehr, sondern eine Wand — man findet den einen nicht, den man sucht. Der
+Bildschirm ist gebaut wie die Hilfe: Suchfeld, Kategorie-Pillen, Gruppen mit
+Überschrift. Gefiltert wird **im Gerät** (dieselbe `normalize`-Rechnung: klein,
+ohne Akzente); die zwanzig Einträge liegen ohnehin im Cache, und eine Anfrage pro
+Tastendruck für eine Liste, die auf einen Bildschirm passt, wäre Aufwand ohne
+Gegenwert.
+
+Die **Kategorie kommt vom Server** (`NOTIFICATION_CATALOG`, Feld `category`).
+Eine zweite Aufzählung hier wäre die, die beim nächsten neuen Eintrag vergessen
+wird — der Schalter stünde dann unter „Sonstiges" oder gar nicht. Im Profil
+bleibt, was zum Gerät gehört: an/aus, Blocker-Hinweis, Test-Benachrichtigung —
+und eine Zeile dorthin mit der Zahl „n von 20 an", die die eine Frage
+beantwortet, für die man sonst scrollt.
+
+**Das Konto** (`features/profile/account-screen.tsx`, Route `/konto`) wandert in
+die Liste unter „Rechtliches & Über die App", als deren **erste** Zeile: Von
+allem dort ist es das einzige, hinter dem etwas zu tun ist. Der Bildschirm lädt
+seine Person selbst, statt sie als Prop zu bekommen — er hängt nicht mehr unter
+dem Profil.
 
 ## Was das Frontend bewusst nicht tut
 

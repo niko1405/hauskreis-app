@@ -89,7 +89,12 @@ export class PrayerRequestService {
   ): Promise<void> {
     const meeting = await this.prisma.meeting.findFirst({
       where: { id: meetingId, hauskreisId },
-      select: { date: true, status: true },
+      select: {
+        date: true,
+        endDate: true,
+        status: true,
+        hasPrayerSlot: true,
+      },
     });
 
     if (!meeting) {
@@ -102,9 +107,18 @@ export class PrayerRequestService {
       );
     }
 
-    if (await this.clock.isPast(hauskreisId, meeting.date)) {
+    if (await this.clock.isPast(hauskreisId, meeting)) {
       throw new BadRequestException(
         'Dieser Termin ist vorbei — was dasteht, bleibt stehen.',
+      );
+    }
+
+    // Der Baustein ist aus: Dann gibt es diesen Abschnitt an dem Abend nicht,
+    // und was hier ankäme, stünde nirgends. Die Oberfläche zeigt das Feld dann
+    // gar nicht erst — die Grenze steht hier, weil sie hier gilt.
+    if (!meeting.hasPrayerSlot) {
+      throw new BadRequestException(
+        'Dieser Termin hat keine Gebetsanliegen — schalte das erst dazu',
       );
     }
   }

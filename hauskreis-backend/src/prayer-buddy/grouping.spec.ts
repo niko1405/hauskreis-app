@@ -246,16 +246,16 @@ describe('repairGroups', () => {
       new Set(['a', 'c', 'd', 'e', 'f', 'g']),
     );
 
-    // `a` bleibt allein und zieht in die kleinste andere — nicht in die
-    // Dreiergruppe, die ohnehin schon die größte ist.
+    // `a` bleibt allein — und weil ein Trio schon steht, kommt jemand **zu**
+    // ihm, statt ihn in das Paar zu setzen: sechs Menschen sind drei Paare.
     expect(shape(repaired)).toEqual({
-      g1: [],
-      g2: ['a', 'c', 'd'],
-      g3: ['e', 'f', 'g'],
+      g1: ['a', 'g'],
+      g2: ['c', 'd'],
+      g3: ['e', 'f'],
     });
   });
 
-  it('setzt einen Neuzugang in die kleinste Gruppe', () => {
+  it('macht aus Trio plus Paar plus Neuzugang drei Paare', () => {
     const repaired = repairGroups(
       [
         { id: 'g1', memberIds: ['a', 'b'] },
@@ -264,9 +264,12 @@ describe('repairGroups', () => {
       new Set(['a', 'b', 'c', 'd', 'e', 'neu']),
     );
 
+    // Nicht `g1` auffüllen: Das gäbe ein zweites Trio, obwohl die Zahl gerade
+    // aufgeht. Stattdessen gibt das bestehende Trio seinen Letzten ab.
     expect(shape(repaired)).toEqual({
-      g1: ['a', 'b', 'neu'],
-      g2: ['c', 'd', 'e'],
+      g1: ['a', 'b'],
+      g2: ['c', 'd'],
+      neu: ['e', 'neu'],
     });
   });
 
@@ -340,8 +343,12 @@ describe('repairGroups', () => {
       expect(repaired.flatMap((group) => group.memberIds)).toHaveLength(7);
     });
 
-    /** Bei freiem Platz bleibt alles beim Alten — die Grenze greift nur oben. */
-    it('füllt weiterhin zuerst die kleinste Gruppe auf', () => {
+    /**
+     * Freier Platz allein reicht nicht: Ein zweites Trio entsteht nur, wenn die
+     * Zahl es erzwingt. Sechs Menschen sind drei Paare — genau die Aufteilung,
+     * die `buildGroups` für dieselben sechs fände.
+     */
+    it('füllt ein Paar nicht zum zweiten Trio auf', () => {
       const repaired = repairGroups(
         [
           { id: 'g1', memberIds: ['a', 'b', 'c'] },
@@ -351,9 +358,60 @@ describe('repairGroups', () => {
       );
 
       expect(shape(repaired)).toEqual({
-        g1: ['a', 'b', 'c'],
-        g2: ['d', 'e', 'neuling'],
+        g1: ['a', 'b'],
+        g2: ['d', 'e'],
+        neu: ['c', 'neuling'],
       });
+    });
+
+    /** Bei ungerader Zahl braucht es eines — dann wird auch aufgefüllt. */
+    it('füllt weiterhin auf, wo noch kein Trio steht', () => {
+      const repaired = repairGroups(
+        [
+          { id: 'g1', memberIds: ['a', 'b'] },
+          { id: 'g2', memberIds: ['c', 'd'] },
+        ],
+        new Set(['a', 'b', 'c', 'd', 'neuling']),
+      );
+
+      expect(shape(repaired)).toEqual({
+        g1: ['a', 'b', 'neuling'],
+        g2: ['c', 'd'],
+      });
+    });
+
+    /**
+     * Regel 0 gilt auch dem zweiten Trio, und aus demselben Grund wie der
+     * Vierergruppe darunter: Eine Regel, die nur nach vorn gilt, macht aus
+     * einem Fehler einen Bestand. Eine Runde, die einmal als 3+3 entstanden
+     * ist, bliebe sonst für immer so — beim Nachrücken passt ja niemand mehr
+     * hinein, also fasst sie niemand mehr an.
+     */
+    it('teilt ein zweites Trio auf, auch ohne Veränderung', () => {
+      const repaired = repairGroups(
+        [
+          { id: 'g1', memberIds: ['a', 'b', 'c'] },
+          { id: 'g2', memberIds: ['d', 'e', 'f'] },
+        ],
+        new Set(['a', 'b', 'c', 'd', 'e', 'f']),
+      );
+
+      expect(groupSizes(repaired)).toEqual([2, 2, 2]);
+      expect(repaired.flatMap((group) => group.memberIds)).toHaveLength(6);
+    });
+
+    /** Acht Menschen sind vier Paare — auch aus 3+2+2 plus einem Zugang. */
+    it('legt acht Menschen in vier Paare', () => {
+      const repaired = repairGroups(
+        [
+          { id: 'g1', memberIds: ['a', 'b', 'c'] },
+          { id: 'g2', memberIds: ['d', 'e'] },
+          { id: 'g3', memberIds: ['f', 'g'] },
+        ],
+        new Set(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'neuling']),
+      );
+
+      expect(groupSizes(repaired)).toEqual([2, 2, 2, 2]);
     });
 
     /**

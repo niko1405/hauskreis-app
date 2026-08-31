@@ -45,6 +45,7 @@ export const prayerBuddyAssignmentSchema = z.object({
 export const prayerBuddyConfigSchema = z.object({
   id: z.uuid(),
   hauskreisId: z.uuid(),
+  enabled: z.boolean(),
   periodLengthWeeks: z.number().int().min(1).max(12),
   updatedByPersonId: z.uuid().nullable(),
   updatedAt: isoDateTimeOut,

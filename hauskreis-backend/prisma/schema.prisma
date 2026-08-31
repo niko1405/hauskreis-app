@@ -123,6 +123,16 @@ enum NotificationType {
   BIRTHDAY_GIFT_REMINDER
   /// Für einen Geburtstag steht fest, was es wird — oder was es gekostet hat.
   BIRTHDAY_GIFT_DECIDED
+  /// Heute ist Hauskreis — mit der Nachfrage, ob die eigene Antwort noch gilt.
+  MEETING_TODAY
+  /// Der Abend ist vorbei und hat noch keine Nachbereitung.
+  NOTES_REMINDER
+  /// Du bist zum Admin ernannt worden.
+  ///
+  /// Nur diese Richtung: Etwas bekommen ist eine Nachricht, etwas verlieren ist
+  /// ein Gespräch. „Du bist kein Admin mehr" beantwortet keine Frage, die es
+  /// nicht selbst aufwirft.
+  ADMIN_GRANTED
 
   @@map("notification_type")
 }
@@ -464,6 +474,17 @@ model Meeting {
   /// voreingestellt aus: ein Standard-Abend hat sein Thema, und wo keins ist,
   /// soll die Karte eine Entscheidung sein und keine Vorgabe.
   hasNotesSlot        Boolean              @default(false) @map("has_notes_slot")
+  /// Wofür die Gruppe an dem Abend beten will — je Person ein Anliegen.
+  ///
+  /// Der einzige Baustein, der **überall voreingestellt an** ist, und der
+  /// einzige, der niemanden einteilt und nichts ausschließt. Er kam als
+  /// letzter dazu: Gebetsanliegen standen an jedem Termin, auch am Geburtstag
+  /// und an der Freizeit, während alles andere am Abend längst abwählbar war.
+  ///
+  /// `@default(true)` gilt auch rückwirkend, und das ist der Punkt: Alles
+  /// andere hieße, dass an jedem Abend im Archiv die Anliegen verschwinden,
+  /// die dort stehen.
+  hasPrayerSlot       Boolean              @default(true) @map("has_prayer_slot")
   locationId          String?              @map("location_id") @db.Uuid
   hostPersonId        String?              @map("host_person_id") @db.Uuid
   /// Wie der Abend überschrieben ist — „Geburtstag von Mira", aber auch ein
@@ -834,6 +855,17 @@ model MeetingScheduleConfig {
   /// nachts für kommend. Stand als Konstante im Code, bis auffiel, dass das
   /// dieselbe Aussage zu viel war wie vorher Wochentag und Uhrzeit.
   timeZone          String   @default("Europe/Berlin") @map("time_zone")
+  /// Ob der Vorsatz der letzten Woche auf dem Startbildschirm steht.
+  ///
+  /// Hier und nicht in einer eigenen Tabelle: „der Actionstep **der Woche**"
+  /// ist die Woche zwischen zwei Terminen, und die steht genau hier. Eine
+  /// Tabelle für ein einziges Boolesches hielte einen Bearbeiter fest, nach dem
+  /// niemand fragt.
+  ///
+  /// Aus heißt: keine Karte auf „Heute" und keine wöchentliche Erinnerung. Der
+  /// Actionstep an der Einheit und über die Nachbereitung bleibt — er wird
+  /// weiter geschrieben, nur nicht mehr die Woche über vor sich hergetragen.
+  weeklyActionstep  Boolean  @default(true) @map("weekly_actionstep")
   updatedByPersonId String?  @map("updated_by_person_id") @db.Uuid
   updatedAt         DateTime @updatedAt @map("updated_at")
   /// Optimistic locking counter, see docs/conditional requests.
@@ -851,6 +883,16 @@ model MeetingScheduleConfig {
 model PrayerBuddyCycleConfig {
   id                String   @id @default(uuid()) @db.Uuid
   hauskreisId       String   @unique @map("hauskreis_id") @db.Uuid
+  /// Ob die Gruppe überhaupt Gebetsbuddys hat.
+  ///
+  /// Aus heißt ganz aus: kein Tab, keine Karte auf „Heute", keine Zuteilung und
+  /// keine Benachrichtigungsart. Die Vorgabe ist `true` und damit das bisherige
+  /// Verhalten — anders als bei den Geschenken, die noch nie jemand hatte, ist
+  /// das hier ein Abschalten und keine Einladung.
+  ///
+  /// **Bestehende Runden bleiben stehen.** Wiedereinschalten holt sie zurück;
+  /// sie zu löschen wäre eine Entscheidung, die kein Schalter treffen sollte.
+  enabled           Boolean  @default(true)
   periodLengthWeeks Int      @default(2) @map("period_length_weeks")
   updatedByPersonId String?  @map("updated_by_person_id") @db.Uuid
   updatedAt         DateTime @updatedAt @map("updated_at")

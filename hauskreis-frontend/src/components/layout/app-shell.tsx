@@ -24,7 +24,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <GlobalProgress />
       <div className="flex w-full max-w-md flex-col border-line-strong/50 bg-canvas shadow-xl md:max-w-5xl md:flex-row md:border-x">
         <Sidebar />
-        <div className="flex min-h-dvh flex-1 flex-col">
+        {/* `min-w-0` ist hier kein Zierrat. Ab `md` ist das hier ein Flex-Kind
+            einer Zeile, und ein Flex-Kind darf ohne das nicht unter seine
+            Inhaltsbreite schrumpfen (`min-width: auto`). Eine einzige breite
+            Zeile — eine Pillenreihe, eine Tabelle, ein langes Wort — drückte
+            damit die ganze Spalte auf, und der Inhalt stand über den Karten.
+            Das `overflow-x-hidden` an `<main>` schnitt danach nur noch ab, was
+            längst zu breit war. */}
+        <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
           {/* Über dem Inhalt und nicht davor: Die Leiste trägt eine negative
               Untermarge in ihrer eigenen Höhe (`header-inset`), sodass das
               Kopfbild nahtlos darunter durchläuft.

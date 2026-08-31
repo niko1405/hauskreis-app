@@ -11,6 +11,7 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useOverlayOpen } from '@/components/ui/overlay-lock';
+import { useHeaderPreference } from '@/lib/header-preference';
 import { NAV_ITEMS } from './nav';
 
 /** Ab hier gilt die Seite nicht mehr als „ganz oben". */
@@ -99,11 +100,22 @@ export function useHeaderScroll(): { atTop: boolean; hidden: boolean } {
  * Gegen `NAV_ITEMS` geprüft und nicht gegen eine zweite Liste — dieselbe Regel
  * wie `useIsActive`, damit es genau eine Aufzählung der Tabs gibt. `/termin`
  * fällt dabei von selbst heraus: Es ist kein Präfix von `/termine`.
+ *
+ * **Und ob man sie überhaupt haben will.** Die Einstellung liegt im Gerät
+ * (`useHeaderPreference`) und hängt hier — an genau einer Zeile, von der alles
+ * andere abfällt: `SmartHeader` rendert dann nichts, `PageHeader` nimmt wieder
+ * seinen eigenen Abstand zur Statusleiste statt des Leisten-Abstands, und die
+ * Nachrichten-Box verschwindet mit der Glocke, die sie öffnet. Der Weg zur
+ * Gruppe steht dann im Profil.
  */
 export function useHasSmartHeader(): boolean {
   const pathname = usePathname();
+  const { shown } = useHeaderPreference();
 
-  return NAV_ITEMS.some(({ href }) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href),
+  return (
+    shown &&
+    NAV_ITEMS.some(({ href }) =>
+      href === '/' ? pathname === '/' : pathname.startsWith(href),
+    )
   );
 }

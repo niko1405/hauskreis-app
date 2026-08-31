@@ -79,9 +79,3 @@ export function useDeleteSong() {
     { invalidateKeys: [keys.songs.all, keys.meetings.all] },
   );
 }
-
-/** Nur Admin. */
-export function useRunSongReminders() {
-  const { hauskreisId } = useHk();
-  return useApiMutation(() => songsApi.runSongReminders(hauskreisId));
-}

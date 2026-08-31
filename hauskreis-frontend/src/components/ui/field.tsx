@@ -9,8 +9,11 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { IconButton, PRESSABLE } from './button';
 
+// `min-w-0` neben `w-full`: In einer Flex-Zeile ist die Mindestbreite eines
+// Eingabefelds seine eingebaute Feldbreite (rund 20 Zeichen), und `w-full`
+// allein kommt dagegen nicht an — das Feld stand dann über seiner Karte.
 const CONTROL =
-  'w-full rounded-md border border-line bg-card px-4 py-2.5 text-sm text-stone-800 ' +
+  'w-full min-w-0 rounded-md border border-line bg-card px-4 py-2.5 text-sm text-stone-800 ' +
   'placeholder:text-stone-300 focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-100 focus:outline-none ' +
   'disabled:bg-stone-50 disabled:text-stone-400';
 

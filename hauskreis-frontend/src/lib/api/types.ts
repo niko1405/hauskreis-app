@@ -266,8 +266,6 @@ export type NotificationEntry = NotificationInbox['unread'][number];
 // ── Ergebnisse der Admin-Läufe ──────────────────────────────────────────────
 
 export type GenerationResult = S['GenerationResultResponseDto'];
-export type ReminderRunResult = S['ReminderRunResultResponseDto'];
-export type ActionstepRunResult = S['ActionstepRunResultResponseDto'];
 export type SyncResult = S['SyncResultResponseDto'];
 
 // ── Geburtstage und Geschenke ───────────────────────────────────────────────
