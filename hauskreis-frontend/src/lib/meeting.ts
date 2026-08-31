@@ -251,28 +251,31 @@ export function planningComplete(meeting: {
 }
 
 /**
- * Die Überschrift einer Terminkarte: der eigene Titel, sonst das Thema, sonst
- * die Art des Termins. Ein Thema ohne Titel bleibt bewusst ohne Titel.
+ * Die Überschrift einer Terminkarte: der eigene Titel, sonst die Art des
+ * Termins.
+ *
+ * **Der Termin heißt nach sich selbst.** Hier standen dazwischen zwei Zeilen,
+ * die auf den Titel der Einheit zurückfielen und dann auf den des Themas. Ein
+ * Abend hieß damit „Teil 2: Was Petrus tat" — das ist aber der Name der
+ * Einheit, nicht der des Abends. Wer seinem Termin einen eigenen Namen geben
+ * will, trägt ihn ein (`HeadlineEdit` schreibt `meeting.title`, und zwar seit
+ * jeher nur das); wer nicht, bekommt die Terminart.
+ *
+ * Das Thema bleibt sichtbar, nur nicht als Überschrift: als Rollen-Chip auf der
+ * Karte, als Themen-Kasten auf der Terminseite, im Archiv unter „Themen".
+ *
+ * Nebenbei sagen damit alle Bildschirme dasselbe. Der Startbildschirm reichte
+ * `HomeNextMeeting` herein, und dieses DTO hat gar kein `topicSession` — dort
+ * stand also längst die Terminart, während Liste, Kalender und Detailseite den
+ * Themen-Titel zeigten.
  */
 export function meetingHeadline(meeting: {
   type: MeetingType;
   title: string | null;
-  topicSession?: {
-    title: string | null;
-    topic: { title: string | null };
-  } | null;
 }): string {
-  if (meeting.title) return meeting.title;
-
-  // Der Titel des Abends schlägt den des Themas: „Teil 2: Was Petrus tat" sagt
-  // mehr als „Vergebung", wenn beides dasteht. Beide sind `null`, solange die
-  // Einheit für den Betrachter nicht freigegeben ist — dann steht hier die
-  // Terminart, und das ist genau richtig: zu sehen gibt es noch nichts.
-  const session = meeting.topicSession;
-  if (session?.title) return session.title;
-  if (session?.topic.title) return session.topic.title;
-
-  return MEETING_TYPE_LABEL[meeting.type];
+  // Auf Wahrheit geprüft und nicht auf `null`: Ein leerer Titel ist keiner, und
+  // `??` ließe eine Überschrift aus null Zeichen stehen.
+  return meeting.title || MEETING_TYPE_LABEL[meeting.type];
 }
 
 export const ROLE_LABEL: Record<AssignmentRole, string> = {
