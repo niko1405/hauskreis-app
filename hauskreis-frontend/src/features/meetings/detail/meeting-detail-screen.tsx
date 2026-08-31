@@ -75,6 +75,7 @@ import { ActionstepCheck } from '@/components/domain/actionstep-check';
 import { SlotCard } from '@/components/domain/slot-toggles';
 import type { MeetingSlotKey } from '@/lib/meeting';
 import type { AssignmentRole, Meeting, PersonRef } from '@/lib/api/types';
+import { AnswerBar } from './answer-bar';
 import { AttendanceCard } from './attendance-card';
 import {
   CancelledNotice,
@@ -737,21 +738,6 @@ function Loaded({
           />
         )}
 
-        <AttendanceCard meeting={meeting} readOnly={locked} />
-
-        {/* Nach der Anwesenheit und vor dem Thema: Anwesenheit und
-            Gebetsanliegen sind beides, was die Einzelnen zum Abend beitragen —
-            Thema und Nachbereitung sind sein Inhalt und dessen Nachklang und
-            bleiben zusammen am Ende. */}
-        {meeting.hasPrayerSlot && (
-          <PrayerRequestsCard
-            meetingId={meetingId}
-            editing={editing}
-            locked={locked}
-            onEdit={() => setEditing(true)}
-          />
-        )}
-
         {/* Thema samt Nachbereitung. Ohne den Baustein gar nicht: was an einem
             Abend besprochen wurde, ist die Zusammenfassung eines Themas.
             Wer den Inhalt sehen darf, entscheidet der Server — vor 18 Uhr am
@@ -777,6 +763,27 @@ function Loaded({
             )}
           </TopicCard>
         )}
+
+        {/* Direkt hinter dem Thema: Die Anliegen entstehen am Abend selbst
+            und gehören zu seinem Inhalt. Die Anwesenheitsliste steht danach —
+            sie beantwortet, wer da war, und das schlägt man nach, statt es
+            zwischen Thema und Anliegen zu lesen. */}
+        {meeting.hasPrayerSlot && (
+          <PrayerRequestsCard
+            meetingId={meetingId}
+            editing={editing}
+            locked={locked}
+            onEdit={() => setEditing(true)}
+          />
+        )}
+
+        <AttendanceCard meeting={meeting} readOnly={locked} />
+
+        {/* Unten am Bildschirm statt hier in der Seite — und nur, solange es
+            etwas zu antworten gibt. An einem vergangenen oder abgesagten Abend
+            steht dort die Tab-Leiste wie überall sonst: Die Navigation
+            aufzugeben lohnt nur, wo etwas Nützlicheres an ihrer Stelle steht. */}
+        {!locked && <AnswerBar meeting={meeting} />}
 
         {/* Dieselben zwei Felder ohne Thema, jedes einzeln und optional. Beide
             Bausteine schließen einander aus, es steht also nie beides da. */}

@@ -21,89 +21,21 @@
  * seine Beschriftung: eine Verspätung, ein „muss schauen, wann Feierabend ist",
  * ein Grund fürs Fehlen.
  *
- * **„Weiß noch nicht" gibt die eigenen Rollen dieses Abends frei** — deshalb
- * läuft der Statuswechsel über `useAttendanceAnswer` und nicht direkt über
- * `useSetAttendance`. Der Hook fragt vorher nach, und zwar nur, wenn wirklich
- * etwas dranhängt.
+ * **Die eigene Antwort steht nicht mehr hier**, sondern unten am Bildschirm
+ * (`answer-bar.tsx`). Diese Karte sagt, wer kommt; dass man selbst dazugehört,
+ * ist eine andere Frage, und die soll nicht am Ende einer Liste stehen, zu der
+ * man erst scrollen muss. Farben, Kurzformen und die Symbole der Sätze sind mit
+ * ihr in `domain/attendance-answers.ts` gezogen — beide brauchen sie, und zwei
+ * Kopien wären zwei Meinungen darüber, welche Farbe „abgesagt" hat.
  */
 import { useState } from 'react';
-import { ChevronDown, Clock, HelpCircle, MessageSquare } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { TextArea } from '@/components/ui/field';
-import { useMe, usePeople, useSetAttendance } from '@/lib/api/hooks';
-import { useAttendanceAnswer } from '@/components/domain/use-attendance-answer';
+import { useMe, usePeople } from '@/lib/api/hooks';
+import { ANSWER, NOTE_FIELD } from '@/components/domain/attendance-answers';
 import { cn } from '@/lib/cn';
 import type { AttendanceStatus, Meeting, Person } from '@/lib/api/types';
-
-/**
- * Wie die drei Antworten heißen und aussehen.
- *
- * Der aktive Knopf färbt sich **nach seiner Bedeutung** und nicht einheitlich
- * terracotta: „dabei" ist die gute Nachricht, „nicht dabei" die, die dem
- * Gastgeber etwas wegnimmt, „weiß noch nicht" die offene. Drei gleich getönte
- * Knöpfe hätten das eingeebnet.
- */
-const ANSWERS: {
-  status: AttendanceStatus;
-  label: string;
-  short: string;
-  active: string;
-  dot: string;
-  text: string;
-}[] = [
-  {
-    status: 'ATTENDING',
-    label: 'Dabei',
-    short: 'Dabei',
-    active: 'border-music-line bg-music-bg text-music',
-    dot: 'bg-music',
-    text: 'text-music',
-  },
-  {
-    status: 'ABSENT',
-    label: 'Nicht dabei',
-    short: 'Abgesagt',
-    active: 'border-alert-line bg-alert-bg text-alert',
-    dot: 'bg-alert',
-    text: 'text-alert',
-  },
-  {
-    status: 'UNKNOWN',
-    label: 'Weiß noch nicht',
-    short: 'Unsicher',
-    active: 'border-terracotta-100 bg-terracotta-50 text-terracotta-700',
-    dot: 'bg-topic',
-    text: 'text-topic',
-  },
-];
-
-const ANSWER = Object.fromEntries(
-  ANSWERS.map((answer) => [answer.status, answer]),
-) as Record<AttendanceStatus, (typeof ANSWERS)[number]>;
-
-/** Beschriftung und Beispiel je Status — dieselbe Spalte, andere Frage. */
-const NOTE_FIELD: Record<
-  AttendanceStatus,
-  { label: string; placeholder: string; icon: typeof Clock }
-> = {
-  ATTENDING: {
-    label: 'Verspätung oder Info (optional)',
-    placeholder: 'z.B. Komme 20 Min später…',
-    icon: Clock,
-  },
-  UNKNOWN: {
-    label: "Woran liegt's? (hilft bei der Planung)",
-    placeholder: 'z.B. Muss schauen, wann Feierabend ist…',
-    icon: HelpCircle,
-  },
-  ABSENT: {
-    label: 'Grund (optional)',
-    placeholder: 'z.B. Bin im Urlaub, euch viel Spaß!',
-    icon: MessageSquare,
-  },
-};
 
 export function AttendanceCard({
   meeting,
@@ -207,14 +139,6 @@ export function AttendanceCard({
           )}
         </div>
       )}
-
-      {!readOnly && me.me && (
-        <OwnAnswer
-          meeting={meeting}
-          status={statusOf(me.me.id)}
-          note={rowOf(me.me.id)?.note ?? null}
-        />
-      )}
     </>
   );
 }
@@ -281,111 +205,5 @@ function PersonRow({
         {answer.short}
       </span>
     </li>
-  );
-}
-
-/**
- * Die eigene Antwort.
- *
- * **Der Status schreibt sofort, die Notiz auf Knopfdruck.** Ein Tipp auf
- * „Dabei" ist überall sonst in der App — Startbildschirm, Terminkarte,
- * Kalender — sofort verbindlich; hier erst nach einem zweiten Knopf zu
- * speichern hieße, dass man nach dem Antippen weggehen und nichts gesagt haben
- * kann. Die Notiz braucht den Knopf dagegen: Sonst ginge bei jedem Buchstaben
- * eine Anfrage raus.
- */
-function OwnAnswer({
-  meeting,
-  status,
-  note,
-}: {
-  meeting: Meeting;
-  status: AttendanceStatus;
-  note: string | null;
-}) {
-  // Der Status läuft über den gemeinsamen Hook: Auf „Weiß noch nicht" zu gehen
-  // gibt die eigenen Rollen dieses Abends frei, und danach wird gefragt. Die
-  // **Notiz** geht direkt raus — sie ändert am Status nichts und braucht
-  // deshalb auch keine Rückfrage.
-  const { answer } = useAttendanceAnswer(meeting);
-  const setAttendance = useSetAttendance(meeting.id);
-  const me = useMe();
-  const personId = me.me?.id;
-  const [draft, setDraft] = useState(note ?? '');
-  // Der Entwurf folgt dem Server, solange niemand tippt — sonst stünde nach
-  // einem Statuswechsel (der die Notiz löscht) der alte Satz noch im Feld.
-  const [touched, setTouched] = useState(false);
-  const shown = touched ? draft : (note ?? '');
-
-  const field = NOTE_FIELD[status];
-  const FieldIcon = field.icon;
-  const trimmed = shown.trim();
-  const changed = (trimmed === '' ? null : trimmed) !== note;
-
-  return (
-    <section>
-      <SectionTitle>Deine Antwort</SectionTitle>
-      <Card className="space-y-3">
-        <div className="flex gap-2">
-          {ANSWERS.map((option) => (
-            <button
-              key={option.status}
-              type="button"
-              aria-pressed={status === option.status}
-              onClick={() => {
-                setTouched(false);
-                void answer(option.status);
-              }}
-              className={cn(
-                'flex-1 rounded-md border px-2 py-2.5 text-xs font-bold transition-colors',
-                status === option.status
-                  ? option.active
-                  : 'border-line bg-card text-stone-500 hover:border-line-strong',
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-2 rounded-md border border-line bg-canvas p-3">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold text-stone-500">
-            <FieldIcon size={13} className="text-stone-400" />
-            {field.label}
-          </p>
-          <TextArea
-            value={shown}
-            placeholder={field.placeholder}
-            aria-label={field.label}
-            className="min-h-16 bg-card"
-            onChange={(event) => {
-              setTouched(true);
-              setDraft(event.target.value);
-            }}
-          />
-          <div className="flex justify-end">
-            {/* Immer da, aber nur bedienbar, wenn es etwas zu speichern gibt.
-                Ihn verschwinden zu lassen hieße, die Karte springen zu
-                lassen, sobald jemand den ersten Buchstaben tippt. */}
-            <Button
-              size="sm"
-              disabled={!changed}
-              loading={setAttendance.isPending}
-              onClick={() => {
-                if (!personId) return;
-                setTouched(false);
-                setAttendance.mutate({
-                  personId,
-                  status,
-                  note: trimmed === '' ? null : trimmed,
-                });
-              }}
-            >
-              Antwort speichern
-            </Button>
-          </div>
-        </div>
-      </Card>
-    </section>
   );
 }

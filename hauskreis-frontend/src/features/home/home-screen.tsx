@@ -18,12 +18,7 @@ import Link from 'next/link';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { RoleChip } from '@/components/domain/role-badge';
-import {
-  useHome,
-  useMe,
-  useSetActionstepDone,
-  useSetAttendance,
-} from '@/lib/api/hooks';
+import { useHome, useMe, useSetActionstepDone } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { formatDay, formatRelativeDay, groupNow } from '@/lib/date';
 import { actionstepProgress, mapsUrl, meetingHeadline } from '@/lib/meeting';
@@ -251,14 +246,6 @@ function NextMeetingCard({
   /** Der laufende Abend bekommt hier seine grüne Tönung. */
   className?: string;
 }) {
-  const attendance = useSetAttendance(meeting.id);
-  const me = useMe();
-
-  const setStatus = (status: 'ATTENDING' | 'ABSENT') => {
-    if (!me.me) return;
-    attendance.mutate({ personId: me.me.id, status });
-  };
-
   return (
     <Card className={cn('space-y-4', className)}>
       {/* Die Uhrzeit steht nur hier — auf dieser einen Karte geht man auf einen
@@ -347,53 +334,6 @@ function NextMeetingCard({
           <RoleChip kind="SONG" people={meeting.songLeaders} />
         )}
       </Link>
-
-      <div className="flex items-center gap-2 border-t border-line pt-3">
-        <span className="mr-auto text-[11px] font-semibold text-stone-400">
-          Bist du dabei?
-        </span>
-        <AttendanceButton
-          active={meeting.myAttendance === 'ATTENDING'}
-          onClick={() => setStatus('ATTENDING')}
-        >
-          Ja
-        </AttendanceButton>
-        <AttendanceButton
-          active={meeting.myAttendance === 'ABSENT'}
-          tone="alert"
-          onClick={() => setStatus('ABSENT')}
-        >
-          Nein
-        </AttendanceButton>
-      </div>
     </Card>
-  );
-}
-
-function AttendanceButton({
-  active,
-  tone = 'music',
-  children,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  active: boolean;
-  tone?: 'music' | 'alert';
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      className={cn(
-        'rounded-full border px-4 py-1.5 text-xs font-bold transition-colors disabled:opacity-50',
-        active
-          ? tone === 'music'
-            ? 'border-music-line bg-music-bg text-music'
-            : 'border-alert-line bg-alert-bg text-alert'
-          : 'border-line text-stone-400 hover:border-line-strong',
-      )}
-      {...props}
-    >
-      {children}
-    </button>
   );
 }

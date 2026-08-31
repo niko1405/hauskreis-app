@@ -5,6 +5,7 @@
  * Spalte links und mehr Breite für Tabelle und Kalender.
  */
 import { cn } from '@/lib/cn';
+import { BottomSlotOutlet, BottomSlotProvider } from './bottom-slot';
 import { GlobalProgress } from './global-progress';
 import { PullToRefresh } from './pull-to-refresh';
 import { SmartHeader } from './smart-header';
@@ -20,19 +21,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     // `min-h-dvh` statt `min-h-screen`: `100vh` rechnet auf mobilen Browsern
     // mit ausgefahrener Adressleiste und ist deshalb zu hoch.
-    <div className="px-safe flex min-h-dvh justify-center bg-shell">
-      <GlobalProgress />
-      <div className="flex w-full max-w-md flex-col border-line-strong/50 bg-canvas shadow-xl md:max-w-5xl md:flex-row md:border-x">
-        <Sidebar />
-        {/* `min-w-0` ist hier kein Zierrat. Ab `md` ist das hier ein Flex-Kind
+    <BottomSlotProvider>
+      <div className="px-safe flex min-h-dvh justify-center bg-shell">
+        <GlobalProgress />
+        <div className="flex w-full max-w-md flex-col border-line-strong/50 bg-canvas shadow-xl md:max-w-5xl md:flex-row md:border-x">
+          <Sidebar />
+          {/* `min-w-0` ist hier kein Zierrat. Ab `md` ist das hier ein Flex-Kind
             einer Zeile, und ein Flex-Kind darf ohne das nicht unter seine
             Inhaltsbreite schrumpfen (`min-width: auto`). Eine einzige breite
             Zeile — eine Pillenreihe, eine Tabelle, ein langes Wort — drückte
             damit die ganze Spalte auf, und der Inhalt stand über den Karten.
             Das `overflow-x-hidden` an `<main>` schnitt danach nur noch ab, was
             längst zu breit war. */}
-        <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
-          {/* Über dem Inhalt und nicht davor: Die Leiste trägt eine negative
+          <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
+            {/* Über dem Inhalt und nicht davor: Die Leiste trägt eine negative
               Untermarge in ihrer eigenen Höhe (`header-inset`), sodass das
               Kopfbild nahtlos darunter durchläuft.
 
@@ -41,14 +43,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               einem Gerät ohne Notch stünde darüber ein Streifen ungeschleiertes
               Foto. Hier beginnt sie an der Kante, und `main` behält seinen
               Abstand für den Inhalt. */}
-          <SmartHeader />
-          <main className="flex-1 overflow-x-hidden pt-2 pb-6">
-            <PullToRefresh>{children}</PullToRefresh>
-          </main>
-          <TabBar />
+            <SmartHeader />
+            <main className="flex-1 overflow-x-hidden pt-2 pb-6">
+              <PullToRefresh>{children}</PullToRefresh>
+            </main>
+            {/* Unten steht die Navigation — es sei denn, ein Bildschirm hat
+              dort etwas Besseres zu sagen. Auf der Terminseite ist das die
+              eigene Zusage; sonst nirgends. Warum das über ein Portal läuft
+              und nicht über eine Prop, steht in `bottom-slot.tsx`. */}
+            <BottomSlotOutlet fallback={<TabBar />} />
+          </div>
         </div>
       </div>
-    </div>
+    </BottomSlotProvider>
   );
 }
 
