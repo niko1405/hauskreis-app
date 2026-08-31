@@ -138,8 +138,18 @@ export const setActionstepDoneSchema = z.object({
  */
 export const updateMeetingScheduleSchema = z
   .object({
+    /// Ob der nächtliche Lauf überhaupt Termine anlegt.
+    ///
+    /// Steht **außerhalb** des Satzes darunter: Er beantwortet nicht, wann sich
+    /// die Gruppe trifft, sondern ob die App den Kalender führt.
+    autoGenerate: z.coerce.boolean().optional(),
     /// 0 = Sonntag … 6 = Samstag, dieselbe Zählung wie `Date.getUTCDay()`.
     weekday: z.coerce.number().int().min(0).max(6).optional(),
+    /// Wochen zwischen zwei Terminen. 1 = jede Woche.
+    ///
+    /// Nach oben begrenzt, weil die Reihe sonst über den Planungshorizont
+    /// hinausliefe: Sieben Termine im Abstand von einem Jahr sind keine Planung.
+    intervalWeeks: z.coerce.number().int().min(1).max(8).optional(),
     /// Die Uhrzeit neuer Abende, `"18:00"`. Ändert keinen bestehenden Termin.
     startTime: wallClockIn.optional(),
     /// Die Zone, in der diese Uhrzeit gilt — und in der „heute" gezählt wird.
@@ -160,6 +170,11 @@ export const updateMeetingScheduleSchema = z
     /// stehen bleibt. Er steht nur deshalb in derselben Zeile, weil „die Woche"
     /// die zwischen zwei Terminen ist.
     weeklyActionstep: z.coerce.boolean().optional(),
+    /// Ob der letzte Termin eines Monats ein Lobpreisabend wird.
+    ///
+    /// Gehört wie `autoGenerate` nicht zum Satz „wir treffen uns dienstags um
+    /// 18 Uhr": Es sagt etwas über die Art der Abende, nicht über ihre Lage.
+    praiseEvenings: z.coerce.boolean().optional(),
   })
   .refine(
     (dto) =>

@@ -214,29 +214,15 @@ export function useSetAttendance(meetingId: string) {
           }),
         );
 
-        // Der Home-Screen zeigt dieselbe Antwort als „Bist du dabei?". Ob es
-        // die eigene ist, weiß er hier nicht — aber `myAttendance` steht nur
-        // an den beiden Termin-Karten, und dort ist es immer die eigene.
+        // Den Startbildschirm greift hier **nichts** mehr vor. Er zeigte die
+        // Antwort einmal selbst („Bist du dabei?") und musste deshalb sofort
+        // umspringen; seit die Frage unten am Termin steht (`answer-bar.tsx`),
+        // liest `myAttendance` niemand mehr. Ein Feld optimistisch zu pflegen,
+        // das keiner anzeigt, ist Arbeit, die stillschweigend veraltet.
         //
-        // **Beide**, seit es „Aktueller Termin" gibt: Wer während des Abends
-        // antwortet, tut es auf der oberen Karte, und nur die untere zu
-        // patchen hieße, dass genau dann nichts umspringt.
-        await patch<HomeScreen>(keys.home, (home) => {
-          const answer = <
-            T extends { id: string; myAttendance: string } | null,
-          >(
-            card: T,
-          ): T =>
-            card?.id === meetingId
-              ? ({ ...card, myAttendance: input.status } as T)
-              : card;
-
-          return {
-            ...home,
-            currentMeeting: answer(home.currentMeeting),
-            nextMeeting: answer(home.nextMeeting),
-          };
-        });
+        // Die Entwertung von `keys.home` bleibt (sie steckt in `derived`): Wer
+        // auf „weiß noch nicht" geht, gibt seine Rollen frei, und „Deine
+        // Rollen" muss das mitbekommen.
       },
     },
   );
@@ -395,10 +381,11 @@ export function useUpdateMeetingSchedule() {
     update: (input, etag) =>
       meetingsApi.updateMeetingSchedule(hauskreisId, input, etag),
     // Bestehende Termine bleiben, wie sie sind — der Rhythmus gilt für neue.
-    // Nur `qk.hauskreise` fällt mit: Dort hängt `features.weeklyActionstep`,
-    // und daran die Actionstep-Karte auf „Heute". Der ETag des Hauskreises
-    // springt bei einer Config-Änderung nicht.
-    invalidateKeys: [qk.hauskreise],
+    // `keys.meetings.all` fällt trotzdem mit: Wer die Erzeugung wieder
+    // anschaltet, bekommt beim nächsten Lauf Abende dazu und soll sie sehen,
+    // ohne die App neu zu laden. `qk.hauskreise` hängt an
+    // `features.weeklyActionstep`.
+    invalidateKeys: [qk.hauskreise, keys.meetings.all],
   });
 }
 

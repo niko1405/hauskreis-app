@@ -20,12 +20,20 @@ type CreateManyArgs = {
   skipDuplicates?: boolean;
 };
 
-/** Dienstag, 18 Uhr — die Vorgabe, mit der die Gruppe bisher gelebt hat. */
-const TUESDAY_AT_SIX = { weekday: 2, startMinutes: 18 * 60 };
+/** Dienstag, 18 Uhr, jede Woche — die Vorgabe, mit der die Gruppe bisher lebt. */
+const TUESDAY_AT_SIX = {
+  autoGenerate: true,
+  weekday: 2,
+  intervalWeeks: 1,
+  startMinutes: 18 * 60,
+  praiseEvenings: true,
+};
 
 function setup(
   existingDates: Date[] = [],
-  rhythm: { weekday: number; startMinutes: number } = TUESDAY_AT_SIX,
+  rhythm: Partial<typeof TUESDAY_AT_SIX> = {},
+  /** Der späteste selbst erzeugte Abend — der Taktschlag. */
+  anchor: Date | null = null,
 ) {
   const createMany = jest.fn(
     (args: CreateManyArgs): Promise<{ count: number }> =>
@@ -35,6 +43,9 @@ function setup(
     findMany: jest
       .fn()
       .mockResolvedValue(existingDates.map((date) => ({ date }))),
+    // Der Anker. `null` heißt „noch nie etwas erzeugt" — dann fängt die Reihe
+    // beim nächsten passenden Wochentag an, wie vor dem einstellbaren Abstand.
+    findFirst: jest.fn().mockResolvedValue(anchor ? { date: anchor } : null),
     createMany,
   };
   const hauskreis = {
@@ -42,7 +53,9 @@ function setup(
   };
   const autoAttendance = { apply: jest.fn().mockResolvedValue(0) };
 
-  const schedule = { getRhythm: jest.fn().mockResolvedValue(rhythm) };
+  const schedule = {
+    getRhythm: jest.fn().mockResolvedValue({ ...TUESDAY_AT_SIX, ...rhythm }),
+  };
 
   const service = withClock(
     new MeetingGeneratorService(
@@ -142,6 +155,76 @@ describe('MeetingGeneratorService.generateFor', () => {
     for (const created of createMany.mock.calls[0][0].data) {
       expect(created.startMinutes).toBe(1170);
     }
+  });
+
+  it('legt nichts an, wenn die Gruppe ihren Kalender selbst pflegt', async () => {
+    // Auch nicht über den Knopf in der Verwaltung, der genau hier landet.
+    const { service, createMany, meeting } = setup([], {
+      autoGenerate: false,
+    });
+
+    const result = await service.generateFor('hk-1', MONDAY);
+
+    expect(result).toEqual({ created: 0, skipped: 0 });
+    expect(createMany).not.toHaveBeenCalled();
+    // Und schaut auch nicht nach, was schon dasteht.
+    expect(meeting.findMany).not.toHaveBeenCalled();
+  });
+
+  it('macht ohne Lobpreisabende auch aus dem letzten im Monat einen Standard', async () => {
+    const { service, createMany } = setup([], { praiseEvenings: false });
+
+    await service.generateFor('hk-1', MONDAY);
+
+    const types = createMany.mock.calls[0][0].data.map((m) => m.type);
+    expect(types).toEqual(Array<string>(MEETINGS_AHEAD).fill('STANDARD'));
+  });
+
+  it('hält bei zwei Wochen den Abstand ein', async () => {
+    const { service, createMany } = setup([], { intervalWeeks: 2 });
+
+    await service.generateFor('hk-1', MONDAY);
+
+    expect(createMany.mock.calls[0][0].data.map((m) => isoOf(m.date))).toEqual([
+      '2026-07-28',
+      '2026-08-11',
+      '2026-08-25',
+      '2026-09-08',
+      '2026-09-22',
+      '2026-10-06',
+      '2026-10-20',
+    ]);
+  });
+
+  it('setzt die Reihe am letzten erzeugten Abend fort', async () => {
+    // Der Taktschlag. Ohne ihn nähme der Lauf am Mittwoch den Dienstag darauf
+    // und legte damit eine zweite, um eine Woche versetzte Reihe an.
+    const { service, createMany } = setup(
+      [],
+      { intervalWeeks: 2 },
+      utc('2026-07-28'),
+    );
+
+    await service.generateFor('hk-1', utc('2026-07-29'));
+
+    expect(
+      createMany.mock.calls[0][0].data.map((m) => isoOf(m.date)).slice(0, 3),
+    ).toEqual(['2026-08-11', '2026-08-25', '2026-09-08']);
+  });
+
+  it('fragt für den Takt nur nach selbst erzeugten Abenden', async () => {
+    // Ein Geburtstag am Samstag verschöbe sonst den Takt der Dienstage.
+    const { service, meeting } = setup([], { intervalWeeks: 2 });
+
+    await service.generateFor('hk-1', MONDAY);
+
+    expect(meeting.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          type: { in: [MeetingType.STANDARD, MeetingType.LOBPREIS_GEBET] },
+        }),
+      }),
+    );
   });
 
   it('folgt dem eingestellten Wochentag', async () => {

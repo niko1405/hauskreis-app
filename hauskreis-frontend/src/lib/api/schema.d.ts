@@ -2607,10 +2607,13 @@ export interface components {
       id: string;
       /** Format: uuid */
       hauskreisId: string;
+      autoGenerate: boolean;
       weekday: number;
+      intervalWeeks: number;
       startTime: string;
       timeZone: string;
       weeklyActionstep: boolean;
+      praiseEvenings: boolean;
       /** Format: uuid */
       updatedByPersonId: string | null;
       /** Format: date-time */
@@ -2625,10 +2628,13 @@ export interface components {
       } | null;
     };
     UpdateMeetingScheduleDto: {
+      autoGenerate?: boolean;
       weekday?: number;
+      intervalWeeks?: number;
       startTime?: string;
       timeZone?: string;
       weeklyActionstep?: boolean;
+      praiseEvenings?: boolean;
     };
     MeetingResponseDto: {
       /** Format: uuid */

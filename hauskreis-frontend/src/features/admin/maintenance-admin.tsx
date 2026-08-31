@@ -49,6 +49,19 @@ const WEEKDAYS = [
 ];
 
 /**
+ * Die Abstände, die eine Gruppe wirklich hat.
+ *
+ * Vier Einträge statt eines Zahlenfelds: „alle 9 Wochen" ist keine Frage, die
+ * jemand stellt, und ein Feld, das sie zulässt, müsste sie beantworten.
+ */
+const INTERVALS = [
+  { weeks: 1, label: 'Jede Woche' },
+  { weeks: 2, label: 'Alle zwei Wochen' },
+  { weeks: 3, label: 'Alle drei Wochen' },
+  { weeks: 4, label: 'Alle vier Wochen' },
+];
+
+/**
  * Alle Zeitzonen, die die Laufzeit kennt — dieselbe Liste, gegen die der Server
  * prüft.
  *
@@ -77,6 +90,7 @@ function MeetingScheduleCard() {
   const toast = useToast();
   const [entwurf, setEntwurf] = useState<{
     weekday: string;
+    intervalWeeks: string;
     startTime: string;
     timeZone: string;
   } | null>(null);
@@ -84,14 +98,18 @@ function MeetingScheduleCard() {
   const current = schedule.data?.data;
   const wert = entwurf ?? {
     weekday: String(current?.weekday ?? 2),
+    intervalWeeks: String(current?.intervalWeeks ?? 1),
     startTime: current?.startTime ?? '18:00',
     timeZone: current?.timeZone ?? 'Europe/Berlin',
   };
 
   const unverändert =
     Number(wert.weekday) === current?.weekday &&
+    Number(wert.intervalWeeks) === current?.intervalWeeks &&
     wert.startTime === current?.startTime &&
     wert.timeZone === current?.timeZone;
+
+  const anlegt = current?.autoGenerate ?? true;
 
   return (
     <section>
@@ -101,87 +119,157 @@ function MeetingScheduleCard() {
           <ConflictBanner onResolve={update.resolveConflict} />
         )}
 
-        <p className="text-[11px] leading-relaxed text-stone-400">
-          Die App erstellt Hauskreis-Termine pro Woche automtisch für dich -
-          hier kannst du den Rhythmus deiner Treffen einstellen. Gilt für
-          Termine, die der Zeitplaner ab jetzt anlegt. Was schon im Kalender
-          steht, behält seinen Tag und seine Zeit — dafür hat längst jemand
-          zugesagt.
-        </p>
-
-        <Field label="Wochentag">
-          <Select
-            value={wert.weekday}
-            onChange={(event) =>
-              setEntwurf({ ...wert, weekday: event.target.value })
-            }
-          >
-            {WEEKDAYS.map((name, index) => (
-              <option key={name} value={index}>
-                {name}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        <Field
-          label="Uhrzeit"
-          hint="Ab wann der Inhalt eines Themas allen gehört, richtet sich danach."
-        >
-          <TextInput
-            type="time"
-            value={wert.startTime}
-            onChange={(event) =>
-              setEntwurf({ ...wert, startTime: event.target.value })
-            }
-          />
-        </Field>
-
-        {/* Die dritte Angabe desselben Satzes: „dienstags um 18 Uhr" ist ohne
-            sie nicht zu deuten — und „welchen Tag haben wir" ebenso wenig. Ein
-            Server in UTC hielt den Termin von gestern bis zwei Uhr nachts für
-            kommend. */}
-        <Field
-          label="Zeitzone"
-          hint="In dieser Zone gilt die Uhrzeit — und in ihr zählt die App die Tage."
-        >
-          <Select
-            value={wert.timeZone}
-            onChange={(event) =>
-              setEntwurf({ ...wert, timeZone: event.target.value })
-            }
-          >
-            {ZONES.map((zone) => (
-              <option key={zone} value={zone}>
-                {zone}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        <Button
-          variant="secondary"
-          className="w-full"
-          loading={update.isPending}
-          disabled={unverändert}
-          onClick={() =>
+        {/* Der Schalter steht über allem anderen, denn er entscheidet, ob das
+            Übrige überhaupt eine Frage ist — dasselbe Muster wie bei den
+            Gebetsbuddys. Er schreibt sofort, das Formular darunter auf
+            Knopfdruck: Ein Haken ist eine Entscheidung, ein Formular sind
+            vier. */}
+        <Checkbox
+          label="Termine automatisch anlegen"
+          description="Die App hält immer sieben Abende im Voraus bereit. Aus heißt: Ihr legt eure Termine selbst an — was schon im Kalender steht, bleibt stehen."
+          checked={anlegt}
+          disabled={update.isPending}
+          onChange={(event) =>
             update.mutate(
+              { autoGenerate: event.target.checked },
               {
-                weekday: Number(wert.weekday),
-                startTime: wert.startTime,
-                timeZone: wert.timeZone,
-              },
-              {
-                onSuccess: () => {
-                  setEntwurf(null);
-                  toast.success('Rhythmus gespeichert.');
-                },
+                onSuccess: () =>
+                  toast.success(
+                    event.target.checked
+                      ? 'Ab jetzt legt ihr eure Termine selbst an.'
+                      : 'Die App legt wieder Termine an.',
+                  ),
               },
             )
           }
-        >
-          Speichern
-        </Button>
+        />
+
+        {anlegt && (
+          <>
+            <p className="text-[11px] leading-relaxed text-stone-400">
+              Hier stellst du den Rhythmus eurer Treffen ein. Er gilt für
+              Termine, die der Zeitplaner ab jetzt anlegt. Was schon im Kalender
+              steht, behält seinen Tag und seine Zeit — dafür hat längst jemand
+              zugesagt.
+            </p>
+
+            <Field label="Wochentag">
+              <Select
+                value={wert.weekday}
+                onChange={(event) =>
+                  setEntwurf({ ...wert, weekday: event.target.value })
+                }
+              >
+                {WEEKDAYS.map((name, index) => (
+                  <option key={name} value={index}>
+                    {name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            {/* Der Abstand als Auswahl und nicht als Zahlenfeld: „alle 9 Wochen"
+            ist keine Frage, die jemand hat — und ein Feld, das sie zulässt,
+            müsste sie beantworten. */}
+            <Field label="Abstand">
+              <Select
+                value={wert.intervalWeeks}
+                onChange={(event) =>
+                  setEntwurf({ ...wert, intervalWeeks: event.target.value })
+                }
+              >
+                {INTERVALS.map(({ weeks, label }) => (
+                  <option key={weeks} value={weeks}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field
+              label="Uhrzeit"
+              hint="Ab wann der Inhalt eines Themas allen gehört, richtet sich danach."
+            >
+              <TextInput
+                type="time"
+                value={wert.startTime}
+                onChange={(event) =>
+                  setEntwurf({ ...wert, startTime: event.target.value })
+                }
+              />
+            </Field>
+
+            {/* Die dritte Angabe desselben Satzes: „dienstags um 18 Uhr" ist ohne
+            sie nicht zu deuten — und „welchen Tag haben wir" ebenso wenig. Ein
+            Server in UTC hielt den Termin von gestern bis zwei Uhr nachts für
+            kommend. */}
+            <Field
+              label="Zeitzone"
+              hint="In dieser Zone gilt die Uhrzeit — und in ihr zählt die App die Tage."
+            >
+              <Select
+                value={wert.timeZone}
+                onChange={(event) =>
+                  setEntwurf({ ...wert, timeZone: event.target.value })
+                }
+              >
+                {ZONES.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {zone}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Button
+              variant="secondary"
+              className="w-full"
+              loading={update.isPending}
+              disabled={unverändert}
+              onClick={() =>
+                update.mutate(
+                  {
+                    weekday: Number(wert.weekday),
+                    intervalWeeks: Number(wert.intervalWeeks),
+                    startTime: wert.startTime,
+                    timeZone: wert.timeZone,
+                  },
+                  {
+                    onSuccess: () => {
+                      setEntwurf(null);
+                      toast.success('Rhythmus gespeichert.');
+                    },
+                  },
+                )
+              }
+            >
+              Speichern
+            </Button>
+
+            {/* Unter dem Speichern-Knopf und ohne ihn: Er sagt etwas über die
+                **Art** der Abende, nicht über ihre Lage — und schreibt deshalb
+                sofort, wie der Schalter ganz oben. */}
+            <Checkbox
+              label="Lobpreis- und Gebetsabende"
+              description="Der jeweils letzte Termin im Monat wird ein Abend mit Liedern und Testimony statt mit Thema. Gilt für neue Termine — ein Lobpreisabend, der schon steht, bleibt einer."
+              checked={current?.praiseEvenings ?? true}
+              disabled={update.isPending}
+              onChange={(event) =>
+                update.mutate(
+                  { praiseEvenings: event.target.checked },
+                  {
+                    onSuccess: () =>
+                      toast.success(
+                        event.target.checked
+                          ? 'Der letzte Abend im Monat wird wieder ein Lobpreisabend.'
+                          : 'Ab jetzt werden alle Abende als Standard-Termin angelegt.',
+                      ),
+                  },
+                )
+              }
+            />
+          </>
+        )}
 
         {current?.updatedBy && (
           <p className="text-[11px] text-stone-400">

@@ -11,13 +11,21 @@ import type { UpdateMeetingScheduleDto } from './dto/meeting.dto';
 export const DEFAULT_WEEKDAY = 2;
 /** 18:00, aus derselben Quelle wie die Sichtbarkeitsgrenze. */
 export const DEFAULT_START_MINUTES = EVENING_HOUR * 60;
+/** Jede Woche — was es war, bevor der Abstand einstellbar wurde. */
+export const DEFAULT_INTERVAL_WEEKS = 1;
 
-/** Wochentag und Uhrzeit, wie der Terminplaner sie braucht. */
+/** Was der Terminplaner über den Rhythmus wissen muss. */
 export interface MeetingRhythm {
+  /** Ob überhaupt Termine angelegt werden. */
+  autoGenerate: boolean;
   /** 0 = Sonntag … 6 = Samstag, wie `Date.getUTCDay()`. */
   weekday: number;
+  /** Wochen zwischen zwei Terminen. 1 = jede Woche. */
+  intervalWeeks: number;
   /** Minuten seit Mitternacht Ortszeit. */
   startMinutes: number;
+  /** Ob der letzte Termin eines Monats ein Lobpreisabend wird. */
+  praiseEvenings: boolean;
 }
 
 const configInclude = {
@@ -71,16 +79,26 @@ export class MeetingScheduleConfigService {
   async getRhythm(hauskreisId: string): Promise<MeetingRhythm> {
     const config = await this.prisma.meetingScheduleConfig.findUnique({
       where: { hauskreisId },
-      select: { weekday: true, startMinutes: true },
+      select: {
+        autoGenerate: true,
+        weekday: true,
+        intervalWeeks: true,
+        startMinutes: true,
+        praiseEvenings: true,
+      },
     });
 
     // Kein Anlegen hier: ein nächtlicher Lauf soll keine Zeilen für Gruppen
     // erzeugen, die nie in die Verwaltung geschaut haben. Die Vorgabe steht in
-    // der Spalte und gilt so oder so.
+    // der Spalte und gilt so oder so — sie muss aber **hier auch stehen**, sonst
+    // bekäme eine Gruppe ohne Zeile `undefined` statt des Vorgabewerts.
     return (
       config ?? {
+        autoGenerate: true,
         weekday: DEFAULT_WEEKDAY,
+        intervalWeeks: DEFAULT_INTERVAL_WEEKS,
         startMinutes: DEFAULT_START_MINUTES,
+        praiseEvenings: true,
       }
     );
   }
@@ -112,10 +130,13 @@ export class MeetingScheduleConfigService {
         this.prisma.meetingScheduleConfig.updateMany({
           where: { hauskreisId, ...versionConstraint },
           data: {
+            autoGenerate: dto.autoGenerate,
             weekday: dto.weekday,
+            intervalWeeks: dto.intervalWeeks,
             startMinutes: dto.startTime,
             timeZone: dto.timeZone,
             weeklyActionstep: dto.weeklyActionstep,
+            praiseEvenings: dto.praiseEvenings,
             updatedByPersonId,
             version: { increment: 1 },
           },

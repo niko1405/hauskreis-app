@@ -6,7 +6,7 @@ import {
   nextWeekdayAfter,
   spanIsPast,
   toUtcDate,
-  upcomingWeekdays,
+  upcomingMeetingDates,
 } from './meeting-schedule';
 
 const BERLIN = 'Europe/Berlin';
@@ -53,9 +53,24 @@ describe('nextWeekdayAfter', () => {
   });
 });
 
-describe('upcomingWeekdays', () => {
+describe('upcomingMeetingDates', () => {
+  const reihe = (options: {
+    from: string;
+    weekday?: number;
+    count?: number;
+    everyWeeks?: number;
+    anchor?: string | null;
+  }) =>
+    upcomingMeetingDates({
+      from: utc(options.from),
+      weekday: options.weekday ?? TUESDAY,
+      count: options.count ?? 4,
+      everyWeeks: options.everyWeeks ?? 1,
+      anchor: options.anchor ? utc(options.anchor) : null,
+    }).map(iso);
+
   it('returns consecutive Tuesdays', () => {
-    expect(upcomingWeekdays(utc('2026-07-27'), TUESDAY, 4).map(iso)).toEqual([
+    expect(reihe({ from: '2026-07-27' })).toEqual([
       '2026-07-28',
       '2026-08-04',
       '2026-08-11',
@@ -64,15 +79,74 @@ describe('upcomingWeekdays', () => {
   });
 
   it('returns nothing when asked for nothing', () => {
-    expect(upcomingWeekdays(utc('2026-07-27'), TUESDAY, 0)).toEqual([]);
+    expect(reihe({ from: '2026-07-27', count: 0 })).toEqual([]);
   });
 
   it('zählt bei einem anderen Wochentag genauso in Siebenerschritten', () => {
-    expect(upcomingWeekdays(utc('2026-07-27'), THURSDAY, 3).map(iso)).toEqual([
+    expect(reihe({ from: '2026-07-27', weekday: THURSDAY, count: 3 })).toEqual([
       '2026-07-30',
       '2026-08-06',
       '2026-08-13',
     ]);
+  });
+
+  it('hält bei zwei Wochen den Abstand ein', () => {
+    expect(reihe({ from: '2026-07-27', everyWeeks: 2 })).toEqual([
+      '2026-07-28',
+      '2026-08-11',
+      '2026-08-25',
+      '2026-09-08',
+    ]);
+  });
+
+  it('setzt die Reihe am Anker fort statt bei heute', () => {
+    // Der letzte erzeugte Abend war der 28. Juli; heute ist der 30.
+    expect(
+      reihe({ from: '2026-07-30', everyWeeks: 2, anchor: '2026-07-28' }),
+    ).toEqual(['2026-08-11', '2026-08-25', '2026-09-08', '2026-09-22']);
+  });
+
+  it('liefert an zwei verschiedenen Tagen dieselbe Reihe', () => {
+    // Der eigentliche Grund für den Anker: Ohne ihn nähme der Lauf am Mittwoch
+    // den Dienstag darauf und der Lauf eine Woche später den Dienstag danach —
+    // zwei um sieben Tage versetzte Reihen, und am Ende stünde wieder jede
+    // Woche ein Termin.
+    const mittwoch = reihe({
+      from: '2026-07-29',
+      everyWeeks: 2,
+      anchor: '2026-07-28',
+    });
+    const dienstagDrauf = reihe({
+      from: '2026-08-04',
+      everyWeeks: 2,
+      anchor: '2026-07-28',
+    });
+
+    expect(mittwoch).toEqual(dienstagDrauf);
+  });
+
+  it('verwirft einen Anker, der nicht auf dem eingestellten Wochentag liegt', () => {
+    // Jemand hat von Dienstag auf Donnerstag umgestellt: Der alte Takt zählt
+    // nicht mehr, die Reihe fängt beim nächsten Donnerstag an.
+    expect(
+      reihe({
+        from: '2026-07-27',
+        weekday: THURSDAY,
+        count: 3,
+        anchor: '2026-07-28',
+      }),
+    ).toEqual(['2026-07-30', '2026-08-06', '2026-08-13']);
+  });
+
+  it('überspringt einen Anker, der lange zurückliegt', () => {
+    expect(
+      reihe({
+        from: '2026-07-27',
+        count: 2,
+        everyWeeks: 2,
+        anchor: '2026-05-05',
+      }),
+    ).toEqual(['2026-07-28', '2026-08-11']);
   });
 });
 
@@ -103,6 +177,17 @@ describe('isLastOfMonth', () => {
     // Donnerstage im Juli 2026: 2., 9., 16., 23., 30.
     expect(isLastOfMonth(utc('2026-07-30'))).toBe(true);
     expect(isLastOfMonth(utc('2026-07-23'))).toBe(false);
+  });
+
+  it('rechnet mit dem eingestellten Abstand', () => {
+    // Alle zwei Wochen, Dienstage: 14. und 28. Juli. Der 14. ist damit nicht
+    // der letzte im Monat — mit der festen Sieben hätte die Regel ihn für den
+    // vorletzten gehalten und trotzdem richtig gelegen; der 21. zeigt den
+    // Unterschied: er ist gar kein Termin, aber die Sieben sagte „nein" und
+    // die Vierzehn sagt „ja".
+    expect(isLastOfMonth(utc('2026-07-14'), 2)).toBe(false);
+    expect(isLastOfMonth(utc('2026-07-28'), 2)).toBe(true);
+    expect(isLastOfMonth(utc('2026-07-21'), 2)).toBe(true);
   });
 });
 

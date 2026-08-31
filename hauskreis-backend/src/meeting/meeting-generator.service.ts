@@ -3,7 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { MeetingStatus, MeetingType } from '../../generated/prisma/enums';
-import { isLastOfMonth, upcomingWeekdays } from './meeting-schedule';
+import { isLastOfMonth, upcomingMeetingDates } from './meeting-schedule';
 import { GroupClockService } from './group-clock.service';
 import { MeetingScheduleConfigService } from './meeting-schedule-config.service';
 import { slotDefaults } from './meeting-slots';
@@ -128,11 +128,23 @@ export class MeetingGeneratorService {
     now = new Date(),
   ): Promise<GenerationResult> {
     const rhythm = await this.schedule.getRhythm(hauskreisId);
+
+    // Wer seinen Kalender selbst pflegt, bekommt hier nichts. Auch nicht über
+    // den Knopf in der Verwaltung, der genau hier landet: Eine Einstellung, die
+    // ein Knopf daneben aushebelt, ist keine.
+    if (!rhythm.autoGenerate) return { created: 0, skipped: 0 };
+
     // Der Kalendertag der Gruppe, nicht der rohe Zeitpunkt: der Lauf startet um
-    // drei Uhr nachts, und in UTC ist das noch der Vortag — `upcomingWeekdays`
-    // hätte dann einen Termin für **heute** angelegt statt für nächste Woche.
+    // drei Uhr nachts, und in UTC ist das noch der Vortag — die Reihe hätte
+    // dann einen Termin für **heute** angelegt statt für nächste Woche.
     const today = await this.clock.today(hauskreisId, now);
-    const dates = upcomingWeekdays(today, rhythm.weekday, MEETINGS_AHEAD);
+    const dates = upcomingMeetingDates({
+      from: today,
+      weekday: rhythm.weekday,
+      count: MEETINGS_AHEAD,
+      everyWeeks: rhythm.intervalWeeks,
+      anchor: await this.lastGeneratedDate(hauskreisId),
+    });
     const last = dates.at(-1) as Date;
 
     const existing = await this.prisma.meeting.findMany({
@@ -161,9 +173,10 @@ export class MeetingGeneratorService {
 
     const result = await this.prisma.meeting.createMany({
       data: missing.map((date) => {
-        const type = isLastOfMonth(date)
-          ? MeetingType.LOBPREIS_GEBET
-          : MeetingType.STANDARD;
+        const type =
+          rhythm.praiseEvenings && isLastOfMonth(date, rhythm.intervalWeeks)
+            ? MeetingType.LOBPREIS_GEBET
+            : MeetingType.STANDARD;
 
         // Bausteine und Uhrzeit kommen aus Terminart und Rhythmus und werden
         // hier ausdrücklich gesetzt statt den Spalten-Defaults überlassen: die
@@ -187,5 +200,30 @@ export class MeetingGeneratorService {
     await this.autoAttendance.apply(hauskreisId, { now });
 
     return { created: result.count, skipped: dates.length - result.count };
+  }
+
+  /**
+   * Der späteste selbst erzeugte Abend — der Taktschlag der Reihe.
+   *
+   * Gebraucht, seit der Abstand einstellbar ist: Bei vierzehn Tagen entscheidet
+   * er, *welche* Woche trifft. Ohne ihn hinge das daran, an welchem Tag der
+   * Lauf gerade startet, und zwei Nächte hintereinander legten zwei um eine
+   * Woche versetzte Reihen an (siehe `upcomingMeetingDates`).
+   *
+   * **Nur `STANDARD` und `LOBPREIS_GEBET`.** Ein `CUSTOM`-Termin ist von Hand
+   * angelegt — ein Geburtstag am Samstag verschöbe sonst den Takt der
+   * Dienstage. Abgesagte zählen mit: Der Abend fällt aus, der Rhythmus nicht.
+   */
+  private async lastGeneratedDate(hauskreisId: string): Promise<Date | null> {
+    const last = await this.prisma.meeting.findFirst({
+      where: {
+        hauskreisId,
+        type: { in: [MeetingType.STANDARD, MeetingType.LOBPREIS_GEBET] },
+      },
+      orderBy: { date: 'desc' },
+      select: { date: true },
+    });
+
+    return last?.date ?? null;
   }
 }

@@ -840,8 +840,31 @@ model MeetingSong {
 model MeetingScheduleConfig {
   id                String   @id @default(uuid()) @db.Uuid
   hauskreisId       String   @unique @map("hauskreis_id") @db.Uuid
+  /// Ob der nächtliche Lauf überhaupt Termine anlegt.
+  ///
+  /// Aus heißt: Die Gruppe pflegt ihren Kalender selbst. Was schon darin steht,
+  /// bleibt stehen — dafür hat vielleicht längst jemand zugesagt oder ein Thema
+  /// vorbereitet; es kommt nur nichts mehr dazu. Auch der Knopf in der
+  /// Verwaltung fragt danach: Eine Einstellung, die ein Knopf daneben
+  /// aushebelt, ist keine.
+  ///
+  /// `closePastMeetings` bleibt davon unberührt. Der Lauf legt dort nichts an,
+  /// er räumt auf — ein Abend, der vorbei ist, ist vorbei, ob die Gruppe ihre
+  /// Termine selbst pflegt oder nicht.
+  autoGenerate      Boolean  @default(true) @map("auto_generate")
   /// 0 = Sonntag … 6 = Samstag, dieselbe Zählung wie `Date.getUTCDay()`.
   weekday           Int      @default(2)
+  /// Wie viele Wochen zwischen zwei Terminen liegen. 1 = jede Woche.
+  ///
+  /// Der Abstand steckte an zwei Stellen als Sieben im Code: in der Reihe der
+  /// nächsten Termine und in der Regel „welcher ist der letzte im Monat".
+  ///
+  /// Alles über 1 braucht einen **Taktschlag**, sonst wäre es Zufall, welche
+  /// Woche trifft: Die Reihe wird aus „heute" gerechnet, und derselbe Lauf
+  /// lieferte in der einen Woche die geraden und in der nächsten die ungeraden
+  /// Dienstage. Der Takt kommt deshalb aus dem Kalender — vom spätesten selbst
+  /// erzeugten Abend (siehe `upcomingMeetingDates`).
+  intervalWeeks     Int      @default(1) @map("interval_weeks")
   /// Minuten seit Mitternacht Ortszeit, wie `Meeting.startMinutes`. 1080 = 18:00.
   ///
   /// Die Vorgabe für neue Abende, keine nachträgliche Regel: ein Wechsel
@@ -866,6 +889,15 @@ model MeetingScheduleConfig {
   /// Actionstep an der Einheit und über die Nachbereitung bleibt — er wird
   /// weiter geschrieben, nur nicht mehr die Woche über vor sich hergetragen.
   weeklyActionstep  Boolean  @default(true) @map("weekly_actionstep")
+  /// Ob der letzte Termin eines Monats ein Lobpreis- und Gebetsabend wird.
+  ///
+  /// Aus heißt: Jeder erzeugte Abend ist ein Standardtermin mit Thema. Nicht
+  /// jede Gruppe hat diesen Abend, und wer ihn nicht hat, bekam ihn bisher
+  /// trotzdem — mit Testimony-Baustein und ohne Thema.
+  ///
+  /// Nur für **neu** erzeugte Termine. Ein Lobpreisabend, der schon im Kalender
+  /// steht, bleibt einer; seine Bausteine ändert man an ihm selbst.
+  praiseEvenings    Boolean  @default(true) @map("praise_evenings")
   updatedByPersonId String?  @map("updated_by_person_id") @db.Uuid
   updatedAt         DateTime @updatedAt @map("updated_at")
   /// Optimistic locking counter, see docs/conditional requests.
@@ -1050,12 +1082,12 @@ model NotificationLog {
   /// Nullable, weil die Zeilen von vorher keinen Text haben. Sie tauchen in der
   /// Box deshalb nicht auf — sie waren immer nur Entdopplung, und einen Titel
   /// nachzuerfinden hieße, Nachrichten zu behaupten, die so nie dastanden.
-  title                 String?
-  body                  String?
+  title    String?
+  body     String?
   /// Wohin die App springt, wenn man den Eintrag antippt (`app-paths.ts`).
-  url                   String?
+  url      String?
   /// Wann die Nachricht gelesen wurde. `null` heißt: steht noch in der Box.
-  readAt                DateTime?        @map("read_at")
+  readAt   DateTime? @map("read_at")
   /// Wann tatsächlich **zugestellt** wurde — und ab jetzt die Entdopplung des
   /// Pushs, während die Zeile selbst den Box-Eintrag trägt.
   ///
@@ -1064,7 +1096,7 @@ model NotificationLog {
   /// Weiterschicken weiter an der bloßen Existenz der Zeile, verlöre man die
   /// Eigenschaft, auf die `NotificationService` ausdrücklich gebaut ist:
   /// wieder eingeschaltet heißt, der nächste Lauf stellt noch zu.
-  pushedAt              DateTime?        @map("pushed_at")
+  pushedAt DateTime? @map("pushed_at")
 
   person          Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
   relatedMeeting  Meeting?          @relation(fields: [relatedMeetingId], references: [id], onDelete: Cascade)

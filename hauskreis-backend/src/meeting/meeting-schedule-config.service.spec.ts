@@ -1,4 +1,5 @@
 import {
+  DEFAULT_INTERVAL_WEEKS,
   DEFAULT_START_MINUTES,
   DEFAULT_WEEKDAY,
   MeetingScheduleConfigService,
@@ -63,24 +64,37 @@ describe('getConfig', () => {
 });
 
 describe('getRhythm', () => {
-  it('gibt Wochentag und Uhrzeit zurück', async () => {
-    const { service } = setup({ weekday: 4, startMinutes: 1170 });
+  it('gibt den ganzen Rhythmus zurück', async () => {
+    const { service } = setup({
+      autoGenerate: false,
+      weekday: 4,
+      intervalWeeks: 2,
+      startMinutes: 1170,
+      praiseEvenings: false,
+    });
 
     await expect(service.getRhythm('hk-1')).resolves.toEqual({
+      autoGenerate: false,
       weekday: 4,
+      intervalWeeks: 2,
       startMinutes: 1170,
+      praiseEvenings: false,
     });
   });
 
   it('legt nichts an, wenn noch nichts dasteht', async () => {
     // Der nächtliche Lauf fasst jeden Hauskreis an; Zeilen für Gruppen zu
     // erzeugen, die nie in die Verwaltung geschaut haben, wäre eine Nebenwirkung
-    // ohne Anlass.
+    // ohne Anlass. Die Vorgaben müssen deshalb **hier** noch einmal stehen —
+    // sonst bekäme so eine Gruppe `undefined` statt des Spalten-Defaults.
     const { service, create } = setup(null);
 
     await expect(service.getRhythm('hk-1')).resolves.toEqual({
+      autoGenerate: true,
       weekday: DEFAULT_WEEKDAY,
+      intervalWeeks: DEFAULT_INTERVAL_WEEKS,
       startMinutes: DEFAULT_START_MINUTES,
+      praiseEvenings: true,
     });
     expect(create).not.toHaveBeenCalled();
   });

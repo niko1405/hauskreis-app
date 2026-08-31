@@ -174,8 +174,12 @@ export const attendanceResponseSchema = z.object({
 export const meetingScheduleSchema = z.object({
   id: z.uuid(),
   hauskreisId: z.uuid(),
+  /// Ob der nächtliche Lauf Termine anlegt.
+  autoGenerate: z.boolean(),
   /// 0 = Sonntag … 6 = Samstag.
   weekday: z.number().int().min(0).max(6),
+  /// Wochen zwischen zwei Terminen. 1 = jede Woche.
+  intervalWeeks: z.number().int().min(1),
   /// `"18:00"` — dieselbe Schreibweise wie `meeting.startTime`.
   startTime: wallClockOut,
   /// Die Zone, in der diese Uhrzeit gilt — `"Europe/Berlin"`.
@@ -186,6 +190,8 @@ export const meetingScheduleSchema = z.object({
   timeZone: z.string(),
   /// Ob der Actionstep der Woche auf dem Startbildschirm steht.
   weeklyActionstep: z.boolean(),
+  /// Ob der letzte Termin eines Monats ein Lobpreisabend wird.
+  praiseEvenings: z.boolean(),
   updatedByPersonId: z.uuid().nullable(),
   updatedAt: isoDateTimeOut,
   version: z.number().int().nonnegative(),

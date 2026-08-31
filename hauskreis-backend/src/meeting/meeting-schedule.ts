@@ -57,34 +57,88 @@ export function nextWeekdayAfter(from: Date, weekday: number): Date {
   return addDays(base, daysUntil);
 }
 
-/** Die nächsten `count` Termine dieses Wochentags, ab dem ersten nach `from`. */
-export function upcomingWeekdays(
-  from: Date,
-  weekday: number,
-  count: number,
-): Date[] {
-  const dates: Date[] = [];
-  let cursor = nextWeekdayAfter(from, weekday);
+export interface MeetingDateOptions {
+  /** Heute, im Kalender der Gruppe. */
+  from: Date;
+  /** 0 = Sonntag … 6 = Samstag. */
+  weekday: number;
+  /** Wie viele Termine die Reihe umfasst. */
+  count: number;
+  /** Wochen zwischen zwei Terminen. 1 = jede Woche. */
+  everyWeeks: number;
+  /**
+   * Der späteste selbst erzeugte Abend — der Taktschlag.
+   *
+   * Nur der gibt bei einem Abstand über einer Woche an, *welche* Woche trifft.
+   * Ein `CUSTOM`-Termin taugt dafür nicht: Ein Geburtstag am Samstag verschöbe
+   * den Takt der Dienstage.
+   */
+  anchor?: Date | null;
+}
 
+/**
+ * Die nächsten `count` Termine des Rhythmus, alle nach `from`.
+ *
+ * **Warum es einen Anker braucht.** Solange jede Woche ein Termin war, genügte
+ * „der nächste Dienstag, dann immer sieben Tage weiter" — jeder Lauf kam auf
+ * dieselbe Reihe. Bei vierzehn Tagen nicht mehr: Der Lauf am Mittwoch nimmt
+ * den Dienstag darauf, der Lauf eine Woche später den Dienstag danach, und
+ * beide Reihen liegen um sieben Tage versetzt. Nach zwei Nächten stünde wieder
+ * jede Woche ein Termin — mit einer Einstellung, die „alle zwei Wochen" sagt.
+ *
+ * Der Takt muss also aus dem Kalender kommen und nicht aus dem Zufall, an
+ * welchem Tag der Lauf startet. Passt der Anker nicht zum eingestellten
+ * Wochentag, wird er verworfen und die Reihe fängt neu an: Genau das ist der
+ * Fall „jemand hat den Wochentag umgestellt" — die alten Termine laufen aus,
+ * der neue Takt beginnt beim nächsten passenden Tag.
+ */
+export function upcomingMeetingDates(options: MeetingDateOptions): Date[] {
+  const { from, weekday, count, everyWeeks, anchor } = options;
+
+  const step = Math.max(1, everyWeeks) * 7;
+  const base = toUtcDate(from);
+  const takt = anchor ? toUtcDate(anchor) : null;
+
+  // Vom Anker aus vorwärts, bis wir hinter `from` sind — sonst vom nächsten
+  // passenden Wochentag. `nextWeekdayAfter` liefert immer einen Tag **nach**
+  // `from`, der heutige Abend zählt also nicht mehr als „kommend".
+  let cursor =
+    takt && takt.getUTCDay() === weekday
+      ? weiterBis(takt, base, step)
+      : nextWeekdayAfter(base, weekday);
+
+  const dates: Date[] = [];
   for (let i = 0; i < count; i += 1) {
     dates.push(cursor);
-    cursor = addDays(cursor, 7);
+    cursor = addDays(cursor, step);
   }
 
   return dates;
 }
 
+/** Der erste Termin der Reihe, der echt hinter `after` liegt. */
+function weiterBis(anchor: Date, after: Date, step: number): Date {
+  let cursor = anchor;
+  while (cursor <= after) cursor = addDays(cursor, step);
+  return cursor;
+}
+
 /**
- * True when no further meeting of the same weekday falls in the same month —
- * i.e. this is the last regular evening before the month ends, which is the
- * Lobpreis/Gebet slot.
+ * True when no further meeting falls in the same month — i.e. this is the last
+ * regular evening before the month ends, which is the Lobpreis/Gebet slot.
  *
  * War schon immer wochentagsunabhängig gerechnet („+7 Tage, anderer Monat?"),
  * nur der Name behauptete etwas anderes.
+ *
+ * Der Abstand gehört seit dem einstellbaren Rhythmus dazu: „danach kommt keiner
+ * mehr in diesem Monat" ist bei vierzehn Tagen ein anderer Abend als bei
+ * sieben. Mit der festen Sieben hätte die Regel bei jedem anderen Abstand
+ * schlicht den falschen Termin markiert.
  */
-export function isLastOfMonth(date: Date): boolean {
+export function isLastOfMonth(date: Date, everyWeeks = 1): boolean {
   const base = toUtcDate(date);
-  return addDays(base, 7).getUTCMonth() !== base.getUTCMonth();
+  const step = Math.max(1, everyWeeks) * 7;
+  return addDays(base, step).getUTCMonth() !== base.getUTCMonth();
 }
 
 /**
