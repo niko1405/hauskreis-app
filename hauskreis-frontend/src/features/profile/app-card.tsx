@@ -19,10 +19,16 @@
  * Hier stand einmal auch, ob die App offline bereit ist. Der Hinweis war ein
  * Werkzeug für einen bestimmten Fehler — er hat ihn gezeigt, der Fehler ist
  * weg, und eine Zeile, die immer dasselbe sagt, liest bald niemand mehr.
+ *
+ * **Ganz unten steht „Unterstützen"**, unter „Gebaut von Niko" und nicht davor:
+ * Das ist die Reihenfolge, in der man es liest — erst wer, dann warum. Dass
+ * hinter der App ein Server, eine Datenbank und ein Keycloak laufen, die
+ * monatlich etwas kosten, stand bisher nirgends.
  */
 import {
   ChevronRight,
   FileText,
+  Heart,
   HelpCircle,
   Mail,
   ShieldCheck,
@@ -30,6 +36,7 @@ import {
   UserCog,
 } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useUnreadFirstSteps } from '@/features/help/use-unread-help';
 import { useUnreadRelease } from '@/features/releases/use-unread-release';
@@ -153,7 +160,70 @@ export function AppCard() {
             niko.vix@icloud.com
           </a>
         </div>
+
+        <Support />
       </Card>
     </section>
+  );
+}
+
+/**
+ * Freiwillig etwas beitragen.
+ *
+ * **Der Knopf hängt an einer Konstante, nicht an einem `disabled`-Attribut.**
+ * Solange hier `null` steht, gibt es nichts zu drücken; steht eine Adresse da,
+ * wird derselbe Knopf ein Link. So ist das Freischalten später eine Zeile und
+ * kein Umbau — und es gibt keinen Zwischenzustand, in dem ein Link ins Leere
+ * zeigt.
+ *
+ * `Button` rendert immer ein `<button>`; für den Link steht deshalb dieselbe
+ * Klassenzeile an einem `<a>`, so wie es „In Maps öffnen" am Termin schon tut.
+ *
+ * **Und der graue Knopf sagt, warum er grau ist.** Wortlos ausgegraut wäre er
+ * das, was an den Lied-Haken einmal falsch war: kein Hinweis, sondern ein
+ * Fehler.
+ */
+const PAYPAL_URL: string | null = null;
+
+const SUPPORT_BUTTON =
+  'inline-flex w-full items-center justify-center gap-2 rounded-full bg-terracotta-500 ' +
+  'px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-terracotta-700';
+
+function Support() {
+  return (
+    <div className="border-t border-line pt-4">
+      {/* Ein getönter Kasten statt einer weiteren nackten Zeile: Die Zeilen
+          darüber führen woandershin, dieser hier fragt etwas. */}
+      <div className="space-y-2.5 rounded-md border border-terracotta-100 bg-terracotta-50 p-4">
+        <p className="flex items-center gap-2 text-sm font-bold text-terracotta-700">
+          <Heart size={15} />
+          Unterstützen
+        </p>
+        <p className="text-[11px] leading-relaxed text-stone-500">
+          Wenn dir die App gefällt, kannst du freiwillig dazu beitragen, die
+          laufenden Betriebskosten zu decken.
+        </p>
+
+        {PAYPAL_URL === null ? (
+          <>
+            <Button className="w-full" disabled>
+              Unterstützen
+            </Button>
+            <p className="text-center text-[11px] text-stone-400">
+              Ist noch nicht eingerichtet.
+            </p>
+          </>
+        ) : (
+          <a
+            href={PAYPAL_URL}
+            target="_blank"
+            rel="noreferrer"
+            className={SUPPORT_BUTTON}
+          >
+            Unterstützen
+          </a>
+        )}
+      </div>
+    </div>
   );
 }
