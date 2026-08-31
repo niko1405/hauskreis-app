@@ -13,18 +13,10 @@
  * - **Treffpunkt** — gehört niemandem, ist frei bearbeitbar und lässt sich
  *   stilllegen. Zu ändern gibt es Name und Anschrift.
  */
-import {
-  Home,
-  MapPin,
-  Navigation,
-  Pencil,
-  Plus,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { Home, MapPin, Navigation, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button, IconButton } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
 import { EmptyState, Skeleton } from '@/components/ui/states';
@@ -33,8 +25,8 @@ import { LocationSheet } from '@/components/domain/location-sheet';
 import { useDeleteLocation, useLocations } from '@/lib/api/hooks';
 import { isHome } from '@/lib/location';
 import { mapsUrl } from '@/lib/meeting';
+import { SwipeActions } from '@/components/ui/swipe-actions';
 import type { Location } from '@/lib/api/types';
-import { useLongPress } from '@/components/ui/use-long-press';
 import { cn } from '@/lib/cn';
 
 export function LocationsCard() {
@@ -168,40 +160,87 @@ function HomeRow({ location }: { location: Location }) {
   );
 }
 
-/** Ein Treffpunkt: gehört niemandem, also frei bearbeitbar und stilllegbar. */
+/**
+ * Ein Treffpunkt: gehört niemandem, also frei bearbeitbar und stilllegbar.
+ *
+ * Stift und Papierkorb liegen hinter einem Wisch nach links (am Rechner hinter
+ * dem Zeiger über der Zeile). Vorher war es ein langer Druck — und dazu eine
+ * Sonderregel: Ohne Anschrift standen die Knöpfe dauerhaft da, weil in der
+ * Zeile Platz war. Zwei Bedienweisen in derselben Liste, je nachdem, ob jemand
+ * eine Adresse eingetragen hatte. Jetzt wischt man überall gleich, und der
+ * Maps-Pfeil bleibt sichtbar, statt beim Aufklappen zu verschwinden: Die Knöpfe
+ * liegen neben der Zeile und nicht mehr darin.
+ */
 function SpotRow({ location }: { location: Location }) {
   const [editing, setEditing] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  const { handlers, selectNone } = useLongPress(
-    () => location.address && setRevealed(true),
-  );
+  const remove = useDeleteLocation();
+  const confirm = useConfirm();
+  const toast = useToast();
+
+  const entfernen = async () => {
+    const ok = await confirm({
+      title: `${location.name} entfernen?`,
+      // Was passiert, weiß erst der Server: hängt ein Abend daran, wird der Ort
+      // nur stillgelegt. Deshalb hier beide Fälle nennen, statt einen zu
+      // versprechen.
+      body: 'War die Gruppe hier schon zu Gast, bleibt der Ort im Archiv stehen und verschwindet nur aus der Auswahl. Sonst wird er ganz gelöscht.',
+      confirmLabel: 'Entfernen',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    remove.mutate(location.id, {
+      onSuccess: (result) =>
+        toast.success(
+          result.deleted
+            ? `${location.name} ist gelöscht.`
+            : `${location.name} ist stillgelegt — vergangene Termine behalten ihn.`,
+        ),
+    });
+  };
 
   return (
-    <li
-      {...handlers}
-      className={cn(
-        'flex items-center gap-3 transition-colors bg-card rounded-md border p-3' +
-          (location.active ? '' : ' opacity-60'),
-        revealed ? 'border-terracotta-100 bg-terracotta-50/40' : 'border-line',
-        selectNone,
-      )}
-    >
-      <MapPin size={15} className="shrink-0 text-stone-300" />
+    <li>
+      <SwipeActions
+        className={cn(
+          'rounded-md border border-line',
+          !location.active && 'opacity-60',
+        )}
+        actions={[
+          {
+            icon: <Pencil size={15} />,
+            label: `${location.name} bearbeiten`,
+            onClick: () => setEditing(true),
+          },
+          // Ein stillgelegter Ort ist schon weg — ihn ein zweites Mal zu
+          // entfernen gibt es nicht.
+          ...(location.active
+            ? [
+                {
+                  icon: <Trash2 size={15} />,
+                  label: `${location.name} entfernen`,
+                  tone: 'danger' as const,
+                  onClick: () => void entfernen(),
+                },
+              ]
+            : []),
+        ]}
+      >
+        <div className="flex items-center gap-3 p-3">
+          <MapPin size={15} className="shrink-0 text-stone-300" />
 
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-stone-800">
-          {location.name}
-        </p>
-        <p className="truncate text-[11px] text-stone-400">
-          {location.address ?? 'Ohne Anschrift'}
-        </p>
-      </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold text-stone-800">
+              {location.name}
+            </p>
+            <p className="truncate text-[11px] text-stone-400">
+              {location.address ?? 'Ohne Anschrift'}
+            </p>
+          </div>
 
-      {!location.active && <Badge variant="neutral">stillgelegt</Badge>}
+          {!location.active && <Badge variant="neutral">stillgelegt</Badge>}
 
-      {location.address ? (
-        <>
-          {!revealed && (
+          {location.address && (
             <a
               href={mapsUrl(location)}
               target="_blank"
@@ -212,87 +251,16 @@ function SpotRow({ location }: { location: Location }) {
               <Navigation size={15} />
             </a>
           )}
-        </>
-      ) : (
-        <SpotRowActions location={location} setEditing={setEditing} />
-      )}
-
-      {revealed && (
-        <>
-          <SpotRowActions location={location} setEditing={setEditing} />
-
-          {/* Ein Weg zurück, ohne die Seite zu verlassen. Ohne ihn bliebe die
-                    Zeile aufgeklappt, bis die Liste neu lädt. */}
-          <IconButton label="Fertig" onClick={() => setRevealed(false)}>
-            <X size={14} />
-          </IconButton>
-        </>
-      )}
+        </div>
+      </SwipeActions>
 
       {editing && (
         <LocationSheet
           open
           onClose={() => setEditing(false)}
-          // Gespeichert heißt fertig mit der Zeile. Beim Abbrechen bleibt sie
-          // offen: dann war man ja noch nicht fertig.
-          onSaved={() => setRevealed(false)}
           location={location}
         />
       )}
     </li>
-  );
-}
-
-function SpotRowActions({
-  location,
-  setEditing,
-}: {
-  location: Location;
-  setEditing: (editing: boolean) => void;
-}) {
-  const remove = useDeleteLocation();
-  const confirm = useConfirm();
-  const toast = useToast();
-
-  return (
-    /* Ohne `flex` stapelt der Rahmen seine beiden Knöpfe senkrecht — in einer
-       Zeile, die selbst schon waagerecht liest. */
-    <div className="flex shrink-0 items-center gap-1">
-      <IconButton
-        label={`${location.name} bearbeiten`}
-        onClick={() => setEditing(true)}
-      >
-        <Pencil size={15} />
-      </IconButton>
-
-      {location.active && (
-        <IconButton
-          label={`${location.name} entfernen`}
-          onClick={async () => {
-            const ok = await confirm({
-              title: `${location.name} entfernen?`,
-              // Was passiert, weiß erst der Server: hängt ein Abend daran,
-              // wird der Ort nur stillgelegt. Deshalb hier beide Fälle nennen,
-              // statt einen zu versprechen.
-              body: 'War die Gruppe hier schon zu Gast, bleibt der Ort im Archiv stehen und verschwindet nur aus der Auswahl. Sonst wird er ganz gelöscht.',
-              confirmLabel: 'Entfernen',
-              tone: 'danger',
-            });
-            if (!ok) return;
-
-            remove.mutate(location.id, {
-              onSuccess: (result) =>
-                toast.success(
-                  result.deleted
-                    ? `${location.name} ist gelöscht.`
-                    : `${location.name} ist stillgelegt — vergangene Termine behalten ihn.`,
-                ),
-            });
-          }}
-        >
-          <Trash2 size={15} />
-        </IconButton>
-      )}
-    </div>
   );
 }

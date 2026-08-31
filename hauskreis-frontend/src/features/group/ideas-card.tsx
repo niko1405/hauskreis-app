@@ -26,7 +26,7 @@ import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
 import { TextArea, TextInput } from '@/components/ui/field';
 import { CardSkeleton } from '@/components/ui/states';
-import { useLongPress } from '@/components/ui/use-long-press';
+import { SwipeActions } from '@/components/ui/swipe-actions';
 import { cn } from '@/lib/cn';
 import {
   useCreateIdea,
@@ -187,8 +187,6 @@ function Row({ idea }: { idea: GroupIdea }) {
   const confirm = useConfirm();
   const { me, isAdmin } = useMe();
   const [editing, setEditing] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  const { handlers, selectNone } = useLongPress(() => setRevealed(true));
 
   const done = idea.doneAt !== null;
   // Dieselbe Regel wie im Server. Sie steht hier ein zweites Mal, weil der
@@ -215,12 +213,7 @@ function Row({ idea }: { idea: GroupIdea }) {
         onSubmit={(values) =>
           update.mutate(
             { idea, input: values },
-            {
-              onSuccess: () => {
-                setEditing(false);
-                setRevealed(false);
-              },
-            },
+            { onSuccess: () => setEditing(false) },
           )
         }
       />
@@ -228,88 +221,69 @@ function Row({ idea }: { idea: GroupIdea }) {
   }
 
   return (
-    <div
-      {...handlers}
-      className={cn(
-        'flex items-start gap-3 py-1.5 transition-colors',
-        revealed &&
-          '-mx-2 rounded-md border border-terracotta-100 bg-terracotta-50/40 px-2',
-        selectNone,
-      )}
+    <SwipeActions
+      className="-mx-2 rounded-md"
+      actions={[
+        {
+          icon: <Pencil size={14} />,
+          label: `${idea.title} bearbeiten`,
+          onClick: () => setEditing(true),
+        },
+        ...(mayDelete
+          ? [
+              {
+                icon: <Trash2 size={14} />,
+                label: `${idea.title} löschen`,
+                tone: 'danger' as const,
+                disabled: remove.isPending,
+                onClick: () => void deleteIdea(),
+              },
+            ]
+          : []),
+      ]}
     >
-      <input
-        type="checkbox"
-        checked={done}
-        disabled={update.isPending}
-        aria-label={
-          done ? `${idea.title} wieder öffnen` : `${idea.title} abhaken`
-        }
-        onChange={(event) =>
-          update.mutate({ idea, input: { done: event.target.checked } })
-        }
-        className="mt-0.5 h-5 w-5 shrink-0 rounded border-line-strong text-terracotta-500 focus:ring-terracotta-500"
-      />
+      <div className="flex items-start gap-3 px-2 py-1.5">
+        <input
+          type="checkbox"
+          checked={done}
+          disabled={update.isPending}
+          aria-label={
+            done ? `${idea.title} wieder öffnen` : `${idea.title} abhaken`
+          }
+          onChange={(event) =>
+            update.mutate({ idea, input: { done: event.target.checked } })
+          }
+          className="mt-0.5 h-5 w-5 shrink-0 rounded border-line-strong text-terracotta-500 focus:ring-terracotta-500"
+        />
 
-      <div className="min-w-0 flex-1">
-        <p
-          className={cn(
-            'text-sm leading-snug font-semibold',
-            done ? 'text-stone-400 line-through' : 'text-stone-800',
-          )}
-        >
-          {idea.title}
-        </p>
-        {idea.note && (
+        <div className="min-w-0 flex-1">
           <p
             className={cn(
-              'mt-0.5 text-xs leading-relaxed',
-              done ? 'text-stone-400' : 'text-stone-500',
+              'text-sm leading-snug font-semibold',
+              done ? 'text-stone-400 line-through' : 'text-stone-800',
             )}
           >
-            {idea.note}
+            {idea.title}
           </p>
-        )}
-        <p className="mt-0.5 text-[11px] text-stone-400">
-          {/* „Ehemaliges Mitglied" steht hier bewusst nicht: Wer sein Konto
+          {idea.note && (
+            <p
+              className={cn(
+                'mt-0.5 text-xs leading-relaxed',
+                done ? 'text-stone-400' : 'text-stone-500',
+              )}
+            >
+              {idea.note}
+            </p>
+          )}
+          <p className="mt-0.5 text-[11px] text-stone-400">
+            {/* „Ehemaliges Mitglied" steht hier bewusst nicht: Wer sein Konto
               löscht, verliert die Zuschreibung an der Idee ganz (`SetNull`).
               Eine Idee ohne Urheber ist immer noch eine Idee. */}
-          {idea.createdBy ? `von ${idea.createdBy.name}` : 'von jemandem'}
-          {done && idea.doneBy && ` · erledigt von ${idea.doneBy.name}`}
-        </p>
+            {idea.createdBy ? `von ${idea.createdBy.name}` : 'von jemandem'}
+            {done && idea.doneBy && ` · erledigt von ${idea.doneBy.name}`}
+          </p>
+        </div>
       </div>
-
-      {revealed && (
-        <>
-          <IconButton
-            label={`${idea.title} bearbeiten`}
-            className="h-7 w-7 text-stone-400"
-            onClick={() => setEditing(true)}
-          >
-            <Pencil size={13} />
-          </IconButton>
-
-          {mayDelete && (
-            <IconButton
-              label={`${idea.title} löschen`}
-              disabled={remove.isPending}
-              className="h-7 w-7 text-stone-400"
-              onClick={deleteIdea}
-            >
-              <Trash2 size={13} />
-            </IconButton>
-          )}
-
-          {/* Ein Weg zurück, ohne die Seite zu verlassen — sonst bliebe die
-              Zeile aufgeklappt, bis die Liste neu lädt. */}
-          <IconButton
-            label="Fertig"
-            className="h-7 w-7 text-stone-400"
-            onClick={() => setRevealed(false)}
-          >
-            <X size={13} />
-          </IconButton>
-        </>
-      )}
-    </div>
+    </SwipeActions>
   );
 }

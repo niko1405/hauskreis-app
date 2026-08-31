@@ -14,14 +14,13 @@ import {
   Plus,
   Search,
   Trash2,
-  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDeferredValue, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
 import { AvatarStack } from '@/components/ui/avatar';
-import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
+import { Button, PRESSABLE } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
@@ -34,7 +33,7 @@ import {
   LoadMore,
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
-import { useLongPress } from '@/components/ui/use-long-press';
+import { SwipeActions } from '@/components/ui/swipe-actions';
 import { LyricsLink } from '@/components/domain/lyrics-link';
 import { SongSheet } from '@/components/domain/song-sheet';
 import { LocationsCard } from './locations-card';
@@ -49,7 +48,7 @@ import {
   useTopicList,
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import { formatDay, formatRelativeDay } from '@/lib/date';
+import { formatDay } from '@/lib/date';
 import type { SongListParams } from '@/lib/api/params';
 import type { SongListItem, TopicListItem } from '@/lib/api/types';
 
@@ -701,26 +700,22 @@ function SongLibrary({ search }: { search: string }) {
 }
 
 /**
- * Eine Liedzeile — und ihre Knöpfe erst nach langem Druck.
+ * Eine Liedzeile — und ihre Knöpfe hinter einem Wisch nach links.
  *
- * Stift und Papierkorb standen dauerhaft da: zwei Ziele an jeder Zeile einer
- * Liste, durch die man scrollt, und beide traf der Daumen zuverlässiger als
- * die Zeile selbst. Jetzt liegen sie hinter einer Geste, die man nicht
- * versehentlich macht — lange drücken oder rechtsklicken.
+ * Stift und Papierkorb standen erst dauerhaft da (zwei Ziele an jeder Zeile
+ * einer Liste, durch die man scrollt, und beide traf der Daumen zuverlässiger
+ * als die Zeile), dann hinter einem langen Druck. Der war nicht zu erraten:
+ * Wer ihn nicht kennt, hält die Liste für schreibgeschützt. Jetzt gibt ein
+ * Wisch nach links sie frei — am Rechner reicht der Zeiger über der Zeile.
  *
- * **Kein Platzhalter, der sie freihält.** Drei Knöpfe sind auf einem 390px
- * breiten Bildschirm ein Drittel der Zeile; sie dauerhaft freizuhalten nähme
- * dem Titel genau den Platz, den diese Änderung ihm geben soll. Dass die Zeile
- * beim Aufklappen umbricht, ist verkraftbar — sie ist in dem Moment ohnehin
- * hervorgehoben, man sieht also, dass etwas passiert ist.
+ * Der „Fertig"-Knopf ist damit weg: Es ist immer nur eine Zeile offen, und die
+ * schließt, sobald eine andere aufgeht oder man daneben tippt.
  */
 function SongRow({ song, rank }: { song: SongListItem; rank?: number }) {
   const remove = useDeleteSong();
   const confirm = useConfirm();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  const { handlers, selectNone } = useLongPress(() => setRevealed(true));
 
   const deleteSong = async () => {
     const ok = await confirm({
@@ -743,62 +738,44 @@ function SongRow({ song, rank }: { song: SongListItem; rank?: number }) {
   };
 
   return (
-    <li
-      {...handlers}
-      className={cn(
-        'flex items-center gap-3 rounded-md border bg-card p-3 transition-colors',
-        revealed ? 'border-terracotta-100 bg-terracotta-50/40' : 'border-line',
-        selectNone,
-      )}
-    >
-      {rank !== undefined && (
-        <span className="w-6 shrink-0 text-center text-xs font-bold text-stone-300">
-          {rank}
-        </span>
-      )}
-      <Music size={15} className="shrink-0 text-stone-300" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-stone-800">
-          {song.title}
-        </p>
-        <p className="truncate text-[11px] text-stone-400">
-          {song.artist ?? 'Unbekannt'} · {song.timesPlayed}×
-          {song.lastPlayedAt &&
-            `, zuletzt ${formatRelativeDay(song.lastPlayedAt)}`}
-        </p>
-      </div>
-      {!revealed && <LyricsLink url={song.lyricsUrl} title={song.title} />}
-
-      {revealed && (
-        <>
-          <IconButton
-            label={`${song.title} bearbeiten`}
-            onClick={() => setEditing(true)}
-          >
-            <Pencil size={14} />
-          </IconButton>
-
-          <IconButton label={`${song.title} löschen`} onClick={deleteSong}>
-            <Trash2 size={14} />
-          </IconButton>
-
-          {/* Ein Weg zurück, ohne die Seite zu verlassen. Ohne ihn bliebe die
-              Zeile aufgeklappt, bis die Liste neu lädt. */}
-          <IconButton label="Fertig" onClick={() => setRevealed(false)}>
-            <X size={14} />
-          </IconButton>
-        </>
-      )}
+    <li>
+      <SwipeActions
+        className="rounded-md border border-line"
+        actions={[
+          {
+            icon: <Pencil size={15} />,
+            label: `${song.title} bearbeiten`,
+            onClick: () => setEditing(true),
+          },
+          {
+            icon: <Trash2 size={15} />,
+            label: `${song.title} löschen`,
+            tone: 'danger',
+            onClick: () => void deleteSong(),
+          },
+        ]}
+      >
+        <div className="flex items-center gap-3 p-3">
+          {rank !== undefined && (
+            <span className="w-6 shrink-0 text-center text-xs font-bold text-stone-300">
+              {rank}
+            </span>
+          )}
+          <Music size={15} className="shrink-0 text-stone-300" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold text-stone-800">
+              {song.title}
+            </p>
+            <p className="truncate text-[11px] text-stone-400">
+              {song.artist ?? 'Unbekannt'} · {song.timesPlayed}×
+            </p>
+          </div>
+          <LyricsLink url={song.lyricsUrl} title={song.title} />
+        </div>
+      </SwipeActions>
 
       {editing && (
-        <SongSheet
-          open
-          onClose={() => {
-            setEditing(false);
-            setRevealed(false);
-          }}
-          song={song}
-        />
+        <SongSheet open onClose={() => setEditing(false)} song={song} />
       )}
     </li>
   );
