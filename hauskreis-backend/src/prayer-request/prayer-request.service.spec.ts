@@ -46,7 +46,9 @@ function setup(meeting: Record<string, unknown> | null) {
 
 const offen = {
   date: KOMMENDER_DIENSTAG,
+  endDate: null,
   status: 'PLANNED',
+  hasPrayerSlot: true,
   hauskreisId: 'hk-1',
 };
 
@@ -153,5 +155,20 @@ describe('PrayerRequestService.findAll', () => {
         orderBy: { createdAt: 'asc' },
       }),
     );
+  });
+});
+
+/**
+ * Der Baustein ist die vierte Grenze neben „vergangen", „abgesagt" und „nur die
+ * eigene Zeile". Ohne ihn käme ein Anliegen an einem Abend an, an dem es
+ * niemand zu sehen bekommt.
+ */
+describe('PrayerRequestService ohne den Baustein', () => {
+  it('nimmt nichts entgegen', async () => {
+    const { service } = setup({ ...offen, hasPrayerSlot: false });
+
+    await expect(
+      service.upsertMine('hk-1', 'm1', { text: 'Für meine Mutter' }, 'p1'),
+    ).rejects.toThrow(/keine Gebetsanliegen/);
   });
 });

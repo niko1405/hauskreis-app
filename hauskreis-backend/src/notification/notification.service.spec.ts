@@ -27,7 +27,10 @@ const env: Record<string, string | undefined> = {
 function setup(
   options: {
     subscriptions?: { id: string; endpoint: string }[];
+    /** Eine Zeile gibt es schon — mit oder ohne erfolgten Push. */
     alreadyLogged?: boolean;
+    /** Nur zusammen mit `alreadyLogged`: war sie auch schon zugestellt? */
+    alreadyPushed?: boolean;
     configured?: boolean;
     switchedOff?: boolean;
   } = {},
@@ -43,10 +46,18 @@ function setup(
     delete: jest.fn().mockResolvedValue({}),
   };
   const notificationLog = {
-    findFirst: jest
-      .fn()
-      .mockResolvedValue(options.alreadyLogged ? { id: 'log-1' } : null),
-    create: jest.fn().mockResolvedValue({ id: 'log-1' }),
+    findFirst: jest.fn().mockResolvedValue(
+      options.alreadyLogged
+        ? {
+            id: 'log-1',
+            // Voreinstellung „schon zugestellt": Das ist der Fall, den es vor
+            // der Box allein gab, und er bleibt der Regelfall.
+            pushedAt: options.alreadyPushed === false ? null : new Date(),
+          }
+        : null,
+    ),
+    create: jest.fn().mockResolvedValue({ id: 'log-1', pushedAt: null }),
+    update: jest.fn().mockResolvedValue({}),
   };
 
   const config = {
@@ -113,7 +124,7 @@ describe('NotificationService.notify', () => {
     expect(mockedWebpush.sendNotification).not.toHaveBeenCalled();
   });
 
-  it('respects a notification the recipient switched off', async () => {
+  it('legt den Eintrag auch bei abgeschalteter Art an, schickt ihn aber nicht', async () => {
     const { service, notificationLog } = setup({ switchedOff: true });
 
     await expect(
@@ -125,10 +136,58 @@ describe('NotificationService.notify', () => {
       }),
     ).resolves.toEqual({ delivered: 0, skipped: 1, pruned: 0, failed: 0 });
 
-    // Nothing is logged, so switching it back on still delivers the reminder
-    // for this very meeting instead of finding it marked as handled.
-    expect(notificationLog.create).not.toHaveBeenCalled();
+    // In der Box zu stehen stört niemanden — wer das Klingeln abgestellt hat,
+    // will trotzdem nachlesen können, dass er dran ist.
+    expect(notificationLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ title: 'Hi', body: 'There' }),
+      select: { id: true, pushedAt: true },
+    });
     expect(mockedWebpush.sendNotification).not.toHaveBeenCalled();
+    // Und `pushedAt` bleibt leer — daran hängt der Test darunter.
+    expect(notificationLog.update).not.toHaveBeenCalled();
+  });
+
+  it('stellt nach dem Wiedereinschalten noch zu', async () => {
+    // Genau die Zeile von eben: angelegt, nie zugestellt.
+    const { service, notificationLog } = setup({
+      alreadyLogged: true,
+      alreadyPushed: false,
+    });
+
+    await expect(
+      service.notify({
+        personId: 'p1',
+        type: 'HOST_REMINDER',
+        relatedMeetingId: 'm1',
+        payload,
+      }),
+    ).resolves.toEqual({ delivered: 1, skipped: 0, pruned: 0, failed: 0 });
+
+    // Keine zweite Zeile, aber diesmal ein Push — und `pushedAt` gesetzt,
+    // damit der Lauf von morgen ihn nicht wiederholt.
+    expect(notificationLog.create).not.toHaveBeenCalled();
+    expect(notificationLog.update).toHaveBeenCalledWith({
+      where: { id: 'log-1' },
+      data: { pushedAt: expect.any(Date) },
+    });
+    expect(mockedWebpush.sendNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it('gibt dem Service Worker die Id mit, damit Antippen als gelesen zählt', async () => {
+    const { service } = setup();
+
+    await service.notify({
+      personId: 'p1',
+      type: 'HOST_REMINDER',
+      relatedMeetingId: 'm1',
+      payload: { ...payload, url: '/termin?id=m1' },
+    });
+
+    const [, body] = mockedWebpush.sendNotification.mock.calls[0];
+    expect(JSON.parse(body as string)).toMatchObject({
+      url: '/termin?id=m1',
+      notificationId: 'log-1',
+    });
   });
 
   it('tells two cancellations for the same evening apart', async () => {
@@ -159,9 +218,11 @@ describe('NotificationService.notify', () => {
         relatedReleaseVersion: null,
         relatedOccasionId: null,
       },
+      select: { id: true, pushedAt: true },
     });
     expect(notificationLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ relatedPersonId: 'antonia' }),
+      select: { id: true, pushedAt: true },
     });
   });
 

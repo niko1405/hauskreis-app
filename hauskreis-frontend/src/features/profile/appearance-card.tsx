@@ -7,13 +7,15 @@
  * Zustände, und „System" ist hier keine Randnotiz, sondern die Voreinstellung
  * — die App wechselt dann abends von selbst mit.
  *
- * Steht weit oben im Profil und nicht bei den Kontosachen: Es ist die einzige
- * Einstellung auf diesem Bildschirm, die man sofort sieht, und die einzige,
- * die nur für dieses Gerät gilt.
+ * Darunter steht seit Neuestem der Schalter für die **Kopfleiste**. Er gehört
+ * hierher, weil er dieselbe Sorte Einstellung ist: eine Aussage über diesen
+ * Bildschirm, nicht über diese Person — und wie das Thema liegt er im Gerät.
  */
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { Card, SectionTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/field';
 import { cn } from '@/lib/cn';
+import { useHeaderPreference } from '@/lib/header-preference';
 import { useTheme, type Theme } from '@/lib/theme';
 
 const OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
@@ -24,6 +26,7 @@ const OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
 
 export function AppearanceCard() {
   const { theme, setTheme } = useTheme();
+  const header = useHeaderPreference();
 
   return (
     <section>
@@ -61,6 +64,19 @@ export function AppearanceCard() {
           Gilt nur auf diesem Gerät. „System" folgt der Einstellung deines
           Smartphones oder Rechners.
         </p>
+
+        {/* Auch eine Sache des Geräts und deshalb hier: Die Leiste ist ein
+            Kompromiss — sie trägt den Weg zur Gruppe und die Glocke, liegt
+            dafür aber über den Kopfbildern. Wer sie nicht will, findet beides
+            danach im Profil. */}
+        <div className="border-t border-line pt-3">
+          <Checkbox
+            label="Kopfleiste anzeigen"
+            description="Die Leiste über den Tabs mit Gruppenbild, „Gruppe“ und Glocke. Ohne sie erreichst du die Gruppe über dein Profil."
+            checked={header.shown}
+            onChange={(event) => header.setShown(event.target.checked)}
+          />
+        </div>
       </Card>
     </section>
   );

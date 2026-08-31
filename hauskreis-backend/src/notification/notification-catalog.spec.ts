@@ -64,41 +64,77 @@ describe('notification catalog', () => {
  * `appliesTo` blendet Schalter aus, die für diese Person nichts bewirken
  * können. Ein Schalter ohne Wirkung ist schlimmer als keiner — man glaubt ihm.
  */
+const regelFuer = (type: NotificationType) =>
+  NOTIFICATION_CATALOG.find((entry) => entry.type === type)?.appliesTo as (
+    context: NotificationContext,
+  ) => boolean;
+
+/** Voller Kontext, aus dem jeder Fall nur das ändert, worum es ihm geht. */
+const kontext = (
+  overrides: Partial<NotificationContext> = {},
+): NotificationContext => ({
+  homeCapacity: null,
+  activeMembers: 9,
+  prayerBuddies: true,
+  weeklyActionstep: true,
+  ...overrides,
+});
+
 describe('appliesTo', () => {
-  const capacityRule = NOTIFICATION_CATALOG.find(
-    (entry) => entry.type === NotificationType.HOST_CAPACITY_UNLOCKED,
-  )?.appliesTo as (context: {
-    homeCapacity: number | null;
-    activeMembers: number;
-  }) => boolean;
+  const capacityRule = regelFuer(NotificationType.HOST_CAPACITY_UNLOCKED);
 
   it('zeigt „Bei euch wäre jetzt Platz" bei begrenzter Wohnung', () => {
-    expect(capacityRule({ homeCapacity: 5, activeMembers: 9 })).toBe(true);
+    expect(capacityRule(kontext({ homeCapacity: 5 }))).toBe(true);
   });
 
   it('verschweigt ihn ohne gesetzte Kapazität', () => {
     // „Alle passen rein" — dann gibt es nichts freizuschalten.
-    expect(capacityRule({ homeCapacity: null, activeMembers: 9 })).toBe(false);
+    expect(capacityRule(kontext({ homeCapacity: null }))).toBe(false);
   });
 
   it('verschweigt ihn, wenn die Wohnung ohnehin für alle reicht', () => {
-    expect(capacityRule({ homeCapacity: 12, activeMembers: 9 })).toBe(false);
+    expect(capacityRule(kontext({ homeCapacity: 12 }))).toBe(false);
   });
 
   it('behandelt „passt genau" als nie gesperrt', () => {
-    expect(capacityRule({ homeCapacity: 9, activeMembers: 9 })).toBe(false);
+    expect(capacityRule(kontext({ homeCapacity: 9 }))).toBe(false);
+  });
+
+  /**
+   * Die beiden abschaltbaren Bausteine. Ein Schalter für etwas, das die Gruppe
+   * gar nicht benutzt, ist genau der Schalter ohne Wirkung, den `appliesTo`
+   * verhindern soll — und abgestellt wird der Versand ohnehin an der Quelle,
+   * im nächtlichen Lauf.
+   */
+  it('verschweigt die Gebetsbuddys, wenn die Gruppe keine hat', () => {
+    const regel = regelFuer(NotificationType.PRAYER_BUDDY_ASSIGNED);
+
+    expect(regel(kontext())).toBe(true);
+    expect(regel(kontext({ prayerBuddies: false }))).toBe(false);
+  });
+
+  it('verschweigt den Actionstep der Woche, wenn er abgeschaltet ist', () => {
+    const regel = regelFuer(NotificationType.ACTIONSTEP_REMINDER);
+
+    expect(regel(kontext())).toBe(true);
+    expect(regel(kontext({ weeklyActionstep: false }))).toBe(false);
   });
 
   /**
    * Der Rest des Katalogs bleibt ungefiltert. `appliesTo` ist die Ausnahme für
-   * einen Schalter, dessen Anlass an einer Bedingung hängt — nicht der neue
-   * Normalfall.
+   * Schalter, deren Anlass an einer Bedingung hängt — nicht der Normalfall.
    */
   it('lässt alle anderen Einträge für jeden gelten', () => {
     const conditional = NOTIFICATION_CATALOG.filter(
       (entry) => entry.appliesTo !== undefined,
     ).map((entry) => entry.type);
 
-    expect(conditional).toEqual([NotificationType.HOST_CAPACITY_UNLOCKED]);
+    expect(conditional.toSorted()).toEqual(
+      [
+        NotificationType.ACTIONSTEP_REMINDER,
+        NotificationType.PRAYER_BUDDY_ASSIGNED,
+        NotificationType.HOST_CAPACITY_UNLOCKED,
+      ].toSorted(),
+    );
   });
 });

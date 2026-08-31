@@ -51,11 +51,12 @@ export class EditRightsService {
         // bekommt die Zugehörigkeit vom Aufrufer bestätigt.
         hauskreisId: true,
         date: true,
+        endDate: true,
         songLeaders: { select: { personId: true } },
       },
     });
 
-    if (meeting && (await this.clock.isPast(meeting.hauskreisId, meeting.date)))
+    if (meeting && (await this.clock.isPast(meeting.hauskreisId, meeting)))
       return;
 
     const leaders = (meeting?.songLeaders ?? []).map((row) => row.personId);

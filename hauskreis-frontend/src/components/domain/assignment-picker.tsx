@@ -71,9 +71,9 @@ export type AssignmentKind = Exclude<
 const UNRANKED_HINT: Record<AssignmentKind, string> = {
   HOST: '',
   TOPIC: '',
-  SONG: 'Vorgeschlagen wird nur, wer ein Instrument spielt. Eintragen kann man jede:n — die Gruppe weiß besser, wer den Abend trägt.',
+  SONG: 'Vorgeschlagen wird nur, wer ein Instrument spielt.',
   TESTIMONY:
-    'Sein Testimony erzählt man einmal — vorgeschlagen wird deshalb nur, wer noch nicht dran war. Eintragen kann man trotzdem jede:n.',
+    'Sein Testimony erzählt man nur einmal — vorgeschlagen wird deshalb nur, wer noch nicht dran war.',
 };
 
 export function AssignmentPicker({
@@ -168,9 +168,9 @@ export function AssignmentPicker({
     <>
       {withoutSuggestions ? (
         <p className="rounded-md border border-line bg-canvas px-4 py-3 text-xs leading-relaxed text-stone-500">
-          Der Abend ist vorbei — hier wird nur nachgetragen, wer es war. Deshalb
-          steht hier kein Vorschlag: die Frage „wer wäre als Nächstes dran"
-          stellt sich rückwärts nicht.
+          Der Termin ist vorbei — hier wird nur nachgetragen, wer es war.
+          Deshalb steht hier kein Vorschlag: die Frage „wer wäre als Nächstes
+          dran" stellt sich rückwärts nicht.
         </p>
       ) : (
         <section>

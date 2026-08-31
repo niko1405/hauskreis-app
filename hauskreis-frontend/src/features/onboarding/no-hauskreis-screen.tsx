@@ -28,6 +28,7 @@ import {
 } from '@/lib/api/hooks';
 import type { Invitation } from '@/lib/api/types';
 import { LegalFooter } from '@/components/layout/legal-footer';
+import { armOwnerWelcome } from '@/lib/owner-welcome';
 
 export function NoHauskreisScreen({ email }: { email?: string }) {
   const auth = useAuth();
@@ -177,7 +178,13 @@ function CreateHauskreisCard() {
     create.mutate(
       { name: trimmed },
       {
-        onSuccess: (hauskreis) => toast.success(`„${hauskreis.name}" steht.`),
+        onSuccess: (hauskreis) => {
+          toast.success(`„${hauskreis.name}" steht.`);
+          // Der Hinweis kommt drüben auf „Heute", wo man gleich landet:
+          // Hier steht noch das Formular, und ein Sheet darüber wäre eine
+          // Rückfrage zu etwas, das schon passiert ist.
+          armOwnerWelcome();
+        },
       },
     );
   }

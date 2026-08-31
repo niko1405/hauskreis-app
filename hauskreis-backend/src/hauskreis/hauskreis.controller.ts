@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common';
 import { HauskreisService } from './hauskreis.service';
@@ -20,8 +21,14 @@ import {
   CreateHauskreisDto,
   HauskreisParamsDto,
   LeaveHauskreisDto,
+  UpdateHauskreisDto,
 } from './dto/hauskreis.dto';
-import { ApiZodResponse } from '../common/http/api-response.decorator';
+import { IfMatch } from '../common/http/if-match.decorator';
+import type { IfMatchCondition } from '../common/http/etag';
+import {
+  ApiConditionalWrite,
+  ApiZodResponse,
+} from '../common/http/api-response.decorator';
 import {
   AccountDeletedResponseDto,
   HauskreisListResponseDto,
@@ -48,6 +55,25 @@ export class HauskreisController {
   @ApiZodResponse(HauskreisResponseDto)
   findOne(@Param() params: HauskreisParamsDto) {
     return this.hauskreisService.findOne(params.hauskreisId);
+  }
+
+  /**
+   * Name und Beschreibung — wer ihr seid.
+   *
+   * **Ohne `@HauskreisAdmin()`**, aus demselben Grund wie beim Kopfbild: Bei
+   * neun Leuten ist die Selbstbeschreibung keine Verwaltungsangelegenheit.
+   * Anders als der Termin-Rhythmus oder die Geschenke-Regeln ändert sie nichts
+   * daran, wie die App rechnet.
+   */
+  @Patch(':hauskreisId')
+  @ApiZodResponse(HauskreisResponseDto)
+  @ApiConditionalWrite()
+  update(
+    @Param() params: HauskreisParamsDto,
+    @Body() dto: UpdateHauskreisDto,
+    @IfMatch() ifMatch?: IfMatchCondition,
+  ) {
+    return this.hauskreisService.update(params.hauskreisId, dto, ifMatch);
   }
 
   /**

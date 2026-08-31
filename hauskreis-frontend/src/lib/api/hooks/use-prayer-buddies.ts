@@ -8,6 +8,7 @@ import type { PrayerBuddyConfig, UpdateCycleConfigInput } from '../types';
 import { useHk } from './use-hk';
 import { useInfiniteList } from './use-paginated';
 import { useApiMutation, useResource, useResourceUpdate } from './use-resource';
+import { qk } from '../query-keys';
 
 /** Die laufende Runde: Zeitraum und alle Gruppen. */
 export function useCurrentPrayerBuddies() {
@@ -58,7 +59,11 @@ export function useUpdatePrayerBuddyConfig() {
     queryKey: keys.prayerBuddies.config,
     update: (input, etag) =>
       prayerBuddiesApi.updatePrayerBuddyConfig(hauskreisId, input, etag),
-    invalidateKeys: [keys.prayerBuddies.all],
+    // `qk.hauskreise` fällt mit: An der Hauskreis-Antwort hängt `features`, und
+    // daran hängen der Gebets-Tab, die Karte auf „Heute" und die Hilfe. Der
+    // ETag des Hauskreises springt bei einer Config-Änderung nicht — ohne die
+    // Invalidierung stünde der Tab noch zehn Minuten da.
+    invalidateKeys: [keys.prayerBuddies.all, qk.hauskreise],
   });
 }
 

@@ -1,5 +1,5 @@
 import { GroupClockService } from './group-clock.service';
-import { currentDay, isPast } from './meeting-schedule';
+import { currentDay, spanIsPast, type MeetingSpan } from './meeting-schedule';
 import { DEFAULT_TIME_ZONE } from '../common/time/local-evening';
 
 /**
@@ -31,8 +31,8 @@ export function testClock(zone: string = DEFAULT_TIME_ZONE): GroupClockService {
     zoneOf: () => Promise.resolve(zone),
     today: (_hauskreisId: string, now?: Date) =>
       Promise.resolve(currentDay(zone, now)),
-    isPast: (_hauskreisId: string, date: Date, now?: Date) =>
-      Promise.resolve(isPast(date, zone, now)),
+    isPast: (_hauskreisId: string, span: MeetingSpan, now?: Date) =>
+      Promise.resolve(spanIsPast(span, zone, now)),
     forget: () => undefined,
   } as unknown as GroupClockService;
 }

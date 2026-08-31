@@ -33,7 +33,7 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    patch?: never;
+    patch: operations['HauskreisController_update'];
     trace?: never;
   };
   '/api/hauskreise/{hauskreisId}/absences': {
@@ -308,6 +308,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/ideas': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['GroupIdeaController_findAll'];
+    put?: never;
+    post: operations['GroupIdeaController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/ideas/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: operations['GroupIdeaController_remove'];
+    options?: never;
+    head?: never;
+    patch: operations['GroupIdeaController_update'];
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/leave': {
     parameters: {
       query?: never;
@@ -404,22 +436,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/hauskreise/{hauskreisId}/meetings/actionstep-reminders': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['MeetingController_runActionstepReminders'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/hauskreise/{hauskreisId}/meetings/config': {
     parameters: {
       query?: never;
@@ -436,22 +452,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/hauskreise/{hauskreisId}/meetings/custom-meeting-reminders': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['MeetingController_runCustomMeetingReminders'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/hauskreise/{hauskreisId}/meetings/generate': {
     parameters: {
       query?: never;
@@ -462,38 +462,6 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['MeetingController_generate'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/hauskreise/{hauskreisId}/meetings/host-reminders': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['MeetingController_runHostReminders'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/hauskreise/{hauskreisId}/meetings/testimony-reminders': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['MeetingController_runTestimonyReminders'];
     delete?: never;
     options?: never;
     head?: never;
@@ -868,6 +836,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/photo': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['HauskreisPhotoController_find'];
+    put?: never;
+    post: operations['HauskreisPhotoController_upload'];
+    delete: operations['HauskreisPhotoController_remove'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/prayer-buddies': {
     parameters: {
       query?: never;
@@ -1028,22 +1012,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/api/hauskreise/{hauskreisId}/songs/reminders': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['SongController_runReminders'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/api/hauskreise/{hauskreisId}/songs/{id}': {
     parameters: {
       query?: never;
@@ -1134,22 +1102,6 @@ export interface paths {
     get: operations['TopicController_findAll'];
     put?: never;
     post: operations['TopicController_create'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/api/hauskreise/{hauskreisId}/topics/reminders': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations['TopicController_runReminders'];
     delete?: never;
     options?: never;
     head?: never;
@@ -1348,6 +1300,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/notifications': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['NotificationInboxController_list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/notifications/read-all': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['NotificationInboxController_markAllRead'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/notifications/{id}/read': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['NotificationInboxController_markRead'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/push/public-key': {
     parameters: {
       query?: never;
@@ -1466,6 +1466,13 @@ export interface components {
       /** Format: uuid */
       id: string;
       name: string;
+      description: string | null;
+      features: {
+        prayerBuddies: boolean;
+        weeklyActionstep: boolean;
+      };
+      /** Format: date-time */
+      photoUpdatedAt: string | null;
       /** Format: date-time */
       createdAt: string;
       version: number;
@@ -1474,9 +1481,20 @@ export interface components {
       /** Format: uuid */
       id: string;
       name: string;
+      description: string | null;
+      features: {
+        prayerBuddies: boolean;
+        weeklyActionstep: boolean;
+      };
+      /** Format: date-time */
+      photoUpdatedAt: string | null;
       /** Format: date-time */
       createdAt: string;
       version: number;
+    };
+    UpdateHauskreisDto: {
+      name?: string;
+      description?: string | null;
     };
     CreateHauskreisDto: {
       name: string;
@@ -1492,6 +1510,10 @@ export interface components {
     };
     AccountDeletedResponseDto: {
       hauskreisDeleted: boolean;
+    };
+    PhotoResponseDto: {
+      /** Format: date-time */
+      photoUpdatedAt: string;
     };
     InvitationListResponseDto: {
       /** Format: uuid */
@@ -1745,10 +1767,6 @@ export interface components {
     VerificationSentResponseDto: {
       verificationEmailSent: boolean;
     };
-    PhotoResponseDto: {
-      /** Format: date-time */
-      photoUpdatedAt: string;
-    };
     LocationListResponseDto: {
       /** Format: uuid */
       id: string;
@@ -1873,6 +1891,7 @@ export interface components {
       id: string;
       /** Format: uuid */
       hauskreisId: string;
+      enabled: boolean;
       periodLengthWeeks: number;
       /** Format: uuid */
       updatedByPersonId: string | null;
@@ -1888,7 +1907,8 @@ export interface components {
       } | null;
     };
     UpdateCycleConfigDto: {
-      periodLengthWeeks: number;
+      enabled?: boolean;
+      periodLengthWeeks?: number;
     };
     RotateDto: {
       /** @default true */
@@ -1942,7 +1962,18 @@ export interface components {
         | 'RELEASE_NOTES'
         | 'BIRTHDAY_GIFT_ASSIGNED'
         | 'BIRTHDAY_GIFT_REMINDER'
-        | 'BIRTHDAY_GIFT_DECIDED';
+        | 'BIRTHDAY_GIFT_DECIDED'
+        | 'MEETING_TODAY'
+        | 'NOTES_REMINDER'
+        | 'ADMIN_GRANTED';
+      /** @enum {string} */
+      category:
+        | 'Deine Rollen'
+        | 'Termine'
+        | 'Nach dem Abend'
+        | 'Gebet'
+        | 'Geburtstage'
+        | 'Gruppe & App';
       label: string;
       description: string;
       schedule:
@@ -1992,7 +2023,18 @@ export interface components {
         | 'RELEASE_NOTES'
         | 'BIRTHDAY_GIFT_ASSIGNED'
         | 'BIRTHDAY_GIFT_REMINDER'
-        | 'BIRTHDAY_GIFT_DECIDED';
+        | 'BIRTHDAY_GIFT_DECIDED'
+        | 'MEETING_TODAY'
+        | 'NOTES_REMINDER'
+        | 'ADMIN_GRANTED';
+      /** @enum {string} */
+      category:
+        | 'Deine Rollen'
+        | 'Termine'
+        | 'Nach dem Abend'
+        | 'Gebet'
+        | 'Geburtstage'
+        | 'Gruppe & App';
       label: string;
       description: string;
       schedule:
@@ -2055,6 +2097,77 @@ export interface components {
       delivered: number;
       pruned: number;
       failed: number;
+    };
+    NotificationInboxResponseDto: {
+      unreadCount: number;
+      unread: {
+        /** Format: uuid */
+        id: string;
+        /** @enum {string} */
+        type:
+          | 'HOST_REMINDER'
+          | 'TOPIC_REMINDER'
+          | 'SONG_REMINDER'
+          | 'ACTIONSTEP_REMINDER'
+          | 'PRAYER_BUDDY_ASSIGNED'
+          | 'ROLE_ASSIGNED'
+          | 'MEETING_CANCELLED'
+          | 'ATTENDANCE_DECLINED'
+          | 'HOST_CAPACITY_UNLOCKED'
+          | 'MEMBER_LEFT'
+          | 'CUSTOM_MEETING_CREATED'
+          | 'CUSTOM_MEETING_REMINDER'
+          | 'TESTIMONY_REMINDER'
+          | 'MEETING_TIME_CHANGED'
+          | 'RELEASE_NOTES'
+          | 'BIRTHDAY_GIFT_ASSIGNED'
+          | 'BIRTHDAY_GIFT_REMINDER'
+          | 'BIRTHDAY_GIFT_DECIDED'
+          | 'MEETING_TODAY'
+          | 'NOTES_REMINDER'
+          | 'ADMIN_GRANTED';
+        title: string;
+        body: string;
+        url: string | null;
+        /** Format: date-time */
+        sentAt: string;
+        /** Format: date-time */
+        readAt: string | null;
+      }[];
+      read: {
+        /** Format: uuid */
+        id: string;
+        /** @enum {string} */
+        type:
+          | 'HOST_REMINDER'
+          | 'TOPIC_REMINDER'
+          | 'SONG_REMINDER'
+          | 'ACTIONSTEP_REMINDER'
+          | 'PRAYER_BUDDY_ASSIGNED'
+          | 'ROLE_ASSIGNED'
+          | 'MEETING_CANCELLED'
+          | 'ATTENDANCE_DECLINED'
+          | 'HOST_CAPACITY_UNLOCKED'
+          | 'MEMBER_LEFT'
+          | 'CUSTOM_MEETING_CREATED'
+          | 'CUSTOM_MEETING_REMINDER'
+          | 'TESTIMONY_REMINDER'
+          | 'MEETING_TIME_CHANGED'
+          | 'RELEASE_NOTES'
+          | 'BIRTHDAY_GIFT_ASSIGNED'
+          | 'BIRTHDAY_GIFT_REMINDER'
+          | 'BIRTHDAY_GIFT_DECIDED'
+          | 'MEETING_TODAY'
+          | 'NOTES_REMINDER'
+          | 'ADMIN_GRANTED';
+        title: string;
+        body: string;
+        url: string | null;
+        /** Format: date-time */
+        sentAt: string;
+        /** Format: date-time */
+        readAt: string | null;
+      }[];
     };
     BirthdayOverviewResponseDto: {
       members: {
@@ -2340,6 +2453,7 @@ export interface components {
         hasSongSlot: boolean;
         hasTestimonySlot: boolean;
         hasNotesSlot: boolean;
+        hasPrayerSlot: boolean;
         /** Format: uuid */
         locationId: string | null;
         /** Format: uuid */
@@ -2480,6 +2594,7 @@ export interface components {
           personId: string;
           /** @enum {string} */
           status: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
+          note: string | null;
         }[];
       }[];
       total: number;
@@ -2495,6 +2610,7 @@ export interface components {
       weekday: number;
       startTime: string;
       timeZone: string;
+      weeklyActionstep: boolean;
       /** Format: uuid */
       updatedByPersonId: string | null;
       /** Format: date-time */
@@ -2509,9 +2625,10 @@ export interface components {
       } | null;
     };
     UpdateMeetingScheduleDto: {
-      weekday: number;
-      startTime: string;
-      timeZone: string;
+      weekday?: number;
+      startTime?: string;
+      timeZone?: string;
+      weeklyActionstep?: boolean;
     };
     MeetingResponseDto: {
       /** Format: uuid */
@@ -2531,6 +2648,7 @@ export interface components {
       hasSongSlot: boolean;
       hasTestimonySlot: boolean;
       hasNotesSlot: boolean;
+      hasPrayerSlot: boolean;
       /** Format: uuid */
       locationId: string | null;
       /** Format: uuid */
@@ -2671,6 +2789,7 @@ export interface components {
         personId: string;
         /** @enum {string} */
         status: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
+        note: string | null;
       }[];
     };
     HostSuggestionListResponseDto: {
@@ -2759,6 +2878,7 @@ export interface components {
       hasSongSlot?: boolean;
       hasTestimonySlot?: boolean;
       hasNotesSlot?: boolean;
+      hasPrayerSlot?: boolean;
     };
     UpdateMeetingDto: {
       /** @enum {string} */
@@ -2780,6 +2900,7 @@ export interface components {
       hasSongSlot?: boolean;
       hasTestimonySlot?: boolean;
       hasNotesSlot?: boolean;
+      hasPrayerSlot?: boolean;
     };
     CancelMeetingDto: {
       reason?: string | null;
@@ -2789,6 +2910,7 @@ export interface components {
       personId: string;
       /** @enum {string} */
       status: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
+      note?: string | null;
     };
     AttendanceResponseDto: {
       /** Format: uuid */
@@ -2799,6 +2921,7 @@ export interface components {
       status: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
       /** @enum {string} */
       source: 'SELF' | 'ABSENCE' | 'AUTO' | 'ROLE';
+      note: string | null;
       /** Format: date-time */
       updatedAt: string;
     };
@@ -2817,16 +2940,6 @@ export interface components {
     GenerationResultResponseDto: {
       created: number;
       skipped: number;
-    };
-    ReminderRunResultResponseDto: {
-      notified: number;
-      skipped: number;
-    };
-    ActionstepRunResultResponseDto: {
-      notified: number;
-      skipped: number;
-      /** Format: uuid */
-      meetingId: string | null;
     };
     TopicPageResponseDto: {
       items: {
@@ -2872,6 +2985,8 @@ export interface components {
             id: string;
             /** Format: date */
             date: string;
+            /** Format: date */
+            endDate: string | null;
             startTime: string;
             /** @enum {string} */
             status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
@@ -2963,6 +3078,8 @@ export interface components {
           id: string;
           /** Format: date */
           date: string;
+          /** Format: date */
+          endDate: string | null;
           startTime: string;
           /** @enum {string} */
           status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
@@ -3047,6 +3164,8 @@ export interface components {
         id: string;
         /** Format: date */
         date: string;
+        /** Format: date */
+        endDate: string | null;
         startTime: string;
         /** @enum {string} */
         status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
@@ -3454,6 +3573,65 @@ export interface components {
       }[];
     };
     HomeScreenResponseDto: {
+      currentMeeting: {
+        /** Format: uuid */
+        id: string;
+        /** Format: date */
+        date: string;
+        startTime: string;
+        /** Format: date */
+        endDate: string | null;
+        /** @enum {string} */
+        type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
+        hasTopicSlot: boolean;
+        hasSongSlot: boolean;
+        hasTestimonySlot: boolean;
+        title: string | null;
+        location: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          latitude: number | null;
+          longitude: number | null;
+          address: string | null;
+          requiresHost: boolean;
+        } | null;
+        host: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+        topicResponsibles: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        }[];
+        topic: {
+          /** Format: uuid */
+          id: string;
+          title: string | null;
+        } | null;
+        songLeaders: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        }[];
+        testimonyPerson: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+        /** @enum {string} */
+        myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
+      } | null;
       nextMeeting: {
         /** Format: uuid */
         id: string;
@@ -3574,6 +3752,65 @@ export interface components {
       screen: 'home' | 'prayer' | 'archive' | 'profile';
       /** Format: date-time */
       updatedAt: string;
+    };
+    GroupIdeaListResponseDto: {
+      /** Format: uuid */
+      id: string;
+      title: string;
+      note: string | null;
+      /** Format: date-time */
+      doneAt: string | null;
+      doneBy: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      } | null;
+      createdBy: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      } | null;
+      /** Format: date-time */
+      createdAt: string;
+      version: number;
+    }[];
+    CreateGroupIdeaDto: {
+      title: string;
+      note?: string | null;
+    };
+    GroupIdeaResponseDto: {
+      /** Format: uuid */
+      id: string;
+      title: string;
+      note: string | null;
+      /** Format: date-time */
+      doneAt: string | null;
+      doneBy: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      } | null;
+      createdBy: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      } | null;
+      /** Format: date-time */
+      createdAt: string;
+      version: number;
+    };
+    UpdateGroupIdeaDto: {
+      title?: string;
+      note?: string | null;
+      done?: boolean;
     };
     ReleaseListResponseDto: {
       version: string;
@@ -3754,6 +3991,85 @@ export interface operations {
       };
       /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  HauskreisController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateHauskreisDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HauskreisResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Das `If-Match` ist veraltet — jemand anders hat inzwischen gespeichert. Neu laden und erneut versuchen. */
+      412: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Kein `If-Match` mitgeschickt. Den ETag aus dem vorangehenden GET verwenden. */
+      428: {
         headers: {
           [name: string]: unknown;
         };
@@ -5230,6 +5546,253 @@ export interface operations {
       };
     };
   };
+  GroupIdeaController_findAll: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Offene zuerst, erledigte darunter */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GroupIdeaListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  GroupIdeaController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateGroupIdeaDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GroupIdeaResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  GroupIdeaController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Gelöscht, kein Inhalt */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nicht angemeldet */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  GroupIdeaController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateGroupIdeaDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GroupIdeaResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Das `If-Match` ist veraltet — jemand anders hat inzwischen gespeichert. Neu laden und erneut versuchen. */
+      412: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Kein `If-Match` mitgeschickt. Den ETag aus dem vorangehenden GET verwenden. */
+      428: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
   HauskreisController_leave: {
     parameters: {
       query?: never;
@@ -5855,63 +6418,6 @@ export interface operations {
       };
     };
   };
-  MeetingController_runActionstepReminders: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        hauskreisId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ActionstepRunResultResponseDto'];
-        };
-      };
-      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Angemeldet, aber ohne das nötige Recht */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-    };
-  };
   MeetingController_getSchedule: {
     parameters: {
       query?: never;
@@ -6049,63 +6555,6 @@ export interface operations {
       };
     };
   };
-  MeetingController_runCustomMeetingReminders: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        hauskreisId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ReminderRunResultResponseDto'];
-        };
-      };
-      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Angemeldet, aber ohne das nötige Recht */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-    };
-  };
   MeetingController_generate: {
     parameters: {
       query?: never;
@@ -6123,120 +6572,6 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['GenerationResultResponseDto'];
-        };
-      };
-      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Angemeldet, aber ohne das nötige Recht */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-    };
-  };
-  MeetingController_runHostReminders: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        hauskreisId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ReminderRunResultResponseDto'];
-        };
-      };
-      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Angemeldet, aber ohne das nötige Recht */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-    };
-  };
-  MeetingController_runTestimonyReminders: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        hauskreisId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ReminderRunResultResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -8294,6 +8629,136 @@ export interface operations {
       };
     };
   };
+  HauskreisPhotoController_find: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  HauskreisPhotoController_upload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'multipart/form-data': {
+          /** Format: binary */
+          file?: string;
+        };
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PhotoResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  HauskreisPhotoController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Gelöscht, kein Inhalt */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nicht angemeldet */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
   PrayerBuddyController_findAll: {
     parameters: {
       query?: {
@@ -8986,63 +9451,6 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['SongLookupStatusResponseDto'];
-        };
-      };
-      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Angemeldet, aber ohne das nötige Recht */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-    };
-  };
-  SongController_runReminders: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        hauskreisId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ReminderRunResultResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -9784,63 +10192,6 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['TopicResponseDto'];
-        };
-      };
-      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Angemeldet, aber ohne das nötige Recht */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorDto'];
-        };
-      };
-    };
-  };
-  TopicController_runReminders: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        hauskreisId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ReminderRunResultResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -10832,6 +11183,154 @@ export interface operations {
       };
     };
   };
+  NotificationInboxController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ungelesenes, die Zahl daneben und „Früher" */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NotificationInboxResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  NotificationInboxController_markAllRead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Die Box ist leer */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nicht angemeldet */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  NotificationInboxController_markRead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Gelesen — auch beim zweiten Mal */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nicht angemeldet */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
   NotificationController_publicKey: {
     parameters: {
       query?: never;
@@ -10966,7 +11465,10 @@ export interface operations {
           | 'RELEASE_NOTES'
           | 'BIRTHDAY_GIFT_ASSIGNED'
           | 'BIRTHDAY_GIFT_REMINDER'
-          | 'BIRTHDAY_GIFT_DECIDED';
+          | 'BIRTHDAY_GIFT_DECIDED'
+          | 'MEETING_TODAY'
+          | 'NOTES_REMINDER'
+          | 'ADMIN_GRANTED';
       };
       cookie?: never;
     };

@@ -14,7 +14,6 @@ import { hkPath } from './paths';
 import type { MeetingListParams } from '../params';
 import type {
   ActionstepDone,
-  ActionstepRunResult,
   Attendance,
   CreateMeetingInput,
   GenerationResult,
@@ -22,7 +21,6 @@ import type {
   Meeting,
   MeetingPage,
   MeetingSchedule,
-  ReminderRunResult,
   RoleSuggestion,
   CancelMeetingInput,
   SetAttendanceInput,
@@ -216,27 +214,4 @@ export function generateMeetings(
   hauskreisId: string,
 ): Promise<GenerationResult> {
   return apiPost<GenerationResult>(`${base(hauskreisId)}/generate`);
-}
-
-export function runHostReminders(
-  hauskreisId: string,
-): Promise<ReminderRunResult> {
-  return apiPost<ReminderRunResult>(`${base(hauskreisId)}/host-reminders`);
-}
-
-/** An alle, nicht nur an Zuständige — ein besonderer Termin betrifft die Gruppe. */
-export function runCustomMeetingReminders(
-  hauskreisId: string,
-): Promise<ReminderRunResult> {
-  return apiPost<ReminderRunResult>(
-    `${base(hauskreisId)}/custom-meeting-reminders`,
-  );
-}
-
-export function runActionstepReminders(
-  hauskreisId: string,
-): Promise<ActionstepRunResult> {
-  return apiPost<ActionstepRunResult>(
-    `${base(hauskreisId)}/actionstep-reminders`,
-  );
 }

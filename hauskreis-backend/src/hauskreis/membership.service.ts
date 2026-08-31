@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { PersonService } from '../person/person.service';
 import { PhotoService } from '../person/photo.service';
+import { GroupFeaturesService } from './group-features.service';
 import { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
 import { BirthdayPlannerService } from '../birthday/birthday-planner.service';
 import {
@@ -47,6 +48,7 @@ export class MembershipService {
     private readonly cancellations: MeetingCancellationService,
     private readonly notifications: NotificationService,
     private readonly photos: PhotoService,
+    private readonly features: GroupFeaturesService,
   ) {}
 
   /**
@@ -73,7 +75,7 @@ export class MembershipService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const angelegt = await this.prisma.$transaction(async (tx) => {
       const hauskreis = await tx.hauskreis.create({ data: { name: dto.name } });
 
       await tx.person.create({
@@ -89,6 +91,11 @@ export class MembershipService {
 
       return hauskreis;
     });
+
+    // Frisch angelegt heißt: noch keine Konfigurationszeile, also die Vorgaben.
+    // Trotzdem gefragt statt hier hingeschrieben — zwei Orte für dieselbe
+    // Vorgabe wären zwei Gelegenheiten, sie auseinanderlaufen zu lassen.
+    return { ...angelegt, features: await this.features.of(angelegt.id) };
   }
 
   /**

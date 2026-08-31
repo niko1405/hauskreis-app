@@ -285,7 +285,7 @@ function SpotRowActions({
                 toast.success(
                   result.deleted
                     ? `${location.name} ist gelöscht.`
-                    : `${location.name} ist stillgelegt — vergangene Abende behalten ihn.`,
+                    : `${location.name} ist stillgelegt — vergangene Termine behalten ihn.`,
                 ),
             });
           }}

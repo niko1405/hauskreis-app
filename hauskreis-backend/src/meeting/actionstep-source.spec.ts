@@ -6,7 +6,7 @@
  * sondern ein Rest — ein vergangener Abend behält seine Einheit auch dann, wenn
  * der Baustein danach abgeschaltet wurde.
  */
-import { actionstepOf } from './actionstep-source';
+import { actionstepOf, latestActionstep } from './actionstep-source';
 
 describe('actionstepOf', () => {
   it('nimmt den Text der Einheit, wenn der Abend ein Thema hat', () => {
@@ -61,5 +61,110 @@ describe('actionstepOf', () => {
         topicSession: null,
       }),
     ).toBeNull();
+  });
+});
+
+/**
+ * Welcher Vorsatz **diese Woche** gilt.
+ *
+ * Die Regel gehört hierher und nicht zweimal in die Aufrufer: Startbildschirm
+ * und wöchentliche Erinnerung stellen dieselbe Frage, und beantworteten sie sie
+ * verschieden, stünde in der App ein anderer Vorsatz als in der
+ * Benachrichtigung.
+ */
+const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+
+const prisma = (meetings: unknown[]) =>
+  ({
+    meeting: { findMany: jest.fn().mockResolvedValue(meetings) },
+  }) as never;
+
+describe('latestActionstep', () => {
+  const HEUTE = utc('2026-08-12');
+
+  const abend = (over: Record<string, unknown>) => ({
+    id: 'm',
+    date: utc('2026-08-11'),
+    type: 'STANDARD',
+    hasTopicSlot: false,
+    actionstepText: null,
+    topicSession: null,
+    actionstepDone: [],
+    ...over,
+  });
+
+  it('nimmt den vom letzten Abend', async () => {
+    const result = await latestActionstep(
+      prisma([abend({ actionstepText: 'Jeden Tag lesen' })]),
+      'hk-1',
+      HEUTE,
+    );
+
+    expect(result).toMatchObject({ id: 'm', text: 'Jeden Tag lesen' });
+  });
+
+  /**
+   * Der eigentliche Grund für diese Funktion: Vorher wurde „der jüngste
+   * vergangene Abend, *der einen hat*" gesucht — ein leerer Dienstag wurde
+   * übersprungen, und der Vorsatz von vorletzter Woche stand eine Woche zu lang
+   * da, als wäre er frisch.
+   */
+  it('endet, wenn der letzte Abend keinen hatte', async () => {
+    const result = await latestActionstep(
+      prisma([
+        abend({ id: 'leer' }),
+        abend({ id: 'alt', actionstepText: 'Alter Vorsatz' }),
+      ]),
+      'hk-1',
+      HEUTE,
+    );
+
+    expect(result).toBeNull();
+  });
+
+  /**
+   * Der besondere Termin ist die Ausnahme: Zwischen zwei Dienstagen einen
+   * Geburtstag zu feiern beendet nicht, was man sich am Dienstag vorgenommen
+   * hat.
+   */
+  it('überspringt einen besonderen Termin ohne Actionstep', async () => {
+    const result = await latestActionstep(
+      prisma([
+        abend({ id: 'geburtstag', type: 'CUSTOM' }),
+        abend({ id: 'dienstag', actionstepText: 'Jeden Tag lesen' }),
+      ]),
+      'hk-1',
+      HEUTE,
+    );
+
+    expect(result).toMatchObject({ id: 'dienstag' });
+  });
+
+  /** Bringt er selbst einen mit, gilt er wie jeder andere Abend. */
+  it('nimmt den eines besonderen Termins, wenn er einen hat', async () => {
+    const result = await latestActionstep(
+      prisma([
+        abend({ id: 'freizeit', type: 'CUSTOM', actionstepText: 'Still sein' }),
+        abend({ id: 'dienstag', actionstepText: 'Jeden Tag lesen' }),
+      ]),
+      'hk-1',
+      HEUTE,
+    );
+
+    expect(result).toMatchObject({ id: 'freizeit' });
+  });
+
+  it('behandelt einen leeren Text wie keinen', async () => {
+    const result = await latestActionstep(
+      prisma([abend({ actionstepText: '   ' })]),
+      'hk-1',
+      HEUTE,
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it('antwortet mit nichts, wenn die Gruppe noch nie getroffen hat', async () => {
+    expect(await latestActionstep(prisma([]), 'hk-1', HEUTE)).toBeNull();
   });
 });

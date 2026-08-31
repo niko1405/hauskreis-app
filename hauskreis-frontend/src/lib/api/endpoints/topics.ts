@@ -28,7 +28,6 @@ import type {
   CreateTopicSessionInput,
   NameTopicInput,
   Page,
-  ReminderRunResult,
   Topic,
   TopicListItem,
   TopicSession,
@@ -225,11 +224,4 @@ export function updateTopicSession(
     input,
     { etag },
   );
-}
-
-/** Nur Admin. */
-export function runTopicReminders(
-  hauskreisId: string,
-): Promise<ReminderRunResult> {
-  return apiPost<ReminderRunResult>(`${base(hauskreisId)}/reminders`);
 }

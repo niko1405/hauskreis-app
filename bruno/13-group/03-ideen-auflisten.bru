@@ -1,0 +1,34 @@
+meta {
+  name: Ideen auflisten
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/ideas
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("stellt Offene vor Erledigte", function () {
+    const offen = res.body.filter((i) => i.doneAt === null).length;
+    const ersteErledigte = res.body.findIndex((i) => i.doneAt !== null);
+    if (ersteErledigte !== -1) {
+      expect(ersteErledigte).to.equal(offen);
+    }
+  });
+}
+
+docs {
+  „Lasst uns mal grillen." Eine Liste mit Haken und sonst nichts — kein
+  Zustimmen, keine Kommentare. Ein Kommentarfaden wäre ein zweiter Chat neben
+  WhatsApp, und gegen den ist diese App gebaut (CLAUDE.md §7).
+
+  Die Sortierung kommt vom Server: Offene zuerst (neueste oben), darunter das
+  zuletzt Abgehakte.
+}

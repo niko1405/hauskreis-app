@@ -71,13 +71,13 @@ export class AvailabilityService {
 
     const meeting = await this.prisma.meeting.findFirst({
       where: { id: meetingId, hauskreisId },
-      select: { date: true },
+      select: { date: true, endDate: true },
     });
 
     if (!meeting) return [];
 
     const [away, angekommen] = await Promise.all([
-      this.findUnavailable(hauskreisId, meeting.date, meetingId, personIds),
+      this.findUnavailable(hauskreisId, meeting, meetingId, personIds),
       this.prisma.person.findMany({
         where: {
           id: { in: [...personIds] },
@@ -113,7 +113,7 @@ export class AvailabilityService {
 
     const meeting = await this.prisma.meeting.findFirst({
       where: { id: meetingId, hauskreisId },
-      select: { date: true },
+      select: { date: true, endDate: true },
     });
 
     // Kein Termin, kein Abend, an dem jemand fehlen könnte. Dass es ihn gibt,
@@ -122,7 +122,7 @@ export class AvailabilityService {
 
     const away = await this.findUnavailable(
       hauskreisId,
-      meeting.date,
+      meeting,
       meetingId,
       personIds,
     );
@@ -186,11 +186,19 @@ export class AvailabilityService {
    */
   private async findUnavailable(
     hauskreisId: string,
-    date: Date,
+    /**
+     * Der ganze Zeitraum, weil „vorbei" ihn ganz meint — der Abgleich mit den
+     * Abwesenheiten unten hängt dagegen am **Anfangstag**: dort trifft man sich,
+     * und ein Urlaub, der erst am zweiten Tag einer Freizeit beginnt, ist eine
+     * Frage für einen anderen Tag.
+     */
+    meeting: { date: Date; endDate: Date | null },
     meetingId: string,
     personIds: readonly string[],
   ): Promise<{ id: string; name: string }[]> {
-    if (await this.clock.isPast(hauskreisId, date)) return [];
+    if (await this.clock.isPast(hauskreisId, meeting)) return [];
+
+    const { date } = meeting;
 
     const [answers, periods, people] = await Promise.all([
       // Beide Antworten in einer Abfrage: die Absage sperrt, die ausdrückliche

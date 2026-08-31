@@ -7,12 +7,15 @@ import {
   type NotificationDefinition,
   type NotificationSchedule,
   notificationDefinition,
+  type NotificationCategory,
 } from './notification-catalog';
 import type { UpdateNotificationSettingDto } from './dto/notification-setting.dto';
+import { GroupFeaturesService } from '../hauskreis/group-features.service';
 
 /** A catalog entry with the person's answer folded in. */
 export interface EffectiveSetting {
   type: NotificationType;
+  category: NotificationCategory;
   label: string;
   description: string;
   schedule: NotificationSchedule;
@@ -44,7 +47,10 @@ type StoredPreference = {
  */
 @Injectable()
 export class NotificationPreferenceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly features: GroupFeaturesService,
+  ) {}
 
   /**
    * The whole settings screen for one person, in catalog order.
@@ -88,16 +94,25 @@ export class NotificationPreferenceService {
     if (!person) {
       // Kein Kontext heißt „nichts trifft zu"; der Aufrufer hat die Person
       // ohnehin gerade aufgelöst.
-      return { homeCapacity: null, activeMembers: 0 };
+      return {
+        homeCapacity: null,
+        activeMembers: 0,
+        prayerBuddies: false,
+        weeklyActionstep: false,
+      };
     }
 
-    const activeMembers = await this.prisma.person.count({
-      where: { hauskreisId: person.hauskreisId, active: true },
-    });
+    const [activeMembers, features] = await Promise.all([
+      this.prisma.person.count({
+        where: { hauskreisId: person.hauskreisId, active: true },
+      }),
+      this.features.of(person.hauskreisId),
+    ]);
 
     return {
       homeCapacity: person.location?.capacity ?? null,
       activeMembers,
+      ...features,
     };
   }
 
@@ -247,6 +262,7 @@ function merge(
 
   return {
     type: definition.type,
+    category: definition.category,
     label: definition.label,
     description: definition.description,
     schedule,

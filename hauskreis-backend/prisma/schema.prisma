@@ -123,6 +123,16 @@ enum NotificationType {
   BIRTHDAY_GIFT_REMINDER
   /// Für einen Geburtstag steht fest, was es wird — oder was es gekostet hat.
   BIRTHDAY_GIFT_DECIDED
+  /// Heute ist Hauskreis — mit der Nachfrage, ob die eigene Antwort noch gilt.
+  MEETING_TODAY
+  /// Der Abend ist vorbei und hat noch keine Nachbereitung.
+  NOTES_REMINDER
+  /// Du bist zum Admin ernannt worden.
+  ///
+  /// Nur diese Richtung: Etwas bekommen ist eine Nachricht, etwas verlieren ist
+  /// ein Gespräch. „Du bist kein Admin mehr" beantwortet keine Frage, die es
+  /// nicht selbst aufwirft.
+  ADMIN_GRANTED
 
   @@map("notification_type")
 }
@@ -170,11 +180,26 @@ enum AttendanceSource {
 }
 
 model Hauskreis {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  createdAt DateTime @default(now()) @map("created_at")
+  id             String    @id @default(uuid()) @db.Uuid
+  name           String
+  /// Wer ihr seid, in ein paar Sätzen — steht auf dem Gruppen-Bildschirm unter
+  /// dem Bild. Optional: ein Hauskreis, der sich nicht beschreibt, ist immer
+  /// noch einer.
+  description    String?
+  /// Wann das Gruppenbild zuletzt geschrieben wurde. Dieselbe Bauart wie
+  /// `person.photo_updated_at` und aus demselben Grund: die Datei heißt immer
+  /// `{id}.webp`, und ein Name, der sich nie ändert, wäre für den Browser für
+  /// immer dasselbe Bild.
+  ///
+  /// Zwei Spalten an der Zeile und **keine eigene Tabelle**, anders als bei
+  /// `meeting_schedule_config` und Verwandten: Die halten fest, wer wann eine
+  /// Einstellung geändert hat. Bild und Beschreibung sind keine Einstellung,
+  /// sondern Identität — dieselbe Sorte Feld wie `name`, der auch schon hier
+  /// steht.
+  photoUpdatedAt DateTime? @map("photo_updated_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
   /// Optimistic locking counter, see docs/conditional requests.
-  version   Int      @default(0)
+  version        Int       @default(0)
 
   people               Person[]
   locations            Location[]
@@ -190,6 +215,7 @@ model Hauskreis {
   birthdayGiftPairings BirthdayGiftPairing[]
   birthdayOccasions    BirthdayOccasion[]
   giftIdeas            GiftIdea[]
+  ideas                GroupIdea[]
 
   @@map("hauskreis")
 }
@@ -317,6 +343,8 @@ model Person {
   giftIdeasFor            GiftIdea[]                @relation("GiftIdeaFor")
   giftIdeasProposed       GiftIdea[]                @relation("GiftIdeaBy")
   giftIdeaVotes           GiftIdeaVote[]            @relation("GiftIdeaVoter")
+  groupIdeas              GroupIdea[]               @relation("GroupIdeaBy")
+  groupIdeasDone          GroupIdea[]               @relation("GroupIdeaDoneBy")
   giftPairingFor          BirthdayGiftPairing[]     @relation("GiftPairingFor")
   giftPairingBy           BirthdayGiftPairing[]     @relation("GiftPairingBy")
   birthdayGiftConfigEdits BirthdayGiftConfig[]      @relation("BirthdayGiftConfigEditor")
@@ -446,6 +474,17 @@ model Meeting {
   /// voreingestellt aus: ein Standard-Abend hat sein Thema, und wo keins ist,
   /// soll die Karte eine Entscheidung sein und keine Vorgabe.
   hasNotesSlot        Boolean              @default(false) @map("has_notes_slot")
+  /// Wofür die Gruppe an dem Abend beten will — je Person ein Anliegen.
+  ///
+  /// Der einzige Baustein, der **überall voreingestellt an** ist, und der
+  /// einzige, der niemanden einteilt und nichts ausschließt. Er kam als
+  /// letzter dazu: Gebetsanliegen standen an jedem Termin, auch am Geburtstag
+  /// und an der Freizeit, während alles andere am Abend längst abwählbar war.
+  ///
+  /// `@default(true)` gilt auch rückwirkend, und das ist der Punkt: Alles
+  /// andere hieße, dass an jedem Abend im Archiv die Anliegen verschwinden,
+  /// die dort stehen.
+  hasPrayerSlot       Boolean              @default(true) @map("has_prayer_slot")
   locationId          String?              @map("location_id") @db.Uuid
   hostPersonId        String?              @map("host_person_id") @db.Uuid
   /// Wie der Abend überschrieben ist — „Geburtstag von Mira", aber auch ein
@@ -816,6 +855,17 @@ model MeetingScheduleConfig {
   /// nachts für kommend. Stand als Konstante im Code, bis auffiel, dass das
   /// dieselbe Aussage zu viel war wie vorher Wochentag und Uhrzeit.
   timeZone          String   @default("Europe/Berlin") @map("time_zone")
+  /// Ob der Vorsatz der letzten Woche auf dem Startbildschirm steht.
+  ///
+  /// Hier und nicht in einer eigenen Tabelle: „der Actionstep **der Woche**"
+  /// ist die Woche zwischen zwei Terminen, und die steht genau hier. Eine
+  /// Tabelle für ein einziges Boolesches hielte einen Bearbeiter fest, nach dem
+  /// niemand fragt.
+  ///
+  /// Aus heißt: keine Karte auf „Heute" und keine wöchentliche Erinnerung. Der
+  /// Actionstep an der Einheit und über die Nachbereitung bleibt — er wird
+  /// weiter geschrieben, nur nicht mehr die Woche über vor sich hergetragen.
+  weeklyActionstep  Boolean  @default(true) @map("weekly_actionstep")
   updatedByPersonId String?  @map("updated_by_person_id") @db.Uuid
   updatedAt         DateTime @updatedAt @map("updated_at")
   /// Optimistic locking counter, see docs/conditional requests.
@@ -833,6 +883,16 @@ model MeetingScheduleConfig {
 model PrayerBuddyCycleConfig {
   id                String   @id @default(uuid()) @db.Uuid
   hauskreisId       String   @unique @map("hauskreis_id") @db.Uuid
+  /// Ob die Gruppe überhaupt Gebetsbuddys hat.
+  ///
+  /// Aus heißt ganz aus: kein Tab, keine Karte auf „Heute", keine Zuteilung und
+  /// keine Benachrichtigungsart. Die Vorgabe ist `true` und damit das bisherige
+  /// Verhalten — anders als bei den Geschenken, die noch nie jemand hatte, ist
+  /// das hier ein Abschalten und keine Einladung.
+  ///
+  /// **Bestehende Runden bleiben stehen.** Wiedereinschalten holt sie zurück;
+  /// sie zu löschen wäre eine Entscheidung, die kein Schalter treffen sollte.
+  enabled           Boolean  @default(true)
   periodLengthWeeks Int      @default(2) @map("period_length_weeks")
   updatedByPersonId String?  @map("updated_by_person_id") @db.Uuid
   updatedAt         DateTime @updatedAt @map("updated_at")
@@ -981,6 +1041,31 @@ model NotificationLog {
   relatedOccasionId     String?          @map("related_occasion_id") @db.Uuid
   sentAt                DateTime         @default(now()) @map("sent_at")
 
+  /// Was drinstand — der Grund, warum diese Tabelle mehr ist als Buchführung.
+  ///
+  /// Bisher wusste sie, *dass* etwas rausging, nicht *was*. Eine Push-Nachricht
+  /// ist damit weg, sobald jemand sie wegwischt. Mit diesen drei Spalten wird
+  /// aus derselben Zeile der Eintrag in der Box hinter der Glocke.
+  ///
+  /// Nullable, weil die Zeilen von vorher keinen Text haben. Sie tauchen in der
+  /// Box deshalb nicht auf — sie waren immer nur Entdopplung, und einen Titel
+  /// nachzuerfinden hieße, Nachrichten zu behaupten, die so nie dastanden.
+  title                 String?
+  body                  String?
+  /// Wohin die App springt, wenn man den Eintrag antippt (`app-paths.ts`).
+  url                   String?
+  /// Wann die Nachricht gelesen wurde. `null` heißt: steht noch in der Box.
+  readAt                DateTime?        @map("read_at")
+  /// Wann tatsächlich **zugestellt** wurde — und ab jetzt die Entdopplung des
+  /// Pushs, während die Zeile selbst den Box-Eintrag trägt.
+  ///
+  /// Die beiden mussten auseinander: Der Eintrag entsteht immer, auch wenn die
+  /// Art abgeschaltet ist (das stört ja niemanden). Der Push nicht. Hinge das
+  /// Weiterschicken weiter an der bloßen Existenz der Zeile, verlöre man die
+  /// Eigenschaft, auf die `NotificationService` ausdrücklich gebaut ist:
+  /// wieder eingeschaltet heißt, der nächste Lauf stellt noch zu.
+  pushedAt              DateTime?        @map("pushed_at")
+
   person          Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
   relatedMeeting  Meeting?          @relation(fields: [relatedMeetingId], references: [id], onDelete: Cascade)
   relatedGroup    PrayerBuddyGroup? @relation(fields: [relatedGroupId], references: [id], onDelete: Cascade)
@@ -996,6 +1081,9 @@ model NotificationLog {
   /// mit jeder weiteren Spalte änderte.
   @@unique([personId, type, relatedMeetingId, relatedGroupId, relatedPersonId, relatedRole, relatedReleaseVersion, relatedOccasionId], map: "notification_log_dedup_key")
   @@index([personId, sentAt])
+  /// Die Box: „meine ungelesenen, neueste zuerst". Ohne ihn läse jedes Öffnen
+  /// der Glocke alle Zeilen einer Person — und die wachsen mit jedem Abend.
+  @@index([personId, readAt, sentAt])
   /// Beantwortet „wurde diese Fassung schon angekündigt?" ohne über alle Zeilen
   /// zu gehen. Ohne diese Frage bekäme jemand, der nächste Woche dazukommt,
   /// beim nächsten Neustart eine Ankündigung für längst Vorhandenes.
@@ -1041,6 +1129,15 @@ model MeetingAttendance {
   /// behalf, and without this column a later re-sync could not tell them from a
   /// deliberate "doch, ich komme" and would silently overwrite it.
   source    AttendanceSource @default(SELF)
+  /// Der eine Satz zur Antwort — „komme 20 Min später", „muss schauen, wann
+  /// Feierabend ist", „bin im Urlaub". Freiwillig und ohne eigene Bedeutung
+  /// für die Logik; sie steht nur in der Teilnehmerliste.
+  ///
+  /// Ein Feld für alle drei Status und nicht drei Felder: Es ist immer
+  /// dieselbe Sache — was man den anderen zu diesem Abend noch sagen will.
+  /// Beim **Wechsel** des Status wird sie geleert (`MeetingService`), denn
+  /// eine Verspätung gehört nicht auf eine Absage.
+  note      String?
   updatedAt DateTime         @updatedAt @map("updated_at")
 
   meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
@@ -1263,4 +1360,39 @@ model GiftIdeaVote {
   @@id([giftIdeaId, personId])
   @@index([personId])
   @@map("gift_idea_vote")
+}
+
+/// Eine Idee der Gruppe — „lasst uns mal grillen".
+///
+/// Bewusst eine Liste mit Haken und nichts weiter: keine Zustimmung, keine
+/// Kommentare. Ein Kommentarfaden wäre ein zweiter Chat neben WhatsApp, und
+/// gegen den ist diese App gebaut. Was besprochen werden muss, wird am Abend
+/// besprochen; hier steht nur, dass es ansteht.
+///
+/// `doneAt` statt eines Häkchens: Wann etwas erledigt wurde, ist die Sortierung
+/// der unteren Hälfte, und ein `Boolean` wüsste sie nicht.
+model GroupIdea {
+  id                String    @id @default(uuid()) @db.Uuid
+  hauskreisId       String    @map("hauskreis_id") @db.Uuid
+  title             String
+  /// Ein Satz mehr, wenn der Titel nicht reicht. Meistens reicht er.
+  note              String?
+  /// `null` heißt offen.
+  doneAt            DateTime? @map("done_at")
+  doneByPersonId    String?   @map("done_by_person_id") @db.Uuid
+  /// `SetNull` wie bei `GiftIdea`: Konto löschen heißt anonymisieren, und eine
+  /// Idee ohne Urheber ist immer noch eine Idee.
+  createdByPersonId String?   @map("created_by_person_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  /// Optimistic locking counter, see docs/conditional requests.
+  version           Int       @default(0)
+
+  hauskreis Hauskreis @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  createdBy Person?   @relation("GroupIdeaBy", fields: [createdByPersonId], references: [id], onDelete: SetNull)
+  doneBy    Person?   @relation("GroupIdeaDoneBy", fields: [doneByPersonId], references: [id], onDelete: SetNull)
+
+  /// Offene zuerst, erledigte darunter — genau die eine Abfrage, die es gibt.
+  @@index([hauskreisId, doneAt])
+  @@map("group_idea")
 }

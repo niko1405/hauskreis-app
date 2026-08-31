@@ -61,11 +61,11 @@ export class RoleAttendanceService {
       where: { id: meetingId },
       // Die Zone der Gruppe entscheidet, ob dieser Abend vorbei ist — nicht die
       // des Servers.
-      select: { hauskreisId: true, date: true, status: true },
+      select: { hauskreisId: true, date: true, endDate: true, status: true },
     });
 
     if (!meeting || meeting.status === MeetingStatus.CANCELLED) return 0;
-    if (await this.clock.isPast(meeting.hauskreisId, meeting.date)) return 0;
+    if (await this.clock.isPast(meeting.hauskreisId, meeting)) return 0;
 
     const ids = [...new Set(personIds)];
 
@@ -102,6 +102,10 @@ export class RoleAttendanceService {
           status: AttendanceStatus.ATTENDING,
           source: AttendanceSource.ROLE,
         },
+        // `note` steht bewusst nicht dabei: Wer „muss schauen, wann Feierabend
+        // ist" geschrieben hat und danach eingeteilt wird, hat damit nichts
+        // Falsches gesagt — der Satz gilt weiter. Ihn wegzuräumen hieße, eine
+        // Auskunft an die Gruppe zu löschen, um die niemand gebeten hat.
       });
 
       if (neu.length > 0) {

@@ -1,12 +1,7 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import sharp from 'sharp';
+import { toSquareWebp } from '../common/images/webp';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppConfigService } from '../config/config.service';
 
@@ -52,28 +47,11 @@ export class PhotoService {
   /**
    * Nimmt ein hochgeladenes Bild an — zugeschnitten, verkleinert, als WebP.
    *
-   * Das Zuschneiden passiert hier und nicht im Browser: was ankommt, muss
-   * ohnehin geprüft werden, und `sharp` scheitert an allem, was kein Bild ist.
-   * Ein Browser, der sich das Zuschneiden sparte, könnte sonst 12 Megapixel
-   * abliefern, und der Avatar wäre trotzdem 40 Pixel groß.
-   *
-   * `fit: 'cover'` mittig: ein Porträt wird zum Quadrat, indem links und rechts
-   * etwas wegfällt — nicht, indem das Gesicht gestaucht wird.
+   * Die Bildverarbeitung steht in `common/images/webp.ts`: Gruppenbilder
+   * brauchen dieselbe, bis hin zur Fehlermeldung.
    */
   async store(personId: string, data: Buffer): Promise<Date> {
-    let webp: Buffer;
-
-    try {
-      webp = await sharp(data)
-        .rotate() // EXIF-Ausrichtung anwenden, sonst liegen Handyfotos quer.
-        .resize(SIZE, SIZE, { fit: 'cover', position: 'centre' })
-        .webp({ quality: 82 })
-        .toBuffer();
-    } catch {
-      throw new BadRequestException(
-        'Damit kann ich nichts anfangen — bitte ein Bild auswählen',
-      );
-    }
+    const webp = await toSquareWebp(data, SIZE, 82);
 
     await mkdir(this.directory, { recursive: true });
     await writeFile(this.pathFor(personId), webp);

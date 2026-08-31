@@ -3,15 +3,12 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationService } from '../notification/notification.service';
 import { NotificationPreferenceService } from '../notification/notification-preference.service';
-import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
+import { NotificationType } from '../../generated/prisma/enums';
 import { GroupClockService } from './group-clock.service';
-import {
-  actionstepOf,
-  actionstepSelect,
-  hasActionstep,
-} from './actionstep-source';
+import { latestActionstep } from './actionstep-source';
 import { appPath } from '../notification/app-paths';
 import { CRON_TIME_ZONE } from '../common/time/local-evening';
+import { GroupFeaturesService } from '../hauskreis/group-features.service';
 
 export interface ActionstepRunResult {
   /** People who got a fresh nudge. */
@@ -36,10 +33,10 @@ export interface ActionstepRunResult {
  * per person, and changing the setting takes effect the next morning without
  * rescheduling anything.
  *
- * **Which actionstep.** The most recent past meeting that has one. Not "the
- * last meeting": if nobody wrote an actionstep last week, last week is silent
- * rather than the week before being repeated — the whole point is the step the
- * group actually agreed on, and re-sending a fortnight-old one reads as a bug.
+ * **Welcher Actionstep.** Der von `latestActionstep` — genau derselbe, den auch
+ * der Startbildschirm zeigt. Ein leerer Abend beendet den Vorsatz von davor;
+ * nur ein besonderer Termin ohne Actionstep wird übersprungen. Warum, steht bei
+ * der Funktion.
  *
  * Deduplication is per meeting, so the nudge goes out once per actionstep even
  * though the job runs every day and the meeting stays "the most recent" for a
@@ -54,6 +51,7 @@ export class ActionstepReminderService {
     private readonly notifications: NotificationService,
     private readonly preferences: NotificationPreferenceService,
     private readonly clock: GroupClockService,
+    private readonly features: GroupFeaturesService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_9AM, {
@@ -74,47 +72,38 @@ export class ActionstepReminderService {
     hauskreisId: string,
     options: { now?: Date } = {},
   ): Promise<ActionstepRunResult> {
+    // Der Actionstep der Woche ist abschaltbar, und dann ist er ganz aus: keine
+    // Karte auf „Heute" und keine Erinnerung. Beides an einem Schalter, sonst
+    // hätte man ihn weggeräumt und bekäme mittwochs trotzdem eine Nachricht.
+    if (!(await this.features.weeklyActionstep(hauskreisId))) {
+      return { notified: 0, skipped: 0, meetingId: null };
+    }
+
     const now = options.now ?? new Date();
     const today = await this.clock.today(hauskreisId, now);
 
-    const meeting = await this.prisma.meeting.findFirst({
-      where: {
-        hauskreisId,
-        date: { lt: today },
-        status: { not: MeetingStatus.CANCELLED },
-        // Aus beiden Quellen: der Einheit eines Themas und der Nachbereitung des
-        // Abends selbst. Welche gilt, entscheidet `actionstepOf`.
-        ...hasActionstep,
-      },
-      orderBy: { date: 'desc' },
-      select: { id: true, ...actionstepSelect },
-    });
+    const meeting = await latestActionstep(this.prisma, hauskreisId, today);
 
-    const actionstep = meeting && actionstepOf(meeting);
-
-    if (!meeting || !actionstep) {
+    if (!meeting) {
       return { notified: 0, skipped: 0, meetingId: null };
     }
+
+    const actionstep = meeting.text;
 
     const people = await this.prisma.person.findMany({
       where: { hauskreisId, active: true },
       select: { id: true },
     });
 
-    const [settings, alreadyDone] = await Promise.all([
-      this.preferences.resolveMany(
-        people.map((person) => person.id),
-        NotificationType.ACTIONSTEP_REMINDER,
-      ),
-      this.prisma.meetingActionstepDone.findMany({
-        where: { meetingId: meeting.id },
-        select: { personId: true },
-      }),
-    ]);
+    const settings = await this.preferences.resolveMany(
+      people.map((person) => person.id),
+      NotificationType.ACTIONSTEP_REMINDER,
+    );
 
     // Wer abgehakt hat, wird nicht mehr gefragt, wie es läuft. Genau dafür ist
-    // der Haken da — sonst wäre er nur Statistik.
-    const done = new Set(alreadyDone.map((row) => row.personId));
+    // der Haken da — sonst wäre er nur Statistik. Die Haken kommen mit dem
+    // Abend, `latestActionstep` liest sie ohnehin mit.
+    const done = new Set(meeting.actionstepDone.map((row) => row.personId));
 
     const weekday = today.getUTCDay();
     const due = people.filter(

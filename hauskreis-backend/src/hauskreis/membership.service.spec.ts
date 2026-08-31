@@ -15,6 +15,7 @@ import type { MeetingCancellationService } from '../meeting/meeting-cancellation
 import type { NotificationService } from '../notification/notification.service';
 import { PersonRole } from '../../generated/prisma/enums';
 import type { AuthenticatedUser } from '../auth/auth.types';
+import { withFeatures } from './group-features.testing';
 
 const user: AuthenticatedUser = {
   keycloakUserId: 'kc-1',
@@ -117,23 +118,25 @@ function setup(
 
   const discardInvitationAccount = jest.fn().mockResolvedValue(undefined);
 
-  const service = new MembershipService(
-    prisma,
-    {
-      syncHomes: jest.fn(),
-      discardInvitationAccount,
-    } as unknown as PersonService,
-    {
-      replanAfterMembershipChange,
-    } as unknown as PrayerBuddyGeneratorService,
-    {
-      plan: planBirthdays,
-      announceDeparture,
-    } as unknown as BirthdayPlannerService,
-    { releaseEverythingUpcoming } as unknown as RoleReleaseService,
-    { reconcile } as unknown as MeetingCancellationService,
-    { notify } as unknown as NotificationService,
-    { remove: removePhoto } as unknown as PhotoService,
+  const service = withFeatures(
+    new MembershipService(
+      prisma,
+      {
+        syncHomes: jest.fn(),
+        discardInvitationAccount,
+      } as unknown as PersonService,
+      {
+        replanAfterMembershipChange,
+      } as unknown as PrayerBuddyGeneratorService,
+      {
+        plan: planBirthdays,
+        announceDeparture,
+      } as unknown as BirthdayPlannerService,
+      { releaseEverythingUpcoming } as unknown as RoleReleaseService,
+      { reconcile } as unknown as MeetingCancellationService,
+      { notify } as unknown as NotificationService,
+      { remove: removePhoto } as unknown as PhotoService,
+    ),
   );
 
   return {

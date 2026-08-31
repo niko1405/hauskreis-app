@@ -446,11 +446,11 @@ export class TopicSessionService {
   ): Promise<void> {
     const meeting = await this.prisma.meeting.findFirst({
       where: { id: meetingId, hauskreisId },
-      select: { date: true, hasTopicSlot: true },
+      select: { date: true, endDate: true, hasTopicSlot: true },
     });
 
     if (!meeting?.hasTopicSlot) return;
-    if (await this.clock.isPast(hauskreisId, meeting.date)) return;
+    if (await this.clock.isPast(hauskreisId, meeting)) return;
 
     const crew = await this.prisma.topicSessionResponsible.findMany({
       where: { sessionId },

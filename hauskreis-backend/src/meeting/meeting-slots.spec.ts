@@ -25,6 +25,7 @@ const an = (slots: MeetingSlots) =>
       ['song', slots.hasSongSlot],
       ['testimony', slots.hasTestimonySlot],
       ['notes', slots.hasNotesSlot],
+      ['prayer', slots.hasPrayerSlot],
     ] as const
   )
     .filter(([, on]) => on)
@@ -32,7 +33,11 @@ const an = (slots: MeetingSlots) =>
 
 describe('slotDefaults', () => {
   it('gibt einem Hauskreis-Abend Thema und Lieder', () => {
-    expect(an(slotDefaults(MeetingType.STANDARD))).toEqual(['topic', 'song']);
+    expect(an(slotDefaults(MeetingType.STANDARD))).toEqual([
+      'topic',
+      'song',
+      'prayer',
+    ]);
   });
 
   /** Kein Thema, dafür ein Testimony — oder auch nur Lieder (CLAUDE.md §5). */
@@ -40,6 +45,7 @@ describe('slotDefaults', () => {
     expect(an(slotDefaults(MeetingType.LOBPREIS_GEBET))).toEqual([
       'song',
       'testimony',
+      'prayer',
     ]);
   });
 
@@ -48,7 +54,32 @@ describe('slotDefaults', () => {
    * unvollständig da, weil ihm ein Thema fehlte, das er nie brauchte.
    */
   it('lässt einen besonderen Termin leer', () => {
-    expect(an(slotDefaults(MeetingType.CUSTOM))).toEqual([]);
+    // Bis auf die Gebetsanliegen — siehe darunter.
+    expect(an(slotDefaults(MeetingType.CUSTOM))).toEqual(['prayer']);
+  });
+
+  /**
+   * Der einzige Baustein, der überall an ist, und der einzige, der niemanden
+   * einteilt: Ein Anliegen bringt jede:r für sich mit, auch am Geburtstag und
+   * auch, wenn er an dem Abend fehlt.
+   */
+  it('gibt die Gebetsanliegen überall vor', () => {
+    for (const type of Object.values(MeetingType)) {
+      expect(slotDefaults(type).hasPrayerSlot).toBe(true);
+    }
+  });
+
+  /** Und er schließt nichts aus — nicht einmal das Thema. */
+  it('verträgt sich mit jedem anderen Baustein', () => {
+    expect(() =>
+      assertSlotsExclusive({
+        hasTopicSlot: true,
+        hasSongSlot: true,
+        hasTestimonySlot: false,
+        hasNotesSlot: false,
+        hasPrayerSlot: true,
+      }),
+    ).not.toThrow();
   });
 
   /**
@@ -198,7 +229,10 @@ describe('resolveSlots', () => {
   });
 
   it('bucht einen einzelnen Baustein dazu', () => {
-    expect(an(resolveSlots(custom, { hasSongSlot: true }))).toEqual(['song']);
+    expect(an(resolveSlots(custom, { hasSongSlot: true }))).toEqual([
+      'song',
+      'prayer',
+    ]);
   });
 
   /**
@@ -209,6 +243,7 @@ describe('resolveSlots', () => {
     expect(an(resolveSlots(custom, { type: MeetingType.STANDARD }))).toEqual([
       'topic',
       'song',
+      'prayer',
     ]);
   });
 
@@ -218,7 +253,7 @@ describe('resolveSlots', () => {
       hasTopicSlot: false,
     });
 
-    expect(an(slots)).toEqual(['song']);
+    expect(an(slots)).toEqual(['song', 'prayer']);
   });
 
   /** Derselbe Typ noch einmal ist kein Wechsel und setzt nichts zurück. */
@@ -227,6 +262,7 @@ describe('resolveSlots', () => {
 
     expect(an(resolveSlots(gebucht, { type: MeetingType.CUSTOM }))).toEqual([
       'song',
+      'prayer',
     ]);
   });
 });

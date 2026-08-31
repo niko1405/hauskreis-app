@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MeetingStatus } from '../../generated/prisma/enums';
 import { GroupClockService } from '../meeting/group-clock.service';
+import { finishedBefore } from '../meeting/meeting-schedule';
 import { topicScopeWhere } from '../topic/topic-shape';
 
 export interface ArchiveYear {
@@ -65,9 +66,16 @@ export class ArchiveService {
     personId: string,
   ): Promise<ArchiveSummary> {
     const today = await this.clock.today(hauskreisId);
+    /**
+     * „Vorbei" heißt den **ganzen** Zeitraum — dieselbe Bedingung, nach der
+     * `…/meetings?scope=past` die Liste füllt, die diese Zahl überschreibt.
+     *
+     * Vorher stand hier `date: { lt: today }`, also der Anfangstag: Über einer
+     * Liste ohne die laufende Freizeit stand eine Zahl mit ihr.
+     */
     const past = {
       hauskreisId,
-      date: { lt: today },
+      ...finishedBefore(today),
       status: { not: MeetingStatus.CANCELLED },
     };
 
@@ -104,7 +112,7 @@ export class ArchiveService {
           where: {
             hauskreisId,
             pickedIn: {
-              some: { isSelected: true, meeting: { date: { lt: today } } },
+              some: { isSelected: true, meeting: finishedBefore(today) },
             },
           },
         }),

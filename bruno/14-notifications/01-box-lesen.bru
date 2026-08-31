@@ -1,0 +1,50 @@
+meta {
+  name: Box lesen
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/notifications
+  body: none
+  auth: inherit
+}
+
+script:post-response {
+  if (res.body.unread.length > 0) {
+    bru.setVar("notificationId", res.body.unread[0].id);
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("nennt die Zahl getrennt von der Liste", function () {
+    expect(res.body.unreadCount).to.be.a("number");
+    expect(res.body.unread).to.be.an("array");
+    expect(res.body.read).to.be.an("array");
+  });
+
+  test("Ungelesenes hat kein readAt, Gelesenes eins", function () {
+    res.body.unread.forEach((e) => expect(e.readAt).to.equal(null));
+    res.body.read.forEach((e) => expect(e.readAt).to.be.a("string"));
+  });
+}
+
+docs {
+  Die Box hinter der Glocke.
+
+  **Nicht unter `/push`**, obwohl sie aus derselben Tabelle liest
+  (`notification_log`): Ein Eintrag entsteht auch dann, wenn die Art in den
+  Einstellungen abgeschaltet ist oder gar keine VAPID-Schlüssel hinterlegt
+  sind. In der Box zu stehen stört niemanden — unter `/push` zu liegen
+  behauptete das Gegenteil.
+
+  `unreadCount` steht eigens da und ist nicht `unread.length`: Die Liste
+  `read` ist auf 30 gedeckelt, die Zahl nicht.
+
+  Zeilen aus der Zeit vor der Box haben kein `title` und tauchen hier nicht
+  auf — sie waren immer nur Entdopplung.
+}

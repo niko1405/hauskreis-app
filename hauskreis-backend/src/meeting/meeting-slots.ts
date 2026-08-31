@@ -43,6 +43,18 @@ export interface MeetingSlots {
    * selbst.
    */
   hasNotesSlot: boolean;
+  /**
+   * Wofür die Gruppe an dem Abend beten will — je Person ein Anliegen.
+   *
+   * Der Nachzügler nach der Nachbereitung, und der einzige Baustein, der
+   * **überall voreingestellt an** ist. Er kam dazu, weil die Gebetsanliegen der
+   * letzte Abschnitt eines Termins ohne Schalter waren: Sie standen an jedem
+   * Abend, auch am Geburtstag und an der Freizeit.
+   *
+   * Er teilt niemanden ein und schließt nichts aus — ein Anliegen bringt jede:r
+   * für sich mit, auch wer an dem Abend fehlt.
+   */
+  hasPrayerSlot: boolean;
 }
 
 /**
@@ -67,6 +79,7 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
         hasSongSlot: true,
         hasTestimonySlot: false,
         hasNotesSlot: false,
+        hasPrayerSlot: true,
       };
     case MeetingType.LOBPREIS_GEBET:
       // Kein Thema, dafür ein Testimony — oder auch nur Lieder (CLAUDE.md §5).
@@ -75,6 +88,7 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
         hasSongSlot: true,
         hasTestimonySlot: true,
         hasNotesSlot: false,
+        hasPrayerSlot: true,
       };
     case MeetingType.CUSTOM:
       return {
@@ -82,6 +96,10 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
         hasSongSlot: false,
         hasTestimonySlot: false,
         hasNotesSlot: false,
+        // Auch hier an, als einziger. Ein besonderer Termin muss nichts
+        // erfüllen — aber beten kann man an einem Geburtstag genauso, und
+        // dieser Baustein verlangt von niemandem etwas.
+        hasPrayerSlot: true,
       };
   }
 }
@@ -92,6 +110,7 @@ const SLOT_LABEL: Record<keyof MeetingSlots, string> = {
   hasSongSlot: 'keine Lieder',
   hasTestimonySlot: 'kein Testimony',
   hasNotesSlot: 'keine Nachbereitung',
+  hasPrayerSlot: 'keine Gebetsanliegen',
 };
 
 /**
@@ -131,6 +150,10 @@ export const SLOT_FIELDS = {
   hasSongSlot: [],
   hasTestimonySlot: ['testimonyPersonId'],
   hasNotesSlot: ['summaryText', 'actionstepText'],
+  // Wie bei den Liedern: Die Anliegen liegen in einer eigenen Tabelle, und die
+  // hat kein `data`-Feld, das sich hier leeren ließe. Weggeräumt werden sie in
+  // `MeetingService.update`.
+  hasPrayerSlot: [],
 } as const satisfies Record<keyof MeetingSlots, readonly string[]>;
 
 /**
@@ -203,6 +226,7 @@ export function resolveSlots(
     hasSongSlot: dto.hasSongSlot ?? base.hasSongSlot,
     hasTestimonySlot: dto.hasTestimonySlot ?? base.hasTestimonySlot,
     hasNotesSlot: dto.hasNotesSlot ?? base.hasNotesSlot,
+    hasPrayerSlot: dto.hasPrayerSlot ?? base.hasPrayerSlot,
   };
 }
 
@@ -219,6 +243,10 @@ export function resolveSlots(
  *
  * **Testimony und Nachbereitung** stehen bewusst nicht hier. Das ist gerade der
  * Abend, um den es geht: jemand erzählt, die Gruppe nimmt sich danach etwas vor.
+ *
+ * **Die Gebetsanliegen stehen ebenfalls nicht hier**, und zwar gegen keinen:
+ * Sie sind kein Beitrag, um den sich ein Abend dreht, sondern etwas, das jede:r
+ * für sich mitbringt.
  *
  * Getrennt von `assertSlotsAllow`: die eine Regel prüft, ob ein **Feld** zu den
  * Bausteinen passt, diese, ob die Bausteine zueinander passen.

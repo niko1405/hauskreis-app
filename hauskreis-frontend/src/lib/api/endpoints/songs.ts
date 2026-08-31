@@ -12,7 +12,6 @@ import type { SongListParams } from '../params';
 import type {
   CreateSongInput,
   Page,
-  ReminderRunResult,
   Song,
   SongListItem,
   UpdateSongInput,
@@ -60,11 +59,4 @@ export function updateSong(
 /** Nur Admin. */
 export function deleteSong(hauskreisId: string, songId: string): Promise<void> {
   return apiDelete(`${base(hauskreisId)}/${songId}`);
-}
-
-/** Nur Admin. Erinnert die Musik-Verantwortlichen an die Songauswahl. */
-export function runSongReminders(
-  hauskreisId: string,
-): Promise<ReminderRunResult> {
-  return apiPost<ReminderRunResult>(`${base(hauskreisId)}/reminders`);
 }

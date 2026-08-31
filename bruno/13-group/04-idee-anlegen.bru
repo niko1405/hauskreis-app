@@ -1,0 +1,38 @@
+meta {
+  name: Idee anlegen
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/ideas
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "title": "Grillabend im Schlosspark",
+    "note": "Wenn das Wetter mitspielt"
+  }
+}
+
+script:post-response {
+  bru.setVar("ideaId", res.body.id);
+  bru.setVar("ideaEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("beginnt offen und kennt den Urheber", function () {
+    expect(res.body.doneAt).to.equal(null);
+    expect(res.body.createdBy).to.not.equal(null);
+  });
+}
+
+docs {
+  Anlegen darf jede:r — wer eine Idee hat, schreibt sie auf.
+}

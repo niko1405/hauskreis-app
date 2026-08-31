@@ -110,6 +110,47 @@ export function isPast(
 }
 
 /**
+ * Ein Termin, so weit man ihn braucht, um zu wissen, wann er zu Ende ist.
+ *
+ * `endDate` ist optional **und** nullbar: Aufrufer, die einen Termin aus der
+ * Datenbank in der Hand halten, geben ihn ganz herein; die wenigen, die nur
+ * einen Tag kennen, geben `{ date }`.
+ */
+export interface MeetingSpan {
+  date: Date;
+  endDate?: Date | null;
+}
+
+/** Der letzte Tag eines Termins — bei einem eintägigen sein einziger. */
+export function lastDay(span: MeetingSpan): Date {
+  return span.endDate ?? span.date;
+}
+
+/**
+ * Liegt dieser Termin hinter uns — **ganz**, nicht nur angefangen?
+ *
+ * Die Fassung von `isPast` für einen Termin statt für einen Tag, und der
+ * Unterschied ist eine Freizeit von Freitag bis Sonntag: Am Samstag war ihr
+ * `date` vorbei, sie selbst aber nicht. Die Listen-Abfragen wussten das seit
+ * jeher (`finishedBefore` unten prüft dieselbe Bedingung); die punktuellen
+ * Vergleiche lasen dagegen nur `meeting.date` und erklärten den zweiten Tag
+ * einer laufenden Freizeit zur Vergangenheit — Lieder waren plötzlich für alle
+ * abhakbar, Rollen ließen sich nicht mehr freigeben, der Inhalt eines Themas
+ * stand offen.
+ *
+ * Zwei Funktionen und nicht eine mit optionalem Feld: `isPast` beantwortet eine
+ * Frage über einen **Kalendertag** (den es auch ohne Termin gibt, etwa in
+ * `topic-session.service.ts`), diese eine über einen **Termin**.
+ */
+export function spanIsPast(
+  span: MeetingSpan,
+  zone: string,
+  now: Date = new Date(),
+): boolean {
+  return isPast(lastDay(span), zone, now);
+}
+
+/**
  * Die drei `where`-Fragmente für „wann findet dieser Termin statt".
  *
  * **Ein Termin ist ein Zeitraum, kein Tag.** Eine Freizeit von Freitag bis

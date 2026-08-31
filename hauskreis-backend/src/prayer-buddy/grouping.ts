@@ -152,12 +152,14 @@ export interface StandingGroup {
  * Vier Regeln, und die Reihenfolge trägt:
  *
  * 0. Was über der Grenze steht, fällt herunter — und danach zählt es als
- *    Neuzugang.
+ *    Neuzugang. Zur Grenze gehört auch **das zweite Trio**: es wird auf zwei
+ *    gestutzt.
  * 1. Wer nicht mehr dabei ist, fällt heraus.
- * 2. Wer neu dabei ist, kommt in die kleinste Gruppe **mit Platz**. Sie zuerst
- *    zu füllen fängt genau den Fall auf, in dem gerade jemand allein
- *    zurückblieb — aus zwei halben Problemen wird eine ganze Zweiergruppe. Ist
- *    keine Gruppe mehr frei, macht er eine neue auf.
+ * 2. Wer neu dabei ist, kommt in die kleinste Gruppe **mit Platz** — solange
+ *    daraus nicht ein zweites Trio wird. Sie zuerst zu füllen fängt genau den
+ *    Fall auf, in dem gerade jemand allein zurückblieb — aus zwei halben
+ *    Problemen wird eine ganze Zweiergruppe. Ist keine Gruppe frei, macht er
+ *    eine neue auf.
  * 3. Wer danach noch allein dasteht, zieht in die kleinste Gruppe mit Platz.
  *    Gibt es keine — alle anderen sind Dreier —, kommt umgekehrt **der zuletzt
  *    Dazugekommene aus der größten Gruppe zu ihm**: aus 3+1 wird 2+2.
@@ -167,6 +169,13 @@ export interface StandingGroup {
  * landeten in derselben Gruppe. Vier Menschen, von denen keiner mehr für jeden
  * betet — und die nächste Runde stand längst als 2-2 daneben, weil
  * `buildGroups` die Grenze immer schon kannte.
+ *
+ * **„Höchstens ein Trio" kam aus demselben Vergleich.** Drei zu erlauben hieß
+ * noch lange nicht, drei zu *bevorzugen*: Aus 3+2 wurde beim nächsten Zugang
+ * 3+3, obwohl 2+2+2 danebenstand — die kleinste Gruppe mit Platz war eben die
+ * Zweiergruppe. `buildGroups` hätte dieselben sechs Menschen in drei Paare
+ * gelegt, denn dort steht der Satz, mit dem diese Datei anfängt: Zwei ist das
+ * Format, drei der Rest. Ein Trio, das die Zahl nicht erzwingt, ist keiner.
  *
  * **Regel 0 kam danach**, weil die Grenze allein nicht reichte: Sie galt fürs
  * Hinzufügen, und eine Gruppe, die schon zu groß *war*, wurde dadurch gerade
@@ -202,8 +211,21 @@ export function repairGroups(
   // Mehr als das Abschneiden braucht es nicht: `assigned` entsteht **danach**,
   // die Heruntergefallenen stehen damit als aktiv-aber-unzugeteilt da und
   // laufen durch dieselben zwei Regeln wie ein Neuzugang.
+  let trios = 0;
   for (const group of repaired) {
     group.memberIds.splice(MAX_GROUP_SIZE);
+
+    // Das erste Trio darf bleiben — bei ungerader Zahl braucht es genau eines.
+    // Jedes weitere wird zum Paar; wer herunterfällt, läuft gleich unten durch
+    // dieselben Regeln wie ein Neuzugang.
+    if (group.memberIds.length < MAX_GROUP_SIZE) {
+      continue;
+    }
+
+    trios += 1;
+    if (trios > 1) {
+      group.memberIds.splice(MAX_GROUP_SIZE - 1);
+    }
   }
 
   const assigned = new Set(repaired.flatMap((group) => group.memberIds));
@@ -262,14 +284,29 @@ export function repairGroups(
  *
  * Leere zählen nicht mit: sie sind aufgelöst, und jemanden dort einzusortieren
  * hieße, ihn allein zurückzulassen. Volle auch nicht — dafür steht die Grenze da.
+ *
+ * **Und ein Paar zählt nur, solange es das erste Trio wird.** Steht schon eines,
+ * gibt es hier nichts mehr; der Aufrufer landet dann in seinem Zweig „keine
+ * Gruppe frei", macht eine neue auf, und Regel 3 holt den zuletzt
+ * Dazugekommenen aus der größten Gruppe dazu. Aus 3+2+1 wird so 2+2+2 statt
+ * 3+3 — dieselbe Aufteilung, die `buildGroups` für sechs Menschen fände.
  */
 function smallestWithRoom(groups: StandingGroup[]): StandingGroup | null {
+  const trioSteht = groups.some(
+    (group) => group.memberIds.length >= MAX_GROUP_SIZE,
+  );
+
   let best: StandingGroup | null = null;
 
   for (const group of groups) {
     const size = group.memberIds.length;
 
     if (size === 0 || size >= MAX_GROUP_SIZE) {
+      continue;
+    }
+
+    // Sie hineinzunehmen machte sie zum Trio, und eines steht schon.
+    if (trioSteht && size === MAX_GROUP_SIZE - 1) {
       continue;
     }
 

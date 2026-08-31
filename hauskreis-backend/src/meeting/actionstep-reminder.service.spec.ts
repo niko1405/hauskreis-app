@@ -3,24 +3,60 @@ import { ActionstepReminderService } from './actionstep-reminder.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { NotificationService } from '../notification/notification.service';
 import type { NotificationPreferenceService } from '../notification/notification-preference.service';
-import { NotificationType } from '../../generated/prisma/enums';
+import { MeetingType, NotificationType } from '../../generated/prisma/enums';
 import { withClock } from './group-clock.testing';
+import { withFeatures } from '../hauskreis/group-features.testing';
+import type { GroupFeatures } from '../hauskreis/group-features.service';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
+/** Ein vergangener Abend, wie `latestActionstep` ihn liest. */
+interface Abend {
+  id: string;
+  actionstepText: string | null;
+  /** Vom Thema (Vorgabe) oder aus der Nachbereitung des Abends selbst. */
+  quelle?: 'thema' | 'nachbereitung';
+  type?: MeetingType;
+  /** Wer den Actionstep schon abgehakt hat. */
+  done?: string[];
+}
+
+function row(abend: Abend) {
+  const ausNachbereitung = abend.quelle === 'nachbereitung';
+
+  return {
+    id: abend.id,
+    date: utc('2026-07-28'),
+    type: abend.type ?? MeetingType.STANDARD,
+    hasTopicSlot: !ausNachbereitung,
+    actionstepText: ausNachbereitung ? abend.actionstepText : null,
+    topicSession: ausNachbereitung
+      ? null
+      : { actionstepText: abend.actionstepText },
+    actionstepDone: (abend.done ?? []).map((personId) => ({ personId })),
+  };
+}
+
 function setup(
   options: {
-    meeting?: { id: string; actionstepText: string | null } | null;
+    meeting?: Abend | null;
     /**
      * Woher der Actionstep kommt: von der Einheit eines Themas (Vorgabe) oder
      * aus der Nachbereitung des Abends selbst. Beides muss dieselbe Erinnerung
      * auslösen — der Vorsatz ist derselbe, nur der Träger ist ein anderer.
      */
     quelle?: 'thema' | 'nachbereitung';
+    /**
+     * Die vergangenen Abende, jüngster zuerst — für die Fälle, in denen es auf
+     * mehr als den letzten ankommt.
+     */
+    lastMeetings?: Abend[];
     people?: string[];
     weekdaysByPerson?: Record<string, number[]>;
     /** Wer den Actionstep schon abgehakt hat. */
     done?: string[];
+    /** Womit die Gruppe arbeitet — voreingestellt mit allem. */
+    features?: Partial<GroupFeatures>;
   } = {},
 ) {
   const abend =
@@ -28,18 +64,11 @@ function setup(
       ? { id: 'meeting-1', actionstepText: 'Jeden Tag 10 Minuten lesen' }
       : options.meeting;
 
-  const ausNachbereitung = options.quelle === 'nachbereitung';
+  const abende =
+    options.lastMeetings ??
+    (abend ? [{ ...abend, quelle: options.quelle, done: options.done }] : []);
 
-  const findFirst = jest.fn().mockResolvedValue(
-    abend && {
-      id: abend.id,
-      hasTopicSlot: !ausNachbereitung,
-      actionstepText: ausNachbereitung ? abend.actionstepText : null,
-      topicSession: ausNachbereitung
-        ? null
-        : { actionstepText: abend.actionstepText },
-    },
-  );
+  const findMany = jest.fn().mockResolvedValue(abende.map(row));
 
   const people = options.people ?? ['anna', 'chris'];
   const findManyPeople = jest
@@ -62,23 +91,21 @@ function setup(
     ),
   );
 
-  const findManyDone = jest
-    .fn()
-    .mockResolvedValue((options.done ?? []).map((personId) => ({ personId })));
-
-  const service = withClock(
-    new ActionstepReminderService(
-      {
-        meeting: { findFirst },
-        person: { findMany: findManyPeople },
-        meetingActionstepDone: { findMany: findManyDone },
-      } as unknown as PrismaService,
-      { notify } as unknown as NotificationService,
-      { resolveMany } as unknown as NotificationPreferenceService,
+  const service = withFeatures(
+    withClock(
+      new ActionstepReminderService(
+        {
+          meeting: { findMany },
+          person: { findMany: findManyPeople },
+        } as unknown as PrismaService,
+        { notify } as unknown as NotificationService,
+        { resolveMany } as unknown as NotificationPreferenceService,
+      ),
     ),
+    options.features,
   );
 
-  return { service, findFirst, notify };
+  return { service, findMany, notify };
 }
 
 // 2026-07-31 is a Friday, 2026-07-30 a Thursday.
@@ -156,14 +183,18 @@ describe('ActionstepReminderService.sendDueReminders', () => {
   });
 
   it('looks only at meetings that already happened', async () => {
-    const { service, findFirst } = setup();
+    const { service, findMany } = setup();
 
     await service.sendDueReminders('hk-1', { now: friday });
 
-    const where = findFirst.mock.calls[0][0].where;
-    expect(where.date).toEqual({ lt: friday });
+    // Ganz vorbei, nicht nur angefangen: eine Freizeit, die noch läuft, hat
+    // ihren Actionstep noch vor sich.
+    expect(findMany.mock.calls[0][0].where.OR).toEqual([
+      { endDate: null, date: { lt: friday } },
+      { endDate: { lt: friday } },
+    ]);
     // Newest first: an older actionstep must not overtake last week's.
-    expect(findFirst.mock.calls[0][0].orderBy).toEqual({ date: 'desc' });
+    expect(findMany.mock.calls[0][0].orderBy).toEqual({ date: 'desc' });
   });
 
   it('leaves out whoever already ticked it off', async () => {
@@ -191,6 +222,82 @@ describe('ActionstepReminderService.sendDueReminders', () => {
    * Der Vorsatz eines Lobpreisabends ist derselbe Vorsatz. Er hing nur an keiner
    * Einheit — und wurde deshalb bis eben gar nicht erinnert.
    */
+  /**
+   * Die Regel, die `latestActionstep` trägt: Ein neuer Abend beendet den
+   * Vorsatz von davor, auch wenn er selbst keinen hinterlässt. Gesucht wurde
+   * einmal „der jüngste Abend, **der einen hat**" — und dann stand der Vorsatz
+   * von vorletzter Woche eine Woche zu lang da, als wäre er frisch.
+   */
+  it('lässt einen leeren Abend den Vorsatz von davor beenden', async () => {
+    const { service, notify } = setup({
+      lastMeetings: [
+        { id: 'leer', actionstepText: null },
+        { id: 'davor', actionstepText: 'Jeden Tag 10 Minuten lesen' },
+      ],
+    });
+
+    const result = await service.sendDueReminders('hk-1', { now: friday });
+
+    expect(result).toEqual({ notified: 0, skipped: 0, meetingId: null });
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Die eine Ausnahme: Zwischen zwei Dienstagen einen Geburtstag zu feiern
+   * beendet nicht, was man sich am Dienstag vorgenommen hat.
+   */
+  it('überspringt einen besonderen Termin ohne Actionstep', async () => {
+    const { service, notify } = setup({
+      lastMeetings: [
+        { id: 'geburtstag', actionstepText: null, type: MeetingType.CUSTOM },
+        { id: 'dienstag', actionstepText: 'Jeden Tag 10 Minuten lesen' },
+      ],
+    });
+
+    const result = await service.sendDueReminders('hk-1', { now: friday });
+
+    expect(result.meetingId).toBe('dienstag');
+    expect(notify).toHaveBeenCalled();
+  });
+
+  /** Bringt er selbst einen mit, gilt er wie jeder andere Abend. */
+  it('nimmt den Actionstep eines besonderen Termins', async () => {
+    const { service, notify } = setup({
+      lastMeetings: [
+        {
+          id: 'geburtstag',
+          actionstepText: 'Ruf jemanden an, den du lange nicht gesprochen hast',
+          quelle: 'nachbereitung',
+          type: MeetingType.CUSTOM,
+        },
+        { id: 'dienstag', actionstepText: 'Jeden Tag 10 Minuten lesen' },
+      ],
+    });
+
+    const result = await service.sendDueReminders('hk-1', { now: friday });
+
+    expect(result.meetingId).toBe('geburtstag');
+    expect(notify.mock.calls[0][0].payload.body).toContain('Ruf jemanden an');
+  });
+
+  /**
+   * Hat die Gruppe den Wochen-Actionstep abgeschaltet, ist er ganz aus. Sonst
+   * hätte man ihn vom Startbildschirm geräumt und bekäme mittwochs trotzdem
+   * eine Nachricht dazu.
+   */
+  it('schweigt, wenn die Gruppe den Wochen-Actionstep abgeschaltet hat', async () => {
+    const { service, notify, findMany } = setup({
+      features: { weeklyActionstep: false },
+    });
+
+    const result = await service.sendDueReminders('hk-1', { now: friday });
+
+    expect(result).toEqual({ notified: 0, skipped: 0, meetingId: null });
+    expect(notify).not.toHaveBeenCalled();
+    // Und zwar ohne überhaupt zu suchen.
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
   it('erinnert auch an den Actionstep eines Abends ohne Thema', async () => {
     const { service, notify } = setup({ quelle: 'nachbereitung' });
 

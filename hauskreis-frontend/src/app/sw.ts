@@ -109,31 +109,48 @@ function originOf(value: string | undefined): string | null {
 
 serwist.addEventListeners();
 
-/** Was der Server schickt: `{title, body, url}` als JSON-String. */
+/**
+ * Was der Server schickt: `{title, body, url, notificationId}` als JSON-String.
+ *
+ * `notificationId` ist die Zeile in der Box hinter der Glocke. Sie geht mit,
+ * damit ein Antippen sie als gelesen eintragen kann — der Worker selbst kann
+ * das nicht, ihm fehlt das Token.
+ */
 interface PushPayload {
   title?: string;
   body?: string;
   url?: string;
+  notificationId?: string;
 }
 
 self.addEventListener('push', (event) => {
   const payload = readPayload(event.data);
 
   event.waitUntil(
-    self.registration.showNotification(payload.title ?? 'Acts2', {
-      body: payload.body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/badge-72.png',
-      // Gleiche Nachricht zweimal soll nicht zweimal aufpoppen.
-      tag: payload.url ?? 'acts2',
-      data: { url: payload.url ?? '/' },
-    }),
+    (async () => {
+      await self.registration.showNotification(payload.title ?? 'Acts2', {
+        body: payload.body,
+        icon: '/icons/icon-192.png',
+        badge: '/icons/badge-72.png',
+        // Gleiche Nachricht zweimal soll nicht zweimal aufpoppen.
+        tag: payload.url ?? 'acts2',
+        data: { url: payload.url ?? '/', id: payload.notificationId },
+      });
+
+      // Ist die App gerade offen, soll die Zahl an der Glocke sofort stimmen.
+      // Das `push`-Ereignis erreicht die Seite nicht — es kommt hier an.
+      const clients = await self.clients.matchAll({ type: 'window' });
+      for (const client of clients) {
+        client.postMessage({ type: 'notification-received' });
+      }
+    })(),
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const target = (event.notification.data as { url?: string })?.url ?? '/';
+  const data = event.notification.data as { url?: string; id?: string };
+  const target = withReadMarker(data.url ?? '/', data.id);
 
   event.waitUntil(
     (async () => {
@@ -154,6 +171,30 @@ self.addEventListener('notificationclick', (event) => {
     })(),
   );
 });
+
+/**
+ * Hängt `gelesen=<id>` an das Ziel.
+ *
+ * Der Umweg über die Adresse und nicht über einen Aufruf von hier aus: Der
+ * Worker hat kein Token (siehe `pushsubscriptionchange` weiter unten). So löst
+ * die App den Haken ein, sobald sie startet — auch aus dem geschlossenen
+ * Zustand, denn dann steht er in der allerersten Adresse.
+ *
+ * `URL` mit einer Basis, weil die Ziele relativ sind (`/termin?id=…`): Ein `?`
+ * hart anzuhängen ginge dort schief, wo schon eine Query steht — und das ist
+ * bei den meisten der Fall.
+ */
+function withReadMarker(url: string, id: string | undefined): string {
+  if (!id) return url;
+
+  try {
+    const target = new URL(url, self.location.origin);
+    target.searchParams.set('gelesen', id);
+    return target.pathname + target.search + target.hash;
+  } catch {
+    return url;
+  }
+}
 
 /**
  * Browser erneuern Subscriptions gelegentlich von sich aus. Ohne diesen

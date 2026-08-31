@@ -52,7 +52,7 @@ export function PeopleAdmin() {
 
   return (
     <section>
-      <SectionTitle>Personen</SectionTitle>
+      <SectionTitle>Mitglieder</SectionTitle>
       <Card className="space-y-4">
         {people.isLoading && <Skeleton className="h-24 w-full" />}
 
@@ -153,7 +153,7 @@ export function PeopleAdmin() {
                               }
                             : {
                                 title: `${person.name} entfernen?`,
-                                body: `Vergangene Abende zeigen weiter, wer gehostet hat — ${person.name} kommt aber aus allen kommenden Planungen heraus. Eine neue Einladung an dieselbe Adresse holt alles wieder zurück.`,
+                                body: `Vergangene Termine zeigen weiter, wer gehostet hat — ${person.name} kommt aber aus allen kommenden Planungen heraus. Du kannst die Person jederzeit wieder einladen.`,
                                 confirmLabel: 'Entfernen',
                                 tone: 'danger',
                               },
@@ -419,7 +419,7 @@ function FormerMemberPicker({
             <>
               <p className="text-[11px] leading-relaxed text-stone-400">
                 Wähle die Zeile, zu der die eingeladene Person gehört. Ihre
-                vergangenen Abende stehen danach wieder unter ihrem Namen statt
+                vergangenen Termine stehen danach wieder unter ihrem Namen statt
                 unter „Ehemaliges Mitglied".
               </p>
               <Select

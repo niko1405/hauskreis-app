@@ -50,6 +50,7 @@ export class MeetingCancellationService {
         id: true,
         hauskreisId: true,
         date: true,
+        endDate: true,
         status: true,
         cancelSource: true,
       },
@@ -58,10 +59,7 @@ export class MeetingCancellationService {
     // Vergangene Abende in Ruhe lassen: dort ist „abgesagt" ein Vermerk fürs
     // Archiv, keine Vorhersage, und nachträgliche Anwesenheit ist genau das
     // Nachtragen, das den Vermerk nicht umstoßen soll.
-    if (
-      !meeting ||
-      (await this.clock.isPast(meeting.hauskreisId, meeting.date))
-    ) {
+    if (!meeting || (await this.clock.isPast(meeting.hauskreisId, meeting))) {
       return;
     }
 

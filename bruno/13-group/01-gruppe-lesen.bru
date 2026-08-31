@@ -1,0 +1,38 @@
+meta {
+  name: Gruppe lesen
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}
+  body: none
+  auth: inherit
+}
+
+script:post-response {
+  bru.setVar("hauskreisEtag", res.getHeader("etag"));
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("trägt Beschreibung und Bild-Zeitstempel", function () {
+    expect(res.body).to.have.property("description");
+    expect(res.body).to.have.property("photoUpdatedAt");
+  });
+
+  test("liefert einen ETag zum Schreiben", function () {
+    expect(res.getHeader("etag")).to.match(/^W\/"\d+"$/);
+  });
+}
+
+docs {
+  Wer ihr seid: Name, Beschreibung, Gruppenbild.
+
+  Der `ETag` ist die Fassungsnummer (`W/"3"`) und nicht ein Hash über den
+  Rumpf — er kommt aus `version`, und genau der geht beim Schreiben als
+  `If-Match` zurück.
+}

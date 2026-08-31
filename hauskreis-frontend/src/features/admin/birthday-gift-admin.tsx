@@ -81,66 +81,70 @@ export function BirthdayGiftAdmin() {
           }
         />
 
-        <Field
-          label="Wie wird eingeteilt?"
-          hint="„Der Reihe nach“ heißt: Du besorgst das Geschenk für den, dessen Geburtstag nach deinem kommt."
-        >
-          <Select
-            value={value.mode}
-            disabled={!value.enabled}
-            onChange={(event) =>
-              setDraft({
-                ...value,
-                mode: event.target.value as 'ROTATING' | 'MANUAL',
-              })
-            }
-          >
-            <option value="ROTATING">Der Reihe nach</option>
-            <option value="MANUAL">Fest zugeteilt</option>
-          </Select>
-        </Field>
+        {value.enabled && (
+          <>
+            <Field
+              label="Wie wird eingeteilt?"
+              hint="„Der Reihe nach“ heißt: Du besorgst das Geschenk für den, dessen Geburtstag nach deinem kommt."
+            >
+              <Select
+                value={value.mode}
+                disabled={!value.enabled}
+                onChange={(event) =>
+                  setDraft({
+                    ...value,
+                    mode: event.target.value as 'ROTATING' | 'MANUAL',
+                  })
+                }
+              >
+                <option value="ROTATING">Der Reihe nach</option>
+                <option value="MANUAL">Fest zugeteilt</option>
+              </Select>
+            </Field>
 
-        <Field
-          label="Ab wann steht es fest"
-          hint="In Tagen vor dem Geburtstag. Danach ändert sich die Zuteilung nicht mehr — auch nicht, wenn jemand seinen Geburtstag nachträgt."
-        >
-          <Select
-            value={value.freezeDays}
-            disabled={!value.enabled}
-            onChange={(event) =>
-              setDraft({ ...value, freezeDays: event.target.value })
-            }
-          >
-            {[7, 14, 21, 30].map((days) => (
-              <option key={days} value={days}>
-                {days} Tage vorher
-              </option>
-            ))}
-          </Select>
-        </Field>
+            <Field
+              label="Ab wann steht es fest"
+              hint="In Tagen vor dem Geburtstag. Danach ändert sich die Zuteilung nicht mehr — auch nicht, wenn jemand seinen Geburtstag nachträgt."
+            >
+              <Select
+                value={value.freezeDays}
+                disabled={!value.enabled}
+                onChange={(event) =>
+                  setDraft({ ...value, freezeDays: event.target.value })
+                }
+              >
+                {[7, 14, 21, 30].map((days) => (
+                  <option key={days} value={days}>
+                    {days} Tage vorher
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
-        <Button
-          variant="secondary"
-          disabled={unchanged}
-          loading={update.isPending}
-          onClick={() =>
-            update.mutate(
-              {
-                enabled: value.enabled,
-                mode: value.mode,
-                freezeDays: Number(value.freezeDays),
-              },
-              {
-                onSuccess: () => {
-                  setDraft(null);
-                  toast.success('Gespeichert — die Zuteilung zieht nach.');
-                },
-              },
-            )
-          }
-        >
-          Speichern
-        </Button>
+            <Button
+              variant="secondary"
+              disabled={unchanged}
+              loading={update.isPending}
+              onClick={() =>
+                update.mutate(
+                  {
+                    enabled: value.enabled,
+                    mode: value.mode,
+                    freezeDays: Number(value.freezeDays),
+                  },
+                  {
+                    onSuccess: () => {
+                      setDraft(null);
+                      toast.success('Gespeichert — die Zuteilung zieht nach.');
+                    },
+                  },
+                )
+              }
+            >
+              Speichern
+            </Button>
+          </>
+        )}
 
         {current?.updatedBy && (
           <p className="text-[11px] text-stone-400">

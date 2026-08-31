@@ -27,6 +27,7 @@ import { useHk } from './use-hk';
 import { useMe } from './use-me';
 import { useInfiniteList } from './use-paginated';
 import { useApiMutation, useResource, useResourceUpdate } from './use-resource';
+import { qk } from '../query-keys';
 
 /** Paginierte Terminliste zum Nachladen beim Scrollen. */
 export function useMeetingList(params: MeetingListParams = {}) {
@@ -152,12 +153,37 @@ export function useSetAttendance(meetingId: string) {
         ...derived,
       ],
       optimistic: async (input, patch, patchAll) => {
+        /**
+         * Dieselbe Regel wie im Server, und sie muss hier stehen: Ohne sie
+         * bliebe „komme 20 Min später" beim Absagen sichtbar, bis die Antwort
+         * eintrifft — also genau in dem Moment, in dem man hinschaut.
+         *
+         * Mitgeschickt gilt; weggelassen heißt „behalten", solange der Status
+         * bleibt, und „weg", sobald er wechselt. Die kompakten Umschalter in
+         * Liste, Kalender und auf „Heute" schicken nur den Status.
+         */
         const answered = (
-          attendances: { personId: string; status: AttendanceStatus }[],
-        ) => [
-          ...attendances.filter((entry) => entry.personId !== input.personId),
-          { personId: input.personId, status: input.status },
-        ];
+          attendances: {
+            personId: string;
+            status: AttendanceStatus;
+            note: string | null;
+          }[],
+        ) => {
+          const before = attendances.find(
+            (entry) => entry.personId === input.personId,
+          );
+          const note =
+            input.note !== undefined
+              ? input.note
+              : before?.status === input.status
+                ? (before?.note ?? null)
+                : null;
+
+          return [
+            ...attendances.filter((entry) => entry.personId !== input.personId),
+            { personId: input.personId, status: input.status, note },
+          ];
+        };
 
         await patch<Resource<Meeting>>(
           keys.meetings.detail(meetingId),
@@ -190,18 +216,27 @@ export function useSetAttendance(meetingId: string) {
 
         // Der Home-Screen zeigt dieselbe Antwort als „Bist du dabei?". Ob es
         // die eigene ist, weiß er hier nicht — aber `myAttendance` steht nur
-        // am nächsten Treffen, und dort ist es immer die eigene.
-        await patch<HomeScreen>(keys.home, (home) =>
-          home.nextMeeting?.id === meetingId
-            ? {
-                ...home,
-                nextMeeting: {
-                  ...home.nextMeeting,
-                  myAttendance: input.status,
-                },
-              }
-            : home,
-        );
+        // an den beiden Termin-Karten, und dort ist es immer die eigene.
+        //
+        // **Beide**, seit es „Aktueller Termin" gibt: Wer während des Abends
+        // antwortet, tut es auf der oberen Karte, und nur die untere zu
+        // patchen hieße, dass genau dann nichts umspringt.
+        await patch<HomeScreen>(keys.home, (home) => {
+          const answer = <
+            T extends { id: string; myAttendance: string } | null,
+          >(
+            card: T,
+          ): T =>
+            card?.id === meetingId
+              ? ({ ...card, myAttendance: input.status } as T)
+              : card;
+
+          return {
+            ...home,
+            currentMeeting: answer(home.currentMeeting),
+            nextMeeting: answer(home.nextMeeting),
+          };
+        });
       },
     },
   );
@@ -360,8 +395,10 @@ export function useUpdateMeetingSchedule() {
     update: (input, etag) =>
       meetingsApi.updateMeetingSchedule(hauskreisId, input, etag),
     // Bestehende Termine bleiben, wie sie sind — der Rhythmus gilt für neue.
-    // Zu invalidieren gibt es also nichts außer der Einstellung selbst.
-    invalidateKeys: [],
+    // Nur `qk.hauskreise` fällt mit: Dort hängt `features.weeklyActionstep`,
+    // und daran die Actionstep-Karte auf „Heute". Der ETag des Hauskreises
+    // springt bei einer Config-Änderung nicht.
+    invalidateKeys: [qk.hauskreise],
   });
 }
 
@@ -373,21 +410,4 @@ export function useGenerateMeetings() {
   return useApiMutation(() => meetingsApi.generateMeetings(hauskreisId), {
     invalidateKeys: [keys.meetings.all, ...derived],
   });
-}
-
-export function useRunHostReminders() {
-  const { hauskreisId } = useHk();
-  return useApiMutation(() => meetingsApi.runHostReminders(hauskreisId));
-}
-
-export function useRunCustomMeetingReminders() {
-  const { hauskreisId } = useHk();
-  return useApiMutation(() =>
-    meetingsApi.runCustomMeetingReminders(hauskreisId),
-  );
-}
-
-export function useRunActionstepReminders() {
-  const { hauskreisId } = useHk();
-  return useApiMutation(() => meetingsApi.runActionstepReminders(hauskreisId));
 }

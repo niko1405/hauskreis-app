@@ -20,12 +20,8 @@ import { useMemo, useState } from 'react';
 import { IconButton } from '@/components/ui/button';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { AttendanceToggle } from '@/components/domain/attendance-toggle';
-import {
-  useBirthdays,
-  useMe,
-  useMeetingList,
-  useSetAttendance,
-} from '@/lib/api/hooks';
+import { useAttendanceAnswer } from '@/components/domain/use-attendance-answer';
+import { useBirthdays, useMe, useMeetingList } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import {
   addDays,
@@ -35,7 +31,6 @@ import {
   formatDayMonth,
   formatDayRange,
   formatMonth,
-  isPast,
   isToday,
   parseDay,
   startOfMonth,
@@ -43,7 +38,7 @@ import {
   toDay,
   today,
 } from '@/lib/date';
-import { meetingHeadline } from '@/lib/meeting';
+import { isMeetingPast, meetingHeadline } from '@/lib/meeting';
 import type { BirthdayOccasion, MeetingListItem } from '@/lib/api/types';
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
@@ -256,7 +251,9 @@ export function MeetingCalendar() {
  */
 function MonthRow({ meeting }: { meeting: MeetingListItem }) {
   const { me } = useMe();
-  const setAttendance = useSetAttendance(meeting.id);
+  // Wie in der Terminliste: Ein zweiter Tipp schickt hier `UNKNOWN`, und der
+  // Hook fragt vorher nach, wenn dadurch eine Rolle frei würde.
+  const attendance = useAttendanceAnswer(meeting);
 
   const cancelled = meeting.status === 'CANCELLED';
   const myStatus =
@@ -290,13 +287,8 @@ function MonthRow({ meeting }: { meeting: MeetingListItem }) {
           </span>
         </span>
 
-        {me && !cancelled && !isPast(meeting.date) && (
-          <AttendanceToggle
-            status={myStatus}
-            onAnswer={(status) =>
-              setAttendance.mutate({ personId: me.id, status })
-            }
-          />
+        {me && !cancelled && !isMeetingPast(meeting) && (
+          <AttendanceToggle status={myStatus} onAnswer={attendance.answer} />
         )}
       </Link>
     </li>

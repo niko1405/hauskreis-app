@@ -3,9 +3,12 @@ import { z } from 'zod';
 import { paginationSchema } from '../../common/http/pagination';
 
 export const updateCycleConfigSchema = z.object({
+  /// Ob die Gruppe überhaupt Gebetsbuddys hat. Optional, damit ein Speichern
+  /// der Rundenlänge den Schalter nicht mitschreiben muss.
+  enabled: z.coerce.boolean().optional(),
   /// One to twelve weeks. Below one there is no rhythm left, above twelve the
   /// pairing is no longer a rotation.
-  periodLengthWeeks: z.coerce.number().int().min(1).max(12),
+  periodLengthWeeks: z.coerce.number().int().min(1).max(12).optional(),
 });
 
 export const rotateSchema = z.object({

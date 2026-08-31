@@ -7,6 +7,8 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { PrayerBuddyService } from './prayer-buddy.service';
 import type { NotificationService } from '../notification/notification.service';
 import { withClock } from '../meeting/group-clock.testing';
+import { withFeatures } from '../hauskreis/group-features.testing';
+import type { GroupFeatures } from '../hauskreis/group-features.service';
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const TODAY = utc('2026-07-29');
@@ -132,7 +134,11 @@ function fakeStore(initial: Partial<Row>[] = [], people = PEOPLE) {
   return { prisma, rows, prayerBuddyGroup };
 }
 
-function setup(initial: Partial<Row>[] = [], people = PEOPLE) {
+function setup(
+  initial: Partial<Row>[] = [],
+  people = PEOPLE,
+  options: { features?: Partial<GroupFeatures> } = {},
+) {
   const { prisma, rows, prayerBuddyGroup } = fakeStore(initial, people);
 
   const findCurrent = jest.fn(async (_hauskreisId: string, on = new Date()) => {
@@ -169,10 +175,13 @@ function setup(initial: Partial<Row>[] = [], people = PEOPLE) {
     .fn()
     .mockResolvedValue({ delivered: 1, pruned: 0, failed: 0, skipped: 0 });
 
-  const service = withClock(
-    new PrayerBuddyGeneratorService(prisma, buddies, {
-      notify,
-    } as unknown as NotificationService),
+  const service = withFeatures(
+    withClock(
+      new PrayerBuddyGeneratorService(prisma, buddies, {
+        notify,
+      } as unknown as NotificationService),
+    ),
+    options.features,
   );
 
   /** Die Zeiträume, die noch laufen oder kommen — in Reihenfolge. */

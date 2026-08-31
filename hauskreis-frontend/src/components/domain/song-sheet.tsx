@@ -121,7 +121,7 @@ function CreateSong({ open, onClose }: { open: boolean; onClose: () => void }) {
       open={open}
       onClose={close}
       title="Lied hinzufügen"
-      subtitle="Es steht danach in eurer Liederliste und lässt sich an jedem Abend auswählen."
+      subtitle="Es steht dann im Archiv und lässt sich bei Terminen auswählen."
       footer={
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1" onClick={close}>

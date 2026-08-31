@@ -67,13 +67,14 @@ export class RoleAssignmentNotifier {
         id: true,
         hauskreisId: true,
         date: true,
+        endDate: true,
         status: true,
         location: true,
       },
     });
 
     if (!meeting || meeting.status === MeetingStatus.CANCELLED) return 0;
-    if (await this.clock.isPast(meeting.hauskreisId, meeting.date)) return 0;
+    if (await this.clock.isPast(meeting.hauskreisId, meeting)) return 0;
 
     const results = await Promise.all(
       recipients.map((personId) =>

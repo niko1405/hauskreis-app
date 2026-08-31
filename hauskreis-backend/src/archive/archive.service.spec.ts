@@ -87,9 +87,17 @@ describe('ArchiveService.summarise', () => {
 
     // An evening that was called off is not part of what the group did, and a
     // future one is not archive material yet.
+    //
+    // „Vorbei" heißt dabei den **ganzen** Zeitraum — dieselbe Bedingung, nach
+    // der `…/meetings?scope=past` die Liste füllt, die diese Zahl überschreibt.
+    // Vorher stand hier `date < heute`, also der Anfangstag: Über einer Liste
+    // ohne die laufende Freizeit stand eine Zahl mit ihr.
     const where = findMany.mock.calls[0][0].where;
     expect(where.status).toEqual({ not: 'CANCELLED' });
-    expect(where.date.lt).toBeInstanceOf(Date);
+    expect(where.OR).toEqual([
+      { endDate: null, date: { lt: expect.any(Date) } },
+      { endDate: { lt: expect.any(Date) } },
+    ]);
   });
 
   it('copes with a group that has never met', async () => {

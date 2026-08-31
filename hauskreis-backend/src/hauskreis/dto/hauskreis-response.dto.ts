@@ -13,6 +13,30 @@ import { PersonRole } from '../../../generated/prisma/enums';
 export const hauskreisResponseSchema = z.object({
   id: z.uuid(),
   name: z.string(),
+  /// Wer ihr seid, in ein paar Sätzen. `null`, solange es niemand geschrieben
+  /// hat — ein Hauskreis, der sich nicht beschreibt, ist immer noch einer.
+  description: z.string().nullable(),
+  /**
+   * Was diese Gruppe benutzt.
+   *
+   * Steht am Hauskreis und nicht hinter einem eigenen Endpunkt, weil es genau
+   * dort gebraucht wird, wo ohnehin schon der Name steht: in der Navigation
+   * (der Gebets-Tab) und auf dem Startbildschirm. Eine zweite Abfrage dafür
+   * wäre ein zweiter Ladezustand für ein Ja/Nein.
+   *
+   * Abgeleitet aus den beiden Konfigurationstabellen, nicht hier gespeichert —
+   * `hauskreis` trägt Identität, keine Einstellungen.
+   */
+  features: z.object({
+    prayerBuddies: z.boolean(),
+    weeklyActionstep: z.boolean(),
+  }),
+  /// Wann das Gruppenbild zuletzt gesetzt wurde; `null` heißt „keins".
+  ///
+  /// Derselbe Kniff wie bei `person.photoUpdatedAt`: Der Zeitstempel hängt als
+  /// Query-Parameter an der Bild-URL, damit ein neues Bild nicht hinter dem
+  /// Zwischenspeicher des Browsers verschwindet.
+  photoUpdatedAt: isoDateTimeOut.nullable(),
   createdAt: isoDateTimeOut,
   version: z.number().int().nonnegative(),
 });

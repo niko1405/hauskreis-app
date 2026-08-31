@@ -60,7 +60,6 @@ import {
   formatRelativeDay,
   formatWeekday,
   hasStarted,
-  isPast,
 } from '@/lib/date';
 import {
   MEETING_SLOT_KEYS,
@@ -70,6 +69,7 @@ import {
   applySlotToggle,
   mapsUrl,
   meetingHeadline,
+  meetingPhase,
 } from '@/lib/meeting';
 import { ActionstepCheck } from '@/components/domain/actionstep-check';
 import { SlotCard } from '@/components/domain/slot-toggles';
@@ -111,6 +111,11 @@ const SLOT_LOSSES: Record<MeetingSlotKey, (meeting: Meeting) => string | null> =
       meeting.testimonyPerson
         ? `${meeting.testimonyPerson.name} erzählt an dem Abend dann nichts mehr.`
         : null,
+    // Wie bei den Liedern immer: Die Anliegen liegen in einer eigenen Abfrage,
+    // dieser Bildschirm sieht von hier aus nicht, ob welche da sind. Und was
+    // hier verlorengeht, sind Sätze, die Menschen über sich selbst geschrieben
+    // haben — dafür ist eine Rückfrage zu viel besser als eine zu wenig.
+    hasPrayerSlot: () => 'Alle Gebetsanliegen dieses Abends werden gelöscht.',
     // Hier wird wirklich gelöscht, anders als beim Thema: die beiden Texte
     // gehören diesem einen Abend und warten nirgends als Entwurf.
     hasNotesSlot: (meeting) =>
@@ -210,7 +215,17 @@ function Loaded({
   const confirm = useConfirm();
 
   const cancelled = meeting.status === 'CANCELLED';
-  const past = isPast(meeting.date);
+  /**
+   * Drei Zustände und nicht zwei — siehe `meetingPhase`.
+   *
+   * `past` hieß bisher `isPast(meeting.date)`, also „der **erste** Tag ist
+   * vorbei". Eine Freizeit von Freitag bis Sonntag stand damit ab Samstag als
+   * „Vorbei" da, obwohl sie lief: Lieder waren plötzlich für alle abhakbar,
+   * Rollen ließen sich nicht mehr freigeben, der Inhalt eines Themas stand
+   * offen. Der Server rechnete längst mit dem ganzen Zeitraum.
+   */
+  const phase = meetingPhase(meeting);
+  const past = phase === 'past';
   /**
    * Hat der Abend angefangen? Entscheidet, ob sich der Actionstep abhaken lässt.
    *
@@ -509,6 +524,10 @@ function Loaded({
         </Link>
         <div className="flex gap-2">
           {past && <Badge>Vorbei</Badge>}
+          {/* Grün wie überall, wo etwas gerade gilt. Ein kommender Abend trägt
+              weiterhin kein Abzeichen — dass er noch kommt, steht schon im
+              Datum darüber. */}
+          {phase === 'running' && <Badge variant="music">Läuft</Badge>}
           {cancelled && <Badge variant="alert">Abgesagt</Badge>}
         </div>
       </div>
@@ -554,6 +573,24 @@ function Loaded({
       {/* Gedämpft, aber nicht versteckt: was an dem Abend geplant war, bleibt
           lesbar — es ist bloß nichts mehr, worauf man hinarbeitet. */}
       <div className={cn('space-y-6', cancelled && 'opacity-55')}>
+        {/* **Ganz oben**, und nicht mehr am Ende der Seite. Ab Terminbeginn ist
+            das die Hauptsache dieses Bildschirms: Wer gerade vom Abend
+            heimkommt, soll die Frage sehen, ohne an Uhrzeit, Ort, Rollen,
+            Liedern und Anwesenheit vorbeizuscrollen.
+
+            Die **Karte** bleibt unten, wo sie war. Sobald etwas drinsteht, ist
+            es Inhalt und gehört zum Nachklang des Abends — hier steht nur die
+            Frage. Beides zugleich gibt es nie: `showNotes` und `mayAddNotes`
+            schließen einander aus.
+
+            Er steht auch **außerhalb** des Bearbeitungsmodus: eine
+            Zusammenfassung schreibt man in dem Moment, in dem man vom Abend
+            kommt, nicht nachdem man einen Schalter gefunden hat — der Knopf
+            legt ihn deshalb gleich mit um. */}
+        {mayAddNotes && (
+          <NotesPrompt saving={update.isPending} onAdd={addNotes} />
+        )}
+
         {/* Die erste Frage an einen Termin ist „wann". Sie stand bisher nur im
             Datum, und eine Uhrzeit gab es gar nicht — „wir fangen heute später
             an" lief über WhatsApp. */}
@@ -706,12 +743,14 @@ function Loaded({
             Gebetsanliegen sind beides, was die Einzelnen zum Abend beitragen —
             Thema und Nachbereitung sind sein Inhalt und dessen Nachklang und
             bleiben zusammen am Ende. */}
-        <PrayerRequestsCard
-          meetingId={meetingId}
-          editing={editing}
-          locked={locked}
-          onEdit={() => setEditing(true)}
-        />
+        {meeting.hasPrayerSlot && (
+          <PrayerRequestsCard
+            meetingId={meetingId}
+            editing={editing}
+            locked={locked}
+            onEdit={() => setEditing(true)}
+          />
+        )}
 
         {/* Thema samt Nachbereitung. Ohne den Baustein gar nicht: was an einem
             Abend besprochen wurde, ist die Zusammenfassung eines Themas.
@@ -753,18 +792,17 @@ function Loaded({
           />
         )}
 
-        {/* Und der Weg dorthin. Er steht auch **außerhalb** des
-            Bearbeitungsmodus: eine Zusammenfassung schreibt man in dem Moment,
-            in dem man vom Abend kommt, nicht nachdem man einen Schalter gefunden
-            hat — der Knopf legt ihn deshalb gleich mit um. */}
-        {mayAddNotes && (
-          <NotesPrompt saving={update.isPending} onAdd={addNotes} />
-        )}
-
         {/* Ganz unten, weil man das einmal beim Anlegen entscheidet und danach
             selten. Aber erreichbar, denn „ach, Lieder hätten wir doch gern"
-            fällt einem erst auf der Terminseite ein. */}
-        {!locked && editing && (
+            fällt einem erst auf der Terminseite ein.
+
+            **Auch an einem vergangenen Abend**, und nur ein abgesagter bleibt
+            gesperrt. Der Server konnte es längst (`assertNotesSlotNotAhead`
+            sperrt allein die Richtung nach vorn); was fehlte, war der Weg
+            dorthin. Wem hinterher auffällt, dass am Dienstag doch Lieder
+            waren, kam bisher nicht mehr heran. An einem **abgesagten** Abend
+            gibt es dagegen nichts umzubauen. */}
+        {!cancelled && editing && (
           <SlotCard
             slots={meeting}
             disabled={update.isPending}

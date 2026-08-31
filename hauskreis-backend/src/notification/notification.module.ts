@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { NotificationController } from './notification.controller';
+import { NotificationInboxController } from './notification-inbox.controller';
+import { NotificationInboxService } from './notification-inbox.service';
 import { NotificationService } from './notification.service';
 import { PushSubscriptionService } from './push-subscription.service';
 import { NotificationPreferenceService } from './notification-preference.service';
@@ -14,9 +16,10 @@ import { PersonModule } from '../person/person.module';
  */
 @Module({
   imports: [PersonModule],
-  controllers: [NotificationController],
+  controllers: [NotificationController, NotificationInboxController],
   providers: [
     NotificationService,
+    NotificationInboxService,
     PushSubscriptionService,
     NotificationPreferenceService,
     MeetingReminderService,

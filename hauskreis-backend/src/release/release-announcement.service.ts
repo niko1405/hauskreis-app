@@ -55,10 +55,17 @@ export class ReleaseAnnouncementService implements OnApplicationBootstrap {
   async announceLatest(): Promise<{ announced: boolean; recipients: number }> {
     const release = latestRelease();
 
+    // `pushedAt` und nicht die bloße Existenz der Zeile: Seit hinter der Glocke
+    // eine Box hängt, entsteht ein Eintrag **immer** — auch ohne
+    // VAPID-Schlüssel und auch bei abgeschalteter Art. Danach zu fragen hieße,
+    // eine Ankündigung, die nie jemanden erreicht hat, für erledigt zu
+    // erklären: Wer die Schlüssel nachträgt und neu startet, bekäme dann nichts
+    // mehr. Gefragt ist „ist das je **rausgegangen**?".
     const alreadyAnnounced = await this.prisma.notificationLog.findFirst({
       where: {
         type: NotificationType.RELEASE_NOTES,
         relatedReleaseVersion: release.version,
+        pushedAt: { not: null },
       },
       select: { id: true },
     });

@@ -1,0 +1,43 @@
+meta {
+  name: Beschreibung ändern
+  type: http
+  seq: 2
+}
+
+patch {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{hauskreisEtag}}
+}
+
+body:json {
+  {
+    "description": "Wir treffen uns dienstags, singen, und einer bereitet ein Thema vor."
+  }
+}
+
+tests {
+  test("antwortet mit 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("übernimmt den Text und zählt die Fassung hoch", function () {
+    expect(res.body.description).to.contain("dienstags");
+    expect(res.body.version).to.be.a("number");
+  });
+}
+
+docs {
+  **Ohne Admin-Recht**, wie das Kopfbild: Bei neun Leuten ist die
+  Selbstbeschreibung keine Verwaltungsangelegenheit.
+
+  `description: null` löscht sie wieder; das Feld wegzulassen heißt
+  „unverändert". Einen Hauskreis ohne **Namen** gibt es dagegen nicht — dort
+  ist `null` kein gültiger Wert.
+
+  Ohne `If-Match` antwortet die Route mit `428`, mit einem veralteten mit `412`.
+}

@@ -1,28 +1,58 @@
 'use client';
 
 /**
- * Lieder eines Termins. Beim Eintragen wird in der Song-Datenbank gesucht;
- * gibt es das Lied noch nicht, legt der Server es mit an — so wächst die
- * Datenbank mit jedem Vorschlag (CLAUDE.md §6).
+ * Lieder eines Termins — **Setlist und Vorschläge, getrennt.**
+ *
+ * Vorher war es eine Liste, in der beides untereinander stand und sich nur
+ * durch einen Haken unterschied. Zwei Fragen, eine Liste: „was singen wir" und
+ * „was wurde vorgeschlagen" sind aber nicht dieselbe, und die erste ist die,
+ * mit der die meisten hierherkommen.
+ *
+ * **Die Setlist steht auch dann da, wenn sie leer ist** — sobald es überhaupt
+ * Lieder gibt. Sie erschien zuerst erst mit dem ersten Haken, und damit fehlte
+ * die Frage genau in dem Zustand, in dem sie offen ist: Man sah zwölf
+ * Vorschläge und musste selbst darauf kommen, dass noch nichts gewählt ist.
+ * Was an ihrer Stelle steht, hängt daran, wer liest: für das Musik-Team eine
+ * Aufforderung, für alle anderen eine Auskunft.
+ *
+ * **Der Haken gehört denen, die ihn drücken dürfen.** Er stand für alle da,
+ * ausgegraut, und brauchte darunter einen Satz, der erklärte, warum er nicht
+ * geht — ein toter Knopf ist kein Hinweis, sondern ein Fehler. Wer nicht die
+ * Musik macht, sieht ihn deshalb gar nicht; welche Gruppe eine Zeile ist, sagt
+ * ohnehin schon die Überschrift darüber. Statt der verschlossenen Tür steht
+ * unter der Karte, wer sie aufmacht.
+ *
+ * **Warum die Setlist terracotta ist und nicht mehr musikgrün.** Grün ist in
+ * dieser App die Farbe der *Rolle* — das SONG-Abzeichen, die Person, die die
+ * Musik macht. „Im Set" ist keine Rolle, sondern eine **Auswahl**, und Auswahl
+ * ist überall terracotta: der aktive Tab, der gewählte Chip, der erste Platz
+ * einer Rangliste.
+ *
+ * Beim Eintragen wird in der Song-Datenbank gesucht; gibt es das Lied noch
+ * nicht, legt der Server es mit an — so wächst die Datenbank mit jedem
+ * Vorschlag (CLAUDE.md §6).
  */
-import { Check, Library, Music, Plus, Trash2 } from 'lucide-react';
-import { useDeferredValue, useState } from 'react';
+import {
+  Check,
+  ChevronDown,
+  ListMusic,
+  Music,
+  Plus,
+  Trash2,
+} from 'lucide-react';
+import { useState } from 'react';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { TextInput } from '@/components/ui/field';
 import { EmptyState, Skeleton } from '@/components/ui/states';
 import {
-  useAddMeetingSong,
   useMeetingSongs,
   useRemoveMeetingSong,
   useSetMeetingSongSelected,
-  useSongSearch,
 } from '@/lib/api/hooks';
-import { LyricsLink, OpenLinkButton } from '@/components/domain/lyrics-link';
-import { SongAiAssist } from '@/components/domain/song-ai-assist';
-import { SongPickerSheet } from '@/components/domain/song-picker-sheet';
+import { LyricsLink } from '@/components/domain/lyrics-link';
+import { SongSuggestSheet } from '@/components/domain/song-suggest-sheet';
 import { cn } from '@/lib/cn';
-import { formatRelativeDay } from '@/lib/date';
+import type { MeetingSong } from '@/lib/api/types';
 
 export function SongsCard({
   meetingId,
@@ -61,9 +91,12 @@ export function SongsCard({
   mayPick?: boolean;
 }) {
   const songs = useMeetingSongs(meetingId);
-  const remove = useRemoveMeetingSong(meetingId);
-  const select = useSetMeetingSongSelected(meetingId);
-  const [picking, setPicking] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [showRest, setShowRest] = useState(true);
+
+  const all = songs.data ?? [];
+  const setlist = all.filter((entry) => entry.isSelected);
+  const rest = all.filter((entry) => !entry.isSelected);
 
   return (
     <section>
@@ -71,7 +104,7 @@ export function SongsCard({
       <Card className="space-y-4">
         {songs.isLoading && <Skeleton className="h-16 w-full" />}
 
-        {songs.data?.length === 0 && (
+        {!songs.isLoading && all.length === 0 && (
           <EmptyState
             title={
               readOnly
@@ -86,285 +119,215 @@ export function SongsCard({
           />
         )}
 
-        <ul className="space-y-2">
-          {(songs.data ?? []).map((entry) => (
-            <li
-              key={entry.id}
-              className={cn(
-                'flex items-center gap-3 rounded-md border p-3',
-                entry.isSelected
-                  ? 'border-music-line bg-music-bg/50'
-                  : 'border-line bg-card',
-              )}
-            >
-              <button
-                type="button"
-                disabled={!mayPick}
-                aria-pressed={entry.isSelected}
-                aria-label={
-                  entry.isSelected
-                    ? 'Aus der Auswahl nehmen'
-                    : 'Für den Abend auswählen'
-                }
-                onClick={() =>
-                  select.mutate({
-                    meetingSongId: entry.id,
-                    isSelected: !entry.isSelected,
-                  })
-                }
-                className={cn(
-                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors',
-                  entry.isSelected
-                    ? 'border-music bg-music text-white'
-                    : 'border-line-strong text-transparent hover:border-music',
-                  !mayPick && 'cursor-default hover:border-line-strong',
-                )}
-              >
-                <Check size={14} strokeWidth={3} />
-              </button>
+        {/* Der Block steht, sobald es überhaupt Lieder gibt — und nicht erst,
+            wenn schon etwas ausgewählt ist. Genau dann ist die Frage „was
+            singen wir" ja offen, und vorher stand sie an dieser Stelle gar
+            nicht: Man sah zwölf Vorschläge und musste selbst darauf kommen,
+            dass die Setlist noch leer ist. */}
+        {all.length > 0 && (
+          <div>
+            <Heading icon={<ListMusic size={12} />}>
+              Feste Setlist ({setlist.length})
+            </Heading>
 
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-stone-800">
-                  {entry.song.title}
+            {setlist.length === 0 && (
+              <div className="rounded-md border border-dashed border-line-strong px-4 py-5 text-center">
+                <p className="text-sm font-bold text-stone-700">
+                  {readOnly
+                    ? 'Nicht notiert, was gesungen wurde'
+                    : mayPick
+                      ? 'Noch nichts ausgewählt'
+                      : 'Die Setlist steht noch nicht fest'}
                 </p>
-                <p className="truncate text-[11px] text-stone-400">
-                  {entry.song.artist ?? 'Unbekannt'}
-                  {entry.suggestedBy && ` · von ${entry.suggestedBy.name}`}
+                <p className="mt-1 text-[11px] leading-relaxed text-stone-400">
+                  {readOnly
+                    ? 'Hak unten ab, was dran war — das hilft der Liederliste.'
+                    : mayPick
+                      ? 'Hakt unten die Lieder ab, die ihr singen wollt — sie erscheinen dann hier.'
+                      : 'Das Musik-Team wählt aus den Vorschlägen aus.'}
                 </p>
               </div>
+            )}
 
-              <LyricsLink url={entry.song.lyricsUrl} title={entry.song.title} />
+            <ul className="space-y-2">
+              {setlist.map((entry) => (
+                <SongRow
+                  key={entry.id}
+                  entry={entry}
+                  meetingId={meetingId}
+                  mayPick={mayPick}
+                  mayDelete={!readOnly && editing}
+                />
+              ))}
+            </ul>
+          </div>
+        )}
 
-              {!readOnly && editing && (
-                <IconButton
-                  label="Lied entfernen"
-                  onClick={() => remove.mutate(entry.id)}
-                >
-                  <Trash2 size={15} />
-                </IconButton>
-              )}
-            </li>
-          ))}
-        </ul>
+        {rest.length > 0 && (
+          <div>
+            {/* Aufklappbar, aber offen voreingestellt: Ein Vorschlag ist dazu
+                da, gelesen zu werden. Zuklappen hilft erst, wenn die Setlist
+                steht und die Liste darunter lang geworden ist. */}
+            <button
+              type="button"
+              aria-expanded={showRest}
+              onClick={() => setShowRest((value) => !value)}
+              className="mb-3 flex w-full items-center gap-1.5 text-left"
+            >
+              <ChevronDown
+                size={13}
+                className={cn(
+                  'shrink-0 text-terracotta-500 transition-transform',
+                  showRest && 'rotate-180',
+                )}
+              />
+              <span className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
+                {setlist.length > 0 ? 'Weitere Vorschläge' : 'Vorschläge'} (
+                {rest.length})
+              </span>
+            </button>
 
-        {/* Ein toter Haken ohne Erklärung ist ein Fehler, kein Hinweis — und
-            seit die Regel streng ist, trifft er auch einen Abend, an dem für
-            die Musik noch niemand eingetragen ist. */}
-        {!mayPick && !readOnly && (songs.data ?? []).length > 0 && (
-          <p className="text-[11px] text-stone-400">
-            Abhaken darf, wer an dem Abend die Musik macht.
-          </p>
+            {showRest && (
+              <ul className="space-y-2">
+                {rest.map((entry) => (
+                  <SongRow
+                    key={entry.id}
+                    entry={entry}
+                    meetingId={meetingId}
+                    mayPick={mayPick}
+                    mayDelete={!readOnly && editing}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
         )}
 
         {!readOnly && (
-          <div className="space-y-3 border-t border-line pt-4">
-            {/* Zwei Wege, und der zweite fehlte: das Archiv war vom Termin aus
-                nicht erreichbar. Er steht zuerst, weil er meistens der
-                richtige ist — die Gruppe singt vieles wieder. */}
+          <div className="border-t border-line pt-4">
+            {/* Ein Knopf für eine Absicht. Was für ein Lied es ist — eines aus
+                dem Archiv oder ein neues —, ist die zweite Frage und wird im
+                Sheet gestellt. */}
             <Button
               variant="secondary"
               className="w-full"
-              onClick={() => setPicking(true)}
+              onClick={() => setSuggesting(true)}
             >
-              <Library size={15} />
-              Aus dem Archiv
+              <Plus size={14} />
+              Lied vorschlagen
             </Button>
 
-            <AddSongForm meetingId={meetingId} />
+            {/* Die Auskunft von der Leserseite her: nicht „du darfst nicht",
+                sondern „dafür ist jemand zuständig". Steht die leere Setlist
+                oben, sagt sie dasselbe schon — dann entfällt der Satz, statt
+                zweimal dazustehen. */}
+            {!mayPick && all.length > 0 && setlist.length > 0 && (
+              <p className="mt-3 text-center text-[11px] text-stone-400">
+                Das Musik-Team wählt aus diesen Vorschlägen die finale Setlist.
+              </p>
+            )}
           </div>
         )}
       </Card>
 
-      {picking && (
-        <SongPickerSheet
-          open
-          onClose={() => setPicking(false)}
-          meetingId={meetingId}
-          alreadyPicked={(songs.data ?? []).map((entry) => entry.song.id)}
-        />
-      )}
+      <SongSuggestSheet
+        open={suggesting}
+        onClose={() => setSuggesting(false)}
+        meetingId={meetingId}
+        alreadyPicked={all.map((entry) => entry.song.id)}
+      />
     </section>
   );
 }
 
-function AddSongForm({ meetingId }: { meetingId: string }) {
-  const [title, setTitle] = useState('');
-  const [artist, setArtist] = useState('');
-  const [lyricsUrl, setLyricsUrl] = useState('');
-  const [expanded, setExpanded] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-
-  // Wie im Archiv: die Eingabe bleibt flüssig, die Abfrage hinkt nach.
-  const search = useSongSearch(useDeferredValue(title), expanded);
-  const add = useAddMeetingSong(meetingId);
-
-  const reset = () => {
-    setTitle('');
-    setArtist('');
-    setLyricsUrl('');
-    setExpanded(false);
-    setConfirming(false);
-  };
-
-  const trimmedTitle = title.trim();
-  const hits = search.data?.items ?? [];
-  /**
-   * Ein Lied, das genau so schon in der Datenbank steht. Dann ist „neu
-   * anlegen" fast immer ein Versehen — man hat den Treffer übersehen.
-   */
-  const exactHit = hits.find(
-    (song) => song.title.toLowerCase() === trimmedTitle.toLowerCase(),
+function Heading({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <h3 className="mb-3 flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
+      {icon}
+      {children}
+    </h3>
   );
+}
 
-  const submit = (songId?: string) => {
-    const payload = songId
-      ? { songId }
-      : {
-          title: trimmedTitle,
-          artist: artist.trim() === '' ? null : artist.trim(),
-          lyricsUrl: lyricsUrl.trim() === '' ? null : lyricsUrl.trim(),
-        };
-
-    if (!songId && trimmedTitle === '') return;
-
-    add.mutate(payload, {
-      onSuccess: reset,
-    });
-  };
-
-  if (!expanded) {
-    return (
-      <Button
-        variant="secondary"
-        className="w-full"
-        onClick={() => setExpanded(true)}
-      >
-        <Plus size={14} />
-        Lied vorschlagen
-      </Button>
-    );
-  }
+function SongRow({
+  entry,
+  meetingId,
+  mayPick,
+  mayDelete,
+}: {
+  entry: MeetingSong;
+  meetingId: string;
+  mayPick: boolean;
+  mayDelete: boolean;
+}) {
+  const select = useSetMeetingSongSelected(meetingId);
+  const remove = useRemoveMeetingSong(meetingId);
 
   return (
-    <div className="space-y-2 border-t border-line pt-4">
-      {/* Kein autoFocus: auf dem Telefon schöbe die Tastatur sonst genau die
-          Trefferliste aus dem Bild, die man gleich braucht. */}
-      <TextInput
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        placeholder="Titel"
-        aria-label="Titel des Liedes"
-      />
-
-      {/* Treffer aus der Song-Datenbank: schneller und ohne Dubletten. */}
-      {(search.data?.items ?? []).length > 0 && (
-        <ul className="space-y-1">
-          {(search.data?.items ?? []).map((song) => (
-            <li key={song.id}>
-              <button
-                type="button"
-                onClick={() => submit(song.id)}
-                className="flex w-full items-center gap-2 rounded-md border border-line bg-canvas px-3 py-2 text-left hover:border-terracotta-400"
-              >
-                <Music size={13} className="shrink-0 text-stone-400" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-xs font-bold text-stone-700">
-                    {song.title}
-                  </span>
-                  <span className="block truncate text-[10px] text-stone-400">
-                    {song.artist ?? 'Unbekannt'} · {song.timesPlayed}× gesungen
-                    {song.lastPlayedAt &&
-                      `, zuletzt ${formatRelativeDay(song.lastPlayedAt)}`}
-                  </span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+    <li
+      className={cn(
+        'flex items-center gap-3 rounded-md border p-3',
+        entry.isSelected
+          ? 'border-terracotta-100 bg-terracotta-50/40'
+          : 'border-line bg-card',
+      )}
+    >
+      {mayPick && (
+        <button
+          type="button"
+          aria-pressed={entry.isSelected}
+          aria-label={
+            entry.isSelected
+              ? 'Aus der Setlist nehmen'
+              : 'In die Setlist aufnehmen'
+          }
+          onClick={() =>
+            select.mutate({
+              meetingSongId: entry.id,
+              isSelected: !entry.isSelected,
+            })
+          }
+          className={cn(
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors',
+            entry.isSelected
+              ? 'border-terracotta-500 bg-terracotta-500 text-white'
+              : 'border-line-strong text-transparent hover:border-terracotta-400',
+          )}
+        >
+          <Check size={14} strokeWidth={3} />
+        </button>
       )}
 
-      <TextInput
-        value={artist}
-        onChange={(event) => setArtist(event.target.value)}
-        placeholder="Interpret (optional)"
-        aria-label="Interpret"
-      />
+      {!mayPick && !entry.isSelected && (
+        <Music size={15} className="shrink-0 text-stone-300" />
+      )}
 
-      {/* Der Knopf daneben erscheint erst, wenn im Feld eine Adresse steht —
-          gerade beim KI-Vorschlag ist „einmal draufsehen" die nächste Frage. */}
-      <div className="flex items-center gap-2">
-        <TextInput
-          type="url"
-          inputMode="url"
-          value={lyricsUrl}
-          onChange={(event) => setLyricsUrl(event.target.value)}
-          placeholder="Link zu Text/Akkorden (optional)"
-          aria-label="Link zu Text/Akkorden"
-        />
-        <OpenLinkButton url={lyricsUrl.trim()} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-stone-800">
+          {entry.song.title}
+        </p>
+        <p className="truncate text-[11px] text-stone-400">
+          {entry.song.artist ?? 'Unbekannt'}
+          {entry.suggestedBy && ` · von ${entry.suggestedBy.name}`}
+        </p>
       </div>
 
-      {/* Gespeichert wird nur der Link, nie der Text selbst (CLAUDE.md §6). */}
+      <LyricsLink url={entry.song.lyricsUrl} title={entry.song.title} />
 
-      <SongAiAssist
-        draft={{ title, artist, lyricsUrl }}
-        onApply={(patch) => {
-          if (patch.title !== undefined) setTitle(patch.title);
-          if (patch.artist !== undefined) setArtist(patch.artist);
-          if (patch.lyricsUrl !== undefined) setLyricsUrl(patch.lyricsUrl);
-        }}
-      />
-
-      {confirming ? (
-        <div className="space-y-2 rounded-md border border-topic-line bg-topic-bg p-3">
-          <p className="text-xs leading-relaxed text-topic">
-            {exactHit ? (
-              <>
-                „{exactHit.title}" steht schon in eurer Liederliste. Willst du
-                wirklich einen zweiten Eintrag anlegen?
-              </>
-            ) : (
-              <>
-                „{trimmedTitle}" kennt die App noch nicht. Neu anlegen? Es
-                landet dann in eurer Liederliste und lässt sich beim nächsten
-                Mal einfach auswählen.
-              </>
-            )}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-1"
-              onClick={() => setConfirming(false)}
-            >
-              Nochmal ansehen
-            </Button>
-            <Button
-              size="sm"
-              className="flex-1"
-              loading={add.isPending}
-              onClick={() => submit()}
-            >
-              {exactHit ? 'Trotzdem anlegen' : 'Anlegen'}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" className="flex-1" onClick={reset}>
-            Abbrechen
-          </Button>
-          <Button
-            size="sm"
-            className="flex-1"
-            disabled={trimmedTitle === ''}
-            onClick={() => setConfirming(true)}
-          >
-            Hinzufügen
-          </Button>
-        </div>
+      {mayDelete && (
+        <IconButton
+          label="Lied entfernen"
+          onClick={() => remove.mutate(entry.id)}
+        >
+          <Trash2 size={15} />
+        </IconButton>
       )}
-    </div>
+    </li>
   );
 }

@@ -35,6 +35,17 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: '1.6.0',
+    date: '2026-08-30',
+    title:
+      'Neuer Header, Gruppen-Detail-Ansicht mit Vorschlägen und Design-Updates',
+    highlights: [
+      'Es gibt nun einen dynamischen Header, der beim Scrollen nach unten verschwindet. Ausschaltbar über das Profil',
+      'Die Gruppen-Detail-Ansicht bietet Möglichkeiten für das Planen von Aktionen sowie weitere Einstellungen für die Gruppe.',
+      'Der HomeScreen wurde überarbeitet, um die wichtigsten Informationen auf einen Blick zu präsentieren.',
+    ],
+  },
+  {
     version: '1.5.0',
     date: '2026-08-19',
     title: 'Alleinstehende Einheiten',

@@ -42,6 +42,13 @@ export type FieldError = NonNullable<ErrorPayload['errors']>[number];
 export type Me = S['MeResponseDto'];
 export type Hauskreis = S['HauskreisResponseDto'];
 export type CreateHauskreisInput = S['CreateHauskreisDto'];
+/** Name und Beschreibung — beides darf jede:r ändern, wie das Kopfbild. */
+export type UpdateHauskreisInput = S['UpdateHauskreisDto'];
+
+/** Eine Idee der Gruppe: Titel, optionale Notiz, Haken. */
+export type GroupIdea = S['GroupIdeaListResponseDto'][number];
+export type CreateGroupIdeaInput = S['CreateGroupIdeaDto'];
+export type UpdateGroupIdeaInput = S['UpdateGroupIdeaDto'];
 
 // ── Personen ────────────────────────────────────────────────────────────────
 
@@ -252,11 +259,13 @@ export type PushSubscriptionRecord = S['PushSubscriptionResponseDto'];
 export type CreatePushSubscriptionInput = S['CreatePushSubscriptionDto'];
 export type DeliveryResult = S['DeliveryResultResponseDto'];
 
+/** Die Box hinter der Glocke: Ungelesenes, die Zahl daneben und „Früher". */
+export type NotificationInbox = S['NotificationInboxResponseDto'];
+export type NotificationEntry = NotificationInbox['unread'][number];
+
 // ── Ergebnisse der Admin-Läufe ──────────────────────────────────────────────
 
 export type GenerationResult = S['GenerationResultResponseDto'];
-export type ReminderRunResult = S['ReminderRunResultResponseDto'];
-export type ActionstepRunResult = S['ActionstepRunResultResponseDto'];
 export type SyncResult = S['SyncResultResponseDto'];
 
 // ── Geburtstage und Geschenke ───────────────────────────────────────────────

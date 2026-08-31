@@ -8,7 +8,7 @@
 import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { Field, Select, TextInput } from '@/components/ui/field';
+import { Checkbox, Field, Select, TextInput } from '@/components/ui/field';
 import { ConflictBanner } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
@@ -20,11 +20,6 @@ import {
   usePrayerBuddyConfig,
   usePurgeAbandonedLocations,
   useRotatePrayerBuddies,
-  useRunActionstepReminders,
-  useRunCustomMeetingReminders,
-  useRunHostReminders,
-  useRunSongReminders,
-  useRunTopicReminders,
   useSyncAbsences,
   useUpdateMeetingSchedule,
   useUpdatePrayerBuddyConfig,
@@ -35,6 +30,7 @@ export function MaintenanceAdmin() {
   return (
     <>
       <MeetingScheduleCard />
+      <WeeklyActionstepCard />
       <PrayerBuddyConfigCard />
       <JobsCard />
     </>
@@ -104,6 +100,14 @@ function MeetingScheduleCard() {
         {update.conflict && (
           <ConflictBanner onResolve={update.resolveConflict} />
         )}
+
+        <p className="text-[11px] leading-relaxed text-stone-400">
+          Die App erstellt Hauskreis-Termine pro Woche automtisch für dich -
+          hier kannst du den Rhythmus deiner Treffen einstellen. Gilt für
+          Termine, die der Zeitplaner ab jetzt anlegt. Was schon im Kalender
+          steht, behält seinen Tag und seine Zeit — dafür hat längst jemand
+          zugesagt.
+        </p>
 
         <Field label="Wochentag">
           <Select
@@ -179,17 +183,55 @@ function MeetingScheduleCard() {
           Speichern
         </Button>
 
-        <p className="text-[11px] leading-relaxed text-stone-400">
-          Gilt für Termine, die der Zeitplaner ab jetzt anlegt. Was schon im
-          Kalender steht, behält seinen Tag und seine Zeit — dafür hat längst
-          jemand zugesagt.
-        </p>
-
         {current?.updatedBy && (
           <p className="text-[11px] text-stone-400">
             Zuletzt geändert von {current.updatedBy.name}.
           </p>
         )}
+      </Card>
+    </section>
+  );
+}
+
+/**
+ * Der Actionstep der Woche — der Vorsatz, den man die Woche über vor sich
+ * herträgt.
+ *
+ * Eine eigene Karte, obwohl er in derselben Zeile wie der Termin-Rhythmus
+ * steht: Er ist keine Aussage darüber, wann ihr euch trefft, sondern darüber,
+ * was danach stehen bleibt. Er wohnt nur dort, weil „die Woche" die zwischen
+ * zwei Terminen ist.
+ */
+function WeeklyActionstepCard() {
+  const schedule = useMeetingSchedule();
+  const update = useUpdateMeetingSchedule();
+  const toast = useToast();
+
+  const current = schedule.data?.data;
+
+  return (
+    <section>
+      <SectionTitle>Actionstep der Woche</SectionTitle>
+      <Card>
+        <Checkbox
+          label={'Auf „Heute" anzeigen'}
+          description="Der Vorsatz vom letzten Abend, mit Haken, plus die wöchentliche Erinnerung. An Einheiten und über die Nachbereitung bleibt der Actionstep so oder so."
+          checked={current?.weeklyActionstep ?? true}
+          disabled={update.isPending}
+          onChange={(event) =>
+            update.mutate(
+              { weeklyActionstep: event.target.checked },
+              {
+                onSuccess: () =>
+                  toast.success(
+                    event.target.checked
+                      ? 'Der Actionstep steht wieder auf „Heute".'
+                      : 'Der Actionstep der Woche ist aus.',
+                  ),
+              },
+            )
+          }
+        />
       </Card>
     </section>
   );
@@ -213,60 +255,91 @@ function PrayerBuddyConfigCard() {
           <ConflictBanner onResolve={update.resolveConflict} />
         )}
 
-        <Field
-          label="Länge einer Runde"
-          hint="In Wochen. Vorgabe sind zwei — neun Personen ergeben Gruppen zu zwei und drei."
-        >
-          <TextInput
-            type="number"
-            min="1"
-            max="12"
-            value={value}
-            onChange={(event) => setWeeks(event.target.value)}
-          />
-        </Field>
-
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            className="flex-1"
-            loading={update.isPending}
-            disabled={Number(value) === current?.periodLengthWeeks}
-            onClick={() =>
-              update.mutate(
-                { periodLengthWeeks: Number(value) },
-                {
-                  onSuccess: () => toast.success('Rhythmus gespeichert.'),
-                },
-              )
-            }
-          >
-            Speichern
-          </Button>
-          <Button
-            className="flex-1"
-            loading={rotate.isPending}
-            onClick={() =>
-              rotate.mutate(true, {
-                onSuccess: (result) =>
+        {/* Der Schalter steht über allem anderen, denn er entscheidet, ob das
+            Übrige überhaupt eine Frage ist. Aus heißt ganz aus: kein Tab, keine
+            Karte auf „Heute", keine Benachrichtigungsart. Bestehende Runden
+            bleiben stehen und sind beim Wiedereinschalten wieder da. */}
+        <Checkbox
+          label="Gebetsbuddys"
+          description="Alle paar Wochen neue Zweier- und Dreiergruppen, die füreinander beten. Ohne sie fällt der Gebets-Tab weg."
+          checked={current?.enabled ?? true}
+          disabled={update.isPending}
+          onChange={(event) =>
+            update.mutate(
+              { enabled: event.target.checked },
+              {
+                onSuccess: () =>
                   toast.success(
-                    result.created
-                      ? `Nächste Runde läuft ab heute, ${result.notified} benachrichtigt.`
-                      : 'Es war nichts zu wechseln.',
+                    event.target.checked
+                      ? 'Gebetsbuddys sind aus.'
+                      : 'Gebetsbuddys sind wieder da.',
                   ),
-              })
-            }
-          >
-            Jetzt weiterschalten
-          </Button>
-        </div>
+              },
+            )
+          }
+        />
 
-        {/* Nicht mehr „neu würfeln": seit fünf Runden im Voraus stehen, wird
+        {current?.enabled !== false && (
+          <>
+            <p className="text-[11px] leading-relaxed text-stone-400">
+              Hier kannst du einstellen, wie viele Wochen eine Gebetsrunde
+              dauert. Vorgabe sind zwei Wochen. Die Änderung gilt für die
+              Runden, die ab jetzt angelegt werden.
+            </p>
+
+            <Field label="Länge einer Runde" hint="Angabe in Wochen">
+              <TextInput
+                type="number"
+                min="1"
+                max="12"
+                value={value}
+                onChange={(event) => setWeeks(event.target.value)}
+              />
+            </Field>
+
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                loading={update.isPending}
+                disabled={Number(value) === current?.periodLengthWeeks}
+                onClick={() =>
+                  update.mutate(
+                    { periodLengthWeeks: Number(value) },
+                    {
+                      onSuccess: () => toast.success('Rhythmus gespeichert.'),
+                    },
+                  )
+                }
+              >
+                Speichern
+              </Button>
+              <Button
+                className="flex-1"
+                loading={rotate.isPending}
+                onClick={() =>
+                  rotate.mutate(true, {
+                    onSuccess: (result) =>
+                      toast.success(
+                        result.created
+                          ? `Nächste Runde läuft ab heute, ${result.notified} benachrichtigt.`
+                          : 'Es war nichts zu wechseln.',
+                      ),
+                  })
+                }
+              >
+                Jetzt weiterschalten
+              </Button>
+            </div>
+
+            {/* Nicht mehr „neu würfeln": seit fünf Runden im Voraus stehen, wird
             nicht neu ausgelost, sondern die nächste geplante vorgezogen. */}
-        <p className="text-[11px] leading-relaxed text-stone-400">
-          Beendet die laufende Runde und zieht die nächste geplante auf heute
-          vor. Danach steht der Vorlauf wieder voll.
-        </p>
+            <p className="text-[11px] leading-relaxed text-stone-400">
+              Beendet die laufende Runde und zieht die nächste geplante auf
+              heute vor. Danach steht der Vorlauf wieder voll.
+            </p>
+          </>
+        )}
 
         {current?.updatedBy && (
           <p className="text-[11px] text-stone-400">
@@ -290,16 +363,17 @@ function JobsCard() {
 
   // Die Hooks stehen einzeln da und nicht in einer Schleife — die Reihenfolge
   // von Hook-Aufrufen muss über Renderdurchläufe hinweg dieselbe sein.
+  //
+  // **Die Erinnerungs-Läufe standen einmal hier und sind weg.** Sieben Knöpfe,
+  // die alle dasselbe taten: eine Nachricht von Hand auslösen, die der Cron um
+  // neun ohnehin schickt. Sie waren zum Ausprobieren da; was blieb, waren
+  // sieben Gelegenheiten, der Gruppe versehentlich etwas zu schicken. Übrig
+  // sind die Läufe, die etwas anlegen oder aufräumen.
   const generate = useGenerateMeetings();
   const planRounds = usePlanPrayerBuddyRounds();
   const repairRound = useRepairPrayerBuddyRound();
   const syncAbsences = useSyncAbsences();
   const purgeLocations = usePurgeAbandonedLocations();
-  const hostReminders = useRunHostReminders();
-  const topicReminders = useRunTopicReminders();
-  const songReminders = useRunSongReminders();
-  const customMeetingReminders = useRunCustomMeetingReminders();
-  const actionstepReminders = useRunActionstepReminders();
 
   const fail = (error: unknown) => toast.error(errorMessage(error));
 
@@ -370,56 +444,6 @@ function JobsCard() {
                 ? `${r.deleted} Ort(e) gelöscht.`
                 : 'Es gab nichts wegzuräumen.',
             ),
-          onError: fail,
-        }),
-    },
-    {
-      label: 'Host-Erinnerungen',
-      hint: 'Erinnert die Gastgeber der nächsten Termine.',
-      pending: hostReminders.isPending,
-      run: () =>
-        hostReminders.mutate(undefined, {
-          onSuccess: (r) => toast.success(`${r.notified} benachrichtigt.`),
-          onError: fail,
-        }),
-    },
-    {
-      label: 'Themen-Erinnerungen',
-      hint: 'Erinnert die, die ein Thema vorbereiten.',
-      pending: topicReminders.isPending,
-      run: () =>
-        topicReminders.mutate(undefined, {
-          onSuccess: (r) => toast.success(`${r.notified} benachrichtigt.`),
-          onError: fail,
-        }),
-    },
-    {
-      label: 'Song-Erinnerungen',
-      hint: 'Erinnert an die Songauswahl vor dem Abend.',
-      pending: songReminders.isPending,
-      run: () =>
-        songReminders.mutate(undefined, {
-          onSuccess: (r) => toast.success(`${r.notified} benachrichtigt.`),
-          onError: fail,
-        }),
-    },
-    {
-      label: 'Erinnerungen an besondere Termine',
-      hint: 'Geht an alle, nicht nur an Zuständige — einen Geburtstag hat man nicht im Kopf wie den Dienstag.',
-      pending: customMeetingReminders.isPending,
-      run: () =>
-        customMeetingReminders.mutate(undefined, {
-          onSuccess: (r) => toast.success(`${r.notified} benachrichtigt.`),
-          onError: fail,
-        }),
-    },
-    {
-      label: 'Actionstep-Erinnerungen',
-      hint: 'Die wöchentliche Erinnerung an den Actionstep.',
-      pending: actionstepReminders.isPending,
-      run: () =>
-        actionstepReminders.mutate(undefined, {
-          onSuccess: (r) => toast.success(`${r.notified} benachrichtigt.`),
           onError: fail,
         }),
     },

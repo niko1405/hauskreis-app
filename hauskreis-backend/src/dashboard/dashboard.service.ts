@@ -7,15 +7,13 @@ import {
 } from '../prayer-buddy/prayer-buddy.service';
 import { AssignmentService, type Assignment } from './assignment.service';
 import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
-import { addDays } from '../meeting/meeting-schedule';
+import { addDays, notFinishedBefore } from '../meeting/meeting-schedule';
+import { eveningReached } from '../common/time/local-evening';
 import { ANGEKOMMEN } from '../person/angekommen';
 import { NotificationPreferenceService } from '../notification/notification-preference.service';
 import { GroupClockService } from '../meeting/group-clock.service';
-import {
-  actionstepOf,
-  actionstepSelect,
-  hasActionstep,
-} from '../meeting/actionstep-source';
+import { latestActionstep } from '../meeting/actionstep-source';
+import { GroupFeaturesService } from '../hauskreis/group-features.service';
 import {
   sessionSelectWithTopic,
   shapeSessionForMeeting,
@@ -25,53 +23,72 @@ import {
 /** How far ahead the home screen looks for your own jobs. */
 export const HOME_HORIZON_DAYS = 8 * 7;
 
-export interface HomeScreen {
-  /** Null when nothing is planned — a valid state, not an error. */
-  nextMeeting: {
+/**
+ * Ein Termin, wie ihn der Startbildschirm braucht.
+ *
+ * Einmal beschrieben und zweimal benutzt: für den laufenden und den nächsten.
+ * Zwei Abschriften desselben Objekts wären zwei Gelegenheiten, sie auseinander
+ * laufen zu lassen.
+ */
+export interface HomeMeeting {
+  id: string;
+  date: string;
+  /**
+   * Minuten seit Mitternacht — das Antwort-Schema macht `"19:30"` daraus,
+   * genau wie bei `meeting.startTime`.
+   *
+   * „Wann treffen wir uns" ist die zweite Frage nach „wann", und sie stand auf
+   * dem Startbildschirm bisher gar nicht: man musste den Termin öffnen, um
+   * eine Uhrzeit zu sehen, die sich inzwischen einstellen lässt.
+   */
+  startTime: number;
+  endDate: string | null;
+  type: string;
+  /** Ob der Abend überhaupt ein Thema, Lieder bzw. ein Testimony vorsieht. */
+  hasTopicSlot: boolean;
+  hasSongSlot: boolean;
+  hasTestimonySlot: boolean;
+  title: string | null;
+  /**
+   * Mit Position, damit der Home-Screen ein „In Maps öffnen" anbieten kann,
+   * ohne den Ort einzeln nachzuladen. `latitude`/`longitude` sind entweder
+   * beide gesetzt oder beide null — das erzwingt schon das Location-DTO.
+   */
+  location: {
     id: string;
-    date: string;
-    /**
-     * Minuten seit Mitternacht — das Antwort-Schema macht `"19:30"` daraus,
-     * genau wie bei `meeting.startTime`.
-     *
-     * „Wann treffen wir uns" ist die zweite Frage nach „wann", und sie stand auf
-     * dem Startbildschirm bisher gar nicht: man musste den Termin öffnen, um
-     * eine Uhrzeit zu sehen, die sich inzwischen einstellen lässt.
-     */
-    startTime: number;
-    endDate: string | null;
-    type: string;
-    /** Ob der Abend überhaupt ein Thema, Lieder bzw. ein Testimony vorsieht. */
-    hasTopicSlot: boolean;
-    hasSongSlot: boolean;
-    hasTestimonySlot: boolean;
-    title: string | null;
-    /**
-     * Mit Position, damit der Home-Screen ein „In Maps öffnen" anbieten kann,
-     * ohne den Ort einzeln nachzuladen. `latitude`/`longitude` sind entweder
-     * beide gesetzt oder beide null — das erzwingt schon das Location-DTO.
-     */
-    location: {
-      id: string;
-      name: string;
-      latitude: number | null;
-      longitude: number | null;
-      address: string | null;
-      /** Damit „kein Host nötig" nicht wie ein fehlender Host aussieht. */
-      requiresHost: boolean;
-    } | null;
-    host: { id: string; name: string } | null;
-    /** Wer für das Thema zugeteilt ist — steht auch ohne gewähltes Thema da. */
-    topicResponsibles: { id: string; name: string }[];
-    /** Was gewählt wurde, sofern es der Betrachter schon sehen darf. */
-    topic: { id: string; title: string | null } | null;
-    /** Who is on for the music. Empty is valid — not every evening has songs. */
-    songLeaders: { id: string; name: string }[];
-    /** Wer sein Testimony erzählt — an einem Lobpreisabend die tragende Rolle. */
-    testimonyPerson: { id: string; name: string } | null;
-    /** What *you* answered for that evening. */
-    myAttendance: string;
+    name: string;
+    latitude: number | null;
+    longitude: number | null;
+    address: string | null;
+    /** Damit „kein Host nötig" nicht wie ein fehlender Host aussieht. */
+    requiresHost: boolean;
   } | null;
+  host: { id: string; name: string } | null;
+  /** Wer für das Thema zugeteilt ist — steht auch ohne gewähltes Thema da. */
+  topicResponsibles: { id: string; name: string }[];
+  /** Was gewählt wurde, sofern es der Betrachter schon sehen darf. */
+  topic: { id: string; title: string | null } | null;
+  /** Who is on for the music. Empty is valid — not every evening has songs. */
+  songLeaders: { id: string; name: string }[];
+  /** Wer sein Testimony erzählt — an einem Lobpreisabend die tragende Rolle. */
+  testimonyPerson: { id: string; name: string } | null;
+  /** What *you* answered for that evening. */
+  myAttendance: string;
+}
+
+export interface HomeScreen {
+  /**
+   * Der Abend, an dem man **gerade steht** — ab der Treffpunktzeit und bis sein
+   * letzter Tag vorbei ist.
+   *
+   * Getrennt vom nächsten, weil es zwei verschiedene Fragen sind: „wo bin ich
+   * jetzt" und „was kommt". Vorher gab es nur eine Karte, und die zeigte den
+   * laufenden Abend — „Nächstes Treffen: heute" ist aber keine Auskunft mehr,
+   * wenn man schon dort sitzt.
+   */
+  currentMeeting: HomeMeeting | null;
+  /** Null when nothing is planned — a valid state, not an error. */
+  nextMeeting: HomeMeeting | null;
   /**
    * Your own jobs over the next weeks, soonest first.
    *
@@ -126,6 +143,7 @@ export class DashboardService {
     private readonly buddies: PrayerBuddyService,
     private readonly clock: GroupClockService,
     private readonly preferences: NotificationPreferenceService,
+    private readonly features: GroupFeaturesService,
   ) {}
 
   async build(
@@ -137,15 +155,21 @@ export class DashboardService {
     const now = options.now ?? new Date();
     const today = await this.clock.today(hauskreisId, now);
 
-    const [meeting, actionstep, myRoles, buddies, peopleCount] =
+    const [features, meetings, actionstep, myRoles, buddies, peopleCount] =
       await Promise.all([
-        this.prisma.meeting.findFirst({
+        this.features.of(hauskreisId),
+        // **Zwei** Zeilen und nicht eine: Läuft gerade ein Abend, ist er die
+        // erste — der nächste steht dann dahinter. `notFinishedBefore` statt
+        // `date >= today`, damit eine Freizeit ab ihrem zweiten Tag nicht aus
+        // der eigenen Übersicht fällt.
+        this.prisma.meeting.findMany({
           where: {
             hauskreisId,
-            date: { gte: today },
+            ...notFinishedBefore(today),
             status: MeetingStatus.PLANNED,
           },
           orderBy: { date: 'asc' },
+          take: 2,
           select: {
             id: true,
             date: true,
@@ -182,24 +206,10 @@ export class DashboardService {
             },
           },
         }),
-        this.prisma.meeting.findFirst({
-          where: {
-            hauskreisId,
-            date: { lt: today },
-            status: { not: MeetingStatus.CANCELLED },
-            // Aus beiden Quellen — Einheit oder Nachbereitung des Abends.
-            ...hasActionstep,
-          },
-          orderBy: { date: 'desc' },
-          select: {
-            id: true,
-            date: true,
-            ...actionstepSelect,
-            // Nur die Ids: der Startbildschirm zeigt eine Zahl und den eigenen
-            // Haken, die Namen stehen auf der Detailseite.
-            actionstepDone: { select: { personId: true } },
-          },
-        }),
+        // Dieselbe Regel wie in der wöchentlichen Erinnerung: ein leerer Abend
+        // beendet den Vorsatz von davor, nur ein besonderer Termin ohne
+        // Actionstep wird übersprungen.
+        latestActionstep(this.prisma, hauskreisId, today),
         this.assignments.findAssignments(hauskreisId, {
           from: today,
           to: addDays(today, HOME_HORIZON_DAYS),
@@ -226,57 +236,81 @@ export class DashboardService {
       group.members.some((member) => member.id === personId),
     );
 
+    const zone = await this.clock.zoneOf(hauskreisId);
+
+    /**
+     * Ein Abend „läuft" ab seiner Treffpunktzeit und bis sein letzter Tag um
+     * ist. Dass er nicht vorbei ist, weiß die Abfrage oben schon
+     * (`notFinishedBefore`) — hier bleibt nur die Uhr des Anfangstags.
+     *
+     * Dieselbe Grenze wie beim Abhaken des Actionsteps und beim Freigeben des
+     * Themen-Inhalts (`eveningReached`). Zwei Rechnungen für „hat der Abend
+     * angefangen" wären eine zu viel.
+     */
+    const läuft = (meeting: (typeof meetings)[number]) =>
+      eveningReached(meeting.date, zone, now, meeting.startMinutes);
+
+    const current = meetings[0] && läuft(meetings[0]) ? meetings[0] : null;
+    const next = meetings.find((meeting) => meeting !== current) ?? null;
+
     // `now` reicht bis hierher durch: die Abendregel ist eine Frage an die Uhr,
     // und ein Startbildschirm, der sie anders beantwortet als der Termin selbst,
     // wäre der Fehler, den ein gemeinsamer Helfer gerade verhindern soll.
-    const nextSession = meeting?.topicSession
-      ? shapeSessionForMeeting(
-          meeting.topicSession,
-          meeting.topicSession.topic,
-          {
-            personId,
-            isAdmin,
-            zone: await this.clock.zoneOf(hauskreisId),
-            now,
-          },
-        )
-      : null;
+    const shape = (
+      meeting: (typeof meetings)[number] | null,
+    ): HomeMeeting | null => {
+      if (!meeting) return null;
 
-    const actionstepText = actionstep && actionstepOf(actionstep);
+      const session = meeting.topicSession
+        ? shapeSessionForMeeting(
+            meeting.topicSession,
+            meeting.topicSession.topic,
+            {
+              personId,
+              isAdmin,
+              zone,
+              now,
+            },
+          )
+        : null;
+
+      return {
+        id: meeting.id,
+        date: isoDate(meeting.date),
+        startTime: meeting.startMinutes,
+        endDate: meeting.endDate ? isoDate(meeting.endDate) : null,
+        type: meeting.type,
+        hasTopicSlot: meeting.hasTopicSlot,
+        hasSongSlot: meeting.hasSongSlot,
+        hasTestimonySlot: meeting.hasTestimonySlot,
+        title: meeting.title,
+        location: meeting.location,
+        host: meeting.host,
+        topicResponsibles: meeting.topicResponsibles.map((r) => r.person),
+        // Über dieselbe Umformung wie überall: vor der Treffpunktzeit gehört
+        // der Titel denen, die ihn vorbereiten, und `shapeSession` gibt ihn
+        // dann als `null` zurück. Ein zweiter Weg an dieselbe Frage wäre ein
+        // zweiter Weg, sie falsch zu beantworten.
+        topic: session?.contentVisible
+          ? { id: session.topic.id, title: session.topic.title }
+          : null,
+        songLeaders: meeting.songLeaders.map((leader) => leader.person),
+        testimonyPerson: meeting.testimonyPerson,
+        // No row means nobody answered yet, which is exactly UNKNOWN.
+        myAttendance: meeting.attendances[0]?.status ?? 'UNKNOWN',
+      };
+    };
 
     return {
-      nextMeeting: meeting
-        ? {
-            id: meeting.id,
-            date: isoDate(meeting.date),
-            startTime: meeting.startMinutes,
-            endDate: meeting.endDate ? isoDate(meeting.endDate) : null,
-            type: meeting.type,
-            hasTopicSlot: meeting.hasTopicSlot,
-            hasSongSlot: meeting.hasSongSlot,
-            hasTestimonySlot: meeting.hasTestimonySlot,
-            title: meeting.title,
-            location: meeting.location,
-            host: meeting.host,
-            topicResponsibles: meeting.topicResponsibles.map((r) => r.person),
-            // Über dieselbe Umformung wie überall: vor 18 Uhr am Termintag
-            // gehört der Titel denen, die ihn vorbereiten, und `shapeSession`
-            // gibt ihn dann als `null` zurück. Ein zweiter Weg an dieselbe
-            // Frage wäre ein zweiter Weg, sie falsch zu beantworten.
-            topic: nextSession?.contentVisible
-              ? { id: nextSession.topic.id, title: nextSession.topic.title }
-              : null,
-            songLeaders: meeting.songLeaders.map((leader) => leader.person),
-            testimonyPerson: meeting.testimonyPerson,
-            // No row means nobody answered yet, which is exactly UNKNOWN.
-            myAttendance: meeting.attendances[0]?.status ?? 'UNKNOWN',
-          }
-        : null,
+      currentMeeting: shape(current),
+      nextMeeting: shape(next),
       myRoles: myRoles.filter((role) => role.role !== 'PRAYER_BUDDY'),
+      // Abgeschaltet heißt nicht „leer", sondern „gibt es hier nicht" — beide
+      // Karten fallen im Frontend an genau diesem `null` von selbst weg.
       openActionstep:
-        actionstep && actionstepText
+        features.weeklyActionstep && actionstep
           ? {
-              text: actionstepText,
+              text: actionstep.text,
               meetingId: actionstep.id,
               date: isoDate(actionstep.date),
               done: actionstep.actionstepDone.some(
@@ -287,7 +321,7 @@ export class DashboardService {
             }
           : null,
       prayerBuddies:
-        buddies && myGroup
+        features.prayerBuddies && buddies && myGroup
           ? { until: buddies.periodEnd, members: myGroup.members }
           : null,
     };

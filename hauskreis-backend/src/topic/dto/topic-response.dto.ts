@@ -44,12 +44,17 @@ export const topicSessionResponseSchema = z.object({
   /// Das Thema darüber. Fehlt, wo die Einheit ohnehin unter ihrem Thema steht.
   topic: topicRefSchema,
   meetingId: z.uuid().nullable(),
-  /// Der Abend, an dem sie hängt. Bewusst nur die fünf Felder, die eine
+  /// Der Abend, an dem sie hängt. Bewusst nur die sechs Felder, die eine
   /// Zeile in der Einheiten-Liste braucht — der volle Termin steht anderswo.
   meeting: z
     .object({
       id: z.uuid(),
       date: isoDateOut,
+      /// Gesetzt, wenn sich der Termin über mehrere Tage zieht. Steht hier aus
+      /// demselben Grund wie `startTime`: „vorbei" heißt den **ganzen**
+      /// Zeitraum, und ohne dieses Feld hielte die Anzeige eine laufende
+      /// Freizeit ab ihrem zweiten Tag für Vergangenheit.
+      endDate: isoDateOut.nullable(),
       /// `"19:30"` — nicht zum Anzeigen, sondern damit die Themenseite weiß, ab
       /// wann sich der Actionstep abhaken lässt. Dieselbe Grenze wie am Termin.
       startTime: wallClockOut,

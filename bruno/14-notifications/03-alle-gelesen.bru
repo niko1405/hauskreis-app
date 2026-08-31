@@ -1,0 +1,22 @@
+meta {
+  name: Alle als gelesen markieren
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/notifications/read-all
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet mit 204", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Räumt die Box. Danach steht an der Glocke keine Zahl mehr, und alles wandert
+  nach „Früher" — verschwunden ist nichts.
+}

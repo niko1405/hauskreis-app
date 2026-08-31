@@ -33,8 +33,8 @@ import {
   useSetAttendance,
   useUncancelMeeting,
 } from '@/lib/api/hooks';
-import { formatTimestamp, isPast } from '@/lib/date';
-import { meetingHeadline } from '@/lib/meeting';
+import { formatTimestamp } from '@/lib/date';
+import { isMeetingPast, meetingHeadline } from '@/lib/meeting';
 import type { Meeting } from '@/lib/api/types';
 
 export function CancelledNotice({ meeting }: { meeting: Meeting }) {
@@ -56,7 +56,7 @@ export function CancelledNotice({ meeting }: { meeting: Meeting }) {
    * Server erkennt beim Abgleich, dass nicht mehr alle abgesagt haben, und holt
    * den Abend von selbst zurück.
    */
-  const mayAttend = automatic && me && !isPast(meeting.date);
+  const mayAttend = automatic && me && !isMeetingPast(meeting);
 
   return (
     <Card className="space-y-3 border-alert-line bg-alert-bg">

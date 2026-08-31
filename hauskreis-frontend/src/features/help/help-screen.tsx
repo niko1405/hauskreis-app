@@ -31,6 +31,8 @@ import {
   type FaqEntry,
 } from './faq-content';
 import { useUnreadFirstSteps } from './use-unread-help';
+import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
+import { FaqAnswer } from './faq-answer';
 
 /**
  * Vergleichsform: klein und ohne Akzente.
@@ -52,6 +54,7 @@ function haystack(entry: FaqEntry): string {
 
 export function HelpScreen() {
   const me = useMe();
+  const { hauskreis } = useHauskreis();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<FaqCategory | 'all'>('all');
   const deferred = useDeferredValue(search).trim();
@@ -60,9 +63,20 @@ export function HelpScreen() {
   // ein Bereich auf, der gleich wieder verschwindet.
   const isAdmin = me.isAdmin;
 
+  // Und dasselbe für einen Baustein, den die Gruppe abgeschaltet hat: Antworten
+  // über Gebetsbuddys sind dort keine Hilfe, sondern eine Beschreibung von
+  // etwas, das es hier nicht gibt. Die leere Kategorie fällt gleich darunter
+  // von selbst weg.
+  const prayer = hauskreis?.features.prayerBuddies ?? true;
+
   const visible = useMemo(
-    () => FAQ_ENTRIES.filter((entry) => isAdmin || !entry.adminOnly),
-    [isAdmin],
+    () =>
+      FAQ_ENTRIES.filter(
+        (entry) =>
+          (isAdmin || !entry.adminOnly) &&
+          (prayer || entry.category !== 'prayer'),
+      ),
+    [isAdmin, prayer],
   );
 
   // Eine Kategorie, von der nichts übrig ist, hat auch keine Pille verdient.
@@ -240,49 +254,10 @@ function Entry({ entry, open }: { entry: FaqEntry; open: boolean }) {
           className="shrink-0 text-stone-400 transition-transform group-open:rotate-180"
         />
       </summary>
-      {/* Leerzeile trennt Absätze, einzelner Umbruch trennt Zeilen — das
-          erledigt `whitespace-pre-line`, damit Aufzählungen nicht zu einem
-          Fließtext zusammenlaufen und es dafür keinen zweiten Mechanismus
-          braucht.
-
-          Der Index als Schlüssel ist hier genau richtig: Die Absätze eines
-          Antworttextes stehen fest, sie kommen nicht dazu, gehen nicht weg und
-          tauschen nie den Platz. */}
-      <div className="space-y-3 px-5 pb-5 text-sm leading-relaxed text-stone-500">
-        {entry.answer.split('\n\n').map((paragraph, index) => (
-          // eslint-disable-next-line react/no-array-index-key
-          <p key={index} className="whitespace-pre-line">
-            <Emphasised text={paragraph} />
-          </p>
-        ))}
-      </div>
+      <FaqAnswer
+        text={entry.answer}
+        className="space-y-3 px-5 pb-5 text-sm leading-relaxed text-stone-500"
+      />
     </details>
-  );
-}
-
-/**
- * `**fett**` im Antworttext.
- *
- * Ein ganzer Markdown-Übersetzer wäre für eine Auszeichnung zu viel Gepäck —
- * und Fettdruck ist die einzige, die diese Texte brauchen: Sie tragen die
- * Sätze, auf die es ankommt.
- */
-function Emphasised({ text }: { text: string }) {
-  return (
-    <>
-      {/* Auch hier ist der Index der richtige Schlüssel — und mehr noch: Er
-          *ist* die Information. `split` mit Gruppe liefert abwechselnd Text und
-          Auszeichnung, ungerade Stellen sind die fetten. */}
-      {text.split(/\*\*(.+?)\*\*/g).map((part, index) =>
-        index % 2 === 1 ? (
-          // eslint-disable-next-line react/no-array-index-key
-          <strong key={index} className="font-semibold text-stone-700">
-            {part}
-          </strong>
-        ) : (
-          part
-        ),
-      )}
-    </>
   );
 }
