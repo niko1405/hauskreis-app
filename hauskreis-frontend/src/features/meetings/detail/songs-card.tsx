@@ -314,7 +314,6 @@ function SongRow({
         </p>
         <p className="truncate text-[11px] text-stone-400">
           {entry.song.artist ?? 'Unbekannt'}
-          {entry.suggestedBy && ` · von ${entry.suggestedBy.name}`}
         </p>
       </div>
 
