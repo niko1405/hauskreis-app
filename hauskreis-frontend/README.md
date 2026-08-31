@@ -121,9 +121,9 @@ der Knopf anfühlt wie kaputt.
 geht der Aufruf schief, dreht `rollback` alles zurück. `useApiMutation` nimmt es
 über die Option `optimistic` entgegen.
 
-Vorgreifend sind die vier Tipp-Schalter: Anwesenheit (zwei Caches — Termin-Detail
-**und** Home, wo dieselbe Antwort als „Bist du dabei?" steht), der
-Actionstep-Haken, die Lied-Auswahl und die Benachrichtigungs-Einstellungen.
+Vorgreifend sind die vier Tipp-Schalter: Anwesenheit (Termin-Detail und
+Terminliste — beide zeigen dieselbe Antwort), der Actionstep-Haken, die
+Lied-Auswahl und die Benachrichtigungs-Einstellungen.
 **Nicht** vorgreifend sind Anlegen, Löschen und alles mit ETag: ein optimistisch
 angelegter Termin ohne Id ist mehr Buchhaltung als Nutzen, und bei
 ETag-Schreibvorgängen ist die Serverantwort die Quelle des nächsten ETags.
@@ -545,14 +545,15 @@ Grillen dabei war, darf sagen, dass es stattgefunden hat; **löschen** nur der
 Urheber oder ein Admin. Die Regel steht im Frontend ein zweites Mal, weil der
 Papierkorb sonst dastünde und mit `403` antwortete.
 
-**Stift und Papierkorb liegen hinter einem langen Druck** (`useLongPress`),
-genau wie an der Liederliste im Archiv und aus demselben Grund: Der Papierkorb
-stand dauerhaft neben jedem Eintrag — ein Ziel am Rand einer Liste, durch die
-man scrollt, und der Daumen fand es zuverlässiger als den Text. Ein Stift
-daneben hätte das verdoppelt. Ändern gab es dabei bis dahin überhaupt nicht:
-Server und `useUpdateIdea` konnten `title`/`note` längst, nur die Bedienung
-fehlte. Anlegen und Ändern teilen sich jetzt `IdeaForm` — zwei Formulare wären
-zwei Meinungen darüber, was eine Idee ausmacht.
+**Stift und Papierkorb liegen hinter einem Wisch nach links**
+(`SwipeActions`, siehe unten), genau wie an der Liederliste im Archiv und den
+Treffpunkten. Der Papierkorb stand einmal dauerhaft neben jedem Eintrag — ein
+Ziel am Rand einer Liste, durch die man scrollt, und der Daumen fand es
+zuverlässiger als den Text; ein Stift daneben hätte das verdoppelt. Ändern gab
+es dabei überhaupt noch nicht: Server und `useUpdateIdea` konnten `title`/`note`
+längst, nur die Bedienung fehlte. Anlegen und Ändern teilen sich jetzt
+`IdeaForm` — zwei Formulare wären zwei Meinungen darüber, was eine Idee
+ausmacht.
 
 Der Zuschnitt des Gruppenbilds benutzt `AVATAR_CROP` — rund, quadratisch, 512.
 Eine eigene Konstante daneben wäre dieselbe Zahlenreihe mit einem zweiten Namen.
@@ -673,8 +674,9 @@ verschieden gezählt wird.
 **„Nächstes Treffen" nennt alle drei Rollen** in denselben `RoleChip`s wie die
 Terminkarte. Sonst hieße „noch kein Host" auf zwei Bildschirmen zweierlei. Die
 Chips verlinken aufs Detail, weil dort das „+ Musik eintragen" auch einlösbar
-ist. „Bist du dabei?" bleibt unverändert und gilt weiterhin nur für genau
-diesen einen Abend.
+ist — und seit dem Umzug der Antwort ist der Link auch der Weg zum Zusagen. Die
+Karte selbst fragt nicht mehr danach: Der Startbildschirm ist die Übersicht
+(„was steht an"), nicht die Entscheidung.
 
 ## Die Termin-Detailseite
 
@@ -732,13 +734,15 @@ Wahl-Sheet. Der Formularrumpf dafür ist als
 Dazu drei kleinere Umbauten:
 
 - **Der Titel sitzt am Überschriftstext**, nicht in einem Feld weiter unten.
-  Angezeigt wird die fertige Überschrift (eigener Titel, sonst der Titel des
-  Abends im Thema, sonst der des Themas, sonst die Terminart); bearbeitet wird
-  aber nur `meeting.title`. Würde der Entwurf mit der Überschrift starten,
-  machte das erste Speichern aus dem geerbten Themen-Titel einen eigenen — und
-  der Termin löste sich still vom Thema ab. Für alle, die den Inhalt noch nicht
-  sehen dürfen, steht dort die Terminart, und das ist genau richtig: zu sehen
-  gibt es noch nichts.
+  Der Termin heißt dabei **nach sich selbst**: `meetingHeadline` fiel einmal auf
+  den Titel der Einheit zurück und dann auf den des Themas, ein Abend hieß damit
+  „Teil 2: Was Petrus tat" — der Name der Einheit, nicht der des Abends. Ohne
+  eigenen Titel steht dort jetzt die Terminart; wer will, trägt am Termin etwas
+  anderes ein. Das Thema bleibt sichtbar, nur nicht als Überschrift: als
+  Rollen-Chip auf der Karte, als Themen-Kasten hier, im Archiv unter „Themen".
+  Nebenbei sagen damit alle Bildschirme dasselbe — der Startbildschirm bekam nie
+  ein `topicSession` und zeigte längst die Terminart, während Liste, Kalender
+  und Detailseite den Themen-Titel zeigten.
 - **Der Info-Text steht oben.** Dort steht, was man _vor_ dem Abend wissen muss;
   unten zwischen Zusammenfassung und Actionstep las es niemand rechtzeitig.
 - **„Wer kommt" beantwortet „mit wie vielen rechne ich?"** — siehe unten, das
@@ -936,7 +940,10 @@ der Gruppe.
 
 ### „Wer kommt": mit wie vielen rechne ich?
 
-`detail/attendance-card.tsx`, drei Teile — Liste, Abgesagte, eigene Antwort.
+`detail/attendance-card.tsx`, zwei Teile — die Liste und die Abgesagten. Die
+**eigene** Antwort steht seit dem Umzug unten am Bildschirm
+(`detail/answer-bar.tsx`, eigener Abschnitt weiter unten); geblieben ist hier,
+was die Karte über die anderen sagt.
 
 **„Weiß noch nicht" zählt in die Planung.** Die Überschrift sagte „3 von 9" und
 meinte nur die ausdrücklichen Zusagen. Der Server rechnet für die
@@ -971,24 +978,21 @@ In der Liste hebt sich nur die Verspätung farblich ab: Sie ändert etwas am Abe
 selbst, während die anderen beiden erklären.
 
 **Der Status schreibt sofort, die Notiz auf Knopfdruck.** Ein Tipp auf „Dabei"
-ist überall sonst — Startbildschirm, Terminkarte, Kalender — augenblicklich
+ist überall sonst — Terminkarte, Kalender — augenblicklich
 verbindlich; erst nach einem zweiten Knopf zu speichern hieße, man könnte
 antippen, weggehen und nichts gesagt haben. Die Notiz braucht den Knopf dagegen,
 sonst ginge bei jedem Buchstaben eine Anfrage raus. Er steht immer da und ist
 nur untätig, solange nichts zu speichern ist — ihn verschwinden zu lassen ließe
-die Karte beim ersten Buchstaben springen.
+den Balken beim ersten Buchstaben springen.
 
 **Der optimistische Patch kennt die Regel des Servers.** Fehlt die Notiz im
 Aufruf, bleibt sie stehen, solange der Status derselbe ist, und fällt weg, sobald
-er wechselt — eine Verspätung gehört nicht auf eine Absage. Die kompakten
-Umschalter in Liste, Kalender und auf „Heute" schicken nur den Status; ohne
-dieselbe Rechnung in `useSetAttendance` bliebe „komme 20 Min später" nach dem
-Absagen sichtbar, bis die Antwort eintrifft — also genau in dem Moment, in dem
-man hinsieht.
+er wechselt — eine Verspätung gehört nicht auf eine Absage. Die Rechnung steht
+trotzdem in `useSetAttendance` und nicht im Balken: Sie beschreibt, was der
+Server tut, und das ändert sich nicht dadurch, wer gerade fragt.
 
-Die eigene Antwort ist außerdem weiterhin der einzige Weg, für einen **einzelnen**
-Abend abzusagen: „Bist du dabei?" auf dem Startbildschirm gilt nur fürs nächste
-Treffen, und Abwesenheiten im Profil decken Zeiträume ab.
+Die eigene Antwort ist außerdem der einzige Weg, für einen **einzelnen** Abend
+abzusagen — Abwesenheiten im Profil decken Zeiträume ab.
 
 **„Weiß noch nicht" gibt die eigenen Rollen dieses Abends frei** — deshalb läuft
 der Statuswechsel über `components/domain/use-attendance-answer.ts` und nicht
@@ -997,11 +1001,126 @@ wirklich etwas dranhängt; die Rollen stehen in jeder Termin-Antwort, es braucht
 also keine zweite Abfrage. Die Rückfrage gilt dem **ganzen Schritt**: Abbrechen
 lässt Status und Rolle stehen.
 
-Er hängt an **allen drei** Stellen, an denen ein `UNKNOWN` entstehen kann — der
-Antwort-Karte hier und dem kompakten `AttendanceToggle` in Terminliste und
-Kalender, wo ein zweiter Tipp auf den gewählten Knopf die Antwort zurücknimmt.
-Eine davon auszulassen hieße, dass dieselbe Geste je nach Bildschirm etwas
-anderes tut. Die **Notiz** geht weiter direkt raus: Sie ändert am Status nichts.
+Ein `UNKNOWN` konnte an drei Stellen entstehen: am Termin und über den kompakten
+`AttendanceToggle` in Terminliste und Kalender. **Die beiden Umschalter sind
+weg** — geantwortet wird nur noch am Termin, und damit gibt es die Geste genau
+einmal. Der Hook bleibt trotzdem einer: Die Rückfrage ist eine Regel über die
+Daten und nicht über einen Bildschirm.
+
+An seiner Stelle steht auf der Terminkarte oben rechts die **Teilnehmerzahl**.
+Sie stand vorher klein zwischen Ort und Terminart und ging dort unter. Gezählt
+wird **nur, wer zugesagt hat** — „3 dabei" ist eine wahre Aussage über die
+Liste, während „geplant für 8" hier bewusst etwas anderes meint. Zwei Zahlen mit
+demselben Wort wären genau der Fehler, den dieser Abschnitt oben beschreibt.
+Anders als der Umschalter steht sie auch an vergangenen und abgesagten Abenden:
+„wer war da" ist dort die bessere Frage. Die **Kalenderzeile** bekommt keine —
+sie ist schon drei Zeilen hoch und beantwortet „was ist wann", nicht „mit wie
+vielen".
+
+Die **Notiz** geht weiter direkt raus: Sie ändert am Status nichts.
+
+Farben, Kurzformen und die Symbole der Sätze stehen in
+`components/domain/attendance-answers.ts` — Karte und Balken brauchen sie beide,
+und zwei Kopien wären zwei Meinungen darüber, welche Farbe „abgesagt" hat.
+
+### Die eigene Antwort ersetzt die Tab-Leiste
+
+`detail/answer-bar.tsx`. Sie war eine Karte mitten in der Seite, zwischen
+Anwesenheitsliste und Gebetsanliegen — gut zwei Bildschirmhöhen unter dem Kopf,
+obwohl sie das Einzige ist, das jede:r bei jedem Besuch tut. Alles andere auf
+dieser Seite liest man; das hier beantwortet man.
+
+Unten war dafür Platz, der auf dieser Seite nichts sagte: Die Leiste führt zu
+fünf Zielen, von denen man gerade keins meint — man ist _in_ einem Termin, und
+der Weg heraus ist der Zurück-Pfeil oben links.
+
+**Nur wo es etwas zu antworten gibt.** An einem vergangenen oder abgesagten
+Abend rendert die Terminseite den Balken gar nicht (`!locked`), und unten steht
+die Leiste wie überall sonst. Die Navigation aufzugeben lohnt nur da, wo etwas
+Nützlicheres an ihrer Stelle steht.
+
+**Wie „unten" funktioniert** (`layout/bottom-slot.tsx`): `AppShell` rendert
+statt `<TabBar />` einen `BottomSlotOutlet`, der die Leiste zeigt, solange
+niemand den Platz beansprucht. Der Balken wird von der Terminseite gerendert —
+also tief in `<main>` — und **portiert** sich dorthin. Er kann nicht bleiben, wo
+er entsteht: `main` trägt `overflow-x-hidden`, damit wird `overflow-y` zu `auto`,
+und ein `sticky bottom-0` in einem Scroll-Container klebt an dessen Unterkante,
+die weit unter dem Bildschirm liegt. Genau darum ist auch die Leiste selbst ein
+Geschwister von `main` und nicht sein Kind.
+
+Der Ziel-Kasten trägt `display: contents`, sonst wäre er der Elternkasten des
+Balkens und exakt so hoch wie er — `sticky` hätte keinen Weg zu kleben. Und der
+Anspruch ist ein **Zähler**, kein Schalter: React montiert Effekte im Strict
+Mode doppelt, und ein Boolean, das einmal zu früh zurückfällt, blendet die
+Navigation mitten im Betrieb wieder ein.
+
+**Zwei Zustände.** Eingeklappt die drei Antworten und der eigene Satz einzeilig,
+falls einer dasteht — ohne Schleier und ohne Sperre, damit die Seite
+weiterscrollt und „Ziehen zum Aktualisieren" scharf bleibt. Ausgeklappt kommt
+das Notizfeld dazu, und dann ist es ein Sheet wie jedes andere: `lockOverlay()`,
+Schleier, Escape, ein Tipp daneben. Zwei Sorten Overlay wären eine zu viel.
+
+Ein Druck auf eine Antwort klappt auf. Dafür gibt `useAttendanceAnswer` seit
+diesem Umbau `Promise<boolean>` zurück: `false`, wenn die Rollen-Rückfrage
+abgebrochen wurde. Wer sie abbricht, hat nichts geantwortet — ein Feld für eine
+Notiz zu einer nicht gegebenen Antwort wäre die falsche Frage.
+
+**Drei Lagen, und die Reihenfolge trägt.** Der Wirt ist `sticky bottom-0` und
+hält im Fluss die Höhe des _eingeklappten_ Balkens frei (gemessen, nicht
+gerechnet — sie hängt an Schriftart, Notizzeile und Umbruch). Das Panel liegt
+darin `absolute bottom-0` und wächst nach oben: So schiebt das Ausklappen nichts
+weg, und am unteren Ende der Seite rutscht es nicht aus dem Bild. Der Schleier
+ist ein **Geschwister** des Panels und nicht sein Kind — das Panel trägt beim
+Ziehen ein `transform`, und ein transformiertes Element wird zum Bezugsrahmen
+für jedes `position: fixed` darin.
+
+Der sichere Rand steckt im Panel (`pb-safe`), die Höhe des Wirts zählt ihn per
+`calc()` mit: Als Polsterung am Wirt zöge `box-sizing: border-box` ihn von der
+Höhe ab, und der Balken deckte auf einem Gerät mit Home-Indikator genau diesen
+Streifen Inhalt zu.
+
+**Auf „Heute" wird gar nicht mehr geantwortet.** Dort war es die vierte Fassung
+derselben Frage und die einzige mit eigenen Regeln: „Ja/Nein" statt der drei
+Antworten, kein Weg zurück auf „weiß noch nicht", und weil `NextMeetingCard`
+direkt über `useSetAttendance` schrieb, auch keine Rückfrage — ein Tipp auf
+„Nein" nahm einem stillschweigend den Abend, für den man eingeteilt war. Mit
+ihr ist der optimistische Patch auf `myAttendance` gefallen: Ein Feld zu
+pflegen, das niemand anzeigt, veraltet stillschweigend. Die Entwertung von
+`keys.home` bleibt — wer eine Rolle abgibt, ändert „Deine Rollen".
+
+### Sheets wischt man weg
+
+`components/ui/sheet.tsx`. Jedes Sheet trug oben einen Griff, seit dem ersten
+Entwurf — genau das Zeichen, das überall „zieh mich weg" heißt. Es hing kein
+einziger Handler daran: Wer zog, bei dem passierte nichts. Ein Zeichen, das ein
+Versprechen gibt und es nicht einlöst, ist schlimmer als keins.
+
+**Gezogen wird am Kopf.** Griff und Titelzeile sind der Ziehbereich
+(`dragListener={false}` plus `useDragControls`, gestartet aus einem
+`onPointerDown`), alles darunter bleibt reines Scrollen. Warum nicht das ganze
+Panel: Der Körper ist ein Scroller (`overflow-y-auto overscroll-contain`), und in
+`image-cropper.tsx` steckt darin `react-easy-crop` mit eigenem Schieben und
+Zoomen samt Bereichsregler. Zwei Gesten auf derselben Fläche brauchen eine Regel,
+welche gewinnt — und die hieße „nur wenn ganz oben gescrollt ist", also eine, die
+je nach Scrollstand etwas anderes tut. Am Kopf gibt es die Frage nicht.
+
+Das X hält den Zeiger mit `stopPropagation` an, sonst begänne jeder Druck darauf
+eine Geste. Der **Griff** tut das bewusst nicht: Er ist die Fläche, an der man
+zieht, und ein sauberer Tipp kommt trotzdem als Klick an.
+
+**Die Schwelle steht einmal** (`components/ui/swipe-dismiss.ts`): Strecke
+**oder** Schwung — wer weit zieht, hat es sich überlegt, wer schnippt ebenfalls;
+nur kurz und langsam ist ein Verrutschen. Sie liegt über der von „Ziehen zum
+Aktualisieren": Ein Sheet ist größer als ein Kringel, und es wegzuwischen
+verwirft mehr. `raised()` ist dasselbe nach oben, für den Antwort-Balken — ein
+Balken, der leichter aufgeht als zu, wäre eine Ungleichheit, die niemand
+entschieden hat.
+
+Damit gilt die Geste an **allen** 25 Sheets ohne eine Änderung am Aufrufer,
+`ConfirmProvider` eingeschlossen: Dort ist Wegwischen dasselbe wie Escape oder
+ein Tipp daneben — Abbrechen. An `pull-to-refresh.tsx` war nichts zu tun; es
+steigt aus, sobald ein Overlay angemeldet ist, und das Sheet meldet sich seit
+jeher über `lockOverlay()` an.
 
 ### Die Nachbereitung entsteht am Abend, nicht davor
 
@@ -1256,14 +1375,48 @@ den ETag einer Einheit beim Schreiben selbst: sie steht im Termin-DTO und nicht
 als eigene Ressource, ihr ETag liegt also nirgends im Cache. Dasselbe Muster wie
 `useSetHostWeight`.
 
-**Die Knöpfe eines Lieds erscheinen erst nach langem Druck.** Stift und
-Papierkorb standen an jeder Zeile dauerhaft da — zwei Ziele in einer Liste,
-durch die man scrollt, und beide traf der Daumen zuverlässiger als die Zeile.
-`useLongPress` arbeitet über Pointer-Events, damit dieselbe Geste mit der Maus
-gilt; drei Dinge sind dabei ausdrücklich behandelt: eine Bewegung über zehn
-Pixel war Scrollen, `contextmenu` gehört dazu (Android schickt beim langen
-Druck genau das), und die Textauswahl muss währenddessen aus, sonst zeigt iOS
-seine Auswahl-Lupe.
+**Die Knöpfe eines Lieds gibt ein Wisch nach links frei** — siehe
+„Wischen statt Drücken" weiter unten.
+
+## Wischen statt Drücken
+
+`components/ui/swipe-actions.tsx`. Drei Listen geben Stift und Papierkorb frei:
+die Lieder im Archiv, die Treffpunkte, die Ideen der Gruppe.
+
+**Was es ersetzt.** Erst standen die Knöpfe dauerhaft da — zwei Ziele am Rand
+jeder Zeile einer Liste, durch die man scrollt, und beide traf der Daumen
+zuverlässiger als die Zeile. Dann lagen sie hinter einem langen Druck. Der war
+nicht zu erraten: Wer die Geste nicht kennt, hält die Liste für
+schreibgeschützt, und nichts belehrt ihn eines Besseren. Ein Wisch zeigt sich
+beim ersten versehentlichen Ansatz.
+
+**Am Rechner fahren dieselben Knöpfe beim Überfahren ein.** Wischen gibt es dort
+nicht, und eine Liste, die auf dem Telefon bearbeitbar ist und im Fenster nicht,
+wäre kein Entwurf, sondern ein Versäumnis. Gefragt wird nach
+`pointerType === 'mouse'`: Ein Touchscreen schickt beim Tippen ebenfalls ein
+`pointerenter`, und die Zeile ginge schon beim Antippen auf.
+
+**Immer nur eine offen.** Ein winziger Speicher wie in `overlay-lock.ts`
+(`useSyncExternalStore`, eine Id) hält fest, welche Zeile offen ist; wer aufgeht,
+schließt die andere. Beim langen Druck blieben zwei aufgeklappte Zeilen
+nebeneinander stehen, bis die Liste neu lud — und genau deshalb brauchte jede
+Zeile einen „Fertig"-Knopf. Den gibt es nicht mehr, und damit ist das dritte
+Ziel aus der Zeile verschwunden.
+
+**Die Breite wird gemessen, nicht gerechnet.** Sie hängt an der Zahl der Knöpfe,
+und die ist je Zeile verschieden: Bei den Ideen darf nicht jede:r löschen, bei
+den Treffpunkten nur ein aktiver. Eine feste Zahl käme bei jeder zweiten Zeile
+zu weit oder zu kurz.
+
+`touch-action: pan-y` auf der ziehenden Ebene: Senkrecht scrollt die Seite wie
+immer, waagerecht gehört die Geste uns. Ohne das entscheidet der Browser, und er
+entscheidet für sich. `dragDirectionLock` hält die Richtung, sobald sie
+feststeht — sonst nähme jeder senkrechte Wisch die Zeile ein Stück mit.
+
+Die Schwellen stehen bei den senkrechten (`components/ui/swipe.ts`,
+`pulledLeft`/`pulledRight` neben `dismissed`/`raised`): Ein waagerechter Wisch,
+der bei anderen Werten auslöste als ein senkrechter, wäre eine Unterscheidung,
+die niemand getroffen hat.
 
 ## Orte: wer was sieht, und wer was ändert
 
@@ -1428,6 +1581,18 @@ wirft schon der Zugriff.
 
 ## Was die Gruppe benutzt, entscheidet, was dasteht
 
+Drei weitere Schalter stehen in der Karte „Termin-Rhythmus"
+(`maintenance-admin.tsx`) und kommen **nicht** über `features`, sondern über
+`GET …/meetings/config` — die Antwort holt sich diese Seite ohnehin, und ein
+Schalter, den nur die Verwaltung braucht, muss nicht an jedem Bildschirm hängen.
+„Termine automatisch anlegen" steht über allem anderen, denn er entscheidet, ob
+das Übrige eine Frage ist; ist er aus, verschwinden Wochentag, Abstand, Uhrzeit,
+Zone und die Lobpreisabende mit. Die beiden **Haken** schreiben sofort, das
+**Formular** dazwischen auf Knopfdruck: Ein Haken ist eine Entscheidung, ein
+Formular sind vier. `useUpdateMeetingSchedule` entwertet seit diesem Umbau auch
+`keys.meetings.all` — wer die Erzeugung wieder anschaltet, soll die neuen Abende
+sehen, ohne die App neu zu laden.
+
 Zwei Bausteine sind abschaltbar (Verwaltung), und beide kommen als `features` an
 der **Hauskreis-Antwort** — also aus dem Kontext, den ohnehin jeder Bildschirm
 hat (`useHauskreis`). Kein eigener Hook, keine zweite Abfrage: ein zweiter
@@ -1522,6 +1687,17 @@ die Liste unter „Rechtliches & Über die App", als deren **erste** Zeile: Von
 allem dort ist es das einzige, hinter dem etwas zu tun ist. Der Bildschirm lädt
 seine Person selbst, statt sie als Prop zu bekommen — er hängt nicht mehr unter
 dem Profil.
+
+**„Unterstützen"** steht am Fuß derselben Karte, unter „Gebaut von Niko" und
+nicht davor: Das ist die Reihenfolge, in der man es liest — erst wer, dann
+warum. Der Knopf hängt an einer Konstante (`PAYPAL_URL`) und nicht an einem
+`disabled`-Attribut: Solange dort `null` steht, gibt es einen grauen Knopf und
+darunter den Satz, warum nichts passiert; steht eine Adresse da, wird derselbe
+Knopf ein `<a>` mit denselben Klassen (`Button` rendert immer ein `<button>` —
+dieselbe Bauform wie „In Maps öffnen" am Termin). So ist das Freischalten später
+eine Zeile, und es gibt keinen Zwischenzustand, in dem ein Link ins Leere zeigt.
+Ein wortlos ausgegrauter Knopf wäre das, was an den Lied-Haken einmal falsch
+war: kein Hinweis, sondern ein Fehler.
 
 ## Was das Frontend bewusst nicht tut
 

@@ -1239,12 +1239,46 @@ Der `MeetingGeneratorService` läuft täglich um 3 Uhr und sorgt dafür, dass im
 die nächsten **7 Abende** als Termin existieren. Der jeweils letzte eines Monats
 wird als `LOBPREIS_GEBET` angelegt, alle anderen als `STANDARD`.
 
-**Wochentag, Uhrzeit und Zeitzone kommen aus `MeetingScheduleConfig`**
-(`GET`/`PUT …/meetings/config`), Vorgabe Dienstag 18 Uhr, `Europe/Berlin`. Alle
-drei standen vorher als Konstante im Code — `TUESDAY = 2`, `EVENING_HOUR = 18`
-und `TIME_ZONE = 'Europe/Berlin'` —, was für die eine Gruppe stimmte, für die es
-geschrieben wurde. `isLastOfMonth` rechnet ohnehin wochentagsunabhängig
-(„+7 Tage, anderer Monat?"), nur der Name behauptete etwas anderes.
+**Der ganze Rhythmus kommt aus `MeetingScheduleConfig`**
+(`GET`/`PUT …/meetings/config`), Vorgabe: Termine anlegen, Dienstag, jede Woche,
+18 Uhr, `Europe/Berlin`, Lobpreisabende an. Wochentag, Uhrzeit und Zone standen
+vorher als Konstante im Code — `TUESDAY = 2`, `EVENING_HOUR = 18`,
+`TIME_ZONE = 'Europe/Berlin'` —, was für die eine Gruppe stimmte, für die es
+geschrieben wurde.
+
+Drei davon sind Schalter:
+
+| Spalte            | aus heißt                                                                                                                                                                                                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auto_generate`   | Die Gruppe führt ihren Kalender selbst. Es kommt nichts dazu; **was schon steht, bleibt stehen**. Auch `POST …/meetings/generate` fragt danach — eine Einstellung, die ein Knopf daneben aushebelt, ist keine. `closePastMeetings` läuft weiter: Das legt nichts an, das räumt auf |
+| `praise_evenings` | Jeder erzeugte Abend ist ein `STANDARD` mit Thema. Ein Lobpreisabend, der schon im Kalender steht, bleibt einer                                                                                                                                                                    |
+| `interval_weeks`  | (kein Schalter) Wochen zwischen zwei Terminen, 1–8                                                                                                                                                                                                                                 |
+
+### Der Abstand braucht einen Taktschlag
+
+`upcomingMeetingDates` rechnete als `upcomingWeekdays` allein aus „heute": der
+nächste passende Wochentag, dann immer sieben Tage weiter. Solange jede Woche
+ein Termin war, kam jeder Lauf auf dieselbe Reihe.
+
+Bei vierzehn Tagen nicht mehr. Der Lauf am Mittwoch nimmt den Dienstag darauf,
+der Lauf eine Woche später den Dienstag danach — zwei um sieben Tage versetzte
+Reihen, und nach zwei Nächten stünde wieder jede Woche ein Termin, unter einer
+Einstellung, die „alle zwei Wochen" sagt.
+
+Der Takt kommt deshalb aus dem Kalender: vom **spätesten selbst erzeugten**
+Abend (`STANDARD` oder `LOBPREIS_GEBET`, `lastGeneratedDate`). Ein `CUSTOM`-Termin
+taugt nicht — ein Geburtstag am Samstag verschöbe den Takt der Dienstage.
+Abgesagte zählen mit: Der Abend fällt aus, der Rhythmus nicht.
+
+Passt der Anker nicht zum eingestellten Wochentag, wird er verworfen und die
+Reihe fängt beim nächsten passenden Tag an. Das ist genau der Fall „jemand hat
+den Wochentag umgestellt": Die alten Termine laufen aus, der neue Takt beginnt.
+
+`isLastOfMonth` bekommt denselben Abstand mit. Die Regel heißt „danach kommt
+keiner mehr in diesem Monat" — bei vierzehn Tagen ist das ein anderer Abend als
+bei sieben, und die feste Sieben hätte schlicht den falschen markiert. Sie
+rechnet weiterhin wochentagsunabhängig, nur ihr Name behauptete einmal etwas
+anderes.
 
 Ein Wechsel des Wochentags **verschiebt nichts.** Der Lauf legt nur an, was
 fehlt; bestehende Dienstage bleiben stehen und laufen aus. Alles andere hieße,
@@ -2149,6 +2183,35 @@ höchstens eine Einheit, technisch ist er die Absicherung dagegen, dass zwei
 gleichzeitig Zugeteilte beide wählen. Der zweite Schreibvorgang läuft in den
 Konflikt und wird zu einem 409, statt eine zweite Einheit anzulegen. Postgres
 zählt `NULL` als verschieden, unfertige Einheiten stören sich also nicht.
+
+### Der Admin bearbeitet keine fremden Themen
+
+`mayEditTopic` und `mayDeleteTopic` (`topic-visibility.ts`) fingen je mit
+`if (isAdmin) return true` an. Damit konnte ein Admin die Einheit eines anderen
+umschreiben, ihre Crew austauschen, ihr ein Überthema geben und es wieder
+wegnehmen — an einem Thema, an dem er nicht mitarbeitet.
+
+Die beiden Zeilen sind weg. Ein Thema vorzubereiten ist keine
+Verwaltungsaufgabe, die ein Admin für andere erledigt; genau diese Ausnahme ist
+beim Abhaken der Lieder (`EditRightsService`) und beim Wählen eines Themas
+(`TopicSessionService.choose`) längst aus demselben Grund gestrichen. Wer
+mitschreiben will, lässt sich als Mitwirkende:r eintragen — eine Zeile, kein
+Hindernis.
+
+Es wirkt auf alles, was darauf aufbaut: `mayEditSession` (Einheit schreiben,
+Crew eintragen, Überthema geben), `mayDeleteSession`, das Verwalten der
+Mitwirkenden und `unnameTopic`.
+
+**Zwei Dinge bleiben ausdrücklich.** `isOrphaned` steht weiter vor der
+Mitgliedsprüfung: Ein Thema, dessen Owner den Hauskreis verlassen hat und das
+keine Mitwirkenden hat, darf jede:r bearbeiten. Ohne den Admin-Weg ist das der
+einzige Weg hinein — sonst gäbe es Themen, an die niemand mehr herankommt. Und
+das **Lesen** behält seine Admin-Zeile (`isContentVisible`, die Entwurfsliste in
+`shapeTopic`): Wer Inhalte vor ihrer Freigabe sehen darf, ist eine andere Frage.
+
+Das Frontend fragt nirgends selbst nach `isAdmin` — es liest `mayEdit`,
+`mayDelete`, `mayEditTopic` und `mayUnname` aus der Antwort. Die Knöpfe
+verschwinden also von allein.
 
 ### Die Wahl
 
