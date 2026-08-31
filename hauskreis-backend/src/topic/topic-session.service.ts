@@ -682,7 +682,6 @@ export class TopicSessionService {
     // wer sie vorbereitet hat — auch wenn er am Thema selbst nichts darf.
     if (
       !mayEditSession({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(vorlage.topic),
         responsibleIds: vorlage.responsibles.map((row) => row.personId),
@@ -752,7 +751,6 @@ export class TopicSessionService {
 
     if (
       !mayEditTopic({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(topic),
       })
@@ -821,7 +819,6 @@ export class TopicSessionService {
 
     if (
       !mayEditSession({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(session.topic),
         responsibleIds: session.responsibles.map((row) => row.personId),
@@ -926,7 +923,6 @@ export class TopicSessionService {
 
     if (
       !mayEditTopic({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(topic),
       })
@@ -1042,7 +1038,6 @@ export class TopicSessionService {
 
     if (
       !mayEditSession({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(session.topic),
         responsibleIds: session.responsibles.map((row) => row.personId),
@@ -1120,7 +1115,6 @@ export class TopicSessionService {
 
     if (
       !mayDeleteTopic({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(session.topic),
       })
@@ -1198,7 +1192,6 @@ export class TopicSessionService {
 
     if (
       !mayDeleteSession({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         // Die Crew mit: Bei einer Hülle ist sie die Mitwirkenden-Ebene, und
         // eine noch nicht gehaltene Einheit darf löschen, wer am Thema
@@ -1320,7 +1313,6 @@ export class TopicSessionService {
 
     if (
       !mayEditSession({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(session.topic, before),
         responsibleIds: before,
@@ -1434,7 +1426,6 @@ export class TopicSessionService {
 
     if (
       !mayEditSession({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(session.topic),
         responsibleIds: session.responsibles.map((row) => row.personId),

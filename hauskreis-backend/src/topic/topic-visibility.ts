@@ -110,13 +110,26 @@ function isOrphaned(topic: TopicMembership): boolean {
  * Bearbeiten darf, wer zum Thema gehört — und zwar **jede** Einheit davon, auch
  * die, bei der man selbst nicht dabei war (Spec 8.1). Ein Thema ist eine
  * gemeinsame Arbeit; ein Recht je Abend wäre Buchhaltung.
+ *
+ * **Der Admin steht hier nicht mehr.** Er stand es, und damit konnte er die
+ * Einheit eines anderen umschreiben, ihr ein Überthema geben und es wieder
+ * wegnehmen — an einem Thema, an dem er nicht mitarbeitet. Ein Thema
+ * vorzubereiten ist keine Verwaltungsaufgabe, die ein Admin für andere
+ * erledigt; dieselbe Ausnahme ist bei der Liedauswahl
+ * (`EditRightsService`) und beim Wählen eines Themas
+ * (`TopicSessionService.choose`) längst aus demselben Grund gestrichen. Wer
+ * mitschreiben will, lässt sich als Mitwirkende:r eintragen — das ist eine
+ * Zeile und kein Hindernis.
+ *
+ * **`isOrphaned` bleibt und trägt jetzt allein.** Ein Thema, dessen Owner den
+ * Hauskreis verlassen hat und das keine Mitwirkenden hat, darf weiterhin
+ * jede:r bearbeiten. Ohne den Admin-Weg ist das der einzige Weg hinein — ohne
+ * ihn gäbe es Themen, an die niemand mehr herankommt.
  */
 export function mayEditTopic(options: {
-  isAdmin: boolean;
   personId: string;
   topic: TopicMembership;
 }): boolean {
-  if (options.isAdmin) return true;
   if (isOrphaned(options.topic)) return true;
   return belongsTo(options.topic, options.personId);
 }
@@ -142,7 +155,6 @@ export function mayEditTopic(options: {
  * Anwesenheit herein, und genau diese Vermischung soll weg.
  */
 export function mayEditSession(options: {
-  isAdmin: boolean;
   personId: string;
   topic: TopicMembership;
   /** Wer diese Einheit vorbereitet — `TopicSessionResponsible`. */
@@ -156,11 +168,11 @@ export function mayEditSession(options: {
  * Dasselbe ohne die beiden Freifahrtscheine: gehört diese Person **zu dieser
  * Vorbereitung**?
  *
- * Der Unterschied zu `mayEditSession` sind Admin-Rolle und verwaistes Thema.
- * Beide sagen „darf notfalls hinein", keines sagt „arbeitet daran mit" — und für
- * `TopicLinkService.reconcile` ist genau das die Frage. Zählte der Admin mit,
- * hielte allein seine Zuteilung jede Einheit an jedem Abend fest, und die Regel
- * liefe in einer Gruppe mit einem Admin praktisch nie.
+ * Der Unterschied zu `mayEditSession` ist das verwaiste Thema: Es sagt „darf
+ * notfalls hinein", nicht „arbeitet daran mit" — und für
+ * `TopicLinkService.reconcile` ist genau das die Frage. Die Admin-Rolle stand
+ * hier ebenfalls einmal daneben; seit sie auch aus `mayEditTopic` heraus ist,
+ * unterscheiden sich die beiden nur noch in diesem einen Punkt.
  */
 export function preparesSession(options: {
   personId: string;
@@ -174,13 +186,16 @@ export function preparesSession(options: {
 /**
  * Löschen ist enger als bearbeiten: nur der Owner (Spec 8.2). Ein Collaborator
  * darf jeden Text ändern, aber nicht die Arbeit aller wegräumen.
+ *
+ * Auch hier ohne Admin, aus demselben Grund wie bei `mayEditTopic` — und hier
+ * wiegt es schwerer: An dieser Prüfung hängen auch das Verwalten der
+ * Mitwirkenden und das Entfernen eines Überthemas. Beides sind Entscheidungen
+ * über fremde Vorbereitung.
  */
 export function mayDeleteTopic(options: {
-  isAdmin: boolean;
   personId: string;
   topic: TopicMembership;
 }): boolean {
-  if (options.isAdmin) return true;
   if (isOrphaned(options.topic)) return true;
   return options.topic.ownerPersonId === options.personId;
 }
@@ -200,7 +215,6 @@ export function mayDeleteTopic(options: {
  * mehr loswird.
  */
 export function mayDeleteSession(options: {
-  isAdmin: boolean;
   personId: string;
   topic: TopicMembership;
   /** Ob das Thema nur die Hülle um diese eine Einheit ist. */

@@ -348,7 +348,6 @@ export function shapeSession(
      * vorbereiten.
      */
     mayEdit: mayEditSession({
-      isAdmin: viewer.isAdmin,
       personId: viewer.personId,
       topic: membership,
       responsibleIds,
@@ -362,7 +361,6 @@ export function shapeSession(
      * einem Thema heraus, das ihm nicht gehört.
      */
     mayEditTopic: mayEditTopic({
-      isAdmin: viewer.isAdmin,
       personId: viewer.personId,
       topic: membership,
     }),
@@ -374,7 +372,6 @@ export function shapeSession(
      * das ganze Thema ist. Die Regel steht einmal, in `mayDeleteSession`.
      */
     mayDelete: mayDeleteSession({
-      isAdmin: viewer.isAdmin,
       personId: viewer.personId,
       topic: membership,
       standalone: topic.standalone,
@@ -392,7 +389,6 @@ export function shapeSession(
       !topic.standalone &&
       sessionTotal === 1 &&
       mayDeleteTopic({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membership,
       }),
@@ -465,12 +461,10 @@ export function shapeTopic(topic: FullTopicRow, viewer: Viewer) {
     publiclyVisible: isPubliclyVisible(topic.sessions, viewer.zone),
     mine,
     mayEdit: mayEditTopic({
-      isAdmin: viewer.isAdmin,
       personId: viewer.personId,
       topic: membership,
     }),
     mayDelete: mayDeleteTopic({
-      isAdmin: viewer.isAdmin,
       personId: viewer.personId,
       topic: membership,
     }),

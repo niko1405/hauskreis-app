@@ -208,7 +208,6 @@ export class TopicService {
 
     if (
       !mayDeleteTopic({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(topic),
       })
@@ -246,7 +245,6 @@ export class TopicService {
 
     if (
       !mayDeleteTopic({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(topic),
       })
@@ -300,7 +298,6 @@ export class TopicService {
 
     if (
       !mayDeleteTopic({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(topic),
       })
@@ -330,7 +327,6 @@ export class TopicService {
 
     if (
       !mayEditTopic({
-        isAdmin: viewer.isAdmin,
         personId: viewer.personId,
         topic: membershipOf(topic),
       })

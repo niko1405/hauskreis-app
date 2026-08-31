@@ -18,6 +18,13 @@ const BERLIN = 'Europe/Berlin';
 const OWNER = 'owner-id';
 const COLLAB = 'collab-id';
 const FREMD = 'fremd-id';
+/**
+ * Jemand mit Admin-Rechten, der an diesem Thema nicht mitarbeitet.
+ *
+ * Steht als eigener Name da, obwohl er sich für diese Funktionen nicht mehr von
+ * `FREMD` unterscheidet — genau das ist die Aussage der Tests weiter unten.
+ */
+const ADMIN_FREMD = 'admin-fremd-id';
 /** Steht an *einer* Einheit, gehört zum Thema aber nicht. */
 const CREW = 'crew-id';
 
@@ -111,28 +118,23 @@ describe('belongsTo', () => {
 describe('mayEditTopic', () => {
   it('Owner und Collaborator dürfen jede Einheit ändern', () => {
     for (const personId of [OWNER, COLLAB]) {
-      expect(mayEditTopic({ isAdmin: false, personId, topic: thema })).toBe(
-        true,
-      );
+      expect(mayEditTopic({ personId, topic: thema })).toBe(true);
     }
   });
 
   it('sonst niemand', () => {
-    expect(
-      mayEditTopic({ isAdmin: false, personId: FREMD, topic: thema }),
-    ).toBe(false);
+    expect(mayEditTopic({ personId: FREMD, topic: thema })).toBe(false);
   });
 
-  it('Admin immer', () => {
-    expect(mayEditTopic({ isAdmin: true, personId: FREMD, topic: thema })).toBe(
-      true,
-    );
+  it('auch der Admin nicht — mitarbeiten ist keine Verwaltungsaufgabe', () => {
+    // Er stand hier einmal ganz oben und konnte damit die Einheit eines
+    // anderen umschreiben. Dieselbe Ausnahme ist bei der Liedauswahl und beim
+    // Wählen eines Themas längst aus demselben Grund gestrichen.
+    expect(mayEditTopic({ personId: ADMIN_FREMD, topic: thema })).toBe(false);
   });
 
   it('an einem verwaisten Thema darf jede:r — sonst bliebe es für immer stehen', () => {
-    expect(
-      mayEditTopic({ isAdmin: false, personId: FREMD, topic: verwaist }),
-    ).toBe(true);
+    expect(mayEditTopic({ personId: FREMD, topic: verwaist })).toBe(true);
   });
 });
 
@@ -144,7 +146,7 @@ describe('mayEditTopic', () => {
  */
 describe('mayEditSession', () => {
   const darf = (personId: string, responsibleIds: string[] = [CREW]) =>
-    mayEditSession({ isAdmin: false, personId, topic: thema, responsibleIds });
+    mayEditSession({ personId, topic: thema, responsibleIds });
 
   it('lässt den Owner ran', () => {
     expect(darf(OWNER)).toBe(true);
@@ -167,21 +169,19 @@ describe('mayEditSession', () => {
     expect(darf(CREW, [])).toBe(false);
   });
 
-  it('lässt den Admin ran', () => {
+  it('lässt auch den Admin nicht ran', () => {
     expect(
       mayEditSession({
-        isAdmin: true,
-        personId: FREMD,
+        personId: ADMIN_FREMD,
         topic: thema,
         responsibleIds: [],
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('lässt bei einem verwaisten Thema jede:n ran', () => {
     expect(
       mayEditSession({
-        isAdmin: false,
         personId: FREMD,
         topic: verwaist,
         responsibleIds: [],
@@ -231,21 +231,18 @@ describe('preparesSession', () => {
 
 describe('mayDeleteTopic', () => {
   it('nur der Owner', () => {
-    expect(
-      mayDeleteTopic({ isAdmin: false, personId: OWNER, topic: thema }),
-    ).toBe(true);
+    expect(mayDeleteTopic({ personId: OWNER, topic: thema })).toBe(true);
   });
 
   it('ein Collaborator darf ändern, aber nicht wegräumen', () => {
-    expect(
-      mayDeleteTopic({ isAdmin: false, personId: COLLAB, topic: thema }),
-    ).toBe(false);
+    expect(mayDeleteTopic({ personId: COLLAB, topic: thema })).toBe(false);
   });
 
-  it('Admin darf', () => {
-    expect(
-      mayDeleteTopic({ isAdmin: true, personId: COLLAB, topic: thema }),
-    ).toBe(true);
+  it('auch der Admin nicht — daran hängt auch das Überthema', () => {
+    // An dieser Prüfung hängen das Verwalten der Mitwirkenden und das
+    // Entfernen eines Überthemas. Beides sind Entscheidungen über fremde
+    // Vorbereitung.
+    expect(mayDeleteTopic({ personId: ADMIN_FREMD, topic: thema })).toBe(false);
   });
 });
 
@@ -264,7 +261,6 @@ describe('mayDeleteSession', () => {
     options: { standalone?: boolean; held?: boolean } = {},
   ) =>
     mayDeleteSession({
-      isAdmin: false,
       personId,
       topic: thema,
       standalone: options.standalone ?? false,
@@ -301,6 +297,8 @@ describe('mayDeleteSession', () => {
 
 describe('isContentVisible', () => {
   const basis = {
+    // Bleibt hier: Der Admin ist aus dem **Bearbeiten** heraus, nicht aus dem
+    // Lesen. Wer Inhalte vor ihrer Freigabe sehen darf, ist eine andere Frage.
     isAdmin: false,
     personId: FREMD,
     topic: thema,
