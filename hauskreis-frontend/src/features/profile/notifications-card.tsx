@@ -16,7 +16,7 @@
  * `/benachrichtigungen`, nach Bereichen sortiert und durchsuchbar.
  */
 import { Bell, BellOff, BellRing, ChevronRight, Send } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/states';

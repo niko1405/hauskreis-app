@@ -10,7 +10,7 @@
  * Bauzeit vom Dateisystem, und das geht nur in einer Server-Komponente.
  */
 import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { Prose } from '@/components/ui/prose';
 
 export function LegalPage({

@@ -32,7 +32,7 @@ import {
   MapPin,
   Pencil,
 } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';

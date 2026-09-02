@@ -15,7 +15,7 @@
  * diesen Monat" beantwortet man nicht dreimal hintereinander mit demselben.
  */
 import { Cake, ChevronLeft, ChevronRight } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { useMemo, useState } from 'react';
 import { IconButton } from '@/components/ui/button';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';

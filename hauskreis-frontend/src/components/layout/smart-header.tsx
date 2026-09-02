@@ -45,7 +45,7 @@
  * wegen der `pull-to-refresh.tsx` den Inhalt nie verschiebt. Die Blase säße
  * sonst in einem 56 Pixel hohen Kasten statt unter der Glocke.
  */
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { Users } from 'lucide-react';
 import { useState } from 'react';
 import { PRESSABLE } from '@/components/ui/button';

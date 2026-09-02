@@ -5,7 +5,7 @@
  * links — dieselben fünf Ziele, damit man nicht zwei Menüs pflegt.
  */
 import { Archive, CalendarDays, Home, Settings, Users } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { usePathname } from 'next/navigation';
 import { useUnreadFirstSteps } from '@/features/help/use-unread-help';
 import { useUnreadRelease } from '@/features/releases/use-unread-release';

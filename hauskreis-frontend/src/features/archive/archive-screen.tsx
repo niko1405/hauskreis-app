@@ -15,7 +15,7 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { useRouter } from 'next/navigation';
 import { useDeferredValue, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';

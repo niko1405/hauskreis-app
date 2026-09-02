@@ -40,6 +40,7 @@ import { PageHeader } from '@/components/layout/app-shell';
 import { Card } from '@/components/ui/card';
 import { Field, TextInput } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
+import { useUnsavedGuard } from '@/components/ui/unsaved';
 import { errorMessage } from '@/lib/api/errors';
 import {
   useChangeEmail,
@@ -107,6 +108,17 @@ function Loaded({
   const trimmed = value.trim();
   const trimmedUsername = username.trim();
 
+  // Beide Felder einzeln benannt statt zweimal in einem `disabled=` gerechnet:
+  // Der Wächter fragt „steht hier irgendwo etwas Ungespeichertes", die Knöpfe
+  // fragen „gibt es für mich etwas zu tun" — dieselbe Bedingung, zwei Leser.
+  // Leer heißt bei beiden „unverändert": wer noch nie angemeldet war, hat
+  // keinen Anmeldenamen, und ein leerer String wäre für den Server ungültig.
+  const usernameDirty =
+    trimmedUsername !== '' && trimmedUsername !== person.username;
+  const emailDirty = trimmed !== '' && trimmed !== email;
+
+  useUnsavedGuard(usernameDirty || emailDirty);
+
   return (
     <div>
       <PageHeader title="Konto" subtitle="Anmeldung, E-Mail und Löschen" />
@@ -134,11 +146,7 @@ function Loaded({
           <Button
             variant="secondary"
             className="w-full"
-            // Leer heißt „unverändert": wer noch nie angemeldet war, hat keinen,
-            // und ein leerer String wäre für den Server ein ungültiger Name.
-            disabled={
-              trimmedUsername === '' || trimmedUsername === person.username
-            }
+            disabled={!usernameDirty}
             loading={update.isPending}
             onClick={() =>
               update.mutate(
@@ -172,7 +180,7 @@ function Loaded({
           <Button
             variant="secondary"
             className="w-full"
-            disabled={trimmed === '' || trimmed === email}
+            disabled={!emailDirty}
             loading={change.isPending}
             onClick={() =>
               change.mutate(trimmed, {

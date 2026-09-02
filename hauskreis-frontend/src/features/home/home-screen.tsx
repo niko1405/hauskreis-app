@@ -14,7 +14,7 @@ import {
   Map,
   MapPin,
 } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { RoleChip } from '@/components/domain/role-badge';

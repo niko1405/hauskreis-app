@@ -17,7 +17,7 @@
  * ein zweites Aussehen für dieselbe Sache wäre eines zu viel.
  */
 import { FileText, Shield } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { Button } from '@/components/ui/button';
 import { Sheet } from '@/components/ui/sheet';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';

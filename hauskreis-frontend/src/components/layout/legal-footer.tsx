@@ -9,7 +9,7 @@
  * `AuthGate`. Ein `<Link>` dorthin ist trotzdem richtig: Der App Router
  * verlässt beim Wechsel den ganzen Layout-Zweig, die Hülle wird also abgebaut.
  */
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 export function LegalFooter({ className = '' }: { className?: string }) {
   return (
     <p
