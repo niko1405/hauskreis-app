@@ -246,12 +246,13 @@ export function MeetingCalendar() {
  * Eine Zeile der Monatsliste.
  *
  * Hier stand einmal derselbe Zusage-Umschalter wie in der Terminliste. Er ist
- * weg: Geantwortet wird seit dem Antwort-Balken nur noch am Termin, und drei
- * Fassungen derselben Frage waren zwei zu viel.
+ * weg und kommt auch nicht wieder, obwohl die Terminliste ihre Antwort
+ * zurückbekommen hat: Dort liest man quer über Wochen und stößt darauf, dass
+ * man am 15. nicht kann — hier sucht man einen Tag im Monat.
  *
  * Auch **keine Teilnehmerzahl**, anders als auf der Terminkarte: Diese Zeile
  * ist schon drei Zeilen hoch und beantwortet „was ist wann", nicht „mit wie
- * vielen".
+ * vielen" und nicht „bist du dabei".
  */
 function MonthRow({ meeting }: { meeting: MeetingListItem }) {
   const cancelled = meeting.status === 'CANCELLED';
