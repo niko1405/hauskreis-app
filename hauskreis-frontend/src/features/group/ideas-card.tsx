@@ -79,14 +79,6 @@ export function IdeasCard() {
         {done.map((idea) => (
           <Row key={idea.id} idea={idea} />
         ))}
-
-        {/* Unten und nicht oben: Die Geste lernt man einmal, die Liste liest
-            man jedes Mal. */}
-        {(open.length > 0 || done.length > 0) && (
-          <p className="pt-1 text-[11px] text-stone-400">
-            Lange auf eine Idee drücken, um sie zu ändern oder zu löschen.
-          </p>
-        )}
       </Card>
     </section>
   );
