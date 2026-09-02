@@ -61,6 +61,17 @@ const nextMeeting = {
   attendances: [] as { status: string }[],
 };
 
+/**
+ * Der Abend, der zuletzt **ganz** vorbei ist. Er teilt sich den oberen Platz
+ * des Startbildschirms mit dem laufenden — steht einer, steht der andere nicht.
+ */
+const pastMeeting = {
+  ...nextMeeting,
+  id: 'm-vorbei',
+  date: utc('2026-07-28'),
+  topicSession: null,
+};
+
 const pastWithActionstep = {
   id: 'm0',
   date: utc('2026-07-28'),
@@ -85,6 +96,8 @@ function setup(
     meetings?: (typeof nextMeeting)[];
     /** Die vergangenen Abende, jüngster zuerst. */
     lastMeetings?: unknown[];
+    /** Der letzte ganz vergangene Abend — die eigene, dritte Abfrage. */
+    lastFinished?: typeof nextMeeting | null;
     actionstep?: {
       id: string;
       date: Date;
@@ -126,6 +139,14 @@ function setup(
     .mockResolvedValueOnce(kommende)
     .mockResolvedValueOnce(vergangene);
 
+  // Eine eigene Abfrage und kein dritter `findMany`: „der letzte Abend" ist
+  // genau eine Zeile, und `findFirst` sagt das auch.
+  const findFirst = jest
+    .fn()
+    .mockResolvedValue(
+      options.lastFinished === undefined ? pastMeeting : options.lastFinished,
+    );
+
   const findAssignments = jest.fn().mockResolvedValue(options.roles ?? []);
   const findCurrent = jest.fn().mockResolvedValue(
     options.buddies === undefined
@@ -147,7 +168,7 @@ function setup(
     withClock(
       new DashboardService(
         {
-          meeting: { findMany },
+          meeting: { findMany, findFirst },
           person: {
             count: jest.fn().mockResolvedValue(options.peopleCount ?? 9),
           },
@@ -168,7 +189,7 @@ function setup(
     options.features,
   );
 
-  return { service, findMany, findAssignments };
+  return { service, findMany, findFirst, findAssignments };
 }
 
 describe('DashboardService.build', () => {
@@ -398,6 +419,67 @@ describe('DashboardService.build', () => {
 
     expect(home.currentMeeting?.id).toBe('m-heute');
     expect(home.nextMeeting?.id).toBe('m1');
+  });
+
+  /**
+   * Am Mittwochmorgen ist die interessanteste Karte der Abend von gestern —
+   * seine Nachbereitung fehlt noch. Vorher stand dort nur der Dienstag in einer
+   * Woche.
+   */
+  it('zeigt den letzten Abend, solange keiner läuft', async () => {
+    const { service } = setup();
+
+    const home = await service.build('hk-1', NIKO, { now: NOW });
+
+    expect(home.lastMeeting?.id).toBe('m-vorbei');
+    expect(home.nextMeeting?.id).toBe('m1');
+  });
+
+  /**
+   * Der obere Platz gehört dem laufenden Abend. Beides zugleich wäre eine Karte
+   * zu viel und die Frage „wo bin ich jetzt" zweimal beantwortet.
+   */
+  it('lässt den letzten weg, solange einer läuft', async () => {
+    const laufend = {
+      ...nextMeeting,
+      id: 'm-heute',
+      date: utc('2026-07-29'),
+      startMinutes: 480,
+    };
+    const { service } = setup({ meetings: [laufend, nextMeeting] });
+
+    const home = await service.build('hk-1', NIKO, {
+      now: new Date('2026-07-29T12:00:00.000Z'),
+    });
+
+    expect(home.currentMeeting?.id).toBe('m-heute');
+    expect(home.lastMeeting).toBeNull();
+  });
+
+  it('kommt ohne vergangene Abende aus', async () => {
+    const { service } = setup({ lastFinished: null });
+
+    const home = await service.build('hk-1', NIKO, { now: NOW });
+
+    // Der erste Dienstag einer neuen Gruppe — kein Fehler, nur nichts dahinter.
+    expect(home.lastMeeting).toBeNull();
+  });
+
+  it('sucht den letzten Abend ganz vorbei und nicht abgesagt', async () => {
+    const { service, findFirst } = setup();
+
+    await service.build('hk-1', NIKO, { now: NOW });
+
+    const args = findFirst.mock.calls[0][0];
+    // `finishedBefore` und nicht `date < heute`: Sonst stünde eine laufende
+    // Freizeit ab ihrem zweiten Tag zugleich oben und darüber.
+    expect(args.where.OR).toEqual([
+      { endDate: null, date: { lt: utc('2026-07-29') } },
+      { endDate: { lt: utc('2026-07-29') } },
+    ]);
+    // Ein ausgefallener Abend ist keiner, den man nachliest.
+    expect(args.where.status).toBe('PLANNED');
+    expect(args.orderBy).toEqual({ date: 'desc' });
   });
 
   it('lässt „Aktueller Termin" leer, solange der Abend noch nicht anfing', async () => {

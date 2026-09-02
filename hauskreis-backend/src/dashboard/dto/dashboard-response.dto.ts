@@ -116,6 +116,18 @@ export const homeScreenSchema = z.object({
   /// Abend unter der Überschrift „Nächstes Treffen" — keine Auskunft mehr,
   /// wenn man schon dort sitzt.
   currentMeeting: homeMeetingSchema.nullable(),
+  /// Der Abend, der zuletzt **ganz** vorbei ist — und zwar nur, wenn gerade
+  /// keiner läuft.
+  ///
+  /// Er teilt sich den oberen Platz mit `currentMeeting`, und wer ihn bekommt,
+  /// entscheidet der Server: Ob gerade ein Abend läuft, hängt an der
+  /// Treffpunktzeit in der Zone der Gruppe (`eveningReached`), und diese Frage
+  /// zweimal zu beantworten — hier und im Frontend — wäre eine Antwort zu viel.
+  ///
+  /// Der Anlass ist der Mittwochmorgen: Der Abend von gestern, dessen
+  /// Nachbereitung noch fehlt, stand nirgends, während oben schon der Dienstag
+  /// in einer Woche angekündigt war.
+  lastMeeting: homeMeetingSchema.nullable(),
   /// `null`, wenn nichts geplant ist — ein gültiger Zustand, kein Fehler.
   nextMeeting: homeMeetingSchema.nullable(),
   /// Die eigenen Aufgaben der nächsten acht Wochen, früheste zuerst.
