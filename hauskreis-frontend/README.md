@@ -565,18 +565,61 @@ und acht davon einzeln zu laden, nur um acht Haken setzen zu können, wäre die
 falsche Antwort darauf. Der ETag ist bei dieser App ohnehin kein Hash, sondern
 die Fassungsnummer.
 
+### Das Bild groß, aber nur wo es etwas zeigt
+
+`components/ui/avatar.tsx` kennt eine Prop `zoomable`. Antippen öffnet ein
+`Sheet` mit demselben Bild in voller Breite — es liegt ohnehin schon da
+(`usePersonPhoto`, Data-URL, `staleTime: Infinity`), und der Server kennt gar
+keine zweite Größe: eine Datei, 512×512, WebP.
+
+Gesetzt ist sie da, wo ein Bild **neben einem Namen für sich steht**: in der
+Mitgliederliste und auf dem Gebets-Bildschirm bei „Du betest für" / „Für dich
+betet". Genau dort will man wissen, wer das ist.
+
+Zwei Einschränkungen sind Absicht. **Ohne Bild ist der Avatar kein Knopf** — ein
+Fenster, das zwei Buchstaben vergrößert, zeigt nichts, was die Zeile nicht schon
+zeigt. Und **nicht überall**: In einer Rollen-Pille ist der Avatar die
+Beschriftung eines Namens und kein Bild; in der Gruppenübersicht des
+Gebets-Bildschirms überlappen sich `xs`-Avatare zu einer Kette, die als Tippziel
+zu klein wäre; und die Buddy-Karte auf „Heute" ist ganz ein Link nach `/gebet` —
+ein zweites Ziel darin wäre eines zu viel.
+
+Groß steht es **quadratisch** da (`rounded-card`), nicht rund. Gespeichert ist
+ein quadratischer Zuschnitt (`AVATAR_CROP`); in klein ist die runde Form
+Schmuck, in groß wäre sie ein zweiter Beschnitt.
+
 ## Der Startbildschirm
 
 Ein Aufruf (`…/home`), vier Blöcke. Drei Entscheidungen darin sind es wert,
 aufgeschrieben zu werden.
 
-**Läuft gerade ein Abend, steht er über dem nächsten** — „Aktueller Termin",
-grün getönt, darunter „Nächster Termin". „Wo bin ich jetzt" und „was kommt" sind
-zwei Fragen; vorher gab es eine Karte, und die zeigte den laufenden Abend unter
-der Überschrift „Nächstes Treffen", was keine Auskunft mehr ist, wenn man schon
-dort sitzt. Beide kommen aus derselben Antwort (`currentMeeting`,
-`nextMeeting`) und aus derselben Komponente — die Tönung ist der einzige
-Unterschied.
+**Der obere Platz sagt, wo man herkommt, der untere, was kommt.** Läuft ein
+Abend, steht er oben als „Aktueller Termin", grün getönt; läuft keiner, steht
+dort der **letzte vergangene** als „Letzter Termin", gedämpft und ohne eigene
+Farbe. Darunter immer „Nächster Termin". Vorher gab es nur die untere Karte, und
+die zeigte den laufenden Abend unter der Überschrift „Nächstes Treffen" — keine
+Auskunft mehr, wenn man schon dort sitzt.
+
+Der letzte Abend kam dazu, weil am Mittwochmorgen genau er die interessantere
+Karte ist: Seine Nachbereitung fehlt noch, seine Zusammenfassung will man
+nachlesen — und oben stand stattdessen der Dienstag in einer Woche.
+
+**Welches der beiden Felder gefüllt ist, entscheidet der Server**
+(`currentMeeting` / `lastMeeting`, nie beide). Ob ein Abend läuft, hängt an
+seiner Treffpunktzeit in der Zone der Gruppe (`eveningReached`), und diese Frage
+im Frontend ein zweites Mal zu beantworten wäre eine Antwort zu viel. Ein
+abgesagter Abend zählt dabei nicht — den liest niemand nach.
+
+Alle drei kommen aus derselben Antwort und derselben Komponente; die Tönung ist
+der einzige Unterschied. `formatRelativeDay` sagt bei vergangenen Tagen von
+selbst „gestern" oder „vor 3 Tagen".
+
+Der letzte Abend liegt auf `bg-canvas` und ohne Schatten — flach, also genau
+eine Stufe ruhiger, und in beiden Themen gleich. `bg-shell` wäre falsch: Das ist
+der Grund eine Ebene _unter_ der Leinwand und im Dunkelmodus fast schwarz
+(`#14100d` gegen `#26201b` der Karte); dort sah der Abend nicht gedämpft aus,
+sondern wie ein Loch in der Seite. Eine Farbe, die nur im Hellen „leiser"
+bedeutet, ist keine.
 
 „Deine Rollen" richtet sich nach **demselben** Abend (`currentMeeting?.id ??
 nextMeeting?.id`): Sonst fiele die eigene Rolle an dem Abend, an dem man sitzt,
@@ -1001,27 +1044,68 @@ wirklich etwas dranhängt; die Rollen stehen in jeder Termin-Antwort, es braucht
 also keine zweite Abfrage. Die Rückfrage gilt dem **ganzen Schritt**: Abbrechen
 lässt Status und Rolle stehen.
 
-Ein `UNKNOWN` konnte an drei Stellen entstehen: am Termin und über den kompakten
-`AttendanceToggle` in Terminliste und Kalender. **Die beiden Umschalter sind
-weg** — geantwortet wird nur noch am Termin, und damit gibt es die Geste genau
-einmal. Der Hook bleibt trotzdem einer: Die Rückfrage ist eine Regel über die
-Daten und nicht über einen Bildschirm.
-
-An seiner Stelle steht auf der Terminkarte oben rechts die **Teilnehmerzahl**.
-Sie stand vorher klein zwischen Ort und Terminart und ging dort unter. Gezählt
-wird **nur, wer zugesagt hat** — „3 dabei" ist eine wahre Aussage über die
-Liste, während „geplant für 8" hier bewusst etwas anderes meint. Zwei Zahlen mit
-demselben Wort wären genau der Fehler, den dieser Abschnitt oben beschreibt.
-Anders als der Umschalter steht sie auch an vergangenen und abgesagten Abenden:
-„wer war da" ist dort die bessere Frage. Die **Kalenderzeile** bekommt keine —
-sie ist schon drei Zeilen hoch und beantwortet „was ist wann", nicht „mit wie
-vielen".
+Ein `UNKNOWN` entsteht an zwei Stellen: am Termin (`answer-bar.tsx`) und auf der
+Terminkarte in der Liste. Beide gehen durch denselben Hook — die Rückfrage ist
+eine Regel über die Daten und nicht über einen Bildschirm.
 
 Die **Notiz** geht weiter direkt raus: Sie ändert am Status nichts.
 
-Farben, Kurzformen und die Symbole der Sätze stehen in
-`components/domain/attendance-answers.ts` — Karte und Balken brauchen sie beide,
-und zwei Kopien wären zwei Meinungen darüber, welche Farbe „abgesagt" hat.
+Farben, Beschriftungen, Symbole und Kurzformen stehen in
+`components/domain/attendance-answers.ts` — Anwesenheitsliste, Balken und
+Terminkarte brauchen sie alle drei, und Kopien wären Meinungen darüber, welche
+Farbe „abgesagt" hat. **`label` ist ein Verb, `short` ein Zustand**: `label`
+steht auf einem Knopf, den man drückt („Zusagen"), `short` in einer Zeile über
+jemand anderen, die etwas feststellt („Dabei"). Die zustimmende Antwort steht
+**rechts**, wie in jeder Rückfrage der App.
+
+### Die Antwort in der Terminliste
+
+`components/domain/meeting-card.tsx` plus
+`components/domain/answer-note-sheet.tsx`.
+
+Der alte `AttendanceToggle` war zwischenzeitlich ganz weg, weil er die zweite
+Fassung derselben Frage war. Zurück ist nicht er, sondern die **drei Antworten
+mit dem Satz dahinter**: „komme 20 Min später" ist das, was vorher in WhatsApp
+stand, und die zwei runden Symbolknöpfe konnten ihn nie. In der Liste liest man
+quer über Wochen — dort fällt einem ein, dass man am 15. nicht kann.
+
+Drei Dinge sind daran zu beachten:
+
+- **Die Karte ist ein `<Link>`.** Jeder Knopf darin braucht `preventDefault()`
+  **und** `stopPropagation()`, sonst führt der Tipp zusätzlich auf die
+  Detailseite — und die Antwort wäre nicht mehr zu sehen.
+- **Das Sheet ist ein Geschwister des Links, nicht sein Kind.** `Sheet` rendert
+  sein Overlay als `position: fixed` ohne Portal, und die Karte trägt sowohl
+  `@container` als auch `active:scale` — beides macht sie zum Bezugsrahmen für
+  `fixed`, und der Schleier säße dann in der Karte statt über der Seite.
+- **`@container` und nicht `md:`.** Ob die Knöpfe neben die Rollen-Chips passen,
+  hängt an der Breite der Karte. Zwischen `md` und rund 1000px Fensterbreite ist
+  die Spalte neben der Seitenleiste erst gut 450px breit; ein Breakpoint auf das
+  Fenster stellte sie dort nebeneinander, wo kein Platz ist. Es ist die einzige
+  Container-Query im Projekt, und sie steht da, wo die Frage wirklich „wie breit
+  bin ich" lautet.
+- **Zwei Zonen, kein umbrechender Fluss.** Rollen und Antwort sind zwei
+  Kästen — schmal untereinander, ab `@lg` nebeneinander (`@lg:flex`). Zuerst
+  waren sie Geschwister in _einer_ umbrechenden Reihe, und dann hing die Antwort
+  auf dem Telefon mit acht Pixeln Abstand an den Chips und las sich wie ein
+  fünfter davon. Schmal trägt sie deshalb einen **zweiten Trennstrich**, ab `@lg`
+  fällt er weg: derselbe Gedanke wie der Strich über den Rollen — er trennt, was
+  der Abend ist, von dem, was du dazu sagst.
+
+Der Ablauf ist derselbe wie im Balken: **Der Status schreibt sofort** (über
+`useAttendanceAnswer`, also mit der Rollen-Rückfrage), **die Notiz auf
+Knopfdruck**. Bricht jemand die Rückfrage ab, öffnet sich kein Fenster für eine
+Notiz, die zu nichts gehört. Nachzurüsten war nichts: `useSetAttendance` patcht
+die Listen im Cache schon optimistisch.
+
+Daneben steht auf der Karte oben rechts die **Teilnehmerzahl**. Sie stand vorher
+klein zwischen Ort und Terminart und ging dort unter. Gezählt wird **nur, wer
+zugesagt hat** — „3 dabei" ist eine wahre Aussage über die Liste, während
+„geplant für 8" hier bewusst etwas anderes meint. Zwei Zahlen mit demselben Wort
+wären genau der Fehler, den dieser Abschnitt oben beschreibt. Anders als die
+Antwort-Knöpfe steht sie auch an vergangenen und abgesagten Abenden: „wer war
+da" ist dort die bessere Frage. Die **Kalenderzeile** bekommt weder das eine
+noch das andere — sie ist schon drei Zeilen hoch und beantwortet „was ist wann".
 
 ### Die eigene Antwort ersetzt die Tab-Leiste
 
@@ -1659,6 +1743,39 @@ Läufe wurden gesehen". Weil der Merker im Gerät liegt und nichts über Rollen
 weiß, stimmt er für später Ernannte von selbst. In der Tab-Leiste läuft er mit
 „Was ist neu" und „Erste Schritte" in **einen** Punkt zusammen, aber nur bei
 Admins: Ein Punkt, der auf etwas Unsichtbares zeigt, bliebe für immer stehen.
+
+## Ein Link, der weiß, was ungespeichert ist
+
+`components/ui/link.tsx` und `components/ui/unsaved.ts`.
+
+Das Profil kannte `dirty` längst — und schaltete damit nur den Speichern-Knopf
+frei. Ein Tipp auf die Tab-Leiste war danach weg, ohne dass irgendetwas gefragt
+hätte; einen Navigationsschutz gab es im ganzen Frontend nicht.
+
+**Jeder Link und nicht ausgewählte.** Alle Wege aus einem Bildschirm heraus sind
+Links: Tab-Leiste, Seitenspalte, Kopfleiste, jede Zeile im Profil. Bewachte man
+nur die, die es heute gibt, wäre bei jedem neuen Formular die Frage „ist dieser
+Link eigentlich bewacht?" neu zu beantworten — und beim ersten Nein still eine
+Antwort verloren. `next/link` wird deshalb nirgends mehr direkt importiert; der
+eine Link der App liegt in `components/ui/link.tsx` und liest den Zähler selbst.
+
+**Ein Zähler und kein Schalter** (`unsaved.ts`, gebaut wie `overlay-lock.ts`):
+Im Profil stehen zwei Formulare nebeneinander — „Deine Angaben" und „Wo du
+wohnst" —, und ein gemeinsames Ja/Nein wäre gelöscht, sobald eines davon sauber
+wird. Angemeldet wird mit einer Zeile: `useUnsavedGuard(dirty)`, direkt neben
+der Bedingung, die ohnehin schon am Speichern-Knopf steht. Sie muss **vor**
+einem vorzeitigen `return` stehen — es ist ein Hook.
+
+Technisch hängt es an `onNavigate` (Next 16): Der Link sagt ab, fragt über
+`useConfirm` nach und geht bei einem Ja per `router.push` weiter — das läuft an
+`onNavigate` vorbei und fragt deshalb nicht zweimal. Dazu ein `beforeunload`,
+solange etwas offen ist; das ist der Weg hinaus, den ein Link-Handler nie sieht.
+
+**Was er nicht kann:** Der Zurück-Knopf des Browsers und die Wischgeste zurück
+lassen sich im App Router nicht abfangen. Dafür gibt es keine Schnittstelle, nur
+Eingriffe in den Verlauf, die ihn verbiegen. Abgedeckt sind alle Wege _in_ der
+App plus Neuladen und Schließen — das ist die ehrliche Reichweite, und sie steht
+im Doc-Kommentar.
 
 ## Das Profil trägt, was man anhakt
 
