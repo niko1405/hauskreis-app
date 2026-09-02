@@ -284,7 +284,10 @@ function Person({ person }: { person: PersonRef | undefined }) {
 
   return (
     <div className="flex items-center gap-3">
-      <Avatar person={person} />
+      {/* Wie in der Mitgliederliste: Wo ein Bild neben einem Namen für sich
+          steht, lässt es sich groß ansehen. Für wen man betet, ist genau die
+          Frage, bei der man wissen will, wer das ist. */}
+      <Avatar person={person} zoomable />
       <span className="flex-1 font-bold text-stone-800">{person.name}</span>
     </div>
   );

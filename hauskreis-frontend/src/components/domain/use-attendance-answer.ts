@@ -17,15 +17,15 @@
  * er bräuchte ein zusätzliches Feld an der API, damit der Server wüsste, was
  * gemeint war.
  *
- * **Warum als Hook und nicht im Balken.** Ein `UNKNOWN` konnte an drei Stellen
- * entstehen: am Termin und über den kompakten Umschalter in Terminliste und
- * Kalender. Die beiden Umschalter sind weg — geantwortet wird nur noch am
- * Termin (`answer-bar.tsx`), und damit gibt es die Geste genau einmal.
+ * **Warum als Hook und nicht im Balken.** Ein `UNKNOWN` entsteht an zwei
+ * Stellen: unten am Termin (`answer-bar.tsx`) und auf der Terminkarte in der
+ * Liste (`meeting-card.tsx`). Der Kalender ist bewusst draußen — seine Zeile
+ * beantwortet „was ist wann".
  *
- * Der Hook bleibt trotzdem einer: Die Rückfrage ist eine Regel über die Daten
- * („eine Rolle ist die Aussage: ich bin da und mache das") und nicht über einen
- * Bildschirm. Sie in den Balken zu schreiben hieße, sie beim nächsten zweiten
- * Ort wieder herauszuholen.
+ * Die Rückfrage ist eine Regel über die Daten („eine Rolle ist die Aussage: ich
+ * bin da und mache das") und nicht über einen Bildschirm. In den Balken
+ * geschrieben, hätte man sie beim zweiten Ort wieder herausholen müssen — was
+ * genau eingetreten ist.
  *
  * Gefragt wird **nur, wenn wirklich etwas dranhängt**. Die Rollen stehen in
  * jeder Termin-Antwort, es braucht also keine zweite Abfrage — und bei

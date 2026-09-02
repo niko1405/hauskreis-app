@@ -14,7 +14,7 @@ import {
   Map,
   MapPin,
 } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { RoleChip } from '@/components/domain/role-badge';
@@ -54,6 +54,7 @@ export function HomeScreen() {
 
   const {
     currentMeeting,
+    lastMeeting,
     nextMeeting,
     myRoles,
     openActionstep,
@@ -99,10 +100,16 @@ export function HomeScreen() {
           />
         </section>
 
-        {/* Zwei Fragen und zwei Karten: „wo bin ich jetzt" und „was kommt".
-            Vorher gab es nur eine, und die zeigte den laufenden Abend unter der
-            Überschrift „Nächstes Treffen" — keine Auskunft mehr, wenn man schon
-            dort sitzt. Läuft nichts, bleibt alles wie bisher. */}
+        {/* Der obere Platz beantwortet „wo komme ich her, wo bin ich gerade",
+            der untere „was kommt". Vorher gab es nur den unteren, und der
+            zeigte den laufenden Abend unter der Überschrift „Nächstes
+            Treffen" — keine Auskunft mehr, wenn man schon dort sitzt.
+
+            Läuft nichts, steht hier der letzte Abend. Am Mittwochmorgen ist er
+            die interessantere Karte: Seine Nachbereitung fehlt noch, und man
+            will nachlesen, was war — während oben bisher schon der Dienstag in
+            einer Woche stand. Welcher der beiden es ist, entscheidet der
+            Server; er füllt immer nur eines der Felder. */}
         {currentMeeting && (
           <section>
             <SectionTitle>Aktueller Termin</SectionTitle>
@@ -111,6 +118,27 @@ export function HomeScreen() {
             <NextMeetingCard
               meeting={currentMeeting}
               className="border-music-line bg-music-bg/30"
+            />
+          </section>
+        )}
+
+        {lastMeeting && (
+          <section>
+            <SectionTitle>Letzter Termin</SectionTitle>
+            {/* Gedämpft und ohne eigene Farbe: Er ist vorbei, nicht aktuell.
+                Eine zweite Tönung neben dem Grün würde behaupten, hier gälte
+                auch gerade etwas.
+
+                `bg-canvas` und nicht `bg-shell`: Die Leinwand ist der Grund,
+                auf dem die Karten liegen — die Karte wird damit flach und
+                bleibt in beiden Themen genau eine Stufe ruhiger. Die Schale
+                liegt eine Ebene tiefer und ist im Dunkelmodus fast schwarz
+                (`#14100d` gegen `#26201b`); dort sah der Abend nicht gedämpft
+                aus, sondern wie ein Loch in der Seite. Ohne Schatten aus
+                demselben Grund: Was flach liegt, wirft keinen. */}
+            <NextMeetingCard
+              meeting={lastMeeting}
+              className="bg-canvas shadow-none"
             />
           </section>
         )}
@@ -137,7 +165,10 @@ export function HomeScreen() {
           ) : (
             <Card>
               <p className="text-sm text-stone-400 italic">
-                {currentMeeting
+                {/* „Danach" braucht ein Davor. Das ist jetzt auch der letzte
+                    Abend — ohne ihn stünde „Gerade ist kein Termin geplant"
+                    unter einer Karte, die einen zeigt. */}
+                {currentMeeting || lastMeeting
                   ? 'Danach ist noch nichts geplant.'
                   : 'Gerade ist kein Termin geplant.'}
               </p>

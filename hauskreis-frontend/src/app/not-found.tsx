@@ -11,7 +11,7 @@
  * dessen, was die App kennt, und soll den Weg zurück finden — nicht erst eine
  * Sitzung aufbauen müssen.
  */
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 
 export default function NotFound() {
   return (

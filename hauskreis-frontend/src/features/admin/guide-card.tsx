@@ -1,6 +1,6 @@
 import { Card, SectionTitle } from '@/components/ui/card';
 import { FileText } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 
 /**
  * Der Weg zur Anleitung, die man seinem Hauskreis schickt.

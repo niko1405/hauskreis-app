@@ -22,7 +22,7 @@
  * zweite schon halb, ohne dass man umschaltet.
  */
 import { CalendarOff, Coffee } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { PRESSABLE } from '@/components/ui/button';

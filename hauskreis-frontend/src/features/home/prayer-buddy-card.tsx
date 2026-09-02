@@ -20,7 +20,7 @@
  * derselben Rechnung sagen irgendwann zwei verschiedene Dinge (CLAUDE.md §6.4).
  */
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { Avatar } from '@/components/ui/avatar';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { formatDayMonth } from '@/lib/date';

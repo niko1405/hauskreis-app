@@ -25,7 +25,7 @@
  * Thema, Musik und Testimony mit, es kostet also keine zweite Abfrage.
  */
 import { CheckCircle2, Minus, Plus } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';

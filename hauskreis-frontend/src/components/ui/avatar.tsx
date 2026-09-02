@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { cn } from '@/lib/cn';
 import { usePersonPhoto } from '@/lib/api/hooks';
 import { avatarScheme, initials } from '@/lib/person';
+import { Sheet } from './sheet';
 import type { PersonRef } from '@/lib/api/types';
 
 const SIZES = {
@@ -21,10 +23,22 @@ export type AvatarSize = keyof typeof SIZES;
 export function Avatar({
   person,
   size = 'md',
+  zoomable = false,
   className,
 }: {
   person?: PersonRef | null;
   size?: AvatarSize;
+  /**
+   * Antippen zeigt das Bild groß.
+   *
+   * **Nur, wo man Menschen ansieht** — in der Mitgliederliste. Eine Rollen-Pille
+   * zu vergrößern beantwortet keine Frage, dort ist der Avatar die Beschriftung
+   * eines Namens und kein Bild.
+   *
+   * Ohne Bild bleibt es beim Kreis: Ein Fenster, das zwei Buchstaben vergrößert,
+   * zeigt nichts, was die Zeile nicht schon zeigt.
+   */
+  zoomable?: boolean;
   className?: string;
 }) {
   if (!person) {
@@ -42,7 +56,14 @@ export function Avatar({
     );
   }
 
-  return <WithPerson person={person} size={size} className={className} />;
+  return (
+    <WithPerson
+      person={person}
+      size={size}
+      zoomable={zoomable}
+      className={className}
+    />
+  );
 }
 
 /**
@@ -58,21 +79,24 @@ export function Avatar({
 function WithPerson({
   person,
   size,
+  zoomable,
   className,
 }: {
   person: PersonRef;
   size: AvatarSize;
+  zoomable: boolean;
   className?: string;
 }) {
   const photo = usePersonPhoto(person);
   const scheme = avatarScheme(person.id);
+  const [zoomed, setZoomed] = useState(false);
 
   if (photo.data) {
-    return (
-      // `next/image` ist hier falsch: es optimiert Bilder, die es abrufen
-      // kann. Diese sind Data-URLs aus dem Cache, schon auf 512 Pixel
-      // gerechnet und hinter einem Bearer-Token — es gäbe nichts zu
-      // optimieren und keinen Weg dorthin.
+    // `next/image` ist hier falsch: es optimiert Bilder, die es abrufen
+    // kann. Diese sind Data-URLs aus dem Cache, schon auf 512 Pixel
+    // gerechnet und hinter einem Bearer-Token — es gäbe nichts zu
+    // optimieren und keinen Weg dorthin.
+    const img = (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={photo.data}
@@ -84,6 +108,36 @@ function WithPerson({
           className,
         )}
       />
+    );
+
+    if (!zoomable) return img;
+
+    return (
+      <>
+        <button
+          type="button"
+          aria-label={`Bild von ${person.name} groß ansehen`}
+          onClick={() => setZoomed(true)}
+          className="shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none"
+        >
+          {img}
+        </button>
+        <Sheet
+          open={zoomed}
+          onClose={() => setZoomed(false)}
+          title={person.name}
+        >
+          {/* Quadratisch und nicht rund: Gespeichert ist ein quadratischer
+              Zuschnitt (`AVATAR_CROP`), und rund zeigt weniger, als da ist —
+              in klein ist die Form Schmuck, in groß wäre sie ein Beschnitt. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photo.data}
+            alt={person.name}
+            className="w-full rounded-card object-cover"
+          />
+        </Sheet>
+      </>
     );
   }
 

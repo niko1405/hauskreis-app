@@ -8,7 +8,7 @@
  */
 import { Ban, Guitar, LogOut, Shield, Users } from 'lucide-react';
 import { HauskreisCard } from './hauskreis-card';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { useEffect, useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { ScreenHeader } from '@/components/layout/screen-header';
@@ -22,6 +22,7 @@ import {
   ErrorState,
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
+import { useUnsavedGuard } from '@/components/ui/unsaved';
 import { useMe, usePerson, useUpdatePerson } from '@/lib/api/hooks';
 import { useHeaderPreference } from '@/lib/header-preference';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
@@ -84,6 +85,21 @@ function Loaded({ personId }: { personId: string }) {
     setBirthdate(current.birthdate ?? '');
   }, [current]);
 
+  // Steht vor dem vorzeitigen Aussteigen, weil `useUnsavedGuard` ein Hook ist
+  // und Hooks nicht hinter einem `return` stehen dürfen. Ohne Serverstand gibt
+  // es ohnehin nichts, wovon etwas abweichen könnte.
+  const dirty =
+    current !== undefined &&
+    (name !== current.name ||
+      playsInstrument !== current.playsInstrument ||
+      canHost !== current.canHost ||
+      autoAttend !== current.autoAttend ||
+      testimonyToldBefore !== current.testimonyToldBefore ||
+      birthdate !== (current.birthdate ?? ''));
+
+  // Solange das gilt, fragt jeder Link nach, bevor er von hier wegführt.
+  useUnsavedGuard(dirty);
+
   if (person.isLoading || !current) {
     return (
       <div className="px-5 pt-6">
@@ -91,14 +107,6 @@ function Loaded({ personId }: { personId: string }) {
       </div>
     );
   }
-
-  const dirty =
-    name !== current.name ||
-    playsInstrument !== current.playsInstrument ||
-    canHost !== current.canHost ||
-    autoAttend !== current.autoAttend ||
-    testimonyToldBefore !== current.testimonyToldBefore ||
-    birthdate !== (current.birthdate ?? '');
 
   const save = () => {
     update.mutate(

@@ -27,7 +27,7 @@
  * setzt `contentVisible: false`. Hier steht nur, was man davon sieht.
  */
 import { ArrowUpRight, ChevronDown } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { useState } from 'react';
 import { Button, PRESSABLE } from '@/components/ui/button';
 import { AvatarStack } from '@/components/ui/avatar';

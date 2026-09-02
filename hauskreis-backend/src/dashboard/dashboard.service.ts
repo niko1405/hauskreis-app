@@ -7,7 +7,12 @@ import {
 } from '../prayer-buddy/prayer-buddy.service';
 import { AssignmentService, type Assignment } from './assignment.service';
 import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
-import { addDays, notFinishedBefore } from '../meeting/meeting-schedule';
+import { Prisma } from '../../generated/prisma/client';
+import {
+  addDays,
+  finishedBefore,
+  notFinishedBefore,
+} from '../meeting/meeting-schedule';
 import { eveningReached } from '../common/time/local-evening';
 import { ANGEKOMMEN } from '../person/angekommen';
 import { NotificationPreferenceService } from '../notification/notification-preference.service';
@@ -87,6 +92,20 @@ export interface HomeScreen {
    * wenn man schon dort sitzt.
    */
   currentMeeting: HomeMeeting | null;
+  /**
+   * Der Abend, der zuletzt **ganz** vorbei ist — und nur, wenn gerade keiner
+   * läuft.
+   *
+   * Er teilt sich den oberen Platz mit `currentMeeting`. Wer ihn bekommt,
+   * entscheidet hier: Ob ein Abend läuft, hängt an seiner Treffpunktzeit in der
+   * Zone der Gruppe, und diese Frage zweimal zu beantworten — hier und im
+   * Frontend — wäre eine Antwort zu viel.
+   *
+   * Der Anlass ist der Mittwochmorgen: Der Abend von gestern, dessen
+   * Nachbereitung noch fehlt, stand nirgends, während oben schon der Dienstag
+   * in einer Woche angekündigt war.
+   */
+  lastMeeting: HomeMeeting | null;
   /** Null when nothing is planned — a valid state, not an error. */
   nextMeeting: HomeMeeting | null;
   /**
@@ -155,82 +174,110 @@ export class DashboardService {
     const now = options.now ?? new Date();
     const today = await this.clock.today(hauskreisId, now);
 
-    const [features, meetings, actionstep, myRoles, buddies, peopleCount] =
-      await Promise.all([
-        this.features.of(hauskreisId),
-        // **Zwei** Zeilen und nicht eine: Läuft gerade ein Abend, ist er die
-        // erste — der nächste steht dann dahinter. `notFinishedBefore` statt
-        // `date >= today`, damit eine Freizeit ab ihrem zweiten Tag nicht aus
-        // der eigenen Übersicht fällt.
-        this.prisma.meeting.findMany({
-          where: {
-            hauskreisId,
-            ...notFinishedBefore(today),
-            status: MeetingStatus.PLANNED,
-          },
-          orderBy: { date: 'asc' },
-          take: 2,
-          select: {
-            id: true,
-            date: true,
-            startMinutes: true,
-            endDate: true,
-            type: true,
-            hasTopicSlot: true,
-            hasSongSlot: true,
-            hasTestimonySlot: true,
-            title: true,
-            location: {
-              select: {
-                id: true,
-                name: true,
-                latitude: true,
-                longitude: true,
-                address: true,
-                requiresHost: true,
-              },
-            },
-            host: { select: personRefSelect },
-            testimonyPerson: { select: personRefSelect },
-            topicResponsibles: {
-              select: { person: { select: personRefSelect } },
-              orderBy: { person: { name: 'asc' } },
-            },
-            topicSession: { select: sessionSelectWithTopic },
-            songLeaders: {
-              select: { person: { select: personRefSelect } },
-            },
-            attendances: {
-              where: { personId },
-              select: { status: true },
-            },
-          },
-        }),
-        // Dieselbe Regel wie in der wöchentlichen Erinnerung: ein leerer Abend
-        // beendet den Vorsatz von davor, nur ein besonderer Termin ohne
-        // Actionstep wird übersprungen.
-        latestActionstep(this.prisma, hauskreisId, today),
-        this.assignments.findAssignments(hauskreisId, {
-          from: today,
-          to: addDays(today, HOME_HORIZON_DAYS),
-          personId,
-          // Der Geburtstag taucht hier genau dann auf, wenn auch die
-          // Erinnerung kommt — dieselbe Zahl, dieselbe Einstellung. Zwei
-          // Systeme mit zwei Meinungen darüber, ab wann etwas „ansteht",
-          // wären eines zu viel.
-          birthdayLeadDays:
-            (
-              await this.preferences.resolve(
-                personId,
-                NotificationType.BIRTHDAY_GIFT_REMINDER,
-              )
-            ).leadDays ?? 0,
-        }),
-        this.buddies.findCurrent(hauskreisId, now),
-        // Dieselbe Menge wie in der Anwesenheitsliste am Termin: „3 von 8"
-        // muss auf beiden Bildschirmen dieselben acht meinen.
-        this.prisma.person.count({ where: { hauskreisId, ...ANGEKOMMEN } }),
-      ]);
+    // Einmal beschrieben und zweimal abgefragt — der kommende Abend und der
+    // vergangene sind auf dem Startbildschirm dieselbe Karte, und zwei
+    // Abschriften desselben `select` wären zwei Gelegenheiten, sie auseinander
+    // laufen zu lassen.
+    const meetingSelect = {
+      id: true,
+      date: true,
+      startMinutes: true,
+      endDate: true,
+      type: true,
+      hasTopicSlot: true,
+      hasSongSlot: true,
+      hasTestimonySlot: true,
+      title: true,
+      location: {
+        select: {
+          id: true,
+          name: true,
+          latitude: true,
+          longitude: true,
+          address: true,
+          requiresHost: true,
+        },
+      },
+      host: { select: personRefSelect },
+      testimonyPerson: { select: personRefSelect },
+      topicResponsibles: {
+        select: { person: { select: personRefSelect } },
+        orderBy: { person: { name: 'asc' } },
+      },
+      topicSession: { select: sessionSelectWithTopic },
+      songLeaders: {
+        select: { person: { select: personRefSelect } },
+      },
+      attendances: {
+        where: { personId },
+        select: { status: true },
+      },
+    } satisfies Prisma.MeetingSelect;
+
+    const [
+      features,
+      meetings,
+      lastFinished,
+      actionstep,
+      myRoles,
+      buddies,
+      peopleCount,
+    ] = await Promise.all([
+      this.features.of(hauskreisId),
+      // **Zwei** Zeilen und nicht eine: Läuft gerade ein Abend, ist er die
+      // erste — der nächste steht dann dahinter. `notFinishedBefore` statt
+      // `date >= today`, damit eine Freizeit ab ihrem zweiten Tag nicht aus
+      // der eigenen Übersicht fällt.
+      this.prisma.meeting.findMany({
+        where: {
+          hauskreisId,
+          ...notFinishedBefore(today),
+          status: MeetingStatus.PLANNED,
+        },
+        orderBy: { date: 'asc' },
+        take: 2,
+        select: meetingSelect,
+      }),
+      // Der jüngste Abend, der **ganz** vorbei ist. `finishedBefore` und
+      // nicht `date < today`: Sonst stünde eine laufende Freizeit ab ihrem
+      // zweiten Tag zugleich oben als „aktuell" und darüber als „letzter".
+      // `PLANNED` schließt abgesagte aus — ein Abend, der ausgefallen ist,
+      // ist keiner, den man nachliest. Sortiert nach dem Anfangstag, wie es
+      // `latestActionstep` für dieselbe Frage schon tut.
+      this.prisma.meeting.findFirst({
+        where: {
+          hauskreisId,
+          ...finishedBefore(today),
+          status: MeetingStatus.PLANNED,
+        },
+        orderBy: { date: 'desc' },
+        select: meetingSelect,
+      }),
+      // Dieselbe Regel wie in der wöchentlichen Erinnerung: ein leerer Abend
+      // beendet den Vorsatz von davor, nur ein besonderer Termin ohne
+      // Actionstep wird übersprungen.
+      latestActionstep(this.prisma, hauskreisId, today),
+      this.assignments.findAssignments(hauskreisId, {
+        from: today,
+        to: addDays(today, HOME_HORIZON_DAYS),
+        personId,
+        // Der Geburtstag taucht hier genau dann auf, wenn auch die
+        // Erinnerung kommt — dieselbe Zahl, dieselbe Einstellung. Zwei
+        // Systeme mit zwei Meinungen darüber, ab wann etwas „ansteht",
+        // wären eines zu viel.
+        birthdayLeadDays:
+          (
+            await this.preferences.resolve(
+              personId,
+              NotificationType.BIRTHDAY_GIFT_REMINDER,
+            )
+          ).leadDays ?? 0,
+      }),
+      this.buddies.findCurrent(hauskreisId, now),
+      // Dieselbe Menge wie in der Anwesenheitsliste am Termin: „3 von 8"
+      // muss auf beiden Bildschirmen dieselben acht meinen.
+      this.prisma.person.count({ where: { hauskreisId, ...ANGEKOMMEN } }),
+    ]);
 
     const myGroup = buddies?.groups.find((group) =>
       group.members.some((member) => member.id === personId),
@@ -252,6 +299,10 @@ export class DashboardService {
 
     const current = meetings[0] && läuft(meetings[0]) ? meetings[0] : null;
     const next = meetings.find((meeting) => meeting !== current) ?? null;
+    // Der obere Platz gehört dem laufenden Abend, sonst dem letzten. Beides
+    // zugleich wäre eine Karte zu viel und die Frage „wo bin ich jetzt" zweimal
+    // beantwortet.
+    const last = current ? null : lastFinished;
 
     // `now` reicht bis hierher durch: die Abendregel ist eine Frage an die Uhr,
     // und ein Startbildschirm, der sie anders beantwortet als der Termin selbst,
@@ -303,6 +354,7 @@ export class DashboardService {
 
     return {
       currentMeeting: shape(current),
+      lastMeeting: shape(last),
       nextMeeting: shape(next),
       myRoles: myRoles.filter((role) => role.role !== 'PRAYER_BUDDY'),
       // Abgeschaltet heißt nicht „leer", sondern „gibt es hier nicht" — beide

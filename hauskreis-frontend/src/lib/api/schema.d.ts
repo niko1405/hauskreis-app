@@ -3638,6 +3638,65 @@ export interface components {
         /** @enum {string} */
         myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
       } | null;
+      lastMeeting: {
+        /** Format: uuid */
+        id: string;
+        /** Format: date */
+        date: string;
+        startTime: string;
+        /** Format: date */
+        endDate: string | null;
+        /** @enum {string} */
+        type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
+        hasTopicSlot: boolean;
+        hasSongSlot: boolean;
+        hasTestimonySlot: boolean;
+        title: string | null;
+        location: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          latitude: number | null;
+          longitude: number | null;
+          address: string | null;
+          requiresHost: boolean;
+        } | null;
+        host: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+        topicResponsibles: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        }[];
+        topic: {
+          /** Format: uuid */
+          id: string;
+          title: string | null;
+        } | null;
+        songLeaders: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        }[];
+        testimonyPerson: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+        /** @enum {string} */
+        myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
+      } | null;
       nextMeeting: {
         /** Format: uuid */
         id: string;

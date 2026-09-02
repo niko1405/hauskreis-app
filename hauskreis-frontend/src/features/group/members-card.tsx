@@ -137,7 +137,10 @@ function MemberRow({ person }: { person: PersonListEntry }) {
           inline && 'flex-1',
         )}
       >
-        <Avatar person={person} size="sm" />
+        {/* Der einzige Ort, an dem das Bild antippbar ist: Hier sieht man
+            sich die Leute an. In einer Rollen-Pille wäre es die Beschriftung
+            eines Namens und kein Bild. */}
+        <Avatar person={person} size="sm" zoomable />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-stone-800">
             {person.name}

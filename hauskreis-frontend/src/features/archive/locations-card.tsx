@@ -85,17 +85,11 @@ export function LocationsCard() {
           Treffpunkte
         </h3>
         {spots.length > 0 && (
-          <>
-            <p className="px-1 text-[11px] text-stone-400 pb-2">
-              Lange auf einen Treffpunkt drücken, um ihn zu ändern oder zu
-              löschen.
-            </p>
-            <ul className="space-y-2">
-              {spots.map((location) => (
-                <SpotRow key={location.id} location={location} />
-              ))}
-            </ul>
-          </>
+          <ul className="space-y-2">
+            {spots.map((location) => (
+              <SpotRow key={location.id} location={location} />
+            ))}
+          </ul>
         )}
 
         <Button

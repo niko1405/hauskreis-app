@@ -17,7 +17,7 @@
  * dass man das Neue wegklicken konnte, ohne es je zu sehen.
  */
 import { ArrowRight, Sparkles } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { Button } from '@/components/ui/button';
 import { useReleases } from '@/lib/api/hooks';
 import { useDismissedRelease } from '@/lib/release-storage';

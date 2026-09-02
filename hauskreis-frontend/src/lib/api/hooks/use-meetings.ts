@@ -159,8 +159,9 @@ export function useSetAttendance(meetingId: string) {
          * eintrifft — also genau in dem Moment, in dem man hinschaut.
          *
          * Mitgeschickt gilt; weggelassen heißt „behalten", solange der Status
-         * bleibt, und „weg", sobald er wechselt. Die kompakten Umschalter in
-         * Liste, Kalender und auf „Heute" schicken nur den Status.
+         * bleibt, und „weg", sobald er wechselt. Eine Antwort ohne Notiz
+         * schickt genau das: nur den Status — der Satz kommt danach und
+         * getrennt (`answer-note-sheet.tsx`).
          */
         const answered = (
           attendances: {
@@ -214,9 +215,9 @@ export function useSetAttendance(meetingId: string) {
           }),
         );
 
-        // Den Startbildschirm greift hier **nichts** mehr vor. Er zeigte die
+        // Den Startbildschirm greift hier **nichts** vor. Er zeigte die
         // Antwort einmal selbst („Bist du dabei?") und musste deshalb sofort
-        // umspringen; seit die Frage unten am Termin steht (`answer-bar.tsx`),
+        // umspringen; seit die Frage am Termin und auf der Terminkarte steht,
         // liest `myAttendance` niemand mehr. Ein Feld optimistisch zu pflegen,
         // das keiner anzeigt, ist Arbeit, die stillschweigend veraltet.
         //

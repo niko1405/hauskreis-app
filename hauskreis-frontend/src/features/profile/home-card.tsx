@@ -20,6 +20,7 @@ import { useConfirm } from '@/components/ui/confirm';
 import { Field, TextInput } from '@/components/ui/field';
 import { Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
+import { useUnsavedGuard } from '@/components/ui/unsaved';
 import {
   useClearHome,
   useLocation,
@@ -57,15 +58,19 @@ export function HomeCard({
     );
   }, [current]);
 
-  if (locationId !== null && home.isLoading) {
-    return <Skeleton className="h-40 w-full" />;
-  }
-
+  // Vor dem vorzeitigen Aussteigen: `useUnsavedGuard` ist ein Hook und darf
+  // nicht hinter einem `return` stehen.
   const trimmed = address.trim();
   const dirty =
     trimmed !== (current?.address ?? '') ||
     capacity !==
       (current?.capacity === null ? '' : String(current?.capacity ?? ''));
+
+  useUnsavedGuard(dirty);
+
+  if (locationId !== null && home.isLoading) {
+    return <Skeleton className="h-40 w-full" />;
+  }
 
   const submit = (joinExisting: boolean) => {
     setHome.mutate(
