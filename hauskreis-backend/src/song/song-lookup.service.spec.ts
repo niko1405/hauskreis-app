@@ -552,6 +552,61 @@ describe('SongLookupService — erst die eigene Datenbank', () => {
     expect(ask).toHaveBeenCalled();
   });
 
+  /**
+   * Der gemeldete Fall. Im Archiv stand „Goodness of God (Live)", getippt wurde
+   * „Goodness of God" — und weil zweimal buchstabengenau verglichen wurde
+   * (`title: { equals }` in SQL, `normalizeSongText` danach), ging die Frage ans
+   * Modell.
+   */
+  it('findet die Fassung im Archiv, auch wenn man ohne Zusatz sucht', async () => {
+    const { service, ask } = setup({
+      db: [
+        {
+          title: 'Goodness of God (Live)',
+          artist: 'Bethel Music',
+          lyricsUrl: UG,
+        },
+      ],
+    });
+
+    await expect(
+      service.search('Goodness of God', 'Bethel Music'),
+    ).resolves.toEqual([
+      expect.objectContaining({ url: UG, title: 'Goodness of God (Live)' }),
+    ]);
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it('nimmt einen Gast im Interpreten in Kauf', async () => {
+    const { service, ask } = setup({
+      db: [
+        {
+          title: 'Goodness of God',
+          artist: 'Bethel Music feat. Jenn Johnson',
+          lyricsUrl: UG,
+        },
+      ],
+    });
+
+    await expect(
+      service.search('Goodness of God', 'Bethel Music'),
+    ).resolves.toEqual([expect.objectContaining({ url: UG })]);
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it('grenzt in der Titel-Richtung nicht ein', async () => {
+    const { service, lookupAcrossGroups } = setup({
+      db: [{ title: 'Gott ist gut', artist: null, lyricsUrl: UG }],
+    });
+
+    await service.search('Gott ist gut', undefined);
+
+    // Ohne Argument: Entschieden wird über `songTitleKey`, und die
+    // Normalisierung lässt sich in SQL nicht ausdrücken. Ein `equals` davor
+    // hätte genau die Zeilen weggeworfen, um die es geht.
+    expect(lookupAcrossGroups).toHaveBeenCalledWith();
+  });
+
   it('fragt beim zweiten Druck trotzdem das Modell', async () => {
     const { service, ask } = setup({
       db: [{ title: 'Gott ist gut', artist: 'Outbreakband', lyricsUrl: UG }],

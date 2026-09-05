@@ -34,6 +34,60 @@ export function normalizeSongText(text: string): string {
 }
 
 /**
+ * Was an einem Titel die **Aufnahme** beschreibt und nicht das Lied.
+ *
+ * „Goodness of God (Live)", „Goodness of God - Live" und „Goodness of God"
+ * sind dasselbe Lied; im Archiv steht es unter irgendeiner der drei
+ * Schreibweisen. Ohne diesen Schritt fand der Abgleich es nicht und fragte für
+ * eine Antwort, die schon dastand, ein Sprachmodell.
+ *
+ * Drei Formen, und mehr bewusst nicht: eine Klammer am Ende, ein Zusatz hinter
+ * einem Gedankenstrich, und die Besetzung („feat.", „ft."). Der Gedankenstrich
+ * zählt **nur** vor einem der bekannten Wörter — „Herr, dein Name - meine
+ * Zuflucht" ist ein Titel und keine Fassung, und ein Streichen bis zum Ende
+ * nähme davon die Hälfte weg.
+ */
+const QUALIFIER_WORDS =
+  'live|akustik|acoustic|unplugged|instrumental|radio edit|remix|reprise|demo|cover|version|remaster(?:ed)?|single|deutsch|german|english';
+
+const TITLE_QUALIFIERS = new RegExp(
+  [
+    // In Klammern am Ende: „(Live)", „[Official Video]".
+    String.raw`\s*[([][^)\]]*[)\]]\s*$`,
+    // Hinter einem Gedankenstrich, aber nur mit einem der Wörter oben.
+    String.raw`\s+[-–—]\s*(?:${QUALIFIER_WORDS})\b.*$`,
+    // Die Besetzung, egal wo sie steht.
+    String.raw`\s+(?:feat|ft)\.?\s.*$`,
+  ].join('|'),
+  'gi',
+);
+
+/**
+ * Der Schlüssel, unter dem zwei Titel dasselbe Lied meinen.
+ *
+ * Bleibt nach dem Streichen nichts übrig, gilt der ungestrichene Titel: Ein
+ * Lied, das wirklich „(Live)" heißt, bekäme sonst einen leeren Schlüssel — und
+ * ein leerer Schlüssel passt auf jeden anderen leeren.
+ */
+export function songTitleKey(title: string): string {
+  const stripped = normalizeSongText(title.replace(TITLE_QUALIFIERS, ''));
+
+  return stripped === '' ? normalizeSongText(title) : stripped;
+}
+
+/**
+ * Dasselbe für den Interpreten, nur ohne die Klammer-Regel.
+ *
+ * „Bethel Music feat. Jenn Johnson" und „Bethel Music" sind dieselbe Band mit
+ * und ohne Gast. Eine Klammer trägt bei einem Interpreten dagegen oft den
+ * unterscheidenden Teil („Casting Crowns (Live)" kommt nicht vor, „Die Priester
+ * (Klassik)" schon), deshalb bleibt sie stehen.
+ */
+export function songArtistKey(artist: string): string {
+  return normalizeSongText(artist.replace(/\s+(?:feat|ft)\.?\s.*$/gi, ''));
+}
+
+/**
  * Was an einer Adresse an Tracking hängt und nichts über die Seite sagt.
  *
  * Keine Liste aller denkbaren Parameter, sondern die, die tatsächlich an

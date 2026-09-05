@@ -5,7 +5,8 @@ import { SongService } from './song.service';
 import {
   lyricsUrlHost,
   normalizeLyricsUrl,
-  normalizeSongText,
+  songArtistKey,
+  songTitleKey,
 } from './song-key';
 
 /**
@@ -229,24 +230,37 @@ export class SongLookupService implements LyricsRetriever {
    * Umgekehrt trennt ein **anderer** Interpret zwei Lieder gleichen Namens, und
    * genau dafür steht der Unique-Index an der Tabelle.
    *
-   * Was knapp danebenliegt, geht ans Modell. Das ist die sichere Richtung: Ein
-   * falscher Treffer verlinkte ein anderes Lied, ein verpasster kostet einen
-   * Aufruf.
+   * **Verglichen wird über `songTitleKey`**, nicht über den rohen Titel: Im
+   * Archiv steht ein Lied unter irgendeiner seiner Schreibweisen, und wer es
+   * eintippt, tippt eine andere. „Goodness of God" fand „Goodness of God (Live)"
+   * nicht und fragte für eine Antwort, die dastand, ein Sprachmodell.
+   *
+   * Beim Interpreten reicht, dass ein Schlüssel im anderen steckt: „Bethel
+   * Music" und „Bethel Music, Jenn Johnson" sind dieselbe Band, einmal mit Gast.
+   * Ein Treffer soll nicht an der Besetzung scheitern, wenn der Titel stimmt.
+   *
+   * Was danach immer noch danebenliegt, geht ans Modell. Das ist die sichere
+   * Richtung: Ein falscher Treffer verlinkte ein anderes Lied, ein verpasster
+   * kostet einen Aufruf.
    */
   private async knownByTitle(
     title: string,
     artist: string | undefined,
   ): Promise<LyricsLinkCandidate[]> {
-    const wantedTitle = normalizeSongText(title);
-    const wantedArtist = artist ? normalizeSongText(artist) : null;
+    const wantedTitle = songTitleKey(title);
+    const wantedArtist = artist ? songArtistKey(artist) : null;
     if (wantedTitle === '') return [];
 
-    const rows = await this.songs.lookupAcrossGroups({ title });
+    const rows = await this.songs.lookupAcrossGroups();
 
     const hits = rows.filter((row) => {
-      if (normalizeSongText(row.title) !== wantedTitle) return false;
+      if (songTitleKey(row.title) !== wantedTitle) return false;
       if (wantedArtist === null || row.artist === null) return true;
-      return normalizeSongText(row.artist) === wantedArtist;
+
+      const found = songArtistKey(row.artist);
+      if (found === '' || wantedArtist === '') return true;
+
+      return found.includes(wantedArtist) || wantedArtist.includes(found);
     });
 
     // Durch dieselbe Prüfung wie die Vorschläge des Modells: kein `http:`,

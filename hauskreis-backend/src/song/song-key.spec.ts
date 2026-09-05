@@ -2,6 +2,8 @@ import {
   lyricsUrlHost,
   normalizeLyricsUrl,
   normalizeSongText,
+  songArtistKey,
+  songTitleKey,
 } from './song-key';
 
 describe('normalizeSongText', () => {
@@ -69,5 +71,67 @@ describe('lyricsUrlHost', () => {
 
   it('gibt null zurück, wenn das keine Adresse ist', () => {
     expect(lyricsUrlHost('nope')).toBeNull();
+  });
+});
+
+describe('songTitleKey', () => {
+  /** Der gemeldete Fall: im Archiv „(Live)", eingetippt ohne. */
+  it('führt eine Fassung mit ihrem Lied zusammen', () => {
+    expect(songTitleKey('Goodness of God (Live)')).toBe(
+      songTitleKey('Goodness of God'),
+    );
+    expect(songTitleKey('Goodness of God - Live')).toBe(
+      songTitleKey('Goodness of God'),
+    );
+    expect(songTitleKey('Goodness of God feat. Jenn Johnson')).toBe(
+      songTitleKey('Goodness of God'),
+    );
+  });
+
+  it('nimmt auch eckige Klammern', () => {
+    expect(songTitleKey('Oceans [Official Video]')).toBe(
+      songTitleKey('Oceans'),
+    );
+  });
+
+  /**
+   * Der Gedankenstrich zählt nur vor einem der bekannten Wörter. Sonst nähme er
+   * jedem Titel, der einen enthält, die Hälfte weg.
+   */
+  it('lässt einen Gedankenstrich im Titel stehen', () => {
+    expect(songTitleKey('Herr, dein Name - meine Zuflucht')).not.toBe(
+      songTitleKey('Herr, dein Name'),
+    );
+  });
+
+  /** Sonst passte ein leerer Schlüssel auf jeden anderen leeren. */
+  it('gibt nicht auf, wenn nach dem Streichen nichts übrig bleibt', () => {
+    expect(songTitleKey('(Live)')).toBe(normalizeSongText('(Live)'));
+    expect(songTitleKey('(Live)')).not.toBe('');
+  });
+
+  it('trennt weiterhin, was verschiedene Lieder sind', () => {
+    expect(songTitleKey('Oceans')).not.toBe(songTitleKey('Ozean'));
+  });
+});
+
+describe('songArtistKey', () => {
+  it('lässt die Besetzung weg', () => {
+    expect(songArtistKey('Bethel Music feat. Jenn Johnson')).toBe(
+      songArtistKey('Bethel Music'),
+    );
+    expect(songArtistKey('Hillsong UNITED ft. Taya')).toBe(
+      songArtistKey('hillsong united'),
+    );
+  });
+
+  /**
+   * Anders als beim Titel: Bei einem Interpreten trägt die Klammer oft den
+   * unterscheidenden Teil.
+   */
+  it('lässt eine Klammer stehen', () => {
+    expect(songArtistKey('Die Priester (Klassik)')).not.toBe(
+      songArtistKey('Die Priester'),
+    );
   });
 });
