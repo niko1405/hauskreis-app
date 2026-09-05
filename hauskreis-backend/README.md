@@ -709,6 +709,7 @@ jeder mit Label, Begründung und Default-Rhythmus.
 | `HOST_REMINDER`          | Abend rückt näher                             | der Host                                               | 3 Tage vorher |
 | `TOPIC_REMINDER`         | Abend rückt näher                             | Themen-Verantwortliche                                 | 5 Tage vorher |
 | `SONG_REMINDER`          | Abend rückt näher                             | Musik-Verantwortliche                                  | 5 Tage vorher |
+| `SNACK_REMINDER`         | Abend rückt näher                             | wer etwas mitbringt                                    | 2 Tage vorher |
 | `ACTIONSTEP_REMINDER`    | Actionstep vom letzten Mal                    | alle                                                   | freitags      |
 | `ROLE_ASSIGNED`          | jemand trägt dich für einen Abend ein         | die eingeteilte Person                                 | sofort        |
 | `PRAYER_BUDDY_ASSIGNED`  | neue Rotation                                 | alle                                                   | sofort        |
@@ -1368,19 +1369,23 @@ unverändert, `null` löscht die Zuordnung.
 
 ### Woraus ein Abend besteht
 
-Fünf Schalter am Termin — `hasTopicSlot`, `hasNotesSlot`, `hasSongSlot`,
-`hasTestimonySlot`, `hasPrayerSlot` — und sie sind die **ganze** Aussage
-darüber, was der Abend ist. Angelegt wird mit einer von drei Belegungen
+Sechs Schalter am Termin — `hasTopicSlot`, `hasNotesSlot`, `hasSongSlot`,
+`hasTestimonySlot`, `hasPrayerSlot`, `hasSnackSlot` — und sie sind die **ganze**
+Aussage darüber, was der Abend ist. Angelegt wird mit einer von drei Belegungen
 (`meeting-slots.ts`):
 
-| Belegung        | Thema | Nachbereitung¹ | Lieder | Testimony | Gebetsanliegen² | wann                            |
-| --------------- | ----- | -------------- | ------ | --------- | --------------- | ------------------------------- |
-| `EVENING_SLOTS` | ✓     | –              | ✓      | –         | ✓               | erzeugt, gewöhnlicher Abend     |
-| `PRAISE_SLOTS`  | –     | –              | ✓      | ✓         | ✓               | erzeugt, letzter Abend im Monat |
-| `EMPTY_SLOTS`   | –     | –              | –      | –         | ✓               | von Hand angelegt               |
+| Belegung        | Thema | Nachbereitung¹ | Lieder | Testimony | Gebetsanliegen² | Snacks³ | wann                            |
+| --------------- | ----- | -------------- | ------ | --------- | --------------- | ------- | ------------------------------- |
+| `EVENING_SLOTS` | ✓     | –              | ✓      | –         | ✓               | –       | erzeugt, gewöhnlicher Abend     |
+| `PRAISE_SLOTS`  | –     | –              | ✓      | ✓         | ✓               | –       | erzeugt, letzter Abend im Monat |
+| `EMPTY_SLOTS`   | –     | –              | –      | –         | ✓               | –       | von Hand angelegt               |
 
 ¹ überall aus und erst **ab Terminbeginn** anschaltbar — siehe unten.
 ² überall an, schließt nichts aus, teilt niemanden ein — siehe unten.
+³ überall aus, schließt nichts aus. Der Generator setzt ihn **nach** der
+Belegung aus `meeting_schedule_config.snack_slot` (Vorgabe aus): Snacks hängen
+nicht daran, ob der Abend ein Thema oder ein Testimony hat — gegessen wird an
+beiden.
 
 **Hier stand einmal eine `MeetingType`** mit den Werten `STANDARD`,
 `LOBPREIS_GEBET` und `CUSTOM`, und die ersten beiden waren eine zweite,
@@ -2474,6 +2479,27 @@ ist gültig: nicht jeder Abend hat Lieder, dann braucht es niemanden.
 
 `GET …/meetings/:id/song-leader-suggestions` rankt nur, wer ein Instrument
 spielt — vier der neun. Eingetragen werden darf trotzdem jeder.
+
+### Snacks
+
+`PUT …/meetings/:id/snack-responsibles` ersetzt, wer etwas zu essen mitbringt —
+gebaut als Zwilling der Musik-Zuteilung, samt `assertAvailable` für die
+Dazukommenden, Zusage über `RoleAttendanceService` und Nachricht über
+`RoleAssignmentNotifier`.
+
+**Es gibt keine Vorschlagsroute daneben**, als einzige der fünf Termin-Rollen.
+Die anderen beantworten „wer wäre als Nächstes dran" mit einer Rangfolge aus
+Fakten; bei den Snacks stellt diese Frage niemand. Wer etwas mitbringt, sagt
+es — die App trägt es nur ein.
+
+Als **Last** zählt die Rolle in den vier übrigen Ranglisten trotzdem
+(`collectSnackEvents` in `RoleSuggestionService`): Wer den Kuchen bringt, ist an
+dem Abend beschäftigt, und ihn ganz oben als Gastgeber vorzuschlagen wäre genau
+der Fehler, den `collectLoad` einmal behoben hat.
+
+Was jemand mitbringt, steht nicht in der Tabelle. Ein `dish`-Feld wäre ein
+zweiter Chat neben WhatsApp — dieselbe Überlegung wie bei den
+Geschenke-Vorschlägen.
 
 ### Die beiden Abkürzungen beim Erfassen (Gemini)
 
@@ -3828,6 +3854,7 @@ beide aus derselben Variable ab.
 | `GET`/`POST`            | `…/meetings/:id/songs`                       | eingeloggt                                   |
 | `PATCH`/`DELETE`        | `…/meetings/:id/songs/:entryId`              | eingeloggt                                   |
 | `GET`/`PUT`             | `…/meetings/:id/song-leaders`                | eingeloggt                                   |
+| `GET`/`PUT`             | `…/meetings/:id/snack-responsibles`          | eingeloggt                                   |
 | `GET`                   | `…/meetings/:id/song-leader-suggestions`     | eingeloggt                                   |
 | `GET`                   | `…/prayer-buddies/current`                   | eingeloggt                                   |
 | `GET`                   | `…/prayer-buddies?scope=past\|upcoming\|all` | eingeloggt (paginiert)                       |

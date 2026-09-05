@@ -1,0 +1,42 @@
+meta {
+  name: Snacks eintragen
+  type: http
+  seq: 31
+}
+
+put {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/meetings/{{meetingId}}/snack-responsibles
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "personIds": ["{{personId}}"]
+  }
+}
+
+tests {
+  test("trägt die Person ein", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.map((p) => p.id)).to.include(bru.getEnvVar("personId"));
+  });
+}
+
+docs {
+  Ersetzt die ganze Liste, wie bei den Songleadern — eine leere ist gültig.
+  Ohne `If-Match`: Die Liste kommt vollständig herein und ersetzt die
+  vorherige; zwei Leute, die gleichzeitig jemanden eintragen, wären ein
+  Wettlauf um dieselbe Aussage und keine Kollision zweier verschiedener.
+
+  Braucht den Baustein nicht — der sagt, ob der Abend die Rolle vorsieht, und
+  das entscheidet die Oberfläche, bevor sie den Weg hierher anbietet. Wird er
+  später abgeschaltet, räumt der Server die Zeilen weg.
+
+  Wer für den Abend **abgesagt** hat, wird mit 400 abgelehnt
+  (`assertAvailable`) — und zwar nur, wenn er neu dazukommt. Wer schon
+  eingetragen war und danach absagt, blockiert die Liste nicht.
+
+  Es gibt bewusst **keine** Vorschlagsroute daneben. „Wer war am längsten nicht
+  dran" ist bei Snacks keine Frage, die jemand stellt.
+}

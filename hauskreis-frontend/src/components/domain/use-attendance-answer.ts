@@ -6,7 +6,7 @@
  *
  * **Wer nicht mehr zusagt, verliert seine Rollen** — bei einer Absage wie bei
  * einem „weiß noch nicht". Eine Rolle ist die Aussage „ich bin da und mache
- * das" (CLAUDE.md §6.7, „Wer eingeteilt wird, ist dabei"), und beide Antworten
+ * das" (CLAUDE.md §6.8, „Wer eingeteilt wird, ist dabei"), und beide Antworten
  * nehmen genau sie zurück. Am Dienstag stand sonst im Plan jemand, der selbst
  * nicht weiß, ob er kommt.
  *

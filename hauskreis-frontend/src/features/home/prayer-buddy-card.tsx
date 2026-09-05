@@ -17,7 +17,7 @@
  * es dort.
  *
  * Gerechnet wird mit `circleOf`, wie auf dem Gebets-Bildschirm. Zwei Kopien
- * derselben Rechnung sagen irgendwann zwei verschiedene Dinge (CLAUDE.md §6.4).
+ * derselben Rechnung sagen irgendwann zwei verschiedene Dinge (CLAUDE.md §6.5).
  */
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import Link from '@/components/ui/link';

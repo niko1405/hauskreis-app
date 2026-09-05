@@ -374,6 +374,32 @@ eines, für das noch niemand einen festgelegt hat. Ein Lobpreisabend hat gar kei
 Thema. Solche Zustände bekommen ihren eigenen Text — nicht `—` und nicht die
 Fehlerdarstellung.
 
+## Vier Farben, die etwas bedeuten — und keine für Rollen
+
+In `globals.css`, hell und dunkel:
+
+| Token     | heißt                  | steht an                                                 |
+| --------- | ---------------------- | -------------------------------------------------------- |
+| `success` | fertig, gewählt, läuft | „Läuft", Erfolgs-Toast, Actionstep-Haken, gewähltes Lied |
+| `warn`    | Hinweis                | Fehlerkarte, Hinweis-Kästen, KI-Vorschlag                |
+| `info`    | Nebenbemerkung         | Info-Kästen im Zuteilungs-Sheet                          |
+| `alert`   | Konflikt und Gefahr    | „Abgesagt", Löschen-Knöpfe, Versionskonflikt             |
+
+Dazu **terracotta** für die _Auswahl_ (aktiver Tab, gewählter Chip, erster Platz
+einer Rangliste) und die sieben Avatar-Paletten für Personen.
+
+**Rollen haben keine eigene Farbe.** Jede trug einmal eine — Thema und Testimony
+amber, Musik grün, Gebetsbuddy blau, Geschenk rot, Gastgeber terracotta —, und
+auf einer Terminkarte standen davon drei nebeneinander, auf „Heute" bis zu fünf.
+Weil jede für sich etwas bedeutete, bedeutete am Ende keine mehr etwas. `RoleChip`
+hat deshalb genau zwei Zustände: besetzt (neutral) und leer (gestrichelt,
+terracotta — die Einladung, jemanden zu wählen).
+
+Die ersten beiden Tokens hießen `music` und `topic`, nach den Rollen, für die
+sie erfunden wurden. Getragen haben sie an den meisten Stellen längst etwas
+anderes; ein Token, das nach einer Rolle heißt, die keine Farbe mehr hat, zeigt
+auf nichts — und der Nächste hätte darin wieder eine Rollenfarbe vermutet.
+
 ## Eine Klasse, die den Rechner rettet
 
 `app-shell.tsx`: Die Inhaltsspalte ist ab `md` ein Flex-Kind einer Zeile
@@ -736,12 +762,48 @@ leere und halbe Werte, und jeder davon wäre ein `PATCH` samt Benachrichtigung a
 die Gruppe. Leeren lässt sich das Feld nicht — ein Abend ohne Uhrzeit ist kein
 Zustand, den es geben soll.
 
-Die Zeit steht **nur hier**, nicht auf den Terminkarten, im Kalender oder in der
-Planungstabelle: bei wöchentlich gleicher Zeit stünde dieselbe Zahl fünfzehnmal
-untereinander. Die Vorgabe für neue Abende kommt aus `…/meetings/config` und
+Die Zeit steht außerdem auf den Terminkarten — seit sie ein Datums-Kästchen
+tragen, ist die Zeile darunter frei dafür. Im Kalender und in der
+Planungstabelle steht sie weiter nicht: dort ist die Zeile drei Zeilen hoch bzw.
+eine Zelle breit, und bei wöchentlich gleicher Zeit stünde dieselbe Zahl
+fünfzehnmal untereinander. Die Vorgabe für neue Abende kommt aus `…/meetings/config` und
 lässt sich in der Verwaltung zusammen mit dem Wochentag umstellen; das
 Anlege-Formular belegt sein Feld damit vor, damit niemand jede Woche dasselbe
 tippt.
+
+**Die Gebetsanliegen sind Sprechblasen.** Was dort steht, ist ein Satz, den
+jemand der Gruppe sagt; als Kasten mit Rahmen sah er aus wie ein Datenfeld. Der
+Zipfel ist ein gedrehtes Quadrat in derselben Fläche und Randfarbe — kein SVG
+und keine zweite Farbe, die beim Umschalten auf Dunkel nachgezogen werden
+müsste. Das **eigene** Anliegen bleibt sichtbar davon unterschieden: Es ist das
+einzige, das man bearbeitet.
+
+**In der Thema-Karte stehen zwei Aussagen an zwei Plätzen**: links, wo man zu
+lesen anfängt, das Überthema mit seinem Link; rechts das wievielte Stück davon
+dieser Abend ist („Einheit 2/4"). Beides war einmal _ein_ überlappendes
+Abzeichen oben links. Eine Hülle hat links nichts stehen und rechts „Einzelne
+Einheit". Der **Actionstep** steht außerhalb des Links auf die Einheit, damit
+der Haken „Für mich abhaken" in denselben Kasten passt — in einem Link darf kein
+Knopf sitzen.
+
+**Ort und Zuständigkeiten sind zwei Sektionen.** Sie standen in einer Karte, der
+Ort als namenloser Block darüber — dabei beantworten sie verschiedene Fragen:
+„wo treffen wir uns" gegen „wer macht was". „Ort & Anreise" zeigt jetzt die
+**Adresse** (`location.address`), die in der Antwort längst mitkommt und auf
+dieser Seite nirgends zu sehen war; ohne Ort steht dort **kein** Maps-Knopf
+statt eines ausgegrauten in `bg-gray-300`.
+
+„Zuständigkeiten" trägt im `action`-Slot der `SectionTitle` einen Zähler
+(„2 von 4 besetzt") und je Rolle eine eigene abgerundete Fläche statt einer
+Zeile hinter `divide-y`.
+
+**Welche Rollen ein Abend hat, steht einmal**: `meetingRoles` in
+`lib/meeting.ts`. Die Aufstellung stand dreimal da — als Kette von `&&` in
+`planningComplete`, als Liste von Zellen in der Planungstabelle und als Folge
+von `{slot && <RoleRow …>}` hier. Drei Antworten auf dieselbe Frage laufen
+irgendwann auseinander, und dann stünde über einer Liste mit vier Zeilen „3 von
+5 besetzt". Sie unterscheidet **fehlt** von **gibt es hier nicht**: Ein Abend im
+Schlosspark hat keine Gastgeber-Rolle, also steht sie dort gar nicht.
 
 **Ort und Gastgeber sind eine Entscheidung** — und haben deshalb **ein**
 Bedienelement: [`VenueSheet`](src/components/domain/venue-sheet.tsx), mit zwei
@@ -966,10 +1028,11 @@ musste selbst darauf kommen, dass noch nichts gewählt ist. Was an ihrer Stelle
 steht, hängt daran, wer liest — für das Musik-Team eine Aufforderung, für alle
 anderen eine Auskunft.
 
-**Das Gewählte ist terracotta und nicht mehr `music`-grün.** Grün ist in dieser
-App die Farbe der _Rolle_ — das SONG-Abzeichen, die Person, die die Musik macht.
-„Im Set" ist keine Rolle, sondern eine **Auswahl**, und Auswahl ist überall
-terracotta: der aktive Tab, der gewählte Chip, der erste Platz einer Rangliste.
+**Das Gewählte ist terracotta.** „Im Set" ist eine **Auswahl**, und Auswahl ist
+überall terracotta: der aktive Tab, der gewählte Chip, der erste Platz einer
+Rangliste. Es war einmal grün, in der Farbe, die damals der Musik-Rolle
+gehörte — inzwischen tragen die Rollen keine eigenen Farben mehr, und dasselbe
+Grün heißt `success` und bedeutet „fertig, gewählt, läuft".
 
 Vergangene Abende sind fürs Abhaken damit wieder bedienbar, obwohl sie sonst
 gesperrt bleiben. Das ist Absicht: wer am nächsten Tag nachträgt, was
@@ -1059,6 +1122,31 @@ steht auf einem Knopf, den man drückt („Zusagen"), `short` in einer Zeile üb
 jemand anderen, die etwas feststellt („Dabei"). Die zustimmende Antwort steht
 **rechts**, wie in jeder Rückfrage der App.
 
+### Die Terminkarte
+
+`components/domain/meeting-card.tsx`.
+
+**Links ein Datums-Kästchen** — Wochentag, Tag, Monat (`dayParts` in
+`lib/date.ts`). Das Datum stand als Kleinschrift-Zeile über dem Titel und war
+damit das Unauffälligste an einer Karte, die man genau danach durchsucht. Ein
+**Zeitraum** bekommt keins: „14.–16." passt nicht hinein, und eine Freizeit ist
+kein Tag; dort steht die Spanne als Zeile.
+
+Weil das Kästchen den Tag trägt, steht die **Uhrzeit** jetzt auch hier und nicht
+mehr nur auf „Heute". Die alte Begründung („in einer Liste über Wochen ist sie
+Rauschen") galt, solange der Tag dieselbe Zeile belegte.
+
+**Rollen-Chips sind neutral** (`RoleChip`). Sie trugen je eine eigene Farbe, und
+auf einer Karte standen davon drei nebeneinander — weil jede für sich etwas
+bedeutete, bedeutete am Ende keine mehr etwas. Unterschieden werden sie durch
+Symbol und Name. Der gestrichelte terracotta Rand des **leeren** Chips bleibt:
+Er ist die Einladung, jemanden zu wählen, und Auswahl ist überall terracotta.
+
+Braucht der Ort keinen Gastgeber, steht **kein** Host-Chip da. Der Ort selbst
+steht schon in der Zeile darüber; als Chip stand er ein zweites Mal und
+behauptete eine Rolle, die es an dem Abend nicht gibt — dieselbe Regel wie
+`meetingRoles` am Termin.
+
 ### Die Antwort in der Terminliste
 
 `components/domain/meeting-card.tsx` plus
@@ -1076,22 +1164,19 @@ Drei Dinge sind daran zu beachten:
   **und** `stopPropagation()`, sonst führt der Tipp zusätzlich auf die
   Detailseite — und die Antwort wäre nicht mehr zu sehen.
 - **Das Sheet ist ein Geschwister des Links, nicht sein Kind.** `Sheet` rendert
-  sein Overlay als `position: fixed` ohne Portal, und die Karte trägt sowohl
-  `@container` als auch `active:scale` — beides macht sie zum Bezugsrahmen für
-  `fixed`, und der Schleier säße dann in der Karte statt über der Seite.
-- **`@container` und nicht `md:`.** Ob die Knöpfe neben die Rollen-Chips passen,
-  hängt an der Breite der Karte. Zwischen `md` und rund 1000px Fensterbreite ist
-  die Spalte neben der Seitenleiste erst gut 450px breit; ein Breakpoint auf das
-  Fenster stellte sie dort nebeneinander, wo kein Platz ist. Es ist die einzige
-  Container-Query im Projekt, und sie steht da, wo die Frage wirklich „wie breit
-  bin ich" lautet.
-- **Zwei Zonen, kein umbrechender Fluss.** Rollen und Antwort sind zwei
-  Kästen — schmal untereinander, ab `@lg` nebeneinander (`@lg:flex`). Zuerst
-  waren sie Geschwister in _einer_ umbrechenden Reihe, und dann hing die Antwort
-  auf dem Telefon mit acht Pixeln Abstand an den Chips und las sich wie ein
-  fünfter davon. Schmal trägt sie deshalb einen **zweiten Trennstrich**, ab `@lg`
-  fällt er weg: derselbe Gedanke wie der Strich über den Rollen — er trennt, was
-  der Abend ist, von dem, was du dazu sagst.
+  sein Overlay als `position: fixed` ohne Portal, und die Karte trägt
+  `active:scale` — das macht sie zum Bezugsrahmen für `fixed`, und der Schleier
+  säße dann in der Karte statt über der Seite.
+- **Zwei Zonen, kein umbrechender Fluss, und immer untereinander.** Rollen und
+  Antwort sind zwei Kästen mit je einem Trennstrich darüber: der erste sagt „das
+  ist der Abend", der zweite „das sagst du dazu". Zuerst waren sie Geschwister in
+  _einer_ umbrechenden Reihe, und dann hing die Antwort mit acht Pixeln Abstand
+  an den Chips und las sich wie ein fünfter davon.
+
+  Dazwischen standen sie eine Runde lang ab 32 rem **nebeneinander**, über eine
+  `@container`-Query — die einzige des Projekts. Das war eng gedacht: Im Fenster
+  verlor die Antwort genau die Trennung, für die der zweite Strich da ist. Jetzt
+  steht sie in jeder Breite darunter, und die Container-Query ist weg.
 
 Der Ablauf ist derselbe wie im Balken: **Der Status schreibt sofort** (über
 `useAttendanceAnswer`, also mit der Rollen-Rückfrage), **die Notiz auf

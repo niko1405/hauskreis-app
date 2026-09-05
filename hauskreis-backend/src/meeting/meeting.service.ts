@@ -928,7 +928,7 @@ export class MeetingService {
      * bei einem „weiß noch nicht".
      *
      * Lange galt das nur für die Absage. Aber eine Rolle ist die Aussage „ich
-     * bin an dem Abend da und mache das" (CLAUDE.md §6.7: „Wer eingeteilt wird,
+     * bin an dem Abend da und mache das" (CLAUDE.md §6.8: „Wer eingeteilt wird,
      * ist dabei"), und wer auf unentschieden zurückgeht, nimmt genau diese
      * Aussage zurück. Am Dienstag stand sonst im Plan jemand, der selbst nicht
      * weiß, ob er kommt.

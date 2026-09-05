@@ -226,6 +226,8 @@ Dazu kommen die **Bausteine**, die man an- und abschalten kann:
 
 - **Thema** oder **Testimony** — immer nur eins von beiden.
 - **Musik**.
+- **Snacks** — wer etwas zu essen mitbringt. Voreingestellt aus; wer sie an
+  jedem erzeugten Termin haben will, hakt das einmal in der Verwaltung an.
 
 Bearbeitet wird das über den Knopf **„Bearbeiten"** ganz unten in der
 Termin-Ansicht. Manche Felder darf nur ändern, wer die passende Rolle hat.
@@ -236,6 +238,10 @@ Termin-Ansicht. Manche Felder darf nur ändern, wer die passende Rolle hat.
 - **Thema** — mehrere möglich.
 - **Musik** — mehrere möglich.
 - **Testimony** — genau eine Person.
+- **Snacks** — mehrere möglich. Als einzige Rolle **ohne Vorschlagsliste**: Wer
+  etwas mitbringt, sagt es — da gibt es nichts zu berechnen. Wer für den Abend
+  abgesagt hat, steht nicht zur Wahl. Was jemand mitbringt, besprecht ihr unter
+  euch; in der App steht nur, wer sich kümmert.
 
 Ein Termin ohne Gastgeber ist völlig in Ordnung: Für einen Treffpunkt wie den
 Schlosspark braucht es keinen.
