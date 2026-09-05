@@ -17,6 +17,7 @@ import type {
   AssignmentRole,
   AttendanceStatus,
   MeetingStatus,
+  PersonRef,
 } from './api/types';
 import { hasStarted, isPast, type CalendarDay } from './date';
 
@@ -229,42 +230,114 @@ export function applySlotToggle(
 }
 
 /**
- * Ist an diesem Abend jede Rolle vergeben, die es an ihm gibt?
+ * Die Rollen, die an einem Abend hängen — Gebetsbuddys und Geschenke also nicht.
  *
- * Die Frage der Planungstabelle, und ihr Kern ist der Unterschied zwischen
- * *fehlt* und *gibt es hier nicht*: ein Geburtstagsabend ohne Thema ist nicht
- * offen, er hat keins. Ein Gastgeber fehlt auch dann nicht, wenn der Ort schon
- * feststeht und keinen braucht — Schlosspark, Café, Gemeindehaus.
- *
- * Ein abgesagter Abend ist nie fertig geplant: an ihm gibt es nichts zu planen.
- * Grün zu leuchten wäre dort eine Auszeichnung für einen Abend, der ausfällt.
+ * Beide teilt der Server zu und beide hängen an keinem Termin; sie stehen unter
+ * „Deine Rollen", aber nie an einem Abend.
  */
-export function planningComplete(meeting: {
-  status: MeetingStatus;
+export type MeetingRole = Exclude<
+  AssignmentRole,
+  'PRAYER_BUDDY' | 'BIRTHDAY_GIFT'
+>;
+
+/** Warum eine Rolle an diesem Abend gar nicht vorkommt. */
+export type RoleAbsence =
+  /** Der Baustein ist aus — den Abend gibt es ohne diese Rolle. */
+  | 'slot-off'
+  /** Der Ort braucht keinen Gastgeber: Schlosspark, Café, Gemeindehaus. */
+  | 'not-needed';
+
+export interface MeetingRoleSlot {
+  role: MeetingRole;
+  people: PersonRef[];
+  /** `null` heißt: Die Rolle gibt es hier, sie ist nur vielleicht unbesetzt. */
+  absent: RoleAbsence | null;
+}
+
+/**
+ * Welche Rollen dieser Abend hat, wer sie trägt — und wo es sie gar nicht gibt.
+ *
+ * **Eine Aufstellung, drei Leser**: die Zuständigkeiten-Sektion am Termin, ihr
+ * Zähler („2 von 4 besetzt") und die Planungstabelle. Sie stand vorher dreimal
+ * da — als Kette von `&&` in `planningComplete`, als Liste von Zellen in der
+ * Tabelle und als Folge von `{slot && <RoleRow …>}` auf der Detailseite. Drei
+ * Antworten auf dieselbe Frage laufen irgendwann auseinander, und dann stünde
+ * über einer Liste mit vier Zeilen „3 von 5 besetzt".
+ *
+ * Der Kern ist der Unterschied zwischen *fehlt* und *gibt es hier nicht*: ein
+ * Geburtstagsabend ohne Thema ist nicht offen, er hat keins.
+ */
+export function meetingRoles(meeting: {
   hostPersonId: string | null;
+  host: PersonRef | null;
   location: { requiresHost: boolean } | null;
   hasTopicSlot: boolean;
   hasSongSlot: boolean;
   hasTestimonySlot: boolean;
   hasSnackSlot: boolean;
-  testimonyPersonId: string | null;
-  topicResponsibles: readonly unknown[];
-  songLeaders: readonly unknown[];
-  snackResponsibles: readonly unknown[];
-}): boolean {
+  testimonyPerson: PersonRef | null;
+  topicResponsibles: readonly { person: PersonRef }[];
+  songLeaders: readonly { person: PersonRef }[];
+  snackResponsibles: readonly { person: PersonRef }[];
+}): MeetingRoleSlot[] {
+  return [
+    {
+      role: 'HOST',
+      people: meeting.host ? [meeting.host] : [],
+      // Einen Gastgeber-Baustein gibt es nicht — man trifft sich immer
+      // irgendwo. Fehlen kann er trotzdem nicht, wenn der Ort keinen braucht.
+      absent:
+        meeting.hostPersonId === null &&
+        meeting.location !== null &&
+        !meeting.location.requiresHost
+          ? 'not-needed'
+          : null,
+    },
+    {
+      role: 'TOPIC',
+      people: meeting.topicResponsibles.map((row) => row.person),
+      absent: meeting.hasTopicSlot ? null : 'slot-off',
+    },
+    {
+      role: 'SONG',
+      people: meeting.songLeaders.map((row) => row.person),
+      absent: meeting.hasSongSlot ? null : 'slot-off',
+    },
+    {
+      role: 'TESTIMONY',
+      people: meeting.testimonyPerson ? [meeting.testimonyPerson] : [],
+      absent: meeting.hasTestimonySlot ? null : 'slot-off',
+    },
+    {
+      role: 'SNACK',
+      people: meeting.snackResponsibles.map((row) => row.person),
+      absent: meeting.hasSnackSlot ? null : 'slot-off',
+    },
+  ];
+}
+
+/** Die Rollen, die es an diesem Abend wirklich gibt. */
+export function activeMeetingRoles(
+  meeting: Parameters<typeof meetingRoles>[0],
+): MeetingRoleSlot[] {
+  return meetingRoles(meeting).filter((slot) => slot.absent === null);
+}
+
+/**
+ * Ist an diesem Abend jede Rolle vergeben, die es an ihm gibt?
+ *
+ * Die Frage der Planungstabelle. Sie liest dieselbe Aufstellung wie die
+ * Zuständigkeiten-Sektion: Was dort als Zeile steht, zählt hier mit.
+ *
+ * Ein abgesagter Abend ist nie fertig geplant: an ihm gibt es nichts zu planen.
+ * Grün zu leuchten wäre dort eine Auszeichnung für einen Abend, der ausfällt.
+ */
+export function planningComplete(
+  meeting: Parameters<typeof meetingRoles>[0] & { status: MeetingStatus },
+): boolean {
   if (meeting.status === 'CANCELLED') return false;
 
-  const hostGeklärt =
-    meeting.hostPersonId !== null ||
-    (meeting.location !== null && !meeting.location.requiresHost);
-
-  return (
-    hostGeklärt &&
-    (!meeting.hasTopicSlot || meeting.topicResponsibles.length > 0) &&
-    (!meeting.hasSongSlot || meeting.songLeaders.length > 0) &&
-    (!meeting.hasTestimonySlot || meeting.testimonyPersonId !== null) &&
-    (!meeting.hasSnackSlot || meeting.snackResponsibles.length > 0)
-  );
+  return activeMeetingRoles(meeting).every((slot) => slot.people.length > 0);
 }
 
 /**

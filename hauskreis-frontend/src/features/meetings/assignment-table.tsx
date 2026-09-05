@@ -38,12 +38,15 @@ import {
   useSongLeaders,
 } from '@/lib/api/hooks';
 import { addDays, formatDay, formatRelativeDay, today } from '@/lib/date';
-import { ROLE_LABEL, planningComplete } from '@/lib/meeting';
+import {
+  ROLE_LABEL,
+  meetingRoles,
+  planningComplete,
+  type MeetingRole,
+} from '@/lib/meeting';
 import { cn } from '@/lib/cn';
 import type { MeetingListItem, PersonRef } from '@/lib/api/types';
 import { useRoleAssignment } from './detail/use-role-assignment';
-
-import type { AssignmentKind } from '@/components/domain/assignment-picker';
 
 const AssignmentSheet = dynamic(() =>
   import('@/components/domain/assignment-sheet').then((m) => m.AssignmentSheet),
@@ -63,13 +66,15 @@ const SnackSheet = dynamic(() =>
  * Gebetsbuddys und Geschenke fallen heraus: Beide hängen an keinem Termin, und
  * eine Spalte, die in jeder Zeile leer bliebe, wäre keine Information.
  *
- * `AssignmentKind` **plus Snacks**, und der Unterschied ist der Punkt: Jener
- * Typ beantwortet „welche Rollen haben eine Rangliste", diese Tabelle „welche
- * Rollen hängen an einem Abend". Bei den ersten vier fällt beides zusammen,
- * bei den Snacks nicht — sie stehen hier, weil ein Abend ohne sie nicht fertig
- * geplant ist, und im Sheet nicht, weil es nichts vorzuschlagen gibt.
+ * `MeetingRole` aus `lib/meeting.ts` — dieselbe Menge, die auch die
+ * Zuständigkeiten am Termin auflisten und `planningComplete` prüft. Sie ist
+ * weiter als `AssignmentKind`: Jener Typ beantwortet „welche Rollen haben eine
+ * Rangliste", diese Tabelle „welche Rollen hängen an einem Abend". Bei vier
+ * Rollen fällt beides zusammen, bei den Snacks nicht — sie stehen hier, weil
+ * ein Abend ohne sie nicht fertig geplant ist, und im Sheet nicht, weil es
+ * nichts vorzuschlagen gibt.
  */
-type Column = AssignmentKind | 'SNACK';
+type Column = MeetingRole;
 
 /**
  * Drei Stufen reichen: ganz, kleiner, klein. Ein stufenloser Regler wäre auf
@@ -227,45 +232,15 @@ function Row({
    * Jede Rolle vergeben, die es an diesem Abend gibt.
    *
    * Genau die Frage, für die man diese Tabelle aufmacht — und sie war bisher
-   * nur zu beantworten, indem man vier Zellen einzeln absuchte. Die Bedingungen
-   * stehen in `planningComplete`, weil sie dieselben sind, nach denen unten die
-   * einzelnen Zellen entscheiden, ob sie „offen" sagen.
+   * nur zu beantworten, indem man die Zellen einzeln absuchte.
    */
   const fertig = planningComplete(meeting);
 
-  const cells: Cell[] = [
-    {
-      role: 'HOST',
-      people: meeting.host ? [meeting.host] : [],
-      // Steht der Ort schon fest und braucht keinen Gastgeber — Schlosspark,
-      // Café, Gemeindehaus —, dann fehlt hier niemand. „offen" hätte jede Woche
-      // an eine Lücke erinnert, die es nicht gibt.
-      absent:
-        meeting.location && !meeting.location.requiresHost
-          ? 'not-needed'
-          : null,
-    },
-    {
-      role: 'TOPIC',
-      people: meeting.topicResponsibles.map((r) => r.person),
-      absent: meeting.hasTopicSlot ? null : 'slot-off',
-    },
-    {
-      role: 'SONG',
-      people: meeting.songLeaders.map((leader) => leader.person),
-      absent: meeting.hasSongSlot ? null : 'slot-off',
-    },
-    {
-      role: 'TESTIMONY',
-      people: meeting.testimonyPerson ? [meeting.testimonyPerson] : [],
-      absent: meeting.hasTestimonySlot ? null : 'slot-off',
-    },
-    {
-      role: 'SNACK',
-      people: meeting.snackResponsibles.map((row) => row.person),
-      absent: meeting.hasSnackSlot ? null : 'slot-off',
-    },
-  ];
+  // Dieselbe Aufstellung, die auch die Zuständigkeiten am Termin zeichnen und
+  // `planningComplete` prüft. Sie stand hier einmal ein zweites Mal, Zelle für
+  // Zelle abgeschrieben — und zwei Antworten auf „welche Rollen hat dieser
+  // Abend" laufen irgendwann auseinander.
+  const cells: Cell[] = meetingRoles(meeting);
 
   return (
     <tr className={cn('align-middle', cancelled && 'opacity-50')}>

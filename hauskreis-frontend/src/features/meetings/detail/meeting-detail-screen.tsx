@@ -30,6 +30,7 @@ import {
   UserPen,
   ExternalLink,
   MapPin,
+  Navigation,
   Pencil,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
@@ -38,7 +39,7 @@ import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button, IconButton } from '@/components/ui/button';
+import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
 import { InlineEdit, TextInput } from '@/components/ui/field';
@@ -68,14 +69,16 @@ import {
   meetingKindLabel,
   ROLE_LABEL,
   SLOT_LABEL,
+  activeMeetingRoles,
   applySlotToggle,
   mapsUrl,
   meetingHeadline,
   meetingPhase,
 } from '@/lib/meeting';
+import { ROLE_ICON } from '@/components/domain/role-badge';
 import { ActionstepCheck } from '@/components/domain/actionstep-check';
 import { SlotCard } from '@/components/domain/slot-toggles';
-import type { MeetingSlotKey } from '@/lib/meeting';
+import type { MeetingRole, MeetingSlotKey } from '@/lib/meeting';
 import type { AssignmentRole, Meeting, PersonRef } from '@/lib/api/types';
 import { AnswerBar } from './answer-bar';
 import { AttendanceCard } from './attendance-card';
@@ -267,6 +270,17 @@ function Loaded({
    */
   const locked = past || cancelled;
 
+  /**
+   * Welche Rollen dieser Abend hat und wer sie trägt.
+   *
+   * Aus `meetingRoles` und nicht aus fünf `{slot && <RoleRow …>}` in der
+   * Ausgabe: Dieselbe Aufstellung entscheidet in der Planungstabelle über
+   * „fertig geplant". Stünde sie hier ein zweites Mal, könnte über einer Liste
+   * mit vier Zeilen „3 von 5 besetzt" stehen.
+   */
+  const rollen = activeMeetingRoles(meeting);
+  const besetzt = rollen.filter((slot) => slot.people.length > 0).length;
+
   const patch = (input: Parameters<typeof update.mutate>[0]) =>
     update.mutate(input);
 
@@ -308,6 +322,21 @@ function Loaded({
   const openVenue = async () => {
     const ok = await nachtragenErlaubt('wo ihr wart');
     if (ok) setChoosingVenue(true);
+  };
+
+  /**
+   * Ein Eingang für fünf Zeilen — jede führt woandershin.
+   *
+   * Der Gastgeber ins Ort-Sheet, weil er *ist* der Ort; die Snacks in ihre
+   * schlichte Auswahl, weil es dort nichts vorzuschlagen gibt; die übrigen drei
+   * ins Zuteilungs-Sheet mit Rangfolge. Die Zeile selbst weiß davon nichts —
+   * sie kennt nur ihre Rolle.
+   */
+  const openRole = (role: MeetingRole) => {
+    if (role === 'HOST') return void openVenue();
+    if (role === 'SNACK') return void setChoosingSnacks(true);
+
+    return void openSheet(role);
   };
 
   /**
@@ -647,119 +676,88 @@ function Loaded({
           </Card>
         </section>
 
-        {/* Ort und Gastgeber stehen an jedem Termin: man trifft sich immer
-            irgendwo, auch an einem Geburtstag. Dass niemand eingetragen ist,
-            ist ein gültiger Zustand — das Treffen im Schlosspark. */}
+        {/* **Zwei Sektionen, nicht eine.** Der Ort stand bisher als namenloser
+            Block über den Rollen, in derselben Karte — dabei beantwortet er eine
+            andere Frage: „wo treffen wir uns" gegen „wer macht was". Und die
+            Adresse, die in der Antwort längst mitkommt, stand auf dieser Seite
+            überhaupt nirgends. */}
         <section>
-          <SectionTitle>Zuständigkeiten</SectionTitle>
-          <Card className="divide-y divide-line">
-            <div className="w-full pb-4">
-              {/* Titel */}
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-stone-400">
-                Ort & Gastgeber
+          <SectionTitle>Ort & Anreise</SectionTitle>
+          <Card className="flex items-center gap-4">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-terracotta-100 bg-terracotta-50 text-terracotta-600">
+              <MapPin size={20} />
+            </span>
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-serif text-lg font-bold text-stone-800">
+                {meeting.location?.name ?? 'Noch offen'}
               </p>
-
-              <div className="flex w-full items-start justify-between gap-4">
-                <div className="flex min-w-0 flex-col">
-                  <div className="flex items-center gap-1.5 text-lg font-bold text-stone-800">
-                    <MapPin
-                      size={20}
-                      className="shrink-0 text-terracotta-600"
-                      fill="currentColor"
-                    />
-                    <span className="truncate font-serif">
-                      {meeting.location?.name ?? 'Noch offen'}
-                    </span>
-                  </div>
-
-                  <p className="mt-1 text-sm text-stone-500">
-                    {meeting.host
-                      ? 'Ergibt sich aus dem Gastgeber.'
-                      : 'Öffentlicher Treffpunkt'}
-                  </p>
-                </div>
-
-                <a
-                  href={
-                    meeting?.location ? mapsUrl(meeting.location) : undefined
-                  }
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-disabled={!meeting?.location}
-                  className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                    meeting?.location
-                      ? 'bg-terracotta-600 text-white hover:bg-terracotta-700'
-                      : 'pointer-events-none cursor-not-allowed bg-gray-300 text-gray-500'
-                  }`}
-                >
-                  <MapPin size={16} />
-                  In Maps öffnen
-                  <ExternalLink size={14} />
-                </a>
-              </div>
+              {/* Der Satz darunter ist die Adresse, wenn es eine gibt. Vorher
+                  stand hier „Ergibt sich aus dem Gastgeber." — eine Erklärung
+                  der Mechanik statt einer Auskunft — und „Öffentlicher
+                  Treffpunkt" auch dann, wenn schlicht noch kein Ort feststand. */}
+              <p className="mt-0.5 truncate text-sm text-stone-500">
+                {meeting.location?.address ??
+                  (meeting.location
+                    ? 'Keine Adresse hinterlegt'
+                    : 'Trag oben einen Gastgeber oder Treffpunkt ein')}
+              </p>
             </div>
 
-            <RoleRow
-              label={ROLE_LABEL.HOST}
-              people={meeting.host ? [meeting.host] : []}
-              emptyLabel={
-                meeting.locationId && !meeting.host
-                  ? 'Kein Host nötig'
-                  : !meeting.host && !meeting.locationId
-                    ? 'Host/Treffpunkt notwendig'
-                    : ''
-              }
-              onEdit={cancelled ? undefined : openVenue}
-              EditIcon={UserPen}
-              editIconSize={16}
-            />
-
-            {meeting.hasTopicSlot && (
-              <RoleRow
-                label={ROLE_LABEL.TOPIC}
-                people={roles.topicPeople}
-                emptyLabel="Noch niemand"
-                onEdit={cancelled ? undefined : () => openSheet('TOPIC')}
-                EditIcon={UserPen}
-                editIconSize={16}
-              />
-            )}
-
-            {meeting.hasTestimonySlot && (
-              <RoleRow
-                label={ROLE_LABEL.TESTIMONY}
-                people={
-                  meeting.testimonyPerson ? [meeting.testimonyPerson] : []
-                }
-                emptyLabel="Noch niemand "
-                onEdit={cancelled ? undefined : () => openSheet('TESTIMONY')}
-                EditIcon={UserPen}
-                editIconSize={16}
-              />
-            )}
-
-            {meeting.hasSongSlot && (
-              <RoleRow
-                label={ROLE_LABEL.SONG}
-                people={songLeaders.data ?? []}
-                emptyLabel="Noch niemand"
-                onEdit={cancelled ? undefined : () => openSheet('SONG')}
-                EditIcon={UserPen}
-                editIconSize={16}
-              />
-            )}
-
-            {meeting.hasSnackSlot && (
-              <RoleRow
-                label={ROLE_LABEL.SNACK}
-                people={meeting.snackResponsibles.map((row) => row.person)}
-                emptyLabel="Noch niemand"
-                onEdit={cancelled ? undefined : () => setChoosingSnacks(true)}
-                EditIcon={UserPen}
-                editIconSize={16}
-              />
+            {/* Ohne Ort steht hier **kein** Knopf. Er war vorher ein
+                deaktivierter Anker in `bg-gray-300` — den einzigen
+                Nicht-Token-Farben dieser Seite, die im Dunkelmodus falsch
+                aussehen. Ein toter Knopf ist kein Hinweis. */}
+            {meeting.location && (
+              <a
+                href={mapsUrl(meeting.location)}
+                target="_blank"
+                rel="noreferrer"
+                className={cn(
+                  'flex shrink-0 items-center gap-1.5 rounded-full bg-terracotta-600 px-4 py-2 text-sm font-semibold text-white transition-colors',
+                  'hover:bg-terracotta-700 focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+                  PRESSABLE,
+                )}
+              >
+                <Navigation size={15} />
+                Maps
+                <ExternalLink size={13} />
+              </a>
             )}
           </Card>
+        </section>
+
+        {/* Eine Zeile je Rolle, die es an **diesem** Abend gibt — dieselbe
+            Aufstellung, nach der auch die Planungstabelle „fertig geplant"
+            entscheidet (`meetingRoles`). Ein Baustein, der aus ist, steht gar
+            nicht da; der Gastgeber steht immer, denn man trifft sich immer
+            irgendwo. */}
+        <section>
+          <SectionTitle
+            action={
+              <span className="text-[11px] font-semibold text-stone-400 normal-case">
+                {besetzt} von {rollen.length} besetzt
+              </span>
+            }
+          >
+            Zuständigkeiten
+          </SectionTitle>
+
+          <div className="space-y-2">
+            {rollen.map((slot) => (
+              <RoleRow
+                key={slot.role}
+                role={slot.role}
+                people={slot.people}
+                emptyLabel={
+                  slot.role === 'HOST' && !meeting.locationId
+                    ? 'Host oder Treffpunkt fehlt'
+                    : 'Noch niemand'
+                }
+                onEdit={cancelled ? undefined : () => openRole(slot.role)}
+              />
+            ))}
+          </div>
         </section>
 
         {meeting.hasSongSlot && (
@@ -1100,44 +1098,58 @@ function TimeRow({
 }
 
 /**
- * Eine Rolle als Zeile: Bezeichnung, wer es ist, Stift.
+ * Eine Rolle als eigene Fläche: Symbol und Name links, wer es ist in der Mitte,
+ * der Knopf zum Eintragen rechts.
  *
- * Vorher standen die drei als Chips nebeneinander. Die sahen nach Anzeige aus,
- * nicht nach „hier trägst du ein", und wer sie nicht angetippt hat, hat die
- * Zuteilung nie gefunden.
+ * Vorher waren es Zeilen in **einer** Karte, getrennt durch `divide-y`, mit der
+ * Rollen-Bezeichnung in einer 16er-Spalte links. Zwei Dinge stimmten daran
+ * nicht: „Testimony" passte nicht in die Spalte, und eine Trennlinie sagt
+ * weniger als eine eigene Fläche — man las die Karte als Block statt als fünf
+ * getrennte Fragen.
+ *
+ * Davor standen die Rollen einmal als Chips nebeneinander. Die sahen nach
+ * Anzeige aus, nicht nach „hier trägst du ein"; deshalb ist der Knopf rechts
+ * geblieben und nicht die ganze Fläche antippbar geworden — er sagt, wo man
+ * drückt.
  */
 function RoleRow({
-  label,
+  role,
   people,
   emptyLabel,
   onEdit,
-  EditIcon,
-  editIconSize = 14,
 }: {
-  label: string;
+  role: MeetingRole;
   people: PersonRef[];
   emptyLabel: string;
   /** Fehlt an einem abgesagten Abend: dort gibt es nichts mehr einzuteilen. */
   onEdit?: () => void;
-  EditIcon?: React.ComponentType<{ size: number }>;
-  editIconSize?: number;
 }) {
+  const Icon = ROLE_ICON[role];
+  const label = ROLE_LABEL[role];
+
   return (
-    <div className="flex items-center gap-3 py-3.5">
-      <span className="w-16 shrink-0 text-[11px] font-semibold text-stone-500">
+    <div className="flex items-center gap-3 rounded-lg border border-line bg-card px-3 py-2.5">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-line bg-canvas text-terracotta-600">
+        <Icon size={15} />
+      </span>
+
+      <span className="w-[4.5rem] shrink-0 text-[13px] font-bold text-stone-700">
         {label}
       </span>
 
-      <span className="flex min-w-0 flex-1 items-center gap-2">
+      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
         {people.length === 0 ? (
           <span className="truncate text-sm text-stone-400 italic">
             {emptyLabel}
           </span>
         ) : (
           people.map((person) => (
-            <span key={person.id} className="flex items-center gap-1.5">
+            <span
+              key={person.id}
+              className="flex items-center gap-1.5 rounded-full bg-canvas py-0.5 pr-2.5 pl-0.5"
+            >
               <Avatar person={person} size="xs" />
-              <span className="text-sm font-bold text-stone-800">
+              <span className="text-[13px] font-bold text-stone-800">
                 {person.name}
               </span>
             </span>
@@ -1147,11 +1159,7 @@ function RoleRow({
 
       {onEdit && (
         <IconButton label={`${label} eintragen`} onClick={onEdit}>
-          {EditIcon ? (
-            <EditIcon size={editIconSize} />
-          ) : (
-            <Pencil size={editIconSize} />
-          )}
+          <UserPen size={16} />
         </IconButton>
       )}
     </div>
