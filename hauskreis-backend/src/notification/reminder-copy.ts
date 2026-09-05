@@ -58,6 +58,16 @@ export function songReminderBody(date: Date): string {
 }
 
 /**
+ * Die Erinnerung an die Snacks — mit Fragezeichen, nicht mit Ausrufezeichen.
+ *
+ * Was jemand mitbringt, verabredet die Gruppe unter sich; die App weiß es nicht
+ * und tut nicht so. Sie erinnert nur daran, dass man sich gemeldet hat.
+ */
+export function snackReminderBody(date: Date): string {
+  return `Am ${formatMeetingDate(date)} bringst du etwas zu essen mit.`;
+}
+
+/**
  * Wann ein besonderer Termin ist — ein Tag oder ein Zeitraum.
  *
  * „Vom 14. bis 16. Mai" statt zweimal derselbe Satz mit zwei Daten: die Frage

@@ -3,6 +3,8 @@ import { MeetingController } from './meeting.controller';
 import { MeetingService } from './meeting.service';
 import { MeetingGeneratorService } from './meeting-generator.service';
 import { MeetingScheduleConfigService } from './meeting-schedule-config.service';
+import { MeetingSnackService } from './meeting-snack.service';
+import { SnackReminderService } from './snack-reminder.service';
 import { HostReminderService } from './host-reminder.service';
 import { ActionstepReminderService } from './actionstep-reminder.service';
 import { TestimonyReminderService } from './testimony-reminder.service';
@@ -37,6 +39,8 @@ import { TopicLinkModule } from '../topic/topic-link.module';
     MeetingService,
     MeetingGeneratorService,
     MeetingScheduleConfigService,
+    MeetingSnackService,
+    SnackReminderService,
     HostReminderService,
     ActionstepReminderService,
     TestimonyReminderService,
@@ -50,6 +54,8 @@ import { TopicLinkModule } from '../topic/topic-link.module';
   exports: [
     MeetingService,
     MeetingGeneratorService,
+    MeetingSnackService,
+    SnackReminderService,
     HostReminderService,
     ActionstepReminderService,
     TestimonyReminderService,

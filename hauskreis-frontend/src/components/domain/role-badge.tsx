@@ -4,7 +4,7 @@
  * Ein Rollen-Chip: „Host: Lukas". Ist niemand eingetragen, wird daraus die
  * Einladung „+ Host eintragen" — nicht ein leeres Feld oder ein Gedankenstrich.
  */
-import { BookOpen, Gift, House, Mic, Music, Users } from 'lucide-react';
+import { BookOpen, Cookie, Gift, House, Mic, Music, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { AssignmentRole, PersonRef } from '@/lib/api/types';
@@ -14,6 +14,7 @@ export const ROLE_ICON: Record<AssignmentRole, LucideIcon> = {
   TOPIC: BookOpen,
   SONG: Music,
   TESTIMONY: Mic,
+  SNACK: Cookie,
   PRAYER_BUDDY: Users,
   BIRTHDAY_GIFT: Gift,
 };
@@ -28,6 +29,7 @@ export const ROLE_STYLE: Record<AssignmentRole, string> = {
   TOPIC: 'bg-topic-bg text-topic border-topic-line',
   SONG: 'bg-music-bg text-music border-music-line',
   TESTIMONY: 'bg-topic-bg text-topic border-topic-line',
+  SNACK: 'bg-terracotta-50 text-terracotta-700 border-terracotta-100',
   PRAYER_BUDDY: 'bg-info-bg text-info border-info-line',
   // Eigene Farbe, weil es als einziges an keinem Abend hängt: Es steht in der
   // Rollenliste zwischen lauter Dienstagabenden und ist doch etwas anderes.
@@ -39,6 +41,7 @@ const ROLE_EMPTY_STYLE: Record<AssignmentRole, string> = {
   TOPIC: 'text-topic border-topic-line bg-topic-bg/40',
   SONG: 'text-music border-music-line bg-music-bg/40',
   TESTIMONY: 'text-topic border-topic-line bg-topic-bg/40',
+  SNACK: 'text-terracotta-700 border-terracotta-100 bg-terracotta-50/40',
   PRAYER_BUDDY: 'text-info border-info-line bg-info-bg/40',
   BIRTHDAY_GIFT: 'text-alert border-alert-line bg-alert-bg/40',
 };

@@ -90,10 +90,11 @@ export type MeetingSlotKey =
   | 'hasSongSlot'
   | 'hasTestimonySlot'
   | 'hasNotesSlot'
-  | 'hasPrayerSlot';
+  | 'hasPrayerSlot'
+  | 'hasSnackSlot';
 
 /**
- * Wie jeder Baustein heißt — **alle fünf**, auch der, den man nicht anhakt.
+ * Wie jeder Baustein heißt — **alle sechs**, auch der, den man nicht anhakt.
  *
  * Getrennt von `MEETING_SLOTS`, weil die Rückfrage beim Umschalten benennen
  * muss, was verlorengeht: wer „Thema" anhakt, verliert die Nachbereitung. Käme
@@ -106,6 +107,7 @@ export const SLOT_LABEL: Record<MeetingSlotKey, string> = {
   hasSongSlot: 'Lieder',
   hasTestimonySlot: 'Testimony',
   hasPrayerSlot: 'Gebetsanliegen',
+  hasSnackSlot: 'Snacks',
 };
 
 export const MEETING_SLOT_KEYS = Object.keys(SLOT_LABEL) as MeetingSlotKey[];
@@ -113,7 +115,7 @@ export const MEETING_SLOT_KEYS = Object.keys(SLOT_LABEL) as MeetingSlotKey[];
 /**
  * Die Bausteine, die man beim **Planen** eines Abends anhakt.
  *
- * Vier, nicht fünf: die **Nachbereitung** steht bewusst nicht dabei. Sie gehört
+ * Fünf, nicht sechs: die **Nachbereitung** steht bewusst nicht dabei. Sie gehört
  * nicht zur Planung, sondern zu dem, was danach übrig bleibt — hier stand sie
  * neben Thema und Liedern und fragte damit vor dem Abend nach der
  * Zusammenfassung von etwas, das noch nicht stattgefunden hatte. Sie kommt
@@ -141,6 +143,11 @@ export const MEETING_SLOTS = [
     label: SLOT_LABEL.hasPrayerSlot,
     hint: 'Wofür ihr an dem Abend beten wollt.',
   },
+  {
+    key: 'hasSnackSlot',
+    label: SLOT_LABEL.hasSnackSlot,
+    hint: 'Wer etwas zu essen mitbringt.',
+  },
 ] as const satisfies readonly {
   key: MeetingSlotKey;
   label: string;
@@ -166,6 +173,9 @@ export const EMPTY_SLOTS: MeetingSlots = {
   hasTestimonySlot: false,
   hasNotesSlot: false,
   hasPrayerSlot: true,
+  // Als einziger auch hier aus: Die Rolle ist eine Einladung. Wer sie an jedem
+  // erzeugten Abend haben will, hakt sie in der Verwaltung an.
+  hasSnackSlot: false,
 };
 
 /**
@@ -188,7 +198,7 @@ export const EMPTY_SLOTS: MeetingSlots = {
  * `summaryText`, während `hasNotesSlot` gerade auf `false` ging: der Server
  * antwortete „Dieser Termin hat keine Nachbereitung — schalte das erst dazu",
  * und das Anhaken von „Thema" tat nichts. Was hier herauskommt, sind genau die
- * fünf Schalter.
+ * sechs Schalter.
  */
 export function applySlotToggle(
   slots: MeetingSlots,
@@ -201,8 +211,10 @@ export function applySlotToggle(
     hasTestimonySlot: slots.hasTestimonySlot,
     hasNotesSlot: slots.hasNotesSlot,
     // Schließt nichts aus und wird von nichts ausgeschlossen — er fährt einfach
-    // unverändert mit.
+    // unverändert mit. Für die Snacks gilt dasselbe: Kuchen gibt es am
+    // Themenabend wie am Geburtstag.
     hasPrayerSlot: slots.hasPrayerSlot,
+    hasSnackSlot: slots.hasSnackSlot,
   };
   next[key] = value;
 
@@ -234,9 +246,11 @@ export function planningComplete(meeting: {
   hasTopicSlot: boolean;
   hasSongSlot: boolean;
   hasTestimonySlot: boolean;
+  hasSnackSlot: boolean;
   testimonyPersonId: string | null;
   topicResponsibles: readonly unknown[];
   songLeaders: readonly unknown[];
+  snackResponsibles: readonly unknown[];
 }): boolean {
   if (meeting.status === 'CANCELLED') return false;
 
@@ -248,7 +262,8 @@ export function planningComplete(meeting: {
     hostGeklärt &&
     (!meeting.hasTopicSlot || meeting.topicResponsibles.length > 0) &&
     (!meeting.hasSongSlot || meeting.songLeaders.length > 0) &&
-    (!meeting.hasTestimonySlot || meeting.testimonyPersonId !== null)
+    (!meeting.hasTestimonySlot || meeting.testimonyPersonId !== null) &&
+    (!meeting.hasSnackSlot || meeting.snackResponsibles.length > 0)
   );
 }
 
@@ -287,6 +302,7 @@ export const ROLE_LABEL: Record<AssignmentRole, string> = {
   TOPIC: 'Thema',
   SONG: 'Musik',
   TESTIMONY: 'Testimony',
+  SNACK: 'Snacks',
   PRAYER_BUDDY: 'Gebetsbuddy',
   BIRTHDAY_GIFT: 'Geschenk',
 };
@@ -297,6 +313,7 @@ export const ROLE_QUESTION: Record<AssignmentRole, string> = {
   TOPIC: 'Wer macht das Thema?',
   SONG: 'Wer macht die Musik?',
   TESTIMONY: 'Wer erzählt?',
+  SNACK: 'Wer bringt was zu essen mit?',
   PRAYER_BUDDY: 'Wer betet miteinander?',
   // Steht nie in einem Zuteilungs-Sheet — Geschenke teilt der Server zu, nicht
   // ein Mensch an einem Abend. Der Eintrag ist hier, weil TypeScript die Karte

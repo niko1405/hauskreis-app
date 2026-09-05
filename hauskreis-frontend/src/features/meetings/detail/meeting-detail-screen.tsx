@@ -48,9 +48,11 @@ import {
   ErrorState,
 } from '@/components/ui/states';
 import { cn } from '@/lib/cn';
+import { namesOf } from '@/lib/person';
 import {
   useMe,
   useMeeting,
+  useSetSnackResponsibles,
   useSongLeaders,
   useUpdateMeeting,
 } from '@/lib/api/hooks';
@@ -112,6 +114,15 @@ const SLOT_LOSSES: Record<MeetingSlotKey, (meeting: Meeting) => string | null> =
       meeting.testimonyPerson
         ? `${meeting.testimonyPerson.name} erzählt an dem Abend dann nichts mehr.`
         : null,
+    // Namentlich, wie beim Testimony: Wer eingetragen ist, steht in der Antwort
+    // des Termins, und „die Snack-Zuteilung wird gelöscht" sagt weniger als der
+    // Name, um den es geht.
+    hasSnackSlot: (meeting) =>
+      meeting.snackResponsibles.length > 0
+        ? `${namesOf(meeting.snackResponsibles.map((row) => row.person))} ${
+            meeting.snackResponsibles.length === 1 ? 'bringt' : 'bringen'
+          } an dem Abend dann nichts mehr mit.`
+        : null,
     // Wie bei den Liedern immer: Die Anliegen liegen in einer eigenen Abfrage,
     // dieser Bildschirm sieht von hier aus nicht, ob welche da sind. Und was
     // hier verlorengeht, sind Sätze, die Menschen über sich selbst geschrieben
@@ -137,12 +148,17 @@ const TopicChoiceSheet = dynamic(() =>
   import('./topic-choice-sheet').then((m) => m.TopicChoiceSheet),
 );
 
+const SnackSheet = dynamic(() =>
+  import('@/components/domain/snack-sheet').then((m) => m.SnackSheet),
+);
+
 /** Der Host fehlt: er steckt im Ort-Sheet, weil er dieselbe Frage beantwortet. */
 // Gastgeber hat sein eigenes Sheet (mit Wohnungen statt Personen); Gebetsbuddys
-// und Geschenke teilt der Server zu und nicht ein Mensch an einem Abend.
+// und Geschenke teilt der Server zu und nicht ein Mensch an einem Abend. Und
+// Snacks haben keine Rangliste — dort führt eine schlichte Auswahl hin.
 type SheetRole = Exclude<
   AssignmentRole,
-  'PRAYER_BUDDY' | 'HOST' | 'BIRTHDAY_GIFT'
+  'PRAYER_BUDDY' | 'HOST' | 'BIRTHDAY_GIFT' | 'SNACK'
 >;
 
 export function MeetingDetailScreen({ meetingId }: { meetingId: string }) {
@@ -188,6 +204,12 @@ function Loaded({
   meeting: NonNullable<ReturnType<typeof useMeeting>['data']>['data'];
 }) {
   const [sheet, setSheet] = useState<SheetRole | null>(null);
+  /**
+   * Eigener Zustand statt eines Werts in `sheet`: Die Snack-Auswahl ist ein
+   * anderes Sheet mit anderen Eigenschaften. Sie in `SheetRole` mitzuführen
+   * hieße, an jeder Stelle, die den Wert auspackt, eine Ausnahme zu schreiben.
+   */
+  const [choosingSnacks, setChoosingSnacks] = useState(false);
   const [choosingVenue, setChoosingVenue] = useState(false);
   const [choosingTopic, setChoosingTopic] = useState(false);
 
@@ -213,6 +235,7 @@ function Loaded({
   const songLeaders = useSongLeaders(meetingId);
   const roles = useRoleAssignment(meeting);
   const session = useTopicSessionActions(meetingId);
+  const setSnacks = useSetSnackResponsibles(meetingId);
   const confirm = useConfirm();
 
   const cancelled = meeting.status === 'CANCELLED';
@@ -725,6 +748,17 @@ function Loaded({
                 editIconSize={16}
               />
             )}
+
+            {meeting.hasSnackSlot && (
+              <RoleRow
+                label={ROLE_LABEL.SNACK}
+                people={meeting.snackResponsibles.map((row) => row.person)}
+                emptyLabel="Noch niemand"
+                onEdit={cancelled ? undefined : () => setChoosingSnacks(true)}
+                EditIcon={UserPen}
+                editIconSize={16}
+              />
+            )}
           </Card>
         </section>
 
@@ -855,6 +889,17 @@ function Loaded({
           hint={sheet === 'TOPIC' ? topicHint : undefined}
           onSubmit={submitFor(sheet)}
           saving={roles.saving}
+        />
+      )}
+
+      {choosingSnacks && (
+        <SnackSheet
+          open
+          onClose={() => setChoosingSnacks(false)}
+          selectedIds={meeting.snackResponsibles.map((row) => row.person.id)}
+          attendances={meeting.attendances}
+          onSubmit={setSnacks.mutate}
+          saving={setSnacks.isPending}
         />
       )}
 

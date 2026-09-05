@@ -31,7 +31,12 @@ import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { IconButton } from '@/components/ui/button';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
-import { useMeeting, useMeetingList, useSongLeaders } from '@/lib/api/hooks';
+import {
+  useMeeting,
+  useMeetingList,
+  useSetSnackResponsibles,
+  useSongLeaders,
+} from '@/lib/api/hooks';
 import { addDays, formatDay, formatRelativeDay, today } from '@/lib/date';
 import { ROLE_LABEL, planningComplete } from '@/lib/meeting';
 import { cn } from '@/lib/cn';
@@ -48,15 +53,23 @@ const VenueSheet = dynamic(() =>
   import('@/components/domain/venue-sheet').then((m) => m.VenueSheet),
 );
 
+const SnackSheet = dynamic(() =>
+  import('@/components/domain/snack-sheet').then((m) => m.SnackSheet),
+);
+
 /**
  * Die Spalten der Mehrwochen-Planung — die Rollen, die an einem Abend hängen.
  *
  * Gebetsbuddys und Geschenke fallen heraus: Beide hängen an keinem Termin, und
  * eine Spalte, die in jeder Zeile leer bliebe, wäre keine Information.
- * Deckungsgleich mit `AssignmentKind` im Zuteilungs-Sheet, und das ist kein
- * Zufall — es ist dieselbe Frage.
+ *
+ * `AssignmentKind` **plus Snacks**, und der Unterschied ist der Punkt: Jener
+ * Typ beantwortet „welche Rollen haben eine Rangliste", diese Tabelle „welche
+ * Rollen hängen an einem Abend". Bei den ersten vier fällt beides zusammen,
+ * bei den Snacks nicht — sie stehen hier, weil ein Abend ohne sie nicht fertig
+ * geplant ist, und im Sheet nicht, weil es nichts vorzuschlagen gibt.
  */
-type Column = AssignmentKind;
+type Column = AssignmentKind | 'SNACK';
 
 /**
  * Drei Stufen reichen: ganz, kleiner, klein. Ein stufenloser Regler wäre auf
@@ -246,6 +259,11 @@ function Row({
       role: 'TESTIMONY',
       people: meeting.testimonyPerson ? [meeting.testimonyPerson] : [],
       absent: meeting.hasTestimonySlot ? null : 'slot-off',
+    },
+    {
+      role: 'SNACK',
+      people: meeting.snackResponsibles.map((row) => row.person),
+      absent: meeting.hasSnackSlot ? null : 'slot-off',
     },
   ];
 
@@ -439,6 +457,7 @@ function LoadedCellSheet({
 }) {
   const roles = useRoleAssignment(meeting);
   const songLeaders = useSongLeaders(meeting.id);
+  const setSnacks = useSetSnackResponsibles(meeting.id);
 
   // Der Gastgeber führt aufs Ort-Sheet: er *ist* der Ort. Bisher war der von
   // hier aus gar nicht erreichbar — man konnte in der Tabelle jemanden
@@ -452,6 +471,21 @@ function LoadedCellSheet({
         hostPersonId={meeting.hostPersonId}
         locationId={meeting.locationId}
         onSubmit={roles.assignVenue}
+      />
+    );
+  }
+
+  // Snacks führen in ihre eigene Auswahl: Es gibt nichts vorzuschlagen, und
+  // die Abgesagten sollen gar nicht erst dastehen.
+  if (role === 'SNACK') {
+    return (
+      <SnackSheet
+        open
+        onClose={onClose}
+        selectedIds={meeting.snackResponsibles.map((row) => row.person.id)}
+        attendances={meeting.attendances}
+        onSubmit={setSnacks.mutate}
+        saving={setSnacks.isPending}
       />
     );
   }

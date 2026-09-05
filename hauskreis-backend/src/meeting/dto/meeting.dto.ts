@@ -29,6 +29,8 @@ const slotFields = {
   /// Wofür ihr an dem Abend beten wollt. Als einziger überall voreingestellt
   /// an, und der einzige, der nichts ausschließt.
   hasPrayerSlot: z.boolean().optional(),
+  /// Wer etwas zu essen mitbringt. Schließt nichts aus, voreingestellt aus.
+  hasSnackSlot: z.boolean().optional(),
 };
 
 /**
@@ -171,6 +173,13 @@ export const updateMeetingScheduleSchema = z
     /// Gehört wie `autoGenerate` nicht zum Satz „wir treffen uns dienstags um
     /// 18 Uhr": Es sagt etwas über die Art der Abende, nicht über ihre Lage.
     praiseEvenings: z.coerce.boolean().optional(),
+    /// Ob erzeugte Termine den Baustein „Snacks" schon mitbringen.
+    ///
+    /// Aus derselben Familie wie `praiseEvenings`: eine Aussage über die Art
+    /// der Abende, nicht über ihre Lage. Voreingestellt aus — die Rolle ist
+    /// eine Einladung, und wer sie nicht will, soll sie nicht abschalten
+    /// müssen.
+    snackSlot: z.coerce.boolean().optional(),
   })
   .refine(
     (dto) =>
@@ -210,6 +219,16 @@ export const listMeetingsQuerySchema = paginationSchema.extend({
     .transform((value) => value === 'true'),
 });
 
+export const setSnackResponsiblesSchema = z.object({
+  /// Ersetzt die ganze Liste. Leer ist gültig — auch wo der Baustein an ist,
+  /// muss niemand dastehen, bevor es jemand zusagt.
+  ///
+  /// Dieselbe Obergrenze wie bei der Musik: mehr als die Gruppe kann nicht
+  /// mitbringen, und eine Liste ohne Deckel wäre ein offenes Feld für
+  /// beliebig viele Zeilen.
+  personIds: z.array(z.uuid()).max(9),
+});
+
 const meetingParamsSchema = z.object({
   hauskreisId: z.uuid(),
   id: z.uuid(),
@@ -229,3 +248,6 @@ export class ListMeetingsQueryDto extends createZodDto(
   listMeetingsQuerySchema,
 ) {}
 export class MeetingParamsDto extends createZodDto(meetingParamsSchema) {}
+export class SetSnackResponsiblesDto extends createZodDto(
+  setSnackResponsiblesSchema,
+) {}

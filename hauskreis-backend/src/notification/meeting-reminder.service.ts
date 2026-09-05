@@ -36,6 +36,7 @@ export interface ReminderMeeting {
     topic: { title: string | null };
   } | null;
   songLeaders: { personId: string }[];
+  snackResponsibles: { personId: string }[];
 }
 
 export interface ReminderRecipient {
@@ -135,6 +136,7 @@ export class MeetingReminderService {
           select: { title: true, topic: { select: { title: true } } },
         },
         songLeaders: { select: { personId: true } },
+        snackResponsibles: { select: { personId: true } },
       },
     });
 

@@ -196,6 +196,11 @@ export class MeetingGeneratorService {
           generated: true,
           startMinutes: rhythm.startMinutes,
           ...(praise ? PRAISE_SLOTS : EVENING_SLOTS),
+          // Nach der Belegung und nicht in ihr: Snacks hängen nicht daran, ob
+          // der Abend ein Thema oder ein Testimony hat — gegessen wird an
+          // beiden. Was darüber entscheidet, ist allein die Einstellung der
+          // Gruppe, und die steht voreingestellt auf aus.
+          hasSnackSlot: rhythm.snackSlot,
         };
       }),
       // Belt and braces against a concurrent run: the unique index on

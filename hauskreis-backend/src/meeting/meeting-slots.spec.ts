@@ -27,6 +27,7 @@ const an = (slots: MeetingSlots) =>
       ['testimony', slots.hasTestimonySlot],
       ['notes', slots.hasNotesSlot],
       ['prayer', slots.hasPrayerSlot],
+      ['snack', slots.hasSnackSlot],
     ] as const
   )
     .filter(([, on]) => on)
@@ -54,6 +55,17 @@ describe('Die drei Belegungen', () => {
   });
 
   /**
+   * Der Gegenpol zu den Gebetsanliegen: nirgends vorgegeben. Er ist eine
+   * Einladung und kein Abschalten — wer Snacks will, hakt sie einmal an, in der
+   * Verwaltung oder am einzelnen Abend.
+   */
+  it('gibt Snacks nirgends vor', () => {
+    for (const slots of BELEGUNGEN) {
+      expect(slots.hasSnackSlot).toBe(false);
+    }
+  });
+
+  /**
    * Der einzige Baustein, der überall an ist, und der einzige, der niemanden
    * einteilt: Ein Anliegen bringt jede:r für sich mit, auch am Geburtstag und
    * auch, wenn er an dem Abend fehlt.
@@ -73,7 +85,18 @@ describe('Die drei Belegungen', () => {
         hasTestimonySlot: false,
         hasNotesSlot: false,
         hasPrayerSlot: true,
+        hasSnackSlot: true,
       }),
+    ).not.toThrow();
+  });
+
+  /** Dasselbe für die Snacks: Kuchen gibt es am Themenabend wie am Geburtstag. */
+  it('lässt Snacks neben jedem anderen Baustein zu', () => {
+    expect(() =>
+      assertSlotsExclusive({ ...PRAISE_SLOTS, hasSnackSlot: true }),
+    ).not.toThrow();
+    expect(() =>
+      assertSlotsExclusive({ ...EVENING_SLOTS, hasSnackSlot: true }),
     ).not.toThrow();
   });
 

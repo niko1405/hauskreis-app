@@ -210,8 +210,8 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Was sind die Bausteine, und was kann ich an- und ausschalten?',
     answer:
-      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Lieder** und **Testimony**. Sie sind die ganze Aussage darüber, was der Abend ist — auch sein Name kommt daher.\n\nDie **Nachbereitung** ist der vierte Teil, steht aber bewusst nicht im Kasten — sie lässt sich erst ab dem Beginn des Abends dazuschalten. Vorher gäbe es ja nichts nachzubereiten.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
-    keywords: ['slots', 'schalter', 'baukasten', 'thema', 'lieder'],
+      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Lieder**, **Testimony**, **Gebetsanliegen** und **Snacks**. Sie sind die ganze Aussage darüber, was der Abend ist — auch sein Name kommt daher.\n\nDie **Nachbereitung** ist der sechste Teil, steht aber bewusst nicht im Kasten — sie lässt sich erst ab dem Beginn des Abends dazuschalten. Vorher gäbe es ja nichts nachzubereiten.\n\nDie **Gebetsanliegen** sind überall voreingestellt an, die **Snacks** überall aus: Beten kann man an jedem Abend, und wer nie über Essen gesprochen hat, soll keine offene Zuständigkeit vorfinden.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
+    keywords: ['slots', 'schalter', 'baukasten', 'thema', 'lieder', 'snacks'],
   },
   {
     id: 'meetings-ausschluss',
@@ -226,15 +226,31 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Was passiert, wenn ich einen Baustein ausschalte?',
     answer:
-      '**Thema aus:** Die Zuteilung fällt weg — sonst käme weiter „Du bist dran mit dem Thema" für einen Abend, der keines mehr hat. Eine schon vorbereitete Einheit wird nur **gelöst**, nicht gelöscht: Sie wartet unter „Angefangenes" und lässt sich jederzeit an einem anderen Abend wieder aufnehmen.\n\n**Lieder aus:** Die Liedwünsche für diesen Abend und die Musik-Zuteilung gehen weg. Die Lieder selbst bleiben natürlich in der Datenbank.\n\n**Testimony aus:** Die eingetragene Person wird entfernt.\n\n**Nachbereitung aus:** Zusammenfassung, Actionstep und die gesetzten Haken sind weg. Anders als bei der Themen-Einheit gehören diese Texte nur zu diesem einen Abend — sie irgendwo aufzubewahren hieße, sie unerreichbar zu machen.',
+      '**Thema aus:** Die Zuteilung fällt weg — sonst käme weiter „Du bist dran mit dem Thema" für einen Abend, der keines mehr hat. Eine schon vorbereitete Einheit wird nur **gelöst**, nicht gelöscht: Sie wartet unter „Angefangenes" und lässt sich jederzeit an einem anderen Abend wieder aufnehmen.\n\n**Lieder aus:** Die Liedwünsche für diesen Abend und die Musik-Zuteilung gehen weg. Die Lieder selbst bleiben natürlich in der Datenbank.\n\n**Testimony aus:** Die eingetragene Person wird entfernt.\n\n**Snacks aus:** Wer eingetragen war, wird entfernt — sonst käme weiter „Du bringst was zu essen mit" für einen Abend, an dem es keine Snacks gibt.\n\n**Gebetsanliegen aus:** Die Anliegen dieses Abends werden gelöscht. Sie gehören diesem einen Abend, wie die Nachbereitung.\n\n**Nachbereitung aus:** Zusammenfassung, Actionstep und die gesetzten Haken sind weg. Anders als bei der Themen-Einheit gehören diese Texte nur zu diesem einen Abend — sie irgendwo aufzubewahren hieße, sie unerreichbar zu machen.',
     keywords: ['abschalten', 'weg', 'gelöscht', 'entwurf'],
+  },
+  {
+    id: 'meetings-snacks',
+    category: 'meetings',
+    question: 'Wie funktionieren die Snacks?',
+    answer:
+      'Wie die Musik: Am Abend hakst du den Baustein **Snacks** an, und dann tragen sich eine oder mehrere Personen ein. Wer eingetragen ist, bekommt zwei Tage vorher eine Erinnerung und steht danach automatisch als „dabei".\n\n**Es gibt keine Vorschlagsliste.** Bei Gastgeber, Thema, Musik und Testimony schlägt die App vor, wer als Nächstes dran wäre — bei den Snacks stellt diese Frage niemand. Wer etwas mitbringt, sagt es, und die App trägt es nur ein. Deshalb steht dort eine schlichte Namensliste.\n\nWer für den Abend **abgesagt** hat, steht gar nicht erst zur Wahl.\n\nDie Rolle zählt trotzdem als Aufgabe: Wer den Kuchen bringt, rutscht in den anderen Vorschlagslisten dieses Abends nach hinten.\n\n**Was** jemand mitbringt, steht nicht in der App — das besprecht ihr unter euch.',
+    keywords: ['essen', 'kuchen', 'snacks', 'verpflegung', 'mitbringen'],
+  },
+  {
+    id: 'meetings-snacks-vorgabe',
+    category: 'admin',
+    question: 'Wie stelle ich ein, dass jeder Abend Snacks hat?',
+    answer:
+      'In der **Verwaltung** unter „Termin-Rhythmus" gibt es den Schalter „Snacks vorbelegen". Ist er an, bringt jeder neu erzeugte Termin den Baustein gleich mit.\n\nEr ist voreingestellt **aus**, anders als die Lobpreisabende: Die Rolle ist eine Einladung. Eine Gruppe, die nie über Essen gesprochen hat, fände sonst an jedem Dienstag eine offene Zuständigkeit vor, nach der niemand gefragt hat.\n\nDer Schalter gilt nur für **neue** Termine. An einem einzelnen Abend lässt sich der Baustein immer anhaken, auch ohne diese Vorgabe.',
+    keywords: ['snacks', 'vorgabe', 'rhythmus', 'verwaltung', 'essen'],
   },
   {
     id: 'meetings-zusagen',
     category: 'meetings',
     question: 'Wie sage ich zu oder ab?',
     answer:
-      'An drei Stellen, mit Absicht unterschiedlich weit:\n\n**Auf „Heute"** — „Bist du dabei?" gilt nur für den nächsten Abend.\n\n**Auf der Terminseite** unter „Wer kommt" → „Deine Antwort" — für diesen einen Abend.\n\n**Im Profil unter Abwesenheiten** — für einen ganzen Zeitraum auf einmal.\n\nEs gibt drei Antworten: dabei, nicht dabei, weiß noch nicht. „Weiß noch nicht" ist ein gültiger Zustand und keine Nachlässigkeit — er verhindert sogar, dass der Abend ausfällt.',
+      'An drei Stellen, mit Absicht unterschiedlich weit:\n\n**Am Termin** — unten am Bildschirm, wo sonst die Tab-Leiste steht. Für diesen einen Abend.\n\n**In der Terminliste** — unter den Rollen jeder Karte. Dort liest man quer über Wochen, und genau dabei fällt einem ein, dass man am 15. nicht kann.\n\n**Im Profil unter Abwesenheiten** — für einen ganzen Zeitraum auf einmal.\n\nEs gibt drei Antworten: zusagen, absagen, weiß noch nicht. „Weiß noch nicht" ist ein gültiger Zustand und keine Nachlässigkeit — er verhindert sogar, dass der Abend ausfällt, und du zählst in der Planung mit.\n\nZu jeder Antwort kannst du einen Satz dazuschreiben: „komme 20 Min später", „bin im Urlaub, euch viel Spaß".\n\nAuf **„Heute"** wird nicht mehr geantwortet — der Startbildschirm zeigt, was ansteht; entschieden wird auf der Karte.',
     keywords: ['zusage', 'absage', 'teilnahme', 'anwesenheit'],
   },
   {

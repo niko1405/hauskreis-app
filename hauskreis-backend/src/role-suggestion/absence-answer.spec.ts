@@ -33,6 +33,7 @@ function setup(zugesagt: string[]) {
     },
     meeting: { findMany: jest.fn().mockResolvedValue([]) },
     meetingSongLeader: { findMany: jest.fn().mockResolvedValue([]) },
+    meetingSnackResponsible: { findMany: jest.fn().mockResolvedValue([]) },
     meetingAttendance: { count: jest.fn().mockResolvedValue(0) },
     absencePeriod: {
       findMany: jest.fn().mockResolvedValue([

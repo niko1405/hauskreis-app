@@ -57,6 +57,7 @@ export const meetingResponseSchema = z.object({
   hasTestimonySlot: z.boolean(),
   hasNotesSlot: z.boolean(),
   hasPrayerSlot: z.boolean(),
+  hasSnackSlot: z.boolean(),
   locationId: z.uuid().nullable(),
   hostPersonId: z.uuid().nullable(),
   /// Wie der Abend überschrieben ist. Gilt für jede Terminart; bleibt er leer,
@@ -108,6 +109,12 @@ export const meetingResponseSchema = z.object({
   /// bleibt, weil dort geschrieben wird; hier steht es, damit eine Terminliste
   /// nicht pro Karte eine zweite Anfrage braucht, um „Musik: Lena" zu zeigen.
   songLeaders: z.array(z.object({ person: personRefSchema })),
+  /// Wer etwas zu essen mitbringt — leer ist gültig, und an den meisten Abenden
+  /// gibt es den Baustein gar nicht.
+  ///
+  /// Wie bei der Musik: hier zum Anzeigen, geschrieben wird unter
+  /// `…/meetings/:id/snack-responsibles`.
+  snackResponsibles: z.array(z.object({ person: personRefSchema })),
   /// Wer den Actionstep für sich abgehakt hat.
   ///
   /// Namen statt einer Zahl: „5 von 9" beantwortet, wie es der Gruppe geht,
@@ -193,6 +200,8 @@ export const meetingScheduleSchema = z.object({
   weeklyActionstep: z.boolean(),
   /// Ob der letzte Termin eines Monats ein Lobpreisabend wird.
   praiseEvenings: z.boolean(),
+  /// Ob erzeugte Termine den Baustein „Snacks" schon mitbringen.
+  snackSlot: z.boolean(),
   updatedByPersonId: z.uuid().nullable(),
   updatedAt: isoDateTimeOut,
   version: z.number().int().nonnegative(),
@@ -227,6 +236,14 @@ export const actionstepRunResultSchema = reminderRunResultSchema.extend({
   meetingId: z.uuid().nullable(),
 });
 
+/**
+ * Wer an einem Abend etwas zu essen mitbringt.
+ *
+ * Dieselbe schlichte Liste wie bei der Musik, und eine leere ist genauso
+ * gültig: An den meisten Abenden gibt es den Baustein gar nicht.
+ */
+export const snackResponsiblesResponseSchema = z.array(personRefSchema);
+
 export class MeetingResponseDto extends createZodDto(meetingResponseSchema) {}
 export class MeetingPageResponseDto extends createZodDto(
   pageSchema(meetingResponseSchema),
@@ -248,4 +265,7 @@ export class ReminderRunResultResponseDto extends createZodDto(
 ) {}
 export class ActionstepRunResultResponseDto extends createZodDto(
   actionstepRunResultSchema,
+) {}
+export class SnackResponsiblesResponseDto extends createZodDto(
+  snackResponsiblesResponseSchema,
 ) {}

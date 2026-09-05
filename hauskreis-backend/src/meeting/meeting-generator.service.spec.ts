@@ -13,8 +13,11 @@ type CreateManyArgs = {
   data: {
     hauskreisId: string;
     date: Date;
-    type: string;
+    generated: boolean;
     startMinutes: number;
+    hasTopicSlot: boolean;
+    hasTestimonySlot: boolean;
+    hasSnackSlot: boolean;
   }[];
   skipDuplicates?: boolean;
 };
@@ -26,6 +29,7 @@ const TUESDAY_AT_SIX = {
   intervalWeeks: 1,
   startMinutes: 18 * 60,
   praiseEvenings: true,
+  snackSlot: false,
 };
 
 function setup(
@@ -196,6 +200,32 @@ describe('MeetingGeneratorService.generateFor', () => {
 
     const themen = createMany.mock.calls[0][0].data.map((m) => m.hasTopicSlot);
     expect(themen).toEqual(Array<boolean>(MEETINGS_AHEAD).fill(true));
+  });
+
+  /**
+   * Voreingestellt aus, und das ist die Aussage: Die Rolle ist eine Einladung.
+   * Eine Gruppe, die nie über Essen gesprochen hat, bekäme sonst an jedem
+   * Dienstag eine offene Zuständigkeit, nach der niemand gefragt hat.
+   */
+  it('gibt Snacks nicht von selbst vor', async () => {
+    const { service, createMany } = setup();
+
+    await service.generateFor('hk-1', MONDAY);
+
+    expect(createMany.mock.calls[0][0].data.map((m) => m.hasSnackSlot)).toEqual(
+      Array<boolean>(MEETINGS_AHEAD).fill(false),
+    );
+  });
+
+  /** Und hängt nicht daran, ob der Abend ein Thema hat — gegessen wird an beiden. */
+  it('gibt Snacks überall vor, wenn die Gruppe es einstellt', async () => {
+    const { service, createMany } = setup([], { snackSlot: true });
+
+    await service.generateFor('hk-1', MONDAY);
+
+    expect(createMany.mock.calls[0][0].data.map((m) => m.hasSnackSlot)).toEqual(
+      Array<boolean>(MEETINGS_AHEAD).fill(true),
+    );
   });
 
   it('hält bei zwei Wochen den Abstand ein', async () => {

@@ -11,7 +11,7 @@ import { wallClockOut } from '../../common/dto/wall-clock';
  * und eine Termin-Rolle auf einen Tag fällt: sonst müsste jeder Konsument auf
  * fünf Formen verzweigen. `endDate` und `groupId` sind nur bei
  * `PRAYER_BUDDY` gesetzt, `occasionId` nur bei `BIRTHDAY_GIFT`, `meetingId`
- * nur bei den drei Termin-Rollen.
+ * nur bei den vier Termin-Rollen.
  */
 export const assignmentSchema = z.object({
   role: z.enum([
@@ -19,6 +19,7 @@ export const assignmentSchema = z.object({
     'TOPIC',
     'SONG',
     'TESTIMONY',
+    'SNACK',
     'PRAYER_BUDDY',
     'BIRTHDAY_GIFT',
   ]),
@@ -51,12 +52,14 @@ const homeMeetingSchema = z.object({
   startTime: wallClockOut,
   /// Gesetzt, wenn sich der Termin über mehrere Tage zieht.
   endDate: isoDateOut.nullable(),
-  /// Nur die zwei, die der Startbildschirm braucht: er zeigt Rollen-Chips
-  /// für Thema und Musik, und ohne sie stünde an einem Geburtstagsabend
-  /// „Thema: noch niemand".
+  /// Die Bausteine, die auf der Karte einen Rollen-Chip tragen. Ohne sie
+  /// stünde an einem Geburtstagsabend „Thema: noch niemand" — und sie sagen
+  /// zugleich, wie der Abend heißt, wenn er keinen eigenen Titel hat
+  /// (`meetingKindLabel` im Frontend).
   hasTopicSlot: z.boolean(),
   hasSongSlot: z.boolean(),
   hasTestimonySlot: z.boolean(),
+  hasSnackSlot: z.boolean(),
   title: z.string().nullable(),
   /// Mit Position, damit „In Maps öffnen" ohne zweiten Aufruf geht.
   /// `latitude`/`longitude` sind entweder beide gesetzt oder beide `null`.
@@ -92,6 +95,9 @@ const homeMeetingSchema = z.object({
   /// dort spiegelt die Hülle die Verknüpfungstabelle, hier ist es eine
   /// eigens gebaute Ansicht und die Hülle wäre nur Ballast.
   songLeaders: z.array(personRefSchema),
+  /// Wer etwas zu essen mitbringt. Flach wie `songLeaders`, aus demselben
+  /// Grund.
+  snackResponsibles: z.array(personRefSchema),
   /// Wer sein Testimony erzählt. `null` heißt „noch niemand" — der Chip
   /// lädt dann zum Eintragen ein, wie bei den anderen Rollen auch.
   testimonyPerson: personRefSchema.nullable(),

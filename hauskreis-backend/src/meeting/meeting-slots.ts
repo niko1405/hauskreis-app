@@ -1,15 +1,17 @@
 /**
  * Woraus ein Abend besteht.
  *
- * Vier Schalter am Termin, und der Typ ist nur noch ihre Voreinstellung. Vorher
- * war der Typ eine Behauptung: er stand in der Antwort, aber geprüft wurde
- * nichts. Man konnte einem Lobpreisabend ein Thema geben, einem Geburtstag ein
- * Testimony, und ein „Geburtstag von Mira" zählte in der Fairness wie ein ganz
- * normaler Dienstag — obwohl dort niemand im Sinne der Rotation dran war.
+ * Sechs Schalter am Termin, und sie sagen es als Einzige. Hier stand einmal
+ * eine Terminart daneben („Standard", „Lobpreis/Gebet", „Custom") — eine
+ * Behauptung, die in der Antwort stand, aber nie geprüft wurde: Man konnte
+ * einem Lobpreisabend ein Thema geben und einem Geburtstag ein Testimony. Sie
+ * ist weg; woraus ein Abend besteht, sagen die Schalter, und wie er heißt,
+ * ergibt sich daraus.
  *
- * Die Schalter beantworten das, indem sie eine Frage von einer anderen trennen:
- * **was für ein Abend ist das** (der Typ, fürs Auge) und **was gehört dazu**
- * (die Slots, für die Logik).
+ * **Fünf davon plant man, den sechsten nicht.** Thema, Lieder, Testimony,
+ * Gebetsanliegen und Snacks hakt man vor dem Abend an; die Nachbereitung steht
+ * nicht im Bausteinkasten, weil man sie dort *vor* dem Abend anhaken müsste —
+ * also als es noch nichts nachzubereiten gab.
  *
  * **Einen Gastgeber-Schalter gibt es nicht.** Man trifft sich immer irgendwo;
  * ein Schalter, der nie aus darf, ist keiner. Dass an einem Abend *niemand*
@@ -54,6 +56,19 @@ export interface MeetingSlots {
    * für sich mit, auch wer an dem Abend fehlt.
    */
   hasPrayerSlot: boolean;
+  /**
+   * Wer an dem Abend etwas zu essen mitbringt.
+   *
+   * Der einzige Baustein, der **überall voreingestellt aus** ist — auch in den
+   * erzeugten Belegungen. Er ist eine Einladung und kein Abschalten: Eine
+   * Gruppe, die nie über Essen gesprochen hat, bekäme sonst an jedem Dienstag
+   * eine offene Zuständigkeit, nach der niemand gefragt hat. Ob der
+   * Terminplaner ihn vorbelegt, sagt `meeting_schedule_config.snack_slot`.
+   *
+   * Schließt nichts aus, wie die Gebetsanliegen: Kuchen gibt es am Themenabend
+   * wie am Lobpreisabend wie am Geburtstag.
+   */
+  hasSnackSlot: boolean;
 }
 
 /**
@@ -79,6 +94,7 @@ export const EVENING_SLOTS: MeetingSlots = {
   hasTestimonySlot: false,
   hasNotesSlot: false,
   hasPrayerSlot: true,
+  hasSnackSlot: false,
 };
 
 /** Kein Thema, dafür ein Testimony — oder auch nur Lieder (CLAUDE.md §5). */
@@ -88,6 +104,7 @@ export const PRAISE_SLOTS: MeetingSlots = {
   hasTestimonySlot: true,
   hasNotesSlot: false,
   hasPrayerSlot: true,
+  hasSnackSlot: false,
 };
 
 /**
@@ -103,6 +120,7 @@ export const EMPTY_SLOTS: MeetingSlots = {
   hasTestimonySlot: false,
   hasNotesSlot: false,
   hasPrayerSlot: true,
+  hasSnackSlot: false,
 };
 
 /** Wie ein Slot heißt, wenn man einem Menschen erklärt, was fehlt. */
@@ -112,6 +130,7 @@ const SLOT_LABEL: Record<keyof MeetingSlots, string> = {
   hasTestimonySlot: 'kein Testimony',
   hasNotesSlot: 'keine Nachbereitung',
   hasPrayerSlot: 'keine Gebetsanliegen',
+  hasSnackSlot: 'keine Snacks',
 };
 
 /**
@@ -155,6 +174,9 @@ export const SLOT_FIELDS = {
   // hat kein `data`-Feld, das sich hier leeren ließe. Weggeräumt werden sie in
   // `MeetingService.update`.
   hasPrayerSlot: [],
+  // Und wie bei der Musik: Wer etwas mitbringt, steht in
+  // `meeting_snack_responsible`, nicht in einer Spalte am Termin.
+  hasSnackSlot: [],
 } as const satisfies Record<keyof MeetingSlots, readonly string[]>;
 
 /**
@@ -226,6 +248,7 @@ export function resolveSlots(
     hasTestimonySlot: dto.hasTestimonySlot ?? before.hasTestimonySlot,
     hasNotesSlot: dto.hasNotesSlot ?? before.hasNotesSlot,
     hasPrayerSlot: dto.hasPrayerSlot ?? before.hasPrayerSlot,
+    hasSnackSlot: dto.hasSnackSlot ?? before.hasSnackSlot,
   };
 }
 

@@ -78,6 +78,9 @@ const meetingInclude = {
   songLeaders: {
     select: { person: { select: personRefSelect } },
   },
+  snackResponsibles: {
+    select: { person: { select: personRefSelect } },
+  },
   actionstepDone: {
     select: { person: { select: personRefSelect }, doneAt: true },
     orderBy: { doneAt: 'asc' },
@@ -417,6 +420,19 @@ export class MeetingService {
     if (before.hasPrayerSlot && !slots.hasPrayerSlot) {
       await this.prisma.$transaction(async (tx) => {
         await tx.meetingPrayerRequest.deleteMany({ where: { meetingId: id } });
+        await touchMeeting(tx, id);
+      });
+    }
+
+    // Und die Snack-Zuteilung, wie die Musik-Zuteilung darüber. Bliebe sie
+    // stehen, schickte `SnackReminderService` „Du bringst was zu essen mit" für
+    // einen Abend, an dem der Baustein aus ist — genau der Fehler, wegen dem
+    // die Themen-Zuteilung nicht mehr aus Vorsicht stehen bleibt.
+    if (before.hasSnackSlot && !slots.hasSnackSlot) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.meetingSnackResponsible.deleteMany({
+          where: { meetingId: id },
+        });
         await touchMeeting(tx, id);
       });
     }

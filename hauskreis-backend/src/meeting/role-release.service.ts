@@ -13,7 +13,7 @@ import { clearSongSelectionIfUnled, touchMeeting } from './meeting-version';
  * steht im Plan jemand, der nicht kommt. Das ist der wahrscheinlichere Weg von
  * beiden; Pläne stehen früh, Absagen kommen spät.
  *
- * Alle vier Rollen werden frei:
+ * Alle fünf Rollen werden frei:
  *
  * - **Gastgeber** — und mit ihm der Ort, wenn es seine Wohnung war. Host und Ort
  *   sind in `resolveVenue` eine Entscheidung, also fallen sie auch zusammen.
@@ -27,6 +27,8 @@ import { clearSongSelectionIfUnled, touchMeeting } from './meeting-version';
  *   an dem der Zuständige nachweislich fehlt, soll nicht zugeteilt aussehen. Die
  *   Vorbereitung geht dabei nicht verloren — die Einheit wird nur vom Termin
  *   gelöst und wartet als Entwurf.
+ * - **Snacks** — wie die Musik: eine Zuteilung für genau diesen Abend, und wer
+ *   nicht kommt, bringt auch nichts mit.
  *
  * Vergangene und abgesagte Abende bleiben unberührt: dort wird nachgetragen,
  * was war, und was war, ändert eine Absage von heute nicht mehr.
@@ -74,7 +76,13 @@ export class RoleReleaseService {
       meeting.status === MeetingStatus.CANCELLED ||
       (await this.clock.isPast(meeting.hauskreisId, meeting))
     ) {
-      return { host: false, song: false, testimony: false, topic: false };
+      return {
+        host: false,
+        song: false,
+        testimony: false,
+        topic: false,
+        snack: false,
+      };
     }
 
     const host = meeting.hostPersonId === personId;
@@ -101,8 +109,12 @@ export class RoleReleaseService {
       });
     }
 
-    const { count } = await this.prisma.$transaction(async (tx) => {
+    const { song, snack } = await this.prisma.$transaction(async (tx) => {
       const result = await tx.meetingSongLeader.deleteMany({
+        where: { meetingId, personId },
+      });
+
+      const snacks = await tx.meetingSnackResponsible.deleteMany({
         where: { meetingId, personId },
       });
 
@@ -117,11 +129,11 @@ export class RoleReleaseService {
       // Nur wenn oben nichts geschrieben wurde: dort ist die Version schon
       // gesprungen, und ein zweiter Sprung an derselben Zeile machte aus einem
       // Vorgang zwei.
-      if (result.count > 0 && !host && !testimony) {
+      if ((result.count > 0 || snacks.count > 0) && !host && !testimony) {
         await touchMeeting(tx, meetingId);
       }
 
-      return result;
+      return { song: result.count > 0, snack: snacks.count > 0 };
     });
 
     // Das Thema zuletzt, weil daran mehr hängt als eine Zeile: bleibt niemand
@@ -129,20 +141,21 @@ export class RoleReleaseService {
     // Abend — sie bleibt als Entwurf erhalten.
     const topic = await this.topicLinks.releaseFor(meetingId, personId);
 
-    if (host || testimony || topic || count > 0) {
+    if (host || testimony || topic || song || snack) {
       this.logger.log(
         `Released roles of person ${personId} on meeting ${meetingId}: ${[
           host && 'host',
-          count > 0 && 'song',
+          song && 'song',
           testimony && 'testimony',
           topic && 'topic',
+          snack && 'snack',
         ]
           .filter(Boolean)
           .join(', ')}`,
       );
     }
 
-    return { host, song: count > 0, testimony, topic };
+    return { host, song, testimony, topic, snack };
   }
 
   /**
@@ -283,6 +296,7 @@ export interface ReleasedRoles {
   song: boolean;
   testimony: boolean;
   topic: boolean;
+  snack: boolean;
 }
 
 export interface LeftoverRoles {

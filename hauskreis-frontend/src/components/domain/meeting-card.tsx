@@ -203,6 +203,12 @@ export function MeetingCard({
                 people={meeting.songLeaders.map((leader) => leader.person)}
               />
             )}
+            {meeting.hasSnackSlot && (
+              <RoleChip
+                kind="SNACK"
+                people={meeting.snackResponsibles.map((row) => row.person)}
+              />
+            )}
           </div>
 
           {/* Schmal eine eigene Zone unter einem zweiten Trennstrich, breit

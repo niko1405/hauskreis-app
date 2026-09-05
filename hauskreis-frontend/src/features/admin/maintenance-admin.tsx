@@ -268,6 +268,30 @@ function MeetingScheduleCard() {
                 )
               }
             />
+
+            {/* Daneben und nicht darüber: Beide sagen etwas über die Bausteine
+                der erzeugten Abende. Anders als der Lobpreisabend ist dieser
+                voreingestellt **aus** — die Rolle ist eine Einladung, und wer
+                sie nicht will, soll sie nicht abwählen müssen. */}
+            <Checkbox
+              label="Snacks vorbelegen"
+              description="Erzeugte Termine bekommen den Baustein „Snacks“ gleich mit. Gilt für neue Termine — an einem einzelnen Abend lässt er sich immer anhaken, auch ohne diese Vorgabe."
+              checked={current?.snackSlot ?? false}
+              disabled={update.isPending}
+              onChange={(event) =>
+                update.mutate(
+                  { snackSlot: event.target.checked },
+                  {
+                    onSuccess: () =>
+                      toast.success(
+                        event.target.checked
+                          ? 'Neue Termine bringen die Snacks mit.'
+                          : 'Neue Termine kommen ohne Snacks.',
+                      ),
+                  },
+                )
+              }
+            />
           </>
         )}
 

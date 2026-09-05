@@ -367,6 +367,9 @@ function NextMeetingCard({
         {meeting.hasSongSlot && meeting.songLeaders.length > 0 && (
           <RoleChip kind="SONG" people={meeting.songLeaders} />
         )}
+        {meeting.hasSnackSlot && meeting.snackResponsibles.length > 0 && (
+          <RoleChip kind="SNACK" people={meeting.snackResponsibles} />
+        )}
       </Link>
     </Card>
   );

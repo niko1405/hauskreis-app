@@ -548,6 +548,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/meetings/{id}/snack-responsibles': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['MeetingController_findSnackResponsibles'];
+    put: operations['MeetingController_setSnackResponsibles'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/meetings/{id}/testimony-suggestions': {
     parameters: {
       query?: never;
@@ -1948,6 +1964,7 @@ export interface components {
         | 'HOST_REMINDER'
         | 'TOPIC_REMINDER'
         | 'SONG_REMINDER'
+        | 'SNACK_REMINDER'
         | 'ACTIONSTEP_REMINDER'
         | 'PRAYER_BUDDY_ASSIGNED'
         | 'ROLE_ASSIGNED'
@@ -2009,6 +2026,7 @@ export interface components {
         | 'HOST_REMINDER'
         | 'TOPIC_REMINDER'
         | 'SONG_REMINDER'
+        | 'SNACK_REMINDER'
         | 'ACTIONSTEP_REMINDER'
         | 'PRAYER_BUDDY_ASSIGNED'
         | 'ROLE_ASSIGNED'
@@ -2108,6 +2126,7 @@ export interface components {
           | 'HOST_REMINDER'
           | 'TOPIC_REMINDER'
           | 'SONG_REMINDER'
+          | 'SNACK_REMINDER'
           | 'ACTIONSTEP_REMINDER'
           | 'PRAYER_BUDDY_ASSIGNED'
           | 'ROLE_ASSIGNED'
@@ -2142,6 +2161,7 @@ export interface components {
           | 'HOST_REMINDER'
           | 'TOPIC_REMINDER'
           | 'SONG_REMINDER'
+          | 'SNACK_REMINDER'
           | 'ACTIONSTEP_REMINDER'
           | 'PRAYER_BUDDY_ASSIGNED'
           | 'ROLE_ASSIGNED'
@@ -2453,6 +2473,7 @@ export interface components {
         hasTestimonySlot: boolean;
         hasNotesSlot: boolean;
         hasPrayerSlot: boolean;
+        hasSnackSlot: boolean;
         /** Format: uuid */
         locationId: string | null;
         /** Format: uuid */
@@ -2577,6 +2598,15 @@ export interface components {
             photoUpdatedAt: string | null;
           };
         }[];
+        snackResponsibles: {
+          person: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: date-time */
+            photoUpdatedAt: string | null;
+          };
+        }[];
         actionstepDone: {
           person: {
             /** Format: uuid */
@@ -2613,6 +2643,7 @@ export interface components {
       timeZone: string;
       weeklyActionstep: boolean;
       praiseEvenings: boolean;
+      snackSlot: boolean;
       /** Format: uuid */
       updatedByPersonId: string | null;
       /** Format: date-time */
@@ -2634,6 +2665,7 @@ export interface components {
       timeZone?: string;
       weeklyActionstep?: boolean;
       praiseEvenings?: boolean;
+      snackSlot?: boolean;
     };
     MeetingResponseDto: {
       /** Format: uuid */
@@ -2653,6 +2685,7 @@ export interface components {
       hasTestimonySlot: boolean;
       hasNotesSlot: boolean;
       hasPrayerSlot: boolean;
+      hasSnackSlot: boolean;
       /** Format: uuid */
       locationId: string | null;
       /** Format: uuid */
@@ -2777,6 +2810,15 @@ export interface components {
           photoUpdatedAt: string | null;
         };
       }[];
+      snackResponsibles: {
+        person: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        };
+      }[];
       actionstepDone: {
         person: {
           /** Format: uuid */
@@ -2878,6 +2920,7 @@ export interface components {
       hasTestimonySlot?: boolean;
       hasNotesSlot?: boolean;
       hasPrayerSlot?: boolean;
+      hasSnackSlot?: boolean;
     };
     UpdateMeetingDto: {
       /** Format: date */
@@ -2898,6 +2941,7 @@ export interface components {
       hasTestimonySlot?: boolean;
       hasNotesSlot?: boolean;
       hasPrayerSlot?: boolean;
+      hasSnackSlot?: boolean;
     };
     CancelMeetingDto: {
       reason?: string | null;
@@ -2933,6 +2977,16 @@ export interface components {
       done: boolean;
       /** Format: date-time */
       doneAt: string | null;
+    };
+    SnackResponsiblesResponseDto: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      /** Format: date-time */
+      photoUpdatedAt: string | null;
+    }[];
+    SetSnackResponsiblesDto: {
+      personIds: string[];
     };
     GenerationResultResponseDto: {
       created: number;
@@ -3547,6 +3601,7 @@ export interface components {
           | 'TOPIC'
           | 'SONG'
           | 'TESTIMONY'
+          | 'SNACK'
           | 'PRAYER_BUDDY'
           | 'BIRTHDAY_GIFT';
         /** Format: date */
@@ -3581,6 +3636,7 @@ export interface components {
         hasTopicSlot: boolean;
         hasSongSlot: boolean;
         hasTestimonySlot: boolean;
+        hasSnackSlot: boolean;
         title: string | null;
         location: {
           /** Format: uuid */
@@ -3611,6 +3667,13 @@ export interface components {
           title: string | null;
         } | null;
         songLeaders: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        }[];
+        snackResponsibles: {
           /** Format: uuid */
           id: string;
           name: string;
@@ -3638,6 +3701,7 @@ export interface components {
         hasTopicSlot: boolean;
         hasSongSlot: boolean;
         hasTestimonySlot: boolean;
+        hasSnackSlot: boolean;
         title: string | null;
         location: {
           /** Format: uuid */
@@ -3668,6 +3732,13 @@ export interface components {
           title: string | null;
         } | null;
         songLeaders: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        }[];
+        snackResponsibles: {
           /** Format: uuid */
           id: string;
           name: string;
@@ -3695,6 +3766,7 @@ export interface components {
         hasTopicSlot: boolean;
         hasSongSlot: boolean;
         hasTestimonySlot: boolean;
+        hasSnackSlot: boolean;
         title: string | null;
         location: {
           /** Format: uuid */
@@ -3731,6 +3803,13 @@ export interface components {
           /** Format: date-time */
           photoUpdatedAt: string | null;
         }[];
+        snackResponsibles: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        }[];
         testimonyPerson: {
           /** Format: uuid */
           id: string;
@@ -3748,6 +3827,7 @@ export interface components {
           | 'TOPIC'
           | 'SONG'
           | 'TESTIMONY'
+          | 'SNACK'
           | 'PRAYER_BUDDY'
           | 'BIRTHDAY_GIFT';
         /** Format: date */
@@ -7073,6 +7153,127 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['HostSuggestionListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeetingController_findSnackResponsibles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SnackResponsiblesResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeetingController_setSnackResponsibles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetSnackResponsiblesDto'];
+      };
+    };
+    responses: {
+      /** @description Ersetzt die Liste; eine leere ist gueltig */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SnackResponsiblesResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -11501,6 +11702,7 @@ export interface operations {
           | 'HOST_REMINDER'
           | 'TOPIC_REMINDER'
           | 'SONG_REMINDER'
+          | 'SNACK_REMINDER'
           | 'ACTIONSTEP_REMINDER'
           | 'PRAYER_BUDDY_ASSIGNED'
           | 'ROLE_ASSIGNED'

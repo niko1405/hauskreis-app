@@ -52,16 +52,22 @@ import type {
 import { SuggestionRow } from './suggestion-row';
 
 /**
- * Die Rollen, die ein Mensch an einem Abend einträgt.
+ * Die Rollen mit einer **Rangliste**.
  *
  * Gebetsbuddys und Geschenke stehen bewusst nicht dabei: Beide teilt der
  * Server zu — die einen gewürfelt, die anderen der Reihe nach —, und beide
  * hängen an keinem Termin. Ein Sheet „wer besorgt das Geschenk" gibt es
  * deshalb nicht; die Zuteilung ändert man in der Verwaltung, nicht hier.
+ *
+ * **Snacks fehlen aus einem anderen Grund**: Sie hängen sehr wohl an einem
+ * Abend, aber „wer war am längsten nicht dran" ist bei ihnen keine Frage, die
+ * jemand stellt. Wer etwas mitbringt, sagt es — dort führt deshalb eine
+ * schlichte Personenauswahl hin (`PeoplePickerSheet`) und keine Rangfolge aus
+ * Fakten. Als **Last** zählen sie in diesen vier Listen trotzdem.
  */
 export type AssignmentKind = Exclude<
   AssignmentRole,
-  'PRAYER_BUDDY' | 'BIRTHDAY_GIFT'
+  'PRAYER_BUDDY' | 'BIRTHDAY_GIFT' | 'SNACK'
 >;
 
 /**

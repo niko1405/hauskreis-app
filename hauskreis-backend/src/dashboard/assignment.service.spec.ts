@@ -19,6 +19,7 @@ type MeetingRow = {
     topic: { title: string | null };
   } | null;
   songLeaders?: { person: { id: string; name: string } }[];
+  snackResponsibles?: { person: { id: string; name: string } }[];
 };
 
 type GroupRow = {
@@ -36,6 +37,7 @@ function setup(meetings: MeetingRow[] = [], groups: GroupRow[] = []) {
       topicResponsibles: [],
       topicSession: null,
       songLeaders: [],
+      snackResponsibles: [],
       ...meeting,
     })),
   );

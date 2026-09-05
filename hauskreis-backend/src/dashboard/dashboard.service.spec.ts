@@ -58,6 +58,7 @@ const nextMeeting = {
     },
   },
   songLeaders: [{ person: { id: 'lena', name: 'Lena' } }],
+  snackResponsibles: [],
   attendances: [] as { status: string }[],
 };
 

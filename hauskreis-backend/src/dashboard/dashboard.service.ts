@@ -52,6 +52,7 @@ export interface HomeMeeting {
   hasTopicSlot: boolean;
   hasSongSlot: boolean;
   hasTestimonySlot: boolean;
+  hasSnackSlot: boolean;
   title: string | null;
   /**
    * Mit Position, damit der Home-Screen ein „In Maps öffnen" anbieten kann,
@@ -74,6 +75,9 @@ export interface HomeMeeting {
   topic: { id: string; title: string | null } | null;
   /** Who is on for the music. Empty is valid — not every evening has songs. */
   songLeaders: { id: string; name: string }[];
+  /** Wer etwas zu essen mitbringt. Leer ist gültig — meistens gibt es den
+   * Baustein gar nicht. */
+  snackResponsibles: { id: string; name: string }[];
   /** Wer sein Testimony erzählt — an einem Lobpreisabend die tragende Rolle. */
   testimonyPerson: { id: string; name: string } | null;
   /** What *you* answered for that evening. */
@@ -185,6 +189,7 @@ export class DashboardService {
       hasTopicSlot: true,
       hasSongSlot: true,
       hasTestimonySlot: true,
+      hasSnackSlot: true,
       title: true,
       location: {
         select: {
@@ -204,6 +209,9 @@ export class DashboardService {
       },
       topicSession: { select: sessionSelectWithTopic },
       songLeaders: {
+        select: { person: { select: personRefSelect } },
+      },
+      snackResponsibles: {
         select: { person: { select: personRefSelect } },
       },
       attendances: {
@@ -339,6 +347,7 @@ export class DashboardService {
         hasTopicSlot: meeting.hasTopicSlot,
         hasSongSlot: meeting.hasSongSlot,
         hasTestimonySlot: meeting.hasTestimonySlot,
+        hasSnackSlot: meeting.hasSnackSlot,
         title: meeting.title,
         location: meeting.location,
         host: meeting.host,
@@ -351,6 +360,7 @@ export class DashboardService {
           ? { id: session.topic.id, title: session.topic.title }
           : null,
         songLeaders: meeting.songLeaders.map((leader) => leader.person),
+        snackResponsibles: meeting.snackResponsibles.map((row) => row.person),
         testimonyPerson: meeting.testimonyPerson,
         // No row means nobody answered yet, which is exactly UNKNOWN.
         myAttendance: meeting.attendances[0]?.status ?? 'UNKNOWN',
