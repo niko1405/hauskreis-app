@@ -4,13 +4,13 @@
  * Eine Terminkarte in der Liste. Zeigt, was man beim Überfliegen braucht:
  * wann, was, wo, wer — und was noch offen ist.
  */
-import { MapPin, Users } from 'lucide-react';
+import { Clock, MapPin, Users } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { PRESSABLE } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
-import { formatDay, formatDayRange, formatRelativeDay } from '@/lib/date';
+import { dayParts, formatDayRange, formatRelativeDay } from '@/lib/date';
 import {
   attendanceCounts,
   isMeetingPast,
@@ -48,6 +48,7 @@ export function MeetingCard({
   // Dieselbe Unterscheidung wie auf der Detailseite: „geplant für" ist keine
   // Aussage über gestern.
   const shown = past || cancelled ? counts.attending : counts.planned;
+  const tag = dayParts(meeting.date);
   const topicPeople = meeting.topicResponsibles.map((r) => r.person);
   // Die Tönung des Lobpreisabends kommt aus denselben Bausteinen wie sein
   // Name: Wo kein Thema, aber ein Testimony steht, dreht sich der Abend ums
@@ -80,12 +81,7 @@ export function MeetingCard({
         onMouseEnter={() => onPrefetch?.(meeting.id)}
         onTouchStart={() => onPrefetch?.(meeting.id)}
         className={cn(
-          // `@container`: Ob die Antwort-Knöpfe neben die Rollen passen, hängt
-          // an der Breite **dieser Karte** und nicht an der des Fensters.
-          // Zwischen `md` und ~1000px ist die Spalte neben der Seitenleiste
-          // erst gut 450px breit — ein `md:` stellte sie dort nebeneinander,
-          // wo kein Platz ist.
-          '@container block rounded-card border p-5 shadow-sm',
+          'block rounded-card border p-5 shadow-sm',
           PRESSABLE,
           'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
           // Hier stand für den Lobpreisabend ein amberfarbener Verlauf. Er
@@ -96,22 +92,62 @@ export function MeetingCard({
           cancelled && 'opacity-60',
         )}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
-                {/* Ein Zeitraum steht als einer da: „14. – 16. August" ist ein
-                    Termin, keine Reihe aus dreien. */}
-                {meeting.endDate
-                  ? formatDayRange(meeting.date, meeting.endDate)
-                  : formatDay(meeting.date)}
+        <div className="flex items-start gap-3">
+          {/* **Das Datum als Kästchen.** Es stand vorher als Kleinschrift-Zeile
+              über dem Titel und war damit das Unauffälligste an einer Karte, die
+              man genau danach durchsucht: „wann ist der nächste". Jetzt ist es
+              der Anker links, an dem das Auge die Liste heruntergeht.
+
+              Ein Zeitraum bekommt keins: „14.–16." passt nicht in ein Kästchen,
+              und eine Freizeit ist kein Tag. Dort steht die Spanne wie bisher
+              als Zeile über dem Titel. */}
+          {meeting.endDate === null && (
+            <span className="flex w-13 shrink-0 flex-col items-center rounded-lg border border-line bg-canvas py-1.5 leading-none">
+              <span className="text-[10px] font-bold tracking-wider text-terracotta-500 uppercase">
+                {tag.weekday}
               </span>
-              {!past && (
-                <span className="text-[10px] font-semibold text-stone-400">
-                  {formatRelativeDay(meeting.date)}
+              <span className="mt-1 font-serif text-xl font-bold text-stone-800">
+                {tag.day}
+              </span>
+              <span className="mt-1 text-[9px] font-semibold tracking-wider text-stone-400 uppercase">
+                {tag.month}
+              </span>
+            </span>
+          )}
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                {/* Ein Zeitraum steht als einer da: „14. – 16. August" ist ein
+                    Termin, keine Reihe aus dreien — und er hat kein Kästchen. */}
+                {meeting.endDate && (
+                  <span className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
+                    {formatDayRange(meeting.date, meeting.endDate)}
+                  </span>
+                )}
+                {!past && (
+                  <span className="text-[10px] font-semibold text-stone-400">
+                    {formatRelativeDay(meeting.date)}
+                  </span>
+                )}
+                {cancelled && <Badge variant="alert">Abgesagt</Badge>}
+              </div>
+
+              {/* Die Zahl sagt **dasselbe wie die Detailseite**: Zusagen plus
+                  Unentschiedene, also die Menge, mit der auch der Server
+                  rechnet. „3 dabei" zählte einmal nur die Zusagen, während
+                  darunter „Geplant für 8" stand — als Gastgeber plant man mit
+                  der größeren.
+
+                  Anders als die Antwort-Knöpfe steht sie auch an vergangenen
+                  und abgesagten Abenden — dort aber als „wer war da", denn
+                  „geplant für" ist keine Aussage über gestern. */}
+              {shown > 0 && (
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-canvas px-2.5 py-1 text-xs font-bold text-stone-600">
+                  <Users size={13} className="text-terracotta-500" />
+                  {shown} {past || cancelled ? 'dabei' : 'geplant'}
                 </span>
               )}
-              {cancelled && <Badge variant="alert">Abgesagt</Badge>}
             </div>
 
             <h3 className="mt-1 truncate font-serif text-lg font-bold text-stone-900">
@@ -119,6 +155,15 @@ export function MeetingCard({
             </h3>
 
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-stone-500">
+              {/* Die Uhrzeit stand bisher nur auf „Heute". Hier gehört sie
+                  dazu, seit das Kästchen den Tag trägt: Der Tag ist die
+                  Sortierung, die Uhrzeit die Verabredung — und seit sie sich
+                  einstellen lässt, ist „18 Uhr wie immer" keine sichere
+                  Annahme mehr. */}
+              <span className="flex items-center gap-1">
+                <Clock size={12} className="text-stone-400" />
+                {meeting.startTime} Uhr
+              </span>
               <span className="flex items-center gap-1">
                 <MapPin size={12} className="text-stone-400" />
                 {/* Ein Termin ohne Ort ist kein Fehler — z. B. draußen im Park. */}
@@ -134,49 +179,23 @@ export function MeetingCard({
               )}
             </div>
           </div>
-
-          {/* Hier stand erst der Gastgeber-Avatar, dann der Zusage-Umschalter.
-              Der Avatar stand doppelt (unten als Rollen-Chip); der Umschalter
-              ist als drei Antworten unter die Rollen gewandert, wo Platz für
-              ihre Beschriftung ist.
-
-              Was hier steht, ist die Zahl, die vorher klein zwischen Ort und
-              Terminart stand und dort unterging — und sie sagt **dasselbe wie
-              die Detailseite**. „3 dabei" zählte einmal nur die Zusagen,
-              während darunter „Geplant für 8" stand; als Gastgeber plant man
-              aber mit der größeren Menge, und mit der rechnet auch der Server.
-              Zwei Zahlen über denselben Abend, und die sichtbare war die
-              knappere.
-
-              Anders als die Antwort-Knöpfe steht sie auch an vergangenen und
-              abgesagten Abenden — dort aber als „wer war da", denn „geplant
-              für" ist keine Aussage über gestern. */}
-          {shown > 0 && (
-            <span className="flex shrink-0 items-center gap-1 rounded-full bg-canvas px-2.5 py-1 text-xs font-bold text-stone-600">
-              <Users size={13} className="text-terracotta-500" />
-              {shown} {past || cancelled ? 'dabei' : 'geplant'}
-            </span>
-          )}
         </div>
 
-        {/* Zwei Zonen, ab `@lg` nebeneinander: links „wer macht was", rechts
-            „bist du dabei". Darunter ist es ein Block und kein umbrechender
-            Fluss — als eines von mehreren Flex-Kindern hing die Antwort mit
-            acht Pixeln an den Rollen-Chips und las sich wie ein fünfter davon. */}
-        <div className="mt-4 border-t border-line pt-3 @lg:flex @lg:items-center @lg:gap-3">
-          <div className="flex flex-wrap items-center gap-2 @lg:flex-1">
-            {meeting.location && !meeting.location.requiresHost ? (
-              <p
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors',
-                  'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
-                  'bg-terracotta-50 text-terracotta-700 border-terracotta-100',
-                )}
-              >
-                <MapPin size={12} className="shrink-0" />
-                <span>{meeting.location.name}</span>
-              </p>
-            ) : (
+        {/* **Untereinander, in jeder Breite.** Hier standen die Antworten ab
+            32 rem rechts neben den Rollen-Chips. Das war eng gedacht: Der
+            Trennstrich über den Chips sagt „das ist der Abend", der zweite
+            darunter „das sagst du dazu" — und im Fenster nebeneinander verlor
+            die Antwort genau diese Trennung und las sich wie ein weiterer Chip.
+            Mit dem `@lg` fallen die einzigen Container-Queries des Projekts. */}
+        <div className="mt-4 border-t border-line pt-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Braucht der Ort keinen Gastgeber — Schlosspark, Café —, steht
+                hier **nichts**. Der Ort selbst steht schon in der Zeile über
+                den Chips; hier stand er ein zweites Mal, als terracotta Chip,
+                und behauptete damit eine Rolle, die es an dem Abend gar nicht
+                gibt. Dieselbe Regel wie in den Zuständigkeiten am Termin
+                (`meetingRoles`). */}
+            {(meeting.location === null || meeting.location.requiresHost) && (
               <RoleChip
                 kind="HOST"
                 people={meeting.host ? [meeting.host] : []}
@@ -212,12 +231,11 @@ export function MeetingCard({
             )}
           </div>
 
-          {/* Schmal eine eigene Zone unter einem zweiten Trennstrich, breit
-              rechts daneben ohne ihn. Der Strich ist derselbe Gedanke wie der
-              über den Rollen: Er trennt, was der Abend ist, von dem, was du
-              dazu sagst. */}
+          {/* Eine eigene Zone unter einem zweiten Trennstrich — derselbe
+              Gedanke wie der Strich über den Rollen: Er trennt, was der Abend
+              ist, von dem, was du dazu sagst. */}
           {answerable && (
-            <div className="mt-3 flex gap-1.5 border-t border-line pt-3 @lg:mt-0 @lg:shrink-0 @lg:border-t-0 @lg:pt-0">
+            <div className="mt-3 flex gap-1.5 border-t border-line pt-3">
               {ANSWERS.map((option) => {
                 const Icon = option.icon;
                 const chosen = myStatus === option.status;
@@ -229,8 +247,8 @@ export function MeetingCard({
                     aria-pressed={chosen}
                     onClick={(event) => void choose(event, option.status)}
                     className={cn(
-                      'flex flex-1 items-center justify-center gap-1 rounded-full border px-2.5 py-1.5',
-                      'text-[11px] font-bold transition-colors @lg:flex-none',
+                      'flex flex-1 items-center justify-center gap-1 rounded-full border px-2.5 py-2',
+                      'text-[11px] font-bold transition-colors',
                       'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
                       chosen
                         ? option.active
@@ -255,10 +273,9 @@ export function MeetingCard({
       </Link>
 
       {/* **Geschwister des Links, nicht sein Kind.** `Sheet` rendert sein
-          Overlay als `position: fixed` ohne Portal, und die Karte trägt sowohl
-          `@container` als auch `active:scale` — beides macht sie zum
-          Bezugsrahmen, und der Schleier säße dann in der Karte statt über der
-          Seite. */}
+          Overlay als `position: fixed` ohne Portal, und die Karte trägt
+          `active:scale` — das macht sie zum Bezugsrahmen, und der Schleier säße
+          dann in der Karte statt über der Seite. */}
       {me && (
         <AnswerNoteSheet
           meetingId={meeting.id}

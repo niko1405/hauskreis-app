@@ -11,7 +11,7 @@ import {
   Circle,
   CircleCheckBig,
   Clock,
-  Map,
+  Navigation,
   MapPin,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
@@ -20,7 +20,13 @@ import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { RoleChip } from '@/components/domain/role-badge';
 import { useHome, useMe, useSetActionstepDone } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import { formatDay, formatRelativeDay, groupNow } from '@/lib/date';
+import {
+  dayParts,
+  formatDay,
+  formatDayRange,
+  formatRelativeDay,
+  groupNow,
+} from '@/lib/date';
 import { actionstepProgress, mapsUrl, meetingHeadline } from '@/lib/meeting';
 import { firstName } from '@/lib/person';
 import { ScreenHeader } from '@/components/layout/screen-header';
@@ -280,59 +286,81 @@ function NextMeetingCard({
   /** Der laufende Abend bekommt hier seine grüne Tönung. */
   className?: string;
 }) {
+  const tag = dayParts(meeting.date);
+
   return (
     <Card className={cn('space-y-4', className)}>
-      {/* Die Uhrzeit steht nur hier — auf dieser einen Karte geht man auf einen
-          Abend zu. In den Terminlisten liest man quer über Wochen, dort wäre sie
-          an jeder Zeile Rauschen. Seit sich die Zeit einstellen lässt, ist
-          „18 Uhr wie immer" keine sichere Annahme mehr. */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-xs font-medium text-stone-500">
-          <Link
-            href={`/termin?id=${meeting.id}`}
-            className="block min-w-0 flex-1 mb-3"
-          >
-            <span className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
-              {formatDay(meeting.date)} · {formatRelativeDay(meeting.date)}
+      {/* Dieselbe Kopfzeile wie auf der Terminkarte: Datums-Kästchen links,
+          Titel, darunter Uhrzeit und Ort. Sie sahen vorher verschieden aus —
+          hier Datum und Countdown in einer Zeile, dort eine andere Anordnung —,
+          obwohl es dasselbe ist. Ein Zeitraum bekommt kein Kästchen; eine
+          Freizeit ist kein Tag. */}
+      <div className="flex items-start gap-3">
+        {meeting.endDate === null && (
+          <span className="flex w-13 shrink-0 flex-col items-center rounded-lg border border-line bg-canvas py-1.5 leading-none">
+            <span className="text-[10px] font-bold tracking-wider text-terracotta-500 uppercase">
+              {tag.weekday}
+            </span>
+            <span className="mt-1 font-serif text-xl font-bold text-stone-800">
+              {tag.day}
+            </span>
+            <span className="mt-1 text-[9px] font-semibold tracking-wider text-stone-400 uppercase">
+              {tag.month}
+            </span>
+          </span>
+        )}
+
+        <div className="min-w-0 flex-1">
+          <Link href={`/termin?id=${meeting.id}`} className="block min-w-0">
+            <span className="text-[10px] font-semibold text-stone-400">
+              {meeting.endDate
+                ? formatDayRange(meeting.date, meeting.endDate)
+                : formatRelativeDay(meeting.date)}
             </span>
             <h3 className="mt-0.5 font-serif text-lg font-bold text-stone-900">
               {meetingHeadline(meeting)}
             </h3>
           </Link>
-          {meeting.location ? (
-            <a
-              href={mapsUrl(meeting.location)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 hover:text-terracotta-600"
-            >
-              <MapPin size={12} className="text-stone-400" />
-              {meeting.location.name}
-            </a>
-          ) : (
-            <span className="inline-flex items-center gap-1">
-              <MapPin size={12} className="text-stone-400" />
-              Ort noch offen
+
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-stone-500">
+            <span className="flex items-center gap-1">
+              <Clock size={12} className="text-stone-400" />
+              {meeting.startTime} Uhr
             </span>
-          )}
+            {meeting.location ? (
+              <a
+                href={mapsUrl(meeting.location)}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 hover:text-terracotta-600"
+              >
+                <MapPin size={12} className="text-stone-400" />
+                {meeting.location.name}
+              </a>
+            ) : (
+              <span className="flex items-center gap-1">
+                <MapPin size={12} className="text-stone-400" />
+                Ort noch offen
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-col shrink-0 items-center justify-center gap-3">
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-canvas px-2.5 py-1 text-xs font-bold text-stone-600">
-            <Clock size={13} className="text-terracotta-500" />
-            {meeting.startTime} Uhr
-          </span>
-          {meeting.location && (
-            <a
-              href={mapsUrl(meeting.location)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center p-3 bg-terracotta-600 rounded-full"
-            >
-              <Map size={19} className="text-stone-400" color="white" />
-            </a>
-          )}
-        </div>
+        {/* Der runde Maps-Knopf bleibt: Auf **dieser** Karte geht man auf einen
+            Abend zu, und „wie komme ich hin" ist dort die nächste Frage. In der
+            Terminliste liest man quer über Wochen — da wäre er an jeder Zeile
+            ein Ziel, das niemand meint. */}
+        {meeting.location && (
+          <a
+            href={mapsUrl(meeting.location)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="In Maps öffnen"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-terracotta-600 text-white transition-colors hover:bg-terracotta-700"
+          >
+            <Navigation size={17} />
+          </a>
+        )}
       </div>
 
       {/* Alle Rollen des Abends, in derselben Form wie auf der Terminkarte —
@@ -342,22 +370,12 @@ function NextMeetingCard({
         href={`/termin?id=${meeting.id}`}
         className="flex flex-wrap items-center gap-2"
       >
-        {meeting.location && !meeting.location.requiresHost ? (
-          <p
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors',
-              'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
-              'bg-terracotta-50 text-terracotta-700 border-terracotta-100',
-            )}
-          >
-            <MapPin size={12} className="shrink-0" />
-            <span>{meeting.location.name}</span>
-          </p>
-        ) : (
-          meeting.host && (
-            <RoleChip kind="HOST" people={meeting.host ? [meeting.host] : []} />
-          )
-        )}
+        {/* Braucht der Ort keinen Gastgeber — Schlosspark, Café —, steht hier
+            **nichts**. Der Ort selbst steht schon in der Kopfzeile darüber;
+            hier stand er ein zweites Mal, als terracotta Chip, und behauptete
+            damit eine Rolle, die es an dem Abend gar nicht gibt. Dieselbe
+            Regel wie in den Zuständigkeiten am Termin (`meetingRoles`). */}
+        {meeting.host && <RoleChip kind="HOST" people={[meeting.host]} />}
         {meeting.hasTopicSlot && meeting.topicResponsibles.length > 0 && (
           <RoleChip kind="TOPIC" people={meeting.topicResponsibles} />
         )}

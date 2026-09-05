@@ -14,6 +14,7 @@
 export type CalendarDay = string;
 
 const WEEKDAY_SHORT = new Intl.DateTimeFormat('de-DE', { weekday: 'short' });
+const MONTH_SHORT = new Intl.DateTimeFormat('de-DE', { month: 'short' });
 const WEEKDAY_LONG = new Intl.DateTimeFormat('de-DE', { weekday: 'long' });
 const DAY_MONTH = new Intl.DateTimeFormat('de-DE', {
   day: 'numeric',
@@ -213,6 +214,29 @@ export function formatWeekday(day: CalendarDay): string {
 /** `August 2026` */
 export function formatMonth(day: CalendarDay): string {
   return MONTH_YEAR.format(parseDay(day));
+}
+
+/**
+ * Der Tag in drei Stücken, für das Datums-Kästchen der Terminkarte.
+ *
+ * Eigene Funktion statt dreier `Intl`-Aufrufe an der Karte: Die drei Zeilen
+ * gehören zusammen, und `Intl.DateTimeFormat` einmal zu bauen und
+ * wiederzuverwenden ist der Grund, warum die Formatierer hier oben stehen.
+ */
+export function dayParts(day: CalendarDay): {
+  weekday: string;
+  day: string;
+  month: string;
+} {
+  const date = parseDay(day);
+
+  return {
+    // Ohne den Punkt: „DI" statt „Di." — im Kästchen ist es eine Beschriftung,
+    // kein abgekürztes Wort in einem Satz.
+    weekday: WEEKDAY_SHORT.format(date).replace('.', ''),
+    day: String(date.getDate()),
+    month: MONTH_SHORT.format(date),
+  };
 }
 
 /** `3. – 17. August` bzw. `28. Juli – 11. August`, je nach Monatswechsel. */
