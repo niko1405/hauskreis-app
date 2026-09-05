@@ -3,7 +3,7 @@ import { ActionstepReminderService } from './actionstep-reminder.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { NotificationService } from '../notification/notification.service';
 import type { NotificationPreferenceService } from '../notification/notification-preference.service';
-import { MeetingType, NotificationType } from '../../generated/prisma/enums';
+import { NotificationType } from '../../generated/prisma/enums';
 import { withClock } from './group-clock.testing';
 import { withFeatures } from '../hauskreis/group-features.testing';
 import type { GroupFeatures } from '../hauskreis/group-features.service';
@@ -16,7 +16,8 @@ interface Abend {
   actionstepText: string | null;
   /** Vom Thema (Vorgabe) oder aus der Nachbereitung des Abends selbst. */
   quelle?: 'thema' | 'nachbereitung';
-  type?: MeetingType;
+  /** Ob der nächtliche Lauf ihn angelegt hat — Vorgabe: ja. */
+  generated?: boolean;
   /** Wer den Actionstep schon abgehakt hat. */
   done?: string[];
 }
@@ -27,7 +28,7 @@ function row(abend: Abend) {
   return {
     id: abend.id,
     date: utc('2026-07-28'),
-    type: abend.type ?? MeetingType.STANDARD,
+    generated: abend.generated ?? true,
     hasTopicSlot: !ausNachbereitung,
     actionstepText: ausNachbereitung ? abend.actionstepText : null,
     topicSession: ausNachbereitung
@@ -246,10 +247,10 @@ describe('ActionstepReminderService.sendDueReminders', () => {
    * Die eine Ausnahme: Zwischen zwei Dienstagen einen Geburtstag zu feiern
    * beendet nicht, was man sich am Dienstag vorgenommen hat.
    */
-  it('überspringt einen besonderen Termin ohne Actionstep', async () => {
+  it('überspringt einen selbst angelegten Termin ohne Actionstep', async () => {
     const { service, notify } = setup({
       lastMeetings: [
-        { id: 'geburtstag', actionstepText: null, type: MeetingType.CUSTOM },
+        { id: 'geburtstag', actionstepText: null, generated: false },
         { id: 'dienstag', actionstepText: 'Jeden Tag 10 Minuten lesen' },
       ],
     });
@@ -261,14 +262,14 @@ describe('ActionstepReminderService.sendDueReminders', () => {
   });
 
   /** Bringt er selbst einen mit, gilt er wie jeder andere Abend. */
-  it('nimmt den Actionstep eines besonderen Termins', async () => {
+  it('nimmt den Actionstep eines selbst angelegten Termins', async () => {
     const { service, notify } = setup({
       lastMeetings: [
         {
           id: 'geburtstag',
           actionstepText: 'Ruf jemanden an, den du lange nicht gesprochen hast',
           quelle: 'nachbereitung',
-          type: MeetingType.CUSTOM,
+          generated: false,
         },
         { id: 'dienstag', actionstepText: 'Jeden Tag 10 Minuten lesen' },
       ],

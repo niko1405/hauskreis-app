@@ -14,7 +14,7 @@
  * den niemand meldet, weil beide Seiten für sich plausibel aussehen.
  */
 import { Prisma } from '../../generated/prisma/client';
-import { MeetingStatus, MeetingType } from '../../generated/prisma/enums';
+import { MeetingStatus } from '../../generated/prisma/enums';
 import type { PrismaService } from '../prisma/prisma.service';
 import { finishedBefore } from './meeting-schedule';
 
@@ -83,7 +83,7 @@ const LOOKBACK = 10;
 const stepSelect = {
   id: true,
   date: true,
-  type: true,
+  generated: true,
   ...actionstepSelect,
   // Nur die Ids: Der Startbildschirm zeigt eine Zahl und den eigenen Haken, die
   // Erinnerung überspringt damit, wer schon abgehakt hat. Die Namen stehen auf
@@ -142,9 +142,9 @@ export async function latestActionstep(
     const text = actionstepOf(meeting);
 
     if (text) return { ...meeting, text };
-    // Nur der besondere Termin wird übersprungen. Jeder andere leere Abend
-    // beendet den Vorsatz von davor.
-    if (meeting.type !== MeetingType.CUSTOM) return null;
+    // Nur der selbst angelegte Termin wird übersprungen. Jeder andere leere
+    // Abend beendet den Vorsatz von davor.
+    if (meeting.generated) return null;
   }
 
   return null;

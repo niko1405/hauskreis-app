@@ -201,17 +201,21 @@ stehen — an dem Wochentag und zu der Uhrzeit, die für die Gruppe eingestellt
 sind. Da musst du nichts tun. Besondere Termine (Hauskreis-Wochenende,
 Geburtstagsfeier, Grillabend) legst du selbst an.
 
-### 6.2 Die drei Terminarten
+### 6.2 Wie ein Termin heißt
 
-- **Hauskreis-Abend** — der Normalfall. Kommt automatisch, mit Thema und Musik.
-- **Lobpreis & Gebet** — kommt automatisch als letzter regulärer Abend im Monat,
-  mit Testimony und Musik statt eines Themas.
-- **Besonderer Termin** — alles selbst gebaut. Er startet **ganz ohne
-  Bausteine**, damit ein Geburtstag nicht unfertig aussieht, nur weil er kein
-  Thema hat.
+Eine feste „Terminart" gibt es nicht. Ein Abend heißt nach dem, woraus er
+besteht — und wer einen eigenen Titel einträgt, sticht das jederzeit.
 
-Die Art lässt sich jederzeit ändern. Dabei springen die Bausteine auf die
-Voreinstellung der neuen Art.
+- **Hauskreis-Abend** — überall dort, wo der Baustein **Thema** an ist. Das ist
+  der Normalfall; die Termine kommen so automatisch.
+- **Lobpreis & Gebet** — kein Thema, dafür Testimony oder Musik. Der letzte
+  reguläre Abend im Monat kommt automatisch so.
+- **Termin** — wenn nichts davon angehakt ist. Ein Geburtstag oder ein
+  Grillabend hat ohnehin fast immer einen eigenen Titel.
+
+Ein selbst angelegter Termin startet **ganz ohne Bausteine**, damit ein
+Geburtstag nicht unfertig aussieht, nur weil er kein Thema hat. Und der Name
+zieht mit, sobald du am Baukasten drehst.
 
 ### 6.3 Das Baukasten-System
 

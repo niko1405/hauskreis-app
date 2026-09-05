@@ -780,12 +780,13 @@ Dazu drei kleinere Umbauten:
   Der Termin heißt dabei **nach sich selbst**: `meetingHeadline` fiel einmal auf
   den Titel der Einheit zurück und dann auf den des Themas, ein Abend hieß damit
   „Teil 2: Was Petrus tat" — der Name der Einheit, nicht der des Abends. Ohne
-  eigenen Titel steht dort jetzt die Terminart; wer will, trägt am Termin etwas
-  anderes ein. Das Thema bleibt sichtbar, nur nicht als Überschrift: als
-  Rollen-Chip auf der Karte, als Themen-Kasten hier, im Archiv unter „Themen".
-  Nebenbei sagen damit alle Bildschirme dasselbe — der Startbildschirm bekam nie
-  ein `topicSession` und zeigte längst die Terminart, während Liste, Kalender
-  und Detailseite den Themen-Titel zeigten.
+  eigenen Titel steht dort jetzt `meetingKindLabel`, der Name aus den
+  Bausteinen; wer will, trägt am Termin etwas anderes ein. Das Thema bleibt
+  sichtbar, nur nicht als Überschrift: als Rollen-Chip auf der Karte, als
+  Themen-Kasten hier, im Archiv unter „Themen". Nebenbei sagen damit alle
+  Bildschirme dasselbe — der Startbildschirm bekam nie ein `topicSession` und
+  zeigte längst den abgeleiteten Namen, während Liste, Kalender und Detailseite
+  den Themen-Titel zeigten.
 - **Der Info-Text steht oben.** Dort steht, was man _vor_ dem Abend wissen muss;
   unten zwischen Zusammenfassung und Actionstep las es niemand rechtzeitig.
 - **„Wer kommt" beantwortet „mit wie vielen rechne ich?"** — siehe unten, das
@@ -1098,14 +1099,23 @@ Knopfdruck**. Bricht jemand die Rückfrage ab, öffnet sich kein Fenster für ei
 Notiz, die zu nichts gehört. Nachzurüsten war nichts: `useSetAttendance` patcht
 die Listen im Cache schon optimistisch.
 
-Daneben steht auf der Karte oben rechts die **Teilnehmerzahl**. Sie stand vorher
-klein zwischen Ort und Terminart und ging dort unter. Gezählt wird **nur, wer
-zugesagt hat** — „3 dabei" ist eine wahre Aussage über die Liste, während
-„geplant für 8" hier bewusst etwas anderes meint. Zwei Zahlen mit demselben Wort
-wären genau der Fehler, den dieser Abschnitt oben beschreibt. Anders als die
-Antwort-Knöpfe steht sie auch an vergangenen und abgesagten Abenden: „wer war
-da" ist dort die bessere Frage. Die **Kalenderzeile** bekommt weder das eine
-noch das andere — sie ist schon drei Zeilen hoch und beantwortet „was ist wann".
+Daneben steht auf der Karte oben rechts die **Teilnehmerzahl**, und sie zählt
+**dieselbe Menge wie diese Seite**: Zusagen plus Unentschiedene. „3 dabei"
+zählte einmal nur die Zusagen, während hier „Geplant für 8" stand — zwei Zahlen
+über denselben Abend, und die sichtbare war die knappere. An einem vergangenen
+oder abgesagten Abend steht dort „3 dabei"; „geplant für" ist keine Aussage
+über gestern, und diese Unterscheidung trifft auch der Abschnitt hier.
+
+Gerechnet wird beides in `attendanceCounts` (`lib/meeting.ts`) — **die
+Personenliste ist die Grundmenge, die Anwesenheit nur ein Nachschlagewerk**.
+Andersherum ginge es nicht: Eine Zeile in `attendances` bekommt nur, wer eine
+hat, und eine mit `UNKNOWN` entsteht fast nur beim aktiven Zurücknehmen einer
+Zusage. Über `attendances` gezählt wären die Unentschiedenen also meistens null.
+`usePeople` liegt mit `STALE.reference` im Cache — eine Abfrage für die ganze
+Liste, nicht eine je Karte.
+
+Die **Kalenderzeile** bekommt weder Zahl noch Knöpfe — sie ist schon drei Zeilen
+hoch und beantwortet „was ist wann".
 
 ### Die eigene Antwort ersetzt die Tab-Leiste
 

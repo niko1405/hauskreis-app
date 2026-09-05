@@ -187,23 +187,30 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Woher kommen die Termine?',
     answer:
-      'Die App legt sie nachts selbst an, so dass immer **sieben** im Voraus stehen — an dem Wochentag und zu der Uhrzeit, die für die Gruppe eingestellt sind (Vorgabe: Dienstag, 18 Uhr).\n\nDer **letzte reguläre Abend im Monat** wird dabei als „Lobpreis & Gebet" angelegt, alle anderen als Hauskreis-Abend.\n\nEin Datum, an dem schon etwas steht, lässt sie in Ruhe. Ein selbst angelegter Geburtstag wird also nicht überschrieben — und in eine mehrtägige Freizeit schiebt sie auch keinen Dienstagabend hinein.',
+      'Die App legt sie nachts selbst an, so dass immer **sieben** im Voraus stehen — an dem Wochentag und zu der Uhrzeit, die für die Gruppe eingestellt sind (Vorgabe: Dienstag, 18 Uhr).\n\nDer **letzte reguläre Abend im Monat** bekommt dabei Lieder und ein Testimony statt eines Themas; alle anderen kommen mit Thema und Liedern. Beides lässt sich am Termin selbst umstellen.\n\nEin Datum, an dem schon etwas steht, lässt sie in Ruhe. Ein selbst angelegter Geburtstag wird also nicht überschrieben — und in eine mehrtägige Freizeit schiebt sie auch keinen Dienstagabend hinein.',
     keywords: ['generiert', 'automatisch', 'sieben', 'vorausplanen'],
   },
   {
     id: 'meetings-arten',
     category: 'meetings',
-    question: 'Was ist der Unterschied zwischen den Terminarten?',
+    question: 'Wie heißt ein Termin, dem ich keinen Titel gebe?',
     answer:
-      '**Hauskreis-Abend** — der Normalfall: Thema und Lieder sind vorbereitet.\n\n**Lobpreis & Gebet** — statt eines Themas ein Testimony, dazu Lieder. Kommt automatisch am letzten Abend des Monats.\n\n**Besonderer Termin** — alles selbst gebaut: ein Geburtstag, ein Grillabend, eine Freizeit über mehrere Tage. Er startet **ganz ohne Bausteine**, weil ein Geburtstag nicht unfertig aussehen soll, nur weil er kein Thema hat.\n\nDie Art lässt sich jederzeit ändern. Wenn du das tust, springen die Bausteine auf die Voreinstellung der neuen Art — aus einem Geburtstag wird wieder ein ganzer Hauskreis-Abend und nicht eine leere Hülle mit neuem Namen.',
-    keywords: ['standard', 'lobpreis', 'custom', 'geburtstag', 'freizeit'],
+      'Nach dem, woraus er besteht. Es gab dafür einmal eine feste „Terminart", die man extra einstellen musste — die ist weg, weil sie dasselbe zweimal sagte.\n\n**Hauskreis-Abend** — überall dort, wo der Baustein **Thema** an ist.\n\n**Lobpreis & Gebet** — kein Thema, dafür Testimony oder Lieder.\n\n**Termin** — wenn nichts davon angehakt ist. Ein Geburtstag hat ohnehin fast immer einen eigenen Titel.\n\nDer Name ändert sich also mit, sobald du am Bausteinkasten drehst. Und ein eigener Titel sticht ihn immer.',
+    keywords: [
+      'titel',
+      'überschrift',
+      'name',
+      'terminart',
+      'lobpreis',
+      'geburtstag',
+    ],
   },
   {
     id: 'meetings-bausteine',
     category: 'meetings',
     question: 'Was sind die Bausteine, und was kann ich an- und ausschalten?',
     answer:
-      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Lieder** und **Testimony**. Die Terminart ist nur die Voreinstellung dafür.\n\nDie **Nachbereitung** ist der vierte Teil, steht aber bewusst nicht im Kasten — sie lässt sich erst ab dem Beginn des Abends dazuschalten. Vorher gäbe es ja nichts nachzubereiten.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
+      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Lieder** und **Testimony**. Sie sind die ganze Aussage darüber, was der Abend ist — auch sein Name kommt daher.\n\nDie **Nachbereitung** ist der vierte Teil, steht aber bewusst nicht im Kasten — sie lässt sich erst ab dem Beginn des Abends dazuschalten. Vorher gäbe es ja nichts nachzubereiten.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
     keywords: ['slots', 'schalter', 'baukasten', 'thema', 'lieder'],
   },
   {
@@ -722,7 +729,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'notes',
     question: 'Wo trage ich Zusammenfassung und Actionstep ein?',
     answer:
-      'Das kommt darauf an, ob der Abend ein Thema hatte.\n\n**Mit Thema:** an dessen Einheit. Dort gehören sie zum Thema und überleben einen Rollenwechsel.\n\n**Ohne Thema** — ein Lobpreisabend, ein besonderer Termin: über den Baustein **Nachbereitung**, direkt am Abend.\n\nBeides zugleich geht nicht, damit es nie zwei Zusammenfassungen und zwei Actionsteps gibt.\n\nFrüher hatte ein Abend ohne Thema gar keinen Ort dafür — obwohl der Vorsatz für die Woche dort genauso entsteht.',
+      'Das kommt darauf an, ob der Abend ein Thema hatte.\n\n**Mit Thema:** an dessen Einheit. Dort gehören sie zum Thema und überleben einen Rollenwechsel.\n\n**Ohne Thema** — ein Lobpreisabend, ein Geburtstag: über den Baustein **Nachbereitung**, direkt am Abend.\n\nBeides zugleich geht nicht, damit es nie zwei Zusammenfassungen und zwei Actionsteps gibt.\n\nFrüher hatte ein Abend ohne Thema gar keinen Ort dafür — obwohl der Vorsatz für die Woche dort genauso entsteht.',
     keywords: ['zusammenfassung', 'actionstep', 'notizen', 'protokoll'],
   },
   {

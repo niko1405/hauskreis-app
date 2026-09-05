@@ -14430,13 +14430,8 @@
                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
                   "nullable": true
                 },
-                "type": {
-                  "type": "string",
-                  "enum": [
-                    "STANDARD",
-                    "LOBPREIS_GEBET",
-                    "CUSTOM"
-                  ]
+                "generated": {
+                  "type": "boolean"
                 },
                 "status": {
                   "type": "string",
@@ -15031,7 +15026,7 @@
                 "date",
                 "startTime",
                 "endDate",
-                "type",
+                "generated",
                 "status",
                 "hasTopicSlot",
                 "hasSongSlot",
@@ -15251,13 +15246,8 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
             "nullable": true
           },
-          "type": {
-            "type": "string",
-            "enum": [
-              "STANDARD",
-              "LOBPREIS_GEBET",
-              "CUSTOM"
-            ]
+          "generated": {
+            "type": "boolean"
           },
           "status": {
             "type": "string",
@@ -15852,7 +15842,7 @@
           "date",
           "startTime",
           "endDate",
-          "type",
+          "generated",
           "status",
           "hasTopicSlot",
           "hasSongSlot",
@@ -16193,15 +16183,6 @@
             "type": "string",
             "pattern": "^([01]\\d|2[0-3]):([0-5]\\d)$"
           },
-          "type": {
-            "default": "CUSTOM",
-            "type": "string",
-            "enum": [
-              "STANDARD",
-              "LOBPREIS_GEBET",
-              "CUSTOM"
-            ]
-          },
           "locationId": {
             "type": "string",
             "format": "uuid",
@@ -16254,14 +16235,6 @@
       "UpdateMeetingDto": {
         "type": "object",
         "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "STANDARD",
-              "LOBPREIS_GEBET",
-              "CUSTOM"
-            ]
-          },
           "endDate": {
             "type": "string",
             "format": "date",
@@ -19039,14 +19012,6 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
                 "nullable": true
               },
-              "type": {
-                "type": "string",
-                "enum": [
-                  "STANDARD",
-                  "LOBPREIS_GEBET",
-                  "CUSTOM"
-                ]
-              },
               "hasTopicSlot": {
                 "type": "boolean"
               },
@@ -19240,7 +19205,6 @@
               "date",
               "startTime",
               "endDate",
-              "type",
               "hasTopicSlot",
               "hasSongSlot",
               "hasTestimonySlot",
@@ -19279,14 +19243,6 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
                 "nullable": true
               },
-              "type": {
-                "type": "string",
-                "enum": [
-                  "STANDARD",
-                  "LOBPREIS_GEBET",
-                  "CUSTOM"
-                ]
-              },
               "hasTopicSlot": {
                 "type": "boolean"
               },
@@ -19480,7 +19436,6 @@
               "date",
               "startTime",
               "endDate",
-              "type",
               "hasTopicSlot",
               "hasSongSlot",
               "hasTestimonySlot",
@@ -19519,14 +19474,6 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
                 "nullable": true
               },
-              "type": {
-                "type": "string",
-                "enum": [
-                  "STANDARD",
-                  "LOBPREIS_GEBET",
-                  "CUSTOM"
-                ]
-              },
               "hasTopicSlot": {
                 "type": "boolean"
               },
@@ -19720,7 +19667,6 @@
               "date",
               "startTime",
               "endDate",
-              "type",
               "hasTopicSlot",
               "hasSongSlot",
               "hasTestimonySlot",

@@ -11,11 +11,12 @@ import {
   assertSlotsExclusive,
   clearedByTurningOff,
   resolveSlots,
-  slotDefaults,
+  EMPTY_SLOTS,
+  EVENING_SLOTS,
+  PRAISE_SLOTS,
   SLOT_FIELDS,
   type MeetingSlots,
 } from './meeting-slots';
-import { MeetingType } from '../../generated/prisma/enums';
 
 /** Kurzschreibweise: welche Bausteine an sind, in fester Reihenfolge. */
 const an = (slots: MeetingSlots) =>
@@ -31,31 +32,25 @@ const an = (slots: MeetingSlots) =>
     .filter(([, on]) => on)
     .map(([name]) => name);
 
-describe('slotDefaults', () => {
+const BELEGUNGEN = [EVENING_SLOTS, PRAISE_SLOTS, EMPTY_SLOTS];
+
+describe('Die drei Belegungen', () => {
   it('gibt einem Hauskreis-Abend Thema und Lieder', () => {
-    expect(an(slotDefaults(MeetingType.STANDARD))).toEqual([
-      'topic',
-      'song',
-      'prayer',
-    ]);
+    expect(an(EVENING_SLOTS)).toEqual(['topic', 'song', 'prayer']);
   });
 
   /** Kein Thema, dafür ein Testimony — oder auch nur Lieder (CLAUDE.md §5). */
   it('tauscht beim Lobpreisabend das Thema gegen ein Testimony', () => {
-    expect(an(slotDefaults(MeetingType.LOBPREIS_GEBET))).toEqual([
-      'song',
-      'testimony',
-      'prayer',
-    ]);
+    expect(an(PRAISE_SLOTS)).toEqual(['song', 'testimony', 'prayer']);
   });
 
   /**
    * Der Kern der ganzen Sache: ein Geburtstagsabend stand bisher als
    * unvollständig da, weil ihm ein Thema fehlte, das er nie brauchte.
    */
-  it('lässt einen besonderen Termin leer', () => {
+  it('lässt einen selbst angelegten Termin leer', () => {
     // Bis auf die Gebetsanliegen — siehe darunter.
-    expect(an(slotDefaults(MeetingType.CUSTOM))).toEqual(['prayer']);
+    expect(an(EMPTY_SLOTS)).toEqual(['prayer']);
   });
 
   /**
@@ -64,8 +59,8 @@ describe('slotDefaults', () => {
    * auch, wenn er an dem Abend fehlt.
    */
   it('gibt die Gebetsanliegen überall vor', () => {
-    for (const type of Object.values(MeetingType)) {
-      expect(slotDefaults(type).hasPrayerSlot).toBe(true);
+    for (const slots of BELEGUNGEN) {
+      expect(slots.hasPrayerSlot).toBe(true);
     }
   });
 
@@ -89,14 +84,14 @@ describe('slotDefaults', () => {
    * erinnern, dass sie es nicht gefüllt hat.
    */
   it('gibt die Nachbereitung nirgends vor', () => {
-    for (const type of Object.values(MeetingType)) {
-      expect(slotDefaults(type).hasNotesSlot).toBe(false);
+    for (const slots of BELEGUNGEN) {
+      expect(slots.hasNotesSlot).toBe(false);
     }
   });
 });
 
 describe('assertSlotsAllow', () => {
-  const leer = slotDefaults(MeetingType.CUSTOM);
+  const leer = EMPTY_SLOTS;
 
   it('weist ein Testimony an einem Termin ohne Testimony-Baustein ab', () => {
     expect(() => assertSlotsAllow(leer, { testimonyPersonId: 'p1' })).toThrow(
@@ -136,7 +131,7 @@ describe('assertSlotsAllow', () => {
 
   it('lässt alles zu, was der Baustein deckt', () => {
     expect(() =>
-      assertSlotsAllow(slotDefaults(MeetingType.LOBPREIS_GEBET), {
+      assertSlotsAllow(PRAISE_SLOTS, {
         testimonyPersonId: 'p1',
         hostPersonId: 'p1',
       }),
@@ -179,8 +174,8 @@ describe('assertSlotsAllow', () => {
 });
 
 describe('clearedByTurningOff', () => {
-  const alles = slotDefaults(MeetingType.STANDARD);
-  const mitTestimony = slotDefaults(MeetingType.LOBPREIS_GEBET);
+  const alles = EVENING_SLOTS;
+  const mitTestimony = PRAISE_SLOTS;
 
   it('leert die Felder eines abgeschalteten Bausteins', () => {
     const cleared = clearedByTurningOff(mitTestimony, {
@@ -219,49 +214,28 @@ describe('clearedByTurningOff', () => {
 });
 
 describe('resolveSlots', () => {
-  const custom = {
-    ...slotDefaults(MeetingType.CUSTOM),
-    type: MeetingType.CUSTOM,
-  };
-
   it('lässt alles stehen, wenn nichts mitkommt', () => {
-    expect(resolveSlots(custom, {})).toEqual(slotDefaults(MeetingType.CUSTOM));
+    expect(resolveSlots(EMPTY_SLOTS, {})).toEqual(EMPTY_SLOTS);
   });
 
   it('bucht einen einzelnen Baustein dazu', () => {
-    expect(an(resolveSlots(custom, { hasSongSlot: true }))).toEqual([
+    expect(an(resolveSlots(EMPTY_SLOTS, { hasSongSlot: true }))).toEqual([
       'song',
       'prayer',
     ]);
   });
 
   /**
-   * Wer aus einem Geburtstag wieder einen Hauskreis-Abend macht, meint einen
-   * ganzen Abend und nicht ein leeres Gerüst mit neuem Namen.
+   * Hier stand einmal ein zweiter Zweig: Ein Wechsel der Terminart setzte alle
+   * Schalter auf deren Voreinstellung zurück. Mit der Terminart ist er weg —
+   * und war schon davor toter Code, denn eine Oberfläche, die den Typ ändert,
+   * gab es nie.
    */
-  it('setzt beim Wechsel der Terminart auf deren Voreinstellung', () => {
-    expect(an(resolveSlots(custom, { type: MeetingType.STANDARD }))).toEqual([
+  it('nimmt nichts weg, was nicht ausdrücklich weggenommen wird', () => {
+    const gebucht = { ...EMPTY_SLOTS, hasTopicSlot: true, hasSongSlot: true };
+
+    expect(an(resolveSlots(gebucht, { hasSongSlot: false }))).toEqual([
       'topic',
-      'song',
-      'prayer',
-    ]);
-  });
-
-  it('lässt einen mitgeschickten Schalter auch dabei gewinnen', () => {
-    const slots = resolveSlots(custom, {
-      type: MeetingType.STANDARD,
-      hasTopicSlot: false,
-    });
-
-    expect(an(slots)).toEqual(['song', 'prayer']);
-  });
-
-  /** Derselbe Typ noch einmal ist kein Wechsel und setzt nichts zurück. */
-  it('rührt nichts an, wenn die Terminart gleich bleibt', () => {
-    const gebucht = { ...custom, hasSongSlot: true };
-
-    expect(an(resolveSlots(gebucht, { type: MeetingType.CUSTOM }))).toEqual([
-      'song',
       'prayer',
     ]);
   });
@@ -315,18 +289,12 @@ describe('assertSlotsExclusive', () => {
   });
 
   it('lässt jedes von beiden für sich zu', () => {
-    expect(() =>
-      assertSlotsExclusive(slotDefaults(MeetingType.STANDARD)),
-    ).not.toThrow();
-    expect(() =>
-      assertSlotsExclusive(slotDefaults(MeetingType.LOBPREIS_GEBET)),
-    ).not.toThrow();
+    expect(() => assertSlotsExclusive(EVENING_SLOTS)).not.toThrow();
+    expect(() => assertSlotsExclusive(PRAISE_SLOTS)).not.toThrow();
   });
 
   /** Ein Geburtstagsabend hat weder das eine noch das andere. */
   it('lässt einen Abend ohne beides zu', () => {
-    expect(() =>
-      assertSlotsExclusive(slotDefaults(MeetingType.CUSTOM)),
-    ).not.toThrow();
+    expect(() => assertSlotsExclusive(EMPTY_SLOTS)).not.toThrow();
   });
 });

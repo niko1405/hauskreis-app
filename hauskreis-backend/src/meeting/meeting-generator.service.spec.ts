@@ -7,7 +7,6 @@ import {
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import type { MeetingScheduleConfigService } from './meeting-schedule-config.service';
-import { MeetingType } from '../../generated/prisma/enums';
 import { withClock } from './group-clock.testing';
 
 type CreateManyArgs = {
@@ -97,19 +96,38 @@ describe('MeetingGeneratorService.generateFor', () => {
     ]);
   });
 
-  it('marks the last Tuesday of each month as Lobpreis/Gebet', async () => {
+  /**
+   * Woraus ein Abend besteht, sagen seit dem Wegfall der Terminart nur noch
+   * die Bausteine — der letzte im Monat bekommt Testimony statt Thema.
+   */
+  it('gibt dem letzten Dienstag im Monat ein Testimony statt eines Themas', async () => {
     const { service, createMany } = setup();
 
     await service.generateFor('hk-1', MONDAY);
 
     const byDate = new Map(
-      createMany.mock.calls[0][0].data.map((m) => [isoOf(m.date), m.type]),
+      createMany.mock.calls[0][0].data.map((m) => [
+        isoOf(m.date),
+        [m.hasTopicSlot, m.hasTestimonySlot],
+      ]),
     );
 
-    expect(byDate.get('2026-07-28')).toBe(MeetingType.LOBPREIS_GEBET);
-    expect(byDate.get('2026-08-25')).toBe(MeetingType.LOBPREIS_GEBET);
-    expect(byDate.get('2026-08-04')).toBe(MeetingType.STANDARD);
-    expect(byDate.get('2026-09-08')).toBe(MeetingType.STANDARD);
+    expect(byDate.get('2026-07-28')).toEqual([false, true]);
+    expect(byDate.get('2026-08-25')).toEqual([false, true]);
+    expect(byDate.get('2026-08-04')).toEqual([true, false]);
+    expect(byDate.get('2026-09-08')).toEqual([true, false]);
+  });
+
+  it('schreibt an jeden erzeugten Abend, dass er erzeugt ist', async () => {
+    // Daran hängen der Taktschlag, die Benachrichtigung über neue Termine, die
+    // Actionstep-Ausnahme und „löschen statt absagen".
+    const { service, createMany } = setup();
+
+    await service.generateFor('hk-1', MONDAY);
+
+    expect(
+      createMany.mock.calls[0][0].data.every((m) => m.generated === true),
+    ).toBe(true);
   });
 
   it('is a no-op when every date is already covered', async () => {
@@ -176,8 +194,8 @@ describe('MeetingGeneratorService.generateFor', () => {
 
     await service.generateFor('hk-1', MONDAY);
 
-    const types = createMany.mock.calls[0][0].data.map((m) => m.type);
-    expect(types).toEqual(Array<string>(MEETINGS_AHEAD).fill('STANDARD'));
+    const themen = createMany.mock.calls[0][0].data.map((m) => m.hasTopicSlot);
+    expect(themen).toEqual(Array<boolean>(MEETINGS_AHEAD).fill(true));
   });
 
   it('hält bei zwei Wochen den Abstand ein', async () => {
@@ -220,9 +238,7 @@ describe('MeetingGeneratorService.generateFor', () => {
 
     expect(meeting.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({
-          type: { in: [MeetingType.STANDARD, MeetingType.LOBPREIS_GEBET] },
-        }),
+        where: { hauskreisId: 'hk-1', generated: true },
       }),
     );
   });
@@ -294,9 +310,15 @@ describe('MeetingGeneratorService.closePastMeetings', () => {
 
     // Cancelled ones keep their status: "fiel aus" is a different fact from
     // "hat stattgefunden", and the archive should tell them apart.
+    //
+    // `finishedBefore` und nicht `date < heute`: Eine Freizeit von Freitag bis
+    // Sonntag wurde sonst am Samstag um drei Uhr geschlossen, während sie lief.
     expect(updateMany.mock.calls[0][0].where).toEqual({
       hauskreisId: 'hk-1',
-      date: { lt: new Date('2026-07-29T00:00:00.000Z') },
+      OR: [
+        { endDate: null, date: { lt: new Date('2026-07-29T00:00:00.000Z') } },
+        { endDate: { lt: new Date('2026-07-29T00:00:00.000Z') } },
+      ],
       status: 'PLANNED',
     });
     expect(updateMany.mock.calls[0][0].data).toEqual({ status: 'COMPLETED' });

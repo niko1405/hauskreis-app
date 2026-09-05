@@ -26,7 +26,7 @@ docs {
   es alle aktiven Mitglieder, und dafür darf sie seit dieser Änderung
   nachschlagen (`recipients` gibt wahlweise ein Promise zurück).
 
-  Gefiltert wird auf `type: CUSTOM`. Der Läufer scannt alle Termine im Fenster —
+  Gefiltert wird auf `generated: false`. Der Läufer scannt alle Termine im Fenster —
   ohne den Filter bekäme jeder Dienstagabend eine zweite Erinnerung obendrauf,
   zusätzlich zu den Rollen-Erinnerungen.
 
@@ -35,6 +35,6 @@ docs {
   daran denken.
 
   Die zweite Nachricht dieser Art, `CUSTOM_MEETING_CREATED`, hat keinen eigenen
-  Endpunkt: sie geht raus, wenn `POST …/meetings` einen `CUSTOM`-Termin anlegt.
+  Endpunkt: sie geht raus, wenn `POST …/meetings` einen Termin anlegt.
   Die anlegende Person bekommt sie nicht — sie weiß es.
 }

@@ -3,9 +3,9 @@
 /**
  * „Was gehört dazu" — die vier Bausteine eines Termins.
  *
- * Ein besonderer Termin verlangte bisher dieselben Rollen wie ein normaler
- * Dienstag: der Geburtstag von Mira stand mit leerem Thema und leerer
- * Musik-Zeile da, als fehlte etwas. Es fehlte aber nichts — es war nie
+ * Ein selbst angelegter Termin verlangte bisher dieselben Rollen wie ein
+ * gewöhnlicher Dienstag: der Geburtstag von Mira stand mit leerem Thema und
+ * leerer Musik-Zeile da, als fehlte etwas. Es fehlte aber nichts — es war nie
  * vorgesehen.
  *
  * Dieselbe Liste beim Anlegen und beim Bearbeiten, damit „was so ein Abend

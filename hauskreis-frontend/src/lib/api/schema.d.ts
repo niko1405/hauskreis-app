@@ -2445,8 +2445,7 @@ export interface components {
         startTime: string;
         /** Format: date */
         endDate: string | null;
-        /** @enum {string} */
-        type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
+        generated: boolean;
         /** @enum {string} */
         status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
         hasTopicSlot: boolean;
@@ -2646,8 +2645,7 @@ export interface components {
       startTime: string;
       /** Format: date */
       endDate: string | null;
-      /** @enum {string} */
-      type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
+      generated: boolean;
       /** @enum {string} */
       status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
       hasTopicSlot: boolean;
@@ -2867,11 +2865,6 @@ export interface components {
       /** Format: date */
       endDate?: string | null;
       startTime?: string;
-      /**
-       * @default CUSTOM
-       * @enum {string}
-       */
-      type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
       /** Format: uuid */
       locationId?: string | null;
       /** Format: uuid */
@@ -2887,8 +2880,6 @@ export interface components {
       hasPrayerSlot?: boolean;
     };
     UpdateMeetingDto: {
-      /** @enum {string} */
-      type?: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
       /** Format: date */
       endDate?: string | null;
       startTime?: string;
@@ -3587,8 +3578,6 @@ export interface components {
         startTime: string;
         /** Format: date */
         endDate: string | null;
-        /** @enum {string} */
-        type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
         hasTopicSlot: boolean;
         hasSongSlot: boolean;
         hasTestimonySlot: boolean;
@@ -3646,8 +3635,6 @@ export interface components {
         startTime: string;
         /** Format: date */
         endDate: string | null;
-        /** @enum {string} */
-        type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
         hasTopicSlot: boolean;
         hasSongSlot: boolean;
         hasTestimonySlot: boolean;
@@ -3705,8 +3692,6 @@ export interface components {
         startTime: string;
         /** Format: date */
         endDate: string | null;
-        /** @enum {string} */
-        type: 'STANDARD' | 'LOBPREIS_GEBET' | 'CUSTOM';
         hasTopicSlot: boolean;
         hasSongSlot: boolean;
         hasTestimonySlot: boolean;

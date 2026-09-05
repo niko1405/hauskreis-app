@@ -21,7 +21,6 @@ import type { RoleAttendanceService } from '../attendance/role-attendance.servic
 import type { TopicLinkService } from '../topic/topic-link.service';
 import type { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import type { MeetingScheduleConfigService } from './meeting-schedule-config.service';
-import { MeetingType } from '../../generated/prisma/enums';
 import { withClock } from './group-clock.testing';
 
 /** Die Zone der Gruppe — in den Tests immer dieselbe. */
@@ -91,7 +90,7 @@ const ICH = { personId: 'p-ich', isAdmin: false, zone: BERLIN };
 const FREIZEIT = {
   date: '2026-08-14',
   endDate: '2026-08-16',
-  type: MeetingType.CUSTOM,
+  generated: false,
   title: 'Hauskreis-Freizeit',
 };
 
@@ -107,18 +106,11 @@ describe('MeetingService.create — mehrere Tage', () => {
   });
 
   /**
-   * Ein Hauskreis-Abend ist ein Abend. Ein Enddatum daran wäre kein Zeitraum,
-   * sondern ein Tippfehler mit Folgen — der Generator ließe die Tage dazwischen
-   * dann leer.
+   * Hier stand einmal „nur ein besonderer Termin kann über mehrere Tage
+   * gehen". Das war eine Regel über die Terminart und nicht über die Sache:
+   * Eine Freizeit ist mehrtägig, ganz gleich, wer sie angelegt hat. Mit der
+   * Terminart ist die Regel weg — geblieben ist die, die etwas prüft.
    */
-  it('lässt nur besondere Termine länger dauern', async () => {
-    const { service } = setup();
-
-    await expect(
-      service.create('hk-1', { ...FREIZEIT, type: MeetingType.STANDARD }, ICH),
-    ).rejects.toThrow(/besonderer Termin/);
-  });
-
   it('weist ein Ende vor dem Anfang ab', async () => {
     const { service } = setup();
 
@@ -178,11 +170,11 @@ describe('MeetingService.create — mehrere Tage', () => {
  * kein technischer: ein Dienstag, der ausfällt, bleibt Teil der Geschichte —
  * und der Terminplaner legte ihn ohnehin gleich wieder an.
  */
-function setupRemove(type: MeetingType) {
+function setupRemove(generated: boolean) {
   const del = jest.fn().mockResolvedValue({});
   const prisma = {
     meeting: {
-      findFirst: jest.fn().mockResolvedValue({ id: 'm1', type }),
+      findFirst: jest.fn().mockResolvedValue({ id: 'm1', generated }),
       delete: del,
     },
   };
@@ -208,23 +200,20 @@ function setupRemove(type: MeetingType) {
 }
 
 describe('MeetingService.remove', () => {
-  it('löscht einen besonderen Termin', async () => {
-    const { service, del } = setupRemove(MeetingType.CUSTOM);
+  it('löscht einen selbst angelegten Termin', async () => {
+    const { service, del } = setupRemove(false);
 
     await service.remove('hk-1', 'm1');
 
     expect(del).toHaveBeenCalledWith({ where: { id: 'm1' } });
   });
 
-  it.each([MeetingType.STANDARD, MeetingType.LOBPREIS_GEBET])(
-    'weist %s ab — der wird abgesagt, nicht gelöscht',
-    async (type) => {
-      const { service, del } = setupRemove(type);
+  it('weist einen erzeugten ab — der wird abgesagt, nicht gelöscht', async () => {
+    const { service, del } = setupRemove(true);
 
-      await expect(service.remove('hk-1', 'm1')).rejects.toThrow(
-        BadRequestException,
-      );
-      expect(del).not.toHaveBeenCalled();
-    },
-  );
+    await expect(service.remove('hk-1', 'm1')).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(del).not.toHaveBeenCalled();
+  });
 });

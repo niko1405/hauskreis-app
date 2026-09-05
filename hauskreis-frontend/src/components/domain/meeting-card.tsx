@@ -12,11 +12,12 @@ import { PRESSABLE } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import { formatDay, formatDayRange, formatRelativeDay } from '@/lib/date';
 import {
-  MEETING_TYPE_LABEL,
+  attendanceCounts,
   isMeetingPast,
   meetingHeadline,
+  meetingKindLabel,
 } from '@/lib/meeting';
-import { useMe } from '@/lib/api/hooks';
+import { useMe, usePeople } from '@/lib/api/hooks';
 import type { AttendanceStatus, MeetingListItem } from '@/lib/api/types';
 import { AnswerNoteSheet } from './answer-note-sheet';
 import { ANSWERS } from './attendance-answers';
@@ -31,21 +32,27 @@ export function MeetingCard({
   onPrefetch?: (meetingId: string) => void;
 }) {
   const { me } = useMe();
+  // Eine Abfrage für die ganze Liste, nicht eine je Karte: `usePeople` liegt
+  // mit `STALE.reference` im Cache und wird auf diesem Bildschirm ohnehin
+  // gebraucht, sobald jemand ins Register „Planung" wechselt.
+  const people = usePeople();
   const { answer } = useAttendanceAnswer(meeting);
   /** Welche Antwort gerade nach einem Satz fragt — `null` heißt: keine. */
   const [noteFor, setNoteFor] = useState<AttendanceStatus | null>(null);
 
   const cancelled = meeting.status === 'CANCELLED';
   const past = isMeetingPast(meeting);
-  // Wer zugesagt hat, sonst niemand: „weiß noch nicht" ist keine Zusage, und
-  // wer gar keine Zeile hat, zählt als eben das. Dass hier dieselbe Menge
-  // steht wie unter „Wer kommt" auf der Detailseite, sorgt der Server —
-  // Eingeladene und Ausgetretene kommen nicht mit.
-  const attending = meeting.attendances.filter(
-    (a) => a.status === 'ATTENDING',
-  ).length;
+  const counts = attendanceCounts(people.data ?? [], meeting.attendances);
+  // An einem kommenden Abend die Menge, mit der geplant wird (Zusagen plus
+  // Unentschiedene); an einem vergangenen oder abgesagten nur, wer da war.
+  // Dieselbe Unterscheidung wie auf der Detailseite: „geplant für" ist keine
+  // Aussage über gestern.
+  const shown = past || cancelled ? counts.attending : counts.planned;
   const topicPeople = meeting.topicResponsibles.map((r) => r.person);
-  const isWorship = meeting.type === 'LOBPREIS_GEBET';
+  // Die Tönung des Lobpreisabends kommt aus denselben Bausteinen wie sein
+  // Name: Wo kein Thema, aber ein Testimony steht, dreht sich der Abend ums
+  // Erzählen.
+  const isWorship = !meeting.hasTopicSlot && meeting.hasTestimonySlot;
 
   const mine = meeting.attendances.find((a) => a.personId === me?.id);
   const myStatus = mine?.status ?? 'UNKNOWN';
@@ -116,9 +123,12 @@ export function MeetingCard({
                 {/* Ein Termin ohne Ort ist kein Fehler — z. B. draußen im Park. */}
                 {meeting.location?.name ?? 'Ort noch offen'}
               </span>
-              {meeting.type !== 'STANDARD' && (
+              {/* Nur, wenn der Abend einen eigenen Titel trägt: Sonst steht
+                  die Bezeichnung schon als Überschrift darüber, und zweimal
+                  dasselbe ist eines zu viel. */}
+              {meeting.title && (
                 <span className="text-stone-400">
-                  {MEETING_TYPE_LABEL[meeting.type]}
+                  {meetingKindLabel(meeting)}
                 </span>
               )}
             </div>
@@ -130,18 +140,20 @@ export function MeetingCard({
               ihre Beschriftung ist.
 
               Was hier steht, ist die Zahl, die vorher klein zwischen Ort und
-              Terminart stand und dort unterging. Sie zählt **nur die Zusagen**;
-              „geplant für" auf der Detailseite meint bewusst etwas anderes
-              (Zusagen plus Unentschiedene, die Menge, mit der der Server
-              rechnet). Zwei Zahlen mit demselben Wort wären genau der Fehler,
-              den die Detailseite einmal hatte.
+              Terminart stand und dort unterging — und sie sagt **dasselbe wie
+              die Detailseite**. „3 dabei" zählte einmal nur die Zusagen,
+              während darunter „Geplant für 8" stand; als Gastgeber plant man
+              aber mit der größeren Menge, und mit der rechnet auch der Server.
+              Zwei Zahlen über denselben Abend, und die sichtbare war die
+              knappere.
 
               Anders als die Antwort-Knöpfe steht sie auch an vergangenen und
-              abgesagten Abenden: „wer war da" ist dort die bessere Frage. */}
-          {attending > 0 && (
+              abgesagten Abenden — dort aber als „wer war da", denn „geplant
+              für" ist keine Aussage über gestern. */}
+          {shown > 0 && (
             <span className="flex shrink-0 items-center gap-1 rounded-full bg-canvas px-2.5 py-1 text-xs font-bold text-stone-600">
               <Users size={13} className="text-terracotta-500" />
-              {attending} dabei
+              {shown} {past || cancelled ? 'dabei' : 'geplant'}
             </span>
           )}
         </div>

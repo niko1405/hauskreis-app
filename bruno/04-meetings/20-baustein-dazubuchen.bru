@@ -39,11 +39,12 @@ docs {
   Braucht {{freizeitId}} aus dem Aufruf davor und einen ETag aus
   "Termin einzeln".
 
-  Ein einzelner Schalter ändert nur sich selbst. Kommt dagegen ein anderer
-  `type` mit, werden **alle drei** auf dessen Voreinstellung zurückgesetzt —
-  wer aus einem Geburtstag wieder einen Hauskreis-Abend macht, meint einen
-  ganzen Abend und nicht ein leeres Gerüst mit neuem Namen. Ausdrücklich
-  mitgeschickte Schalter gewinnen auch dann.
+  Ein einzelner Schalter ändert nur sich selbst; weggelassene bleiben stehen.
+
+  Hier stand einmal eine zweite Regel: Ein mitgeschickter `type` setzte alle
+  Schalter auf dessen Voreinstellung zurück. Mit der Terminart ist sie weg —
+  und war schon davor toter Code, denn eine Oberfläche, die den Typ ändert, gab
+  es nie.
 
   Einen Gastgeber-Baustein gibt es nicht: man trifft sich immer irgendwo.
   Dass niemand eingetragen ist, ist ein leeres Feld und kein abgeschalteter

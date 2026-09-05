@@ -41,7 +41,7 @@ function meeting(overrides: Record<string, unknown> = {}) {
     hauskreisId: 'hk1',
     date: KOMMENDER_DIENSTAG,
     endDate: null,
-    type: 'STANDARD',
+    generated: true,
     status: 'PLANNED',
     // Ein Hauskreis-Abend hat einen Gastgeber-Slot. Ohne die vier Schalter
     // liest `resolveSlots` `undefined` und hielte jeden Baustein für

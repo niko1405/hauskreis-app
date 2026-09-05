@@ -871,7 +871,8 @@ Zwei und nicht eine, weil es zwei Fragen sind: „gibt es etwas Neues"
 beantwortet man einmal, „ich muss daran denken" braucht eine Vorlaufzeit. Wer
 das eine will und das andere nicht, kann das einstellen.
 
-Beide gelten **nur für `CUSTOM`**. Der Dienstagabend steht jede Woche, alle
+Beide gelten **nur für selbst angelegte Termine** (`generated: false`). Der
+Dienstagabend steht jede Woche, alle
 wissen es, und wer eine Rolle hat, bekommt seine eigene Erinnerung. Sieben
 generierte Termine pro Nacht, jeder mit einer Ankündigung an alle neun, wäre
 die schnellste Art, Benachrichtigungen abzuschalten — der Filter steht deshalb
@@ -1237,7 +1238,8 @@ Alle Pfade sind relativ zu `/api/hauskreise/:hauskreisId`.
 
 Der `MeetingGeneratorService` läuft täglich um 3 Uhr und sorgt dafür, dass immer
 die nächsten **7 Abende** als Termin existieren. Der jeweils letzte eines Monats
-wird als `LOBPREIS_GEBET` angelegt, alle anderen als `STANDARD`.
+bekommt dabei Testimony und Lieder statt eines Themas, alle anderen Thema und
+Lieder.
 
 **Der ganze Rhythmus kommt aus `MeetingScheduleConfig`**
 (`GET`/`PUT …/meetings/config`), Vorgabe: Termine anlegen, Dienstag, jede Woche,
@@ -1251,7 +1253,7 @@ Drei davon sind Schalter:
 | Spalte            | aus heißt                                                                                                                                                                                                                                                                          |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `auto_generate`   | Die Gruppe führt ihren Kalender selbst. Es kommt nichts dazu; **was schon steht, bleibt stehen**. Auch `POST …/meetings/generate` fragt danach — eine Einstellung, die ein Knopf daneben aushebelt, ist keine. `closePastMeetings` läuft weiter: Das legt nichts an, das räumt auf |
-| `praise_evenings` | Jeder erzeugte Abend ist ein `STANDARD` mit Thema. Ein Lobpreisabend, der schon im Kalender steht, bleibt einer                                                                                                                                                                    |
+| `praise_evenings` | Jeder erzeugte Abend bekommt ein Thema. Was schon im Kalender steht, behält seine Bausteine                                                                                                                                                                                        |
 | `interval_weeks`  | (kein Schalter) Wochen zwischen zwei Terminen, 1–8                                                                                                                                                                                                                                 |
 
 ### Der Abstand braucht einen Taktschlag
@@ -1266,7 +1268,7 @@ Reihen, und nach zwei Nächten stünde wieder jede Woche ein Termin, unter einer
 Einstellung, die „alle zwei Wochen" sagt.
 
 Der Takt kommt deshalb aus dem Kalender: vom **spätesten selbst erzeugten**
-Abend (`STANDARD` oder `LOBPREIS_GEBET`, `lastGeneratedDate`). Ein `CUSTOM`-Termin
+Abend (`generated: true`, `lastGeneratedDate`). Ein von Hand angelegter Termin
 taugt nicht — ein Geburtstag am Samstag verschöbe den Takt der Dienstage.
 Abgesagte zählen mit: Der Abend fällt aus, der Rhythmus nicht.
 
@@ -1286,9 +1288,9 @@ dass eine Einstellung Termine verrückt, für die längst jemand zugesagt und ei
 Thema vorbereitet hat.
 
 Der Lauf ist **idempotent**: ein Datum, an dem bereits _irgendein_ Termin liegt,
-bleibt unangetastet — unabhängig vom Typ. Genau das schützt selbst angelegte
-`CUSTOM`-Termine (z. B. „Geburtstag von …") davor, durch einen generierten
-Standardtermin ersetzt zu werden. Abgesichert ist das zusätzlich durch einen
+bleibt unangetastet — unabhängig davon, woher er kommt. Genau das schützt
+selbst angelegte Termine (z. B. „Geburtstag von …") davor, durch einen
+erzeugten ersetzt zu werden. Abgesichert ist das zusätzlich durch einen
 Unique-Index auf `(hauskreis_id, date)`.
 
 Die Datumslogik liegt bewusst als reine Funktionen in
@@ -1367,22 +1369,31 @@ unverändert, `null` löscht die Zuordnung.
 ### Woraus ein Abend besteht
 
 Fünf Schalter am Termin — `hasTopicSlot`, `hasNotesSlot`, `hasSongSlot`,
-`hasTestimonySlot`, `hasPrayerSlot` — und die Terminart ist nur noch ihre
-**Voreinstellung**:
+`hasTestimonySlot`, `hasPrayerSlot` — und sie sind die **ganze** Aussage
+darüber, was der Abend ist. Angelegt wird mit einer von drei Belegungen
+(`meeting-slots.ts`):
 
-| Typ              | Thema | Nachbereitung¹ | Lieder | Testimony | Gebetsanliegen² |
-| ---------------- | ----- | -------------- | ------ | --------- | --------------- |
-| `STANDARD`       | ✓     | –              | ✓      | –         | ✓               |
-| `LOBPREIS_GEBET` | –     | –              | ✓      | ✓         | ✓               |
-| `CUSTOM`         | –     | –              | –      | –         | ✓               |
+| Belegung        | Thema | Nachbereitung¹ | Lieder | Testimony | Gebetsanliegen² | wann                            |
+| --------------- | ----- | -------------- | ------ | --------- | --------------- | ------------------------------- |
+| `EVENING_SLOTS` | ✓     | –              | ✓      | –         | ✓               | erzeugt, gewöhnlicher Abend     |
+| `PRAISE_SLOTS`  | –     | –              | ✓      | ✓         | ✓               | erzeugt, letzter Abend im Monat |
+| `EMPTY_SLOTS`   | –     | –              | –      | –         | ✓               | von Hand angelegt               |
 
 ¹ überall aus und erst **ab Terminbeginn** anschaltbar — siehe unten.
 ² überall an, schließt nichts aus, teilt niemanden ein — siehe unten.
 
-Vorher war der Typ eine **Behauptung**: er stand in der Antwort, geprüft wurde
-nichts. Man konnte einem Lobpreisabend ein Thema geben und einem Geburtstag ein
-Testimony, und „Geburtstag von Mira" zählte in der Fairness wie ein ganz
-normaler Dienstag — obwohl dort niemand im Sinne der Rotation dran war.
+**Hier stand einmal eine `MeetingType`** mit den Werten `STANDARD`,
+`LOBPREIS_GEBET` und `CUSTOM`, und die ersten beiden waren eine zweite,
+ungenauere Fassung dieser Tabelle: eine **Behauptung**, die in der Antwort
+stand und nie geprüft wurde. Man konnte einem Lobpreisabend ein Thema geben.
+Übrig ist `generated` — ob der nächtliche Lauf den Abend angelegt hat —, und
+daran hängen vier Regeln: der Taktschlag oben, die zwei Benachrichtigungsarten
+für selbst angelegte Termine, die Actionstep-Ausnahme und „löschen statt
+absagen".
+
+Nebenbei: „Geburtstag von Mira" zählte in der Fairness einmal wie ein ganz
+normaler Dienstag — obwohl dort niemand im Sinne der Rotation dran war. Das
+löst heute `hasTopicSlot`.
 Außerhalb der DTOs gab es genau drei Stellen mit Typ-Logik.
 
 **Einen Gastgeber-Schalter gibt es nicht.** Man trifft sich immer irgendwo; ein
@@ -1457,8 +1468,6 @@ Die Regeln stehen als reine Funktionen in
   Nachbereitung ist, wem die Texte gehören: eine Einheit trägt die Vorbereitung
   einer Person über mehrere Abende, die zwei Felder am Termin gehören diesem
   einen Abend.
-- Ein Wechsel der **Terminart** setzt alle vier auf deren Voreinstellung
-  zurück; ausdrücklich mitgeschickte Schalter gewinnen trotzdem.
 
 Die Fairness-Rechnung zählt Termine mit Musik-Zuteilung und mit Testimony —
 ohne den Baustein kann keines von beiden gesetzt sein. Beim Thema filtert sie
@@ -1569,7 +1578,7 @@ sondern erst beim Hochfahren. Möglich ist das, weil `PrismaModule` `@Global` is
 
 ### Ein Termin, mehrere Tage
 
-`endDate` — nur bei `CUSTOM`, für eine Freizeit von Freitag bis Sonntag. Das ist
+`endDate`, für eine Freizeit von Freitag bis Sonntag. Das ist
 **ein** Termin und kein Stapel aus dreien, deshalb bleibt der Unique-Index auf
 `(hauskreis_id, date)`: eine Zeile, das Startdatum als Schlüssel.
 

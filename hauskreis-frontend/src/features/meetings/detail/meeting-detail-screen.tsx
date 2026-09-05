@@ -63,7 +63,7 @@ import {
 } from '@/lib/date';
 import {
   MEETING_SLOT_KEYS,
-  MEETING_TYPE_LABEL,
+  meetingKindLabel,
   ROLE_LABEL,
   SLOT_LABEL,
   applySlotToggle,
@@ -553,7 +553,7 @@ function Loaded({
         <HeadlineEdit
           headline={meetingHeadline(meeting)}
           title={meeting.title}
-          placeholder={MEETING_TYPE_LABEL[meeting.type]}
+          placeholder={meetingKindLabel(meeting)}
           saving={update.isPending}
           onSave={editing ? (next) => patch({ title: next }) : undefined}
         />
@@ -562,8 +562,7 @@ function Loaded({
               man wissen will, ist von wann bis wann. */}
           {meeting.endDate
             ? formatDayRange(meeting.date, meeting.endDate)
-            : formatDayFull(meeting.date)}{' '}
-          · {MEETING_TYPE_LABEL[meeting.type]}
+            : formatDayFull(meeting.date)}
         </p>
       </header>
 
@@ -891,11 +890,11 @@ function Loaded({
  * unten — dort war er ein Formularfeld unter vielen, obwohl er das Erste ist,
  * was man liest.
  *
- * Was angezeigt wird, ist die fertige Überschrift (eigener Titel, sonst das
- * Thema, sonst die Terminart). Bearbeitet wird aber nur `meeting.title`: würde
- * der Entwurf mit der Überschrift starten, machte das erste Speichern aus dem
- * geerbten Themen-Titel einen eigenen — und der Termin löste sich still vom
- * Thema ab.
+ * Was angezeigt wird, ist die fertige Überschrift: der eigene Titel, sonst der
+ * Name, der sich aus den Bausteinen ergibt. Bearbeitet wird aber nur
+ * `meeting.title` — würde der Entwurf mit der Überschrift starten, machte das
+ * erste Speichern aus dem abgeleiteten Namen einen eigenen, und der Abend
+ * hörte auf, seinen Bausteinen zu folgen.
  */
 function HeadlineEdit({
   headline,

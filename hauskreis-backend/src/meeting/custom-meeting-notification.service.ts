@@ -12,7 +12,7 @@ import {
   customMeetingReminderBody,
 } from '../notification/reminder-copy';
 import { appPath } from '../notification/app-paths';
-import { MeetingType, NotificationType } from '../../generated/prisma/enums';
+import { NotificationType } from '../../generated/prisma/enums';
 import { CRON_TIME_ZONE } from '../common/time/local-evening';
 
 /**
@@ -56,12 +56,12 @@ export class CustomMeetingNotificationService {
         hauskreisId: true,
         date: true,
         endDate: true,
-        type: true,
+        generated: true,
         title: true,
       },
     });
 
-    if (meeting.type !== MeetingType.CUSTOM) return 0;
+    if (meeting.generated) return 0;
 
     const recipients = await this.activeMembers(
       meeting.hauskreisId,
@@ -107,7 +107,7 @@ export class CustomMeetingNotificationService {
     return this.reminders.run(
       NotificationType.CUSTOM_MEETING_REMINDER,
       async (meeting) => {
-        if (meeting.type !== MeetingType.CUSTOM) return [];
+        if (meeting.generated) return [];
 
         const members = await this.activeMembers(meeting.hauskreisId);
 

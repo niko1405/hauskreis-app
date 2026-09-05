@@ -6,11 +6,7 @@ import {
 } from './notification.service';
 import { NotificationPreferenceService } from './notification-preference.service';
 import { notificationDefinition } from './notification-catalog';
-import {
-  MeetingStatus,
-  MeetingType,
-  NotificationType,
-} from '../../generated/prisma/enums';
+import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
 // Pure date helpers, no Nest provider involved — importing them across module
 // folders costs nothing and beats a second implementation of "same day in UTC".
 import { addDays, currentDay } from '../meeting/meeting-schedule';
@@ -23,7 +19,7 @@ export interface ReminderMeeting {
   hauskreisId: string;
   date: Date;
   endDate: Date | null;
-  type: MeetingType;
+  generated: boolean;
   title: string | null;
   hostPersonId: string | null;
   testimonyPersonId: string | null;
@@ -124,11 +120,12 @@ export class MeetingReminderService {
         hauskreisId: true,
         date: true,
         endDate: true,
-        // Terminart und Titel braucht die Erinnerung an besondere Termine:
-        // sie filtert danach und sagt im Text, worum es geht. Die drei
-        // Rollen-Erinnerungen lesen sie nicht — ein Feld mehr im `select`
-        // kostet weniger als eine zweite Abfrage für einen Sonderfall.
-        type: true,
+        // Woher der Abend kommt und wie er heißt, braucht die Erinnerung an
+        // selbst angelegte Termine: sie filtert danach und sagt im Text, worum
+        // es geht. Die drei Rollen-Erinnerungen lesen beides nicht — ein Feld
+        // mehr im `select` kostet weniger als eine zweite Abfrage für einen
+        // Sonderfall.
+        generated: true,
         title: true,
         hostPersonId: true,
         testimonyPersonId: true,

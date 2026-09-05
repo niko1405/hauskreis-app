@@ -100,16 +100,18 @@ export function HomeScreen() {
           />
         </section>
 
-        {/* Der obere Platz beantwortet „wo komme ich her, wo bin ich gerade",
-            der untere „was kommt". Vorher gab es nur den unteren, und der
-            zeigte den laufenden Abend unter der Überschrift „Nächstes
-            Treffen" — keine Auskunft mehr, wenn man schon dort sitzt.
+        {/* Drei Abschnitte in der Reihenfolge, in der man sie braucht: der
+            Abend, an dem man gerade sitzt — der nächste — der letzte.
 
-            Läuft nichts, steht hier der letzte Abend. Am Mittwochmorgen ist er
-            die interessantere Karte: Seine Nachbereitung fehlt noch, und man
-            will nachlesen, was war — während oben bisher schon der Dienstag in
-            einer Woche stand. Welcher der beiden es ist, entscheidet der
-            Server; er füllt immer nur eines der Felder. */}
+            Ganz oben nur, wenn wirklich einer läuft; „Nächstes Treffen: heute"
+            war keine Auskunft mehr, wenn man schon dort saß. Ganz unten der
+            vergangene: Am Mittwochmorgen will man nachlesen, was war, und die
+            Nachbereitung fehlt noch — aber gefragt ist zuerst, was kommt.
+
+            `currentMeeting` und `lastMeeting` schließen einander aus, und das
+            entscheidet der Server: Ob ein Abend läuft, hängt an seiner
+            Treffpunktzeit in der Zone der Gruppe, und diese Frage zweimal zu
+            beantworten wäre eine Antwort zu viel. */}
         {currentMeeting && (
           <section>
             <SectionTitle>Aktueller Termin</SectionTitle>
@@ -121,6 +123,40 @@ export function HomeScreen() {
             />
           </section>
         )}
+
+        <section>
+          <SectionTitle
+            action={
+              <Link
+                href="/termine"
+                className="flex items-center gap-0.5 text-xs font-bold text-terracotta-500 hover:underline"
+              >
+                Alle Termine <ChevronRight size={14} />
+              </Link>
+            }
+          >
+            {/* „Nächstes Treffen" hieß es, solange es nur eine Karte gab.
+                Zwischen „Aktueller Termin" und „Letzter Termin" liest sich
+                „Nächster Termin" als das mittlere Glied — drei Wörter für
+                dieselbe Sache untereinander wären zwei zu viel. */}
+            Nächster Termin
+          </SectionTitle>
+          {nextMeeting ? (
+            <NextMeetingCard meeting={nextMeeting} />
+          ) : (
+            <Card>
+              <p className="text-sm text-stone-400 italic">
+                {/* „Danach" braucht ein Davor — den laufenden Abend. Der
+                    letzte zählt hier **nicht**: Er steht unter dieser Karte,
+                    und „danach ist nichts geplant" liest sich als Aussage über
+                    das, was darüber steht. */}
+                {currentMeeting
+                  ? 'Danach ist noch nichts geplant.'
+                  : 'Gerade ist kein Termin geplant.'}
+              </p>
+            </Card>
+          )}
+        </section>
 
         {lastMeeting && (
           <section>
@@ -142,39 +178,6 @@ export function HomeScreen() {
             />
           </section>
         )}
-
-        <section>
-          <SectionTitle
-            action={
-              <Link
-                href="/termine"
-                className="flex items-center gap-0.5 text-xs font-bold text-terracotta-500 hover:underline"
-              >
-                Alle Termine <ChevronRight size={14} />
-              </Link>
-            }
-          >
-            {/* „Nächstes Treffen" hieß es, solange es nur eine Karte gab.
-                Unter „Aktueller Termin" liest sich „Nächster Termin" als das
-                Gegenstück — zwei Wörter für dieselbe Sache untereinander wären
-                eines zu viel. */}
-            Nächster Termin
-          </SectionTitle>
-          {nextMeeting ? (
-            <NextMeetingCard meeting={nextMeeting} />
-          ) : (
-            <Card>
-              <p className="text-sm text-stone-400 italic">
-                {/* „Danach" braucht ein Davor. Das ist jetzt auch der letzte
-                    Abend — ohne ihn stünde „Gerade ist kein Termin geplant"
-                    unter einer Karte, die einen zeigt. */}
-                {currentMeeting || lastMeeting
-                  ? 'Danach ist noch nichts geplant.'
-                  : 'Gerade ist kein Termin geplant.'}
-              </p>
-            </Card>
-          )}
-        </section>
       </div>
     </div>
   );

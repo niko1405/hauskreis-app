@@ -1,13 +1,12 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import { AttendanceStatus, MeetingType } from '../../../generated/prisma/enums';
+import { AttendanceStatus } from '../../../generated/prisma/enums';
 import { paginationSchema } from '../../common/http/pagination';
 import { isoDay } from '../../common/dto/iso-day';
 import { wallClockIn } from '../../common/dto/wall-clock';
 
 // Deriving the schemas from Prisma's generated enums keeps the API and the
 // database in sync — adding a value in schema.prisma is enough.
-const meetingType = z.enum(MeetingType);
 const attendanceStatus = z.enum(AttendanceStatus);
 
 /**
@@ -39,16 +38,14 @@ const slotFields = {
  */
 export const createMeetingSchema = z.object({
   date: z.iso.date(),
-  /// Letzter Tag eines mehrtägigen Termins. Nur bei `CUSTOM` erlaubt und muss
-  /// hinter `date` liegen — beides prüft der Service, weil beides den Blick auf
-  /// ein zweites Feld braucht.
+  /// Letzter Tag eines mehrtägigen Termins. Muss hinter `date` liegen — das
+  /// prüft der Service, weil es den Blick auf ein zweites Feld braucht.
   endDate: z.iso.date().nullish(),
   /// Wann es losgeht, `"19:30"`. Weggelassen heißt „die Zeit der Gruppe" — die
   /// steht in `MeetingScheduleConfig`, und sie in jeden Aufrufer zu kopieren
   /// wäre eine zweite Stelle, an der sie veralten kann. Nicht `nullish`: ein
   /// Abend ohne Uhrzeit ist kein Zustand, den es geben soll.
   startTime: wallClockIn.optional(),
-  type: meetingType.default(MeetingType.CUSTOM),
   locationId: z.uuid().nullish(),
   hostPersonId: z.uuid().nullish(),
   /// Wie `hostPersonId` eine Rolle, die man schon beim Anlegen vergeben darf.
@@ -68,7 +65,6 @@ export const createMeetingSchema = z.object({
  * schreibt als ein Feld: wann, von wem, warum.
  */
 export const updateMeetingSchema = z.object({
-  type: meetingType.optional(),
   endDate: z.iso.date().nullish(),
   /// Änderbar, aber nicht leerbar — genau das heißt „Pflichtfeld" in einem
   /// PATCH. Ändert sie sich am nächsten Abend, erfahren es die anderen

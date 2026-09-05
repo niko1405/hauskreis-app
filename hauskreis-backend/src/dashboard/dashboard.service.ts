@@ -48,7 +48,6 @@ export interface HomeMeeting {
    */
   startTime: number;
   endDate: string | null;
-  type: string;
   /** Ob der Abend überhaupt ein Thema, Lieder bzw. ein Testimony vorsieht. */
   hasTopicSlot: boolean;
   hasSongSlot: boolean;
@@ -183,7 +182,6 @@ export class DashboardService {
       date: true,
       startMinutes: true,
       endDate: true,
-      type: true,
       hasTopicSlot: true,
       hasSongSlot: true,
       hasTestimonySlot: true,
@@ -241,14 +239,22 @@ export class DashboardService {
       // Der jüngste Abend, der **ganz** vorbei ist. `finishedBefore` und
       // nicht `date < today`: Sonst stünde eine laufende Freizeit ab ihrem
       // zweiten Tag zugleich oben als „aktuell" und darüber als „letzter".
-      // `PLANNED` schließt abgesagte aus — ein Abend, der ausgefallen ist,
-      // ist keiner, den man nachliest. Sortiert nach dem Anfangstag, wie es
-      // `latestActionstep` für dieselbe Frage schon tut.
+      //
+      // **`{ not: CANCELLED }` und nicht `PLANNED`.** Gemeint war immer „ein
+      // Abend, der ausgefallen ist, ist keiner, den man nachliest" — aber
+      // `PLANNED` sagt das nicht: Der nächtliche Lauf setzt jeden vergangenen
+      // Abend auf `COMPLETED` (`closePastMeetings`). Die Karte stand damit in
+      // Produktion von Mitternacht bis drei Uhr da und danach nie wieder,
+      // während sie in der Entwicklung immer stand — dort läuft nachts kein
+      // Server. Dieselbe Bedingung wie in `latestActionstep`, das für denselben
+      // Abend dieselbe Frage stellt.
+      //
+      // Sortiert nach dem Anfangstag, ebenfalls wie dort.
       this.prisma.meeting.findFirst({
         where: {
           hauskreisId,
           ...finishedBefore(today),
-          status: MeetingStatus.PLANNED,
+          status: { not: MeetingStatus.CANCELLED },
         },
         orderBy: { date: 'desc' },
         select: meetingSelect,
@@ -330,7 +336,6 @@ export class DashboardService {
         date: isoDate(meeting.date),
         startTime: meeting.startMinutes,
         endDate: meeting.endDate ? isoDate(meeting.endDate) : null,
-        type: meeting.type,
         hasTopicSlot: meeting.hasTopicSlot,
         hasSongSlot: meeting.hasSongSlot,
         hasTestimonySlot: meeting.hasTestimonySlot,

@@ -11,22 +11,6 @@ datasource db {
   provider = "postgresql"
 }
 
-/// A meeting that follows the usual format: one topic, prepared by someone.
-/// Generated automatically for every upcoming Tuesday.
-///
-/// LOBPREIS_GEBET replaces the last standard meeting of each month and carries
-/// a testimony (or just songs) instead of a topic.
-///
-/// CUSTOM is anything the group schedules themselves (birthdays, one-offs) and
-/// has no required host, topic or location.
-enum MeetingType {
-  STANDARD
-  LOBPREIS_GEBET
-  CUSTOM
-
-  @@map("meeting_type")
-}
-
 enum MeetingStatus {
   PLANNED
   CANCELLED
@@ -444,17 +428,39 @@ model Meeting {
   /// leeres Feld hieße nur „hat noch niemand eingetragen". Automatisch erzeugte
   /// Abende bekommen die Zeit aus `MeetingScheduleConfig`.
   startMinutes        Int                  @default(1080) @map("start_minutes")
-  type                MeetingType          @default(STANDARD)
-  status              MeetingStatus        @default(PLANNED)
-  /// Woraus der Abend besteht. Die vier Schalter sind das, was der **Typ**
-  /// vorher nur behauptet hat: geprüft wurde nie etwas, man konnte einem
-  /// Lobpreisabend ein Thema geben und einem Geburtstag ein Testimony.
+  /// Ob der nächtliche Lauf diesen Abend angelegt hat — oder ein Mensch.
   ///
-  /// Jetzt ist der Typ eine Voreinstellung und die Schalter sind die Regel —
-  /// STANDARD bringt Thema und Lieder mit, LOBPREIS_GEBET Lieder und
-  /// Testimony, CUSTOM gar nichts und alles einzeln zubuchbar. Ein
-  /// Geburtstagsabend braucht keine Themenzuteilung, und er soll in der
-  /// Fairness-Rechnung des Themas auch nicht mitzählen.
+  /// Das ist alles, was von der früheren `MeetingType` übrig ist. `STANDARD`
+  /// gegen `LOBPREIS_GEBET` war reine Doppelung: Woraus ein Abend besteht,
+  /// sagen die Bausteine darunter genauer, und der Typ behauptete es nur.
+  /// `CUSTOM` sagte dagegen etwas, das kein Baustein weiß — und vier Regeln
+  /// hängen daran:
+  ///
+  /// 1. **Der Taktschlag.** Die Reihe der erzeugten Abende gibt den Rhythmus
+  ///    vor; ein Geburtstag am Samstag verschöbe sonst den Takt der Dienstage.
+  /// 2. **„Es gibt einen neuen Termin".** Die sieben Dienstage vom Generator
+  ///    sind keine Neuigkeit, ein von Hand angelegter Abend schon — samt seiner
+  ///    Vorlauf-Erinnerung.
+  /// 3. **Der Actionstep.** Ein leerer Abend beendet den Vorsatz von davor;
+  ///    ein selbst angelegter (ein Geburtstag zwischen zwei Dienstagen) nicht.
+  /// 4. **Löschen statt Absagen.** Einen erzeugten Abend legt der Terminplaner
+  ///    sofort wieder an — deshalb sagt man ihn ab.
+  ///
+  /// `@default(false)`: Angelegt wird von Hand, erzeugt wird vom Generator, und
+  /// der schreibt die Spalte ausdrücklich — wie er schon die Bausteine
+  /// ausdrücklich schreibt, statt sich auf Vorgaben zu verlassen.
+  generated           Boolean              @default(false)
+  status              MeetingStatus        @default(PLANNED)
+  /// Woraus der Abend besteht — und zwar als Einziges. Das war einmal die
+  /// **Terminart**, die es nur behauptete: geprüft wurde nie etwas, man konnte
+  /// einem Lobpreisabend ein Thema geben und einem Geburtstag ein Testimony.
+  ///
+  /// Die Schalter sind jetzt die ganze Aussage. Beim Erzeugen wählt der
+  /// Generator zwischen zwei Belegungen (`EVENING_SLOTS`, `PRAISE_SLOTS`), von
+  /// Hand angelegte Abende starten leer (`EMPTY_SLOTS`) und bekommen einzeln
+  /// dazugebucht, was sie brauchen. Ein Geburtstagsabend braucht keine
+  /// Themenzuteilung, und er soll in der Fairness-Rechnung des Themas auch
+  /// nicht mitzählen.
   ///
   /// **Thema, Testimony und Nachbereitung schließen einander paarweise aus**,
   /// aber nicht alle drei gegeneinander. Thema und Testimony, weil beides der

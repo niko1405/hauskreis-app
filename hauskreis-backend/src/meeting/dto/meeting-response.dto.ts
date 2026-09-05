@@ -5,7 +5,6 @@ import {
   AttendanceStatus,
   MeetingCancelSource,
   MeetingStatus,
-  MeetingType,
 } from '../../../generated/prisma/enums';
 import {
   isoDateOut,
@@ -39,9 +38,11 @@ export const meetingResponseSchema = z.object({
   /// Letzter Tag, wenn sich der Termin über mehrere zieht (eine Freizeit von
   /// Freitag bis Sonntag). `null` heißt: ein Tag, der Normalfall.
   endDate: isoDateOut.nullable(),
-  /// Die Art des Abends — fürs Auge. **Was** dazugehört, sagen die drei Slots
-  /// darunter; der Typ ist nur noch ihre Voreinstellung beim Anlegen.
-  type: z.enum(MeetingType),
+  /// Ob der nächtliche Lauf diesen Abend angelegt hat. Das Frontend braucht es
+  /// für genau eine Frage: Löschen gibt es nur bei selbst angelegten, sonst
+  /// legt der Terminplaner den Abend gleich wieder an. **Woraus** der Abend
+  /// besteht, sagen die Bausteine darunter.
+  generated: z.boolean(),
   status: z.enum(MeetingStatus),
   /// Woraus der Abend besteht. Ein abgeschalteter Baustein heißt: das Feld
   /// dazu lässt sich nicht schreiben, die Rolle wird nicht vorgeschlagen, es

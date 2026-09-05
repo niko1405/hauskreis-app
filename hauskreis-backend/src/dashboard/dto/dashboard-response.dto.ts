@@ -1,6 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import { AttendanceStatus, MeetingType } from '../../../generated/prisma/enums';
+import { AttendanceStatus } from '../../../generated/prisma/enums';
 import { isoDateOut, personRefSchema } from '../../common/dto/response';
 import { wallClockOut } from '../../common/dto/wall-clock';
 
@@ -51,7 +51,6 @@ const homeMeetingSchema = z.object({
   startTime: wallClockOut,
   /// Gesetzt, wenn sich der Termin über mehrere Tage zieht.
   endDate: isoDateOut.nullable(),
-  type: z.enum(MeetingType),
   /// Nur die zwei, die der Startbildschirm braucht: er zeigt Rollen-Chips
   /// für Thema und Musik, und ohne sie stünde an einem Geburtstagsabend
   /// „Thema: noch niemand".
