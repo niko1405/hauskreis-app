@@ -277,7 +277,9 @@ function Row({
         scope="row"
         className={cn(
           'rounded-l-md border-y border-l px-3 py-2.5 text-left font-normal',
-          fertig ? 'border-music-line bg-music-bg/40' : 'border-line bg-card',
+          fertig
+            ? 'border-success-line bg-success-bg/40'
+            : 'border-line bg-card',
         )}
       >
         <Link
@@ -299,7 +301,7 @@ function Row({
             {fertig && (
               <CheckCircle2
                 size={13}
-                className="shrink-0 text-music"
+                className="shrink-0 text-success"
                 aria-hidden
               />
             )}
@@ -315,7 +317,9 @@ function Row({
           key={cell.role}
           className={cn(
             'border-y p-1',
-            fertig ? 'border-music-line bg-music-bg/40' : 'border-line bg-card',
+            fertig
+              ? 'border-success-line bg-success-bg/40'
+              : 'border-line bg-card',
             index === cells.length - 1 && 'rounded-r-md border-r',
           )}
         >

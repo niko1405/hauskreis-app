@@ -119,7 +119,7 @@ export function HomeScreen() {
                 Actionstep darüber: die Farbe von „gilt gerade". */}
             <NextMeetingCard
               meeting={currentMeeting}
-              className="border-music-line bg-music-bg/30"
+              className="border-success-line bg-success-bg/30"
             />
           </section>
         )}
@@ -228,7 +228,7 @@ function OpenActionstepCard({ step }: { step: HomeActionstep }) {
       className={cn(
         'transition-colors',
         step.done
-          ? 'border-music-line bg-music-bg/40'
+          ? 'border-success-line bg-success-bg/40'
           : 'border-terracotta-100 bg-terracotta-50/40',
       )}
     >
@@ -244,7 +244,7 @@ function OpenActionstepCard({ step }: { step: HomeActionstep }) {
             'flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-50',
             'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
             step.done
-              ? 'bg-music-bg text-music'
+              ? 'bg-success-bg text-success'
               : 'bg-card text-stone-300 hover:text-terracotta-500',
           )}
         >
@@ -254,7 +254,7 @@ function OpenActionstepCard({ step }: { step: HomeActionstep }) {
           <p
             className={cn(
               'text-[10px] font-bold tracking-widest uppercase',
-              step.done ? 'text-music' : 'text-terracotta-500',
+              step.done ? 'text-success' : 'text-terracotta-500',
             )}
           >
             Actionstep der Woche

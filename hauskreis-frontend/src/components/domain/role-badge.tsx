@@ -19,32 +19,27 @@ export const ROLE_ICON: Record<AssignmentRole, LucideIcon> = {
   BIRTHDAY_GIFT: Gift,
 };
 
-// Testimony trägt bewusst die Farbe des Themas: die beiden schließen einander
-// aus, an einem Abend steht immer nur eines davon. Eine eigene Farbe behauptete
-// eine fünfte Sorte Aufgabe, die es nicht gibt — es ist dieselbe Stelle im
-// Abend, nur anders gefüllt.
+/**
+ * **Rollen haben keine Farbe.**
+ *
+ * Hier standen einmal zwei `Record<AssignmentRole, string>` mit je sechs
+ * Einträgen: Thema und Testimony amber, Musik grün, Gebetsbuddy blau, Geschenk
+ * rot, Gastgeber terracotta. Auf einer Terminkarte standen davon drei
+ * nebeneinander, auf „Heute" bis zu fünf — und weil jede Farbe für sich etwas
+ * bedeutete, bedeutete am Ende keine mehr etwas.
+ *
+ * Unterschieden werden die Rollen durch das, was sie ohnehin unterscheidet:
+ * ihr Symbol und ihren Namen. Beides steht im Chip.
+ *
+ * Terracotta bleibt der gestrichelte Rand des leeren Chips, und das ist
+ * dieselbe Aussage wie überall: die Farbe der **Auswahl** — der aktive Tab, das
+ * gewählte Lied, der erste Platz einer Rangliste. „Hier fehlt noch jemand" ist
+ * die Einladung, etwas zu wählen.
+ */
+const FILLED_STYLE = 'border-line bg-canvas text-stone-600';
 
-export const ROLE_STYLE: Record<AssignmentRole, string> = {
-  HOST: 'bg-terracotta-50 text-terracotta-700 border-terracotta-100',
-  TOPIC: 'bg-topic-bg text-topic border-topic-line',
-  SONG: 'bg-music-bg text-music border-music-line',
-  TESTIMONY: 'bg-topic-bg text-topic border-topic-line',
-  SNACK: 'bg-terracotta-50 text-terracotta-700 border-terracotta-100',
-  PRAYER_BUDDY: 'bg-info-bg text-info border-info-line',
-  // Eigene Farbe, weil es als einziges an keinem Abend hängt: Es steht in der
-  // Rollenliste zwischen lauter Dienstagabenden und ist doch etwas anderes.
-  BIRTHDAY_GIFT: 'bg-alert-bg text-alert border-alert-line',
-};
-
-const ROLE_EMPTY_STYLE: Record<AssignmentRole, string> = {
-  HOST: 'text-terracotta-700 border-terracotta-100 bg-terracotta-50/40',
-  TOPIC: 'text-topic border-topic-line bg-topic-bg/40',
-  SONG: 'text-music border-music-line bg-music-bg/40',
-  TESTIMONY: 'text-topic border-topic-line bg-topic-bg/40',
-  SNACK: 'text-terracotta-700 border-terracotta-100 bg-terracotta-50/40',
-  PRAYER_BUDDY: 'text-info border-info-line bg-info-bg/40',
-  BIRTHDAY_GIFT: 'text-alert border-alert-line bg-alert-bg/40',
-};
+const EMPTY_STYLE =
+  'border-dashed border-terracotta-200 bg-terracotta-50/40 text-terracotta-700';
 
 export function RoleChip({
   kind,
@@ -79,7 +74,7 @@ export function RoleChip({
 
   const classes = cn(
     'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors',
-    filled ? ROLE_STYLE[kind] : cn('border-dashed', ROLE_EMPTY_STYLE[kind]),
+    filled ? FILLED_STYLE : EMPTY_STYLE,
     onClick && 'hover:opacity-80',
     className,
   );

@@ -185,7 +185,7 @@ export function SongAiAssist({
               return keep;
             });
           }}
-          className="block w-full rounded-md border border-topic-line bg-topic-bg px-3 py-2 text-left text-xs text-topic hover:border-topic"
+          className="block w-full rounded-md border border-warn-line bg-warn-bg px-3 py-2 text-left text-xs text-warn hover:border-warn"
         >
           {LABELS[key as keyof SongDraft]} laut Seite: „{value}" — übernehmen?
         </button>

@@ -344,8 +344,8 @@ export function LeaveSheet({
         )}
 
         {successorNeeded && (
-          <div className="space-y-2 rounded-md border border-topic-line bg-topic-bg p-3">
-            <p className="text-xs leading-relaxed text-topic">
+          <div className="space-y-2 rounded-md border border-warn-line bg-warn-bg p-3">
+            <p className="text-xs leading-relaxed text-warn">
               Du bist die einzige Person mit Admin-Rechten. Bestimme, wer
               übernimmt — sonst kann danach niemand mehr einladen.
             </p>

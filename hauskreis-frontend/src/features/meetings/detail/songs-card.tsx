@@ -22,11 +22,13 @@
  * ohnehin schon die Überschrift darüber. Statt der verschlossenen Tür steht
  * unter der Karte, wer sie aufmacht.
  *
- * **Warum die Setlist terracotta ist und nicht mehr musikgrün.** Grün ist in
- * dieser App die Farbe der *Rolle* — das SONG-Abzeichen, die Person, die die
- * Musik macht. „Im Set" ist keine Rolle, sondern eine **Auswahl**, und Auswahl
- * ist überall terracotta: der aktive Tab, der gewählte Chip, der erste Platz
- * einer Rangliste.
+ * **Warum die Setlist terracotta ist.** Sie war einmal grün, in der Farbe, die
+ * damals der Musik-Rolle gehörte. „Im Set" ist aber keine Rolle, sondern eine
+ * **Auswahl**, und Auswahl ist überall terracotta: der aktive Tab, der gewählte
+ * Chip, der erste Platz einer Rangliste.
+ *
+ * Inzwischen tragen die Rollen ohnehin keine eigenen Farben mehr, und dasselbe
+ * Grün heißt jetzt `success` — es bedeutet „fertig, gewählt, läuft".
  *
  * Beim Eintragen wird in der Song-Datenbank gesucht; gibt es das Lied noch
  * nicht, legt der Server es mit an — so wächst die Datenbank mit jedem

@@ -296,8 +296,8 @@ function useNewSongForm({
   );
 
   const footer = confirming ? (
-    <div className="space-y-2 rounded-md border border-topic-line bg-topic-bg p-3">
-      <p className="text-xs leading-relaxed text-topic">
+    <div className="space-y-2 rounded-md border border-warn-line bg-warn-bg p-3">
+      <p className="text-xs leading-relaxed text-warn">
         {exactHit ? (
           <>
             „{exactHit.title}" steht schon in eurer Liederliste. Willst du

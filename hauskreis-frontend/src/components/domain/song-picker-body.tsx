@@ -114,7 +114,7 @@ export function SongPickerBody({
                 className={cn(
                   'flex min-w-0 flex-1 items-center gap-2.5 rounded-md border p-2.5 text-left transition-colors',
                   alreadyThere
-                    ? 'cursor-default border-music-line bg-music-bg/50'
+                    ? 'cursor-default border-success-line bg-success-bg/50'
                     : 'border-line bg-card hover:border-terracotta-400',
                 )}
               >
@@ -122,7 +122,7 @@ export function SongPickerBody({
                   <Check
                     size={14}
                     strokeWidth={3}
-                    className="shrink-0 text-music"
+                    className="shrink-0 text-success"
                   />
                 ) : (
                   <Music size={14} className="shrink-0 text-stone-300" />

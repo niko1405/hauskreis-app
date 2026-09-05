@@ -650,9 +650,9 @@ function SessionRow({
         </span>
       </span>
       {vorbei ? (
-        <Badge variant="topic">gehalten</Badge>
+        <Badge variant="warn">gehalten</Badge>
       ) : (
-        <Badge variant="music">offen</Badge>
+        <Badge variant="success">offen</Badge>
       )}
     </>
   );

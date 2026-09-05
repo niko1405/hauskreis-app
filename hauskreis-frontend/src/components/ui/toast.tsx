@@ -41,7 +41,7 @@ const ICONS = {
 } as const;
 
 const TINTS = {
-  success: 'text-music',
+  success: 'text-success',
   error: 'text-alert',
   info: 'text-terracotta-500',
 } as const;

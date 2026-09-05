@@ -53,7 +53,7 @@ export function NotificationsCard() {
         {push.isLoading ? (
           <Skeleton className="h-10 w-full" />
         ) : push.blocker ? (
-          <p className="rounded-md bg-topic-bg p-3 text-xs leading-relaxed text-topic">
+          <p className="rounded-md bg-warn-bg p-3 text-xs leading-relaxed text-warn">
             {BLOCKER_TEXT[push.blocker]}
           </p>
         ) : push.subscribedHere ? (

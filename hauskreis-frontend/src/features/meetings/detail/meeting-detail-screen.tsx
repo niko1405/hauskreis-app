@@ -551,7 +551,7 @@ function Loaded({
           {/* Grün wie überall, wo etwas gerade gilt. Ein kommender Abend trägt
               weiterhin kein Abzeichen — dass er noch kommt, steht schon im
               Datum darüber. */}
-          {phase === 'running' && <Badge variant="music">Läuft</Badge>}
+          {phase === 'running' && <Badge variant="success">Läuft</Badge>}
           {cancelled && <Badge variant="alert">Abgesagt</Badge>}
         </div>
       </div>

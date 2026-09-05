@@ -224,7 +224,7 @@ export function SuggestionRow({
             ))}
           </ul>
           {deferred && host?.facts.deferredReason && (
-            <p className="mt-1 text-[11px] font-semibold text-topic">
+            <p className="mt-1 text-[11px] font-semibold text-warn">
               Zurückgestellt: {DEFERRED_REASON[host.facts.deferredReason]}
             </p>
           )}

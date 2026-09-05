@@ -230,7 +230,7 @@ function Loaded({
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {session.meeting ? (
             <Link href={`/termin?id=${session.meeting.id}`}>
-              <Badge variant={session.held ? 'neutral' : 'topic'}>
+              <Badge variant={session.held ? 'neutral' : 'warn'}>
                 <CalendarDays size={11} />
                 {session.held ? 'gehalten am' : 'am'}{' '}
                 {formatDay(session.meeting.date)}

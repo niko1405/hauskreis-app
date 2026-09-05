@@ -52,7 +52,6 @@ export function MeetingCard({
   // Die Tönung des Lobpreisabends kommt aus denselben Bausteinen wie sein
   // Name: Wo kein Thema, aber ein Testimony steht, dreht sich der Abend ums
   // Erzählen.
-  const isWorship = !meeting.hasTopicSlot && meeting.hasTestimonySlot;
 
   const mine = meeting.attendances.find((a) => a.personId === me?.id);
   const myStatus = mine?.status ?? 'UNKNOWN';
@@ -89,9 +88,11 @@ export function MeetingCard({
           '@container block rounded-card border p-5 shadow-sm',
           PRESSABLE,
           'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
-          isWorship
-            ? 'border-topic-line bg-gradient-to-br from-topic-bg to-card'
-            : 'border-line bg-card',
+          // Hier stand für den Lobpreisabend ein amberfarbener Verlauf. Er
+          // war die letzte Rollenfarbe auf dieser Karte: Was für ein Abend das
+          // ist, sagen die Überschrift und die Chips darunter — und eine
+          // getönte Karte in einer Liste sah aus, als sei sie hervorgehoben.
+          'border-line bg-card',
           cancelled && 'opacity-60',
         )}
       >
