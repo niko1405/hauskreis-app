@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { GroupClockService } from '../meeting/group-clock.service';
@@ -116,6 +117,62 @@ export class SongService {
       sorted.slice(query.skip, query.skip + query.take),
       total,
       query,
+    );
+  }
+
+  /**
+   * Was wir über ein Lied wissen — **über alle Hauskreise hinweg**.
+   *
+   * Die einzige Song-Abfrage im Backend ohne `hauskreisId` im `where`, und das
+   * ist Absicht. „Wie heißt das Lied hinter diesem Link" ist keine Frage, deren
+   * Antwort von der Gruppe abhängt: Sie kostet sonst einen Modellaufruf für
+   * etwas, das eine Gruppe weiter schon dasteht. Derselbe Gedanke steht seit
+   * jeher am Zwischenspeicher in `SongLookupService` — er trennt seine
+   * Schlüssel ebenfalls nicht nach Hauskreis.
+   *
+   * Zurück gehen **nur** `title`, `artist` und `lyricsUrl`: drei Felder, die
+   * über niemanden etwas aussagen. Wer den Song angelegt hat, wann, in welcher
+   * Gruppe und unter welcher Id — das bleibt hier.
+   *
+   * Der `HauskreisMemberGuard` bleibt davon unberührt: Er schützt die Route,
+   * und die ist weiterhin hauskreisgebunden. Wer hier ankommt, gehört zu einer
+   * Gruppe; er erfährt nur nicht, zu welcher das gefundene Lied gehört.
+   *
+   * Grob eingegrenzt und in TypeScript entschieden: Auf `title` und
+   * `lyrics_url` liegt kein Index (und es kommt keiner dazu — bei ein paar
+   * hundert Zeilen je Gruppe wäre er Pflege ohne Gegenwert), und die
+   * Normalisierung aus `song-key.ts` lässt sich in SQL ohnehin nicht ausdrücken.
+   */
+  async lookupAcrossGroups(where: {
+    urlHost?: string;
+    title?: string;
+  }): Promise<{ title: string; artist: string | null; lyricsUrl: string }[]> {
+    // Ohne Adresse hilft eine Zeile hier nicht weiter: Gesucht wird in beiden
+    // Richtungen etwas, das auf eine Seite zeigt.
+    const filter: Prisma.SongWhereInput =
+      where.urlHost !== undefined
+        ? {
+            lyricsUrl: {
+              contains: where.urlHost,
+              mode: 'insensitive',
+              not: null,
+            },
+          }
+        : {
+            title: { equals: where.title ?? '', mode: 'insensitive' },
+            lyricsUrl: { not: null },
+          };
+
+    const rows = await this.prisma.song.findMany({
+      where: filter,
+      select: { title: true, artist: true, lyricsUrl: true },
+      // Genug, um mehrere Schreibweisen desselben Lieds abzudecken, und wenig
+      // genug, dass ein häufiger Host (genius.com) die Antwort nicht sprengt.
+      take: 25,
+    });
+
+    return rows.flatMap((row) =>
+      row.lyricsUrl === null ? [] : [{ ...row, lyricsUrl: row.lyricsUrl }],
     );
   }
 

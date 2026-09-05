@@ -1,5 +1,6 @@
 import { SongLookupService } from './song-lookup.service';
 import type { GeminiClient } from './gemini.client';
+import type { SongService } from './song.service';
 
 type RawCandidate = {
   url: string;
@@ -19,6 +20,8 @@ function setup(options: {
   /** HTML, das ein Abruf zurueckgibt — fuer den Weg ueber den Seitenkopf. */
   html?: Record<string, string>;
   enabled?: boolean;
+  /** Was in der eigenen Song-Tabelle steht — leer heisst „kennen wir nicht". */
+  db?: { title: string; artist: string | null; lyricsUrl: string }[];
 }) {
   const ask = jest.fn().mockResolvedValue(options.answer ?? null);
   const gemini = {
@@ -39,7 +42,17 @@ function setup(options: {
   });
   global.fetch = fetchMock as unknown as typeof fetch;
 
-  return { service: new SongLookupService(gemini), ask, fetchMock };
+  // Der Service grenzt in SQL ein und entscheidet in TypeScript; die Attrappe
+  // gibt deshalb schlicht alles zurueck, was in der „Tabelle" steht.
+  const lookupAcrossGroups = jest.fn().mockResolvedValue(options.db ?? []);
+  const songs = { lookupAcrossGroups } as unknown as SongService;
+
+  return {
+    service: new SongLookupService(gemini, songs),
+    ask,
+    fetchMock,
+    lookupAcrossGroups,
+  };
 }
 
 /** Was `ask` beim n-ten Aufruf mitbekommen hat. */
@@ -439,6 +452,122 @@ describe('SongLookupService.metadataFromLink', () => {
       artist: null,
     });
     expect(ask).not.toHaveBeenCalled();
+  });
+});
+
+describe('SongLookupService — erst die eigene Datenbank', () => {
+  it('liest Titel und Interpret aus der Tabelle, ohne das Modell zu fragen', async () => {
+    const { service, ask, fetchMock, lookupAcrossGroups } = setup({
+      db: [{ title: 'Gott ist gut', artist: 'Outbreakband', lyricsUrl: UG }],
+    });
+
+    await expect(service.metadataFromLink(UG)).resolves.toEqual({
+      title: 'Gott ist gut',
+      artist: 'Outbreakband',
+    });
+
+    // Weder gefragt noch abgerufen: Der Sinn der Sache ist, beides zu sparen.
+    expect(ask).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    // Eingegrenzt wird ueber den Host — auf `lyrics_url` liegt kein Index.
+    expect(lookupAcrossGroups).toHaveBeenCalledWith({
+      urlHost: 'tabs.ultimate-guitar.com',
+    });
+  });
+
+  it('erkennt denselben Link in anderer Schreibweise', async () => {
+    const { service, ask } = setup({
+      db: [
+        {
+          title: 'Gott ist gut',
+          artist: null,
+          lyricsUrl: `${UG}/?utm_source=whatsapp`,
+        },
+      ],
+    });
+
+    await expect(service.metadataFromLink(UG)).resolves.toEqual({
+      title: 'Gott ist gut',
+      artist: null,
+    });
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it('faellt aufs Modell zurueck, wenn eine andere Seite gemeint ist', async () => {
+    const { service, ask } = setup({
+      db: [{ title: 'Anderes Lied', artist: null, lyricsUrl: GENIUS }],
+      reachability: { [UG]: 403 },
+      answer: { title: 'Gott ist gut', artist: 'Outbreakband' },
+    });
+
+    await service.metadataFromLink(UG);
+
+    // Derselbe Host waere hier sogar verschieden — aber selbst bei gleichem
+    // Host entscheidet der genaue Vergleich, nicht die Eingrenzung.
+    expect(ask).toHaveBeenCalled();
+  });
+
+  it('gibt den bekannten Link als Vorschlag zurueck', async () => {
+    const { service, ask } = setup({
+      db: [{ title: 'Gott ist gut', artist: 'Outbreakband', lyricsUrl: UG }],
+    });
+
+    await expect(
+      service.search('gott ist GUT!', 'outbreakband'),
+    ).resolves.toEqual([
+      {
+        url: UG,
+        title: 'Gott ist gut',
+        artist: 'Outbreakband',
+        site: 'ultimate-guitar.com',
+      },
+    ]);
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it('nimmt eine Zeile ohne Interpret mit', async () => {
+    // Wer „Oceans" ohne Interpret sucht, meint dasselbe Lied wie die Zeile, an
+    // der einer steht — und umgekehrt.
+    const { service, ask } = setup({
+      db: [{ title: 'Gott ist gut', artist: null, lyricsUrl: UG }],
+    });
+
+    await expect(
+      service.search('Gott ist gut', 'Outbreakband'),
+    ).resolves.toEqual([expect.objectContaining({ url: UG })]);
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it('laesst ein gleichnamiges Lied eines anderen Interpreten stehen', async () => {
+    const { service, ask } = setup({
+      db: [{ title: 'Gott ist gut', artist: 'Jemand anders', lyricsUrl: UG }],
+      answer: candidates(song(GENIUS)),
+      reachability: { [GENIUS]: 200 },
+    });
+
+    await service.search('Gott ist gut', 'Outbreakband');
+
+    // Zwei Lieder gleichen Namens sind zwei Lieder — genau dafuer steht der
+    // Unique-Index an der Tabelle.
+    expect(ask).toHaveBeenCalled();
+  });
+
+  it('fragt beim zweiten Druck trotzdem das Modell', async () => {
+    const { service, ask } = setup({
+      db: [{ title: 'Gott ist gut', artist: 'Outbreakband', lyricsUrl: UG }],
+      answer: candidates(song(GENIUS)),
+      reachability: { [GENIUS]: 200 },
+    });
+
+    await service.search('Gott ist gut', 'Outbreakband');
+    expect(ask).not.toHaveBeenCalled();
+
+    // „Noch mal suchen" heisst „daneben weitersuchen".
+    const zweiter = await service.search('Gott ist gut', 'Outbreakband', true);
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(zweiter.map((c) => c.url)).toEqual([UG, GENIUS]);
+    // Und der bekannte Link geht als „kennen wir schon" mit hinein.
+    expect(askedWith(ask).input).toContain(UG);
   });
 });
 

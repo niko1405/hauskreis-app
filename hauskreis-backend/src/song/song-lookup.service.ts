@@ -1,6 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
 import { GeminiClient } from './gemini.client';
+import { SongService } from './song.service';
+import {
+  lyricsUrlHost,
+  normalizeLyricsUrl,
+  normalizeSongText,
+} from './song-key';
 
 /**
  * Wonach zuerst gesucht wird.
@@ -126,11 +132,19 @@ export class SongLookupService implements LyricsRetriever {
    * Nicht nach Hauskreis getrennt: „Wie heißt das Lied hinter diesem Link" ist
    * keine Frage, deren Antwort von der Gruppe abhängt. Dass die Routen trotzdem
    * hauskreisgebunden sind, ist die Zugangsprüfung, nicht der Namensraum.
+   *
+   * **Vor dem Modell steht seit Neuestem die eigene Datenbank** — mit demselben
+   * Argument, nur haltbarer: Der Zwischenspeicher hier ist nach einem Neustart
+   * leer, die Song-Tabelle nicht. Beide Richtungen sehen deshalb erst in
+   * `SongService.lookupAcrossGroups` nach.
    */
   private readonly metadataCache = new Expiring<SongMetadata>();
   private readonly searchCache = new Expiring<LyricsLinkCandidate[]>();
 
-  constructor(private readonly gemini: GeminiClient) {}
+  constructor(
+    private readonly gemini: GeminiClient,
+    private readonly songs: SongService,
+  ) {}
 
   get isEnabled(): boolean {
     return this.gemini.isEnabled;
@@ -158,6 +172,16 @@ export class SongLookupService implements LyricsRetriever {
     const cached = this.metadataCache.get(target.href);
     if (cached) return cached;
 
+    // Steht der Link schon irgendwo im System, ist die Antwort geschenkt: kein
+    // Abruf der Seite, kein Modellaufruf. Er wird trotzdem in den
+    // Zwischenspeicher geschrieben — die zweite Frage soll nicht wieder in die
+    // Datenbank müssen.
+    const known = await this.knownByLink(target.href);
+    if (known) {
+      this.metadataCache.set(target.href, known);
+      return known;
+    }
+
     const head = await this.pageHead(target.href);
     const result = head
       ? await this.askAboutPageHead(target.href, head)
@@ -170,6 +194,78 @@ export class SongLookupService implements LyricsRetriever {
 
     this.metadataCache.set(target.href, metadata);
     return metadata;
+  }
+
+  /**
+   * Titel und Interpret zu einem Link — aus der eigenen Datenbank.
+   *
+   * Verglichen wird über die **normalisierte** Adresse (`song-key.ts`), damit
+   * `www.`, ein Schrägstrich am Ende und ein angehängtes `utm_source` nicht
+   * denselben Link zweimal bedeuten. Eingegrenzt wird über den Host, weil sich
+   * die Normalisierung in SQL nicht ausdrücken lässt.
+   *
+   * Eine Zeile **ohne Titel** gibt es nicht (das Feld ist Pflicht), eine ohne
+   * Interpret schon — die zählt trotzdem: Das Formular füllt ohnehin nur leere
+   * Felder, ein fehlender Interpret nimmt also nichts weg.
+   */
+  private async knownByLink(href: string): Promise<SongMetadata | null> {
+    const host = lyricsUrlHost(href);
+    const wanted = normalizeLyricsUrl(href);
+    if (!host || !wanted) return null;
+
+    const rows = await this.songs.lookupAcrossGroups({ urlHost: host });
+    const hit = rows.find(
+      (row) => normalizeLyricsUrl(row.lyricsUrl) === wanted,
+    );
+
+    return hit ? { title: hit.title, artist: hit.artist } : null;
+  }
+
+  /**
+   * Bekannte Links zu einem Titel — aus der eigenen Datenbank.
+   *
+   * Der Interpret zählt nur, wenn beide ihn haben: Wer „Oceans" ohne Interpret
+   * sucht, meint dasselbe Lied wie die Zeile, an der „Hillsong United" steht.
+   * Umgekehrt trennt ein **anderer** Interpret zwei Lieder gleichen Namens, und
+   * genau dafür steht der Unique-Index an der Tabelle.
+   *
+   * Was knapp danebenliegt, geht ans Modell. Das ist die sichere Richtung: Ein
+   * falscher Treffer verlinkte ein anderes Lied, ein verpasster kostet einen
+   * Aufruf.
+   */
+  private async knownByTitle(
+    title: string,
+    artist: string | undefined,
+  ): Promise<LyricsLinkCandidate[]> {
+    const wantedTitle = normalizeSongText(title);
+    const wantedArtist = artist ? normalizeSongText(artist) : null;
+    if (wantedTitle === '') return [];
+
+    const rows = await this.songs.lookupAcrossGroups({ title });
+
+    const hits = rows.filter((row) => {
+      if (normalizeSongText(row.title) !== wantedTitle) return false;
+      if (wantedArtist === null || row.artist === null) return true;
+      return normalizeSongText(row.artist) === wantedArtist;
+    });
+
+    // Durch dieselbe Prüfung wie die Vorschläge des Modells: kein `http:`,
+    // keine Startseite, nichts aus `NEVER_LINK`. Nur **abgerufen** wird nicht —
+    // die Erreichbarkeitsprüfung gilt dem, was ein Modell erfindet, und eine
+    // Adresse aus dem eigenen Archiv ist entweder von Hand eingetragen oder
+    // schon einmal durch genau diese Prüfung gegangen. Sie noch einmal
+    // anzufassen gäbe die gesparte Zeit zurück.
+    return dedupeBySite(
+      rank(
+        hits.flatMap((row) => {
+          const candidate = toCandidate(row.lyricsUrl, {
+            title: row.title,
+            artist: row.artist,
+          });
+          return candidate ? [candidate] : [];
+        }),
+      ),
+    ).slice(0, MAX_CANDIDATES);
   }
 
   /** Der billige Weg: das Modell sieht nur den Kopf der Seite. */
@@ -272,6 +368,18 @@ export class SongLookupService implements LyricsRetriever {
     // `undefined` und `[]` sind hier zweierlei: ein gespeichertes „nichts
     // gefunden" wird beim ersten Druck weiterhin nicht noch einmal bezahlt.
     if (!more && known) return known;
+
+    // **Nur beim ersten Druck.** „Noch mal suchen" heißt „daneben
+    // weitersuchen"; dem die eigene Datenbank zurückzugeben wäre die Antwort
+    // auf eine andere Frage. Beim zweiten Druck gehen die hier gefundenen
+    // Adressen stattdessen als „kennen wir schon" mit ins Modell.
+    if (!more) {
+      const fromDb = await this.knownByTitle(title, artist);
+      if (fromDb.length > 0) {
+        this.searchCache.set(key, fromDb);
+        return fromDb;
+      }
+    }
 
     const found = await this.searchUncached(
       title,
