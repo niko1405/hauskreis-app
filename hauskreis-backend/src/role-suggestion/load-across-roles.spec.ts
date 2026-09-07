@@ -80,6 +80,8 @@ function setup() {
         );
       }),
     },
+    // Snacks zählen als Last mit, tragen hier aber nichts bei.
+    meetingSnackResponsible: { findMany: jest.fn().mockResolvedValue([]) },
     meetingAttendance: { count: jest.fn().mockResolvedValue(0) },
     absencePeriod: { findMany: jest.fn().mockResolvedValue([]) },
     location: {

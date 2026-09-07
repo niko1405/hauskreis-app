@@ -235,6 +235,30 @@ export function useSetAttendance(meetingId: string) {
  * Betrifft auch den Home-Screen: dort steht die Erinnerung, dort verschwindet
  * sie, und dort steht „5 von 9 haben's geschafft".
  */
+/**
+ * Setzt, wer an einem Abend etwas zu essen mitbringt.
+ *
+ * Ohne eigenen Lese-Hook: Die Liste steht in der Antwort des Termins, wie die
+ * Musik-Zuteilung. Die GET-Route daneben gibt es für den Fall, dass jemand sie
+ * für sich braucht — die App liest sie nicht.
+ */
+export function useSetSnackResponsibles(meetingId: string) {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useApiMutation(
+    (personIds: string[]) =>
+      meetingsApi.setSnackResponsibles(hauskreisId, meetingId, personIds),
+    {
+      invalidateKeys: [
+        keys.meetings.detail(meetingId),
+        keys.meetings.snackResponsibles(meetingId),
+        keys.meetings.all,
+        ...derived,
+      ],
+    },
+  );
+}
+
 export function useSetActionstepDone(meetingId: string) {
   const { hauskreisId, keys, derived } = useHk();
   const { me } = useMe();

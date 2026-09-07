@@ -85,7 +85,7 @@ describe('latestActionstep', () => {
   const abend = (over: Record<string, unknown>) => ({
     id: 'm',
     date: utc('2026-08-11'),
-    type: 'STANDARD',
+    generated: true,
     hasTopicSlot: false,
     actionstepText: null,
     topicSession: null,
@@ -123,14 +123,14 @@ describe('latestActionstep', () => {
   });
 
   /**
-   * Der besondere Termin ist die Ausnahme: Zwischen zwei Dienstagen einen
-   * Geburtstag zu feiern beendet nicht, was man sich am Dienstag vorgenommen
-   * hat.
+   * Der selbst angelegte Termin ist die Ausnahme: Zwischen zwei Dienstagen
+   * einen Geburtstag zu feiern beendet nicht, was man sich am Dienstag
+   * vorgenommen hat.
    */
-  it('überspringt einen besonderen Termin ohne Actionstep', async () => {
+  it('überspringt einen selbst angelegten Termin ohne Actionstep', async () => {
     const result = await latestActionstep(
       prisma([
-        abend({ id: 'geburtstag', type: 'CUSTOM' }),
+        abend({ id: 'geburtstag', generated: false }),
         abend({ id: 'dienstag', actionstepText: 'Jeden Tag lesen' }),
       ]),
       'hk-1',
@@ -141,10 +141,14 @@ describe('latestActionstep', () => {
   });
 
   /** Bringt er selbst einen mit, gilt er wie jeder andere Abend. */
-  it('nimmt den eines besonderen Termins, wenn er einen hat', async () => {
+  it('nimmt den eines selbst angelegten Termins, wenn er einen hat', async () => {
     const result = await latestActionstep(
       prisma([
-        abend({ id: 'freizeit', type: 'CUSTOM', actionstepText: 'Still sein' }),
+        abend({
+          id: 'freizeit',
+          generated: false,
+          actionstepText: 'Still sein',
+        }),
         abend({ id: 'dienstag', actionstepText: 'Jeden Tag lesen' }),
       ]),
       'hk-1',

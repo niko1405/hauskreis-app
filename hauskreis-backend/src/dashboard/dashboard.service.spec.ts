@@ -22,7 +22,7 @@ const nextMeeting = {
   id: 'm1',
   date: utc('2026-08-04'),
   startMinutes: 1080,
-  type: 'STANDARD',
+  generated: true,
   title: null,
   location: { id: 'loc-chris', name: 'Bei Chris', requiresHost: true },
   host: { id: 'chris', name: 'chris' },
@@ -58,6 +58,7 @@ const nextMeeting = {
     },
   },
   songLeaders: [{ person: { id: 'lena', name: 'Lena' } }],
+  snackResponsibles: [],
   attendances: [] as { status: string }[],
 };
 
@@ -477,9 +478,24 @@ describe('DashboardService.build', () => {
       { endDate: null, date: { lt: utc('2026-07-29') } },
       { endDate: { lt: utc('2026-07-29') } },
     ]);
-    // Ein ausgefallener Abend ist keiner, den man nachliest.
-    expect(args.where.status).toBe('PLANNED');
+    // Ein ausgefallener Abend ist keiner, den man nachliest — aber ein
+    // abgeschlossener sehr wohl. `PLANNED` stand hier einmal und war der Grund,
+    // warum die Karte in Produktion um drei Uhr nachts verschwand: Genau dann
+    // setzt `closePastMeetings` den Abend von gestern auf `COMPLETED`.
+    expect(args.where.status).toEqual({ not: 'CANCELLED' });
     expect(args.orderBy).toEqual({ date: 'desc' });
+  });
+
+  it('zeigt einen abgeschlossenen Abend als letzten', async () => {
+    const { service } = setup({
+      lastFinished: { ...pastMeeting, status: 'COMPLETED' },
+    });
+
+    const home = await service.build('hk-1', NIKO, { now: NOW });
+
+    // Der Normalfall nach dem nächtlichen Lauf — und der Fall, den die Abfrage
+    // vorher ausgeschlossen hat.
+    expect(home.lastMeeting?.id).toBe('m-vorbei');
   });
 
   it('lässt „Aktueller Termin" leer, solange der Abend noch nicht anfing', async () => {

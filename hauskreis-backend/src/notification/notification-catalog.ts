@@ -178,6 +178,22 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     defaultEnabled: true,
   },
   {
+    type: NotificationType.SNACK_REMINDER,
+    category: 'Deine Rollen',
+    label: 'Du bringst was mit',
+    description:
+      'Erinnerung, bevor du für die Snacks eines Abends zuständig bist.',
+    // Zwei Tage statt fünf wie bei der Musik: Einkaufen ist ein Gang, kein
+    // Vorbereiten. Wer eine längere Vorlaufzeit will, stellt sie im Profil um.
+    schedule: {
+      kind: 'LEAD_TIME',
+      defaultLeadDays: 2,
+      minLeadDays: 1,
+      maxLeadDays: 14,
+    },
+    defaultEnabled: true,
+  },
+  {
     type: NotificationType.ACTIONSTEP_REMINDER,
     category: 'Nach dem Abend',
     // Hat die Gruppe den Wochen-Actionstep abgeschaltet, gibt es hier nichts

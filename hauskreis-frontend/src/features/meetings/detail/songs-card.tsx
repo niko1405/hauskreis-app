@@ -22,11 +22,13 @@
  * ohnehin schon die Überschrift darüber. Statt der verschlossenen Tür steht
  * unter der Karte, wer sie aufmacht.
  *
- * **Warum die Setlist terracotta ist und nicht mehr musikgrün.** Grün ist in
- * dieser App die Farbe der *Rolle* — das SONG-Abzeichen, die Person, die die
- * Musik macht. „Im Set" ist keine Rolle, sondern eine **Auswahl**, und Auswahl
- * ist überall terracotta: der aktive Tab, der gewählte Chip, der erste Platz
- * einer Rangliste.
+ * **Warum die Setlist terracotta ist.** Sie war einmal grün, in der Farbe, die
+ * damals der Musik-Rolle gehörte. „Im Set" ist aber keine Rolle, sondern eine
+ * **Auswahl**, und Auswahl ist überall terracotta: der aktive Tab, der gewählte
+ * Chip, der erste Platz einer Rangliste.
+ *
+ * Inzwischen tragen die Rollen ohnehin keine eigenen Farben mehr, und dasselbe
+ * Grün heißt jetzt `success` — es bedeutet „fertig, gewählt, läuft".
  *
  * Beim Eintragen wird in der Song-Datenbank gesucht; gibt es das Lied noch
  * nicht, legt der Server es mit an — so wächst die Datenbank mit jedem
@@ -41,7 +43,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Button, IconButton } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { EmptyState, Skeleton } from '@/components/ui/states';
 import {
@@ -51,29 +53,16 @@ import {
 } from '@/lib/api/hooks';
 import { LyricsLink } from '@/components/domain/lyrics-link';
 import { SongSuggestSheet } from '@/components/domain/song-suggest-sheet';
+import { SwipeActions } from '@/components/ui/swipe-actions';
 import { cn } from '@/lib/cn';
 import type { MeetingSong } from '@/lib/api/types';
 
 export function SongsCard({
   meetingId,
-  editing,
   readOnly = false,
   mayPick = true,
 }: {
   meetingId: string;
-  /**
-   * Der Bearbeitungsmodus der Seite — und hier gilt er **nur fürs Löschen**.
-   *
-   * Diese Karte war die einzige, die ihn gar nicht kannte: Neben jeder Zeile
-   * stand dauerhaft ein Papierkorb, der ohne Rückfrage löscht. Auf einer Seite,
-   * die man zehnmal öffnet, um nachzusehen, und einmal, um etwas zu ändern, ist
-   * das eine Zeile zu nah am Daumen.
-   *
-   * Vorschlagen bleibt frei. Ein Lied vorzuschlagen ist der Normalfall dieser
-   * Karte — wer etwas beitragen will, soll dafür keinen Schalter suchen müssen.
-   * Und Abhaken hat ohnehin seine eigene Regel (`mayPick`).
-   */
-  editing: boolean;
   /**
    * Ein vergangener oder abgesagter Abend: Vorschlagen und Löschen sind vorbei.
    * **Abhaken nicht** — das hat seine eigene Regel, siehe `mayPick`.
@@ -156,7 +145,7 @@ export function SongsCard({
                   entry={entry}
                   meetingId={meetingId}
                   mayPick={mayPick}
-                  mayDelete={!readOnly && editing}
+                  mayDelete={!readOnly}
                 />
               ))}
             </ul>
@@ -195,7 +184,7 @@ export function SongsCard({
                     entry={entry}
                     meetingId={meetingId}
                     mayPick={mayPick}
-                    mayDelete={!readOnly && editing}
+                    mayDelete={!readOnly}
                   />
                 ))}
               </ul>
@@ -269,8 +258,8 @@ function SongRow({
   const select = useSetMeetingSongSelected(meetingId);
   const remove = useRemoveMeetingSong(meetingId);
 
-  return (
-    <li
+  const row = (
+    <div
       className={cn(
         'flex items-center gap-3 rounded-md border p-3',
         entry.isSelected
@@ -318,15 +307,28 @@ function SongRow({
       </div>
 
       <LyricsLink url={entry.song.lyricsUrl} title={entry.song.title} />
+    </div>
+  );
 
-      {mayDelete && (
-        <IconButton
-          label="Lied entfernen"
-          onClick={() => remove.mutate(entry.id)}
-        >
-          <Trash2 size={15} />
-        </IconButton>
-      )}
+  // Ohne Löschrecht keine Wisch-Zeile: eine, die nachgibt und nichts freigibt,
+  // ist ein Versprechen, das die Liste nicht hält.
+  if (!mayDelete) return <li>{row}</li>;
+
+  return (
+    <li>
+      <SwipeActions
+        actions={[
+          {
+            icon: <Trash2 size={14} />,
+            label: `${entry.song.title} entfernen`,
+            tone: 'danger',
+            disabled: remove.isPending,
+            onClick: () => remove.mutate(entry.id),
+          },
+        ]}
+      >
+        {row}
+      </SwipeActions>
     </li>
   );
 }

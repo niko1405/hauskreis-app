@@ -220,6 +220,7 @@ export class MeetingNotificationService {
       song: false,
       testimony: false,
       topic: false,
+      snack: false,
     },
   ): Promise<void> {
     const meeting = await this.prisma.meeting.findUnique({
@@ -449,20 +450,28 @@ export class MeetingNotificationService {
  * Austritt — und aus demselben Grund vollständig: **das Thema fehlte hier**,
  * obwohl `RoleReleaseService` es längst freigibt. Wer nur dafür zugeteilt war
  * und absagte, ließ `what` auf `null` fallen, und dieser ganze Zweig schwieg.
+ *
+ * Die Mehrzahl steht an der Zeile und wird nicht geraten: Vier der fünf Rollen
+ * sind Einzahl, „Die Snacks" ist es nicht — und „Die Snacks ist wieder frei"
+ * wäre der Satz, den ein Mensch als Erstes bemerkt. Aus dem Wort ablesen ließe
+ * sie sich nicht (ein „s" am Ende hat auch „Der Gastgeber-Platz" nicht).
  */
 function describeReleased(released: ReleasedRoles): string | null {
   const free = [
-    released.host && 'Der Gastgeber-Platz',
-    released.topic && 'Das Thema',
-    released.song && 'Die Musik',
-    released.testimony && 'Das Testimony',
-  ].filter((entry): entry is string => typeof entry === 'string');
+    released.host && { text: 'Der Gastgeber-Platz', plural: false },
+    released.topic && { text: 'Das Thema', plural: false },
+    released.song && { text: 'Die Musik', plural: false },
+    released.testimony && { text: 'Das Testimony', plural: false },
+    released.snack && { text: 'Die Snacks', plural: true },
+  ].filter((entry) => typeof entry === 'object');
 
   if (free.length === 0) return null;
-  if (free.length === 1) return `${free[0]} ist`;
+  if (free.length === 1) {
+    return `${free[0].text} ${free[0].plural ? 'sind' : 'ist'}`;
+  }
 
   // Ab zweien steht der Artikel im Weg: „Der Gastgeber-Platz und Die Musik".
-  const bare = free.map((entry) => entry.replace(/^(Der|Die|Das) /, ''));
+  const bare = free.map((entry) => entry.text.replace(/^(Der|Die|Das) /, ''));
 
   return `${bare.slice(0, -1).join(', ')} und ${bare[bare.length - 1]} sind`;
 }

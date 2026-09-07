@@ -15,6 +15,7 @@ const TITLE: Record<AssignmentRole, string> = {
   TOPIC: 'Du machst das Thema',
   SONG: 'Du machst die Musik',
   TESTIMONY: 'Du erzählst dein Testimony',
+  SNACK: 'Du bringst was zu essen mit',
 };
 
 /**
@@ -117,8 +118,13 @@ function assignmentBody(
 
   // Ein `switch` und kein Ternär: der hatte zwei Zweige für vier Rollen, und
   // `TESTIMONY` fiel in den Musik-Zweig — Titel „Du erzählst dein Testimony",
-  // Text „Am … machst du die Musik." Mit `switch` fällt die nächste Rolle beim
-  // Übersetzen auf, statt still in den letzten Zweig zu rutschen.
+  // Text „Am … machst du die Musik."
+  //
+  // Und **ohne `default`**, seit es eine fünfte Rolle gibt: Der Zweig fing
+  // alles ab, was nicht ausdrücklich dastand, und hätte „Am … machst du die
+  // Musik." an alle geschickt, die Snacks mitbringen. Genau der Fehler von
+  // vorher, nur eine Rolle weiter. Ohne `default` verlangt TypeScript für jede
+  // neue Rolle einen eigenen Zweig.
   switch (role) {
     case AssignmentRole.HOST:
       return locationName
@@ -128,7 +134,9 @@ function assignmentBody(
       return `Am ${when} bist du mit dem Thema dran.`;
     case AssignmentRole.TESTIMONY:
       return `Am ${when} erzählst du deine Geschichte.`;
-    default:
+    case AssignmentRole.SNACK:
+      return `Am ${when} bringst du etwas zu essen mit.`;
+    case AssignmentRole.SONG:
       return `Am ${when} machst du die Musik.`;
   }
 }

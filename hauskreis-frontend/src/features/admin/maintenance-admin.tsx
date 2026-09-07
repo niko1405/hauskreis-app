@@ -247,11 +247,11 @@ function MeetingScheduleCard() {
             </Button>
 
             {/* Unter dem Speichern-Knopf und ohne ihn: Er sagt etwas über die
-                **Art** der Abende, nicht über ihre Lage — und schreibt deshalb
-                sofort, wie der Schalter ganz oben. */}
+                **Bausteine** der Abende, nicht über ihre Lage — und schreibt
+                deshalb sofort, wie der Schalter ganz oben. */}
             <Checkbox
               label="Lobpreis- und Gebetsabende"
-              description="Der jeweils letzte Termin im Monat wird ein Abend mit Liedern und Testimony statt mit Thema. Gilt für neue Termine — ein Lobpreisabend, der schon steht, bleibt einer."
+              description="Der jeweils letzte Termin im Monat bekommt Lieder und ein Testimony statt eines Themas. Gilt für neue Termine — was schon im Kalender steht, behält seine Bausteine."
               checked={current?.praiseEvenings ?? true}
               disabled={update.isPending}
               onChange={(event) =>
@@ -262,7 +262,31 @@ function MeetingScheduleCard() {
                       toast.success(
                         event.target.checked
                           ? 'Der letzte Abend im Monat wird wieder ein Lobpreisabend.'
-                          : 'Ab jetzt werden alle Abende als Standard-Termin angelegt.',
+                          : 'Ab jetzt bekommt jeder erzeugte Abend ein Thema.',
+                      ),
+                  },
+                )
+              }
+            />
+
+            {/* Daneben und nicht darüber: Beide sagen etwas über die Bausteine
+                der erzeugten Abende. Anders als der Lobpreisabend ist dieser
+                voreingestellt **aus** — die Rolle ist eine Einladung, und wer
+                sie nicht will, soll sie nicht abwählen müssen. */}
+            <Checkbox
+              label="Snacks vorbelegen"
+              description="Erzeugte Termine bekommen den Baustein „Snacks“ gleich mit. Gilt für neue Termine — an einem einzelnen Abend lässt er sich immer anhaken, auch ohne diese Vorgabe."
+              checked={current?.snackSlot ?? false}
+              disabled={update.isPending}
+              onChange={(event) =>
+                update.mutate(
+                  { snackSlot: event.target.checked },
+                  {
+                    onSuccess: () =>
+                      toast.success(
+                        event.target.checked
+                          ? 'Neue Termine bringen die Snacks mit.'
+                          : 'Neue Termine kommen ohne Snacks.',
                       ),
                   },
                 )
@@ -468,7 +492,7 @@ function JobsCard() {
   const jobs: Job[] = [
     {
       label: 'Termine vorausplanen',
-      hint: 'Legt Standard- und Lobpreis-Termine an, bis sieben im Voraus stehen.',
+      hint: 'Legt Abende an, bis sieben im Voraus stehen.',
       pending: generate.isPending,
       run: () =>
         generate.mutate(undefined, {

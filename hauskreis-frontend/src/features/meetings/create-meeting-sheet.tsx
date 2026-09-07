@@ -1,14 +1,14 @@
 'use client';
 
 /**
- * Einen Termin von Hand anlegen — in der Regel ein „Custom"-Termin
- * („Geburtstag von …"). Die Standard- und Lobpreis-Termine legt das Backend
- * selbst an, damit immer mindestens sieben im Voraus zuteilbar sind.
+ * Einen Termin von Hand anlegen — in der Regel einen besonderen („Geburtstag
+ * von …"). Die wöchentlichen Abende legt das Backend selbst an, damit immer
+ * mindestens sieben im Voraus zuteilbar sind.
  *
- * Neu daran sind zwei Dinge, die beide vom besonderen Termin herkommen: er darf
- * **leer** starten und sich einzeln zusammensetzen lassen, und er darf über
- * mehrere Tage gehen. Ein Hauskreis-Abend ist ein Abend; eine Freizeit von
- * Freitag bis Sonntag ist ein Termin, kein Stapel aus dreien.
+ * Zwei Dinge unterscheiden ihn von einem erzeugten Abend: Er startet **leer**
+ * und setzt sich einzeln zusammen, und er ist der übliche Weg zu einem Termin
+ * über mehrere Tage. Eine Freizeit von Freitag bis Sonntag ist ein Termin,
+ * kein Stapel aus dreien.
  */
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -21,16 +21,10 @@ import {
   useLocations,
   useMeetingSchedule,
 } from '@/lib/api/hooks';
-import {
-  MEETING_TYPE_LABEL,
-  applySlotToggle,
-  slotDefaults,
-} from '@/lib/meeting';
+import { EMPTY_SLOTS, applySlotToggle } from '@/lib/meeting';
 import { isSelectableWithoutHost } from '@/lib/location';
-import { MEETING_TYPES } from '@/lib/api/types';
 import { addDays, today } from '@/lib/date';
 import type { MeetingSlotKey, MeetingSlots } from '@/lib/meeting';
-import type { MeetingType } from '@/lib/api/types';
 
 export function CreateMeetingSheet({
   open,
@@ -47,12 +41,14 @@ export function CreateMeetingSheet({
    * nicht wieder überschrieben wird, wenn die Abfrage nachlädt.
    */
   const [startTime, setStartTime] = useState('');
-  const [type, setType] = useState<MeetingType>('CUSTOM');
   const [title, setTitle] = useState('');
   const [locationId, setLocationId] = useState('');
-  const [slots, setSlots] = useState<MeetingSlots>(() =>
-    slotDefaults('CUSTOM'),
-  );
+  // Leer bis auf die Gebetsanliegen. Hier stand einmal ein Feld „Art", das drei
+  // Voreinstellungen anbot — es war die Terminart, und die sagte über den Abend
+  // nichts, was die Schalter darunter nicht genauer sagen. Von Hand angelegte
+  // Termine sind ohnehin fast immer besondere; wer einen gewöhnlichen Abend
+  // will, hakt zwei Schalter an.
+  const [slots, setSlots] = useState<MeetingSlots>(EMPTY_SLOTS);
 
   const locations = useLocations();
   const schedule = useMeetingSchedule();
@@ -61,15 +57,6 @@ export function CreateMeetingSheet({
 
   const gruppenzeit = schedule.data?.data.startTime ?? '18:00';
   const zeit = startTime || gruppenzeit;
-
-  // Die Art wechseln heißt: von vorn mit dem, was dazugehört. Wer danach noch
-  // etwas dazu- oder wegnimmt, behält das — deshalb der eigene Zustand statt
-  // einer Ableitung beim Rendern.
-  const changeType = (next: MeetingType) => {
-    setType(next);
-    setSlots(slotDefaults(next));
-    if (next !== 'CUSTOM') setEndDate('');
-  };
 
   // Über `applySlotToggle`, nicht mit einem einfachen Spread: Thema und
   // Testimony schließen einander aus, und das Formular soll gar nicht erst in
@@ -83,7 +70,6 @@ export function CreateMeetingSheet({
         date,
         endDate: endDate === '' ? null : endDate,
         startTime: zeit,
-        type,
         title: title.trim() === '' ? null : title.trim(),
         locationId: locationId === '' ? null : locationId,
         ...slots,
@@ -103,20 +89,7 @@ export function CreateMeetingSheet({
   return (
     <Sheet open={open} onClose={onClose} title="Neuer Termin">
       <div className="space-y-4">
-        <Field label="Art">
-          <Select
-            value={type}
-            onChange={(event) => changeType(event.target.value as MeetingType)}
-          >
-            {MEETING_TYPES.map((value) => (
-              <option key={value} value={value}>
-                {MEETING_TYPE_LABEL[value]}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        <Field label={type === 'CUSTOM' ? 'Von' : 'Datum'}>
+        <Field label="Von">
           <TextInput
             type="date"
             value={date}
@@ -137,26 +110,24 @@ export function CreateMeetingSheet({
           />
         </Field>
 
-        {/* Nur beim besonderen Termin: an einem Hauskreis-Abend wäre ein
-            Enddatum kein Zeitraum, sondern ein Tippfehler mit Folgen — die
-            Tage dazwischen bleiben für den Terminplaner gesperrt. */}
-        {type === 'CUSTOM' && (
-          <Field
-            label="Bis"
-            hint="Optional — für eine Freizeit oder ein Wochenende."
-          >
-            <TextInput
-              type="date"
-              value={endDate}
-              min={date}
-              onChange={(event) => setEndDate(event.target.value)}
-            />
-          </Field>
-        )}
+        {/* Steht jetzt immer da. „Nur bei einem besonderen Termin" war eine
+            Regel über die Terminart und nicht über die Sache: Eine Freizeit ist
+            mehrtägig, ganz gleich, als was sie einmal angelegt wurde. */}
+        <Field
+          label="Bis"
+          hint="Optional — für eine Freizeit oder ein Wochenende."
+        >
+          <TextInput
+            type="date"
+            value={endDate}
+            min={date}
+            onChange={(event) => setEndDate(event.target.value)}
+          />
+        </Field>
 
         <Field
           label="Titel"
-          hint="Optional — bspw „Geburtstagsfeier“. Bleibt er leer, steht die Art des Termins da."
+          hint="Optional — bspw „Geburtstagsfeier“. Bleibt er leer, benennt sich der Abend nach seinen Bausteinen."
         >
           <TextInput
             value={title}

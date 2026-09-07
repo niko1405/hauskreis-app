@@ -31,14 +31,22 @@ import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { IconButton } from '@/components/ui/button';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
-import { useMeeting, useMeetingList, useSongLeaders } from '@/lib/api/hooks';
+import {
+  useMeeting,
+  useMeetingList,
+  useSetSnackResponsibles,
+  useSongLeaders,
+} from '@/lib/api/hooks';
 import { addDays, formatDay, formatRelativeDay, today } from '@/lib/date';
-import { ROLE_LABEL, planningComplete } from '@/lib/meeting';
+import {
+  ROLE_LABEL,
+  meetingRoles,
+  planningComplete,
+  type MeetingRole,
+} from '@/lib/meeting';
 import { cn } from '@/lib/cn';
 import type { MeetingListItem, PersonRef } from '@/lib/api/types';
 import { useRoleAssignment } from './detail/use-role-assignment';
-
-import type { AssignmentKind } from '@/components/domain/assignment-picker';
 
 const AssignmentSheet = dynamic(() =>
   import('@/components/domain/assignment-sheet').then((m) => m.AssignmentSheet),
@@ -48,15 +56,25 @@ const VenueSheet = dynamic(() =>
   import('@/components/domain/venue-sheet').then((m) => m.VenueSheet),
 );
 
+const SnackSheet = dynamic(() =>
+  import('@/components/domain/snack-sheet').then((m) => m.SnackSheet),
+);
+
 /**
  * Die Spalten der Mehrwochen-Planung — die Rollen, die an einem Abend hängen.
  *
  * Gebetsbuddys und Geschenke fallen heraus: Beide hängen an keinem Termin, und
  * eine Spalte, die in jeder Zeile leer bliebe, wäre keine Information.
- * Deckungsgleich mit `AssignmentKind` im Zuteilungs-Sheet, und das ist kein
- * Zufall — es ist dieselbe Frage.
+ *
+ * `MeetingRole` aus `lib/meeting.ts` — dieselbe Menge, die auch die
+ * Zuständigkeiten am Termin auflisten und `planningComplete` prüft. Sie ist
+ * weiter als `AssignmentKind`: Jener Typ beantwortet „welche Rollen haben eine
+ * Rangliste", diese Tabelle „welche Rollen hängen an einem Abend". Bei vier
+ * Rollen fällt beides zusammen, bei den Snacks nicht — sie stehen hier, weil
+ * ein Abend ohne sie nicht fertig geplant ist, und im Sheet nicht, weil es
+ * nichts vorzuschlagen gibt.
  */
-type Column = AssignmentKind;
+type Column = MeetingRole;
 
 /**
  * Drei Stufen reichen: ganz, kleiner, klein. Ein stufenloser Regler wäre auf
@@ -214,40 +232,15 @@ function Row({
    * Jede Rolle vergeben, die es an diesem Abend gibt.
    *
    * Genau die Frage, für die man diese Tabelle aufmacht — und sie war bisher
-   * nur zu beantworten, indem man vier Zellen einzeln absuchte. Die Bedingungen
-   * stehen in `planningComplete`, weil sie dieselben sind, nach denen unten die
-   * einzelnen Zellen entscheiden, ob sie „offen" sagen.
+   * nur zu beantworten, indem man die Zellen einzeln absuchte.
    */
   const fertig = planningComplete(meeting);
 
-  const cells: Cell[] = [
-    {
-      role: 'HOST',
-      people: meeting.host ? [meeting.host] : [],
-      // Steht der Ort schon fest und braucht keinen Gastgeber — Schlosspark,
-      // Café, Gemeindehaus —, dann fehlt hier niemand. „offen" hätte jede Woche
-      // an eine Lücke erinnert, die es nicht gibt.
-      absent:
-        meeting.location && !meeting.location.requiresHost
-          ? 'not-needed'
-          : null,
-    },
-    {
-      role: 'TOPIC',
-      people: meeting.topicResponsibles.map((r) => r.person),
-      absent: meeting.hasTopicSlot ? null : 'slot-off',
-    },
-    {
-      role: 'SONG',
-      people: meeting.songLeaders.map((leader) => leader.person),
-      absent: meeting.hasSongSlot ? null : 'slot-off',
-    },
-    {
-      role: 'TESTIMONY',
-      people: meeting.testimonyPerson ? [meeting.testimonyPerson] : [],
-      absent: meeting.hasTestimonySlot ? null : 'slot-off',
-    },
-  ];
+  // Dieselbe Aufstellung, die auch die Zuständigkeiten am Termin zeichnen und
+  // `planningComplete` prüft. Sie stand hier einmal ein zweites Mal, Zelle für
+  // Zelle abgeschrieben — und zwei Antworten auf „welche Rollen hat dieser
+  // Abend" laufen irgendwann auseinander.
+  const cells: Cell[] = meetingRoles(meeting);
 
   return (
     <tr className={cn('align-middle', cancelled && 'opacity-50')}>
@@ -259,7 +252,9 @@ function Row({
         scope="row"
         className={cn(
           'rounded-l-md border-y border-l px-3 py-2.5 text-left font-normal',
-          fertig ? 'border-music-line bg-music-bg/40' : 'border-line bg-card',
+          fertig
+            ? 'border-success-line bg-success-bg/40'
+            : 'border-line bg-card',
         )}
       >
         <Link
@@ -281,7 +276,7 @@ function Row({
             {fertig && (
               <CheckCircle2
                 size={13}
-                className="shrink-0 text-music"
+                className="shrink-0 text-success"
                 aria-hidden
               />
             )}
@@ -297,7 +292,9 @@ function Row({
           key={cell.role}
           className={cn(
             'border-y p-1',
-            fertig ? 'border-music-line bg-music-bg/40' : 'border-line bg-card',
+            fertig
+              ? 'border-success-line bg-success-bg/40'
+              : 'border-line bg-card',
             index === cells.length - 1 && 'rounded-r-md border-r',
           )}
         >
@@ -439,6 +436,7 @@ function LoadedCellSheet({
 }) {
   const roles = useRoleAssignment(meeting);
   const songLeaders = useSongLeaders(meeting.id);
+  const setSnacks = useSetSnackResponsibles(meeting.id);
 
   // Der Gastgeber führt aufs Ort-Sheet: er *ist* der Ort. Bisher war der von
   // hier aus gar nicht erreichbar — man konnte in der Tabelle jemanden
@@ -452,6 +450,21 @@ function LoadedCellSheet({
         hostPersonId={meeting.hostPersonId}
         locationId={meeting.locationId}
         onSubmit={roles.assignVenue}
+      />
+    );
+  }
+
+  // Snacks führen in ihre eigene Auswahl: Es gibt nichts vorzuschlagen, und
+  // die Abgesagten sollen gar nicht erst dastehen.
+  if (role === 'SNACK') {
+    return (
+      <SnackSheet
+        open
+        onClose={onClose}
+        selectedIds={meeting.snackResponsibles.map((row) => row.person.id)}
+        attendances={meeting.attendances}
+        onSubmit={setSnacks.mutate}
+        saving={setSnacks.isPending}
       />
     );
   }

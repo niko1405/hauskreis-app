@@ -226,7 +226,9 @@ export function DeleteMeetingBlock({ meeting }: { meeting: Meeting }) {
   const confirm = useConfirm();
   const toast = useToast();
 
-  if (!isAdmin || meeting.type !== 'CUSTOM') return null;
+  // Nur selbst angelegte Termine: Einen erzeugten Abend legt der Terminplaner
+  // gleich wieder an — deshalb sagt man ihn ab, statt ihn zu löschen.
+  if (!isAdmin || meeting.generated) return null;
 
   const ask = async () => {
     const ok = await confirm({

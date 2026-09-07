@@ -53,7 +53,7 @@ export function ActionstepCheck({
           'flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors disabled:opacity-50',
           'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
           doneByMe
-            ? 'border-music-line bg-music-bg/40 text-music'
+            ? 'border-success-line bg-success-bg/40 text-success'
             : 'border-line text-stone-500 hover:border-line-strong',
         )}
       >

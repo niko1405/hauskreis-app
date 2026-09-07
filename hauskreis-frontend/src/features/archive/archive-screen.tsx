@@ -590,7 +590,7 @@ function TopicEntry({ topic }: { topic: TopicListItem }) {
           {/* Nur für die eigenen: bei einem fremden Thema sagt „läuft" nichts,
               was man tun könnte. */}
           {topic.mine && !topic.standalone && topic.status === 'RUNNING' && (
-            <Badge variant="topic">läuft</Badge>
+            <Badge variant="warn">läuft</Badge>
           )}
         </div>
 

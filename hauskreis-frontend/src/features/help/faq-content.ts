@@ -187,24 +187,31 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Woher kommen die Termine?',
     answer:
-      'Die App legt sie nachts selbst an, so dass immer **sieben** im Voraus stehen — an dem Wochentag und zu der Uhrzeit, die für die Gruppe eingestellt sind (Vorgabe: Dienstag, 18 Uhr).\n\nDer **letzte reguläre Abend im Monat** wird dabei als „Lobpreis & Gebet" angelegt, alle anderen als Hauskreis-Abend.\n\nEin Datum, an dem schon etwas steht, lässt sie in Ruhe. Ein selbst angelegter Geburtstag wird also nicht überschrieben — und in eine mehrtägige Freizeit schiebt sie auch keinen Dienstagabend hinein.',
+      'Die App legt sie nachts selbst an, so dass immer **sieben** im Voraus stehen — an dem Wochentag und zu der Uhrzeit, die für die Gruppe eingestellt sind (Vorgabe: Dienstag, 18 Uhr).\n\nDer **letzte reguläre Abend im Monat** bekommt dabei Lieder und ein Testimony statt eines Themas; alle anderen kommen mit Thema und Liedern. Beides lässt sich am Termin selbst umstellen.\n\nEin Datum, an dem schon etwas steht, lässt sie in Ruhe. Ein selbst angelegter Geburtstag wird also nicht überschrieben — und in eine mehrtägige Freizeit schiebt sie auch keinen Dienstagabend hinein.',
     keywords: ['generiert', 'automatisch', 'sieben', 'vorausplanen'],
   },
   {
     id: 'meetings-arten',
     category: 'meetings',
-    question: 'Was ist der Unterschied zwischen den Terminarten?',
+    question: 'Wie heißt ein Termin, dem ich keinen Titel gebe?',
     answer:
-      '**Hauskreis-Abend** — der Normalfall: Thema und Lieder sind vorbereitet.\n\n**Lobpreis & Gebet** — statt eines Themas ein Testimony, dazu Lieder. Kommt automatisch am letzten Abend des Monats.\n\n**Besonderer Termin** — alles selbst gebaut: ein Geburtstag, ein Grillabend, eine Freizeit über mehrere Tage. Er startet **ganz ohne Bausteine**, weil ein Geburtstag nicht unfertig aussehen soll, nur weil er kein Thema hat.\n\nDie Art lässt sich jederzeit ändern. Wenn du das tust, springen die Bausteine auf die Voreinstellung der neuen Art — aus einem Geburtstag wird wieder ein ganzer Hauskreis-Abend und nicht eine leere Hülle mit neuem Namen.',
-    keywords: ['standard', 'lobpreis', 'custom', 'geburtstag', 'freizeit'],
+      'Nach dem, woraus er besteht. Es gab dafür einmal eine feste „Terminart", die man extra einstellen musste — die ist weg, weil sie dasselbe zweimal sagte.\n\n**Hauskreis-Abend** — überall dort, wo der Baustein **Thema** an ist.\n\n**Lobpreis & Gebet** — kein Thema, dafür Testimony oder Lieder.\n\n**Termin** — wenn nichts davon angehakt ist. Ein Geburtstag hat ohnehin fast immer einen eigenen Titel.\n\nDer Name ändert sich also mit, sobald du am Bausteinkasten drehst. Und ein eigener Titel sticht ihn immer.',
+    keywords: [
+      'titel',
+      'überschrift',
+      'name',
+      'terminart',
+      'lobpreis',
+      'geburtstag',
+    ],
   },
   {
     id: 'meetings-bausteine',
     category: 'meetings',
     question: 'Was sind die Bausteine, und was kann ich an- und ausschalten?',
     answer:
-      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Lieder** und **Testimony**. Die Terminart ist nur die Voreinstellung dafür.\n\nDie **Nachbereitung** ist der vierte Teil, steht aber bewusst nicht im Kasten — sie lässt sich erst ab dem Beginn des Abends dazuschalten. Vorher gäbe es ja nichts nachzubereiten.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
-    keywords: ['slots', 'schalter', 'baukasten', 'thema', 'lieder'],
+      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Lieder**, **Testimony**, **Gebetsanliegen** und **Snacks**. Sie sind die ganze Aussage darüber, was der Abend ist — auch sein Name kommt daher.\n\nDu findest sie am Fuß der Terminseite unter **„Was gehört dazu"**. Der Kasten ist zugeklappt und sagt im Kopf, wie viele an sind; ein Klick auf ein Häkchen wirkt sofort.\n\nDie **Nachbereitung** ist der sechste Teil, steht aber bewusst nicht im Kasten — sie lässt sich erst ab dem Beginn des Abends dazuschalten. Vorher gäbe es ja nichts nachzubereiten.\n\nDie **Gebetsanliegen** sind überall voreingestellt an, die **Snacks** überall aus: Beten kann man an jedem Abend, und wer nie über Essen gesprochen hat, soll keine offene Zuständigkeit vorfinden.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
+    keywords: ['slots', 'schalter', 'baukasten', 'thema', 'lieder', 'snacks'],
   },
   {
     id: 'meetings-ausschluss',
@@ -219,15 +226,31 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Was passiert, wenn ich einen Baustein ausschalte?',
     answer:
-      '**Thema aus:** Die Zuteilung fällt weg — sonst käme weiter „Du bist dran mit dem Thema" für einen Abend, der keines mehr hat. Eine schon vorbereitete Einheit wird nur **gelöst**, nicht gelöscht: Sie wartet unter „Angefangenes" und lässt sich jederzeit an einem anderen Abend wieder aufnehmen.\n\n**Lieder aus:** Die Liedwünsche für diesen Abend und die Musik-Zuteilung gehen weg. Die Lieder selbst bleiben natürlich in der Datenbank.\n\n**Testimony aus:** Die eingetragene Person wird entfernt.\n\n**Nachbereitung aus:** Zusammenfassung, Actionstep und die gesetzten Haken sind weg. Anders als bei der Themen-Einheit gehören diese Texte nur zu diesem einen Abend — sie irgendwo aufzubewahren hieße, sie unerreichbar zu machen.',
+      '**Thema aus:** Die Zuteilung fällt weg — sonst käme weiter „Du bist dran mit dem Thema" für einen Abend, der keines mehr hat. Eine schon vorbereitete Einheit wird nur **gelöst**, nicht gelöscht: Sie wartet unter „Angefangenes" und lässt sich jederzeit an einem anderen Abend wieder aufnehmen.\n\n**Lieder aus:** Die Liedwünsche für diesen Abend und die Musik-Zuteilung gehen weg. Die Lieder selbst bleiben natürlich in der Datenbank.\n\n**Testimony aus:** Die eingetragene Person wird entfernt.\n\n**Snacks aus:** Wer eingetragen war, wird entfernt — sonst käme weiter „Du bringst was zu essen mit" für einen Abend, an dem es keine Snacks gibt.\n\n**Gebetsanliegen aus:** Die Anliegen dieses Abends werden gelöscht. Sie gehören diesem einen Abend, wie die Nachbereitung.\n\n**Nachbereitung aus:** Zusammenfassung, Actionstep und die gesetzten Haken sind weg. Anders als bei der Themen-Einheit gehören diese Texte nur zu diesem einen Abend — sie irgendwo aufzubewahren hieße, sie unerreichbar zu machen.',
     keywords: ['abschalten', 'weg', 'gelöscht', 'entwurf'],
+  },
+  {
+    id: 'meetings-snacks',
+    category: 'meetings',
+    question: 'Wie funktionieren die Snacks?',
+    answer:
+      'Wie die Musik: Am Abend hakst du den Baustein **Snacks** an, und dann tragen sich eine oder mehrere Personen ein. Wer eingetragen ist, bekommt zwei Tage vorher eine Erinnerung und steht danach automatisch als „dabei".\n\n**Es gibt keine Vorschlagsliste.** Bei Gastgeber, Thema, Musik und Testimony schlägt die App vor, wer als Nächstes dran wäre — bei den Snacks stellt diese Frage niemand. Wer etwas mitbringt, sagt es, und die App trägt es nur ein. Deshalb steht dort eine schlichte Namensliste.\n\nWer für den Abend **abgesagt** hat, steht gar nicht erst zur Wahl.\n\nDie Rolle zählt trotzdem als Aufgabe: Wer den Kuchen bringt, rutscht in den anderen Vorschlagslisten dieses Abends nach hinten.\n\n**Was** jemand mitbringt, steht nicht in der App — das besprecht ihr unter euch.',
+    keywords: ['essen', 'kuchen', 'snacks', 'verpflegung', 'mitbringen'],
+  },
+  {
+    id: 'meetings-snacks-vorgabe',
+    category: 'admin',
+    question: 'Wie stelle ich ein, dass jeder Abend Snacks hat?',
+    answer:
+      'In der **Verwaltung** unter „Termin-Rhythmus" gibt es den Schalter „Snacks vorbelegen". Ist er an, bringt jeder neu erzeugte Termin den Baustein gleich mit.\n\nEr ist voreingestellt **aus**, anders als die Lobpreisabende: Die Rolle ist eine Einladung. Eine Gruppe, die nie über Essen gesprochen hat, fände sonst an jedem Dienstag eine offene Zuständigkeit vor, nach der niemand gefragt hat.\n\nDer Schalter gilt nur für **neue** Termine. An einem einzelnen Abend lässt sich der Baustein immer anhaken, auch ohne diese Vorgabe.',
+    keywords: ['snacks', 'vorgabe', 'rhythmus', 'verwaltung', 'essen'],
   },
   {
     id: 'meetings-zusagen',
     category: 'meetings',
     question: 'Wie sage ich zu oder ab?',
     answer:
-      'An drei Stellen, mit Absicht unterschiedlich weit:\n\n**Auf „Heute"** — „Bist du dabei?" gilt nur für den nächsten Abend.\n\n**Auf der Terminseite** unter „Wer kommt" → „Deine Antwort" — für diesen einen Abend.\n\n**Im Profil unter Abwesenheiten** — für einen ganzen Zeitraum auf einmal.\n\nEs gibt drei Antworten: dabei, nicht dabei, weiß noch nicht. „Weiß noch nicht" ist ein gültiger Zustand und keine Nachlässigkeit — er verhindert sogar, dass der Abend ausfällt.',
+      'An vier Stellen, mit Absicht unterschiedlich weit:\n\n**Am Termin** — unten am Bildschirm, wo sonst die Tab-Leiste steht. Für diesen einen Abend.\n\n**In der Terminliste** — unter den Rollen jeder Karte. Dort liest man quer über Wochen, und genau dabei fällt einem ein, dass man am 15. nicht kann.\n\n**Im Kalender** — rechts an jeder Zeile der Monatsliste. Auf dem Telefon tragen die drei Knöpfe dort nur ihr Symbol, damit die Zeile eine bleibt.\n\n**Im Profil unter Abwesenheiten** — für einen ganzen Zeitraum auf einmal.\n\nEs gibt drei Antworten: zusagen, absagen, weiß noch nicht. „Weiß noch nicht" ist ein gültiger Zustand und keine Nachlässigkeit — er verhindert sogar, dass der Abend ausfällt, und du zählst in der Planung mit.\n\nZu jeder Antwort kannst du einen Satz dazuschreiben: „komme 20 Min später", „bin im Urlaub, euch viel Spaß".\n\nAuf **„Heute"** wird nicht mehr geantwortet — der Startbildschirm zeigt, was ansteht; entschieden wird auf der Karte.',
     keywords: ['zusage', 'absage', 'teilnahme', 'anwesenheit'],
   },
   {
@@ -294,10 +317,11 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
   {
     id: 'meetings-uhrzeit',
     category: 'meetings',
-    question: 'Jeder Termin hat eine Uhrzeit — wo sehe ich sie?',
+    question:
+      'Jeder Termin hat eine Uhrzeit — wo sehe ich sie, wo ändere ich sie?',
     answer:
-      'Auf „Heute" steht sie oben rechts in der Karte für das nächste Treffen, und auf der Terminseite selbst.\n\nIn den Listen steht sie bewusst nicht an jeder Zeile: Dort liest man quer über Wochen und sucht ein Datum, da wäre die Uhrzeit an jeder Zeile nur Rauschen.\n\nÄndert sich die Uhrzeit des **nächsten** Termins, bekommen alle eine Benachrichtigung.',
-    keywords: ['zeit', 'wann', 'treffpunktzeit', 'beginn'],
+      'Überall dort, wo ein Termin steht: auf „Heute", in der Terminliste und auf der Terminseite. Auf den Karten trägt ein Kästchen links den Tag — der ist die Sortierung —, und daneben steht die Uhrzeit, denn die ist die Verabredung.\n\n**Ändern** kannst du sie auf der Terminseite über „Bearbeiten" oben rechts. Dahinter steht ein Formular mit Titel, Uhrzeit und Infos zusammen — es sind drei Angaben derselben Sache.\n\nÄndert sich die Uhrzeit des **nächsten** Termins, bekommen alle eine Benachrichtigung.',
+    keywords: ['zeit', 'wann', 'treffpunktzeit', 'beginn', 'titel', 'infos'],
   },
 
   // ── Themen ────────────────────────────────────────────────────────────────
@@ -639,7 +663,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'prayer',
     question: 'Wie trage ich ein Gebetsanliegen ein?',
     answer:
-      'Auf der Seite eines Termins, im Abschnitt **„Gebetsanliegen"**. Ein Klick auf „Mein Gebetsanliegen hinzufügen", schreiben, fertig — du musst dafür nicht erst in den Bearbeitungsmodus, der Klick schaltet ihn selbst ein.\n\n**Ändern und Löschen** brauchen dann den Bearbeitungsmodus („Bearbeiten" ganz unten auf der Seite). Das ist Absicht: Ein Papierkorb neben einem fertigen Satz wäre eine Zeile zu nah am Daumen.\n\nDu hast **ein** Anliegen je Abend. Schreibst du noch einmal, ersetzt du damit das alte.',
+      'Auf der Seite eines Termins, im Abschnitt **„Gebetsanliegen"**. Ein Klick auf „Mein Gebetsanliegen hinzufügen", schreiben, fertig.\n\n**Ändern und Löschen** gehen genauso direkt: der Stift am eigenen Kasten, darunter „Anliegen entfernen". Fremde Anliegen kannst du nur lesen — für die gibt es gar keinen Weg zum Schreiben.\n\nDu hast **ein** Anliegen je Abend. Schreibst du noch einmal, ersetzt du damit das alte.',
     keywords: ['gebet', 'anliegen', 'notiz', 'beten für', 'bitte'],
   },
   {
@@ -722,7 +746,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'notes',
     question: 'Wo trage ich Zusammenfassung und Actionstep ein?',
     answer:
-      'Das kommt darauf an, ob der Abend ein Thema hatte.\n\n**Mit Thema:** an dessen Einheit. Dort gehören sie zum Thema und überleben einen Rollenwechsel.\n\n**Ohne Thema** — ein Lobpreisabend, ein besonderer Termin: über den Baustein **Nachbereitung**, direkt am Abend.\n\nBeides zugleich geht nicht, damit es nie zwei Zusammenfassungen und zwei Actionsteps gibt.\n\nFrüher hatte ein Abend ohne Thema gar keinen Ort dafür — obwohl der Vorsatz für die Woche dort genauso entsteht.',
+      'Das kommt darauf an, ob der Abend ein Thema hatte.\n\n**Mit Thema:** an dessen Einheit. Dort gehören sie zum Thema und überleben einen Rollenwechsel.\n\n**Ohne Thema** — ein Lobpreisabend, ein Geburtstag: über den Baustein **Nachbereitung**, direkt am Abend.\n\nBeides zugleich geht nicht, damit es nie zwei Zusammenfassungen und zwei Actionsteps gibt.\n\nFrüher hatte ein Abend ohne Thema gar keinen Ort dafür — obwohl der Vorsatz für die Woche dort genauso entsteht.',
     keywords: ['zusammenfassung', 'actionstep', 'notizen', 'protokoll'],
   },
   {
@@ -730,7 +754,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'notes',
     question: 'Warum kann ich die Nachbereitung erst am Abend hinzufügen?',
     answer:
-      'Weil man sie nicht vorplant. Stünde sie im Baukasten, hätte man sie **vor** dem Abend angehakt — also als es noch nichts nachzubereiten gab.\n\nAb der Treffpunktzeit steht an einem Abend ohne Thema der Hinweis „Nachbereitung hinzufügen?". Ein Klick legt die Karte an; im Bearbeitungsmodus kannst du sie auch wieder ganz entfernen, dann steht wieder der Hinweis da.\n\nNicht jeder Abend braucht eine. Eine leere Karte an jedem Termin wäre eine Aufforderung, der man meistens nicht nachkommt.\n\nHatte der Abend ein **Thema**, steht der Hinweis nicht da — dort tragen Zusammenfassung und Actionstep an der Einheit. War es nachträglich betrachtet doch keines, leer einfach die Rolle „Thema": Nach einer Rückfrage fällt der Baustein weg und der Hinweis erscheint.',
+      'Weil man sie nicht vorplant. Stünde sie im Baukasten, hätte man sie **vor** dem Abend angehakt — also als es noch nichts nachzubereiten gab.\n\nAb der Treffpunktzeit steht an einem Abend ohne Thema ganz oben der Hinweis „Nachbereitung hinzufügen?". Ein Klick legt die Karte an; am Fuß der Karte nimmst du sie auch wieder ganz weg, dann steht wieder der Hinweis da.\n\nNicht jeder Abend braucht eine. Eine leere Karte an jedem Termin wäre eine Aufforderung, der man meistens nicht nachkommt.\n\nHatte der Abend ein **Thema**, steht der Hinweis nicht da — dort tragen Zusammenfassung und Actionstep an der Einheit. War es nachträglich betrachtet doch keines, leer einfach die Rolle „Thema": Nach einer Rückfrage fällt der Baustein weg und der Hinweis erscheint.',
     keywords: ['hinzufügen', 'später', 'hinweis', 'karte'],
   },
   {
@@ -738,7 +762,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'notes',
     question: 'Muss ich beides ausfüllen?',
     answer:
-      'Nein, jedes der beiden Stücke ist einzeln und freiwillig. Zusammenfassung und Actionstep stehen nur da, wenn etwas drinsteht.\n\nIm Bearbeitungsmodus legt ein Knopf das fehlende Stück an und öffnet gleich das Eingabefeld. Bleibt es leer, verschwindet es wieder — ein Feld ohne Inhalt gibt es nicht.\n\nManchmal gibt es eben nur einen Vorsatz und nichts zusammenzufassen.',
+      'Nein, jedes der beiden Stücke ist einzeln und freiwillig. Zusammenfassung und Actionstep stehen nur da, wenn etwas drinsteht.\n\nEin Knopf in der Karte legt das fehlende Stück an und öffnet gleich das Eingabefeld. Bleibt es leer, verschwindet es wieder — ein Feld ohne Inhalt gibt es nicht.\n\nManchmal gibt es eben nur einen Vorsatz und nichts zusammenzufassen.',
     keywords: ['pflicht', 'beides', 'leer', 'nur eines'],
   },
   {

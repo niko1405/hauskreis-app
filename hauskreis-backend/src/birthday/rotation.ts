@@ -87,7 +87,7 @@ export function rotate(people: readonly GiftablePerson[]): Duties {
  * zwei. In der Rotation kann es nicht passieren, weil `rotate` den Kreis jedes
  * Mal ganz neu legt.
  *
- * **Die Regel, die gilt** (CLAUDE.md §6.9): Jede:r beschenkt genau einen und
+ * **Die Regel, die gilt** (CLAUDE.md §6.10): Jede:r beschenkt genau einen und
  * wird von genau einem beschenkt — eine fixpunktfreie Permutation. Sie ist
  * nicht bloß hübsch, sie ist die Zusage, auf die sich neun Leute verlassen:
  * einmal im Jahr dran, und nie für sich selbst.

@@ -10,14 +10,13 @@ import { CustomMeetingNotificationService } from './custom-meeting-notification.
 import type { PrismaService } from '../prisma/prisma.service';
 import type { NotificationService } from '../notification/notification.service';
 import type { MeetingReminderService } from '../notification/meeting-reminder.service';
-import { MeetingType } from '../../generated/prisma/enums';
 
 const FREIZEIT = {
   id: 'm-1',
   hauskreisId: 'hk-1',
   date: new Date('2027-05-14'),
   endDate: new Date('2027-05-16'),
-  type: MeetingType.CUSTOM,
+  generated: false,
   title: 'Hauskreis-Freizeit',
 };
 
@@ -102,7 +101,7 @@ describe('CustomMeetingNotificationService.announceCreation', () => {
   it('schweigt über einen Hauskreis-Abend', async () => {
     const { service, notify } = setup({
       ...FREIZEIT,
-      type: MeetingType.STANDARD,
+      generated: true,
     });
 
     await expect(service.announceCreation('m-1')).resolves.toBe(0);
@@ -140,14 +139,14 @@ describe('CustomMeetingNotificationService.sendDueReminders', () => {
   });
 
   /**
-   * Der Läufer scannt **alle** Termine im Fenster; das Aussieben nach Terminart
+   * Der Läufer scannt **alle** Termine im Fenster; das Aussieben nach Herkunft
    * passiert erst in der `recipients`-Funktion. Ohne das bekäme jeder Dienstag
    * eine zweite Erinnerung obendrauf.
    */
   it('lässt gewöhnliche Abende aus', async () => {
     const { service } = setup(FREIZEIT, {
       ...FREIZEIT,
-      type: MeetingType.STANDARD,
+      generated: true,
     });
 
     const result = (await service.sendDueReminders()) as unknown as {

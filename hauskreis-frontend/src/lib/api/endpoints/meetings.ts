@@ -21,6 +21,7 @@ import type {
   Meeting,
   MeetingPage,
   MeetingSchedule,
+  PersonRef,
   RoleSuggestion,
   CancelMeetingInput,
   SetAttendanceInput,
@@ -127,6 +128,26 @@ export function setActionstepDone(
   return apiPut<ActionstepDone>(
     `${base(hauskreisId)}/${meetingId}/actionstep-done`,
     { done },
+    UNCONDITIONAL,
+  ).then((r) => r.data);
+}
+
+/**
+ * Wer an einem Abend etwas zu essen mitbringt.
+ *
+ * Ohne Vorbedingung wie die Musik-Zuteilung: Die Liste kommt vollständig herein
+ * und ersetzt die vorherige — zwei Leute, die gleichzeitig jemanden eintragen,
+ * wären ein Wettlauf um dieselbe Aussage und keine Kollision zweier
+ * verschiedener.
+ */
+export function setSnackResponsibles(
+  hauskreisId: string,
+  meetingId: string,
+  personIds: string[],
+): Promise<PersonRef[]> {
+  return apiPut<PersonRef[]>(
+    `${base(hauskreisId)}/${meetingId}/snack-responsibles`,
+    { personIds },
     UNCONDITIONAL,
   ).then((r) => r.data);
 }

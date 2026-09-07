@@ -5,7 +5,6 @@ import {
   AttendanceStatus,
   MeetingCancelSource,
   MeetingStatus,
-  MeetingType,
 } from '../../../generated/prisma/enums';
 import {
   isoDateOut,
@@ -39,9 +38,11 @@ export const meetingResponseSchema = z.object({
   /// Letzter Tag, wenn sich der Termin über mehrere zieht (eine Freizeit von
   /// Freitag bis Sonntag). `null` heißt: ein Tag, der Normalfall.
   endDate: isoDateOut.nullable(),
-  /// Die Art des Abends — fürs Auge. **Was** dazugehört, sagen die drei Slots
-  /// darunter; der Typ ist nur noch ihre Voreinstellung beim Anlegen.
-  type: z.enum(MeetingType),
+  /// Ob der nächtliche Lauf diesen Abend angelegt hat. Das Frontend braucht es
+  /// für genau eine Frage: Löschen gibt es nur bei selbst angelegten, sonst
+  /// legt der Terminplaner den Abend gleich wieder an. **Woraus** der Abend
+  /// besteht, sagen die Bausteine darunter.
+  generated: z.boolean(),
   status: z.enum(MeetingStatus),
   /// Woraus der Abend besteht. Ein abgeschalteter Baustein heißt: das Feld
   /// dazu lässt sich nicht schreiben, die Rolle wird nicht vorgeschlagen, es
@@ -56,6 +57,7 @@ export const meetingResponseSchema = z.object({
   hasTestimonySlot: z.boolean(),
   hasNotesSlot: z.boolean(),
   hasPrayerSlot: z.boolean(),
+  hasSnackSlot: z.boolean(),
   locationId: z.uuid().nullable(),
   hostPersonId: z.uuid().nullable(),
   /// Wie der Abend überschrieben ist. Gilt für jede Terminart; bleibt er leer,
@@ -107,6 +109,12 @@ export const meetingResponseSchema = z.object({
   /// bleibt, weil dort geschrieben wird; hier steht es, damit eine Terminliste
   /// nicht pro Karte eine zweite Anfrage braucht, um „Musik: Lena" zu zeigen.
   songLeaders: z.array(z.object({ person: personRefSchema })),
+  /// Wer etwas zu essen mitbringt — leer ist gültig, und an den meisten Abenden
+  /// gibt es den Baustein gar nicht.
+  ///
+  /// Wie bei der Musik: hier zum Anzeigen, geschrieben wird unter
+  /// `…/meetings/:id/snack-responsibles`.
+  snackResponsibles: z.array(z.object({ person: personRefSchema })),
   /// Wer den Actionstep für sich abgehakt hat.
   ///
   /// Namen statt einer Zahl: „5 von 9" beantwortet, wie es der Gruppe geht,
@@ -192,6 +200,8 @@ export const meetingScheduleSchema = z.object({
   weeklyActionstep: z.boolean(),
   /// Ob der letzte Termin eines Monats ein Lobpreisabend wird.
   praiseEvenings: z.boolean(),
+  /// Ob erzeugte Termine den Baustein „Snacks" schon mitbringen.
+  snackSlot: z.boolean(),
   updatedByPersonId: z.uuid().nullable(),
   updatedAt: isoDateTimeOut,
   version: z.number().int().nonnegative(),
@@ -226,6 +236,14 @@ export const actionstepRunResultSchema = reminderRunResultSchema.extend({
   meetingId: z.uuid().nullable(),
 });
 
+/**
+ * Wer an einem Abend etwas zu essen mitbringt.
+ *
+ * Dieselbe schlichte Liste wie bei der Musik, und eine leere ist genauso
+ * gültig: An den meisten Abenden gibt es den Baustein gar nicht.
+ */
+export const snackResponsiblesResponseSchema = z.array(personRefSchema);
+
 export class MeetingResponseDto extends createZodDto(meetingResponseSchema) {}
 export class MeetingPageResponseDto extends createZodDto(
   pageSchema(meetingResponseSchema),
@@ -247,4 +265,7 @@ export class ReminderRunResultResponseDto extends createZodDto(
 ) {}
 export class ActionstepRunResultResponseDto extends createZodDto(
   actionstepRunResultSchema,
+) {}
+export class SnackResponsiblesResponseDto extends createZodDto(
+  snackResponsiblesResponseSchema,
 ) {}

@@ -30,7 +30,7 @@ import {
 import { useMeetingList } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { formatDayFull, formatDayRange } from '@/lib/date';
-import { MEETING_TYPE_LABEL, meetingHeadline } from '@/lib/meeting';
+import { meetingKindLabel, meetingHeadline } from '@/lib/meeting';
 import type { MeetingListItem } from '@/lib/api/types';
 
 export function MeetingsArchive({ search }: { search: string }) {
@@ -127,9 +127,13 @@ function MeetingEntry({ meeting }: { meeting: MeetingListItem }) {
             <h3 className="mt-0.5 truncate font-serif text-base font-bold text-stone-900">
               {meetingHeadline(meeting)}
             </h3>
-            <p className="mt-0.5 text-[11px] text-stone-400">
-              {MEETING_TYPE_LABEL[meeting.type]}
-            </p>
+            {/* Nur, wenn der Abend einen eigenen Titel trägt — sonst stünde
+                dieselbe Bezeichnung eine Zeile über sich selbst. */}
+            {meeting.title && (
+              <p className="mt-0.5 text-[11px] text-stone-400">
+                {meetingKindLabel(meeting)}
+              </p>
+            )}
           </div>
 
           {cancelled && <Badge variant="alert">Abgesagt</Badge>}

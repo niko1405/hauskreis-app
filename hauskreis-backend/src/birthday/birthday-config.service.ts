@@ -164,7 +164,7 @@ export class BirthdayConfigService {
 
     // Und die Gegenrichtung: niemand besorgt zwei Geschenke, solange jemand
     // anders keines besorgt. Das ist die Zusage der ganzen Reihe — jede:r ist
-    // in einem Jahr genau einmal dran (CLAUDE.md §6.9) —, und sie ließ sich
+    // in einem Jahr genau einmal dran (CLAUDE.md §6.10) —, und sie ließ sich
     // hier aushebeln: Die Prüfung darüber sah nur die linke Spalte. Wer die
     // Zeilen in der Verwaltung durchklickte, konnte eine Person zweimal
     // eintragen, und eine andere blieb ohne Aufgabe.

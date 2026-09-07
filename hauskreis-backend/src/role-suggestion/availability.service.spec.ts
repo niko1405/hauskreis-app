@@ -257,6 +257,9 @@ function setupRelease(
       // ist. Leer heißt „niemand mehr", also wird die Auswahl zurückgenommen.
       findMany: jest.fn().mockResolvedValue([]),
     },
+    meetingSnackResponsible: {
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
     meetingSong: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
   };
 
@@ -291,6 +294,7 @@ describe('RoleReleaseService.releaseFor', () => {
       song: false,
       testimony: false,
       topic: false,
+      snack: false,
     });
 
     expect(prisma.meeting.update).toHaveBeenCalledWith(
@@ -331,6 +335,7 @@ describe('RoleReleaseService.releaseFor', () => {
       song: false,
       testimony: false,
       topic: false,
+      snack: false,
     });
 
     expect(prisma.meeting.update).not.toHaveBeenCalled();
@@ -353,6 +358,7 @@ describe('RoleReleaseService.releaseFor', () => {
       song: true,
       testimony: false,
       topic: false,
+      snack: false,
     });
   });
 
@@ -373,6 +379,7 @@ describe('RoleReleaseService.releaseFor', () => {
       song: false,
       testimony: true,
       topic: false,
+      snack: false,
     });
 
     expect(prisma.meeting.update).toHaveBeenCalledWith(
@@ -392,6 +399,7 @@ describe('RoleReleaseService.releaseFor', () => {
 
     await expect(service.releaseFor('m1', 'p1')).resolves.toMatchObject({
       topic: true,
+      snack: false,
     });
     expect(topicLinks.releaseFor).toHaveBeenCalledWith('m1', 'p1');
   });

@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { GroupClockService } from '../meeting/group-clock.service';
@@ -116,6 +117,73 @@ export class SongService {
       sorted.slice(query.skip, query.skip + query.take),
       total,
       query,
+    );
+  }
+
+  /**
+   * Was wir über ein Lied wissen — **über alle Hauskreise hinweg**.
+   *
+   * Die einzige Song-Abfrage im Backend ohne `hauskreisId` im `where`, und das
+   * ist Absicht. „Wie heißt das Lied hinter diesem Link" ist keine Frage, deren
+   * Antwort von der Gruppe abhängt: Sie kostet sonst einen Modellaufruf für
+   * etwas, das eine Gruppe weiter schon dasteht. Derselbe Gedanke steht seit
+   * jeher am Zwischenspeicher in `SongLookupService` — er trennt seine
+   * Schlüssel ebenfalls nicht nach Hauskreis.
+   *
+   * Zurück gehen **nur** `title`, `artist` und `lyricsUrl`: drei Felder, die
+   * über niemanden etwas aussagen. Wer den Song angelegt hat, wann, in welcher
+   * Gruppe und unter welcher Id — das bleibt hier.
+   *
+   * Der `HauskreisMemberGuard` bleibt davon unberührt: Er schützt die Route,
+   * und die ist weiterhin hauskreisgebunden. Wer hier ankommt, gehört zu einer
+   * Gruppe; er erfährt nur nicht, zu welcher das gefundene Lied gehört.
+   *
+   * Grob eingegrenzt und in TypeScript entschieden: Auf `title` und
+   * `lyrics_url` liegt kein Index (und es kommt keiner dazu — bei ein paar
+   * hundert Zeilen je Gruppe wäre er Pflege ohne Gegenwert), und die
+   * Normalisierung aus `song-key.ts` lässt sich in SQL ohnehin nicht ausdrücken.
+   *
+   * **Die Titel-Richtung grenzt deshalb gar nicht ein.** Hier stand einmal ein
+   * `title: { equals }` — und damit wurde zweimal buchstabengenau verglichen,
+   * denn `songTitleKey` kam erst danach. Die Normalisierung konnte nur noch
+   * verengen, was SQL schon exakt getroffen hatte, war also faktisch tot: „Goodness
+   * of God" fand „Goodness of God (Live)" nicht und fragte das Modell. Zu laden
+   * kostet nichts Zusätzliches — ohne Index scannt Postgres die Tabelle so oder
+   * so, das `equals` sparte keine Arbeit, sondern warf nur die Zeilen weg, um
+   * die es ging.
+   */
+  async lookupAcrossGroups(
+    where: { urlHost?: string } = {},
+  ): Promise<{ title: string; artist: string | null; lyricsUrl: string }[]> {
+    // Ohne Adresse hilft eine Zeile hier nicht weiter: Gesucht wird in beiden
+    // Richtungen etwas, das auf eine Seite zeigt. In der URL-Richtung grenzt
+    // der Host echt ein — er überlebt die Normalisierung unverändert.
+    const filter: Prisma.SongWhereInput =
+      where.urlHost === undefined
+        ? { lyricsUrl: { not: null } }
+        : {
+            lyricsUrl: {
+              contains: where.urlHost,
+              mode: 'insensitive',
+              not: null,
+            },
+          };
+
+    const rows = await this.prisma.song.findMany({
+      where: filter,
+      select: { title: true, artist: true, lyricsUrl: true },
+      // Die Jüngsten zuerst: Wird der Deckel je erreicht, sind die zuletzt
+      // angelegten Lieder die, nach denen gerade jemand sucht.
+      orderBy: { createdAt: 'desc' },
+      // Eine Obergrenze und keine Seitenzahl: Der Aufrufer sucht ein bestimmtes
+      // Lied, nicht die zweite Seite. Reicht das für eine Instanz einmal nicht
+      // mehr, ist der Ausweg ein gespeicherter Schlüssel neben dem Titel — wie
+      // `location.address_key` — und nicht ein größerer Deckel.
+      take: 5000,
+    });
+
+    return rows.flatMap((row) =>
+      row.lyricsUrl === null ? [] : [{ ...row, lyricsUrl: row.lyricsUrl }],
     );
   }
 

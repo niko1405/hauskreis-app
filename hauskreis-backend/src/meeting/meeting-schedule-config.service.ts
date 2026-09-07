@@ -26,6 +26,8 @@ export interface MeetingRhythm {
   startMinutes: number;
   /** Ob der letzte Termin eines Monats ein Lobpreisabend wird. */
   praiseEvenings: boolean;
+  /** Ob erzeugte Termine den Baustein „Snacks" schon mitbringen. */
+  snackSlot: boolean;
 }
 
 const configInclude = {
@@ -85,6 +87,7 @@ export class MeetingScheduleConfigService {
         intervalWeeks: true,
         startMinutes: true,
         praiseEvenings: true,
+        snackSlot: true,
       },
     });
 
@@ -99,6 +102,8 @@ export class MeetingScheduleConfigService {
         intervalWeeks: DEFAULT_INTERVAL_WEEKS,
         startMinutes: DEFAULT_START_MINUTES,
         praiseEvenings: true,
+        // Als einziger aus: Snacks sind eine Einladung und kein Abschalten.
+        snackSlot: false,
       }
     );
   }
@@ -137,6 +142,7 @@ export class MeetingScheduleConfigService {
             timeZone: dto.timeZone,
             weeklyActionstep: dto.weeklyActionstep,
             praiseEvenings: dto.praiseEvenings,
+            snackSlot: dto.snackSlot,
             updatedByPersonId,
             version: { increment: 1 },
           },

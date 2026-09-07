@@ -95,6 +95,7 @@ describe('getRhythm', () => {
       intervalWeeks: DEFAULT_INTERVAL_WEEKS,
       startMinutes: DEFAULT_START_MINUTES,
       praiseEvenings: true,
+      snackSlot: false,
     });
     expect(create).not.toHaveBeenCalled();
   });

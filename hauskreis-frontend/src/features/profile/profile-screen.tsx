@@ -156,7 +156,7 @@ function Loaded({ personId }: { personId: string }) {
                   </Badge>
                 )}
                 {current.playsInstrument && (
-                  <Badge variant="music">
+                  <Badge variant="success">
                     <Guitar size={11} />
                     Instrument
                   </Badge>

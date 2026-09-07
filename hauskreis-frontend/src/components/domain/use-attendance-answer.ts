@@ -4,12 +4,17 @@
  * Die eigene Antwort auf „bist du dabei" — mit der einen Rückfrage, die dazu
  * gehört.
  *
- * **Wer eingeteilt ist und auf „Weiß noch nicht" geht, verliert seine Rollen.**
- * Der Server macht das seit jeher bei einer Absage und ab jetzt auch hier: Eine
- * Rolle ist die Aussage „ich bin da und mache das" (CLAUDE.md §6.7, „Wer
- * eingeteilt wird, ist dabei"), und wer auf unentschieden zurückgeht, nimmt
- * genau sie zurück. Am Dienstag stand sonst im Plan jemand, der selbst nicht
- * weiß, ob er kommt.
+ * **Wer nicht mehr zusagt, verliert seine Rollen** — bei einer Absage wie bei
+ * einem „weiß noch nicht". Eine Rolle ist die Aussage „ich bin da und mache
+ * das" (CLAUDE.md §6.8, „Wer eingeteilt wird, ist dabei"), und beide Antworten
+ * nehmen genau sie zurück. Am Dienstag stand sonst im Plan jemand, der selbst
+ * nicht weiß, ob er kommt.
+ *
+ * Der Server hält das seit jeher so (`dto.status !== ATTENDING`); die Rückfrage
+ * hier kam lange nur beim „weiß noch nicht". Damit fehlte sie ausgerechnet im
+ * häufigeren Fall: Wer eingeteilt war und absagte, stand hinterher ohne Rolle
+ * da, ohne dass irgendetwas es gesagt hätte. Der Wortlaut wechselt mit der
+ * Antwort (`ANSWER_WORDING`), die Regel nicht.
  *
  * **Die Rückfrage gilt dem ganzen Schritt.** Abbrechen lässt Status *und* Rolle
  * stehen; es gibt bewusst kein „ja, aber die Rolle behalten". Das wäre ein
@@ -17,10 +22,10 @@
  * er bräuchte ein zusätzliches Feld an der API, damit der Server wüsste, was
  * gemeint war.
  *
- * **Warum als Hook und nicht im Balken.** Ein `UNKNOWN` entsteht an zwei
- * Stellen: unten am Termin (`answer-bar.tsx`) und auf der Terminkarte in der
- * Liste (`meeting-card.tsx`). Der Kalender ist bewusst draußen — seine Zeile
- * beantwortet „was ist wann".
+ * **Warum als Hook und nicht im Balken.** Geantwortet wird an drei Stellen:
+ * unten am Termin (`answer-bar.tsx`), auf der Terminkarte in der Liste und in
+ * der Monatsliste des Kalenders — die letzten beiden über dieselben Knöpfe
+ * (`answer-buttons.tsx`).
  *
  * Die Rückfrage ist eine Regel über die Daten („eine Rolle ist die Aussage: ich
  * bin da und mache das") und nicht über einen Bildschirm. In den Balken
@@ -73,6 +78,37 @@ function join(parts: string[]): string {
   return `${parts.slice(0, -1).join(', ')} und ${parts.at(-1)}`;
 }
 
+/**
+ * Wie die Rückfrage klingt — je nachdem, was man gerade zurücknimmt.
+ *
+ * Zwei Sätze und nicht einer: Absagen ist eine Aussage über den Abend („ich
+ * komme nicht"), „weiß noch nicht" eine über einen selbst. Und der Knopf trägt
+ * das Verb, das man gedrückt hat — er ist die Wiederholung der Absicht, nicht
+ * ihre Umformulierung.
+ *
+ * `danger` nur bei der Absage: Sie nimmt dem Abend jemanden, das „weiß noch
+ * nicht" hält nur eine Frage offen.
+ */
+const ANSWER_WORDING: Record<
+  'ABSENT' | 'UNKNOWN',
+  {
+    body: (rolle: string) => string;
+    confirmLabel: string;
+    tone?: 'danger';
+  }
+> = {
+  ABSENT: {
+    body: (rolle) => `Abzusagen gibt ${rolle} wieder frei.`,
+    confirmLabel: 'Absagen',
+    tone: 'danger',
+  },
+  UNKNOWN: {
+    body: (rolle) =>
+      `Auf „Weiß noch nicht“ zu gehen gibt ${rolle} wieder frei.`,
+    confirmLabel: 'Weiß nicht',
+  },
+};
+
 export function useAttendanceAnswer(meeting: { id: string } & RolesAtMeeting) {
   const setAttendance = useSetAttendance(meeting.id);
   const confirm = useConfirm();
@@ -92,14 +128,24 @@ export function useAttendanceAnswer(meeting: { id: string } & RolesAtMeeting) {
     async (status: AttendanceStatus): Promise<boolean> => {
       if (!myId) return false;
 
-      if (status === 'UNKNOWN') {
+      // **Beide Wege zurück, nicht nur einer.** Der Server gibt die Rollen frei,
+      // sobald jemand nicht mehr zusagt — bei einer Absage wie bei einem „weiß
+      // noch nicht" (`dto.status !== ATTENDING`). Gefragt wurde bisher nur beim
+      // zweiten, und damit verlor genau der Fall, der öfter vorkommt, seine
+      // Warnung: Wer eingeteilt war und absagte, stand hinterher ohne Rolle da,
+      // ohne dass irgendetwas es gesagt hätte.
+      if (status !== 'ATTENDING') {
         const roles = rolesOf(meeting, myId);
 
         if (roles.length > 0) {
+          const wording = ANSWER_WORDING[status];
+          const rolle = roles.length === 1 ? 'die Rolle' : 'diese Rollen';
+
           const ok = await confirm({
             title: 'Du bist an dem Abend eingeteilt',
-            body: `${join(roles).replace(/^./, (c) => c.toUpperCase())}. Auf „Weiß noch nicht“ zu gehen gibt ${roles.length === 1 ? 'die Rolle' : 'diese Rollen'} wieder frei.`,
-            confirmLabel: 'Weiß noch nicht',
+            body: `${join(roles).replace(/^./, (c) => c.toUpperCase())}. ${wording.body(rolle)}`,
+            confirmLabel: wording.confirmLabel,
+            tone: wording.tone,
           });
           if (!ok) return false;
         }

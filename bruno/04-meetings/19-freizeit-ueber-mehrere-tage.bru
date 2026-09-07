@@ -14,7 +14,6 @@ body:json {
   {
     "date": "2027-05-14",
     "endDate": "2027-05-16",
-    "type": "CUSTOM",
     "title": "Hauskreis-Freizeit",
     "hasSongSlot": true
   }
@@ -41,18 +40,20 @@ tests {
 docs {
   Zwei Neuerungen in einem Aufruf.
 
-  **Zeitraum.** Nur `CUSTOM` darf länger als einen Abend dauern; an einem
-  Hauskreis-Abend wäre ein Enddatum kein Zeitraum, sondern ein Tippfehler mit
-  Folgen — die Tage dazwischen sind für den Terminplaner gesperrt. Der Termin
-  bleibt **eine** Zeile: `@@unique([hauskreisId, date])` steht weiterhin auf
-  dem Startdatum. Dass kein zweiter Termin hineinfällt, prüft der Service; eine
-  Exclusion Constraint über Bereiche lässt sich in Prisma nicht ausdrücken.
+  **Zeitraum.** Der Termin bleibt **eine** Zeile: `@@unique([hauskreisId,
+  date])` steht weiterhin auf dem Startdatum. Dass kein zweiter Termin
+  hineinfällt, prüft der Service; eine Exclusion Constraint über Bereiche lässt
+  sich in Prisma nicht ausdrücken. Die Tage dazwischen sind damit für den
+  Terminplaner gesperrt.
 
-  **Bausteine.** Weggelassene Schalter heißen „nimm, was zu dieser Terminart
-  gehört": STANDARD bringt Gastgeber, Thema und Lieder mit, LOBPREIS_GEBET
-  Gastgeber, Lieder und Testimony, CUSTOM gar nichts. Der Typ ist damit eine
-  Voreinstellung geworden — vorher war er eine Behauptung, geprüft wurde nie
-  etwas.
+  Hier stand einmal „nur ein `CUSTOM` darf länger als einen Abend dauern". Das
+  war eine Regel über die Terminart und nicht über die Sache — mit ihr ist sie
+  weg.
+
+  **Bausteine.** Weggelassene Schalter heißen beim Anlegen „gar nicht": Ein von
+  Hand angelegter Abend kommt leer auf die Welt, bis auf die Gebetsanliegen.
+  Woraus er besteht, sagen damit allein die Schalter — vorher behauptete es die
+  Terminart, geprüft wurde nie etwas.
 
   Ein Feld zu schreiben, dessen Baustein aus ist, endet in einem 400
   („Dieser Termin hat kein Thema — schalte das erst dazu"). Umgekehrt räumt das

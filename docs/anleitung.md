@@ -201,17 +201,21 @@ stehen — an dem Wochentag und zu der Uhrzeit, die für die Gruppe eingestellt
 sind. Da musst du nichts tun. Besondere Termine (Hauskreis-Wochenende,
 Geburtstagsfeier, Grillabend) legst du selbst an.
 
-### 6.2 Die drei Terminarten
+### 6.2 Wie ein Termin heißt
 
-- **Hauskreis-Abend** — der Normalfall. Kommt automatisch, mit Thema und Musik.
-- **Lobpreis & Gebet** — kommt automatisch als letzter regulärer Abend im Monat,
-  mit Testimony und Musik statt eines Themas.
-- **Besonderer Termin** — alles selbst gebaut. Er startet **ganz ohne
-  Bausteine**, damit ein Geburtstag nicht unfertig aussieht, nur weil er kein
-  Thema hat.
+Eine feste „Terminart" gibt es nicht. Ein Abend heißt nach dem, woraus er
+besteht — und wer einen eigenen Titel einträgt, sticht das jederzeit.
 
-Die Art lässt sich jederzeit ändern. Dabei springen die Bausteine auf die
-Voreinstellung der neuen Art.
+- **Hauskreis-Abend** — überall dort, wo der Baustein **Thema** an ist. Das ist
+  der Normalfall; die Termine kommen so automatisch.
+- **Lobpreis & Gebet** — kein Thema, dafür Testimony oder Musik. Der letzte
+  reguläre Abend im Monat kommt automatisch so.
+- **Termin** — wenn nichts davon angehakt ist. Ein Geburtstag oder ein
+  Grillabend hat ohnehin fast immer einen eigenen Titel.
+
+Ein selbst angelegter Termin startet **ganz ohne Bausteine**, damit ein
+Geburtstag nicht unfertig aussieht, nur weil er kein Thema hat. Und der Name
+zieht mit, sobald du am Baukasten drehst.
 
 ### 6.3 Das Baukasten-System
 
@@ -222,9 +226,17 @@ Dazu kommen die **Bausteine**, die man an- und abschalten kann:
 
 - **Thema** oder **Testimony** — immer nur eins von beiden.
 - **Musik**.
+- **Snacks** — wer etwas zu essen mitbringt. Voreingestellt aus; wer sie an
+  jedem erzeugten Termin haben will, hakt das einmal in der Verwaltung an.
 
-Bearbeitet wird das über den Knopf **„Bearbeiten"** ganz unten in der
-Termin-Ansicht. Manche Felder darf nur ändern, wer die passende Rolle hat.
+Angehakt wird das am Fuß der Termin-Ansicht unter **„Was gehört dazu"**. Der
+Kasten ist zugeklappt und sagt im Kopf, wie viele Bausteine an sind; ein Klick
+auf ein Häkchen wirkt sofort. Nimmst du einen weg, an dem etwas hängt, fragt die
+App vorher nach und sagt, was verlorengeht.
+
+**Titel, Uhrzeit und den Info-Text** ändert der Knopf **„Bearbeiten"** oben
+rechts: ein Formular für alle drei, ein Speichern. Manche Felder darf nur
+ändern, wer die passende Rolle hat.
 
 ### 6.4 Die Rollen
 
@@ -232,6 +244,10 @@ Termin-Ansicht. Manche Felder darf nur ändern, wer die passende Rolle hat.
 - **Thema** — mehrere möglich.
 - **Musik** — mehrere möglich.
 - **Testimony** — genau eine Person.
+- **Snacks** — mehrere möglich. Als einzige Rolle **ohne Vorschlagsliste**: Wer
+  etwas mitbringt, sagt es — da gibt es nichts zu berechnen. Wer für den Abend
+  abgesagt hat, steht nicht zur Wahl. Was jemand mitbringt, besprecht ihr unter
+  euch; in der App steht nur, wer sich kümmert.
 
 Ein Termin ohne Gastgeber ist völlig in Ordnung: Für einen Treffpunkt wie den
 Schlosspark braucht es keinen.
@@ -439,8 +455,8 @@ stehen, hängt davon ab, ob der Abend ein Thema hatte:
 
 **Die Nachbereitung plant man nicht vor.** Sie taucht erst **ab der
 Treffpunktzeit** in der Termin-Ansicht als Hinweis auf („Nachbereitung
-hinzufügen?"). Ein Klick legt sie an, im Bearbeitungsmodus lässt sie sich auch
-wieder ganz entfernen. Zusammenfassung und Actionstep sind darin einzeln und
+hinzufügen?"). Ein Klick legt sie an, ein Knopf an ihrem Fuß nimmt sie auch
+wieder ganz weg. Zusammenfassung und Actionstep sind darin einzeln und
 beide optional — manchmal gibt es eben nur einen Vorsatz und nichts
 zusammenzufassen.
 

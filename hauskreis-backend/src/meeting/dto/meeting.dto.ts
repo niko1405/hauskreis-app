@@ -1,13 +1,12 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import { AttendanceStatus, MeetingType } from '../../../generated/prisma/enums';
+import { AttendanceStatus } from '../../../generated/prisma/enums';
 import { paginationSchema } from '../../common/http/pagination';
 import { isoDay } from '../../common/dto/iso-day';
 import { wallClockIn } from '../../common/dto/wall-clock';
 
 // Deriving the schemas from Prisma's generated enums keeps the API and the
 // database in sync — adding a value in schema.prisma is enough.
-const meetingType = z.enum(MeetingType);
 const attendanceStatus = z.enum(AttendanceStatus);
 
 /**
@@ -30,6 +29,8 @@ const slotFields = {
   /// Wofür ihr an dem Abend beten wollt. Als einziger überall voreingestellt
   /// an, und der einzige, der nichts ausschließt.
   hasPrayerSlot: z.boolean().optional(),
+  /// Wer etwas zu essen mitbringt. Schließt nichts aus, voreingestellt aus.
+  hasSnackSlot: z.boolean().optional(),
 };
 
 /**
@@ -39,16 +40,14 @@ const slotFields = {
  */
 export const createMeetingSchema = z.object({
   date: z.iso.date(),
-  /// Letzter Tag eines mehrtägigen Termins. Nur bei `CUSTOM` erlaubt und muss
-  /// hinter `date` liegen — beides prüft der Service, weil beides den Blick auf
-  /// ein zweites Feld braucht.
+  /// Letzter Tag eines mehrtägigen Termins. Muss hinter `date` liegen — das
+  /// prüft der Service, weil es den Blick auf ein zweites Feld braucht.
   endDate: z.iso.date().nullish(),
   /// Wann es losgeht, `"19:30"`. Weggelassen heißt „die Zeit der Gruppe" — die
   /// steht in `MeetingScheduleConfig`, und sie in jeden Aufrufer zu kopieren
   /// wäre eine zweite Stelle, an der sie veralten kann. Nicht `nullish`: ein
   /// Abend ohne Uhrzeit ist kein Zustand, den es geben soll.
   startTime: wallClockIn.optional(),
-  type: meetingType.default(MeetingType.CUSTOM),
   locationId: z.uuid().nullish(),
   hostPersonId: z.uuid().nullish(),
   /// Wie `hostPersonId` eine Rolle, die man schon beim Anlegen vergeben darf.
@@ -68,7 +67,6 @@ export const createMeetingSchema = z.object({
  * schreibt als ein Feld: wann, von wem, warum.
  */
 export const updateMeetingSchema = z.object({
-  type: meetingType.optional(),
   endDate: z.iso.date().nullish(),
   /// Änderbar, aber nicht leerbar — genau das heißt „Pflichtfeld" in einem
   /// PATCH. Ändert sie sich am nächsten Abend, erfahren es die anderen
@@ -175,6 +173,13 @@ export const updateMeetingScheduleSchema = z
     /// Gehört wie `autoGenerate` nicht zum Satz „wir treffen uns dienstags um
     /// 18 Uhr": Es sagt etwas über die Art der Abende, nicht über ihre Lage.
     praiseEvenings: z.coerce.boolean().optional(),
+    /// Ob erzeugte Termine den Baustein „Snacks" schon mitbringen.
+    ///
+    /// Aus derselben Familie wie `praiseEvenings`: eine Aussage über die Art
+    /// der Abende, nicht über ihre Lage. Voreingestellt aus — die Rolle ist
+    /// eine Einladung, und wer sie nicht will, soll sie nicht abschalten
+    /// müssen.
+    snackSlot: z.coerce.boolean().optional(),
   })
   .refine(
     (dto) =>
@@ -214,6 +219,16 @@ export const listMeetingsQuerySchema = paginationSchema.extend({
     .transform((value) => value === 'true'),
 });
 
+export const setSnackResponsiblesSchema = z.object({
+  /// Ersetzt die ganze Liste. Leer ist gültig — auch wo der Baustein an ist,
+  /// muss niemand dastehen, bevor es jemand zusagt.
+  ///
+  /// Dieselbe Obergrenze wie bei der Musik: mehr als die Gruppe kann nicht
+  /// mitbringen, und eine Liste ohne Deckel wäre ein offenes Feld für
+  /// beliebig viele Zeilen.
+  personIds: z.array(z.uuid()).max(9),
+});
+
 const meetingParamsSchema = z.object({
   hauskreisId: z.uuid(),
   id: z.uuid(),
@@ -233,3 +248,6 @@ export class ListMeetingsQueryDto extends createZodDto(
   listMeetingsQuerySchema,
 ) {}
 export class MeetingParamsDto extends createZodDto(meetingParamsSchema) {}
+export class SetSnackResponsiblesDto extends createZodDto(
+  setSnackResponsiblesSchema,
+) {}

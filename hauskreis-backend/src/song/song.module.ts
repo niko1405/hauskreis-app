@@ -24,7 +24,9 @@ import { AttendanceModule } from '../attendance/attendance.module';
  *
  * `SongLookupService` ist die einzige Stelle im Backend, die mit einem
  * KI-Anbieter spricht. Sie liegt hier und nicht in einem eigenen Modul, weil
- * sie nichts kann, was über Lieder hinausgeht.
+ * sie nichts kann, was über Lieder hinausgeht — und weil sie den `SongService`
+ * braucht: Bevor das Modell gefragt wird, sieht sie in der eigenen
+ * Song-Tabelle nach.
  */
 @Module({
   imports: [

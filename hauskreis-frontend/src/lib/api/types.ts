@@ -117,7 +117,6 @@ export type AccountDeleted = S['AccountDeletedResponseDto'];
 /** Eine Person-Zeile, die noch niemandem gehört — das Angebot eines Hauskreises. */
 export type Invitation = S['InvitationListResponseDto'][number];
 
-export type MeetingType = Meeting['type'];
 export type MeetingStatus = Meeting['status'];
 export type AttendanceStatus = Meeting['attendances'][number]['status'];
 /** Die Einheit am Abend — dort sitzt die Nachbereitung. */
@@ -128,12 +127,6 @@ export type Attendance = S['AttendanceResponseDto'];
 
 /** Der Haken am Actionstep — pro Person, nicht pro Abend. */
 export type ActionstepDone = S['ActionstepDoneResponseDto'];
-
-export const MEETING_TYPES = [
-  'STANDARD',
-  'LOBPREIS_GEBET',
-  'CUSTOM',
-] as const satisfies readonly MeetingType[];
 
 // ── Vorschläge ──────────────────────────────────────────────────────────────
 

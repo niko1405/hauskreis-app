@@ -2,7 +2,7 @@
  * Abfrageparameter der Listen-Routen. Liegen getrennt, weil sowohl die
  * Endpunkt-Funktionen als auch die Query-Keys sie brauchen.
  */
-import type { MeetingType, TopicStatus } from './types';
+import type { TopicStatus } from './types';
 
 /** `take` maximal 100, Vorgabe 20 (`docs/api-fuer-frontend.md` §5). */
 export interface PageParams {
@@ -66,5 +66,3 @@ export interface AssignmentParams {
   to: string;
   personId?: string;
 }
-
-export type { MeetingType };

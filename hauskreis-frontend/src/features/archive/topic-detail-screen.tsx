@@ -140,7 +140,7 @@ function Loaded({ topic }: { topic: Topic }) {
           />
           <div className="mt-1.5 flex items-center gap-2">
             {topic.status === 'RUNNING' ? (
-              <Badge variant="topic">läuft</Badge>
+              <Badge variant="warn">läuft</Badge>
             ) : (
               <Badge>abgeschlossen</Badge>
             )}

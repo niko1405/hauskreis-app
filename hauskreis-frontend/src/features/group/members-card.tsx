@@ -94,7 +94,7 @@ function MemberRow({ person }: { person: PersonListEntry }) {
   }
   if (person.playsInstrument) {
     badges.push(
-      <Badge key="instrument" variant="music">
+      <Badge key="instrument" variant="success">
         <span role="img" aria-label="Instrument" title="Instrument">
           <Guitar size={14} />
         </span>

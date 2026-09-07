@@ -16,8 +16,8 @@
  * steht sie nicht im Bausteinkasten: dort hätte man sie vorher angehakt, also zu
  * einem Zeitpunkt, an dem es nichts nachzubereiten gibt. Stattdessen erscheint
  * ab Terminbeginn ein Hinweis (`NotesPrompt`), ein Klick legt die Karte an, und
- * im Bearbeitungsmodus lässt sie sich wieder ganz entfernen — danach ist der
- * Hinweis zurück, als wäre nichts gewesen.
+ * ein Knopf an ihrem Fuß nimmt sie wieder ganz weg — danach ist der Hinweis
+ * zurück, als wäre nichts gewesen.
  *
  * **Anders als beim Thema wird hier nichts zurückgehalten.** Der Inhalt einer
  * Einheit gehört bis zum Abendbeginn denen, die ihn vorbereiten — an der
@@ -29,8 +29,8 @@
  * nur da, wenn etwas drinsteht. Vorher standen beide immer, auch leer — eine
  * Karte, die man gerade erst angelegt hatte, sah damit aus wie ein Formular mit
  * zwei unerledigten Zeilen. Nicht jeder Abend braucht beides: manchmal gibt es
- * nur einen Vorsatz und nichts zusammenzufassen. Im Bearbeitungsmodus legt ein
- * Knopf das fehlende Stück an; bleibt es leer, verschwindet es wieder.
+ * nur einen Vorsatz und nichts zusammenzufassen. Ein Knopf legt das fehlende
+ * Stück an; bleibt es leer, verschwindet es wieder.
  */
 import { NotebookPen, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -87,14 +87,18 @@ export function NotesPrompt({
  */
 export function NotesCard({
   meeting,
-  /** Ob jetzt gerade geschrieben werden darf — der Bearbeitungsmodus. */
+  /**
+   * Ob geschrieben werden darf. An einem **vergangenen** Abend ja — die
+   * Nachbereitung entsteht ja erst danach; an einem **abgesagten** nicht, dort
+   * gibt es nichts zu protokollieren.
+   */
   editable,
   /** Ob der Abend schon angefangen hat. Entscheidet über den Abhak-Block. */
   started,
   saving,
   onSummary,
   onActionstep,
-  /** Fehlt außerhalb des Bearbeitungsmodus — dort gibt es nichts zu löschen. */
+  /** Fehlt an einem abgesagten Abend, wo es nichts zu löschen gibt. */
   onRemove,
 }: {
   meeting: Meeting;
@@ -113,8 +117,8 @@ export function NotesCard({
   const [addingSummary, setAddingSummary] = useState(false);
   const [addingActionstep, setAddingActionstep] = useState(false);
 
-  // Der Bearbeitungsmodus zählt mit: wer ihn verlässt, während ein frisch
-  // angelegtes Feld noch leer ist, soll es nicht als leere Zeile zurücklassen.
+  // `editable` zählt mit: An einem abgesagten Abend soll ein frisch angelegtes,
+  // noch leeres Feld nicht als leere Zeile stehen bleiben.
   const showSummary =
     Boolean(meeting.summaryText) || (editable && addingSummary);
   const showActionstep =

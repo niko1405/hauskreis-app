@@ -52,6 +52,7 @@ function setup() {
       ),
     },
     meetingSongLeader: { findMany: jest.fn().mockResolvedValue([]) },
+    meetingSnackResponsible: { findMany: jest.fn().mockResolvedValue([]) },
     absencePeriod: { findMany: jest.fn().mockResolvedValue([]) },
   };
 

@@ -19,7 +19,6 @@ import type { CustomMeetingNotificationService } from './custom-meeting-notifica
 import type { TopicLinkService } from '../topic/topic-link.service';
 import type { MeetingScheduleConfigService } from './meeting-schedule-config.service';
 import type { IfMatchCondition } from '../common/http/etag';
-import { MeetingType } from '../../generated/prisma/enums';
 import { withClock } from './group-clock.testing';
 
 /** Die Zone der Gruppe — in den Tests immer dieselbe. */
@@ -37,7 +36,7 @@ function meeting(startMinutes = 1080) {
     date: ABEND,
     endDate: null,
     startMinutes,
-    type: MeetingType.STANDARD,
+    generated: true,
     status: 'PLANNED',
     hasTopicSlot: true,
     hasSongSlot: true,
@@ -118,11 +117,7 @@ describe('MeetingService.create', () => {
   it('nimmt die Zeit der Gruppe, wenn keine dabeisteht', async () => {
     const { service, create } = setup(1170, { anlegen: true });
 
-    await service.create(
-      'hk1',
-      { date: '2026-08-11', type: MeetingType.CUSTOM } as never,
-      ICH,
-    );
+    await service.create('hk1', { date: '2026-08-11' } as never, ICH);
 
     expect(create.mock.calls[0][0].data.startMinutes).toBe(1170);
   });
@@ -134,7 +129,7 @@ describe('MeetingService.create', () => {
       'hk1',
       {
         date: '2026-08-11',
-        type: MeetingType.CUSTOM,
+        generated: false,
         // Das DTO hat den String längst in Minuten übersetzt.
         startTime: 1200,
       } as never,

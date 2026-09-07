@@ -104,9 +104,9 @@ export function ConflictBanner({
   onResolve: () => void | Promise<void>;
 }) {
   return (
-    <div className="rounded-md border border-topic-line bg-topic-bg p-4">
-      <p className="text-sm font-bold text-topic">Das hat nicht geklappt</p>
-      <p className="mt-1 text-xs leading-relaxed text-topic/80">
+    <div className="rounded-md border border-warn-line bg-warn-bg p-4">
+      <p className="text-sm font-bold text-warn">Das hat nicht geklappt</p>
+      <p className="mt-1 text-xs leading-relaxed text-warn/80">
         Dein Stand war nicht mehr der aktuelle — jemand hat hier inzwischen
         gespeichert. Wir haben ihn aufgefrischt; sieh kurz drüber und probier es
         noch einmal.

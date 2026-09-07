@@ -2,11 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
-import { MeetingStatus, MeetingType } from '../../generated/prisma/enums';
-import { isLastOfMonth, upcomingMeetingDates } from './meeting-schedule';
+import { MeetingStatus } from '../../generated/prisma/enums';
+import {
+  finishedBefore,
+  isLastOfMonth,
+  upcomingMeetingDates,
+} from './meeting-schedule';
 import { GroupClockService } from './group-clock.service';
 import { MeetingScheduleConfigService } from './meeting-schedule-config.service';
-import { slotDefaults } from './meeting-slots';
+import { EVENING_SLOTS, PRAISE_SLOTS } from './meeting-slots';
 import { CRON_TIME_ZONE } from '../common/time/local-evening';
 
 /** How many future meetings should always be available for planning. */
@@ -62,6 +66,12 @@ export class MeetingGeneratorService {
    * Gruppe für Gruppe und nicht in einem Rutsch, seit jede ihre eigene Zeitzone
    * hat: „gestern" fängt in Auckland zwölf Stunden früher an als in Berlin, und
    * ein gemeinsames `updateMany` müsste sich für eine der beiden entscheiden.
+   *
+   * **`finishedBefore` und nicht `date < heute`.** Vorbei heißt ganz vorbei:
+   * Eine Freizeit von Freitag bis Sonntag wurde sonst am Samstag um drei Uhr
+   * geschlossen, während sie lief — und weil der Startbildschirm für seine
+   * kommenden Abende auf `PLANNED` filtert, fiel sie ab diesem Moment ganz aus
+   * ihm heraus. Dieselbe Unterscheidung, die die Listen längst treffen.
    */
   async closePastMeetings(now = new Date()): Promise<number> {
     const hauskreise = await this.prisma.hauskreis.findMany({
@@ -73,7 +83,7 @@ export class MeetingGeneratorService {
         const result = await this.prisma.meeting.updateMany({
           where: {
             hauskreisId: id,
-            date: { lt: await this.clock.today(id, now) },
+            ...finishedBefore(await this.clock.today(id, now)),
             status: MeetingStatus.PLANNED,
           },
           data: { status: MeetingStatus.COMPLETED },
@@ -173,21 +183,24 @@ export class MeetingGeneratorService {
 
     const result = await this.prisma.meeting.createMany({
       data: missing.map((date) => {
-        const type =
-          rhythm.praiseEvenings && isLastOfMonth(date, rhythm.intervalWeeks)
-            ? MeetingType.LOBPREIS_GEBET
-            : MeetingType.STANDARD;
+        const praise =
+          rhythm.praiseEvenings && isLastOfMonth(date, rhythm.intervalWeeks);
 
-        // Bausteine und Uhrzeit kommen aus Terminart und Rhythmus und werden
-        // hier ausdrücklich gesetzt statt den Spalten-Defaults überlassen: die
-        // stimmen nur für STANDARD um 18 Uhr, und ein Lobpreisabend mit
-        // Themen-Slot wäre genau der Zustand, den die Slots abschaffen sollten.
+        // Bausteine und Uhrzeit werden ausdrücklich gesetzt statt den
+        // Spalten-Defaults überlassen: die stimmen nur für einen gewöhnlichen
+        // Abend um 18 Uhr, und ein Lobpreisabend mit Themen-Slot wäre genau der
+        // Zustand, den die Bausteine abschaffen sollten.
         return {
           hauskreisId,
           date,
-          type,
+          generated: true,
           startMinutes: rhythm.startMinutes,
-          ...slotDefaults(type),
+          ...(praise ? PRAISE_SLOTS : EVENING_SLOTS),
+          // Nach der Belegung und nicht in ihr: Snacks hängen nicht daran, ob
+          // der Abend ein Thema oder ein Testimony hat — gegessen wird an
+          // beiden. Was darüber entscheidet, ist allein die Einstellung der
+          // Gruppe, und die steht voreingestellt auf aus.
+          hasSnackSlot: rhythm.snackSlot,
         };
       }),
       // Belt and braces against a concurrent run: the unique index on
@@ -210,16 +223,13 @@ export class MeetingGeneratorService {
    * Lauf gerade startet, und zwei Nächte hintereinander legten zwei um eine
    * Woche versetzte Reihen an (siehe `upcomingMeetingDates`).
    *
-   * **Nur `STANDARD` und `LOBPREIS_GEBET`.** Ein `CUSTOM`-Termin ist von Hand
-   * angelegt — ein Geburtstag am Samstag verschöbe sonst den Takt der
-   * Dienstage. Abgesagte zählen mit: Der Abend fällt aus, der Rhythmus nicht.
+   * **Nur selbst erzeugte.** Ein von Hand angelegter Termin gibt keinen Takt
+   * vor — ein Geburtstag am Samstag verschöbe sonst den der Dienstage.
+   * Abgesagte zählen mit: Der Abend fällt aus, der Rhythmus nicht.
    */
   private async lastGeneratedDate(hauskreisId: string): Promise<Date | null> {
     const last = await this.prisma.meeting.findFirst({
-      where: {
-        hauskreisId,
-        type: { in: [MeetingType.STANDARD, MeetingType.LOBPREIS_GEBET] },
-      },
+      where: { hauskreisId, generated: true },
       orderBy: { date: 'desc' },
       select: { date: true },
     });

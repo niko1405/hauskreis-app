@@ -57,7 +57,9 @@ export function AttendanceCard({
   // Eingeladene zählen nicht mit: Wer sich noch nie angemeldet hat, kann nicht
   // antworten und stünde auf ewig unter „weiß noch nicht". Der Server rechnet
   // für „alle haben abgesagt" mit derselben Menge. Ausgetretene kommen gar
-  // nicht erst an — die sortiert `findAll` aus.
+  // nicht erst an — die sortiert `findAll` aus. Dieselbe Regel steht als
+  // `attendanceCounts` in `lib/meeting.ts`, wo die Terminkarte sie liest; hier
+  // werden neben der Zahl auch die Namen gebraucht.
   const active = (people.data ?? []).filter(
     (person) => person.acceptedAt !== null,
   );

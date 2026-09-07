@@ -90,6 +90,8 @@ export const qk = {
           [...root, 'meetings', meetingId, 'songs'] as const,
         songLeaders: (meetingId: string) =>
           [...root, 'meetings', meetingId, 'song-leaders'] as const,
+        snackResponsibles: (meetingId: string) =>
+          [...root, 'meetings', meetingId, 'snack-responsibles'] as const,
         /// Die Gebetsanliegen eines Abends. Eigener Schlüssel wie bei den
         /// Liedern: Sie stehen nicht in der Antwort des Termins und haben
         /// deshalb ihren eigenen ETag.

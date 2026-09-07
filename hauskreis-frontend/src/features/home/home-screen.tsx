@@ -10,17 +10,21 @@ import {
   ChevronRight,
   Circle,
   CircleCheckBig,
-  Clock,
-  Map,
-  MapPin,
+  Navigation,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { RoleChip } from '@/components/domain/role-badge';
+import { DateBox, TimeAndPlace } from '@/components/domain/date-box';
 import { useHome, useMe, useSetActionstepDone } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import { formatDay, formatRelativeDay, groupNow } from '@/lib/date';
+import {
+  formatDay,
+  formatDayRange,
+  formatRelativeDay,
+  groupNow,
+} from '@/lib/date';
 import { actionstepProgress, mapsUrl, meetingHeadline } from '@/lib/meeting';
 import { firstName } from '@/lib/person';
 import { ScreenHeader } from '@/components/layout/screen-header';
@@ -100,16 +104,18 @@ export function HomeScreen() {
           />
         </section>
 
-        {/* Der obere Platz beantwortet „wo komme ich her, wo bin ich gerade",
-            der untere „was kommt". Vorher gab es nur den unteren, und der
-            zeigte den laufenden Abend unter der Überschrift „Nächstes
-            Treffen" — keine Auskunft mehr, wenn man schon dort sitzt.
+        {/* Drei Abschnitte in der Reihenfolge, in der man sie braucht: der
+            Abend, an dem man gerade sitzt — der nächste — der letzte.
 
-            Läuft nichts, steht hier der letzte Abend. Am Mittwochmorgen ist er
-            die interessantere Karte: Seine Nachbereitung fehlt noch, und man
-            will nachlesen, was war — während oben bisher schon der Dienstag in
-            einer Woche stand. Welcher der beiden es ist, entscheidet der
-            Server; er füllt immer nur eines der Felder. */}
+            Ganz oben nur, wenn wirklich einer läuft; „Nächstes Treffen: heute"
+            war keine Auskunft mehr, wenn man schon dort saß. Ganz unten der
+            vergangene: Am Mittwochmorgen will man nachlesen, was war, und die
+            Nachbereitung fehlt noch — aber gefragt ist zuerst, was kommt.
+
+            `currentMeeting` und `lastMeeting` schließen einander aus, und das
+            entscheidet der Server: Ob ein Abend läuft, hängt an seiner
+            Treffpunktzeit in der Zone der Gruppe, und diese Frage zweimal zu
+            beantworten wäre eine Antwort zu viel. */}
         {currentMeeting && (
           <section>
             <SectionTitle>Aktueller Termin</SectionTitle>
@@ -117,10 +123,44 @@ export function HomeScreen() {
                 Actionstep darüber: die Farbe von „gilt gerade". */}
             <NextMeetingCard
               meeting={currentMeeting}
-              className="border-music-line bg-music-bg/30"
+              className="border-success-line bg-success-bg/30"
             />
           </section>
         )}
+
+        <section>
+          <SectionTitle
+            action={
+              <Link
+                href="/termine"
+                className="flex items-center gap-0.5 text-xs font-bold text-terracotta-500 hover:underline"
+              >
+                Alle Termine <ChevronRight size={14} />
+              </Link>
+            }
+          >
+            {/* „Nächstes Treffen" hieß es, solange es nur eine Karte gab.
+                Zwischen „Aktueller Termin" und „Letzter Termin" liest sich
+                „Nächster Termin" als das mittlere Glied — drei Wörter für
+                dieselbe Sache untereinander wären zwei zu viel. */}
+            Nächster Termin
+          </SectionTitle>
+          {nextMeeting ? (
+            <NextMeetingCard meeting={nextMeeting} />
+          ) : (
+            <Card>
+              <p className="text-sm text-stone-400 italic">
+                {/* „Danach" braucht ein Davor — den laufenden Abend. Der
+                    letzte zählt hier **nicht**: Er steht unter dieser Karte,
+                    und „danach ist nichts geplant" liest sich als Aussage über
+                    das, was darüber steht. */}
+                {currentMeeting
+                  ? 'Danach ist noch nichts geplant.'
+                  : 'Gerade ist kein Termin geplant.'}
+              </p>
+            </Card>
+          )}
+        </section>
 
         {lastMeeting && (
           <section>
@@ -142,39 +182,6 @@ export function HomeScreen() {
             />
           </section>
         )}
-
-        <section>
-          <SectionTitle
-            action={
-              <Link
-                href="/termine"
-                className="flex items-center gap-0.5 text-xs font-bold text-terracotta-500 hover:underline"
-              >
-                Alle Termine <ChevronRight size={14} />
-              </Link>
-            }
-          >
-            {/* „Nächstes Treffen" hieß es, solange es nur eine Karte gab.
-                Unter „Aktueller Termin" liest sich „Nächster Termin" als das
-                Gegenstück — zwei Wörter für dieselbe Sache untereinander wären
-                eines zu viel. */}
-            Nächster Termin
-          </SectionTitle>
-          {nextMeeting ? (
-            <NextMeetingCard meeting={nextMeeting} />
-          ) : (
-            <Card>
-              <p className="text-sm text-stone-400 italic">
-                {/* „Danach" braucht ein Davor. Das ist jetzt auch der letzte
-                    Abend — ohne ihn stünde „Gerade ist kein Termin geplant"
-                    unter einer Karte, die einen zeigt. */}
-                {currentMeeting || lastMeeting
-                  ? 'Danach ist noch nichts geplant.'
-                  : 'Gerade ist kein Termin geplant.'}
-              </p>
-            </Card>
-          )}
-        </section>
       </div>
     </div>
   );
@@ -225,7 +232,7 @@ function OpenActionstepCard({ step }: { step: HomeActionstep }) {
       className={cn(
         'transition-colors',
         step.done
-          ? 'border-music-line bg-music-bg/40'
+          ? 'border-success-line bg-success-bg/40'
           : 'border-terracotta-100 bg-terracotta-50/40',
       )}
     >
@@ -241,7 +248,7 @@ function OpenActionstepCard({ step }: { step: HomeActionstep }) {
             'flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-50',
             'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
             step.done
-              ? 'bg-music-bg text-music'
+              ? 'bg-success-bg text-success'
               : 'bg-card text-stone-300 hover:text-terracotta-500',
           )}
         >
@@ -251,7 +258,7 @@ function OpenActionstepCard({ step }: { step: HomeActionstep }) {
           <p
             className={cn(
               'text-[10px] font-bold tracking-widest uppercase',
-              step.done ? 'text-music' : 'text-terracotta-500',
+              step.done ? 'text-success' : 'text-terracotta-500',
             )}
           >
             Actionstep der Woche
@@ -279,57 +286,50 @@ function NextMeetingCard({
 }) {
   return (
     <Card className={cn('space-y-4', className)}>
-      {/* Die Uhrzeit steht nur hier — auf dieser einen Karte geht man auf einen
-          Abend zu. In den Terminlisten liest man quer über Wochen, dort wäre sie
-          an jeder Zeile Rauschen. Seit sich die Zeit einstellen lässt, ist
-          „18 Uhr wie immer" keine sichere Annahme mehr. */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-xs font-medium text-stone-500">
-          <Link
-            href={`/termin?id=${meeting.id}`}
-            className="block min-w-0 flex-1 mb-3"
-          >
-            <span className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
-              {formatDay(meeting.date)} · {formatRelativeDay(meeting.date)}
+      {/* Dieselbe Kopfzeile wie auf der Terminkarte: Datums-Kästchen links,
+          Titel, darunter Uhrzeit und Ort. Sie sahen vorher verschieden aus —
+          hier Datum und Countdown in einer Zeile, dort eine andere Anordnung —,
+          obwohl es dasselbe ist. Ein Zeitraum bekommt kein Kästchen; eine
+          Freizeit ist kein Tag. */}
+      <div className="flex items-start gap-3">
+        {meeting.endDate === null && <DateBox day={meeting.date} />}
+
+        <div className="min-w-0 flex-1">
+          <Link href={`/termin?id=${meeting.id}`} className="block min-w-0">
+            <span className="text-[10px] font-semibold text-stone-400">
+              {meeting.endDate
+                ? formatDayRange(meeting.date, meeting.endDate)
+                : formatRelativeDay(meeting.date)}
             </span>
-            <h3 className="mt-0.5 font-serif text-lg font-bold text-stone-900">
+            <h3 className="mt-0.5 font-serif text-xl font-bold text-stone-900">
               {meetingHeadline(meeting)}
             </h3>
           </Link>
-          {meeting.location ? (
-            <a
-              href={mapsUrl(meeting.location)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 hover:text-terracotta-600"
-            >
-              <MapPin size={12} className="text-stone-400" />
-              {meeting.location.name}
-            </a>
-          ) : (
-            <span className="inline-flex items-center gap-1">
-              <MapPin size={12} className="text-stone-400" />
-              Ort noch offen
-            </span>
-          )}
+
+          {/* Hier führt der Ort nach Maps, in der Terminliste nicht: Dort ist
+              die ganze Karte ein Link auf den Abend. */}
+          <TimeAndPlace
+            startTime={meeting.startTime}
+            location={meeting.location}
+            linkToMaps
+          />
         </div>
 
-        <div className="flex flex-col shrink-0 items-center justify-center gap-3">
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-canvas px-2.5 py-1 text-xs font-bold text-stone-600">
-            <Clock size={13} className="text-terracotta-500" />
-            {meeting.startTime} Uhr
-          </span>
-          {meeting.location && (
-            <a
-              href={mapsUrl(meeting.location)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center p-3 bg-terracotta-600 rounded-full"
-            >
-              <Map size={19} className="text-stone-400" color="white" />
-            </a>
-          )}
-        </div>
+        {/* Der runde Maps-Knopf bleibt: Auf **dieser** Karte geht man auf einen
+            Abend zu, und „wie komme ich hin" ist dort die nächste Frage. In der
+            Terminliste liest man quer über Wochen — da wäre er an jeder Zeile
+            ein Ziel, das niemand meint. */}
+        {meeting.location && (
+          <a
+            href={mapsUrl(meeting.location)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="In Maps öffnen"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-terracotta-600 text-white transition-colors hover:bg-terracotta-700"
+          >
+            <Navigation size={17} />
+          </a>
+        )}
       </div>
 
       {/* Alle Rollen des Abends, in derselben Form wie auf der Terminkarte —
@@ -339,22 +339,12 @@ function NextMeetingCard({
         href={`/termin?id=${meeting.id}`}
         className="flex flex-wrap items-center gap-2"
       >
-        {meeting.location && !meeting.location.requiresHost ? (
-          <p
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors',
-              'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
-              'bg-terracotta-50 text-terracotta-700 border-terracotta-100',
-            )}
-          >
-            <MapPin size={12} className="shrink-0" />
-            <span>{meeting.location.name}</span>
-          </p>
-        ) : (
-          meeting.host && (
-            <RoleChip kind="HOST" people={meeting.host ? [meeting.host] : []} />
-          )
-        )}
+        {/* Braucht der Ort keinen Gastgeber — Schlosspark, Café —, steht hier
+            **nichts**. Der Ort selbst steht schon in der Kopfzeile darüber;
+            hier stand er ein zweites Mal, als terracotta Chip, und behauptete
+            damit eine Rolle, die es an dem Abend gar nicht gibt. Dieselbe
+            Regel wie in den Zuständigkeiten am Termin (`meetingRoles`). */}
+        {meeting.host && <RoleChip kind="HOST" people={[meeting.host]} />}
         {meeting.hasTopicSlot && meeting.topicResponsibles.length > 0 && (
           <RoleChip kind="TOPIC" people={meeting.topicResponsibles} />
         )}
@@ -363,6 +353,9 @@ function NextMeetingCard({
         )}
         {meeting.hasSongSlot && meeting.songLeaders.length > 0 && (
           <RoleChip kind="SONG" people={meeting.songLeaders} />
+        )}
+        {meeting.hasSnackSlot && meeting.snackResponsibles.length > 0 && (
+          <RoleChip kind="SNACK" people={meeting.snackResponsibles} />
         )}
       </Link>
     </Card>

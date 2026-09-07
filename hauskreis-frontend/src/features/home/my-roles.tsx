@@ -27,7 +27,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { PRESSABLE } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ROLE_ICON, ROLE_STYLE } from '@/components/domain/role-badge';
+import { ROLE_ICON } from '@/components/domain/role-badge';
 import { formatDay, formatRelativeDay } from '@/lib/date';
 import { ROLE_LABEL } from '@/lib/meeting';
 import { cn } from '@/lib/cn';
@@ -216,17 +216,14 @@ function roleKey(role: Assignment): string {
 
 function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
   const Icon = ROLE_ICON[role.role];
-  const Style = ROLE_STYLE[role.role];
 
   const content = (
     <span className="flex items-center justify-between gap-3">
       <span className="flex min-w-0 items-center gap-3">
-        <span
-          className={cn(
-            'flex h-9 w-9 shrink-0 items-center justify-center rounded-md',
-            Style,
-          )}
-        >
+        {/* Ohne Rollenfarbe: Sechs verschiedene Kacheln untereinander waren
+            ein Farbkasten, in dem keine Farbe mehr etwas bedeutete. Welche
+            Rolle es ist, sagen Symbol und Name daneben. */}
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-canvas text-stone-500">
           <Icon size={20} />
         </span>
         <span className="min-w-0">

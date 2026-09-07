@@ -11,22 +11,6 @@ datasource db {
   provider = "postgresql"
 }
 
-/// A meeting that follows the usual format: one topic, prepared by someone.
-/// Generated automatically for every upcoming Tuesday.
-///
-/// LOBPREIS_GEBET replaces the last standard meeting of each month and carries
-/// a testimony (or just songs) instead of a topic.
-///
-/// CUSTOM is anything the group schedules themselves (birthdays, one-offs) and
-/// has no required host, topic or location.
-enum MeetingType {
-  STANDARD
-  LOBPREIS_GEBET
-  CUSTOM
-
-  @@map("meeting_type")
-}
-
 enum MeetingStatus {
   PLANNED
   CANCELLED
@@ -65,6 +49,14 @@ enum AssignmentRole {
   /// TOPIC und nie mit ihm zusammen: ein Abend hat entweder ein Thema oder ein
   /// Testimony, nicht beides.
   TESTIMONY
+  /// Wer an dem Abend etwas zu essen mitbringt. Mehrere möglich, wie bei SONG —
+  /// Bring & Share heißt oft, dass zwei Leute etwas beisteuern.
+  ///
+  /// Die einzige Rolle **ohne** eigene Vorschlagsliste: „wer war am längsten
+  /// nicht dran" ist hier keine Frage, die jemand stellt. Als **Last** zählt
+  /// sie trotzdem in allen anderen Listen — wer den Kuchen bringt, ist an dem
+  /// Abend beschäftigt.
+  SNACK
 
   @@map("assignment_role")
 }
@@ -93,6 +85,8 @@ enum NotificationType {
   TOPIC_REMINDER
   /// Ahead of the meeting whose songs you lead.
   SONG_REMINDER
+  /// Ahead of the meeting you bring something to eat to.
+  SNACK_REMINDER
   /// Mid-week nudge about the actionstep from the last meeting.
   ACTIONSTEP_REMINDER
   /// A new prayer buddy rotation started.
@@ -313,6 +307,7 @@ model Person {
   cancelledMeetings       Meeting[]                 @relation("MeetingCanceller")
   songsCreated            Song[]                    @relation("SongCreator")
   songLeaderships         MeetingSongLeader[]       @relation("SongLeader")
+  snackDuties             MeetingSnackResponsible[] @relation("SnackResponsible")
   songsSuggested          MeetingSong[]             @relation("SongSuggester")
   /// Die Rolle „Thema" an einem einzelnen Abend — das Gegenstück zu
   /// `songLeaderships`. Zuständigkeit für einen Abend, nicht für ein Thema.
@@ -444,17 +439,39 @@ model Meeting {
   /// leeres Feld hieße nur „hat noch niemand eingetragen". Automatisch erzeugte
   /// Abende bekommen die Zeit aus `MeetingScheduleConfig`.
   startMinutes        Int                  @default(1080) @map("start_minutes")
-  type                MeetingType          @default(STANDARD)
-  status              MeetingStatus        @default(PLANNED)
-  /// Woraus der Abend besteht. Die vier Schalter sind das, was der **Typ**
-  /// vorher nur behauptet hat: geprüft wurde nie etwas, man konnte einem
-  /// Lobpreisabend ein Thema geben und einem Geburtstag ein Testimony.
+  /// Ob der nächtliche Lauf diesen Abend angelegt hat — oder ein Mensch.
   ///
-  /// Jetzt ist der Typ eine Voreinstellung und die Schalter sind die Regel —
-  /// STANDARD bringt Thema und Lieder mit, LOBPREIS_GEBET Lieder und
-  /// Testimony, CUSTOM gar nichts und alles einzeln zubuchbar. Ein
-  /// Geburtstagsabend braucht keine Themenzuteilung, und er soll in der
-  /// Fairness-Rechnung des Themas auch nicht mitzählen.
+  /// Das ist alles, was von der früheren `MeetingType` übrig ist. `STANDARD`
+  /// gegen `LOBPREIS_GEBET` war reine Doppelung: Woraus ein Abend besteht,
+  /// sagen die Bausteine darunter genauer, und der Typ behauptete es nur.
+  /// `CUSTOM` sagte dagegen etwas, das kein Baustein weiß — und vier Regeln
+  /// hängen daran:
+  ///
+  /// 1. **Der Taktschlag.** Die Reihe der erzeugten Abende gibt den Rhythmus
+  ///    vor; ein Geburtstag am Samstag verschöbe sonst den Takt der Dienstage.
+  /// 2. **„Es gibt einen neuen Termin".** Die sieben Dienstage vom Generator
+  ///    sind keine Neuigkeit, ein von Hand angelegter Abend schon — samt seiner
+  ///    Vorlauf-Erinnerung.
+  /// 3. **Der Actionstep.** Ein leerer Abend beendet den Vorsatz von davor;
+  ///    ein selbst angelegter (ein Geburtstag zwischen zwei Dienstagen) nicht.
+  /// 4. **Löschen statt Absagen.** Einen erzeugten Abend legt der Terminplaner
+  ///    sofort wieder an — deshalb sagt man ihn ab.
+  ///
+  /// `@default(false)`: Angelegt wird von Hand, erzeugt wird vom Generator, und
+  /// der schreibt die Spalte ausdrücklich — wie er schon die Bausteine
+  /// ausdrücklich schreibt, statt sich auf Vorgaben zu verlassen.
+  generated           Boolean              @default(false)
+  status              MeetingStatus        @default(PLANNED)
+  /// Woraus der Abend besteht — und zwar als Einziges. Das war einmal die
+  /// **Terminart**, die es nur behauptete: geprüft wurde nie etwas, man konnte
+  /// einem Lobpreisabend ein Thema geben und einem Geburtstag ein Testimony.
+  ///
+  /// Die Schalter sind jetzt die ganze Aussage. Beim Erzeugen wählt der
+  /// Generator zwischen zwei Belegungen (`EVENING_SLOTS`, `PRAISE_SLOTS`), von
+  /// Hand angelegte Abende starten leer (`EMPTY_SLOTS`) und bekommen einzeln
+  /// dazugebucht, was sie brauchen. Ein Geburtstagsabend braucht keine
+  /// Themenzuteilung, und er soll in der Fairness-Rechnung des Themas auch
+  /// nicht mitzählen.
   ///
   /// **Thema, Testimony und Nachbereitung schließen einander paarweise aus**,
   /// aber nicht alle drei gegeneinander. Thema und Testimony, weil beides der
@@ -485,6 +502,19 @@ model Meeting {
   /// andere hieße, dass an jedem Abend im Archiv die Anliegen verschwinden,
   /// die dort stehen.
   hasPrayerSlot       Boolean              @default(true) @map("has_prayer_slot")
+  /// Wer an dem Abend etwas zu essen mitbringt.
+  ///
+  /// `@default(false)`, und das ist die Aussage: Die Rolle ist eine
+  /// **Einladung**, kein Abschalten. Anders als bei den Gebetsanliegen, die an
+  /// jedem Abend im Archiv schon dastanden, bekäme sonst jeder vergangene Abend
+  /// rückwirkend eine offene Zuständigkeit, die nie jemand vermisst hat.
+  ///
+  /// Ob der Terminplaner ihn vorbelegt, entscheidet die Gruppe über
+  /// `meeting_schedule_config.snack_slot` — auch dort voreingestellt aus.
+  ///
+  /// Schließt nichts aus: Kuchen gibt es am Themenabend wie am Lobpreisabend
+  /// wie am Geburtstag.
+  hasSnackSlot        Boolean              @default(false) @map("has_snack_slot")
   locationId          String?              @map("location_id") @db.Uuid
   hostPersonId        String?              @map("host_person_id") @db.Uuid
   /// Wie der Abend überschrieben ist — „Geburtstag von Mira", aber auch ein
@@ -545,6 +575,7 @@ model Meeting {
   topicSession      TopicSession?
   attendances       MeetingAttendance[]
   songLeaders       MeetingSongLeader[]
+  snackResponsibles MeetingSnackResponsible[]
   songs             MeetingSong[]
   actionstepDone    MeetingActionstepDone[]
   prayerRequests    MeetingPrayerRequest[]
@@ -805,6 +836,25 @@ model MeetingSongLeader {
   @@map("meeting_song_leader")
 }
 
+/// Wer an einem Abend etwas zu essen mitbringt — der Zwilling von
+/// `MeetingSongLeader`, und aus demselben Grund eine eigene Tabelle: Es können
+/// mehrere sein, und eine Spalte am Termin trüge nur einen.
+///
+/// Ohne eigene Felder: Was jemand mitbringt, spricht die Gruppe ab. Ein
+/// `dish String?` wäre ein zweiter Chat neben WhatsApp, gegen den diese App
+/// gebaut ist (CLAUDE.md §11) — hier steht nur, wer sich darum kümmert.
+model MeetingSnackResponsible {
+  meetingId String @map("meeting_id") @db.Uuid
+  personId  String @map("person_id") @db.Uuid
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  person  Person  @relation("SnackResponsible", fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([meetingId, personId])
+  @@index([personId])
+  @@map("meeting_snack_responsible")
+}
+
 /// A song put forward for one evening. `isSelected` separates the shortlist
 /// from what actually gets sung, so a suggestion that did not make it stays
 /// visible rather than being deleted.
@@ -898,6 +948,16 @@ model MeetingScheduleConfig {
   /// Nur für **neu** erzeugte Termine. Ein Lobpreisabend, der schon im Kalender
   /// steht, bleibt einer; seine Bausteine ändert man an ihm selbst.
   praiseEvenings    Boolean  @default(true) @map("praise_evenings")
+  /// Ob erzeugte Termine den Baustein „Snacks" schon mitbringen.
+  ///
+  /// Voreingestellt **aus**, anders als die beiden Schalter darüber: Die Rolle
+  /// ist neu, und eine Gruppe, die nie über Essen gesprochen hat, bekäme sonst
+  /// an jedem Dienstag eine offene Zuständigkeit, nach der niemand gefragt hat.
+  /// Wer sie will, hakt sie einmal an.
+  ///
+  /// Nur für **neu** erzeugte Termine. Was schon im Kalender steht, ändert man
+  /// an ihm selbst — wie beim Lobpreisabend.
+  snackSlot         Boolean  @default(false) @map("snack_slot")
   updatedByPersonId String?  @map("updated_by_person_id") @db.Uuid
   updatedAt         DateTime @updatedAt @map("updated_at")
   /// Optimistic locking counter, see docs/conditional requests.

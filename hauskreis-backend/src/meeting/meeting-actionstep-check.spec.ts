@@ -21,7 +21,6 @@ import type { RoleAttendanceService } from '../attendance/role-attendance.servic
 import type { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import type { TopicLinkService } from '../topic/topic-link.service';
 import type { MeetingScheduleConfigService } from './meeting-schedule-config.service';
-import { MeetingType } from '../../generated/prisma/enums';
 import { withClock } from './group-clock.testing';
 
 /** Der Termin selbst: Dienstag, der 11. August 2026. */
@@ -41,7 +40,7 @@ function setup(startMinutes = 1080) {
         id: 'm1',
         date: ABEND,
         startMinutes,
-        type: MeetingType.STANDARD,
+        generated: true,
         status: 'PLANNED',
       }),
       // `touchMeeting` greift nach dem Schreiben an die Version des Termins —

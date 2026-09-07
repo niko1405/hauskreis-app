@@ -14,6 +14,7 @@ import {
 import { MeetingService } from './meeting.service';
 import { MeetingGeneratorService } from './meeting-generator.service';
 import { MeetingScheduleConfigService } from './meeting-schedule-config.service';
+import { MeetingSnackService } from './meeting-snack.service';
 import { GroupClockService } from './group-clock.service';
 import {
   CancelMeetingDto,
@@ -24,6 +25,7 @@ import {
   SetAttendanceDto,
   UpdateMeetingDto,
   UpdateMeetingScheduleDto,
+  SetSnackResponsiblesDto,
 } from './dto/meeting.dto';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import { HauskreisAdmin } from '../auth/hauskreis-admin.decorator';
@@ -44,6 +46,7 @@ import {
   MeetingPageResponseDto,
   MeetingResponseDto,
   MeetingScheduleResponseDto,
+  SnackResponsiblesResponseDto,
 } from './dto/meeting-response.dto';
 import {
   HostSuggestionListResponseDto,
@@ -57,6 +60,7 @@ export class MeetingController {
     private readonly generator: MeetingGeneratorService,
     private readonly schedule: MeetingScheduleConfigService,
     private readonly clock: GroupClockService,
+    private readonly snacks: MeetingSnackService,
   ) {}
 
   @Get()
@@ -275,6 +279,40 @@ export class MeetingController {
       params.id,
       membership.id,
       dto.done,
+    );
+  }
+
+  @Get(':id/snack-responsibles')
+  @ApiZodResponse(SnackResponsiblesResponseDto)
+  findSnackResponsibles(@Param() params: MeetingParamsDto) {
+    return this.snacks.findResponsibles(params.hauskreisId, params.id);
+  }
+
+  /**
+   * Ersetzt, wer etwas zu essen mitbringt; eine leere Liste ist gültig.
+   *
+   * Ohne `If-Match`, wie die Musik-Zuteilung: Die Liste kommt vollständig
+   * herein und ersetzt die vorherige — zwei Leute, die gleichzeitig jemanden
+   * eintragen, wären ein Wettlauf um dieselbe Aussage und keine Kollision
+   * zweier verschiedener.
+   *
+   * Es gibt bewusst keine Vorschlagsliste daneben. „Wer war am längsten nicht
+   * dran" ist bei Snacks keine Frage, die jemand stellt.
+   */
+  @Put(':id/snack-responsibles')
+  @ApiZodResponse(SnackResponsiblesResponseDto, {
+    description: 'Ersetzt die Liste; eine leere ist gueltig',
+  })
+  setSnackResponsibles(
+    @Param() params: MeetingParamsDto,
+    @Body() dto: SetSnackResponsiblesDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.snacks.setResponsibles(
+      params.hauskreisId,
+      params.id,
+      dto,
+      membership.id,
     );
   }
 

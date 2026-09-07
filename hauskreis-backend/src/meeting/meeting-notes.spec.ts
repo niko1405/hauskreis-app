@@ -26,7 +26,6 @@ import type { CustomMeetingNotificationService } from './custom-meeting-notifica
 import type { TopicLinkService } from '../topic/topic-link.service';
 import type { MeetingScheduleConfigService } from './meeting-schedule-config.service';
 import type { IfMatchCondition } from '../common/http/etag';
-import { MeetingType } from '../../generated/prisma/enums';
 import { withClock } from './group-clock.testing';
 
 /** Die Zone der Gruppe — in den Tests immer dieselbe. */
@@ -53,7 +52,7 @@ function setup({
       date: ABEND,
       endDate: null,
       startMinutes,
-      type: MeetingType.CUSTOM,
+      generated: false,
       status: 'PLANNED',
       hasTopicSlot,
       hasSongSlot: false,

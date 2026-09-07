@@ -3,8 +3,8 @@ import { cn } from '@/lib/cn';
 const VARIANTS = {
   neutral: 'bg-stone-100 text-stone-600 border-stone-200',
   terracotta: 'bg-terracotta-50 text-terracotta-700 border-terracotta-100',
-  music: 'bg-music-bg text-music border-music-line',
-  topic: 'bg-topic-bg text-topic border-topic-line',
+  success: 'bg-success-bg text-success border-success-line',
+  warn: 'bg-warn-bg text-warn border-warn-line',
   info: 'bg-info-bg text-info border-info-line',
   alert: 'bg-alert-bg text-alert border-alert-line',
 } as const;

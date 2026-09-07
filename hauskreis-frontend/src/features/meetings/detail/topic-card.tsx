@@ -68,9 +68,35 @@ export function TopicCard({
 
         {session && sichtbar && (
           <>
-            {/* Eine Einheit ohne Thema bekommt hier keine leere Kopfzeile.
-                „Zugehöriges Thema: —" behauptete eine Lücke, wo keine ist. */}
-            {!session.topic.standalone && <TopicHeading session={session} />}
+            {/* **Zwei Plätze für zwei Aussagen.** Links, wo man zu lesen
+                anfängt: wozu dieser Abend gehört. Rechts: das wievielte Stück
+                davon er ist. Beides stand vorher als *ein* überlappendes
+                Abzeichen oben links — bei einer Serie terracotta gefüllt, bei
+                einer Hülle blass —, und wer wissen wollte, zu welchem Thema der
+                Abend gehört, musste die Kopfzeile darüber lesen.
+
+                Eine Einheit ohne Thema hat links nichts stehen: „Zugehöriges
+                Thema: —" behauptete eine Lücke, wo keine ist. */}
+            <div className="flex items-start justify-between gap-3">
+              {session.topic.standalone ? (
+                <span />
+              ) : (
+                <TopicHeading session={session} />
+              )}
+
+              <span
+                className={cn(
+                  'shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-wide',
+                  session.topic.standalone
+                    ? 'border-line-strong bg-canvas text-stone-500'
+                    : 'border-terracotta-100 bg-terracotta-50 text-terracotta-700',
+                )}
+              >
+                {session.topic.standalone
+                  ? 'Einzelne Einheit'
+                  : `Einheit ${session.sessionIndex}/${session.sessionCount}`}
+              </span>
+            </div>
 
             {/* Der Kasten ist der Weg zur Einheit. `InlineEdit` ohne `onSave`
                 rendert nur einen Absatz — im Link sitzt also nichts
@@ -78,25 +104,11 @@ export function TopicCard({
             <Link
               href={`/einheit?id=${session.id}&von=termin`}
               className={cn(
-                'group relative block rounded-lg border border-line-strong p-4 pt-5',
-                'transition-colors hover:border-terracotta-300',
+                'group block rounded-lg p-1',
+                'transition-colors',
                 PRESSABLE,
-                session.topic.standalone ? 'mt-2' : 'mt-6',
               )}
             >
-              <span
-                className={cn(
-                  'absolute -top-2.5 left-3 rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wide',
-                  session.topic.standalone
-                    ? 'border border-line-strong bg-canvas text-stone-500'
-                    : 'bg-terracotta-600 text-white',
-                )}
-              >
-                {session.topic.standalone
-                  ? 'Einzelne Einheit'
-                  : `Einheit ${session.sessionIndex} von ${session.sessionCount}`}
-              </span>
-
               <div className="flex items-baseline gap-1">
                 <InlineEdit
                   label="Titel dieses Abends"
@@ -116,16 +128,32 @@ export function TopicCard({
                   emptyLabel="Noch nichts — hilft allen, die nicht da waren."
                 />
               </div>
-
-              <div className="mt-4 rounded-lg border border-line-strong bg-canvas p-3">
-                <FieldLabel>Actionstep</FieldLabel>
-                <InlineEdit
-                  label="Actionstep"
-                  value={session.actionstepText}
-                  emptyLabel="Noch kein Actionstep für die Woche"
-                />
-              </div>
             </Link>
+
+            {/* **Der Actionstep steht außerhalb des Links.** Er trug den Haken
+                bisher unter sich, weil in einem Link kein Knopf sitzen darf —
+                und damit stand die Frage „hast du es geschafft" räumlich neben
+                dem Vorsatz statt darunter. Jetzt ist es ein Kasten: oben der
+                Satz, ein Trennstrich, darunter der Haken.
+
+                Die terracotta-Kante links ist dieselbe Farbe wie überall, wo
+                etwas zu tun ist. Sie ersetzt den vollen Rahmen — der machte aus
+                dem Actionstep eine zweite Karte in der Karte. */}
+            <div className="rounded-lg border border-line-strong border-l-2 border-l-terracotta-500 bg-canvas p-3">
+              <FieldLabel>Actionstep</FieldLabel>
+              <InlineEdit
+                label="Actionstep"
+                value={session.actionstepText}
+                emptyLabel="Noch kein Actionstep für die Woche"
+              />
+
+              {/* Der Haken hängt am **Termin** und gilt pro Person, während der
+                  Text der Einheit gehört. Zwei Dinge, ein Kasten — getrennt
+                  durch den Strich. */}
+              {session.actionstepText && children && (
+                <div className="mt-3 border-t border-line pt-3">{children}</div>
+              )}
+            </div>
 
             {/* Wer sie vorbereitet — und **nicht** dasselbe wie die Rolle
                 oben. Die Rolle sagt, wer an dem Abend dafür einsteht; das hier
@@ -144,12 +172,6 @@ export function TopicCard({
                 </span>
               </div>
             )}
-
-            {/* Der Haken bleibt hier und wandert nicht mit: Er hängt am Termin
-                und gilt pro Person, während der Text der Einheit gehört. Er
-                steht deshalb unter dem Kasten statt darin — in einem Link hat
-                ein Knopf nichts verloren. */}
-            {session.actionstepText && children}
 
             {/* Eine Hülle hat keine Geschwister — die Klappe wäre immer leer. */}
             {!session.topic.standalone && session.sessionCount > 1 && (

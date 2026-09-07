@@ -374,6 +374,32 @@ eines, für das noch niemand einen festgelegt hat. Ein Lobpreisabend hat gar kei
 Thema. Solche Zustände bekommen ihren eigenen Text — nicht `—` und nicht die
 Fehlerdarstellung.
 
+## Vier Farben, die etwas bedeuten — und keine für Rollen
+
+In `globals.css`, hell und dunkel:
+
+| Token     | heißt                  | steht an                                                 |
+| --------- | ---------------------- | -------------------------------------------------------- |
+| `success` | fertig, gewählt, läuft | „Läuft", Erfolgs-Toast, Actionstep-Haken, gewähltes Lied |
+| `warn`    | Hinweis                | Fehlerkarte, Hinweis-Kästen, KI-Vorschlag                |
+| `info`    | Nebenbemerkung         | Info-Kästen im Zuteilungs-Sheet                          |
+| `alert`   | Konflikt und Gefahr    | „Abgesagt", Löschen-Knöpfe, Versionskonflikt             |
+
+Dazu **terracotta** für die _Auswahl_ (aktiver Tab, gewählter Chip, erster Platz
+einer Rangliste) und die sieben Avatar-Paletten für Personen.
+
+**Rollen haben keine eigene Farbe.** Jede trug einmal eine — Thema und Testimony
+amber, Musik grün, Gebetsbuddy blau, Geschenk rot, Gastgeber terracotta —, und
+auf einer Terminkarte standen davon drei nebeneinander, auf „Heute" bis zu fünf.
+Weil jede für sich etwas bedeutete, bedeutete am Ende keine mehr etwas. `RoleChip`
+hat deshalb genau zwei Zustände: besetzt (neutral) und leer (gestrichelt,
+terracotta — die Einladung, jemanden zu wählen).
+
+Die ersten beiden Tokens hießen `music` und `topic`, nach den Rollen, für die
+sie erfunden wurden. Getragen haben sie an den meisten Stellen längst etwas
+anderes; ein Token, das nach einer Rolle heißt, die keine Farbe mehr hat, zeigt
+auf nichts — und der Nächste hätte darin wieder eine Rollenfarbe vermutet.
+
 ## Eine Klasse, die den Rechner rettet
 
 `app-shell.tsx`: Die Inhaltsspalte ist ab `md` ein Flex-Kind einer Zeile
@@ -728,20 +754,72 @@ Zwei Regeln prägen den Aufbau, beide inhaltlich und nicht kosmetisch.
 **Ganz oben steht die Uhrzeit.** Die erste Frage an einen Termin ist „wann", und
 sie war bisher nur halb beantwortet: es gab ein Datum und keine Uhrzeit, „wir
 fangen heute später an" lief über WhatsApp. Jetzt trägt jeder Abend eine
-(`meeting.startTime`, `"19:30"`), geändert wird sie im Bearbeitungsmodus.
+(`meeting.startTime`, `"19:30"`), und sie steht als Kästchen neben dem Datum
+direkt unter dem Titel.
 
-Das Eingabefeld hat einen eigenen Zustand und einen „Übernehmen"-Knopf, statt
-bei jedem Tastendruck zu speichern: `<input type="time">` liefert zwischendurch
+Sie hatte einmal eine eigene Sektion mitten in der Seite — Überschrift, Karte,
+Stift, eigener „Übernehmen"-Knopf —, für eine Angabe aus fünf Zeichen, nach der
+man zuerst fragt. Geändert wird sie jetzt zusammen mit Titel und Infos in
+[`MeetingEditSheet`](src/features/meetings/detail/meeting-edit-sheet.tsx).
+
+Das Formular hat einen eigenen Zustand und einen Speichern-Knopf, statt bei
+jedem Tastendruck zu schreiben: `<input type="time">` liefert zwischendurch
 leere und halbe Werte, und jeder davon wäre ein `PATCH` samt Benachrichtigung an
 die Gruppe. Leeren lässt sich das Feld nicht — ein Abend ohne Uhrzeit ist kein
-Zustand, den es geben soll.
+Zustand, den es geben soll. Und geschickt wird **nur, was sich geändert hat**:
+An der Uhrzeit des nächsten Termins hängt die Nachricht an alle, und wer den
+Titel korrigiert, löste sie sonst mit aus.
 
-Die Zeit steht **nur hier**, nicht auf den Terminkarten, im Kalender oder in der
-Planungstabelle: bei wöchentlich gleicher Zeit stünde dieselbe Zahl fünfzehnmal
-untereinander. Die Vorgabe für neue Abende kommt aus `…/meetings/config` und
+Die Zeit steht außerdem auf den Terminkarten — seit sie ein Datums-Kästchen
+tragen, ist die Zeile darunter frei dafür. Im Kalender und in der
+Planungstabelle steht sie weiter nicht: dort ist die Zeile drei Zeilen hoch bzw.
+eine Zelle breit, und bei wöchentlich gleicher Zeit stünde dieselbe Zahl
+fünfzehnmal untereinander. Die Vorgabe für neue Abende kommt aus `…/meetings/config` und
 lässt sich in der Verwaltung zusammen mit dem Wochentag umstellen; das
 Anlege-Formular belegt sein Feld damit vor, damit niemand jede Woche dasselbe
 tippt.
+
+**Die Gebetsanliegen sind Sprechblasen.** Was dort steht, ist ein Satz, den
+jemand der Gruppe sagt; als Kasten mit Rahmen sah er aus wie ein Datenfeld. Der
+Zipfel ist ein gedrehtes Quadrat in derselben Fläche und Randfarbe — kein SVG
+und keine zweite Farbe, die beim Umschalten auf Dunkel nachgezogen werden
+müsste. Das **eigene** Anliegen bleibt sichtbar davon unterschieden: Es ist das
+einzige, das man bearbeitet.
+
+**In der Thema-Karte stehen zwei Aussagen an zwei Plätzen**: links, wo man zu
+lesen anfängt, das Überthema mit seinem Link; rechts das wievielte Stück davon
+dieser Abend ist („Einheit 2/4"). Beides war einmal _ein_ überlappendes
+Abzeichen oben links. Eine Hülle hat links nichts stehen und rechts „Einzelne
+Einheit". Der **Actionstep** steht außerhalb des Links auf die Einheit, damit
+der Haken „Für mich abhaken" in denselben Kasten passt — in einem Link darf kein
+Knopf sitzen.
+
+**Ort und Zuständigkeiten sind zwei Sektionen.** Sie standen in einer Karte, der
+Ort als namenloser Block darüber — dabei beantworten sie verschiedene Fragen:
+„wo treffen wir uns" gegen „wer macht was". „Ort & Anreise" zeigt jetzt die
+**Adresse** (`location.address`), die in der Antwort längst mitkommt und auf
+dieser Seite nirgends zu sehen war; ohne Ort steht dort **kein** Maps-Knopf
+statt eines ausgegrauten in `bg-gray-300`.
+
+„Zuständigkeiten" trägt im `action`-Slot der `SectionTitle` einen Zähler
+(„2 von 4 besetzt") und je Rolle eine eigene abgerundete Fläche statt einer
+Zeile hinter `divide-y`.
+
+**Eine Rollenzeile ist zwei Zeilen.** Erst stand alles nebeneinander: Symbol,
+eine 4,5 rem breite Spalte für die Bezeichnung, die Namen, der Knopf. Auf dem
+Telefon blieben für die Namen rund 130 Pixel — einer passte hinein, der zweite
+rutschte darunter, der dritte machte die Zeile dreistöckig. Dabei sind gerade
+die Rollen mit mehreren die häufigen: Musik, Thema, Snacks. Jetzt stehen oben
+Symbol, Name und der Knopf, darunter über die volle Breite die Menschen,
+eingerückt auf die Höhe der Bezeichnung.
+
+**Welche Rollen ein Abend hat, steht einmal**: `meetingRoles` in
+`lib/meeting.ts`. Die Aufstellung stand dreimal da — als Kette von `&&` in
+`planningComplete`, als Liste von Zellen in der Planungstabelle und als Folge
+von `{slot && <RoleRow …>}` hier. Drei Antworten auf dieselbe Frage laufen
+irgendwann auseinander, und dann stünde über einer Liste mit vier Zeilen „3 von
+5 besetzt". Sie unterscheidet **fehlt** von **gibt es hier nicht**: Ein Abend im
+Schlosspark hat keine Gastgeber-Rolle, also steht sie dort gar nicht.
 
 **Ort und Gastgeber sind eine Entscheidung** — und haben deshalb **ein**
 Bedienelement: [`VenueSheet`](src/components/domain/venue-sheet.tsx), mit zwei
@@ -780,12 +858,13 @@ Dazu drei kleinere Umbauten:
   Der Termin heißt dabei **nach sich selbst**: `meetingHeadline` fiel einmal auf
   den Titel der Einheit zurück und dann auf den des Themas, ein Abend hieß damit
   „Teil 2: Was Petrus tat" — der Name der Einheit, nicht der des Abends. Ohne
-  eigenen Titel steht dort jetzt die Terminart; wer will, trägt am Termin etwas
-  anderes ein. Das Thema bleibt sichtbar, nur nicht als Überschrift: als
-  Rollen-Chip auf der Karte, als Themen-Kasten hier, im Archiv unter „Themen".
-  Nebenbei sagen damit alle Bildschirme dasselbe — der Startbildschirm bekam nie
-  ein `topicSession` und zeigte längst die Terminart, während Liste, Kalender
-  und Detailseite den Themen-Titel zeigten.
+  eigenen Titel steht dort jetzt `meetingKindLabel`, der Name aus den
+  Bausteinen; wer will, trägt am Termin etwas anderes ein. Das Thema bleibt
+  sichtbar, nur nicht als Überschrift: als Rollen-Chip auf der Karte, als
+  Themen-Kasten hier, im Archiv unter „Themen". Nebenbei sagen damit alle
+  Bildschirme dasselbe — der Startbildschirm bekam nie ein `topicSession` und
+  zeigte längst den abgeleiteten Namen, während Liste, Kalender und Detailseite
+  den Themen-Titel zeigten.
 - **Der Info-Text steht oben.** Dort steht, was man _vor_ dem Abend wissen muss;
   unten zwischen Zusammenfassung und Actionstep las es niemand rechtzeitig.
 - **„Wer kommt" beantwortet „mit wie vielen rechne ich?"** — siehe unten, das
@@ -892,37 +971,54 @@ Actionstep, den alle eine Woche vorher lesen, ist keiner mehr. Umgekehrt sollen
 die Zuständigen vorbereiten dürfen — vorher verbot der Server das Schreiben bis
 zum Termintag, und zwar genau der Person, die es am ehesten brauchte.
 
-### Lesen ist der Normalfall
+### Lesen ist der Normalfall — aber nicht über einen Modus
 
-Termin-Detail und Themenseite haben unten einen **„Bearbeiten"**-Schalter. Erst
-danach erscheinen die Stifte an den Texten, die Bausteine und die Löschsymbole.
-Vorher bot jedes Feld dauerhaft eine Bearbeitung an — auf einer Seite, die man
-zehnmal öffnet, um etwas zu wissen, und einmal, um etwas zu ändern.
+Die **Themenseite** hat unten einen „Bearbeiten"-Schalter; erst danach
+erscheinen die Stifte an ihren Texten. Die **Termin-Detailseite** hatte einmal
+denselben, und er ist weg.
 
-**Die Rollen-Zuteilung liegt außerhalb.** Ihre Stifte stehen immer da. Sie ist
-der Grund, aus dem man diese Seite überhaupt aufmacht — „wer hostet nächste
-Woche" trägt man im Vorbeigehen ein, nicht nach dem Umlegen eines Schalters.
-Versehentlich passieren kann dabei nichts: jede Zuteilung geht über ein Sheet,
-in dem man ausdrücklich bestätigt. Gesperrt ist sie nur an einem abgesagten
-Abend, an dem es nichts einzuteilen gibt. Ein Thema zu **wählen** bleibt dagegen
-im Bearbeitungsmodus — das ist Inhalt, keine Zuteilung.
+Er schaltete dort fünf verschiedene Dinge auf einmal an: die Stifte an Titel,
+Uhrzeit und Infos, den Bausteinkasten, das Ändern und Löschen des eigenen
+Gebetsanliegens und die Papierkörbe an den Liedvorschlägen. Das kostete zwei
+Dinge. Erstens war jede dieser Möglichkeiten hinter einem Ort versteckt, den man
+erst kennen musste — den Bausteinkasten sah gar nicht, wer nicht bis zum
+Seitenende scrollte, und damit sah ein Abend ohne Lieder aus wie einer ohne
+Musik-Team. Zweitens hieß derselbe Schalter an jeder dieser Stellen etwas
+anderes, von „dieses Feld ist beschreibbar" bis „hier darf gelöscht werden".
 
-Es gibt bewusst **kein „Speichern"**: jede Änderung geht sofort raus, der
-Schalter entscheidet nur, ob sie überhaupt angeboten wird. Ein Sammel-Speichern
-hieße, einen zweiten Zustand zu führen, der mit dem Server auseinanderläuft, und
-den Verlust bei einem versehentlichen Zurück in Kauf zu nehmen.
+Was an seine Stelle trat, ist jeweils die Form, die die Sache ohnehin schon
+hatte:
+
+| Was am Modus hing        | Wo es jetzt steht                                          |
+| ------------------------ | ---------------------------------------------------------- |
+| Titel, Uhrzeit, Infos    | `MeetingEditSheet`, hinter „Bearbeiten" oben rechts        |
+| Bausteine                | `SlotCard`, immer da und zugeklappt, mit Zähler im Kopf    |
+| eigenes Gebetsanliegen   | Stift und „entfernen" am eigenen Kasten, ohne Vorbedingung |
+| Löschen eines Vorschlags | `SwipeActions`, wie an jeder anderen Liste der App         |
+| Nachbereitung            | `notesOpen` — ein Merker für „gerade angelegt, noch leer"  |
+
+**Die Rollen-Zuteilung lag schon immer außerhalb.** Ihre Knöpfe stehen immer da.
+Sie ist der Grund, aus dem man diese Seite überhaupt aufmacht — „wer hostet
+nächste Woche" trägt man im Vorbeigehen ein. Versehentlich passieren kann dabei
+nichts: jede Zuteilung geht über ein Sheet, in dem man ausdrücklich bestätigt.
+Gesperrt ist sie nur an einem abgesagten Abend, an dem es nichts einzuteilen
+gibt.
+
+Es gibt außerhalb des Formulars bewusst **kein „Speichern"**: jede Änderung geht
+sofort raus. Ein Sammel-Speichern hieße, einen zweiten Zustand zu führen, der
+mit dem Server auseinanderläuft, und den Verlust bei einem versehentlichen
+Zurück in Kauf zu nehmen. Das Formular ist die Ausnahme, und zwar eine mit
+Grund: Titel, Uhrzeit und Infos sind drei Angaben derselben Sache, und drei
+Schreibvorgänge wären drei Gelegenheiten für einen Versionskonflikt.
 
 Anwesenheit und Actionstep-Haken bleiben ebenfalls immer bedienbar — das ist
 Teilnahme, keine Bearbeitung. Absagen und Löschen stehen dauerhaft ganz unten:
 sie sind keine Bearbeitung, sondern eine Entscheidung über den Abend als Ganzes.
 
-Umgesetzt ist es ohne neue Mechanik: `InlineEdit` und `RoleRow` blenden ihre
-Bedienelemente schon von selbst aus, wenn der Handler fehlt. Der Schalter setzt
-also nur `editing && berechtigt ? handler : undefined`.
-
-`InlineEdit` hat dafür ein optionales `onSave` bekommen: fehlt es, gibt es
-keinen Stift. Ihn zu zeigen und dann mit `403` zu antworten wäre eine Einladung
-ins Leere.
+`InlineEdit` hat ein optionales `onSave`: fehlt es, gibt es keinen Stift. Ihn zu
+zeigen und dann mit `403` zu antworten wäre eine Einladung ins Leere. Dasselbe
+gilt für `RoleRow` und `onEdit` — die Themenseite baut ihren Modus noch immer
+darauf.
 
 **Abhaken bleibt für alle**, auch für die, die den Text nicht ändern dürfen —
 es ist der eigene Vorsatz.
@@ -965,10 +1061,11 @@ musste selbst darauf kommen, dass noch nichts gewählt ist. Was an ihrer Stelle
 steht, hängt daran, wer liest — für das Musik-Team eine Aufforderung, für alle
 anderen eine Auskunft.
 
-**Das Gewählte ist terracotta und nicht mehr `music`-grün.** Grün ist in dieser
-App die Farbe der _Rolle_ — das SONG-Abzeichen, die Person, die die Musik macht.
-„Im Set" ist keine Rolle, sondern eine **Auswahl**, und Auswahl ist überall
-terracotta: der aktive Tab, der gewählte Chip, der erste Platz einer Rangliste.
+**Das Gewählte ist terracotta.** „Im Set" ist eine **Auswahl**, und Auswahl ist
+überall terracotta: der aktive Tab, der gewählte Chip, der erste Platz einer
+Rangliste. Es war einmal grün, in der Farbe, die damals der Musik-Rolle
+gehörte — inzwischen tragen die Rollen keine eigenen Farben mehr, und dasselbe
+Grün heißt `success` und bedeutet „fertig, gewählt, läuft".
 
 Vergangene Abende sind fürs Abhaken damit wieder bedienbar, obwohl sie sonst
 gesperrt bleiben. Das ist Absicht: wer am nächsten Tag nachträgt, was
@@ -1058,39 +1155,88 @@ steht auf einem Knopf, den man drückt („Zusagen"), `short` in einer Zeile üb
 jemand anderen, die etwas feststellt („Dabei"). Die zustimmende Antwort steht
 **rechts**, wie in jeder Rückfrage der App.
 
-### Die Antwort in der Terminliste
+### Die Terminkarte
 
-`components/domain/meeting-card.tsx` plus
+`components/domain/meeting-card.tsx`.
+
+**Links ein Datums-Kästchen** — Wochentag, Tag, Monat (`dayParts` in
+`lib/date.ts`). Das Datum stand als Kleinschrift-Zeile über dem Titel und war
+damit das Unauffälligste an einer Karte, die man genau danach durchsucht. Ein
+**Zeitraum** bekommt keins: „14.–16." passt nicht hinein, und eine Freizeit ist
+kein Tag; dort steht die Spanne als Zeile. Der Tag steht **zweistellig**: Im
+Kästchen stehen die Zahlen untereinander wie in einer Spalte, und eine
+einstellige säße dort schmal in der Mitte.
+
+Weil das Kästchen den Tag trägt, steht die **Uhrzeit** jetzt auch hier und nicht
+mehr nur auf „Heute". Die alte Begründung („in einer Liste über Wochen ist sie
+Rauschen") galt, solange der Tag dieselbe Zeile belegte. Uhrzeit und Ort trennt
+ein **Punkt**, und ihre Symbole sind terracotta: Es sind zwei Antworten auf zwei
+Fragen, die sich mit bloßem Abstand als eine lasen, und graue Symbole
+verschwammen mit dem Text, den sie beschriften.
+
+**Kästchen und Zeile stehen in `components/domain/date-box.tsx`**, nicht hier.
+Es gab sie wortgleich zweimal — auch in der `NextMeetingCard` auf „Heute" —, und
+das war verschmerzbar, solange sie nur ein Datum untereinandersetzten. Mit
+Rahmen, Tönung und der zweistelligen Zahl wären es zwei Meinungen darüber, wie
+ein Termin aussieht. Der einzige Unterschied ist ein Schalter: Auf „Heute" führt
+der Ort nach Maps, in der Liste nicht, denn dort ist die ganze Karte schon ein
+Link auf den Termin.
+
+**Rollen-Chips sind neutral** (`RoleChip`). Sie trugen je eine eigene Farbe, und
+auf einer Karte standen davon drei nebeneinander — weil jede für sich etwas
+bedeutete, bedeutete am Ende keine mehr etwas. Unterschieden werden sie durch
+Symbol und Name. Der gestrichelte terracotta Rand des **leeren** Chips bleibt:
+Er ist die Einladung, jemanden zu wählen, und Auswahl ist überall terracotta.
+
+Braucht der Ort keinen Gastgeber, steht **kein** Host-Chip da. Der Ort selbst
+steht schon in der Zeile darüber; als Chip stand er ein zweites Mal und
+behauptete eine Rolle, die es an dem Abend nicht gibt — dieselbe Regel wie
+`meetingRoles` am Termin.
+
+### Die Antwort in Liste und Kalender
+
+`components/domain/answer-buttons.tsx` plus
 `components/domain/answer-note-sheet.tsx`.
 
 Der alte `AttendanceToggle` war zwischenzeitlich ganz weg, weil er die zweite
 Fassung derselben Frage war. Zurück ist nicht er, sondern die **drei Antworten
 mit dem Satz dahinter**: „komme 20 Min später" ist das, was vorher in WhatsApp
-stand, und die zwei runden Symbolknöpfe konnten ihn nie. In der Liste liest man
-quer über Wochen — dort fällt einem ein, dass man am 15. nicht kann.
+stand, und die zwei runden Symbolknöpfe konnten ihn nie. Man liest quer über
+Wochen — dort fällt einem ein, dass man am 15. nicht kann.
 
-Drei Dinge sind daran zu beachten:
+**Auch im Kalender**, und das war einmal ausdrücklich ausgeschlossen („dort
+sucht man einen Tag im Monat"). Das stimmt für die Frage, mit der man ihn
+aufmacht, aber nicht für das, was einem dabei auffällt; und zwei Bildschirme,
+auf denen dieselbe Zeile einmal fragt und einmal nicht, sind schwerer zu
+erklären als einer mehr, der fragt. Dort stehen die Knöpfe **neben** dem Termin
+(`compact`) und tragen unter `sm` nur ihr Symbol: Die Kachel ist schon drei
+Zeilen hoch, eine vierte hätte den Monat auf zwei Bildschirmhöhen gebracht.
 
+Vier Dinge sind daran zu beachten:
+
+- **Die drei Antworten sind ein Schalter, nicht drei Knöpfe.** Jede trug einen
+  eigenen Rahmen und sah damit aus wie eine eigene Handlung — dabei ist es
+  _eine_ Frage, von deren drei Antworten genau eine gilt. Der Rahmen liegt jetzt
+  außen herum, gefüllt ist nur die gewählte.
 - **Die Karte ist ein `<Link>`.** Jeder Knopf darin braucht `preventDefault()`
   **und** `stopPropagation()`, sonst führt der Tipp zusätzlich auf die
-  Detailseite — und die Antwort wäre nicht mehr zu sehen.
-- **Das Sheet ist ein Geschwister des Links, nicht sein Kind.** `Sheet` rendert
-  sein Overlay als `position: fixed` ohne Portal, und die Karte trägt sowohl
-  `@container` als auch `active:scale` — beides macht sie zum Bezugsrahmen für
-  `fixed`, und der Schleier säße dann in der Karte statt über der Seite.
-- **`@container` und nicht `md:`.** Ob die Knöpfe neben die Rollen-Chips passen,
-  hängt an der Breite der Karte. Zwischen `md` und rund 1000px Fensterbreite ist
-  die Spalte neben der Seitenleiste erst gut 450px breit; ein Breakpoint auf das
-  Fenster stellte sie dort nebeneinander, wo kein Platz ist. Es ist die einzige
-  Container-Query im Projekt, und sie steht da, wo die Frage wirklich „wie breit
-  bin ich" lautet.
-- **Zwei Zonen, kein umbrechender Fluss.** Rollen und Antwort sind zwei
-  Kästen — schmal untereinander, ab `@lg` nebeneinander (`@lg:flex`). Zuerst
-  waren sie Geschwister in _einer_ umbrechenden Reihe, und dann hing die Antwort
-  auf dem Telefon mit acht Pixeln Abstand an den Chips und las sich wie ein
-  fünfter davon. Schmal trägt sie deshalb einen **zweiten Trennstrich**, ab `@lg`
-  fällt er weg: derselbe Gedanke wie der Strich über den Rollen — er trennt, was
-  der Abend ist, von dem, was du dazu sagst.
+  Detailseite — und die Antwort wäre nicht mehr zu sehen. Im Kalender umfasst
+  der Link nur die linke Hälfte, aber die Knöpfe halten dieselbe Regel ein: Sie
+  wissen nicht, wo sie hängen.
+- **Das Sheet gehört dem Aufrufer, nicht den Knöpfen.** `Sheet` rendert sein
+  Overlay als `position: fixed` ohne Portal, und die Terminkarte trägt
+  `active:scale` — das macht sie zum Bezugsrahmen für `fixed`, und der Schleier
+  säße dann in der Karte statt über der Seite. `AnswerButtons` meldet über
+  `onAnswered` nur, dass geantwortet wurde; wo das Notizfeld hängt, entscheidet
+  die Stelle, die es einbaut.
+- **Untereinander, ohne Trennstriche.** Rollen und Antwort standen eine Runde
+  lang ab 32 rem **nebeneinander**, über eine `@container`-Query — die einzige
+  des Projekts. Das war eng gedacht: Im Fenster las sich die Antwort wie ein
+  fünfter Chip. Und über beiden lag je ein Trennstrich, auf einer Karte, die
+  selbst schon von einem Rahmen eingefasst ist — drei waagerechte Linien
+  übereinander. Was sie sagen sollten, sagen die Formen längst: Chips sind
+  Pillen mit Namen darin, die Antwort ein umrandeter Schalter. Getrennt wird
+  über den Abstand.
 
 Der Ablauf ist derselbe wie im Balken: **Der Status schreibt sofort** (über
 `useAttendanceAnswer`, also mit der Rollen-Rückfrage), **die Notiz auf
@@ -1098,14 +1244,23 @@ Knopfdruck**. Bricht jemand die Rückfrage ab, öffnet sich kein Fenster für ei
 Notiz, die zu nichts gehört. Nachzurüsten war nichts: `useSetAttendance` patcht
 die Listen im Cache schon optimistisch.
 
-Daneben steht auf der Karte oben rechts die **Teilnehmerzahl**. Sie stand vorher
-klein zwischen Ort und Terminart und ging dort unter. Gezählt wird **nur, wer
-zugesagt hat** — „3 dabei" ist eine wahre Aussage über die Liste, während
-„geplant für 8" hier bewusst etwas anderes meint. Zwei Zahlen mit demselben Wort
-wären genau der Fehler, den dieser Abschnitt oben beschreibt. Anders als die
-Antwort-Knöpfe steht sie auch an vergangenen und abgesagten Abenden: „wer war
-da" ist dort die bessere Frage. Die **Kalenderzeile** bekommt weder das eine
-noch das andere — sie ist schon drei Zeilen hoch und beantwortet „was ist wann".
+Daneben steht auf der Karte oben rechts die **Teilnehmerzahl**, und sie zählt
+**dieselbe Menge wie diese Seite**: Zusagen plus Unentschiedene. „3 dabei"
+zählte einmal nur die Zusagen, während hier „Geplant für 8" stand — zwei Zahlen
+über denselben Abend, und die sichtbare war die knappere. An einem vergangenen
+oder abgesagten Abend steht dort „3 dabei"; „geplant für" ist keine Aussage
+über gestern, und diese Unterscheidung trifft auch der Abschnitt hier.
+
+Gerechnet wird beides in `attendanceCounts` (`lib/meeting.ts`) — **die
+Personenliste ist die Grundmenge, die Anwesenheit nur ein Nachschlagewerk**.
+Andersherum ginge es nicht: Eine Zeile in `attendances` bekommt nur, wer eine
+hat, und eine mit `UNKNOWN` entsteht fast nur beim aktiven Zurücknehmen einer
+Zusage. Über `attendances` gezählt wären die Unentschiedenen also meistens null.
+`usePeople` liegt mit `STALE.reference` im Cache — eine Abfrage für die ganze
+Liste, nicht eine je Karte.
+
+Die **Kalenderzeile** bekommt weder Zahl noch Knöpfe — sie ist schon drei Zeilen
+hoch und beantwortet „was ist wann".
 
 ### Die eigene Antwort ersetzt die Tab-Leiste
 
@@ -1225,17 +1380,19 @@ Stattdessen ein Ablauf in drei Zuständen, und keiner davon zeigt ein leeres Fel
 | ------------- | ---------------------------------------------------- |
 | nichts        | vor der Treffpunktzeit, oder der Abend hat ein Thema |
 | `NotesPrompt` | ab Terminbeginn, solange nichts geschrieben ist      |
-| `NotesCard`   | sobald etwas drinsteht — oder im Bearbeitungsmodus   |
+| `NotesCard`   | sobald etwas drinsteht — oder gerade angelegt        |
 
-Der Hinweis schaltet den Baustein an **und** den Bearbeitungsmodus: er ist die
-Aufforderung, etwas zu schreiben, und eine Karte ohne Eingabemöglichkeit wäre
-die falsche Antwort darauf. Innerhalb der Karte ist jedes der beiden Stücke
+Der Hinweis schaltet den Baustein an **und** macht die Karte auf (`notesOpen`):
+er ist die Aufforderung, etwas zu schreiben, und eine Karte, die erst beim
+ersten gespeicherten Satz erschiene, gäbe es nicht, in den man ihn tippt. Bleibt
+sie leer, steht beim nächsten Aufmachen wieder der Hinweis da.
+Innerhalb der Karte ist jedes der beiden Stücke
 einzeln: ein Knopf legt das fehlende an und öffnet gleich das Feld (`startOpen`
 an `InlineEdit`), bleibt es leer, nimmt `onDiscard` es wieder weg. So gibt es
 kein Feld ohne Inhalt — und manchmal gibt es eben nur einen Vorsatz und nichts
 zusammenzufassen.
 
-Wegnehmen geht im Bearbeitungsmodus über „Nachbereitung entfernen", mit derselben
+Wegnehmen geht über „Nachbereitung entfernen" am Fuß der Karte, mit derselben
 Rückfrage wie bei den anderen Bausteinen: gelöscht werden beide Texte und die
 Haken darunter. Danach steht wieder der Hinweis da, als wäre nichts gewesen.
 
@@ -1464,8 +1621,11 @@ als eigene Ressource, ihr ETag liegt also nirgends im Cache. Dasselbe Muster wie
 
 ## Wischen statt Drücken
 
-`components/ui/swipe-actions.tsx`. Drei Listen geben Stift und Papierkorb frei:
-die Lieder im Archiv, die Treffpunkte, die Ideen der Gruppe.
+`components/ui/swipe-actions.tsx`. Vier Listen geben Stift und Papierkorb frei:
+die Lieder im Archiv, die Treffpunkte, die Ideen der Gruppe — und seit dem
+Wegfall des Bearbeitungsmodus auch die Liedvorschläge an einem Termin. Dort
+stand der Papierkorb vorher dauerhaft am Zeilenrand und war nur deshalb
+erträglich, weil ein Schalter am Seitenende ihn versteckte.
 
 **Was es ersetzt.** Erst standen die Knöpfe dauerhaft da — zwei Ziele am Rand
 jeder Zeile einer Liste, durch die man scrollt, und beide traf der Daumen
@@ -1486,6 +1646,11 @@ schließt die andere. Beim langen Druck blieben zwei aufgeklappte Zeilen
 nebeneinander stehen, bis die Liste neu lud — und genau deshalb brauchte jede
 Zeile einen „Fertig"-Knopf. Den gibt es nicht mehr, und damit ist das dritte
 Ziel aus der Zeile verschwunden.
+
+**Die Box hinter der Glocke wischt ohne Knöpfe.** Dort gibt es genau eine Sache
+zu tun (gelesen), und sie ist umkehrbar — ein Knopf, der sie erst noch anbietet,
+wäre ein Schritt zu viel. Sie benutzt deshalb nicht `SwipeActions`, wohl aber
+dieselbe Schwelle aus `swipe.ts`.
 
 **Die Breite wird gemessen, nicht gerechnet.** Sie hängt an der Zahl der Knöpfe,
 und die ist je Zeile verschieden: Bei den Ideen darf nicht jede:r löschen, bei
@@ -1618,6 +1783,22 @@ stört niemanden. Sie liegt darum unter `/api/notifications` und nicht unter
 
 Gelesenes verschwindet aus der Box, aber nicht aus der Welt: Es wandert nach
 „Früher", aufklappbar, die letzten dreißig.
+
+**Wer nur wegräumen will, wischt nach links.** „Alle gelesen" war das einzige
+Werkzeug dafür und ist ein grobes: Wer sieben Nachrichten hat und sechs davon
+erledigt, musste die siebte stehen lassen oder alles auf einmal wegräumen.
+
+Der Wisch ist **kein `SwipeActions`**, obwohl die App den überall sonst
+benutzt. Die Listen dort geben rechts Stift und Papierkorb frei, weil zwei Dinge
+zur Wahl stehen und eines davon löscht. Hier gibt es genau eine Sache zu tun,
+und sie ist umkehrbar — der Eintrag wandert nach „Früher", nicht aus der Welt.
+Ein Knopf, den man danach noch treffen muss, wäre ein Schritt zu viel; unter der
+Zeile steht deshalb nur ein Haken auf `success-bg`, also was gleich passiert.
+Die Schwelle kommt trotzdem aus `swipe.ts` (`pulledLeft`) — es gibt eine
+Meinung darüber, ab wann jemand etwas gemeint hat. Gewischt wird nur an den
+**ungelesenen**: An einer gelesenen gibt es nichts wegzuräumen, und eine Zeile,
+die nachgibt und dann nichts tut, ist ein Versprechen, das die Liste nicht
+hält.
 
 **Sie ist eine Sprechblase unter der Glocke, kein Sheet von unten.** Ein
 Bottom-Sheet beantwortet „wähle etwas aus", nicht „was ist neu" — und es fuhr

@@ -25,12 +25,14 @@
  */
 import {
   ArrowLeft,
-  Check,
+  CalendarDays,
   Clock,
-  UserPen,
   ExternalLink,
+  Info,
   MapPin,
+  Navigation,
   Pencil,
+  UserPen,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { useRouter } from 'next/navigation';
@@ -38,19 +40,20 @@ import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button, IconButton } from '@/components/ui/button';
+import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
-import { InlineEdit, TextInput } from '@/components/ui/field';
 import {
   CardSkeleton,
   ConflictBanner,
   ErrorState,
 } from '@/components/ui/states';
 import { cn } from '@/lib/cn';
+import { namesOf } from '@/lib/person';
 import {
   useMe,
   useMeeting,
+  useSetSnackResponsibles,
   useSongLeaders,
   useUpdateMeeting,
 } from '@/lib/api/hooks';
@@ -63,17 +66,19 @@ import {
 } from '@/lib/date';
 import {
   MEETING_SLOT_KEYS,
-  MEETING_TYPE_LABEL,
+  meetingKindLabel,
   ROLE_LABEL,
   SLOT_LABEL,
+  activeMeetingRoles,
   applySlotToggle,
   mapsUrl,
   meetingHeadline,
   meetingPhase,
 } from '@/lib/meeting';
+import { ROLE_ICON } from '@/components/domain/role-badge';
 import { ActionstepCheck } from '@/components/domain/actionstep-check';
 import { SlotCard } from '@/components/domain/slot-toggles';
-import type { MeetingSlotKey } from '@/lib/meeting';
+import type { MeetingRole, MeetingSlotKey } from '@/lib/meeting';
 import type { AssignmentRole, Meeting, PersonRef } from '@/lib/api/types';
 import { AnswerBar } from './answer-bar';
 import { AttendanceCard } from './attendance-card';
@@ -82,6 +87,7 @@ import {
   CancelMeetingBlock,
   DeleteMeetingBlock,
 } from './cancellation-card';
+import { MeetingEditSheet } from './meeting-edit-sheet';
 import { NotesCard, NotesPrompt } from './notes-card';
 import { PrayerRequestsCard } from './prayer-requests-card';
 import { SongsCard } from './songs-card';
@@ -112,6 +118,15 @@ const SLOT_LOSSES: Record<MeetingSlotKey, (meeting: Meeting) => string | null> =
       meeting.testimonyPerson
         ? `${meeting.testimonyPerson.name} erzählt an dem Abend dann nichts mehr.`
         : null,
+    // Namentlich, wie beim Testimony: Wer eingetragen ist, steht in der Antwort
+    // des Termins, und „die Snack-Zuteilung wird gelöscht" sagt weniger als der
+    // Name, um den es geht.
+    hasSnackSlot: (meeting) =>
+      meeting.snackResponsibles.length > 0
+        ? `${namesOf(meeting.snackResponsibles.map((row) => row.person))} ${
+            meeting.snackResponsibles.length === 1 ? 'bringt' : 'bringen'
+          } an dem Abend dann nichts mehr mit.`
+        : null,
     // Wie bei den Liedern immer: Die Anliegen liegen in einer eigenen Abfrage,
     // dieser Bildschirm sieht von hier aus nicht, ob welche da sind. Und was
     // hier verlorengeht, sind Sätze, die Menschen über sich selbst geschrieben
@@ -137,12 +152,17 @@ const TopicChoiceSheet = dynamic(() =>
   import('./topic-choice-sheet').then((m) => m.TopicChoiceSheet),
 );
 
+const SnackSheet = dynamic(() =>
+  import('@/components/domain/snack-sheet').then((m) => m.SnackSheet),
+);
+
 /** Der Host fehlt: er steckt im Ort-Sheet, weil er dieselbe Frage beantwortet. */
 // Gastgeber hat sein eigenes Sheet (mit Wohnungen statt Personen); Gebetsbuddys
-// und Geschenke teilt der Server zu und nicht ein Mensch an einem Abend.
+// und Geschenke teilt der Server zu und nicht ein Mensch an einem Abend. Und
+// Snacks haben keine Rangliste — dort führt eine schlichte Auswahl hin.
 type SheetRole = Exclude<
   AssignmentRole,
-  'PRAYER_BUDDY' | 'HOST' | 'BIRTHDAY_GIFT'
+  'PRAYER_BUDDY' | 'HOST' | 'BIRTHDAY_GIFT' | 'SNACK'
 >;
 
 export function MeetingDetailScreen({ meetingId }: { meetingId: string }) {
@@ -188,31 +208,52 @@ function Loaded({
   meeting: NonNullable<ReturnType<typeof useMeeting>['data']>['data'];
 }) {
   const [sheet, setSheet] = useState<SheetRole | null>(null);
+  /**
+   * Eigener Zustand statt eines Werts in `sheet`: Die Snack-Auswahl ist ein
+   * anderes Sheet mit anderen Eigenschaften. Sie in `SheetRole` mitzuführen
+   * hieße, an jeder Stelle, die den Wert auspackt, eine Ausnahme zu schreiben.
+   */
+  const [choosingSnacks, setChoosingSnacks] = useState(false);
   const [choosingVenue, setChoosingVenue] = useState(false);
   const [choosingTopic, setChoosingTopic] = useState(false);
 
   /**
-   * Der Lesemodus ist der Normalfall — für die **Texte**.
+   * Ob das Formular für Titel, Uhrzeit und Infos offensteht.
    *
-   * Vorher bot jedes Feld dauerhaft einen Stift an, auch beim bloßen
-   * Nachschauen — auf einer Seite, die man zehnmal öffnet, um etwas zu wissen,
-   * und einmal, um etwas zu ändern. Es gibt bewusst **kein** „Speichern": jede
-   * Änderung geht sofort raus, der Schalter entscheidet nur, ob man sie
-   * überhaupt angeboten bekommt.
+   * **Hier stand einmal ein Modus für die ganze Seite.** Ein Schalter ganz
+   * unten schaltete überall Stifte an: am Titel, an der Uhrzeit, an den Infos,
+   * an den Gebetsanliegen, an den Papierkörben der Lieder. Das kostete zwei
+   * Dinge. Erstens war jede dieser Möglichkeiten hinter einem Ort versteckt,
+   * den man erst kennen musste — die Bausteine sah gar nicht, wer nicht bis
+   * zum Seitenende scrollte. Zweitens hieß derselbe Schalter an fünf Stellen
+   * fünf verschiedene Dinge, von „dieses Feld ist beschreibbar" bis „hier darf
+   * gelöscht werden".
    *
-   * Was der Schalter **nicht** deckt: die Rollen-Zuteilung. Sie ist der Grund,
-   * aus dem man diese Seite überhaupt aufmacht — „wer hostet nächste Woche"
-   * trägt man im Vorbeigehen ein, nicht nach dem Umlegen eines Schalters. Sie
-   * hängt an einem Sheet, kann also nicht versehentlich passieren, und sie
-   * bleibt wie Anwesenheit und Actionstep-Haken immer erreichbar. Gesperrt ist
-   * sie nur an einem abgesagten Abend, an dem es nichts einzuteilen gibt.
+   * Übrig bleibt ein gewöhnliches Formular hinter einem gewöhnlichen Knopf.
+   * Alles andere steht jetzt für sich: Die Bausteine tragen ihren eigenen
+   * Aufklapper, das Löschen eines Liedes liegt hinter dem Wisch, mit dem man
+   * überall in dieser App löscht, und die Textfelder haben ihren Stift ohnehin
+   * selbst (`InlineEdit`).
    */
   const [editing, setEditing] = useState(false);
+
+  /**
+   * Ob die Nachbereitungs-Karte gerade offensteht, obwohl noch nichts
+   * drinsteht.
+   *
+   * Der Hinweis „Nachbereitung hinzufügen" legt den Baustein an und öffnet die
+   * Karte; bleibt sie leer, soll beim nächsten Aufmachen wieder der Hinweis
+   * dastehen und keine leere Karte. Das hing vorher am Seitenmodus — wer ihn
+   * verließ, bekam den Hinweis zurück. Ein eigener Merker sagt dasselbe, ohne
+   * dafür einen Modus zu brauchen.
+   */
+  const [notesOpen, setNotesOpen] = useState(false);
 
   const update = useUpdateMeeting(meetingId);
   const songLeaders = useSongLeaders(meetingId);
   const roles = useRoleAssignment(meeting);
   const session = useTopicSessionActions(meetingId);
+  const setSnacks = useSetSnackResponsibles(meetingId);
   const confirm = useConfirm();
 
   const cancelled = meeting.status === 'CANCELLED';
@@ -243,6 +284,17 @@ function Loaded({
    * Lieder und Rollen zuweisen.
    */
   const locked = past || cancelled;
+
+  /**
+   * Welche Rollen dieser Abend hat und wer sie trägt.
+   *
+   * Aus `meetingRoles` und nicht aus fünf `{slot && <RoleRow …>}` in der
+   * Ausgabe: Dieselbe Aufstellung entscheidet in der Planungstabelle über
+   * „fertig geplant". Stünde sie hier ein zweites Mal, könnte über einer Liste
+   * mit vier Zeilen „3 von 5 besetzt" stehen.
+   */
+  const rollen = activeMeetingRoles(meeting);
+  const besetzt = rollen.filter((slot) => slot.people.length > 0).length;
 
   const patch = (input: Parameters<typeof update.mutate>[0]) =>
     update.mutate(input);
@@ -285,6 +337,21 @@ function Loaded({
   const openVenue = async () => {
     const ok = await nachtragenErlaubt('wo ihr wart');
     if (ok) setChoosingVenue(true);
+  };
+
+  /**
+   * Ein Eingang für fünf Zeilen — jede führt woandershin.
+   *
+   * Der Gastgeber ins Ort-Sheet, weil er *ist* der Ort; die Snacks in ihre
+   * schlichte Auswahl, weil es dort nichts vorzuschlagen gibt; die übrigen drei
+   * ins Zuteilungs-Sheet mit Rangfolge. Die Zeile selbst weiß davon nichts —
+   * sie kennt nur ihre Rolle.
+   */
+  const openRole = (role: MeetingRole) => {
+    if (role === 'HOST') return void openVenue();
+    if (role === 'SNACK') return void setChoosingSnacks(true);
+
+    return void openSheet(role);
   };
 
   /**
@@ -405,12 +472,13 @@ function Loaded({
    * ist.
    *
    * Eine Karte, in der nichts steht, ist keine Nachbereitung, sondern ein
-   * Formular mit zwei unerledigten Zeilen. Solange nichts geschrieben ist, steht
-   * deshalb der Hinweis da; im **Bearbeitungsmodus** dagegen die Karte, denn
-   * dort legt man die beiden Stücke überhaupt erst an.
+   * Formular mit zwei unerledigten Zeilen. Solange nichts geschrieben ist,
+   * steht deshalb der Hinweis da — es sei denn, jemand hat ihn gerade gedrückt
+   * (`notesOpen`): dann ist die Karte der Ort, an dem die beiden Stücke
+   * überhaupt erst entstehen.
    */
   const notesContent = Boolean(meeting.summaryText || meeting.actionstepText);
-  const showNotes = meeting.hasNotesSlot && (notesContent || editing);
+  const showNotes = meeting.hasNotesSlot && (notesContent || notesOpen);
 
   /**
    * Ob der Hinweis „Nachbereitung hinzufügen" dasteht.
@@ -424,14 +492,15 @@ function Loaded({
     started && !cancelled && !meeting.hasTopicSlot && !showNotes;
 
   /**
-   * Der Hinweis führt in den Bearbeitungsmodus — er ist ja die Aufforderung,
-   * etwas zu schreiben, und die Karte erschiene sonst leer und wieder ohne
-   * Eingabemöglichkeit. Den Baustein schaltet er nur an, wenn er aus war: nach
-   * einer Karte, die leer geblieben ist, steht er noch.
+   * Der Hinweis legt die Karte an und macht sie auf — er ist ja die
+   * Aufforderung, etwas zu schreiben, und eine Karte, die erst beim ersten
+   * gespeicherten Satz erschiene, gäbe es nicht, in den man ihn tippt. Den
+   * Baustein schaltet er nur an, wenn er aus war: nach einer Karte, die leer
+   * geblieben ist, steht er noch.
    */
   const addNotes = () => {
     if (!meeting.hasNotesSlot) patch({ hasNotesSlot: true });
-    setEditing(true);
+    setNotesOpen(true);
   };
 
   /**
@@ -452,6 +521,7 @@ function Loaded({
       if (!ok) return;
     }
 
+    setNotesOpen(false);
     patch({ hasNotesSlot: false });
   };
 
@@ -517,19 +587,30 @@ function Loaded({
 
   return (
     <div className="space-y-6 px-5 pt-safe-4 pb-10">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Link href="/termine">
           <IconButton label="Zurück">
             <ArrowLeft size={18} />
           </IconButton>
         </Link>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {past && <Badge>Vorbei</Badge>}
           {/* Grün wie überall, wo etwas gerade gilt. Ein kommender Abend trägt
               weiterhin kein Abzeichen — dass er noch kommt, steht schon im
               Datum darüber. */}
-          {phase === 'running' && <Badge variant="music">Läuft</Badge>}
+          {phase === 'running' && <Badge variant="success">Läuft</Badge>}
           {cancelled && <Badge variant="alert">Abgesagt</Badge>}
+
+          {/* **Oben, wo man ankommt** — und nicht mehr als Schalter am
+              Seitenende. Er meint Titel, Uhrzeit und Infos zusammen: drei
+              Angaben derselben Sache, hinter einem Knopf und einem Formular. */}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setEditing(true)}
+          >
+            <Pencil size={14} /> Bearbeiten
+          </Button>
         </div>
       </div>
 
@@ -550,21 +631,43 @@ function Loaded({
         <p className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
           {formatWeekday(meeting.date)} · {formatRelativeDay(meeting.date)}
         </p>
-        <HeadlineEdit
-          headline={meetingHeadline(meeting)}
-          title={meeting.title}
-          placeholder={MEETING_TYPE_LABEL[meeting.type]}
-          saving={update.isPending}
-          onSave={editing ? (next) => patch({ title: next }) : undefined}
-        />
-        <p className="mt-1 text-sm text-stone-400">
-          {/* Bei einem Zeitraum ist das volle Datum die falsche Auskunft: was
-              man wissen will, ist von wann bis wann. */}
-          {meeting.endDate
-            ? formatDayRange(meeting.date, meeting.endDate)
-            : formatDayFull(meeting.date)}{' '}
-          · {MEETING_TYPE_LABEL[meeting.type]}
-        </p>
+        <h1 className="mt-1 font-serif text-3xl leading-tight font-bold text-stone-900">
+          {meetingHeadline(meeting)}
+        </h1>
+
+        {/* **Datum und Uhrzeit als zwei Kästchen, direkt unter dem Titel.** Die
+            Uhrzeit hatte vorher eine eigene Sektion mitten in der Seite, mit
+            Überschrift, Karte und Stift — für eine Angabe aus fünf Zeichen, die
+            zur ersten Frage an einen Termin gehört: „wann". Sie steht jetzt
+            dort, wo man sie sucht, und geändert wird sie im Formular oben. */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-[13px] font-semibold text-stone-700">
+            <CalendarDays size={15} className="shrink-0 text-terracotta-500" />
+            {/* Bei einem Zeitraum ist das volle Datum die falsche Auskunft: was
+                man wissen will, ist von wann bis wann. */}
+            {meeting.endDate
+              ? formatDayRange(meeting.date, meeting.endDate)
+              : formatDayFull(meeting.date)}
+          </span>
+          <span className="flex items-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-[13px] font-semibold text-stone-700">
+            <Clock size={15} className="shrink-0 text-terracotta-500" />
+            {meeting.startTime} Uhr
+          </span>
+        </div>
+
+        {/* Die Infos gehören hierher und nicht in eine eigene Sektion weiter
+            unten: Es ist das, was man **vor** dem Abend wissen muss — „bringt
+            eure Bibeln mit", „wir fangen später an". Steht nichts drin, steht
+            hier auch nichts: Eine Karte mit „Nichts Besonderes zu beachten" ist
+            eine Zeile, die nichts sagt. */}
+        {meeting.infoText && (
+          <div className="mt-4 flex gap-3 rounded-lg border border-line border-l-[3px] border-l-terracotta-500 bg-canvas p-3">
+            <Info size={16} className="mt-0.5 shrink-0 text-terracotta-500" />
+            <p className="text-sm leading-relaxed whitespace-pre-line text-stone-700">
+              {meeting.infoText}
+            </p>
+          </div>
+        )}
       </header>
 
       {/* Direkt unter dem Kopf und außerhalb des gedämpften Teils: das ist die
@@ -584,155 +687,100 @@ function Loaded({
             Frage. Beides zugleich gibt es nie: `showNotes` und `mayAddNotes`
             schließen einander aus.
 
-            Er steht auch **außerhalb** des Bearbeitungsmodus: eine
-            Zusammenfassung schreibt man in dem Moment, in dem man vom Abend
-            kommt, nicht nachdem man einen Schalter gefunden hat — der Knopf
-            legt ihn deshalb gleich mit um. */}
+            Ein Klick genügt: eine Zusammenfassung schreibt man in dem Moment,
+            in dem man vom Abend kommt, und nicht nachdem man erst einen
+            Schalter gefunden hat. */}
         {mayAddNotes && (
           <NotesPrompt saving={update.isPending} onAdd={addNotes} />
         )}
 
-        {/* Die erste Frage an einen Termin ist „wann". Sie stand bisher nur im
-            Datum, und eine Uhrzeit gab es gar nicht — „wir fangen heute später
-            an" lief über WhatsApp. */}
+        {/* **Zwei Sektionen, nicht eine.** Der Ort stand bisher als namenloser
+            Block über den Rollen, in derselben Karte — dabei beantwortet er eine
+            andere Frage: „wo treffen wir uns" gegen „wer macht was". Und die
+            Adresse, die in der Antwort längst mitkommt, stand auf dieser Seite
+            überhaupt nirgends. */}
         <section>
-          <SectionTitle>Uhrzeit</SectionTitle>
-          <Card>
-            <TimeRow
-              startTime={meeting.startTime}
-              saving={update.isPending}
-              onSave={
-                editing ? (next) => patch({ startTime: next }) : undefined
-              }
-            />
-          </Card>
-        </section>
+          <SectionTitle>Ort & Anreise</SectionTitle>
+          <Card className="flex items-center gap-4">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-terracotta-100 bg-terracotta-50 text-terracotta-600">
+              <MapPin size={20} />
+            </span>
 
-        {/* Ganz oben, weil hier steht, was man vor dem Abend wissen muss —
-          „bringt Kuchen mit", „wir fangen später an". Unten zwischen
-          Zusammenfassung und Actionstep las es niemand rechtzeitig. */}
-        <section>
-          <SectionTitle>Infos</SectionTitle>
-          <Card>
-            <InlineEdit
-              label="Infos"
-              multiline
-              value={meeting.infoText}
-              emptyLabel="Nichts Besonderes zu beachten"
-              saving={update.isPending}
-              onSave={editing ? (next) => patch({ infoText: next }) : undefined}
-            />
-          </Card>
-        </section>
-
-        {/* Ort und Gastgeber stehen an jedem Termin: man trifft sich immer
-            irgendwo, auch an einem Geburtstag. Dass niemand eingetragen ist,
-            ist ein gültiger Zustand — das Treffen im Schlosspark. */}
-        <section>
-          <SectionTitle>Zuständigkeiten</SectionTitle>
-          <Card className="divide-y divide-line">
-            <div className="w-full pb-4">
-              {/* Titel */}
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-stone-400">
-                Ort & Gastgeber
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-serif text-lg font-bold text-stone-800">
+                {meeting.location?.name ?? 'Noch offen'}
               </p>
-
-              <div className="flex w-full items-start justify-between gap-4">
-                <div className="flex min-w-0 flex-col">
-                  <div className="flex items-center gap-1.5 text-lg font-bold text-stone-800">
-                    <MapPin
-                      size={20}
-                      className="shrink-0 text-terracotta-600"
-                      fill="currentColor"
-                    />
-                    <span className="truncate font-serif">
-                      {meeting.location?.name ?? 'Noch offen'}
-                    </span>
-                  </div>
-
-                  <p className="mt-1 text-sm text-stone-500">
-                    {meeting.host
-                      ? 'Ergibt sich aus dem Gastgeber.'
-                      : 'Öffentlicher Treffpunkt'}
-                  </p>
-                </div>
-
-                <a
-                  href={
-                    meeting?.location ? mapsUrl(meeting.location) : undefined
-                  }
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-disabled={!meeting?.location}
-                  className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                    meeting?.location
-                      ? 'bg-terracotta-600 text-white hover:bg-terracotta-700'
-                      : 'pointer-events-none cursor-not-allowed bg-gray-300 text-gray-500'
-                  }`}
-                >
-                  <MapPin size={16} />
-                  In Maps öffnen
-                  <ExternalLink size={14} />
-                </a>
-              </div>
+              {/* Der Satz darunter ist die Adresse, wenn es eine gibt. Vorher
+                  stand hier „Ergibt sich aus dem Gastgeber." — eine Erklärung
+                  der Mechanik statt einer Auskunft — und „Öffentlicher
+                  Treffpunkt" auch dann, wenn schlicht noch kein Ort feststand. */}
+              <p className="mt-0.5 truncate text-sm text-stone-500">
+                {meeting.location?.address ??
+                  (meeting.location
+                    ? 'Keine Adresse hinterlegt'
+                    : 'Trag oben einen Gastgeber oder Treffpunkt ein')}
+              </p>
             </div>
 
-            <RoleRow
-              label={ROLE_LABEL.HOST}
-              people={meeting.host ? [meeting.host] : []}
-              emptyLabel={
-                meeting.locationId && !meeting.host
-                  ? 'Kein Host nötig'
-                  : !meeting.host && !meeting.locationId
-                    ? 'Host/Treffpunkt notwendig'
-                    : ''
-              }
-              onEdit={cancelled ? undefined : openVenue}
-              EditIcon={UserPen}
-              editIconSize={16}
-            />
-
-            {meeting.hasTopicSlot && (
-              <RoleRow
-                label={ROLE_LABEL.TOPIC}
-                people={roles.topicPeople}
-                emptyLabel="Noch niemand"
-                onEdit={cancelled ? undefined : () => openSheet('TOPIC')}
-                EditIcon={UserPen}
-                editIconSize={16}
-              />
-            )}
-
-            {meeting.hasTestimonySlot && (
-              <RoleRow
-                label={ROLE_LABEL.TESTIMONY}
-                people={
-                  meeting.testimonyPerson ? [meeting.testimonyPerson] : []
-                }
-                emptyLabel="Noch niemand "
-                onEdit={cancelled ? undefined : () => openSheet('TESTIMONY')}
-                EditIcon={UserPen}
-                editIconSize={16}
-              />
-            )}
-
-            {meeting.hasSongSlot && (
-              <RoleRow
-                label={ROLE_LABEL.SONG}
-                people={songLeaders.data ?? []}
-                emptyLabel="Noch niemand"
-                onEdit={cancelled ? undefined : () => openSheet('SONG')}
-                EditIcon={UserPen}
-                editIconSize={16}
-              />
+            {/* Ohne Ort steht hier **kein** Knopf. Er war vorher ein
+                deaktivierter Anker in `bg-gray-300` — den einzigen
+                Nicht-Token-Farben dieser Seite, die im Dunkelmodus falsch
+                aussehen. Ein toter Knopf ist kein Hinweis. */}
+            {meeting.location && (
+              <a
+                href={mapsUrl(meeting.location)}
+                target="_blank"
+                rel="noreferrer"
+                className={cn(
+                  'flex shrink-0 items-center gap-1.5 rounded-full bg-terracotta-600 px-4 py-2 text-sm font-semibold text-white transition-colors',
+                  'hover:bg-terracotta-700 focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+                  PRESSABLE,
+                )}
+              >
+                <Navigation size={15} />
+                Maps
+                <ExternalLink size={13} />
+              </a>
             )}
           </Card>
+        </section>
+
+        {/* Eine Zeile je Rolle, die es an **diesem** Abend gibt — dieselbe
+            Aufstellung, nach der auch die Planungstabelle „fertig geplant"
+            entscheidet (`meetingRoles`). Ein Baustein, der aus ist, steht gar
+            nicht da; der Gastgeber steht immer, denn man trifft sich immer
+            irgendwo. */}
+        <section>
+          <SectionTitle
+            action={
+              <span className="text-[11px] font-semibold text-stone-400 normal-case">
+                {besetzt} von {rollen.length} besetzt
+              </span>
+            }
+          >
+            Zuständigkeiten
+          </SectionTitle>
+
+          <div className="space-y-2">
+            {rollen.map((slot) => (
+              <RoleRow
+                key={slot.role}
+                role={slot.role}
+                people={slot.people}
+                emptyLabel={
+                  slot.role === 'HOST' && !meeting.locationId
+                    ? 'Host oder Treffpunkt fehlt'
+                    : 'Noch niemand'
+                }
+                onEdit={cancelled ? undefined : () => openRole(slot.role)}
+              />
+            ))}
+          </div>
         </section>
 
         {meeting.hasSongSlot && (
           <SongsCard
             meetingId={meetingId}
-            editing={editing}
             readOnly={locked}
             mayPick={mayPickSongs}
           />
@@ -769,12 +817,7 @@ function Loaded({
             sie beantwortet, wer da war, und das schlägt man nach, statt es
             zwischen Thema und Anliegen zu lesen. */}
         {meeting.hasPrayerSlot && (
-          <PrayerRequestsCard
-            meetingId={meetingId}
-            editing={editing}
-            locked={locked}
-            onEdit={() => setEditing(true)}
-          />
+          <PrayerRequestsCard meetingId={meetingId} locked={locked} />
         )}
 
         <AttendanceCard meeting={meeting} readOnly={locked} />
@@ -790,12 +833,12 @@ function Loaded({
         {showNotes && (
           <NotesCard
             meeting={meeting}
-            editable={editing}
+            editable={!cancelled}
             started={started}
             saving={update.isPending}
             onSummary={(next) => patch({ summaryText: next })}
             onActionstep={(next) => patch({ actionstepText: next })}
-            onRemove={editing ? removeNotes : undefined}
+            onRemove={cancelled ? undefined : removeNotes}
           />
         )}
 
@@ -809,7 +852,7 @@ function Loaded({
             dorthin. Wem hinterher auffällt, dass am Dienstag doch Lieder
             waren, kam bisher nicht mehr heran. An einem **abgesagten** Abend
             gibt es dagegen nichts umzubauen. */}
-        {!cancelled && editing && (
+        {!cancelled && (
           <SlotCard
             slots={meeting}
             disabled={update.isPending}
@@ -818,31 +861,18 @@ function Loaded({
         )}
       </div>
 
-      {/* Der Schalter, nicht ein Speichern-Knopf: geschrieben wird sofort, hier
-          wird nur entschieden, ob überhaupt etwas angeboten wird. Er deckt die
-          Texte und die Bausteine — die Rollen-Zuteilung braucht ihn nicht, die
-          steht immer offen. Absagen und Löschen stehen bewusst dahinter und
-          dauerhaft da: sie sind keine Bearbeitung, sondern eine Entscheidung
-          über den Abend als Ganzes. */}
-      <Button
-        variant={editing ? 'primary' : 'secondary'}
-        className="w-full"
-        onClick={() => setEditing((current) => !current)}
-      >
-        {editing ? (
-          <>
-            <Check size={16} /> Fertig
-          </>
-        ) : (
-          <>
-            <Pencil size={14} /> Bearbeiten
-          </>
-        )}
-      </Button>
-
       {!cancelled && <CancelMeetingBlock meeting={meeting} past={past} />}
 
       <DeleteMeetingBlock meeting={meeting} />
+
+      <MeetingEditSheet
+        open={editing}
+        meeting={meeting}
+        placeholder={meetingKindLabel(meeting)}
+        saving={update.isPending}
+        onSave={patch}
+        onClose={() => setEditing(false)}
+      />
 
       {sheet && (
         <AssignmentSheet
@@ -856,6 +886,17 @@ function Loaded({
           hint={sheet === 'TOPIC' ? topicHint : undefined}
           onSubmit={submitFor(sheet)}
           saving={roles.saving}
+        />
+      )}
+
+      {choosingSnacks && (
+        <SnackSheet
+          open
+          onClose={() => setChoosingSnacks(false)}
+          selectedIds={meeting.snackResponsibles.map((row) => row.person.id)}
+          attendances={meeting.attendances}
+          onSubmit={setSnacks.mutate}
+          saving={setSnacks.isPending}
         />
       )}
 
@@ -887,229 +928,74 @@ function Loaded({
 }
 
 /**
- * Der Titel sitzt am Überschriftstext, nicht in einem eigenen Feld weiter
- * unten — dort war er ein Formularfeld unter vielen, obwohl er das Erste ist,
- * was man liest.
+ * Eine Rolle als eigene Fläche: oben Symbol, Name und der Knopf zum Eintragen,
+ * darunter die Menschen.
  *
- * Was angezeigt wird, ist die fertige Überschrift (eigener Titel, sonst das
- * Thema, sonst die Terminart). Bearbeitet wird aber nur `meeting.title`: würde
- * der Entwurf mit der Überschrift starten, machte das erste Speichern aus dem
- * geerbten Themen-Titel einen eigenen — und der Termin löste sich still vom
- * Thema ab.
- */
-function HeadlineEdit({
-  headline,
-  title,
-  placeholder,
-  saving,
-  onSave,
-}: {
-  headline: string;
-  title: string | null;
-  placeholder: string;
-  saving: boolean;
-  /** Fehlt sie, ist die Überschrift nur Anzeige — wie bei `InlineEdit`. */
-  onSave?: (next: string | null) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(title ?? '');
-
-  const commit = () => {
-    const trimmed = draft.trim();
-    setEditing(false);
-    const next = trimmed === '' ? null : trimmed;
-    if (next !== title) onSave?.(next);
-  };
-
-  if (editing) {
-    return (
-      <div className="mt-1 space-y-2">
-        {/* Kein autoFocus: auf dem Telefon schöbe die Tastatur die Überschrift
-            aus dem Bild, die man gerade bearbeitet. */}
-        <TextInput
-          value={draft}
-          placeholder={placeholder}
-          aria-label="Titel des Termins"
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') commit();
-            if (event.key === 'Escape') {
-              setDraft(title ?? '');
-              setEditing(false);
-            }
-          }}
-        />
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setDraft(title ?? '');
-              setEditing(false);
-            }}
-          >
-            Abbrechen
-          </Button>
-          <Button size="sm" loading={saving} onClick={commit}>
-            Übernehmen
-          </Button>
-        </div>
-        <p className="text-[11px] text-stone-400">
-          Leer lassen: dann steht dort das Thema, sonst die Art des Termins.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-1 flex items-start gap-2">
-      <h1 className="font-serif text-3xl leading-tight font-bold text-stone-900">
-        {headline}
-      </h1>
-      {onSave && (
-        <IconButton
-          label="Titel bearbeiten"
-          onClick={() => {
-            setDraft(title ?? '');
-            setEditing(true);
-          }}
-          disabled={saving}
-          className="mt-1 shrink-0"
-        >
-          <Pencil size={15} />
-        </IconButton>
-      )}
-    </div>
-  );
-}
-
-/**
- * Wann es losgeht — lesen immer, ändern im Bearbeitungsmodus.
+ * **Zwei Zeilen und nicht eine.** Vorher stand alles nebeneinander: Symbol,
+ * eine 4,5rem breite Spalte für die Bezeichnung, die Namen, der Knopf. Auf dem
+ * Telefon blieben für die Namen rund 130 Pixel — ein einziger passte hinein,
+ * der zweite rutschte darunter, der dritte machte die Zeile dreistöckig. Dabei
+ * sind gerade die Rollen mit mehreren die häufigen: Musik, Thema, Snacks.
+ * Unten über die volle Breite stehen zwei bequem, meistens drei.
  *
- * Ein eigener Zustand für das Eingabefeld und nicht direkt `patch` bei jedem
- * Tastendruck: `<input type="time">` liefert zwischendurch leere und halbe
- * Werte, während man tippt, und jede davon wäre ein Schreibvorgang samt
- * Benachrichtigung an die Gruppe.
- */
-function TimeRow({
-  startTime,
-  saving,
-  onSave,
-}: {
-  startTime: string;
-  saving: boolean;
-  /** Fehlt außerhalb des Bearbeitungsmodus. */
-  onSave?: (next: string) => void;
-}) {
-  const [draft, setDraft] = useState<string | null>(null);
-
-  if (draft === null) {
-    return (
-      <div className="flex items-center gap-3">
-        <Clock size={18} className="shrink-0 text-terracotta-600" />
-        <span className="flex-1 font-serif text-lg font-bold text-stone-800">
-          {startTime} Uhr
-        </span>
-        {onSave && (
-          <IconButton
-            label="Uhrzeit ändern"
-            onClick={() => setDraft(startTime)}
-            disabled={saving}
-          >
-            <Pencil size={15} />
-          </IconButton>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <TextInput
-        type="time"
-        value={draft}
-        aria-label="Uhrzeit des Termins"
-        onChange={(event) => setDraft(event.target.value)}
-      />
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={() => setDraft(null)}>
-          Abbrechen
-        </Button>
-        <Button
-          size="sm"
-          loading={saving}
-          // Ein leeres Feld hieße „keine Uhrzeit", und die gibt es nicht.
-          disabled={draft === ''}
-          onClick={() => {
-            if (draft !== startTime) onSave?.(draft);
-            setDraft(null);
-          }}
-        >
-          Übernehmen
-        </Button>
-      </div>
-      <p className="text-[11px] leading-relaxed text-stone-400">
-        Ist das der nächste Termin, bekommen die anderen Bescheid.
-      </p>
-    </div>
-  );
-}
-
-/**
- * Eine Rolle als Zeile: Bezeichnung, wer es ist, Stift.
- *
- * Vorher standen die drei als Chips nebeneinander. Die sahen nach Anzeige aus,
- * nicht nach „hier trägst du ein", und wer sie nicht angetippt hat, hat die
- * Zuteilung nie gefunden.
+ * Davor standen die Rollen einmal als Chips nebeneinander. Die sahen nach
+ * Anzeige aus, nicht nach „hier trägst du ein"; deshalb ist der Knopf oben
+ * rechts geblieben und nicht die ganze Fläche antippbar geworden — er sagt, wo
+ * man drückt.
  */
 function RoleRow({
-  label,
+  role,
   people,
   emptyLabel,
   onEdit,
-  EditIcon,
-  editIconSize = 14,
 }: {
-  label: string;
+  role: MeetingRole;
   people: PersonRef[];
   emptyLabel: string;
   /** Fehlt an einem abgesagten Abend: dort gibt es nichts mehr einzuteilen. */
   onEdit?: () => void;
-  EditIcon?: React.ComponentType<{ size: number }>;
-  editIconSize?: number;
 }) {
-  return (
-    <div className="flex items-center gap-3 py-3.5">
-      <span className="w-16 shrink-0 text-[11px] font-semibold text-stone-500">
-        {label}
-      </span>
+  const Icon = ROLE_ICON[role];
+  const label = ROLE_LABEL[role];
 
-      <span className="flex min-w-0 flex-1 items-center gap-2">
+  return (
+    <div className="rounded-lg border border-line bg-card px-3 py-2.5">
+      <div className="flex items-center gap-3">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-line bg-canvas text-terracotta-600">
+          <Icon size={15} />
+        </span>
+
+        <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-stone-700">
+          {label}
+        </span>
+
+        {onEdit && (
+          <IconButton label={`${label} eintragen`} onClick={onEdit}>
+            <UserPen size={16} />
+          </IconButton>
+        )}
+      </div>
+
+      {/* Eingerückt auf die Höhe der Bezeichnung — Symbol (2rem) plus Abstand
+          (0,75rem) —, damit die Namen unter ihr beginnen und nicht unter dem
+          Symbol. Ohne den Knopf daneben bleibt hier die ganze Kartenbreite. */}
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-11">
         {people.length === 0 ? (
-          <span className="truncate text-sm text-stone-400 italic">
-            {emptyLabel}
-          </span>
+          <span className="text-sm text-stone-400 italic">{emptyLabel}</span>
         ) : (
           people.map((person) => (
-            <span key={person.id} className="flex items-center gap-1.5">
+            <span
+              key={person.id}
+              className="flex max-w-full items-center gap-1.5 rounded-full bg-canvas py-0.5 pr-2.5 pl-0.5"
+            >
               <Avatar person={person} size="xs" />
-              <span className="text-sm font-bold text-stone-800">
+              <span className="truncate text-[13px] font-bold text-stone-800">
                 {person.name}
               </span>
             </span>
           ))
         )}
-      </span>
-
-      {onEdit && (
-        <IconButton label={`${label} eintragen`} onClick={onEdit}>
-          {EditIcon ? (
-            <EditIcon size={editIconSize} />
-          ) : (
-            <Pencil size={editIconSize} />
-          )}
-        </IconButton>
-      )}
+      </div>
     </div>
   );
 }

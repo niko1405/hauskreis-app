@@ -494,7 +494,7 @@ export class RoleSuggestionService {
     const bearbeitet = (kandidat: AssignmentRole) =>
       kandidat === role ? options.meetingId : undefined;
 
-    const [host, topic, song, testimony] = await Promise.all([
+    const [host, topic, song, testimony, snack] = await Promise.all([
       this.collectEvents(hauskreisId, bearbeitet(AssignmentRole.HOST)),
       this.collectTopicEvents(hauskreisId, {
         excludeMeetingId: bearbeitet(AssignmentRole.TOPIC),
@@ -508,9 +508,10 @@ export class RoleSuggestionService {
         hauskreisId,
         bearbeitet(AssignmentRole.TESTIMONY),
       ),
+      this.collectSnackEvents(hauskreisId, bearbeitet(AssignmentRole.SNACK)),
     ]);
 
-    return [...host, ...topic, ...song, ...testimony];
+    return [...host, ...topic, ...song, ...testimony, ...snack];
   }
 
   /**
@@ -676,6 +677,38 @@ export class RoleSuggestionService {
       personId: leader.personId,
       role: AssignmentRole.SONG,
       date: leader.meeting.date,
+    }));
+  }
+
+  /**
+   * Wer wann etwas zu essen mitgebracht hat.
+   *
+   * Die Rolle hat keine eigene Vorschlagsliste — „wer war am längsten nicht
+   * dran" fragt bei Snacks niemand. Als **Last** zählt sie hier trotzdem, und
+   * das ist kein Widerspruch: Für „wer hat am wenigsten zu tun, über alle
+   * Rollen" (CLAUDE.md §6.1) zählt jeder Dienst an dem Abend. Wer den Kuchen
+   * bringt, ganz oben als Gastgeber vorzuschlagen, wäre genau der Fehler, den
+   * `collectLoad` einmal behoben hat.
+   */
+  private async collectSnackEvents(
+    hauskreisId: string,
+    excludeMeetingId?: string,
+  ): Promise<RoleAssignmentEvent[]> {
+    const responsibles = await this.prisma.meetingSnackResponsible.findMany({
+      where: {
+        meeting: {
+          hauskreisId,
+          status: { not: MeetingStatus.CANCELLED },
+          ...(excludeMeetingId ? { id: { not: excludeMeetingId } } : {}),
+        },
+      },
+      select: { personId: true, meeting: { select: { date: true } } },
+    });
+
+    return responsibles.map((row) => ({
+      personId: row.personId,
+      role: AssignmentRole.SNACK,
+      date: row.meeting.date,
     }));
   }
 }

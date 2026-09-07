@@ -54,20 +54,27 @@
   --color-line: #f0e5de;
   --color-line-strong: #eae0d5;
 
-  /* Rollenfarben: Musik grün, Thema amber, Hinweise blau */
-  --color-music: #2d6a4f;
-  --color-music-bg: #e5f0ea;
-  --color-music-line: #c3dccf;
+  /* Vier Bedeutungen — und keine Rollen.
+     Sie hießen einmal `music` (grün) und `topic` (amber), nach den Rollen, für
+     die sie erfunden wurden. Getragen haben sie an den meisten Stellen längst
+     etwas anderes: grün das Abzeichen „Läuft", den Erfolgs-Toast, den Haken am
+     Actionstep, das gewählte Lied, die fertig geplante Zeile; amber die
+     Fehlerkarte und jeden Hinweis-Kasten. Seit die Rollen keine eigenen Farben
+     mehr haben, zeigte der Name auf nichts — und der Nächste hätte darin wieder
+     eine Rollenfarbe vermutet. */
+  --color-success: #2d6a4f;
+  --color-success-bg: #e5f0ea;
+  --color-success-line: #c3dccf;
 
-  --color-topic: #a67c33;
-  --color-topic-bg: #fdf3e1;
-  --color-topic-line: #fbeacd;
+  --color-warn: #a67c33;
+  --color-warn-bg: #fdf3e1;
+  --color-warn-line: #fbeacd;
 
   --color-info: #1e749c;
   --color-info-bg: #ddf3fc;
   --color-info-line: #c5eaf7;
 
-  /* Warnung und Konflikt */
+  /* Konflikt und Gefahr — schärfer als `warn`, das nur hinweist. */
   --color-alert: #9d3b4c;
   --color-alert-bg: #fdecee;
   --color-alert-line: #f6d5da;
@@ -154,8 +161,8 @@
  * lebt von einem warmen Ton, und ein neutrales Grau daraus zu machen hätte
  * genau das gekostet. Die Grauleiter bleibt deshalb bräunlich, Terracotta
  * wird eine Spur kräftiger (auf Dunkel wirkt sie sonst stumpf), und die
- * Rollenfarben bekommen gedämpfte Flächen statt der hellen Pastelltöne, die
- * hier leuchten würden.
+ * die vier Bedeutungsfarben bekommen gedämpfte Flächen statt der hellen
+ * Pastelltöne, die hier leuchten würden.
  *
  * Zwei Regeln kehren sich um: Bei `terracotta` ist im Hellen die höhere Zahl
  * die dunklere Farbe, im Dunklen die hellere — `hover:bg-terracotta-700` muss
@@ -189,14 +196,14 @@
   --color-header-bar: #8a4429;
   --color-header-bar-deep: #6d3520;
 
-  /* Rollenfarben */
-  --color-music: #7fc5a1;
-  --color-music-bg: #152b23;
-  --color-music-line: #26483a;
+  /* Die vier Bedeutungen, gedämpft */
+  --color-success: #7fc5a1;
+  --color-success-bg: #152b23;
+  --color-success-line: #26483a;
 
-  --color-topic: #d9b163;
-  --color-topic-bg: #332715;
-  --color-topic-line: #4c3a1f;
+  --color-warn: #d9b163;
+  --color-warn-bg: #332715;
+  --color-warn-line: #4c3a1f;
 
   --color-info: #6cb6d8;
   --color-info-bg: #122c39;

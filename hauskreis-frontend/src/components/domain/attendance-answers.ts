@@ -63,17 +63,17 @@ export const ANSWERS: {
     short: 'Unsicher',
     icon: HelpCircle,
     active: 'border-terracotta-100 bg-terracotta-50 text-terracotta-700',
-    dot: 'bg-topic',
-    text: 'text-topic',
+    dot: 'bg-warn',
+    text: 'text-warn',
   },
   {
     status: 'ATTENDING',
     label: 'Zusagen',
     short: 'Dabei',
     icon: Check,
-    active: 'border-music-line bg-music-bg text-music',
-    dot: 'bg-music',
-    text: 'text-music',
+    active: 'border-success-line bg-success-bg text-success',
+    dot: 'bg-success',
+    text: 'text-success',
   },
 ];
 

@@ -13,7 +13,12 @@
  * Gastgeber ist kein Baustein: man trifft sich immer irgendwo. Dass an einem
  * Abend niemand gastgebend eingetragen ist, bleibt davon unberührt.
  */
-import type { AssignmentRole, MeetingStatus, MeetingType } from './api/types';
+import type {
+  AssignmentRole,
+  AttendanceStatus,
+  MeetingStatus,
+  PersonRef,
+} from './api/types';
 import { hasStarted, isPast, type CalendarDay } from './date';
 
 /**
@@ -56,21 +61,41 @@ export function isMeetingPast(meeting: MeetingWhen): boolean {
   return meetingPhase(meeting) === 'past';
 }
 
-export const MEETING_TYPE_LABEL: Record<MeetingType, string> = {
-  STANDARD: 'Hauskreis-Abend',
-  LOBPREIS_GEBET: 'Lobpreis & Gebet',
-  CUSTOM: 'Besonderer Termin',
-};
+/**
+ * Wie ein Abend heißt, wenn niemand ihm einen Namen gegeben hat.
+ *
+ * Abgeleitet und nicht gespeichert. Hier stand einmal `MEETING_TYPE_LABEL`, ein
+ * Wörterbuch über die Terminart — und die war für „Standard" gegen „Lobpreis"
+ * nichts als eine zweite, ungenauere Fassung dessen, was die Bausteine ohnehin
+ * sagen. Zwei Aussagen über denselben Abend, von denen sich nur eine ändert,
+ * wenn jemand am Bausteinkasten dreht.
+ *
+ * Die Reihenfolge ist die des Gewichts: Ein Abend mit Thema ist ein
+ * Hauskreis-Abend, auch wenn Lieder dazugehören. Ohne Thema tragen Testimony
+ * und Lieder den Abend — das ist der Lobpreisabend. Bleibt nichts davon, heißt
+ * er schlicht „Termin"; ein Geburtstag hat ohnehin fast immer einen eigenen
+ * Titel.
+ */
+export function meetingKindLabel(slots: {
+  hasTopicSlot: boolean;
+  hasSongSlot: boolean;
+  hasTestimonySlot: boolean;
+}): string {
+  if (slots.hasTopicSlot) return 'Hauskreis-Abend';
+  if (slots.hasTestimonySlot || slots.hasSongSlot) return 'Lobpreis & Gebet';
+  return 'Termin';
+}
 
 export type MeetingSlotKey =
   | 'hasTopicSlot'
   | 'hasSongSlot'
   | 'hasTestimonySlot'
   | 'hasNotesSlot'
-  | 'hasPrayerSlot';
+  | 'hasPrayerSlot'
+  | 'hasSnackSlot';
 
 /**
- * Wie jeder Baustein heißt — **alle fünf**, auch der, den man nicht anhakt.
+ * Wie jeder Baustein heißt — **alle sechs**, auch der, den man nicht anhakt.
  *
  * Getrennt von `MEETING_SLOTS`, weil die Rückfrage beim Umschalten benennen
  * muss, was verlorengeht: wer „Thema" anhakt, verliert die Nachbereitung. Käme
@@ -83,6 +108,7 @@ export const SLOT_LABEL: Record<MeetingSlotKey, string> = {
   hasSongSlot: 'Lieder',
   hasTestimonySlot: 'Testimony',
   hasPrayerSlot: 'Gebetsanliegen',
+  hasSnackSlot: 'Snacks',
 };
 
 export const MEETING_SLOT_KEYS = Object.keys(SLOT_LABEL) as MeetingSlotKey[];
@@ -90,7 +116,7 @@ export const MEETING_SLOT_KEYS = Object.keys(SLOT_LABEL) as MeetingSlotKey[];
 /**
  * Die Bausteine, die man beim **Planen** eines Abends anhakt.
  *
- * Vier, nicht fünf: die **Nachbereitung** steht bewusst nicht dabei. Sie gehört
+ * Fünf, nicht sechs: die **Nachbereitung** steht bewusst nicht dabei. Sie gehört
  * nicht zur Planung, sondern zu dem, was danach übrig bleibt — hier stand sie
  * neben Thema und Liedern und fragte damit vor dem Abend nach der
  * Zusammenfassung von etwas, das noch nicht stattgefunden hatte. Sie kommt
@@ -118,6 +144,11 @@ export const MEETING_SLOTS = [
     label: SLOT_LABEL.hasPrayerSlot,
     hint: 'Wofür ihr an dem Abend beten wollt.',
   },
+  {
+    key: 'hasSnackSlot',
+    label: SLOT_LABEL.hasSnackSlot,
+    hint: 'Wer etwas zu essen mitbringt.',
+  },
 ] as const satisfies readonly {
   key: MeetingSlotKey;
   label: string;
@@ -127,44 +158,26 @@ export const MEETING_SLOTS = [
 export type MeetingSlots = Record<MeetingSlotKey, boolean>;
 
 /**
- * Was eine Terminart mitbringt — dieselbe Tabelle wie im Backend
- * (`meeting-slots.ts`), nur fürs Formular beim Anlegen.
+ * Womit ein von Hand angelegter Abend startet — dieselbe Belegung wie im
+ * Backend (`EMPTY_SLOTS` in `meeting-slots.ts`), nur fürs Anlege-Formular.
  *
- * Zwei Wahrheiten wären hier ungefährlich, aber verwirrend: der Server setzt
- * ohnehin seine eigenen, wenn nichts mitkommt. Sichtbar zu machen, **was** er
+ * Zwei Wahrheiten wären hier ungefährlich, aber verwirrend: Der Server setzt
+ * ohnehin seine eigene, wenn nichts mitkommt. Sichtbar zu machen, **was** er
  * setzen wird, ist der ganze Zweck.
+ *
+ * Leer bis auf die Gebetsanliegen: Ein selbst angelegter Termin muss nichts
+ * erfüllen — aber beten kann man an einem Geburtstag genauso.
  */
-export function slotDefaults(type: MeetingType): MeetingSlots {
-  if (type === 'STANDARD') {
-    return {
-      hasTopicSlot: true,
-      hasSongSlot: true,
-      hasTestimonySlot: false,
-      hasNotesSlot: false,
-      hasPrayerSlot: true,
-    };
-  }
-
-  if (type === 'LOBPREIS_GEBET') {
-    return {
-      hasTopicSlot: false,
-      hasSongSlot: true,
-      hasTestimonySlot: true,
-      hasNotesSlot: false,
-      hasPrayerSlot: true,
-    };
-  }
-
-  return {
-    hasTopicSlot: false,
-    hasSongSlot: false,
-    hasTestimonySlot: false,
-    hasNotesSlot: false,
-    // Auch hier an, als einziger: Ein besonderer Termin muss nichts erfüllen —
-    // aber beten kann man an einem Geburtstag genauso.
-    hasPrayerSlot: true,
-  };
-}
+export const EMPTY_SLOTS: MeetingSlots = {
+  hasTopicSlot: false,
+  hasSongSlot: false,
+  hasTestimonySlot: false,
+  hasNotesSlot: false,
+  hasPrayerSlot: true,
+  // Als einziger auch hier aus: Die Rolle ist eine Einladung. Wer sie an jedem
+  // erzeugten Abend haben will, hakt sie in der Verwaltung an.
+  hasSnackSlot: false,
+};
 
 /**
  * Einen Schalter umlegen — und dabei die Ausschlüsse wahren.
@@ -186,7 +199,7 @@ export function slotDefaults(type: MeetingType): MeetingSlots {
  * `summaryText`, während `hasNotesSlot` gerade auf `false` ging: der Server
  * antwortete „Dieser Termin hat keine Nachbereitung — schalte das erst dazu",
  * und das Anhaken von „Thema" tat nichts. Was hier herauskommt, sind genau die
- * fünf Schalter.
+ * sechs Schalter.
  */
 export function applySlotToggle(
   slots: MeetingSlots,
@@ -199,8 +212,10 @@ export function applySlotToggle(
     hasTestimonySlot: slots.hasTestimonySlot,
     hasNotesSlot: slots.hasNotesSlot,
     // Schließt nichts aus und wird von nichts ausgeschlossen — er fährt einfach
-    // unverändert mit.
+    // unverändert mit. Für die Snacks gilt dasselbe: Kuchen gibt es am
+    // Themenabend wie am Geburtstag.
     hasPrayerSlot: slots.hasPrayerSlot,
+    hasSnackSlot: slots.hasSnackSlot,
   };
   next[key] = value;
 
@@ -215,67 +230,144 @@ export function applySlotToggle(
 }
 
 /**
- * Ist an diesem Abend jede Rolle vergeben, die es an ihm gibt?
+ * Die Rollen, die an einem Abend hängen — Gebetsbuddys und Geschenke also nicht.
  *
- * Die Frage der Planungstabelle, und ihr Kern ist der Unterschied zwischen
- * *fehlt* und *gibt es hier nicht*: ein Geburtstagsabend ohne Thema ist nicht
- * offen, er hat keins. Ein Gastgeber fehlt auch dann nicht, wenn der Ort schon
- * feststeht und keinen braucht — Schlosspark, Café, Gemeindehaus.
- *
- * Ein abgesagter Abend ist nie fertig geplant: an ihm gibt es nichts zu planen.
- * Grün zu leuchten wäre dort eine Auszeichnung für einen Abend, der ausfällt.
+ * Beide teilt der Server zu und beide hängen an keinem Termin; sie stehen unter
+ * „Deine Rollen", aber nie an einem Abend.
  */
-export function planningComplete(meeting: {
-  status: MeetingStatus;
+export type MeetingRole = Exclude<
+  AssignmentRole,
+  'PRAYER_BUDDY' | 'BIRTHDAY_GIFT'
+>;
+
+/** Warum eine Rolle an diesem Abend gar nicht vorkommt. */
+export type RoleAbsence =
+  /** Der Baustein ist aus — den Abend gibt es ohne diese Rolle. */
+  | 'slot-off'
+  /** Der Ort braucht keinen Gastgeber: Schlosspark, Café, Gemeindehaus. */
+  | 'not-needed';
+
+export interface MeetingRoleSlot {
+  role: MeetingRole;
+  people: PersonRef[];
+  /** `null` heißt: Die Rolle gibt es hier, sie ist nur vielleicht unbesetzt. */
+  absent: RoleAbsence | null;
+}
+
+/**
+ * Welche Rollen dieser Abend hat, wer sie trägt — und wo es sie gar nicht gibt.
+ *
+ * **Eine Aufstellung, drei Leser**: die Zuständigkeiten-Sektion am Termin, ihr
+ * Zähler („2 von 4 besetzt") und die Planungstabelle. Sie stand vorher dreimal
+ * da — als Kette von `&&` in `planningComplete`, als Liste von Zellen in der
+ * Tabelle und als Folge von `{slot && <RoleRow …>}` auf der Detailseite. Drei
+ * Antworten auf dieselbe Frage laufen irgendwann auseinander, und dann stünde
+ * über einer Liste mit vier Zeilen „3 von 5 besetzt".
+ *
+ * Der Kern ist der Unterschied zwischen *fehlt* und *gibt es hier nicht*: ein
+ * Geburtstagsabend ohne Thema ist nicht offen, er hat keins.
+ */
+export function meetingRoles(meeting: {
   hostPersonId: string | null;
+  host: PersonRef | null;
   location: { requiresHost: boolean } | null;
   hasTopicSlot: boolean;
   hasSongSlot: boolean;
   hasTestimonySlot: boolean;
-  testimonyPersonId: string | null;
-  topicResponsibles: readonly unknown[];
-  songLeaders: readonly unknown[];
-}): boolean {
-  if (meeting.status === 'CANCELLED') return false;
+  hasSnackSlot: boolean;
+  testimonyPerson: PersonRef | null;
+  topicResponsibles: readonly { person: PersonRef }[];
+  songLeaders: readonly { person: PersonRef }[];
+  snackResponsibles: readonly { person: PersonRef }[];
+}): MeetingRoleSlot[] {
+  return [
+    {
+      role: 'HOST',
+      people: meeting.host ? [meeting.host] : [],
+      // Einen Gastgeber-Baustein gibt es nicht — man trifft sich immer
+      // irgendwo. Fehlen kann er trotzdem nicht, wenn der Ort keinen braucht.
+      absent:
+        meeting.hostPersonId === null &&
+        meeting.location !== null &&
+        !meeting.location.requiresHost
+          ? 'not-needed'
+          : null,
+    },
+    {
+      role: 'TOPIC',
+      people: meeting.topicResponsibles.map((row) => row.person),
+      absent: meeting.hasTopicSlot ? null : 'slot-off',
+    },
+    {
+      role: 'SONG',
+      people: meeting.songLeaders.map((row) => row.person),
+      absent: meeting.hasSongSlot ? null : 'slot-off',
+    },
+    {
+      role: 'TESTIMONY',
+      people: meeting.testimonyPerson ? [meeting.testimonyPerson] : [],
+      absent: meeting.hasTestimonySlot ? null : 'slot-off',
+    },
+    {
+      role: 'SNACK',
+      people: meeting.snackResponsibles.map((row) => row.person),
+      absent: meeting.hasSnackSlot ? null : 'slot-off',
+    },
+  ];
+}
 
-  const hostGeklärt =
-    meeting.hostPersonId !== null ||
-    (meeting.location !== null && !meeting.location.requiresHost);
-
-  return (
-    hostGeklärt &&
-    (!meeting.hasTopicSlot || meeting.topicResponsibles.length > 0) &&
-    (!meeting.hasSongSlot || meeting.songLeaders.length > 0) &&
-    (!meeting.hasTestimonySlot || meeting.testimonyPersonId !== null)
-  );
+/** Die Rollen, die es an diesem Abend wirklich gibt. */
+export function activeMeetingRoles(
+  meeting: Parameters<typeof meetingRoles>[0],
+): MeetingRoleSlot[] {
+  return meetingRoles(meeting).filter((slot) => slot.absent === null);
 }
 
 /**
- * Die Überschrift einer Terminkarte: der eigene Titel, sonst die Art des
- * Termins.
+ * Ist an diesem Abend jede Rolle vergeben, die es an ihm gibt?
+ *
+ * Die Frage der Planungstabelle. Sie liest dieselbe Aufstellung wie die
+ * Zuständigkeiten-Sektion: Was dort als Zeile steht, zählt hier mit.
+ *
+ * Ein abgesagter Abend ist nie fertig geplant: an ihm gibt es nichts zu planen.
+ * Grün zu leuchten wäre dort eine Auszeichnung für einen Abend, der ausfällt.
+ */
+export function planningComplete(
+  meeting: Parameters<typeof meetingRoles>[0] & { status: MeetingStatus },
+): boolean {
+  if (meeting.status === 'CANCELLED') return false;
+
+  return activeMeetingRoles(meeting).every((slot) => slot.people.length > 0);
+}
+
+/**
+ * Die Überschrift einer Terminkarte: der eigene Titel, sonst der Name, der sich
+ * aus den Bausteinen ergibt.
  *
  * **Der Termin heißt nach sich selbst.** Hier standen dazwischen zwei Zeilen,
  * die auf den Titel der Einheit zurückfielen und dann auf den des Themas. Ein
  * Abend hieß damit „Teil 2: Was Petrus tat" — das ist aber der Name der
  * Einheit, nicht der des Abends. Wer seinem Termin einen eigenen Namen geben
  * will, trägt ihn ein (`HeadlineEdit` schreibt `meeting.title`, und zwar seit
- * jeher nur das); wer nicht, bekommt die Terminart.
+ * jeher nur das); wer nicht, bekommt `meetingKindLabel`.
  *
  * Das Thema bleibt sichtbar, nur nicht als Überschrift: als Rollen-Chip auf der
  * Karte, als Themen-Kasten auf der Terminseite, im Archiv unter „Themen".
  *
  * Nebenbei sagen damit alle Bildschirme dasselbe. Der Startbildschirm reichte
- * `HomeNextMeeting` herein, und dieses DTO hat gar kein `topicSession` — dort
+ * `HomeNextMeeting` herein, und dieses DTO hatte gar kein `topicSession` — dort
  * stand also längst die Terminart, während Liste, Kalender und Detailseite den
  * Themen-Titel zeigten.
  */
 export function meetingHeadline(meeting: {
-  type: MeetingType;
+  hasTopicSlot: boolean;
+  hasSongSlot: boolean;
+  hasTestimonySlot: boolean;
   title: string | null;
 }): string {
   // Auf Wahrheit geprüft und nicht auf `null`: Ein leerer Titel ist keiner, und
   // `??` ließe eine Überschrift aus null Zeichen stehen.
-  return meeting.title || MEETING_TYPE_LABEL[meeting.type];
+  return meeting.title || meetingKindLabel(meeting);
 }
 
 export const ROLE_LABEL: Record<AssignmentRole, string> = {
@@ -283,6 +375,7 @@ export const ROLE_LABEL: Record<AssignmentRole, string> = {
   TOPIC: 'Thema',
   SONG: 'Musik',
   TESTIMONY: 'Testimony',
+  SNACK: 'Snacks',
   PRAYER_BUDDY: 'Gebetsbuddy',
   BIRTHDAY_GIFT: 'Geschenk',
 };
@@ -293,6 +386,7 @@ export const ROLE_QUESTION: Record<AssignmentRole, string> = {
   TOPIC: 'Wer macht das Thema?',
   SONG: 'Wer macht die Musik?',
   TESTIMONY: 'Wer erzählt?',
+  SNACK: 'Wer bringt was zu essen mit?',
   PRAYER_BUDDY: 'Wer betet miteinander?',
   // Steht nie in einem Zuteilungs-Sheet — Geschenke teilt der Server zu, nicht
   // ein Mensch an einem Abend. Der Eintrag ist hier, weil TypeScript die Karte
@@ -328,4 +422,39 @@ export function mapsUrl(location: {
   }
   const query = encodeURIComponent(location.address ?? location.name);
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
+}
+
+/**
+ * Wie viele dabei sind — und mit wie vielen geplant wird.
+ *
+ * **Die Personenliste ist die Grundmenge, die Anwesenheit nur ein
+ * Nachschlagewerk.** Andersherum ginge es nicht: Eine Zeile in `attendances`
+ * bekommt nur, wer eine hat, und eine mit `UNKNOWN` entsteht fast nur, wenn
+ * jemand eine Zusage aktiv zurücknimmt. Wer nie geantwortet hat, steht gar
+ * nicht im Array — über `attendances` gezählt wären die Unentschiedenen also
+ * meistens null.
+ *
+ * **Eingeladene zählen nicht mit.** Wer sich noch nie angemeldet hat, kann
+ * nicht antworten und stünde auf ewig unter „weiß noch nicht"; der Server
+ * rechnet für „alle haben abgesagt" mit derselben Menge. Ausgetretene kommen
+ * gar nicht erst an.
+ *
+ * Die beiden Zahlen beantworten zwei Fragen, und beide werden gebraucht:
+ * `attending` ist „wer war da", `planned` ist „mit wie vielen rechne ich".
+ * Letzteres ist dieselbe Menge wie `countExpectedAttendance` im Server
+ * (Gruppengröße minus Absagen), nur von der anderen Seite gezählt.
+ */
+export function attendanceCounts(
+  people: readonly { id: string; acceptedAt: string | null }[],
+  attendances: readonly { personId: string; status: AttendanceStatus }[],
+): { attending: number; planned: number } {
+  const active = people.filter((person) => person.acceptedAt !== null);
+  const statusOf = (personId: string): AttendanceStatus =>
+    attendances.find((entry) => entry.personId === personId)?.status ??
+    'UNKNOWN';
+
+  const attending = active.filter((p) => statusOf(p.id) === 'ATTENDING').length;
+  const absent = active.filter((p) => statusOf(p.id) === 'ABSENT').length;
+
+  return { attending, planned: active.length - absent };
 }

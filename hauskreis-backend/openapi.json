@@ -4464,6 +4464,178 @@
         ]
       }
     },
+    "/api/hauskreise/{hauskreisId}/meetings/{id}/snack-responsibles": {
+      "get": {
+        "operationId": "MeetingController_findSnackResponsibles",
+        "parameters": [
+          {
+            "name": "hauskreisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnackResponsiblesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Meeting"
+        ]
+      },
+      "put": {
+        "operationId": "MeetingController_setSnackResponsibles",
+        "parameters": [
+          {
+            "name": "hauskreisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetSnackResponsiblesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ersetzt die Liste; eine leere ist gueltig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnackResponsiblesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Meeting"
+        ]
+      }
+    },
     "/api/hauskreise/{hauskreisId}/meetings/{id}/testimony-suggestions": {
       "get": {
         "operationId": "MeetingController_suggestTestimony",
@@ -10360,6 +10532,7 @@
                 "HOST_REMINDER",
                 "TOPIC_REMINDER",
                 "SONG_REMINDER",
+                "SNACK_REMINDER",
                 "ACTIONSTEP_REMINDER",
                 "PRAYER_BUDDY_ASSIGNED",
                 "ROLE_ASSIGNED",
@@ -12687,6 +12860,7 @@
                 "HOST_REMINDER",
                 "TOPIC_REMINDER",
                 "SONG_REMINDER",
+                "SNACK_REMINDER",
                 "ACTIONSTEP_REMINDER",
                 "PRAYER_BUDDY_ASSIGNED",
                 "ROLE_ASSIGNED",
@@ -12868,6 +13042,7 @@
               "HOST_REMINDER",
               "TOPIC_REMINDER",
               "SONG_REMINDER",
+              "SNACK_REMINDER",
               "ACTIONSTEP_REMINDER",
               "PRAYER_BUDDY_ASSIGNED",
               "ROLE_ASSIGNED",
@@ -13187,6 +13362,7 @@
                     "HOST_REMINDER",
                     "TOPIC_REMINDER",
                     "SONG_REMINDER",
+                    "SNACK_REMINDER",
                     "ACTIONSTEP_REMINDER",
                     "PRAYER_BUDDY_ASSIGNED",
                     "ROLE_ASSIGNED",
@@ -13257,6 +13433,7 @@
                     "HOST_REMINDER",
                     "TOPIC_REMINDER",
                     "SONG_REMINDER",
+                    "SNACK_REMINDER",
                     "ACTIONSTEP_REMINDER",
                     "PRAYER_BUDDY_ASSIGNED",
                     "ROLE_ASSIGNED",
@@ -14430,13 +14607,8 @@
                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
                   "nullable": true
                 },
-                "type": {
-                  "type": "string",
-                  "enum": [
-                    "STANDARD",
-                    "LOBPREIS_GEBET",
-                    "CUSTOM"
-                  ]
+                "generated": {
+                  "type": "boolean"
                 },
                 "status": {
                   "type": "string",
@@ -14459,6 +14631,9 @@
                   "type": "boolean"
                 },
                 "hasPrayerSlot": {
+                  "type": "boolean"
+                },
+                "hasSnackSlot": {
                   "type": "boolean"
                 },
                 "locationId": {
@@ -14950,6 +15125,43 @@
                     "additionalProperties": false
                   }
                 },
+                "snackResponsibles": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "person": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "photoUpdatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "photoUpdatedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "person"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
                 "actionstepDone": {
                   "type": "array",
                   "items": {
@@ -15031,13 +15243,14 @@
                 "date",
                 "startTime",
                 "endDate",
-                "type",
+                "generated",
                 "status",
                 "hasTopicSlot",
                 "hasSongSlot",
                 "hasTestimonySlot",
                 "hasNotesSlot",
                 "hasPrayerSlot",
+                "hasSnackSlot",
                 "locationId",
                 "hostPersonId",
                 "title",
@@ -15058,6 +15271,7 @@
                 "topicResponsibles",
                 "topicSession",
                 "songLeaders",
+                "snackResponsibles",
                 "actionstepDone",
                 "attendances"
               ],
@@ -15132,6 +15346,9 @@
           "praiseEvenings": {
             "type": "boolean"
           },
+          "snackSlot": {
+            "type": "boolean"
+          },
           "updatedByPersonId": {
             "type": "string",
             "format": "uuid",
@@ -15185,6 +15402,7 @@
           "timeZone",
           "weeklyActionstep",
           "praiseEvenings",
+          "snackSlot",
           "updatedByPersonId",
           "updatedAt",
           "version",
@@ -15220,6 +15438,9 @@
           },
           "praiseEvenings": {
             "type": "boolean"
+          },
+          "snackSlot": {
+            "type": "boolean"
           }
         }
       },
@@ -15251,13 +15472,8 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
             "nullable": true
           },
-          "type": {
-            "type": "string",
-            "enum": [
-              "STANDARD",
-              "LOBPREIS_GEBET",
-              "CUSTOM"
-            ]
+          "generated": {
+            "type": "boolean"
           },
           "status": {
             "type": "string",
@@ -15280,6 +15496,9 @@
             "type": "boolean"
           },
           "hasPrayerSlot": {
+            "type": "boolean"
+          },
+          "hasSnackSlot": {
             "type": "boolean"
           },
           "locationId": {
@@ -15771,6 +15990,43 @@
               "additionalProperties": false
             }
           },
+          "snackResponsibles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "person": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "photoUpdatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "photoUpdatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "person"
+              ],
+              "additionalProperties": false
+            }
+          },
           "actionstepDone": {
             "type": "array",
             "items": {
@@ -15852,13 +16108,14 @@
           "date",
           "startTime",
           "endDate",
-          "type",
+          "generated",
           "status",
           "hasTopicSlot",
           "hasSongSlot",
           "hasTestimonySlot",
           "hasNotesSlot",
           "hasPrayerSlot",
+          "hasSnackSlot",
           "locationId",
           "hostPersonId",
           "title",
@@ -15879,6 +16136,7 @@
           "topicResponsibles",
           "topicSession",
           "songLeaders",
+          "snackResponsibles",
           "actionstepDone",
           "attendances"
         ],
@@ -16193,15 +16451,6 @@
             "type": "string",
             "pattern": "^([01]\\d|2[0-3]):([0-5]\\d)$"
           },
-          "type": {
-            "default": "CUSTOM",
-            "type": "string",
-            "enum": [
-              "STANDARD",
-              "LOBPREIS_GEBET",
-              "CUSTOM"
-            ]
-          },
           "locationId": {
             "type": "string",
             "format": "uuid",
@@ -16245,6 +16494,9 @@
           },
           "hasPrayerSlot": {
             "type": "boolean"
+          },
+          "hasSnackSlot": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -16254,14 +16506,6 @@
       "UpdateMeetingDto": {
         "type": "object",
         "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "STANDARD",
-              "LOBPREIS_GEBET",
-              "CUSTOM"
-            ]
-          },
           "endDate": {
             "type": "string",
             "format": "date",
@@ -16326,6 +16570,9 @@
             "type": "boolean"
           },
           "hasPrayerSlot": {
+            "type": "boolean"
+          },
+          "hasSnackSlot": {
             "type": "boolean"
           }
         }
@@ -16460,6 +16707,51 @@
           "doneAt"
         ],
         "additionalProperties": false
+      },
+      "SnackResponsiblesResponseDto": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "name": {
+              "type": "string"
+            },
+            "photoUpdatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+              "nullable": true
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "photoUpdatedAt"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "SetSnackResponsiblesDto": {
+        "type": "object",
+        "properties": {
+          "personIds": {
+            "maxItems": 9,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "personIds"
+        ]
       },
       "GenerationResultResponseDto": {
         "type": "object",
@@ -18931,6 +19223,7 @@
                     "TOPIC",
                     "SONG",
                     "TESTIMONY",
+                    "SNACK",
                     "PRAYER_BUDDY",
                     "BIRTHDAY_GIFT"
                   ]
@@ -19039,14 +19332,6 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
                 "nullable": true
               },
-              "type": {
-                "type": "string",
-                "enum": [
-                  "STANDARD",
-                  "LOBPREIS_GEBET",
-                  "CUSTOM"
-                ]
-              },
               "hasTopicSlot": {
                 "type": "boolean"
               },
@@ -19054,6 +19339,9 @@
                 "type": "boolean"
               },
               "hasTestimonySlot": {
+                "type": "boolean"
+              },
+              "hasSnackSlot": {
                 "type": "boolean"
               },
               "title": {
@@ -19200,6 +19488,34 @@
                   "additionalProperties": false
                 }
               },
+              "snackResponsibles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "photoUpdatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "photoUpdatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              },
               "testimonyPerson": {
                 "type": "object",
                 "properties": {
@@ -19240,16 +19556,17 @@
               "date",
               "startTime",
               "endDate",
-              "type",
               "hasTopicSlot",
               "hasSongSlot",
               "hasTestimonySlot",
+              "hasSnackSlot",
               "title",
               "location",
               "host",
               "topicResponsibles",
               "topic",
               "songLeaders",
+              "snackResponsibles",
               "testimonyPerson",
               "myAttendance"
             ],
@@ -19279,14 +19596,6 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
                 "nullable": true
               },
-              "type": {
-                "type": "string",
-                "enum": [
-                  "STANDARD",
-                  "LOBPREIS_GEBET",
-                  "CUSTOM"
-                ]
-              },
               "hasTopicSlot": {
                 "type": "boolean"
               },
@@ -19294,6 +19603,9 @@
                 "type": "boolean"
               },
               "hasTestimonySlot": {
+                "type": "boolean"
+              },
+              "hasSnackSlot": {
                 "type": "boolean"
               },
               "title": {
@@ -19440,6 +19752,34 @@
                   "additionalProperties": false
                 }
               },
+              "snackResponsibles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "photoUpdatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "photoUpdatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              },
               "testimonyPerson": {
                 "type": "object",
                 "properties": {
@@ -19480,16 +19820,17 @@
               "date",
               "startTime",
               "endDate",
-              "type",
               "hasTopicSlot",
               "hasSongSlot",
               "hasTestimonySlot",
+              "hasSnackSlot",
               "title",
               "location",
               "host",
               "topicResponsibles",
               "topic",
               "songLeaders",
+              "snackResponsibles",
               "testimonyPerson",
               "myAttendance"
             ],
@@ -19519,14 +19860,6 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
                 "nullable": true
               },
-              "type": {
-                "type": "string",
-                "enum": [
-                  "STANDARD",
-                  "LOBPREIS_GEBET",
-                  "CUSTOM"
-                ]
-              },
               "hasTopicSlot": {
                 "type": "boolean"
               },
@@ -19534,6 +19867,9 @@
                 "type": "boolean"
               },
               "hasTestimonySlot": {
+                "type": "boolean"
+              },
+              "hasSnackSlot": {
                 "type": "boolean"
               },
               "title": {
@@ -19680,6 +20016,34 @@
                   "additionalProperties": false
                 }
               },
+              "snackResponsibles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "photoUpdatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "photoUpdatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              },
               "testimonyPerson": {
                 "type": "object",
                 "properties": {
@@ -19720,16 +20084,17 @@
               "date",
               "startTime",
               "endDate",
-              "type",
               "hasTopicSlot",
               "hasSongSlot",
               "hasTestimonySlot",
+              "hasSnackSlot",
               "title",
               "location",
               "host",
               "topicResponsibles",
               "topic",
               "songLeaders",
+              "snackResponsibles",
               "testimonyPerson",
               "myAttendance"
             ],
@@ -19748,6 +20113,7 @@
                     "TOPIC",
                     "SONG",
                     "TESTIMONY",
+                    "SNACK",
                     "PRAYER_BUDDY",
                     "BIRTHDAY_GIFT"
                   ]

@@ -5,7 +5,13 @@ import { MeetingStatus } from '../../generated/prisma/enums';
 import { overlapping, toUtcDate } from '../meeting/meeting-schedule';
 
 export type AssignmentRoleName =
-  'HOST' | 'TOPIC' | 'SONG' | 'TESTIMONY' | 'PRAYER_BUDDY' | 'BIRTHDAY_GIFT';
+  | 'HOST'
+  | 'TOPIC'
+  | 'SONG'
+  | 'TESTIMONY'
+  | 'SNACK'
+  | 'PRAYER_BUDDY'
+  | 'BIRTHDAY_GIFT';
 
 /**
  * One thing somebody is down for.
@@ -114,6 +120,9 @@ export class AssignmentService {
           songLeaders: {
             select: { person: { select: personRefSelect } },
           },
+          snackResponsibles: {
+            select: { person: { select: personRefSelect } },
+          },
         },
         orderBy: { date: 'asc' },
       }),
@@ -218,6 +227,19 @@ export class AssignmentService {
           label: null,
         });
       }
+
+      for (const responsible of meeting.snackResponsibles) {
+        assignments.push({
+          role: 'SNACK',
+          date,
+          endDate: null,
+          person: responsible.person,
+          meetingId: meeting.id,
+          groupId: null,
+          occasionId: null,
+          label: null,
+        });
+      }
     }
 
     for (const occasion of birthdays) {
@@ -276,10 +298,14 @@ const ROLE_ORDER: Record<AssignmentRoleName, number> = {
   TOPIC: 1,
   TESTIMONY: 1,
   SONG: 2,
-  PRAYER_BUDDY: 3,
+  // Hinter der Musik und vor den Gebetsbuddys: Snacks hängen an einem Abend,
+  // brauchen aber weniger Vorlauf als alles darüber — wer sie sieht, hat noch
+  // Zeit bis zum Einkaufen.
+  SNACK: 3,
+  PRAYER_BUDDY: 4,
   // Ganz unten, weil es als einziges nicht an einem Abend hängt — und weil es
   // die Rolle mit der längsten Vorlaufzeit ist. Wer sie sieht, hat noch Zeit.
-  BIRTHDAY_GIFT: 4,
+  BIRTHDAY_GIFT: 5,
 };
 
 /** "mit Antonia und Reini" — the tone from CLAUDE.md §9. */

@@ -12,7 +12,6 @@ import {
   AttendanceStatus,
   MeetingCancelSource,
   MeetingStatus,
-  MeetingType,
 } from '../../generated/prisma/enums';
 import { RoleSuggestionService } from '../role-suggestion/role-suggestion.service';
 import { AvailabilityService } from '../role-suggestion/availability.service';
@@ -50,7 +49,7 @@ import {
   assertSlotsExclusive,
   clearedByTurningOff,
   resolveSlots,
-  slotDefaults,
+  EMPTY_SLOTS,
 } from './meeting-slots';
 import type {
   CancelMeetingDto,
@@ -77,6 +76,9 @@ const meetingInclude = {
   // zurückgibt, ohne Umformung im Service — sonst müsste jede Stelle, die
   // einen Termin lädt, daran denken.
   songLeaders: {
+    select: { person: { select: personRefSelect } },
+  },
+  snackResponsibles: {
     select: { person: { select: personRefSelect } },
   },
   actionstepDone: {
@@ -202,18 +204,15 @@ export class MeetingService {
     viewer: Viewer,
   ) {
     const date = new Date(dto.date);
-    const endDate = this.resolveEndDate(dto.type, date, dto.endDate);
+    const endDate = this.resolveEndDate(date, dto.endDate);
     await this.assertReferencesBelongToHauskreis(hauskreisId, dto);
     await this.assertNoOverlap(hauskreisId, date, endDate);
 
-    // Weggelassene Schalter heißen beim Anlegen „nimm, was zu dieser Terminart
-    // gehört". Ein `CUSTOM` kommt damit leer auf die Welt — genau das ist der
-    // Punkt: ein Geburtstagsabend soll nicht als unvollständig dastehen, weil
-    // ihm ein Thema fehlt, das er nie brauchte.
-    const slots = resolveSlots(
-      { ...slotDefaults(dto.type), type: dto.type },
-      dto,
-    );
+    // Weggelassene Schalter heißen beim Anlegen „gar nicht": Ein von Hand
+    // angelegter Abend kommt leer auf die Welt. Genau das ist der Punkt — ein
+    // Geburtstagsabend soll nicht als unvollständig dastehen, weil ihm ein
+    // Thema fehlt, das er nie brauchte.
+    const slots = resolveSlots(EMPTY_SLOTS, dto);
     assertSlotsAllow(slots, dto);
     assertSlotsExclusive(slots);
 
@@ -224,7 +223,7 @@ export class MeetingService {
 
     // Auch beim Anlegen: die API ist aus Bruno und aus jedem Skript erreichbar,
     // und ein rückdatierter Termin passiert die Regel korrekt.
-    assertNotesSlotNotAhead(slotDefaults(dto.type), slots, {
+    assertNotesSlotNotAhead(EMPTY_SLOTS, slots, {
       date,
       startMinutes,
       zone: await this.clock.zoneOf(hauskreisId),
@@ -240,7 +239,9 @@ export class MeetingService {
         hauskreisId,
         date,
         endDate,
-        type: dto.type,
+        // Wer über die API anlegt, ist ein Mensch — der Generator schreibt
+        // seine Abende selbst und setzt das Feld dort ausdrücklich.
+        generated: false,
         startMinutes,
         ...slots,
         locationId: venue.locationId ?? null,
@@ -312,13 +313,10 @@ export class MeetingService {
     });
     const cleared = clearedByTurningOff(before, slots);
 
-    const type = dto.type ?? before.type;
     const endDate =
       dto.endDate === undefined
-        ? // Ein Wechsel weg von CUSTOM lässt keinen Zeitraum zurück: nur
-          // besondere Termine dauern länger als einen Abend.
-          this.resolveEndDate(type, before.date, before.endDate?.toISOString())
-        : this.resolveEndDate(type, before.date, dto.endDate);
+        ? this.resolveEndDate(before.date, before.endDate?.toISOString())
+        : this.resolveEndDate(before.date, dto.endDate);
 
     if (endDate?.getTime() !== before.endDate?.getTime()) {
       await this.assertNoOverlap(hauskreisId, before.date, endDate, id);
@@ -355,7 +353,6 @@ export class MeetingService {
         this.prisma.meeting.updateMany({
           where: { id, hauskreisId, ...versionConstraint },
           data: {
-            type: dto.type,
             endDate,
             startMinutes: dto.startTime,
             ...slots,
@@ -423,6 +420,19 @@ export class MeetingService {
     if (before.hasPrayerSlot && !slots.hasPrayerSlot) {
       await this.prisma.$transaction(async (tx) => {
         await tx.meetingPrayerRequest.deleteMany({ where: { meetingId: id } });
+        await touchMeeting(tx, id);
+      });
+    }
+
+    // Und die Snack-Zuteilung, wie die Musik-Zuteilung darüber. Bliebe sie
+    // stehen, schickte `SnackReminderService` „Du bringst was zu essen mit" für
+    // einen Abend, an dem der Baustein aus ist — genau der Fehler, wegen dem
+    // die Themen-Zuteilung nicht mehr aus Vorsicht stehen bleibt.
+    if (before.hasSnackSlot && !slots.hasSnackSlot) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.meetingSnackResponsible.deleteMany({
+          where: { meetingId: id },
+        });
         await touchMeeting(tx, id);
       });
     }
@@ -565,7 +575,6 @@ export class MeetingService {
    * sind die Sorte Unterschied, an der später Vergleiche scheitern.
    */
   private resolveEndDate(
-    type: MeetingType,
     date: Date,
     raw: string | Date | null | undefined,
   ): Date | null {
@@ -573,12 +582,9 @@ export class MeetingService {
 
     const endDate = new Date(raw);
 
-    if (type !== MeetingType.CUSTOM) {
-      throw new BadRequestException(
-        'Nur ein besonderer Termin kann über mehrere Tage gehen',
-      );
-    }
-
+    // Hier stand einmal „nur ein besonderer Termin kann über mehrere Tage
+    // gehen". Das war eine Regel über die Terminart und nicht über die Sache:
+    // Eine Freizeit ist mehrtägig, ganz gleich, wer sie angelegt hat.
     if (endDate.getTime() === date.getTime()) return null;
 
     if (endDate < date) {
@@ -814,7 +820,7 @@ export class MeetingService {
         id: true,
         date: true,
         startMinutes: true,
-        type: true,
+        generated: true,
         status: true,
       },
     });
@@ -859,7 +865,7 @@ export class MeetingService {
   async remove(hauskreisId: string, id: string) {
     const meeting = await this.loadPlain(hauskreisId, id);
 
-    if (meeting.type !== MeetingType.CUSTOM) {
+    if (meeting.generated) {
       throw new BadRequestException(
         'Einen Hauskreis-Abend sagt man ab, statt ihn zu löschen — sonst legt der Terminplaner ihn gleich wieder an',
       );
@@ -922,7 +928,7 @@ export class MeetingService {
      * bei einem „weiß noch nicht".
      *
      * Lange galt das nur für die Absage. Aber eine Rolle ist die Aussage „ich
-     * bin an dem Abend da und mache das" (CLAUDE.md §6.7: „Wer eingeteilt wird,
+     * bin an dem Abend da und mache das" (CLAUDE.md §6.8: „Wer eingeteilt wird,
      * ist dabei"), und wer auf unentschieden zurückgeht, nimmt genau diese
      * Aussage zurück. Am Dienstag stand sonst im Plan jemand, der selbst nicht
      * weiß, ob er kommt.

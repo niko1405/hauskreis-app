@@ -229,7 +229,7 @@ function MeetingListView() {
           }
           hint={
             scope === 'upcoming'
-              ? 'Standard-Termine werden automatisch angelegt — du kannst auch hier einen eigenen anlegen.'
+              ? 'Die wöchentlichen Abende werden automatisch angelegt — du kannst auch hier einen eigenen anlegen.'
               : undefined
           }
         />
