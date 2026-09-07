@@ -928,19 +928,20 @@ function Loaded({
 }
 
 /**
- * Eine Rolle als eigene Fläche: Symbol und Name links, wer es ist in der Mitte,
- * der Knopf zum Eintragen rechts.
+ * Eine Rolle als eigene Fläche: oben Symbol, Name und der Knopf zum Eintragen,
+ * darunter die Menschen.
  *
- * Vorher waren es Zeilen in **einer** Karte, getrennt durch `divide-y`, mit der
- * Rollen-Bezeichnung in einer 16er-Spalte links. Zwei Dinge stimmten daran
- * nicht: „Testimony" passte nicht in die Spalte, und eine Trennlinie sagt
- * weniger als eine eigene Fläche — man las die Karte als Block statt als fünf
- * getrennte Fragen.
+ * **Zwei Zeilen und nicht eine.** Vorher stand alles nebeneinander: Symbol,
+ * eine 4,5rem breite Spalte für die Bezeichnung, die Namen, der Knopf. Auf dem
+ * Telefon blieben für die Namen rund 130 Pixel — ein einziger passte hinein,
+ * der zweite rutschte darunter, der dritte machte die Zeile dreistöckig. Dabei
+ * sind gerade die Rollen mit mehreren die häufigen: Musik, Thema, Snacks.
+ * Unten über die volle Breite stehen zwei bequem, meistens drei.
  *
  * Davor standen die Rollen einmal als Chips nebeneinander. Die sahen nach
- * Anzeige aus, nicht nach „hier trägst du ein"; deshalb ist der Knopf rechts
- * geblieben und nicht die ganze Fläche antippbar geworden — er sagt, wo man
- * drückt.
+ * Anzeige aus, nicht nach „hier trägst du ein"; deshalb ist der Knopf oben
+ * rechts geblieben und nicht die ganze Fläche antippbar geworden — er sagt, wo
+ * man drückt.
  */
 function RoleRow({
   role,
@@ -958,40 +959,43 @@ function RoleRow({
   const label = ROLE_LABEL[role];
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-line bg-card px-3 py-2.5">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-line bg-canvas text-terracotta-600">
-        <Icon size={15} />
-      </span>
+    <div className="rounded-lg border border-line bg-card px-3 py-2.5">
+      <div className="flex items-center gap-3">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-line bg-canvas text-terracotta-600">
+          <Icon size={15} />
+        </span>
 
-      <span className="w-[4.5rem] shrink-0 text-[13px] font-bold text-stone-700">
-        {label}
-      </span>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-stone-700">
+          {label}
+        </span>
 
-      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+        {onEdit && (
+          <IconButton label={`${label} eintragen`} onClick={onEdit}>
+            <UserPen size={16} />
+          </IconButton>
+        )}
+      </div>
+
+      {/* Eingerückt auf die Höhe der Bezeichnung — Symbol (2rem) plus Abstand
+          (0,75rem) —, damit die Namen unter ihr beginnen und nicht unter dem
+          Symbol. Ohne den Knopf daneben bleibt hier die ganze Kartenbreite. */}
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-11">
         {people.length === 0 ? (
-          <span className="truncate text-sm text-stone-400 italic">
-            {emptyLabel}
-          </span>
+          <span className="text-sm text-stone-400 italic">{emptyLabel}</span>
         ) : (
           people.map((person) => (
             <span
               key={person.id}
-              className="flex items-center gap-1.5 rounded-full bg-canvas py-0.5 pr-2.5 pl-0.5"
+              className="flex max-w-full items-center gap-1.5 rounded-full bg-canvas py-0.5 pr-2.5 pl-0.5"
             >
               <Avatar person={person} size="xs" />
-              <span className="text-[13px] font-bold text-stone-800">
+              <span className="truncate text-[13px] font-bold text-stone-800">
                 {person.name}
               </span>
             </span>
           ))
         )}
-      </span>
-
-      {onEdit && (
-        <IconButton label={`${label} eintragen`} onClick={onEdit}>
-          <UserPen size={16} />
-        </IconButton>
-      )}
+      </div>
     </div>
   );
 }
