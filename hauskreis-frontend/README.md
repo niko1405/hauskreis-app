@@ -1193,18 +1193,26 @@ steht schon in der Zeile darüber; als Chip stand er ein zweites Mal und
 behauptete eine Rolle, die es an dem Abend nicht gibt — dieselbe Regel wie
 `meetingRoles` am Termin.
 
-### Die Antwort in der Terminliste
+### Die Antwort in Liste und Kalender
 
-`components/domain/meeting-card.tsx` plus
+`components/domain/answer-buttons.tsx` plus
 `components/domain/answer-note-sheet.tsx`.
 
 Der alte `AttendanceToggle` war zwischenzeitlich ganz weg, weil er die zweite
 Fassung derselben Frage war. Zurück ist nicht er, sondern die **drei Antworten
 mit dem Satz dahinter**: „komme 20 Min später" ist das, was vorher in WhatsApp
-stand, und die zwei runden Symbolknöpfe konnten ihn nie. In der Liste liest man
-quer über Wochen — dort fällt einem ein, dass man am 15. nicht kann.
+stand, und die zwei runden Symbolknöpfe konnten ihn nie. Man liest quer über
+Wochen — dort fällt einem ein, dass man am 15. nicht kann.
 
-Drei Dinge sind daran zu beachten:
+**Auch im Kalender**, und das war einmal ausdrücklich ausgeschlossen („dort
+sucht man einen Tag im Monat"). Das stimmt für die Frage, mit der man ihn
+aufmacht, aber nicht für das, was einem dabei auffällt; und zwei Bildschirme,
+auf denen dieselbe Zeile einmal fragt und einmal nicht, sind schwerer zu
+erklären als einer mehr, der fragt. Dort stehen die Knöpfe **neben** dem Termin
+(`compact`) und tragen unter `sm` nur ihr Symbol: Die Kachel ist schon drei
+Zeilen hoch, eine vierte hätte den Monat auf zwei Bildschirmhöhen gebracht.
+
+Vier Dinge sind daran zu beachten:
 
 - **Die drei Antworten sind ein Schalter, nicht drei Knöpfe.** Jede trug einen
   eigenen Rahmen und sah damit aus wie eine eigene Handlung — dabei ist es
@@ -1212,21 +1220,23 @@ Drei Dinge sind daran zu beachten:
   außen herum, gefüllt ist nur die gewählte.
 - **Die Karte ist ein `<Link>`.** Jeder Knopf darin braucht `preventDefault()`
   **und** `stopPropagation()`, sonst führt der Tipp zusätzlich auf die
-  Detailseite — und die Antwort wäre nicht mehr zu sehen.
-- **Das Sheet ist ein Geschwister des Links, nicht sein Kind.** `Sheet` rendert
-  sein Overlay als `position: fixed` ohne Portal, und die Karte trägt
+  Detailseite — und die Antwort wäre nicht mehr zu sehen. Im Kalender umfasst
+  der Link nur die linke Hälfte, aber die Knöpfe halten dieselbe Regel ein: Sie
+  wissen nicht, wo sie hängen.
+- **Das Sheet gehört dem Aufrufer, nicht den Knöpfen.** `Sheet` rendert sein
+  Overlay als `position: fixed` ohne Portal, und die Terminkarte trägt
   `active:scale` — das macht sie zum Bezugsrahmen für `fixed`, und der Schleier
-  säße dann in der Karte statt über der Seite.
-- **Zwei Zonen, kein umbrechender Fluss, und immer untereinander.** Rollen und
-  Antwort sind zwei Kästen mit je einem Trennstrich darüber: der erste sagt „das
-  ist der Abend", der zweite „das sagst du dazu". Zuerst waren sie Geschwister in
-  _einer_ umbrechenden Reihe, und dann hing die Antwort mit acht Pixeln Abstand
-  an den Chips und las sich wie ein fünfter davon.
-
-  Dazwischen standen sie eine Runde lang ab 32 rem **nebeneinander**, über eine
-  `@container`-Query — die einzige des Projekts. Das war eng gedacht: Im Fenster
-  verlor die Antwort genau die Trennung, für die der zweite Strich da ist. Jetzt
-  steht sie in jeder Breite darunter, und die Container-Query ist weg.
+  säße dann in der Karte statt über der Seite. `AnswerButtons` meldet über
+  `onAnswered` nur, dass geantwortet wurde; wo das Notizfeld hängt, entscheidet
+  die Stelle, die es einbaut.
+- **Untereinander, ohne Trennstriche.** Rollen und Antwort standen eine Runde
+  lang ab 32 rem **nebeneinander**, über eine `@container`-Query — die einzige
+  des Projekts. Das war eng gedacht: Im Fenster las sich die Antwort wie ein
+  fünfter Chip. Und über beiden lag je ein Trennstrich, auf einer Karte, die
+  selbst schon von einem Rahmen eingefasst ist — drei waagerechte Linien
+  übereinander. Was sie sagen sollten, sagen die Formen längst: Chips sind
+  Pillen mit Namen darin, die Antwort ein umrandeter Schalter. Getrennt wird
+  über den Abstand.
 
 Der Ablauf ist derselbe wie im Balken: **Der Status schreibt sofort** (über
 `useAttendanceAnswer`, also mit der Rollen-Rückfrage), **die Notiz auf
@@ -1637,6 +1647,11 @@ nebeneinander stehen, bis die Liste neu lud — und genau deshalb brauchte jede
 Zeile einen „Fertig"-Knopf. Den gibt es nicht mehr, und damit ist das dritte
 Ziel aus der Zeile verschwunden.
 
+**Die Box hinter der Glocke wischt ohne Knöpfe.** Dort gibt es genau eine Sache
+zu tun (gelesen), und sie ist umkehrbar — ein Knopf, der sie erst noch anbietet,
+wäre ein Schritt zu viel. Sie benutzt deshalb nicht `SwipeActions`, wohl aber
+dieselbe Schwelle aus `swipe.ts`.
+
 **Die Breite wird gemessen, nicht gerechnet.** Sie hängt an der Zahl der Knöpfe,
 und die ist je Zeile verschieden: Bei den Ideen darf nicht jede:r löschen, bei
 den Treffpunkten nur ein aktiver. Eine feste Zahl käme bei jeder zweiten Zeile
@@ -1768,6 +1783,22 @@ stört niemanden. Sie liegt darum unter `/api/notifications` und nicht unter
 
 Gelesenes verschwindet aus der Box, aber nicht aus der Welt: Es wandert nach
 „Früher", aufklappbar, die letzten dreißig.
+
+**Wer nur wegräumen will, wischt nach links.** „Alle gelesen" war das einzige
+Werkzeug dafür und ist ein grobes: Wer sieben Nachrichten hat und sechs davon
+erledigt, musste die siebte stehen lassen oder alles auf einmal wegräumen.
+
+Der Wisch ist **kein `SwipeActions`**, obwohl die App den überall sonst
+benutzt. Die Listen dort geben rechts Stift und Papierkorb frei, weil zwei Dinge
+zur Wahl stehen und eines davon löscht. Hier gibt es genau eine Sache zu tun,
+und sie ist umkehrbar — der Eintrag wandert nach „Früher", nicht aus der Welt.
+Ein Knopf, den man danach noch treffen muss, wäre ein Schritt zu viel; unter der
+Zeile steht deshalb nur ein Haken auf `success-bg`, also was gleich passiert.
+Die Schwelle kommt trotzdem aus `swipe.ts` (`pulledLeft`) — es gibt eine
+Meinung darüber, ab wann jemand etwas gemeint hat. Gewischt wird nur an den
+**ungelesenen**: An einer gelesenen gibt es nichts wegzuräumen, und eine Zeile,
+die nachgibt und dann nichts tut, ist ein Versprechen, das die Liste nicht
+hält.
 
 **Sie ist eine Sprechblase unter der Glocke, kein Sheet von unten.** Ein
 Bottom-Sheet beantwortet „wähle etwas aus", nicht „was ist neu" — und es fuhr
