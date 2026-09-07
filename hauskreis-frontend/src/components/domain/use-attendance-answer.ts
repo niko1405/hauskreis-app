@@ -22,10 +22,10 @@
  * er bräuchte ein zusätzliches Feld an der API, damit der Server wüsste, was
  * gemeint war.
  *
- * **Warum als Hook und nicht im Balken.** Geantwortet wird an zwei Stellen:
- * unten am Termin (`answer-bar.tsx`) und auf der Terminkarte in der Liste
- * (`meeting-card.tsx`). Der Kalender ist bewusst draußen — seine Zeile
- * beantwortet „was ist wann".
+ * **Warum als Hook und nicht im Balken.** Geantwortet wird an drei Stellen:
+ * unten am Termin (`answer-bar.tsx`), auf der Terminkarte in der Liste und in
+ * der Monatsliste des Kalenders — die letzten beiden über dieselben Knöpfe
+ * (`answer-buttons.tsx`).
  *
  * Die Rückfrage ist eine Regel über die Daten („eine Rolle ist die Aussage: ich
  * bin da und mache das") und nicht über einen Bildschirm. In den Balken

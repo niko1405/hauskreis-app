@@ -1,13 +1,14 @@
 'use client';
 
 /**
- * „Noch etwas dazu?" — das Notizfeld hinter einer Antwort in der Terminliste.
+ * „Noch etwas dazu?" — das Notizfeld hinter einer Antwort in Liste und Kalender.
  *
  * Am Termin steht dasselbe Feld fest im Antwort-Balken (`answer-bar.tsx`): Dort
  * ist man *in* einem Abend, und der Balken hat unten dauerhaft Platz. In der
- * Liste gibt es den nicht — dort liest man quer über Wochen, und ein Textfeld
- * an jeder Karte wäre an neun von zehn Karten Ballast. Es kommt deshalb als
- * Sheet, ausgelöst von der Antwort, die man gerade gegeben hat.
+ * Liste und im Kalender gibt es den nicht — dort liest man quer über Wochen,
+ * und ein Textfeld an jeder Zeile wäre an neun von zehn Zeilen Ballast. Es
+ * kommt deshalb als Sheet, ausgelöst von der Antwort, die man gerade gegeben
+ * hat.
  *
  * **Der Status ist schon geschrieben, wenn dieses Sheet aufgeht.** Genau wie im
  * Balken: Ein Tipp auf „Zusagen" ist sofort verbindlich, sonst könnte man

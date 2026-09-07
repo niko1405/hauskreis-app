@@ -19,7 +19,7 @@ import Link from '@/components/ui/link';
 import { useMemo, useState } from 'react';
 import { IconButton } from '@/components/ui/button';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
-import { useBirthdays, useMeetingList } from '@/lib/api/hooks';
+import { useBirthdays, useMe, useMeetingList } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import {
   addDays,
@@ -37,7 +37,16 @@ import {
   today,
 } from '@/lib/date';
 import { meetingHeadline } from '@/lib/meeting';
-import type { BirthdayOccasion, MeetingListItem } from '@/lib/api/types';
+import {
+  AnswerButtons,
+  isAnswerable,
+} from '@/components/domain/answer-buttons';
+import { AnswerNoteSheet } from '@/components/domain/answer-note-sheet';
+import type {
+  AttendanceStatus,
+  BirthdayOccasion,
+  MeetingListItem,
+} from '@/lib/api/types';
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
@@ -243,33 +252,51 @@ export function MeetingCalendar() {
 }
 
 /**
- * Eine Zeile der Monatsliste.
+ * Eine Zeile der Monatsliste — links der Termin, rechts die eigene Antwort.
  *
- * Hier stand einmal derselbe Zusage-Umschalter wie in der Terminliste. Er ist
- * weg und kommt auch nicht wieder, obwohl die Terminliste ihre Antwort
- * zurückbekommen hat: Dort liest man quer über Wochen und stößt darauf, dass
- * man am 15. nicht kann — hier sucht man einen Tag im Monat.
+ * **Die Antwort ist zurück.** Sie war hier einmal als runder Umschalter, fiel
+ * mit ihm weg und sollte nicht wiederkommen: „hier sucht man einen Tag im
+ * Monat, nicht ob man kann". Das stimmt für die Frage, mit der man den Kalender
+ * aufmacht, aber nicht für das, was einem dabei auffällt — man sieht den 15.
+ * neben dem Urlaub stehen und will genau dann absagen. Zwei Bildschirme, auf
+ * denen dieselbe Karte einmal fragt und einmal nicht, sind schwerer zu erklären
+ * als einer mehr, der fragt.
  *
- * Auch **keine Teilnehmerzahl**, anders als auf der Terminkarte: Diese Zeile
- * ist schon drei Zeilen hoch und beantwortet „was ist wann", nicht „mit wie
- * vielen" und nicht „bist du dabei".
+ * **Sie steht neben dem Termin, nicht darunter** (`compact`). Diese Kachel ist
+ * schon drei Zeilen hoch; eine vierte für die Knöpfe hätte den Monat auf zwei
+ * Bildschirmhöhen gebracht. Auf dem Telefon tragen die Knöpfe deshalb nur ihr
+ * Symbol — was sie bedeuten, sagt `aria-label`, und ab `sm` steht das Wort
+ * wieder dabei.
+ *
+ * **Der Link umfasst nur den Termin.** In der Terminliste liegen die Knöpfe im
+ * Link und fangen den Klick ab; hier wäre das unnötig, weil links und rechts
+ * ohnehin nebeneinander sitzen. Ein Knopf, der kein Link ist, ist der
+ * ehrlichere Bau.
+ *
+ * Weiterhin **keine Teilnehmerzahl**, anders als auf der Terminkarte: Die Zeile
+ * beantwortet „was ist wann", nicht „mit wie vielen".
  */
 function MonthRow({ meeting }: { meeting: MeetingListItem }) {
+  const { me } = useMe();
+  /** Welche Antwort gerade nach einem Satz fragt — `null` heißt: keine. */
+  const [noteFor, setNoteFor] = useState<AttendanceStatus | null>(null);
+
   const cancelled = meeting.status === 'CANCELLED';
+  const myNote =
+    meeting.attendances.find((row) => row.personId === me?.id)?.note ?? null;
 
   return (
     <li>
-      <Link
-        href={`/termin?id=${meeting.id}`}
+      <div
         className={cn(
-          'flex items-center justify-between gap-3 rounded-md border border-line bg-card p-3 transition-colors hover:border-line-strong',
+          'flex items-center gap-3 rounded-md border border-line bg-card p-3 transition-colors focus-within:border-line-strong hover:border-line-strong',
           // Wie auf der Terminkarte: der Punkt im Raster oben war schon
           // grau, hier stand ein abgesagter Abend bisher wie jeder
           // andere.
           cancelled && 'opacity-60',
         )}
       >
-        <span className="min-w-0 flex-1">
+        <Link href={`/termin?id=${meeting.id}`} className="min-w-0 flex-1">
           <span className="block text-[11px] font-bold text-terracotta-500">
             {meeting.endDate
               ? formatDayRange(meeting.date, meeting.endDate)
@@ -283,8 +310,30 @@ function MonthRow({ meeting }: { meeting: MeetingListItem }) {
               ? 'Fällt aus'
               : (meeting.location?.name ?? 'Ort noch offen')}
           </span>
-        </span>
-      </Link>
+          {/* Der eigene Satz, einzeilig — wie auf der Terminkarte. Er ist der
+              Grund, aus dem man die Zeile sonst öffnen müsste, um zu sehen, ob
+              man überhaupt etwas dazugesagt hat. */}
+          {myNote && (
+            <span className="mt-0.5 block truncate text-[11px] text-stone-400">
+              „{myNote}"
+            </span>
+          )}
+        </Link>
+
+        {isAnswerable(meeting, me?.id) && (
+          <AnswerButtons meeting={meeting} compact onAnswered={setNoteFor} />
+        )}
+      </div>
+
+      {me && (
+        <AnswerNoteSheet
+          meetingId={meeting.id}
+          personId={me.id}
+          status={noteFor}
+          note={myNote}
+          onClose={() => setNoteFor(null)}
+        />
+      )}
     </li>
   );
 }
