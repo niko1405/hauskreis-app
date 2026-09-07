@@ -20,10 +20,9 @@ import {
 import { useMe, usePeople } from '@/lib/api/hooks';
 import type { AttendanceStatus, MeetingListItem } from '@/lib/api/types';
 import { AnswerNoteSheet } from './answer-note-sheet';
+import { AnswerButtons, isAnswerable } from './answer-buttons';
 import { DateBox, TimeAndPlace } from './date-box';
-import { ANSWERS } from './attendance-answers';
 import { RoleChip } from './role-badge';
-import { useAttendanceAnswer } from './use-attendance-answer';
 
 export function MeetingCard({
   meeting,
@@ -37,7 +36,6 @@ export function MeetingCard({
   // mit `STALE.reference` im Cache und wird auf diesem Bildschirm ohnehin
   // gebraucht, sobald jemand ins Register „Planung" wechselt.
   const people = usePeople();
-  const { answer } = useAttendanceAnswer(meeting);
   /** Welche Antwort gerade nach einem Satz fragt — `null` heißt: keine. */
   const [noteFor, setNoteFor] = useState<AttendanceStatus | null>(null);
 
@@ -50,29 +48,10 @@ export function MeetingCard({
   // Aussage über gestern.
   const shown = past || cancelled ? counts.attending : counts.planned;
   const topicPeople = meeting.topicResponsibles.map((r) => r.person);
-  // Die Tönung des Lobpreisabends kommt aus denselben Bausteinen wie sein
-  // Name: Wo kein Thema, aber ein Testimony steht, dreht sich der Abend ums
-  // Erzählen.
 
-  const mine = meeting.attendances.find((a) => a.personId === me?.id);
-  const myStatus = mine?.status ?? 'UNKNOWN';
-  const myNote = mine?.note ?? null;
-  // Dieselbe Regel, mit der die Detailseite ihren Antwort-Balken zeigt: An
-  // einem vergangenen oder abgesagten Abend gibt es nichts mehr zuzusagen.
-  const answerable = me !== undefined && !past && !cancelled;
-
-  const choose = async (
-    event: React.MouseEvent,
-    next: AttendanceStatus,
-  ): Promise<void> => {
-    // Die Karte **ist** ein Link. Ohne beides führt jeder Tipp zusätzlich auf
-    // die Detailseite — und die Antwort wäre nicht mehr zu sehen.
-    event.preventDefault();
-    event.stopPropagation();
-    // Nur wenn wirklich geantwortet wurde. Wer die Rollen-Rückfrage abbricht,
-    // soll nicht in einem Feld für eine Notiz landen, die zu nichts gehört.
-    if (await answer(next)) setNoteFor(next);
-  };
+  const myNote =
+    meeting.attendances.find((row) => row.personId === me?.id)?.note ?? null;
+  const answerable = isAnswerable(meeting, me?.id);
 
   return (
     <>
@@ -159,96 +138,59 @@ export function MeetingCard({
         </div>
 
         {/* **Untereinander, in jeder Breite.** Hier standen die Antworten ab
-            32 rem rechts neben den Rollen-Chips. Das war eng gedacht: Der
-            Trennstrich über den Chips sagt „das ist der Abend", der zweite
-            darunter „das sagst du dazu" — und im Fenster nebeneinander verlor
-            die Antwort genau diese Trennung und las sich wie ein weiterer Chip.
-            Mit dem `@lg` fallen die einzigen Container-Queries des Projekts. */}
-        <div className="mt-4 border-t border-line pt-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Braucht der Ort keinen Gastgeber — Schlosspark, Café —, steht
-                hier **nichts**. Der Ort selbst steht schon in der Zeile über
-                den Chips; hier stand er ein zweites Mal, als terracotta Chip,
-                und behauptete damit eine Rolle, die es an dem Abend gar nicht
-                gibt. Dieselbe Regel wie in den Zuständigkeiten am Termin
-                (`meetingRoles`). */}
-            {(meeting.location === null || meeting.location.requiresHost) && (
-              <RoleChip
-                kind="HOST"
-                people={meeting.host ? [meeting.host] : []}
-              />
-            )}
-            {meeting.hasTopicSlot && (
-              <RoleChip kind="TOPIC" people={topicPeople} />
-            )}
-            {/* Und das Testimony, das an derselben Stelle des Abends steht — es
-                fehlte hier wie die Musik davor. Auf einem Lobpreisabend zeigte
-                die Karte damit Gastgeber und Musik, aber nicht, wer erzählt. */}
-            {meeting.hasTestimonySlot && (
-              <RoleChip
-                kind="TESTIMONY"
-                people={
-                  meeting.testimonyPerson ? [meeting.testimonyPerson] : []
-                }
-              />
-            )}
-            {/* Musik fehlte hier, obwohl sie eine der drei Rollen ist — auf
-                einem Lobpreisabend sogar die tragende. */}
-            {meeting.hasSongSlot && (
-              <RoleChip
-                kind="SONG"
-                people={meeting.songLeaders.map((leader) => leader.person)}
-              />
-            )}
-            {meeting.hasSnackSlot && (
-              <RoleChip
-                kind="SNACK"
-                people={meeting.snackResponsibles.map((row) => row.person)}
-              />
-            )}
-          </div>
+            32 rem rechts neben den Rollen-Chips. Das war eng gedacht: Im
+            Fenster nebeneinander las sich die Antwort wie ein weiterer Chip.
+            Mit dem `@lg` fallen die einzigen Container-Queries des Projekts.
 
-          {/* Eine eigene Zone unter einem zweiten Trennstrich — derselbe
-              Gedanke wie der Strich über den Rollen: Er trennt, was der Abend
-              ist, von dem, was du dazu sagst.
-
-              **Ein Schalter aus drei Feldern, nicht drei Knöpfe.** Sie standen
-              als drei einzeln umrandete Pillen nebeneinander, und damit sah
-              jede aus wie eine eigene Handlung — dabei ist es *eine* Frage mit
-              drei Antworten, von denen genau eine gilt. Der Rahmen liegt
-              deshalb außen herum; gefüllt ist nur die, die gerade gewählt ist,
-              die übrigen tragen keinen eigenen. */}
-          {answerable && (
-            <div className="mt-3 border-t border-line pt-3">
-              <div className="flex gap-1 rounded-xl border border-line bg-canvas p-1">
-                {ANSWERS.map((option) => {
-                  const Icon = option.icon;
-                  const chosen = myStatus === option.status;
-
-                  return (
-                    <button
-                      key={option.status}
-                      type="button"
-                      aria-pressed={chosen}
-                      onClick={(event) => void choose(event, option.status)}
-                      className={cn(
-                        'flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2',
-                        'text-[11px] font-bold transition-colors',
-                        'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
-                        chosen
-                          ? option.active
-                          : 'border-transparent text-stone-400 hover:text-stone-600',
-                      )}
-                    >
-                      <Icon size={13} className="shrink-0" />
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            **Ohne Trennstriche.** Über den Chips lag einer und über den
+            Antworten ein zweiter — auf einer Karte, die selbst schon von einem
+            Rahmen eingefasst ist, waren das drei waagerechte Linien
+            übereinander. Was die Striche sagen sollten, sagen die Formen
+            längst: Chips sind Pillen mit Namen darin, die Antwort ein
+            umrandeter Schalter. Getrennt wird jetzt über den Abstand. */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {/* Braucht der Ort keinen Gastgeber — Schlosspark, Café —, steht
+              hier **nichts**. Der Ort selbst steht schon in der Zeile über
+              den Chips; hier stand er ein zweites Mal, als terracotta Chip,
+              und behauptete damit eine Rolle, die es an dem Abend gar nicht
+              gibt. Dieselbe Regel wie in den Zuständigkeiten am Termin
+              (`meetingRoles`). */}
+          {(meeting.location === null || meeting.location.requiresHost) && (
+            <RoleChip kind="HOST" people={meeting.host ? [meeting.host] : []} />
+          )}
+          {meeting.hasTopicSlot && (
+            <RoleChip kind="TOPIC" people={topicPeople} />
+          )}
+          {/* Und das Testimony, das an derselben Stelle des Abends steht — es
+              fehlte hier wie die Musik davor. Auf einem Lobpreisabend zeigte
+              die Karte damit Gastgeber und Musik, aber nicht, wer erzählt. */}
+          {meeting.hasTestimonySlot && (
+            <RoleChip
+              kind="TESTIMONY"
+              people={meeting.testimonyPerson ? [meeting.testimonyPerson] : []}
+            />
+          )}
+          {/* Musik fehlte hier, obwohl sie eine der drei Rollen ist — auf
+              einem Lobpreisabend sogar die tragende. */}
+          {meeting.hasSongSlot && (
+            <RoleChip
+              kind="SONG"
+              people={meeting.songLeaders.map((leader) => leader.person)}
+            />
+          )}
+          {meeting.hasSnackSlot && (
+            <RoleChip
+              kind="SNACK"
+              people={meeting.snackResponsibles.map((row) => row.person)}
+            />
           )}
         </div>
+
+        {answerable && (
+          <div className="mt-3">
+            <AnswerButtons meeting={meeting} onAnswered={setNoteFor} />
+          </div>
+        )}
 
         {/* Der eigene Satz, einzeilig — wie im eingeklappten Antwort-Balken. Er
             ist der Grund, aus dem man die Karte sonst öffnen müsste, um zu
