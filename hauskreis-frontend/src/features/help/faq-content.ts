@@ -210,7 +210,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Was sind die Bausteine, und was kann ich an- und ausschalten?',
     answer:
-      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Lieder**, **Testimony**, **Gebetsanliegen** und **Snacks**. Sie sind die ganze Aussage darüber, was der Abend ist — auch sein Name kommt daher.\n\nDie **Nachbereitung** ist der sechste Teil, steht aber bewusst nicht im Kasten — sie lässt sich erst ab dem Beginn des Abends dazuschalten. Vorher gäbe es ja nichts nachzubereiten.\n\nDie **Gebetsanliegen** sind überall voreingestellt an, die **Snacks** überall aus: Beten kann man an jedem Abend, und wer nie über Essen gesprochen hat, soll keine offene Zuständigkeit vorfinden.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
+      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Lieder**, **Testimony**, **Gebetsanliegen** und **Snacks**. Sie sind die ganze Aussage darüber, was der Abend ist — auch sein Name kommt daher.\n\nDu findest sie am Fuß der Terminseite unter **„Was gehört dazu"**. Der Kasten ist zugeklappt und sagt im Kopf, wie viele an sind; ein Klick auf ein Häkchen wirkt sofort.\n\nDie **Nachbereitung** ist der sechste Teil, steht aber bewusst nicht im Kasten — sie lässt sich erst ab dem Beginn des Abends dazuschalten. Vorher gäbe es ja nichts nachzubereiten.\n\nDie **Gebetsanliegen** sind überall voreingestellt an, die **Snacks** überall aus: Beten kann man an jedem Abend, und wer nie über Essen gesprochen hat, soll keine offene Zuständigkeit vorfinden.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
     keywords: ['slots', 'schalter', 'baukasten', 'thema', 'lieder', 'snacks'],
   },
   {
@@ -317,10 +317,11 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
   {
     id: 'meetings-uhrzeit',
     category: 'meetings',
-    question: 'Jeder Termin hat eine Uhrzeit — wo sehe ich sie?',
+    question:
+      'Jeder Termin hat eine Uhrzeit — wo sehe ich sie, wo ändere ich sie?',
     answer:
-      'Auf „Heute" steht sie oben rechts in der Karte für das nächste Treffen, und auf der Terminseite selbst.\n\nIn den Listen steht sie bewusst nicht an jeder Zeile: Dort liest man quer über Wochen und sucht ein Datum, da wäre die Uhrzeit an jeder Zeile nur Rauschen.\n\nÄndert sich die Uhrzeit des **nächsten** Termins, bekommen alle eine Benachrichtigung.',
-    keywords: ['zeit', 'wann', 'treffpunktzeit', 'beginn'],
+      'Überall dort, wo ein Termin steht: auf „Heute", in der Terminliste und auf der Terminseite. Auf den Karten trägt ein Kästchen links den Tag — der ist die Sortierung —, und daneben steht die Uhrzeit, denn die ist die Verabredung.\n\n**Ändern** kannst du sie auf der Terminseite über „Bearbeiten" oben rechts. Dahinter steht ein Formular mit Titel, Uhrzeit und Infos zusammen — es sind drei Angaben derselben Sache.\n\nÄndert sich die Uhrzeit des **nächsten** Termins, bekommen alle eine Benachrichtigung.',
+    keywords: ['zeit', 'wann', 'treffpunktzeit', 'beginn', 'titel', 'infos'],
   },
 
   // ── Themen ────────────────────────────────────────────────────────────────
@@ -662,7 +663,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'prayer',
     question: 'Wie trage ich ein Gebetsanliegen ein?',
     answer:
-      'Auf der Seite eines Termins, im Abschnitt **„Gebetsanliegen"**. Ein Klick auf „Mein Gebetsanliegen hinzufügen", schreiben, fertig — du musst dafür nicht erst in den Bearbeitungsmodus, der Klick schaltet ihn selbst ein.\n\n**Ändern und Löschen** brauchen dann den Bearbeitungsmodus („Bearbeiten" ganz unten auf der Seite). Das ist Absicht: Ein Papierkorb neben einem fertigen Satz wäre eine Zeile zu nah am Daumen.\n\nDu hast **ein** Anliegen je Abend. Schreibst du noch einmal, ersetzt du damit das alte.',
+      'Auf der Seite eines Termins, im Abschnitt **„Gebetsanliegen"**. Ein Klick auf „Mein Gebetsanliegen hinzufügen", schreiben, fertig.\n\n**Ändern und Löschen** gehen genauso direkt: der Stift am eigenen Kasten, darunter „Anliegen entfernen". Fremde Anliegen kannst du nur lesen — für die gibt es gar keinen Weg zum Schreiben.\n\nDu hast **ein** Anliegen je Abend. Schreibst du noch einmal, ersetzt du damit das alte.',
     keywords: ['gebet', 'anliegen', 'notiz', 'beten für', 'bitte'],
   },
   {
@@ -753,7 +754,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'notes',
     question: 'Warum kann ich die Nachbereitung erst am Abend hinzufügen?',
     answer:
-      'Weil man sie nicht vorplant. Stünde sie im Baukasten, hätte man sie **vor** dem Abend angehakt — also als es noch nichts nachzubereiten gab.\n\nAb der Treffpunktzeit steht an einem Abend ohne Thema der Hinweis „Nachbereitung hinzufügen?". Ein Klick legt die Karte an; im Bearbeitungsmodus kannst du sie auch wieder ganz entfernen, dann steht wieder der Hinweis da.\n\nNicht jeder Abend braucht eine. Eine leere Karte an jedem Termin wäre eine Aufforderung, der man meistens nicht nachkommt.\n\nHatte der Abend ein **Thema**, steht der Hinweis nicht da — dort tragen Zusammenfassung und Actionstep an der Einheit. War es nachträglich betrachtet doch keines, leer einfach die Rolle „Thema": Nach einer Rückfrage fällt der Baustein weg und der Hinweis erscheint.',
+      'Weil man sie nicht vorplant. Stünde sie im Baukasten, hätte man sie **vor** dem Abend angehakt — also als es noch nichts nachzubereiten gab.\n\nAb der Treffpunktzeit steht an einem Abend ohne Thema ganz oben der Hinweis „Nachbereitung hinzufügen?". Ein Klick legt die Karte an; am Fuß der Karte nimmst du sie auch wieder ganz weg, dann steht wieder der Hinweis da.\n\nNicht jeder Abend braucht eine. Eine leere Karte an jedem Termin wäre eine Aufforderung, der man meistens nicht nachkommt.\n\nHatte der Abend ein **Thema**, steht der Hinweis nicht da — dort tragen Zusammenfassung und Actionstep an der Einheit. War es nachträglich betrachtet doch keines, leer einfach die Rolle „Thema": Nach einer Rückfrage fällt der Baustein weg und der Hinweis erscheint.',
     keywords: ['hinzufügen', 'später', 'hinweis', 'karte'],
   },
   {
@@ -761,7 +762,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'notes',
     question: 'Muss ich beides ausfüllen?',
     answer:
-      'Nein, jedes der beiden Stücke ist einzeln und freiwillig. Zusammenfassung und Actionstep stehen nur da, wenn etwas drinsteht.\n\nIm Bearbeitungsmodus legt ein Knopf das fehlende Stück an und öffnet gleich das Eingabefeld. Bleibt es leer, verschwindet es wieder — ein Feld ohne Inhalt gibt es nicht.\n\nManchmal gibt es eben nur einen Vorsatz und nichts zusammenzufassen.',
+      'Nein, jedes der beiden Stücke ist einzeln und freiwillig. Zusammenfassung und Actionstep stehen nur da, wenn etwas drinsteht.\n\nEin Knopf in der Karte legt das fehlende Stück an und öffnet gleich das Eingabefeld. Bleibt es leer, verschwindet es wieder — ein Feld ohne Inhalt gibt es nicht.\n\nManchmal gibt es eben nur einen Vorsatz und nichts zusammenzufassen.',
     keywords: ['pflicht', 'beides', 'leer', 'nur eines'],
   },
   {

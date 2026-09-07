@@ -16,13 +16,13 @@
  * beten, ist gerade dann der Punkt. Hier steht deshalb bewusst keine
  * Anwesenheitsprüfung, anders als bei den Rollen.
  *
- * **Der Weg hinein geht ohne den Bearbeitungsmodus.** Das eigene Anliegen
- * anzulegen ist der Grund, aus dem man diese Karte überhaupt ansieht — dafür
- * erst einen Schalter zu suchen wäre eine Hürde vor der Hauptsache. Der Klick
- * schaltet den Modus selbst ein (wie `NotesPrompt` es für die Nachbereitung
- * tut), damit gleich ein Eingabefeld dasteht. **Ändern und Löschen** brauchen
- * ihn dann doch: Das sind Eingriffe in etwas, das schon dasteht, und ein
- * Papierkorb neben einem fertigen Satz ist eine Zeile zu nah am Daumen.
+ * **Anlegen, ändern und löschen stehen offen.** Alle drei hingen einmal am
+ * Bearbeitungsmodus der Seite — genauer: das Anlegen schaltete ihn selbst ein,
+ * Ändern und Löschen verlangten ihn. Das war eine Unterscheidung, die niemand
+ * erklären konnte: Es geht in allen drei Fällen um den einen Satz, der einem
+ * selbst gehört, und den kann ohnehin niemand sonst anfassen — es gibt gar
+ * keine Adresse dafür (`…/prayer-requests/mine`). Der Papierkorb steht deshalb
+ * auch nicht am Rand einer Liste, sondern im eigenen Kasten.
  *
  * Fremde Anliegen sind nur zu lesen. Das ist keine Rechteprüfung im Frontend,
  * sondern die Form der Sache: Es gibt gar keine Adresse, unter der man an einer
@@ -45,21 +45,15 @@ import type { PrayerRequest } from '@/lib/api/types';
 
 export function PrayerRequestsCard({
   meetingId,
-  /** Der Bearbeitungsmodus der Seite — er gilt hier fürs Ändern und Löschen. */
-  editing,
   /**
    * Ein vergangener oder abgesagter Abend. Dann steht nur noch da, was war —
    * wie bei den Liedern, die danach „Gesungen" heißen. Der Server hält
    * dieselbe Grenze.
    */
   locked,
-  /** Schaltet den Bearbeitungsmodus ein, wenn jemand hier anfängt zu schreiben. */
-  onEdit,
 }: {
   meetingId: string;
-  editing: boolean;
   locked: boolean;
-  onEdit: () => void;
 }) {
   const requests = useMeetingPrayerRequests(meetingId);
   const save = useSaveMyPrayerRequest(meetingId);
@@ -84,7 +78,7 @@ export function PrayerRequestsCard({
   // ohne Anliegen wäre sie eine Erinnerung daran, dass niemand etwas hatte.
   if (entries.length === 0 && !mayAdd) return null;
 
-  const showMine = Boolean(mine) || (editing && writing);
+  const showMine = Boolean(mine) || writing;
 
   return (
     <section>
@@ -115,10 +109,13 @@ export function PrayerRequestsCard({
               onDiscard={() => setWriting(false)}
               saving={save.isPending}
               onSave={
-                // Ohne Bearbeitungsmodus nur beim ersten Schreiben — dann ist
-                // der Modus durch den Klick auf „Hinzufügen" ohnehin schon an.
-                editing
-                  ? (next) => {
+                // Ein Anliegen ist das eigene und sonst niemandes: Wer es
+                // geschrieben hat, darf es jederzeit ändern. Gesperrt ist es
+                // allein an einem vergangenen oder abgesagten Abend — dann
+                // steht die Karte gar nicht mehr zum Schreiben da.
+                locked
+                  ? undefined
+                  : (next) => {
                       if (next === null || next.trim() === '') {
                         setWriting(false);
                         if (mine) remove.mutate();
@@ -126,14 +123,15 @@ export function PrayerRequestsCard({
                       }
                       save.mutate(next);
                     }
-                  : undefined
               }
             />
 
-            {/* Löschen nur im Bearbeitungsmodus und nur beim eigenen — leeren
-                geht auch über das Feld, aber ein Papierkorb sagt deutlicher,
-                dass danach nichts mehr dasteht. */}
-            {editing && mine && (
+            {/* Nur am eigenen Anliegen — leeren geht auch über das Feld, aber
+                ein Papierkorb sagt deutlicher, dass danach nichts mehr
+                dasteht. Er steht im eigenen Kasten und nicht am Rand einer
+                Liste: das Ziel, das er trifft, ist das einzige, das einem
+                gehört. */}
+            {!locked && mine && (
               <button
                 type="button"
                 onClick={() => {
@@ -153,10 +151,7 @@ export function PrayerRequestsCard({
         {mayAdd && !showMine && (
           <button
             type="button"
-            onClick={() => {
-              setWriting(true);
-              onEdit();
-            }}
+            onClick={() => setWriting(true)}
             className="flex w-full items-center gap-2 rounded-lg border border-dashed border-line-strong px-3 py-2.5 text-[12px] font-semibold text-stone-400 transition-colors hover:border-terracotta-400 hover:text-terracotta-600"
           >
             <Plus size={14} />

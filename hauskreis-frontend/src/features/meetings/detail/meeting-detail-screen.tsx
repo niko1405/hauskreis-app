@@ -25,13 +25,14 @@
  */
 import {
   ArrowLeft,
-  Check,
+  CalendarDays,
   Clock,
-  UserPen,
   ExternalLink,
+  Info,
   MapPin,
   Navigation,
   Pencil,
+  UserPen,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { useRouter } from 'next/navigation';
@@ -42,7 +43,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
-import { InlineEdit, TextInput } from '@/components/ui/field';
 import {
   CardSkeleton,
   ConflictBanner,
@@ -87,6 +87,7 @@ import {
   CancelMeetingBlock,
   DeleteMeetingBlock,
 } from './cancellation-card';
+import { MeetingEditSheet } from './meeting-edit-sheet';
 import { NotesCard, NotesPrompt } from './notes-card';
 import { PrayerRequestsCard } from './prayer-requests-card';
 import { SongsCard } from './songs-card';
@@ -217,22 +218,36 @@ function Loaded({
   const [choosingTopic, setChoosingTopic] = useState(false);
 
   /**
-   * Der Lesemodus ist der Normalfall — für die **Texte**.
+   * Ob das Formular für Titel, Uhrzeit und Infos offensteht.
    *
-   * Vorher bot jedes Feld dauerhaft einen Stift an, auch beim bloßen
-   * Nachschauen — auf einer Seite, die man zehnmal öffnet, um etwas zu wissen,
-   * und einmal, um etwas zu ändern. Es gibt bewusst **kein** „Speichern": jede
-   * Änderung geht sofort raus, der Schalter entscheidet nur, ob man sie
-   * überhaupt angeboten bekommt.
+   * **Hier stand einmal ein Modus für die ganze Seite.** Ein Schalter ganz
+   * unten schaltete überall Stifte an: am Titel, an der Uhrzeit, an den Infos,
+   * an den Gebetsanliegen, an den Papierkörben der Lieder. Das kostete zwei
+   * Dinge. Erstens war jede dieser Möglichkeiten hinter einem Ort versteckt,
+   * den man erst kennen musste — die Bausteine sah gar nicht, wer nicht bis
+   * zum Seitenende scrollte. Zweitens hieß derselbe Schalter an fünf Stellen
+   * fünf verschiedene Dinge, von „dieses Feld ist beschreibbar" bis „hier darf
+   * gelöscht werden".
    *
-   * Was der Schalter **nicht** deckt: die Rollen-Zuteilung. Sie ist der Grund,
-   * aus dem man diese Seite überhaupt aufmacht — „wer hostet nächste Woche"
-   * trägt man im Vorbeigehen ein, nicht nach dem Umlegen eines Schalters. Sie
-   * hängt an einem Sheet, kann also nicht versehentlich passieren, und sie
-   * bleibt wie Anwesenheit und Actionstep-Haken immer erreichbar. Gesperrt ist
-   * sie nur an einem abgesagten Abend, an dem es nichts einzuteilen gibt.
+   * Übrig bleibt ein gewöhnliches Formular hinter einem gewöhnlichen Knopf.
+   * Alles andere steht jetzt für sich: Die Bausteine tragen ihren eigenen
+   * Aufklapper, das Löschen eines Liedes liegt hinter dem Wisch, mit dem man
+   * überall in dieser App löscht, und die Textfelder haben ihren Stift ohnehin
+   * selbst (`InlineEdit`).
    */
   const [editing, setEditing] = useState(false);
+
+  /**
+   * Ob die Nachbereitungs-Karte gerade offensteht, obwohl noch nichts
+   * drinsteht.
+   *
+   * Der Hinweis „Nachbereitung hinzufügen" legt den Baustein an und öffnet die
+   * Karte; bleibt sie leer, soll beim nächsten Aufmachen wieder der Hinweis
+   * dastehen und keine leere Karte. Das hing vorher am Seitenmodus — wer ihn
+   * verließ, bekam den Hinweis zurück. Ein eigener Merker sagt dasselbe, ohne
+   * dafür einen Modus zu brauchen.
+   */
+  const [notesOpen, setNotesOpen] = useState(false);
 
   const update = useUpdateMeeting(meetingId);
   const songLeaders = useSongLeaders(meetingId);
@@ -457,12 +472,13 @@ function Loaded({
    * ist.
    *
    * Eine Karte, in der nichts steht, ist keine Nachbereitung, sondern ein
-   * Formular mit zwei unerledigten Zeilen. Solange nichts geschrieben ist, steht
-   * deshalb der Hinweis da; im **Bearbeitungsmodus** dagegen die Karte, denn
-   * dort legt man die beiden Stücke überhaupt erst an.
+   * Formular mit zwei unerledigten Zeilen. Solange nichts geschrieben ist,
+   * steht deshalb der Hinweis da — es sei denn, jemand hat ihn gerade gedrückt
+   * (`notesOpen`): dann ist die Karte der Ort, an dem die beiden Stücke
+   * überhaupt erst entstehen.
    */
   const notesContent = Boolean(meeting.summaryText || meeting.actionstepText);
-  const showNotes = meeting.hasNotesSlot && (notesContent || editing);
+  const showNotes = meeting.hasNotesSlot && (notesContent || notesOpen);
 
   /**
    * Ob der Hinweis „Nachbereitung hinzufügen" dasteht.
@@ -476,14 +492,15 @@ function Loaded({
     started && !cancelled && !meeting.hasTopicSlot && !showNotes;
 
   /**
-   * Der Hinweis führt in den Bearbeitungsmodus — er ist ja die Aufforderung,
-   * etwas zu schreiben, und die Karte erschiene sonst leer und wieder ohne
-   * Eingabemöglichkeit. Den Baustein schaltet er nur an, wenn er aus war: nach
-   * einer Karte, die leer geblieben ist, steht er noch.
+   * Der Hinweis legt die Karte an und macht sie auf — er ist ja die
+   * Aufforderung, etwas zu schreiben, und eine Karte, die erst beim ersten
+   * gespeicherten Satz erschiene, gäbe es nicht, in den man ihn tippt. Den
+   * Baustein schaltet er nur an, wenn er aus war: nach einer Karte, die leer
+   * geblieben ist, steht er noch.
    */
   const addNotes = () => {
     if (!meeting.hasNotesSlot) patch({ hasNotesSlot: true });
-    setEditing(true);
+    setNotesOpen(true);
   };
 
   /**
@@ -504,6 +521,7 @@ function Loaded({
       if (!ok) return;
     }
 
+    setNotesOpen(false);
     patch({ hasNotesSlot: false });
   };
 
@@ -569,19 +587,30 @@ function Loaded({
 
   return (
     <div className="space-y-6 px-5 pt-safe-4 pb-10">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Link href="/termine">
           <IconButton label="Zurück">
             <ArrowLeft size={18} />
           </IconButton>
         </Link>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {past && <Badge>Vorbei</Badge>}
           {/* Grün wie überall, wo etwas gerade gilt. Ein kommender Abend trägt
               weiterhin kein Abzeichen — dass er noch kommt, steht schon im
               Datum darüber. */}
           {phase === 'running' && <Badge variant="success">Läuft</Badge>}
           {cancelled && <Badge variant="alert">Abgesagt</Badge>}
+
+          {/* **Oben, wo man ankommt** — und nicht mehr als Schalter am
+              Seitenende. Er meint Titel, Uhrzeit und Infos zusammen: drei
+              Angaben derselben Sache, hinter einem Knopf und einem Formular. */}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setEditing(true)}
+          >
+            <Pencil size={14} /> Bearbeiten
+          </Button>
         </div>
       </div>
 
@@ -602,20 +631,43 @@ function Loaded({
         <p className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
           {formatWeekday(meeting.date)} · {formatRelativeDay(meeting.date)}
         </p>
-        <HeadlineEdit
-          headline={meetingHeadline(meeting)}
-          title={meeting.title}
-          placeholder={meetingKindLabel(meeting)}
-          saving={update.isPending}
-          onSave={editing ? (next) => patch({ title: next }) : undefined}
-        />
-        <p className="mt-1 text-sm text-stone-400">
-          {/* Bei einem Zeitraum ist das volle Datum die falsche Auskunft: was
-              man wissen will, ist von wann bis wann. */}
-          {meeting.endDate
-            ? formatDayRange(meeting.date, meeting.endDate)
-            : formatDayFull(meeting.date)}
-        </p>
+        <h1 className="mt-1 font-serif text-3xl leading-tight font-bold text-stone-900">
+          {meetingHeadline(meeting)}
+        </h1>
+
+        {/* **Datum und Uhrzeit als zwei Kästchen, direkt unter dem Titel.** Die
+            Uhrzeit hatte vorher eine eigene Sektion mitten in der Seite, mit
+            Überschrift, Karte und Stift — für eine Angabe aus fünf Zeichen, die
+            zur ersten Frage an einen Termin gehört: „wann". Sie steht jetzt
+            dort, wo man sie sucht, und geändert wird sie im Formular oben. */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-[13px] font-semibold text-stone-700">
+            <CalendarDays size={15} className="shrink-0 text-terracotta-500" />
+            {/* Bei einem Zeitraum ist das volle Datum die falsche Auskunft: was
+                man wissen will, ist von wann bis wann. */}
+            {meeting.endDate
+              ? formatDayRange(meeting.date, meeting.endDate)
+              : formatDayFull(meeting.date)}
+          </span>
+          <span className="flex items-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-[13px] font-semibold text-stone-700">
+            <Clock size={15} className="shrink-0 text-terracotta-500" />
+            {meeting.startTime} Uhr
+          </span>
+        </div>
+
+        {/* Die Infos gehören hierher und nicht in eine eigene Sektion weiter
+            unten: Es ist das, was man **vor** dem Abend wissen muss — „bringt
+            eure Bibeln mit", „wir fangen später an". Steht nichts drin, steht
+            hier auch nichts: Eine Karte mit „Nichts Besonderes zu beachten" ist
+            eine Zeile, die nichts sagt. */}
+        {meeting.infoText && (
+          <div className="mt-4 flex gap-3 rounded-lg border border-line border-l-[3px] border-l-terracotta-500 bg-canvas p-3">
+            <Info size={16} className="mt-0.5 shrink-0 text-terracotta-500" />
+            <p className="text-sm leading-relaxed whitespace-pre-line text-stone-700">
+              {meeting.infoText}
+            </p>
+          </div>
+        )}
       </header>
 
       {/* Direkt unter dem Kopf und außerhalb des gedämpften Teils: das ist die
@@ -635,46 +687,12 @@ function Loaded({
             Frage. Beides zugleich gibt es nie: `showNotes` und `mayAddNotes`
             schließen einander aus.
 
-            Er steht auch **außerhalb** des Bearbeitungsmodus: eine
-            Zusammenfassung schreibt man in dem Moment, in dem man vom Abend
-            kommt, nicht nachdem man einen Schalter gefunden hat — der Knopf
-            legt ihn deshalb gleich mit um. */}
+            Ein Klick genügt: eine Zusammenfassung schreibt man in dem Moment,
+            in dem man vom Abend kommt, und nicht nachdem man erst einen
+            Schalter gefunden hat. */}
         {mayAddNotes && (
           <NotesPrompt saving={update.isPending} onAdd={addNotes} />
         )}
-
-        {/* Die erste Frage an einen Termin ist „wann". Sie stand bisher nur im
-            Datum, und eine Uhrzeit gab es gar nicht — „wir fangen heute später
-            an" lief über WhatsApp. */}
-        <section>
-          <SectionTitle>Uhrzeit</SectionTitle>
-          <Card>
-            <TimeRow
-              startTime={meeting.startTime}
-              saving={update.isPending}
-              onSave={
-                editing ? (next) => patch({ startTime: next }) : undefined
-              }
-            />
-          </Card>
-        </section>
-
-        {/* Ganz oben, weil hier steht, was man vor dem Abend wissen muss —
-          „bringt Kuchen mit", „wir fangen später an". Unten zwischen
-          Zusammenfassung und Actionstep las es niemand rechtzeitig. */}
-        <section>
-          <SectionTitle>Infos</SectionTitle>
-          <Card>
-            <InlineEdit
-              label="Infos"
-              multiline
-              value={meeting.infoText}
-              emptyLabel="Nichts Besonderes zu beachten"
-              saving={update.isPending}
-              onSave={editing ? (next) => patch({ infoText: next }) : undefined}
-            />
-          </Card>
-        </section>
 
         {/* **Zwei Sektionen, nicht eine.** Der Ort stand bisher als namenloser
             Block über den Rollen, in derselben Karte — dabei beantwortet er eine
@@ -763,7 +781,6 @@ function Loaded({
         {meeting.hasSongSlot && (
           <SongsCard
             meetingId={meetingId}
-            editing={editing}
             readOnly={locked}
             mayPick={mayPickSongs}
           />
@@ -800,12 +817,7 @@ function Loaded({
             sie beantwortet, wer da war, und das schlägt man nach, statt es
             zwischen Thema und Anliegen zu lesen. */}
         {meeting.hasPrayerSlot && (
-          <PrayerRequestsCard
-            meetingId={meetingId}
-            editing={editing}
-            locked={locked}
-            onEdit={() => setEditing(true)}
-          />
+          <PrayerRequestsCard meetingId={meetingId} locked={locked} />
         )}
 
         <AttendanceCard meeting={meeting} readOnly={locked} />
@@ -821,12 +833,12 @@ function Loaded({
         {showNotes && (
           <NotesCard
             meeting={meeting}
-            editable={editing}
+            editable={!cancelled}
             started={started}
             saving={update.isPending}
             onSummary={(next) => patch({ summaryText: next })}
             onActionstep={(next) => patch({ actionstepText: next })}
-            onRemove={editing ? removeNotes : undefined}
+            onRemove={cancelled ? undefined : removeNotes}
           />
         )}
 
@@ -840,7 +852,7 @@ function Loaded({
             dorthin. Wem hinterher auffällt, dass am Dienstag doch Lieder
             waren, kam bisher nicht mehr heran. An einem **abgesagten** Abend
             gibt es dagegen nichts umzubauen. */}
-        {!cancelled && editing && (
+        {!cancelled && (
           <SlotCard
             slots={meeting}
             disabled={update.isPending}
@@ -849,31 +861,18 @@ function Loaded({
         )}
       </div>
 
-      {/* Der Schalter, nicht ein Speichern-Knopf: geschrieben wird sofort, hier
-          wird nur entschieden, ob überhaupt etwas angeboten wird. Er deckt die
-          Texte und die Bausteine — die Rollen-Zuteilung braucht ihn nicht, die
-          steht immer offen. Absagen und Löschen stehen bewusst dahinter und
-          dauerhaft da: sie sind keine Bearbeitung, sondern eine Entscheidung
-          über den Abend als Ganzes. */}
-      <Button
-        variant={editing ? 'primary' : 'secondary'}
-        className="w-full"
-        onClick={() => setEditing((current) => !current)}
-      >
-        {editing ? (
-          <>
-            <Check size={16} /> Fertig
-          </>
-        ) : (
-          <>
-            <Pencil size={14} /> Bearbeiten
-          </>
-        )}
-      </Button>
-
       {!cancelled && <CancelMeetingBlock meeting={meeting} past={past} />}
 
       <DeleteMeetingBlock meeting={meeting} />
+
+      <MeetingEditSheet
+        open={editing}
+        meeting={meeting}
+        placeholder={meetingKindLabel(meeting)}
+        saving={update.isPending}
+        onSave={patch}
+        onClose={() => setEditing(false)}
+      />
 
       {sheet && (
         <AssignmentSheet
@@ -924,175 +923,6 @@ function Loaded({
           onClose={() => setChoosingTopic(false)}
         />
       )}
-    </div>
-  );
-}
-
-/**
- * Der Titel sitzt am Überschriftstext, nicht in einem eigenen Feld weiter
- * unten — dort war er ein Formularfeld unter vielen, obwohl er das Erste ist,
- * was man liest.
- *
- * Was angezeigt wird, ist die fertige Überschrift: der eigene Titel, sonst der
- * Name, der sich aus den Bausteinen ergibt. Bearbeitet wird aber nur
- * `meeting.title` — würde der Entwurf mit der Überschrift starten, machte das
- * erste Speichern aus dem abgeleiteten Namen einen eigenen, und der Abend
- * hörte auf, seinen Bausteinen zu folgen.
- */
-function HeadlineEdit({
-  headline,
-  title,
-  placeholder,
-  saving,
-  onSave,
-}: {
-  headline: string;
-  title: string | null;
-  placeholder: string;
-  saving: boolean;
-  /** Fehlt sie, ist die Überschrift nur Anzeige — wie bei `InlineEdit`. */
-  onSave?: (next: string | null) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(title ?? '');
-
-  const commit = () => {
-    const trimmed = draft.trim();
-    setEditing(false);
-    const next = trimmed === '' ? null : trimmed;
-    if (next !== title) onSave?.(next);
-  };
-
-  if (editing) {
-    return (
-      <div className="mt-1 space-y-2">
-        {/* Kein autoFocus: auf dem Telefon schöbe die Tastatur die Überschrift
-            aus dem Bild, die man gerade bearbeitet. */}
-        <TextInput
-          value={draft}
-          placeholder={placeholder}
-          aria-label="Titel des Termins"
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') commit();
-            if (event.key === 'Escape') {
-              setDraft(title ?? '');
-              setEditing(false);
-            }
-          }}
-        />
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setDraft(title ?? '');
-              setEditing(false);
-            }}
-          >
-            Abbrechen
-          </Button>
-          <Button size="sm" loading={saving} onClick={commit}>
-            Übernehmen
-          </Button>
-        </div>
-        <p className="text-[11px] text-stone-400">
-          Leer lassen: dann steht dort das Thema, sonst die Art des Termins.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-1 flex items-start gap-2">
-      <h1 className="font-serif text-3xl leading-tight font-bold text-stone-900">
-        {headline}
-      </h1>
-      {onSave && (
-        <IconButton
-          label="Titel bearbeiten"
-          onClick={() => {
-            setDraft(title ?? '');
-            setEditing(true);
-          }}
-          disabled={saving}
-          className="mt-1 shrink-0"
-        >
-          <Pencil size={15} />
-        </IconButton>
-      )}
-    </div>
-  );
-}
-
-/**
- * Wann es losgeht — lesen immer, ändern im Bearbeitungsmodus.
- *
- * Ein eigener Zustand für das Eingabefeld und nicht direkt `patch` bei jedem
- * Tastendruck: `<input type="time">` liefert zwischendurch leere und halbe
- * Werte, während man tippt, und jede davon wäre ein Schreibvorgang samt
- * Benachrichtigung an die Gruppe.
- */
-function TimeRow({
-  startTime,
-  saving,
-  onSave,
-}: {
-  startTime: string;
-  saving: boolean;
-  /** Fehlt außerhalb des Bearbeitungsmodus. */
-  onSave?: (next: string) => void;
-}) {
-  const [draft, setDraft] = useState<string | null>(null);
-
-  if (draft === null) {
-    return (
-      <div className="flex items-center gap-3">
-        <Clock size={18} className="shrink-0 text-terracotta-600" />
-        <span className="flex-1 font-serif text-lg font-bold text-stone-800">
-          {startTime} Uhr
-        </span>
-        {onSave && (
-          <IconButton
-            label="Uhrzeit ändern"
-            onClick={() => setDraft(startTime)}
-            disabled={saving}
-          >
-            <Pencil size={15} />
-          </IconButton>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <TextInput
-        type="time"
-        value={draft}
-        aria-label="Uhrzeit des Termins"
-        onChange={(event) => setDraft(event.target.value)}
-      />
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={() => setDraft(null)}>
-          Abbrechen
-        </Button>
-        <Button
-          size="sm"
-          loading={saving}
-          // Ein leeres Feld hieße „keine Uhrzeit", und die gibt es nicht.
-          disabled={draft === ''}
-          onClick={() => {
-            if (draft !== startTime) onSave?.(draft);
-            setDraft(null);
-          }}
-        >
-          Übernehmen
-        </Button>
-      </div>
-      <p className="text-[11px] leading-relaxed text-stone-400">
-        Ist das der nächste Termin, bekommen die anderen Bescheid.
-      </p>
     </div>
   );
 }
