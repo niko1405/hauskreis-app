@@ -14,6 +14,14 @@
  * dreißig; wer weiter zurück will, sucht am Ort selbst. Die Box ist kein
  * zweites Archiv.
  *
+ * **Und wer nur wegräumen will, wischt nach links.** „Alle gelesen" war bisher
+ * das einzige Werkzeug dafür, und es ist ein grobes: Wer sieben Nachrichten hat
+ * und sechs davon erledigt, musste die siebte entweder stehen lassen oder alles
+ * auf einmal wegräumen. Ein Wisch macht dasselbe für eine Zeile — dieselbe
+ * Geste, mit der in dieser App überall in Listen aufgeräumt wird, nur ohne den
+ * Knopf dahinter: Es gibt hier nur eine Sache zu tun, und ein Knopf, der sie
+ * erst noch anbietet, wäre ein Schritt zu viel.
+ *
  * **Eine Sprechblase und kein Sheet.** Sie fuhr einmal von unten herein, und
  * das war die falsche Bauform: Ein Bottom-Sheet beantwortet „wähle etwas aus",
  * nicht „was ist neu" — und es kam aus der Ecke gegenüber dem Knopf, den man
@@ -51,10 +59,11 @@ import {
   UserMinus,
   Users,
 } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useAnimationControls } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { lockOverlay } from '@/components/ui/overlay-lock';
+import { pulledLeft } from '@/components/ui/swipe';
 import { formatTimestamp } from '@/lib/date';
 import { cn } from '@/lib/cn';
 import {
@@ -217,7 +226,12 @@ export function NotificationInbox({
               ) : (
                 <div className="space-y-2">
                   {unread.map((entry) => (
-                    <Row key={entry.id} entry={entry} onOpen={openEntry} />
+                    <SwipeToRead
+                      key={entry.id}
+                      onRead={() => markRead.mutate(entry.id)}
+                    >
+                      <Row entry={entry} onOpen={openEntry} />
+                    </SwipeToRead>
                   ))}
 
                   {unread.length === 0 && (
@@ -261,6 +275,77 @@ export function NotificationInbox({
         </>
       )}
     </AnimatePresence>
+  );
+}
+
+/**
+ * Eine ungelesene Zeile, die sich nach links wegwischen lässt.
+ *
+ * **Nur die ungelesenen.** An einer gelesenen gibt es nichts wegzuräumen; eine
+ * Zeile, die nachgibt und dann nichts tut, ist ein Versprechen, das die Liste
+ * nicht hält.
+ *
+ * **Ohne Knopf dahinter**, anders als `SwipeActions` in den Listen der App. Die
+ * geben rechts Stift und Papierkorb frei, weil dort zwei Dinge zur Wahl stehen
+ * und eines davon löscht. Hier gibt es genau eine Sache zu tun, und sie ist
+ * umkehrbar — der Eintrag wandert nach „Früher", nicht aus der Welt. Dafür
+ * einen Knopf anzubieten, den man dann noch treffen muss, wäre ein Schritt zu
+ * viel; darunter steht deshalb nur, was gleich passiert.
+ *
+ * Die Schwelle kommt aus `swipe.ts` wie bei allen anderen Zügen der App:
+ * Strecke **oder** Schwung, damit ein Verrutschen nicht zählt und ein
+ * Schnipser reicht. `dragDirectionLock` und `touch-pan-y`, damit die Liste
+ * senkrecht scrollt wie immer.
+ */
+function SwipeToRead({
+  onRead,
+  children,
+}: {
+  onRead: () => void;
+  children: React.ReactNode;
+}) {
+  const controls = useAnimationControls();
+
+  return (
+    <div className="relative overflow-hidden rounded-md">
+      {/* Was unter der Zeile liegt. Grün wie überall, wo etwas erledigt ist —
+          und rechts, weil die Zeile nach links darüber hinweggeht. */}
+      <span
+        aria-hidden
+        className="absolute inset-0 flex items-center justify-end rounded-md bg-success-bg pr-4 text-success"
+      >
+        <Check size={16} />
+      </span>
+
+      <motion.div
+        drag="x"
+        dragDirectionLock
+        // Beide Grenzen auf 0 und die Nachgiebigkeit nur nach links: Die Zeile
+        // folgt dem Finger nach links fast eins zu eins und lässt sich nach
+        // rechts gar nicht ziehen — dorthin gibt es nichts freizugeben.
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={{ left: 0.9, right: 0 }}
+        animate={controls}
+        onDragEnd={(_, info) => {
+          if (pulledLeft(info)) {
+            // Erst zu Ende wischen, dann schreiben: Der Eintrag verschwindet
+            // sonst erst, wenn die Antwort da ist — und bis dahin stünde er
+            // halb weggeschoben da.
+            void controls
+              .start({ x: '-100%', opacity: 0, transition: { duration: 0.18 } })
+              .then(onRead);
+          } else {
+            void controls.start({
+              x: 0,
+              transition: { type: 'spring', damping: 30, stiffness: 300 },
+            });
+          }
+        }}
+        className="relative touch-pan-y"
+      >
+        {children}
+      </motion.div>
+    </div>
   );
 }
 
