@@ -4,13 +4,13 @@
  * Eine Terminkarte in der Liste. Zeigt, was man beim Überfliegen braucht:
  * wann, was, wo, wer — und was noch offen ist.
  */
-import { Clock, MapPin, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { PRESSABLE } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
-import { dayParts, formatDayRange, formatRelativeDay } from '@/lib/date';
+import { formatDayRange, formatRelativeDay } from '@/lib/date';
 import {
   attendanceCounts,
   isMeetingPast,
@@ -20,6 +20,7 @@ import {
 import { useMe, usePeople } from '@/lib/api/hooks';
 import type { AttendanceStatus, MeetingListItem } from '@/lib/api/types';
 import { AnswerNoteSheet } from './answer-note-sheet';
+import { DateBox, TimeAndPlace } from './date-box';
 import { ANSWERS } from './attendance-answers';
 import { RoleChip } from './role-badge';
 import { useAttendanceAnswer } from './use-attendance-answer';
@@ -48,7 +49,6 @@ export function MeetingCard({
   // Dieselbe Unterscheidung wie auf der Detailseite: „geplant für" ist keine
   // Aussage über gestern.
   const shown = past || cancelled ? counts.attending : counts.planned;
-  const tag = dayParts(meeting.date);
   const topicPeople = meeting.topicResponsibles.map((r) => r.person);
   // Die Tönung des Lobpreisabends kommt aus denselben Bausteinen wie sein
   // Name: Wo kein Thema, aber ein Testimony steht, dreht sich der Abend ums
@@ -101,19 +101,7 @@ export function MeetingCard({
               Ein Zeitraum bekommt keins: „14.–16." passt nicht in ein Kästchen,
               und eine Freizeit ist kein Tag. Dort steht die Spanne wie bisher
               als Zeile über dem Titel. */}
-          {meeting.endDate === null && (
-            <span className="flex w-13 shrink-0 flex-col items-center rounded-lg border border-line bg-canvas py-1.5 leading-none">
-              <span className="text-[10px] font-bold tracking-wider text-terracotta-500 uppercase">
-                {tag.weekday}
-              </span>
-              <span className="mt-1 font-serif text-xl font-bold text-stone-800">
-                {tag.day}
-              </span>
-              <span className="mt-1 text-[9px] font-semibold tracking-wider text-stone-400 uppercase">
-                {tag.month}
-              </span>
-            </span>
-          )}
+          {meeting.endDate === null && <DateBox day={meeting.date} />}
 
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
@@ -143,41 +131,30 @@ export function MeetingCard({
                   und abgesagten Abenden — dort aber als „wer war da", denn
                   „geplant für" ist keine Aussage über gestern. */}
               {shown > 0 && (
-                <span className="flex shrink-0 items-center gap-1 rounded-full bg-canvas px-2.5 py-1 text-xs font-bold text-stone-600">
+                <span className="flex shrink-0 items-center gap-1 rounded-full border border-line bg-canvas px-2.5 py-1 text-xs font-bold text-stone-600">
                   <Users size={13} className="text-terracotta-500" />
                   {shown} {past || cancelled ? 'dabei' : 'geplant'}
                 </span>
               )}
             </div>
 
-            <h3 className="mt-1 truncate font-serif text-lg font-bold text-stone-900">
+            <h3 className="mt-1 truncate font-serif text-xl font-bold text-stone-900">
               {meetingHeadline(meeting)}
             </h3>
 
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-stone-500">
-              {/* Die Uhrzeit stand bisher nur auf „Heute". Hier gehört sie
-                  dazu, seit das Kästchen den Tag trägt: Der Tag ist die
-                  Sortierung, die Uhrzeit die Verabredung — und seit sie sich
-                  einstellen lässt, ist „18 Uhr wie immer" keine sichere
-                  Annahme mehr. */}
-              <span className="flex items-center gap-1">
-                <Clock size={12} className="text-stone-400" />
-                {meeting.startTime} Uhr
-              </span>
-              <span className="flex items-center gap-1">
-                <MapPin size={12} className="text-stone-400" />
-                {/* Ein Termin ohne Ort ist kein Fehler — z. B. draußen im Park. */}
-                {meeting.location?.name ?? 'Ort noch offen'}
-              </span>
-              {/* Nur, wenn der Abend einen eigenen Titel trägt: Sonst steht
-                  die Bezeichnung schon als Überschrift darüber, und zweimal
-                  dasselbe ist eines zu viel. */}
-              {meeting.title && (
-                <span className="text-stone-400">
-                  {meetingKindLabel(meeting)}
-                </span>
-              )}
-            </div>
+            {/* Die Uhrzeit stand bisher nur auf „Heute". Hier gehört sie dazu,
+                seit das Kästchen den Tag trägt: Der Tag ist die Sortierung, die
+                Uhrzeit die Verabredung — und seit sie sich einstellen lässt,
+                ist „18 Uhr wie immer" keine sichere Annahme mehr.
+
+                Die Art des Abends steht nur dahinter, wenn er einen eigenen
+                Titel trägt: Sonst steht sie schon als Überschrift darüber, und
+                zweimal dasselbe ist eines zu viel. */}
+            <TimeAndPlace
+              startTime={meeting.startTime}
+              location={meeting.location}
+              extra={meeting.title ? meetingKindLabel(meeting) : undefined}
+            />
           </div>
         </div>
 
@@ -233,33 +210,42 @@ export function MeetingCard({
 
           {/* Eine eigene Zone unter einem zweiten Trennstrich — derselbe
               Gedanke wie der Strich über den Rollen: Er trennt, was der Abend
-              ist, von dem, was du dazu sagst. */}
-          {answerable && (
-            <div className="mt-3 flex gap-1.5 border-t border-line pt-3">
-              {ANSWERS.map((option) => {
-                const Icon = option.icon;
-                const chosen = myStatus === option.status;
+              ist, von dem, was du dazu sagst.
 
-                return (
-                  <button
-                    key={option.status}
-                    type="button"
-                    aria-pressed={chosen}
-                    onClick={(event) => void choose(event, option.status)}
-                    className={cn(
-                      'flex flex-1 items-center justify-center gap-1 rounded-full border px-2.5 py-2',
-                      'text-[11px] font-bold transition-colors',
-                      'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
-                      chosen
-                        ? option.active
-                        : 'border-line bg-card text-stone-400 hover:border-line-strong hover:text-stone-600',
-                    )}
-                  >
-                    <Icon size={13} className="shrink-0" />
-                    {option.label}
-                  </button>
-                );
-              })}
+              **Ein Schalter aus drei Feldern, nicht drei Knöpfe.** Sie standen
+              als drei einzeln umrandete Pillen nebeneinander, und damit sah
+              jede aus wie eine eigene Handlung — dabei ist es *eine* Frage mit
+              drei Antworten, von denen genau eine gilt. Der Rahmen liegt
+              deshalb außen herum; gefüllt ist nur die, die gerade gewählt ist,
+              die übrigen tragen keinen eigenen. */}
+          {answerable && (
+            <div className="mt-3 border-t border-line pt-3">
+              <div className="flex gap-1 rounded-xl border border-line bg-canvas p-1">
+                {ANSWERS.map((option) => {
+                  const Icon = option.icon;
+                  const chosen = myStatus === option.status;
+
+                  return (
+                    <button
+                      key={option.status}
+                      type="button"
+                      aria-pressed={chosen}
+                      onClick={(event) => void choose(event, option.status)}
+                      className={cn(
+                        'flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2',
+                        'text-[11px] font-bold transition-colors',
+                        'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+                        chosen
+                          ? option.active
+                          : 'border-transparent text-stone-400 hover:text-stone-600',
+                      )}
+                    >
+                      <Icon size={13} className="shrink-0" />
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

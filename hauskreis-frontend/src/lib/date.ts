@@ -234,7 +234,11 @@ export function dayParts(day: CalendarDay): {
     // Ohne den Punkt: „DI" statt „Di." — im Kästchen ist es eine Beschriftung,
     // kein abgekürztes Wort in einem Satz.
     weekday: WEEKDAY_SHORT.format(date).replace('.', ''),
-    day: String(date.getDate()),
+    // Zweistellig: Im Kästchen stehen die Zahlen untereinander wie in einer
+    // Spalte, und eine einstellige säße dort schmal in der Mitte, während die
+    // Karte darüber und darunter bündig bleibt. „08" ist hier keine Uhrzeit,
+    // sondern eine feste Breite.
+    day: String(date.getDate()).padStart(2, '0'),
     month: MONTH_SHORT.format(date),
   };
 }

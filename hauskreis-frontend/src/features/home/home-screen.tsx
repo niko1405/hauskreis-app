@@ -10,18 +10,16 @@ import {
   ChevronRight,
   Circle,
   CircleCheckBig,
-  Clock,
   Navigation,
-  MapPin,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { RoleChip } from '@/components/domain/role-badge';
+import { DateBox, TimeAndPlace } from '@/components/domain/date-box';
 import { useHome, useMe, useSetActionstepDone } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import {
-  dayParts,
   formatDay,
   formatDayRange,
   formatRelativeDay,
@@ -286,8 +284,6 @@ function NextMeetingCard({
   /** Der laufende Abend bekommt hier seine grüne Tönung. */
   className?: string;
 }) {
-  const tag = dayParts(meeting.date);
-
   return (
     <Card className={cn('space-y-4', className)}>
       {/* Dieselbe Kopfzeile wie auf der Terminkarte: Datums-Kästchen links,
@@ -296,19 +292,7 @@ function NextMeetingCard({
           obwohl es dasselbe ist. Ein Zeitraum bekommt kein Kästchen; eine
           Freizeit ist kein Tag. */}
       <div className="flex items-start gap-3">
-        {meeting.endDate === null && (
-          <span className="flex w-13 shrink-0 flex-col items-center rounded-lg border border-line bg-canvas py-1.5 leading-none">
-            <span className="text-[10px] font-bold tracking-wider text-terracotta-500 uppercase">
-              {tag.weekday}
-            </span>
-            <span className="mt-1 font-serif text-xl font-bold text-stone-800">
-              {tag.day}
-            </span>
-            <span className="mt-1 text-[9px] font-semibold tracking-wider text-stone-400 uppercase">
-              {tag.month}
-            </span>
-          </span>
-        )}
+        {meeting.endDate === null && <DateBox day={meeting.date} />}
 
         <div className="min-w-0 flex-1">
           <Link href={`/termin?id=${meeting.id}`} className="block min-w-0">
@@ -317,33 +301,18 @@ function NextMeetingCard({
                 ? formatDayRange(meeting.date, meeting.endDate)
                 : formatRelativeDay(meeting.date)}
             </span>
-            <h3 className="mt-0.5 font-serif text-lg font-bold text-stone-900">
+            <h3 className="mt-0.5 font-serif text-xl font-bold text-stone-900">
               {meetingHeadline(meeting)}
             </h3>
           </Link>
 
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-stone-500">
-            <span className="flex items-center gap-1">
-              <Clock size={12} className="text-stone-400" />
-              {meeting.startTime} Uhr
-            </span>
-            {meeting.location ? (
-              <a
-                href={mapsUrl(meeting.location)}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1 hover:text-terracotta-600"
-              >
-                <MapPin size={12} className="text-stone-400" />
-                {meeting.location.name}
-              </a>
-            ) : (
-              <span className="flex items-center gap-1">
-                <MapPin size={12} className="text-stone-400" />
-                Ort noch offen
-              </span>
-            )}
-          </div>
+          {/* Hier führt der Ort nach Maps, in der Terminliste nicht: Dort ist
+              die ganze Karte ein Link auf den Abend. */}
+          <TimeAndPlace
+            startTime={meeting.startTime}
+            location={meeting.location}
+            linkToMaps
+          />
         </div>
 
         {/* Der runde Maps-Knopf bleibt: Auf **dieser** Karte geht man auf einen
