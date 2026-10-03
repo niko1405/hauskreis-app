@@ -10,6 +10,8 @@
  */
 import { zoneOffsetMinutes } from '../common/time/local-evening';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /** Strips the time part, keeping the calendar date in UTC. */
 export function toUtcDate(date: Date): Date {
   return new Date(
@@ -116,11 +118,20 @@ export function upcomingMeetingDates(options: MeetingDateOptions): Date[] {
   return dates;
 }
 
-/** Der erste Termin der Reihe, der echt hinter `after` liegt. */
+/**
+ * Der erste Termin der Reihe, der echt hinter `after` liegt — in **beide**
+ * Richtungen gesucht.
+ *
+ * Der Anker gibt nur die Phase vor, nicht den Anfang. Hier lief einmal eine
+ * Schleife, die nur vorwärts zählen konnte, und das ging am Normalfall vorbei:
+ * Der späteste erzeugte Abend liegt im laufenden Betrieb **vorne**, sieben
+ * Termine weit. Die Reihe begann dann dort statt bei heute, jeder Lauf legte
+ * sechs Termine dahinter an, und nach einem Monat standen zweihundert im
+ * Kalender.
+ */
 function weiterBis(anchor: Date, after: Date, step: number): Date {
-  let cursor = anchor;
-  while (cursor <= after) cursor = addDays(cursor, step);
-  return cursor;
+  const days = Math.round((after.getTime() - anchor.getTime()) / DAY_MS);
+  return addDays(anchor, (Math.floor(days / step) + 1) * step);
 }
 
 /**

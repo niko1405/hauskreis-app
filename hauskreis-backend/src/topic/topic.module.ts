@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { RecapModule } from '../recap/recap.module';
 import { TopicController } from './topic.controller';
 import { MeetingTopicController } from './meeting-topic.controller';
 import { TopicService } from './topic.service';
@@ -32,6 +33,7 @@ import { AttendanceModule } from '../attendance/attendance.module';
     RoleSuggestionModule,
     TopicLinkModule,
     AttendanceModule,
+    RecapModule,
   ],
   controllers: [TopicController, MeetingTopicController],
   providers: [TopicService, TopicSessionService, TopicReminderService],

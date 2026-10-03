@@ -35,6 +35,7 @@ import {
 } from './topic-visibility';
 import { touchSession, touchTopic } from './topic-version';
 import { TopicLinkService } from './topic-link.service';
+import { RecapAnnouncer } from '../recap/recap-announcer.service';
 import type {
   ChooseTopicSessionDto,
   CreateTopicSessionDto,
@@ -102,6 +103,9 @@ export class TopicSessionService {
     private readonly roleAttendance: RoleAttendanceService,
     private readonly availability: AvailabilityService,
     private readonly links: TopicLinkService,
+    // Vor der Uhr, wie bei `MeetingService`: Die Tests reichen sie per
+    // `withClock` nach.
+    private readonly recaps: RecapAnnouncer,
     private readonly clock: GroupClockService,
   ) {}
 
@@ -420,6 +424,19 @@ export class TopicSessionService {
       sessionId,
       viewer.personId,
     );
+
+    // Eine Einheit, die schon Text mitbringt, kann den Rückblick eines Abends
+    // erst entstehen lassen — beim Nachtragen über das Anlege-Formular ist
+    // genau das der Fall. Verglichen wird mit der Einheit, die vorher dran war.
+    await this.recaps.afterWrite({
+      meetingId,
+      actorPersonId: viewer.personId,
+      source: 'session',
+      before: {
+        summary: bisher?.summaryText ?? null,
+        actionstep: bisher?.actionstepText ?? null,
+      },
+    });
 
     return this.findSession(hauskreisId, sessionId, viewer);
   }
@@ -1415,6 +1432,8 @@ export class TopicSessionService {
         id: true,
         meetingId: true,
         topicId: true,
+        summaryText: true,
+        actionstepText: true,
         topic: { select: topicMembershipSelect },
         responsibles: { select: { personId: true } },
       },
@@ -1436,7 +1455,7 @@ export class TopicSessionService {
       );
     }
 
-    return updateWithVersionCheck({
+    const updated = await updateWithVersionCheck({
       condition,
       update: (versionConstraint) =>
         this.prisma.$transaction(async (tx) => {
@@ -1469,6 +1488,23 @@ export class TopicSessionService {
       reload: () => this.findSession(hauskreisId, sessionId, viewer),
       notFoundMessage: `Topic session ${sessionId} not found`,
     });
+
+    // Hinter dem Schreiben, nicht davor: Eine Nachricht über einen Text, der
+    // dann am Versionskonflikt scheitert, wäre schlimmer als keine. Ein
+    // Entwurf ohne Abend hat niemandem etwas zu erzählen.
+    if (dto.summaryText !== undefined || dto.actionstepText !== undefined) {
+      await this.recaps.afterWrite({
+        meetingId: session.meetingId,
+        actorPersonId: viewer.personId,
+        source: 'session',
+        before: {
+          summary: session.summaryText,
+          actionstep: session.actionstepText,
+        },
+      });
+    }
+
+    return updated;
   }
 
   // -------------------------------------------------------------------- Helfer
@@ -1481,7 +1517,14 @@ export class TopicSessionService {
         date: true,
         hasTopicSlot: true,
         topicResponsibles: { select: { personId: true } },
-        topicSession: { select: { id: true, topicId: true } },
+        topicSession: {
+          select: {
+            id: true,
+            topicId: true,
+            summaryText: true,
+            actionstepText: true,
+          },
+        },
       },
     });
 

@@ -82,6 +82,12 @@ export interface HomeMeeting {
   testimonyPerson: { id: string; name: string } | null;
   /** What *you* answered for that evening. */
   myAttendance: string;
+  /**
+   * Die Zusammenfassung des Abends — nur am laufenden und am letzten, beim
+   * nächsten immer `null`. Dieselbe Regel wie beim Actionstep: Mit Thema steht
+   * sie an der Einheit, sonst an der Nachbereitung des Abends.
+   */
+  summaryText: string | null;
 }
 
 export interface HomeScreen {
@@ -191,6 +197,8 @@ export class DashboardService {
       hasTestimonySlot: true,
       hasSnackSlot: true,
       title: true,
+      // Die Nachbereitung eines Abends ohne Thema — für den Rückblick oben.
+      summaryText: true,
       location: {
         select: {
           id: true,
@@ -323,6 +331,8 @@ export class DashboardService {
     // wäre der Fehler, den ein gemeinsamer Helfer gerade verhindern soll.
     const shape = (
       meeting: (typeof meetings)[number] | null,
+      /** Ob der Abend einen Rückblick tragen darf: der laufende und der letzte. */
+      { recap }: { recap: boolean },
     ): HomeMeeting | null => {
       if (!meeting) return null;
 
@@ -364,13 +374,26 @@ export class DashboardService {
         testimonyPerson: meeting.testimonyPerson,
         // No row means nobody answered yet, which is exactly UNKNOWN.
         myAttendance: meeting.attendances[0]?.status ?? 'UNKNOWN',
+        // Am Baustein entschieden wie `actionstepOf`, und an der Einheit über
+        // dieselbe Sichtbarkeit wie ihr Titel. Am laufenden und letzten Abend
+        // ist die ohnehin erreicht — die Prüfung kostet nichts und hält die
+        // Regel an einer Stelle.
+        summaryText: recap
+          ? nonEmpty(
+              meeting.hasTopicSlot
+                ? session?.contentVisible
+                  ? session.summaryText
+                  : null
+                : meeting.summaryText,
+            )
+          : null,
       };
     };
 
     return {
-      currentMeeting: shape(current),
-      lastMeeting: shape(last),
-      nextMeeting: shape(next),
+      currentMeeting: shape(current, { recap: true }),
+      lastMeeting: shape(last, { recap: true }),
+      nextMeeting: shape(next, { recap: false }),
       myRoles: myRoles.filter((role) => role.role !== 'PRAYER_BUDDY'),
       // Abgeschaltet heißt nicht „leer", sondern „gibt es hier nicht" — beide
       // Karten fallen im Frontend an genau diesem `null` von selbst weg.
@@ -397,4 +420,9 @@ export class DashboardService {
 
 function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+/** Ein leerer Text ist keiner — sonst stünde oben eine Karte ohne Inhalt. */
+function nonEmpty(value: string | null | undefined): string | null {
+  return value && value.trim() !== '' ? value : null;
 }

@@ -437,6 +437,55 @@ describe('DashboardService.build', () => {
   });
 
   /**
+   * Steht am letzten Abend eine Zusammenfassung, zeigt der Startbildschirm sie
+   * statt der Karte. Am nächsten Abend gibt es nichts zurückzublicken.
+   */
+  it('gibt dem letzten Abend seine Zusammenfassung mit', async () => {
+    const { service } = setup({
+      lastFinished: {
+        ...pastMeeting,
+        hasTopicSlot: false,
+        summaryText: 'Wir haben über Dankbarkeit gesprochen',
+      } as never,
+    });
+
+    const home = await service.build('hk-1', NIKO, { now: NOW });
+
+    expect(home.lastMeeting?.summaryText).toBe(
+      'Wir haben über Dankbarkeit gesprochen',
+    );
+    expect(home.nextMeeting?.summaryText).toBeNull();
+  });
+
+  it('nimmt die Zusammenfassung der Einheit, wenn der Abend ein Thema hat', async () => {
+    const { service } = setup({
+      lastFinished: {
+        ...nextMeeting,
+        id: 'm-vorbei',
+        date: utc('2026-07-28'),
+        hasTopicSlot: true,
+        // Steht hier, gilt an einem Themenabend aber nicht.
+        summaryText: 'aus der Nachbereitung',
+        topicSession: {
+          ...nextMeeting.topicSession,
+          summaryText: 'Vergebung ist ein Weg, kein Moment',
+          meeting: {
+            ...nextMeeting.topicSession.meeting,
+            id: 'm-vorbei',
+            date: utc('2026-07-28'),
+          },
+        },
+      } as never,
+    });
+
+    const home = await service.build('hk-1', NIKO, { now: NOW });
+
+    expect(home.lastMeeting?.summaryText).toBe(
+      'Vergebung ist ein Weg, kein Moment',
+    );
+  });
+
+  /**
    * Der obere Platz gehört dem laufenden Abend. Beides zugleich wäre eine Karte
    * zu viel und die Frage „wo bin ich jetzt" zweimal beantwortet.
    */

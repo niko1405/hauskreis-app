@@ -1,11 +1,12 @@
 'use client';
 
 /**
- * Der eigene Haken unter einem Actionstep, plus die Gesichter der anderen.
+ * Der eigene Haken unter einem Actionstep — und nur der.
  *
- * Namen statt nur einer Zahl: „5 von 9" sagt, wie es der Gruppe geht, die
- * Gesichter sagen, wen man fragen kann, wie es lief. Für neun Leute passt beides
- * nebeneinander.
+ * Hier standen einmal „5 von 9 haben's geschafft" und die Gesichter derer, die
+ * abgehakt hatten. Der Haken sagt jetzt nur noch etwas über einen selbst: Wie
+ * es den anderen mit ihrem Vorsatz ging, erzählen sie am nächsten Abend. Die
+ * Haken der anderen liefert der Server weiterhin mit, gezeigt werden sie nicht.
  *
  * Der Haken hängt am **Termin** (`meeting_actionstep_done`), der Text an der
  * Einheit. Deshalb steht dieser Block an zwei Stellen: unter dem Actionstep im
@@ -18,10 +19,8 @@
  * ob sein Abend schon war.
  */
 import { CheckCircle2, Circle } from 'lucide-react';
-import { Avatar } from '@/components/ui/avatar';
-import { useMe, usePeople, useSetActionstepDone } from '@/lib/api/hooks';
+import { useMe, useSetActionstepDone } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import { actionstepProgress } from '@/lib/meeting';
 import type { PersonRef } from '@/lib/api/types';
 
 export function ActionstepCheck({
@@ -33,17 +32,12 @@ export function ActionstepCheck({
   done: readonly { person: PersonRef }[];
 }) {
   const me = useMe();
-  const people = usePeople();
   const setDone = useSetActionstepDone(meetingId);
 
   const doneByMe = done.some((row) => row.person.id === me.me?.id);
-  const activeCount = (people.data ?? []).length;
-  const others = done
-    .map((row) => row.person)
-    .filter((person) => person.id !== me.me?.id);
 
   return (
-    <div className="space-y-3 border-t border-line pt-4">
+    <div className="border-t border-line pt-4">
       <button
         type="button"
         aria-pressed={doneByMe}
@@ -62,21 +56,6 @@ export function ActionstepCheck({
           {doneByMe ? 'Du hast es geschafft' : 'Für mich abhaken'}
         </span>
       </button>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-semibold text-stone-400">
-          {actionstepProgress(done.length, activeCount)}
-        </span>
-        {others.length > 0 && (
-          <span className="flex items-center gap-1.5">
-            {others.map((person) => (
-              <span key={person.id} title={person.name}>
-                <Avatar person={person} size="xs" />
-              </span>
-            ))}
-          </span>
-        )}
-      </div>
     </div>
   );
 }

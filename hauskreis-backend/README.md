@@ -3361,6 +3361,44 @@ Wie beim Gebetsbuddy-Generator werden die Log-Zeilen einer Runde **gelöscht**,
 bevor neu gemeldet wird: Person, Art und Runde bleiben sonst gleich, und die
 Entdopplung verschluckte jede zweite Nachricht.
 
+### `related_key`
+
+Der letzte Unterscheider ist keine Fremdschlüssel-Spalte, sondern Text: Er
+beantwortet „derselbe Gegenstand, aber ein anderer **Anlass**", und ein Anlass
+ist nichts, worauf man zeigen könnte.
+
+- **Der Tag** bei Erinnerungen an mehreren Wochentagen (`ACTIONSTEP_REMINDER`,
+  `ROLE_OPEN_REMINDER`). Ohne ihn galt der Actionstep nach dem ersten
+  gewählten Wochentag als erledigt — der Freitag nach dem Mittwoch ging nie
+  raus. Der Test dafür prüfte nur, wer an einem Tag dran ist, und mockte
+  `notify`; die Entdopplung dahinter sah er nicht.
+- **Das Feld** beim Rückblick (`RECAP_ADDED`: `summary` oder `actionstep`).
+  Zusammenfassung und Actionstep desselben Abends sind zwei Nachrichten.
+
+Bestehende Zeilen tragen `NULL` und behalten genau die Bedeutung, die sie
+hatten.
+
+## Was am nächsten Abend passiert
+
+Drei Nachrichten fragen nach „dem nächsten Abend" und „wer ist dabei" — die
+Antworten stehen einmal in [`src/meeting/next-meeting.ts`](src/meeting/next-meeting.ts):
+
+- `findNextMeetingId` — der erste geplante Abend, der nicht ganz vorbei ist,
+  mit `notFinishedBefore` wie auf dem Startbildschirm. Die Uhrzeit-Nachricht
+  rechnete vorher mit `date >= today` und verlor damit eine laufende Freizeit.
+- `plannedAttendees` — alle Angekommenen außer den Abgesagten. Wer nie
+  geantwortet hat, zählt als „weiß noch nicht" und wird gefragt.
+- `openRoles` — was fehlt, im Unterschied zu dem, was es hier nicht gibt (ein
+  Baustein aus, ein Ort ohne Gastgeber). Den Satz daraus baut `describeRoles`,
+  dieselbe Funktion wie für „… ist wieder frei" nach einer Absage.
+
+**`SlotChangeAnnouncer`** bündelt Bausteinwechsel zwei Minuten lang in einem
+Zeitgeber im Prozess und vergleicht dann mit dem Stand vor der ersten Änderung.
+**`RoleOpenReminderService`** läuft um neun wie die anderen Erinnerungen.
+**`RecapAnnouncer`** liegt in einem eigenen Modul ohne Kanten
+([`src/recap/`](src/recap/)), weil Nachbereitung (`MeetingModule`) und Einheit
+(`TopicModule`) ihn beide brauchen.
+
 ## Home-Screen und Zuteilungen
 
 Zwei Routen aus [`src/dashboard/`](src/dashboard/) — eine Sicht auf vorhandene

@@ -445,7 +445,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     question:
       'Warum sehe ich Titel und Zusammenfassung eines Abends noch nicht?',
     answer:
-      'Weil er noch nicht angefangen hat. Titel, Actionstep und Zusammenfassung einer noch nicht gehaltenen Einheit sehen nur die, die dafür zuständig sind — damit die Vorbereitung eine Vorbereitung bleiben darf und nicht schon halb vorgetragen ist.\n\nMaßgeblich ist die **Treffpunktzeit dieses Termins**, nicht der Kalendertag und keine feste Uhrzeit. Fängt der Abend um 19 Uhr an, wird um 19 Uhr aufgeschlossen.\n\nWer schon abgehakt hat, ist übrigens immer zu sehen — das sagt nichts über den Inhalt.',
+      'Weil er noch nicht angefangen hat. Titel, Actionstep und Zusammenfassung einer noch nicht gehaltenen Einheit sehen nur die, die dafür zuständig sind — damit die Vorbereitung eine Vorbereitung bleiben darf und nicht schon halb vorgetragen ist.\n\nMaßgeblich ist die **Treffpunktzeit dieses Termins**, nicht der Kalendertag und keine feste Uhrzeit. Fängt der Abend um 19 Uhr an, wird um 19 Uhr aufgeschlossen.',
     keywords: ['verborgen', 'nicht sichtbar', 'geheim', 'gesperrt'],
   },
   {
@@ -770,7 +770,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'notes',
     question: 'Warum kann ich den Actionstep noch nicht abhaken?',
     answer:
-      'Weil der Abend noch nicht angefangen hat. Maßgeblich ist die **Treffpunktzeit**, nicht der Kalendertag — einen Vorsatz für heute Abend hakt man heute früh nicht ab.\n\nDer Haken gilt pro Person und hängt am Termin; er funktioniert für beide Fälle gleich, ob der Actionstep nun vom Thema oder vom Baustein kommt.\n\nWieder abhaken darfst du jederzeit. Und du siehst, wie weit die anderen sind — bei null steht dort „Noch niemand hat abgehakt" und nicht „0 von 9", was sich wie ein Vorwurf läse.',
+      'Weil der Abend noch nicht angefangen hat. Maßgeblich ist die **Treffpunktzeit**, nicht der Kalendertag — einen Vorsatz für heute Abend hakt man heute früh nicht ab.\n\nDer Haken gilt pro Person und hängt am Termin; er funktioniert für beide Fälle gleich, ob der Actionstep nun vom Thema oder vom Baustein kommt.\n\nWieder abhaken darfst du jederzeit. Zu sehen ist nur dein eigener Haken — wie es den anderen mit ihrem Vorsatz ging, erzählen sie am nächsten Abend.',
     keywords: ['haken', 'erledigt', 'abhaken', 'gesperrt'],
   },
 
@@ -862,7 +862,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'app',
     question: 'Wie schalte ich Benachrichtigungen ein, und welche gibt es?',
     answer:
-      'Im Profil unter „Benachrichtigungen". Du musst sie einmal je Gerät erlauben — auf dem iPhone geht das nur, wenn die App vom Home-Bildschirm gestartet wurde, nicht im Safari-Tab.\n\nJede Art lässt sich einzeln schalten. Bei den Erinnerungen stellst du außerdem ein, **wie viele Tage vorher** sie kommen sollen; beim Actionstep, an welchen Wochentagen (auch mehrere).\n\nEs gibt Erinnerungen an deine eigenen Aufgaben (hosten, Thema, Musik, Testimony, Actionstep) und Nachrichten über die Gruppe (eingeteilt worden, neue Gebetsbuddys, Abend fällt aus oder findet doch statt, geänderte Uhrzeit, jemand sagt ab, bei euch wäre jetzt Platz, jemand verlässt den Hauskreis, ein besonderer Termin, Neues in der App).',
+      'Im Profil unter „Benachrichtigungen". Du musst sie einmal je Gerät erlauben — auf dem iPhone geht das nur, wenn die App vom Home-Bildschirm gestartet wurde, nicht im Safari-Tab.\n\nJede Art lässt sich einzeln schalten. Bei den Erinnerungen stellst du außerdem ein, **wie viele Tage vorher** sie kommen sollen; beim Actionstep und bei „am nächsten Abend ist noch etwas frei", an welchen Wochentagen (auch mehrere).\n\nEs gibt Erinnerungen an deine eigenen Aufgaben (hosten, Thema, Musik, Testimony, Actionstep) und Nachrichten über die Gruppe (eingeteilt worden, neue Gebetsbuddys, Abend fällt aus oder findet doch statt, geänderte Uhrzeit, am nächsten Abend kommt etwas dazu oder fällt weg, am nächsten Abend ist noch eine Rolle frei, die Zusammenfassung oder der Actionstep vom letzten Abend ist da, jemand sagt ab, bei euch wäre jetzt Platz, jemand verlässt den Hauskreis, ein besonderer Termin, Neues in der App).',
     keywords: ['push', 'erinnerung', 'benachrichtigung', 'einstellen'],
   },
   {

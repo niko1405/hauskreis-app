@@ -155,6 +155,21 @@ describe('ActionstepReminderService.sendDueReminders', () => {
     expect(notify.mock.calls.map((call) => call[0].personId)).toEqual(['anna']);
   });
 
+  it('entdoppelt je Tag und nicht nur je Abend', async () => {
+    // Sonst gälte der Actionstep nach dem ersten gewählten Wochentag als
+    // erledigt, und der zweite Tag schickte nichts mehr.
+    const { service, notify } = setup();
+
+    await service.sendDueReminders('hk-1', { now: friday });
+
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        personId: 'anna',
+        relatedKey: friday.toISOString().slice(0, 10),
+      }),
+    );
+  });
+
   it('stays silent on a day nobody chose', async () => {
     const { service, notify } = setup();
 

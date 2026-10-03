@@ -18,6 +18,9 @@ import { RoleSuggestionModule } from '../role-suggestion/role-suggestion.module'
 import { NotificationModule } from '../notification/notification.module';
 import { AttendanceModule } from '../attendance/attendance.module';
 import { TopicLinkModule } from '../topic/topic-link.module';
+import { RecapModule } from '../recap/recap.module';
+import { SlotChangeAnnouncer } from './slot-change-announcer.service';
+import { RoleOpenReminderService } from './role-open-reminder.service';
 
 @Module({
   // Die ersten beiden Importe sind der Sinn des Modul-Schnitts: das Ranking
@@ -33,6 +36,9 @@ import { TopicLinkModule } from '../topic/topic-link.module';
     NotificationModule,
     AttendanceModule,
     TopicLinkModule,
+    // „Die Zusammenfassung ist da" — geschrieben wird sie hier wie an der
+    // Einheit eines Themas, deshalb ein eigenes Modul ohne Kanten.
+    RecapModule,
   ],
   controllers: [MeetingController],
   providers: [
@@ -50,6 +56,8 @@ import { TopicLinkModule } from '../topic/topic-link.module';
     MeetingCancellationService,
     RoleReleaseService,
     CustomMeetingNotificationService,
+    SlotChangeAnnouncer,
+    RoleOpenReminderService,
   ],
   exports: [
     MeetingService,

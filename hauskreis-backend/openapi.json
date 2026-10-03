@@ -10550,7 +10550,10 @@
                 "BIRTHDAY_GIFT_DECIDED",
                 "MEETING_TODAY",
                 "NOTES_REMINDER",
-                "ADMIN_GRANTED"
+                "ADMIN_GRANTED",
+                "MEETING_SLOTS_CHANGED",
+                "ROLE_OPEN_REMINDER",
+                "RECAP_ADDED"
               ]
             }
           }
@@ -12878,7 +12881,10 @@
                 "BIRTHDAY_GIFT_DECIDED",
                 "MEETING_TODAY",
                 "NOTES_REMINDER",
-                "ADMIN_GRANTED"
+                "ADMIN_GRANTED",
+                "MEETING_SLOTS_CHANGED",
+                "ROLE_OPEN_REMINDER",
+                "RECAP_ADDED"
               ]
             },
             "category": {
@@ -13060,7 +13066,10 @@
               "BIRTHDAY_GIFT_DECIDED",
               "MEETING_TODAY",
               "NOTES_REMINDER",
-              "ADMIN_GRANTED"
+              "ADMIN_GRANTED",
+              "MEETING_SLOTS_CHANGED",
+              "ROLE_OPEN_REMINDER",
+              "RECAP_ADDED"
             ]
           },
           "category": {
@@ -13380,7 +13389,10 @@
                     "BIRTHDAY_GIFT_DECIDED",
                     "MEETING_TODAY",
                     "NOTES_REMINDER",
-                    "ADMIN_GRANTED"
+                    "ADMIN_GRANTED",
+                    "MEETING_SLOTS_CHANGED",
+                    "ROLE_OPEN_REMINDER",
+                    "RECAP_ADDED"
                   ]
                 },
                 "title": {
@@ -13451,7 +13463,10 @@
                     "BIRTHDAY_GIFT_DECIDED",
                     "MEETING_TODAY",
                     "NOTES_REMINDER",
-                    "ADMIN_GRANTED"
+                    "ADMIN_GRANTED",
+                    "MEETING_SLOTS_CHANGED",
+                    "ROLE_OPEN_REMINDER",
+                    "RECAP_ADDED"
                   ]
                 },
                 "title": {
@@ -19549,6 +19564,10 @@
                   "ABSENT",
                   "UNKNOWN"
                 ]
+              },
+              "summaryText": {
+                "type": "string",
+                "nullable": true
               }
             },
             "required": [
@@ -19568,7 +19587,8 @@
               "songLeaders",
               "snackResponsibles",
               "testimonyPerson",
-              "myAttendance"
+              "myAttendance",
+              "summaryText"
             ],
             "additionalProperties": false,
             "nullable": true
@@ -19813,6 +19833,10 @@
                   "ABSENT",
                   "UNKNOWN"
                 ]
+              },
+              "summaryText": {
+                "type": "string",
+                "nullable": true
               }
             },
             "required": [
@@ -19832,7 +19856,8 @@
               "songLeaders",
               "snackResponsibles",
               "testimonyPerson",
-              "myAttendance"
+              "myAttendance",
+              "summaryText"
             ],
             "additionalProperties": false,
             "nullable": true
@@ -20077,6 +20102,10 @@
                   "ABSENT",
                   "UNKNOWN"
                 ]
+              },
+              "summaryText": {
+                "type": "string",
+                "nullable": true
               }
             },
             "required": [
@@ -20096,7 +20125,8 @@
               "songLeaders",
               "snackResponsibles",
               "testimonyPerson",
-              "myAttendance"
+              "myAttendance",
+              "summaryText"
             ],
             "additionalProperties": false,
             "nullable": true

@@ -217,6 +217,7 @@ describe('NotificationService.notify', () => {
         // Geburtstag darunter.
         relatedReleaseVersion: null,
         relatedOccasionId: null,
+        relatedKey: null,
       },
       select: { id: true, pushedAt: true },
     });

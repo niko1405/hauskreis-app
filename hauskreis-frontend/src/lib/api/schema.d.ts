@@ -1982,7 +1982,10 @@ export interface components {
         | 'BIRTHDAY_GIFT_DECIDED'
         | 'MEETING_TODAY'
         | 'NOTES_REMINDER'
-        | 'ADMIN_GRANTED';
+        | 'ADMIN_GRANTED'
+        | 'MEETING_SLOTS_CHANGED'
+        | 'ROLE_OPEN_REMINDER'
+        | 'RECAP_ADDED';
       /** @enum {string} */
       category:
         | 'Deine Rollen'
@@ -2044,7 +2047,10 @@ export interface components {
         | 'BIRTHDAY_GIFT_DECIDED'
         | 'MEETING_TODAY'
         | 'NOTES_REMINDER'
-        | 'ADMIN_GRANTED';
+        | 'ADMIN_GRANTED'
+        | 'MEETING_SLOTS_CHANGED'
+        | 'ROLE_OPEN_REMINDER'
+        | 'RECAP_ADDED';
       /** @enum {string} */
       category:
         | 'Deine Rollen'
@@ -2144,7 +2150,10 @@ export interface components {
           | 'BIRTHDAY_GIFT_DECIDED'
           | 'MEETING_TODAY'
           | 'NOTES_REMINDER'
-          | 'ADMIN_GRANTED';
+          | 'ADMIN_GRANTED'
+          | 'MEETING_SLOTS_CHANGED'
+          | 'ROLE_OPEN_REMINDER'
+          | 'RECAP_ADDED';
         title: string;
         body: string;
         url: string | null;
@@ -2179,7 +2188,10 @@ export interface components {
           | 'BIRTHDAY_GIFT_DECIDED'
           | 'MEETING_TODAY'
           | 'NOTES_REMINDER'
-          | 'ADMIN_GRANTED';
+          | 'ADMIN_GRANTED'
+          | 'MEETING_SLOTS_CHANGED'
+          | 'ROLE_OPEN_REMINDER'
+          | 'RECAP_ADDED';
         title: string;
         body: string;
         url: string | null;
@@ -3689,6 +3701,7 @@ export interface components {
         } | null;
         /** @enum {string} */
         myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
+        summaryText: string | null;
       } | null;
       lastMeeting: {
         /** Format: uuid */
@@ -3754,6 +3767,7 @@ export interface components {
         } | null;
         /** @enum {string} */
         myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
+        summaryText: string | null;
       } | null;
       nextMeeting: {
         /** Format: uuid */
@@ -3819,6 +3833,7 @@ export interface components {
         } | null;
         /** @enum {string} */
         myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
+        summaryText: string | null;
       } | null;
       myRoles: {
         /** @enum {string} */
@@ -11720,7 +11735,10 @@ export interface operations {
           | 'BIRTHDAY_GIFT_DECIDED'
           | 'MEETING_TODAY'
           | 'NOTES_REMINDER'
-          | 'ADMIN_GRANTED';
+          | 'ADMIN_GRANTED'
+          | 'MEETING_SLOTS_CHANGED'
+          | 'ROLE_OPEN_REMINDER'
+          | 'RECAP_ADDED';
       };
       cookie?: never;
     };

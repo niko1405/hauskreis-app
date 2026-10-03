@@ -234,7 +234,7 @@ describe('handleDecline', () => {
     };
 
     it('sagt es auch, wenn nur das Thema frei wurde', async () => {
-      // Der Fall, der vorher stumm blieb: `describeReleased` zählte Gastgeber,
+      // Der Fall, der vorher stumm blieb: `describeRoles` zählte Gastgeber,
       // Musik und Testimony auf, aber nicht das Thema. Wer nur dafür zugeteilt
       // war und absagte, ließ `what` auf `null` fallen — und dieser ganze
       // Zweig schwieg.

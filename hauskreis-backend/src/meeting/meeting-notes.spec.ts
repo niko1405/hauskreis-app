@@ -25,6 +25,8 @@ import type { RoleAttendanceService } from '../attendance/role-attendance.servic
 import type { CustomMeetingNotificationService } from './custom-meeting-notification.service';
 import type { TopicLinkService } from '../topic/topic-link.service';
 import type { MeetingScheduleConfigService } from './meeting-schedule-config.service';
+import type { SlotChangeAnnouncer } from './slot-change-announcer.service';
+import type { RecapAnnouncer } from '../recap/recap-announcer.service';
 import type { IfMatchCondition } from '../common/http/etag';
 import { withClock } from './group-clock.testing';
 
@@ -68,6 +70,7 @@ function setup({
   };
 
   const deleteActionstepDone = jest.fn().mockResolvedValue({ count: 2 });
+  const recapAfterWrite = jest.fn().mockResolvedValue(0);
   const topicLinks = { detach: jest.fn().mockResolvedValue(true) };
 
   const prisma = {
@@ -113,10 +116,18 @@ function setup({
       } as unknown as CustomMeetingNotificationService,
       topicLinks as unknown as TopicLinkService,
       {} as unknown as MeetingScheduleConfigService,
+      { noteChange: jest.fn() } as unknown as SlotChangeAnnouncer,
+      { afterWrite: recapAfterWrite } as unknown as RecapAnnouncer,
     ),
   );
 
-  return { service, state, deleteActionstepDone, detach: topicLinks.detach };
+  return {
+    service,
+    state,
+    deleteActionstepDone,
+    detach: topicLinks.detach,
+    recapAfterWrite,
+  };
 }
 
 afterEach(() => {
@@ -156,6 +167,29 @@ describe('Nachbereitung schreiben', () => {
     // Und die Antwort trägt sie auch — sonst stünde nach dem Speichern der
     // alte Stand da, bis jemand neu lädt.
     expect(updated.summaryText).toBe('Wir haben über Dankbarkeit gesprochen');
+  });
+
+  it('meldet den Rückblick mit dem Stand von vorher', async () => {
+    // Ob es das erste Mal ist, entscheidet der Vergleich mit dem, was vor dem
+    // Schreiben dastand — die Nachricht selbst prüft `recap-announcer.spec`.
+    jetzt(ABENDS);
+    const { service, recapAfterWrite } = setup({ hasNotesSlot: true });
+
+    await service.update(
+      'hk1',
+      'm1',
+      { summaryText: 'Wir haben über Dankbarkeit gesprochen' } as never,
+      ICH,
+      EGAL,
+    );
+
+    expect(recapAfterWrite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        meetingId: 'm1',
+        source: 'meeting',
+        before: { summary: null, actionstep: null },
+      }),
+    );
   });
 
   it('leert ein Feld auf ausdrückliches null', async () => {

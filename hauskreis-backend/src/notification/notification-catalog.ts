@@ -246,6 +246,18 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     defaultEnabled: true,
   },
   {
+    type: NotificationType.RECAP_ADDED,
+    category: 'Nach dem Abend',
+    label: 'Zusammenfassung und Actionstep',
+    // Für die, die nicht da waren, ist das die Nachricht des Abends — und für
+    // alle anderen der Vorsatz für die Woche. Nur beim ersten Eintragen: Wer
+    // danach einen Tippfehler korrigiert, schreibt nichts Neues.
+    description:
+      'Wenn für den letzten Abend zum ersten Mal eine Zusammenfassung oder ein Actionstep dasteht.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
     type: NotificationType.PRAYER_BUDDY_ASSIGNED,
     category: 'Gebet',
     appliesTo: (context) => context.prayerBuddies,
@@ -276,6 +288,31 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     description:
       'Wenn sich die Uhrzeit des nächsten Treffens ändert — die eine Änderung, von der man vorher wissen muss.',
     schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
+    type: NotificationType.MEETING_SLOTS_CHANGED,
+    category: 'Termine',
+    label: 'Der nächste Abend ändert sich',
+    // Dieselbe Begründung wie bei der Uhrzeit: Was in fünf Wochen anders
+    // aussieht, liest man, wenn man hinschaut. Kommen am nächsten Abend
+    // plötzlich Lieder dazu, muss jemand die Musik machen — und das erfährt
+    // man besser jetzt als am Dienstag um sechs.
+    description:
+      'Wenn am nächsten Abend etwas dazukommt oder wegfällt — Thema, Lieder, Testimony, Gebetsanliegen oder Snacks. An alle, die dabei oder noch unentschieden sind.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
+    type: NotificationType.ROLE_OPEN_REMINDER,
+    category: 'Termine',
+    label: 'Am nächsten Abend ist noch etwas frei',
+    // Wochentage und kein Vorlauf, wie beim Actionstep: Wann man sich darum
+    // kümmert, hängt an der eigenen Woche, nicht am Abstand zum Abend. Am
+    // Samstag mit Luft, am Montag als letzte Gelegenheit vor dem Dienstag.
+    description:
+      'Solange für den nächsten Abend noch jemand fürs Thema, die Musik, das Testimony, die Snacks oder als Gastgeber fehlt. An alle, die dabei oder noch unentschieden sind.',
+    schedule: { kind: 'WEEKLY', defaultWeekdays: [6, 1] },
     defaultEnabled: true,
   },
   {
