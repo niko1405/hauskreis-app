@@ -141,6 +141,12 @@ export class NotificationService implements OnModuleInit {
     /// wäre „du besorgst das Geschenk für Mira" in jedem Jahr dieselbe
     /// Nachricht wie im ersten und käme genau einmal im Leben an.
     relatedOccasionId?: string | null;
+    /// Ein freier Unterscheider, wenn derselbe Gegenstand aus verschiedenem
+    /// Anlass mehrmals melden darf: der Tag bei einer Erinnerung, die an
+    /// mehreren Wochentagen kommt; das Feld beim Rückblick auf einen Abend.
+    /// Ohne ihn ging an einem zweiten gewählten Wochentag nichts mehr raus —
+    /// der Termin allein war schon „erledigt".
+    relatedKey?: string | null;
     payload: NotificationPayload;
   }): Promise<SendResult> {
     // Erst der Eintrag, dann die Frage nach dem Push. Die Reihenfolge ist die
@@ -212,6 +218,7 @@ export class NotificationService implements OnModuleInit {
     relatedRole?: AssignmentRole | null;
     relatedReleaseVersion?: string | null;
     relatedOccasionId?: string | null;
+    relatedKey?: string | null;
     payload: NotificationPayload;
   }): Promise<{ id: string; pushedAt: Date | null }> {
     const content = {
@@ -242,6 +249,7 @@ export class NotificationService implements OnModuleInit {
         relatedRole: params.relatedRole ?? null,
         relatedReleaseVersion: params.relatedReleaseVersion ?? null,
         relatedOccasionId: params.relatedOccasionId ?? null,
+        relatedKey: params.relatedKey ?? null,
         ...content,
       },
       select: { id: true, pushedAt: true },
@@ -345,6 +353,7 @@ export class NotificationService implements OnModuleInit {
     relatedRole?: AssignmentRole | null;
     relatedReleaseVersion?: string | null;
     relatedOccasionId?: string | null;
+    relatedKey?: string | null;
   }): Promise<{ id: string; pushedAt: Date | null } | null> {
     return this.prisma.notificationLog.findFirst({
       where: {
@@ -356,6 +365,7 @@ export class NotificationService implements OnModuleInit {
         relatedRole: params.relatedRole ?? null,
         relatedReleaseVersion: params.relatedReleaseVersion ?? null,
         relatedOccasionId: params.relatedOccasionId ?? null,
+        relatedKey: params.relatedKey ?? null,
       },
       select: { id: true, pushedAt: true },
     });

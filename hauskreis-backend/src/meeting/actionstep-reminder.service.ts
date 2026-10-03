@@ -118,6 +118,10 @@ export class ActionstepReminderService {
           personId: person.id,
           type: NotificationType.ACTIONSTEP_REMINDER,
           relatedMeetingId: meeting.id,
+          // Der Tag gehört zum Schlüssel. Nur über den Abend entdoppelt, galt
+          // der Actionstep nach dem ersten gewählten Wochentag als erledigt —
+          // der Freitag nach dem Mittwoch ging nie raus.
+          relatedKey: today.toISOString().slice(0, 10),
           payload: {
             title: 'Dein Actionstep',
             body: `Wie läuft es damit? "${actionstep}"`,

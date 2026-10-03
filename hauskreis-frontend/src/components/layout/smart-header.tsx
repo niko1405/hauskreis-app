@@ -58,7 +58,7 @@ import { useHasSmartHeader, useHeaderScroll } from './use-header-scroll';
 
 export function SmartHeader() {
   const show = useHasSmartHeader();
-  const { atTop, hidden } = useHeaderScroll();
+  const { atTop, hidden, suppressed } = useHeaderScroll();
   const { hauskreis } = useHauskreis();
   const [inbox, setInbox] = useState(false);
 
@@ -74,7 +74,17 @@ export function SmartHeader() {
           // Die Leiste ist damit sofort weg, statt sich sichtbar hinauszu-
           // schieben. Genau darum ging es — was man während des Hinausschiebens
           // sieht, ist der Balken, den man erst beim Hochwischen sehen soll.
-          hidden ? '-translate-y-full' : 'transition-transform duration-200',
+          //
+          // **Außer ein Bildschirm schickt sie weg** (der Suchmodus im
+          // Archiv). Dort scrollt niemand, man sieht also keinen Balken
+          // hinausfahren, sondern den Schleier — und dass er sichtbar geht,
+          // ist die Antwort auf den Tipp ins Suchfeld.
+          hidden
+            ? cn(
+                '-translate-y-full',
+                suppressed && 'transition-transform duration-300',
+              )
+            : 'transition-transform duration-200',
           atTop
             ? 'header-veil'
             : 'bg-gradient-to-b from-header-bar/95 to-header-bar-deep/95 shadow-md shadow-black/10 backdrop-blur',

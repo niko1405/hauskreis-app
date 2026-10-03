@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { MeetingStatus } from '../../generated/prisma/enums';
 import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
@@ -18,6 +19,7 @@ import {
 import { SongService } from './song.service';
 import type {
   AddMeetingSongDto,
+  ReorderSetlistDto,
   SetSongLeadersDto,
   UpdateMeetingSongDto,
 } from './dto/song.dto';
@@ -25,12 +27,66 @@ import type {
 const meetingSongSelect = {
   id: true,
   isSelected: true,
+  position: true,
   createdAt: true,
   song: {
     select: { id: true, title: true, artist: true, lyricsUrl: true },
   },
   suggestedBy: { select: personRefSelect },
+  votes: { select: { personId: true } },
 } as const;
+
+type MeetingSongRow = {
+  id: string;
+  isSelected: boolean;
+  position: number | null;
+  createdAt: Date;
+  song: {
+    id: string;
+    title: string;
+    artist: string | null;
+    lyricsUrl: string | null;
+  };
+  suggestedBy: { id: string; name: string } | null;
+  votes: { personId: string }[];
+};
+
+/**
+ * Was der Betrachter von einem Eintrag sieht: die Zahl der Stimmen und ob
+ * seine dabei ist — nicht, von wem die anderen kommen. Dieselbe Form wie bei
+ * den Geschenkideen.
+ */
+function shape(row: MeetingSongRow, viewerId: string) {
+  const { votes, ...rest } = row;
+  return {
+    ...rest,
+    votes: votes.length,
+    votedByMe: votes.some((vote) => vote.personId === viewerId),
+  };
+}
+
+/**
+ * Erst die Setlist in ihrer Reihenfolge, dann die Vorschläge nach Stimmen.
+ *
+ * Zwei Ordnungen in einer Liste, weil es zwei Fragen sind: „in welcher Folge
+ * singen wir" entscheidet das Musik-Team, „was wollen die anderen" sagen die
+ * Stimmen. Bei Gleichstand gilt, wer zuerst vorgeschlagen hat — dieselbe
+ * Regel wie bisher für die ganze Liste.
+ */
+function bySetlistThenVotes(a: MeetingSongRow, b: MeetingSongRow): number {
+  if (a.isSelected !== b.isSelected) return a.isSelected ? -1 : 1;
+  if (a.isSelected) {
+    return (
+      (a.position ?? Number.MAX_SAFE_INTEGER) -
+        (b.position ?? Number.MAX_SAFE_INTEGER) ||
+      a.createdAt.getTime() - b.createdAt.getTime()
+    );
+  }
+  return (
+    b.votes.length - a.votes.length ||
+    a.createdAt.getTime() - b.createdAt.getTime()
+  );
+}
 
 @Injectable()
 export class MeetingSongService {
@@ -44,15 +100,15 @@ export class MeetingSongService {
     private readonly clock: GroupClockService,
   ) {}
 
-  async findAll(hauskreisId: string, meetingId: string) {
+  async findAll(hauskreisId: string, meetingId: string, viewerId: string) {
     await this.assertMeetingBelongsToHauskreis(hauskreisId, meetingId);
 
-    return this.prisma.meetingSong.findMany({
+    const rows = await this.prisma.meetingSong.findMany({
       where: { meetingId },
       select: meetingSongSelect,
-      // Picked ones first, then in the order they were suggested.
-      orderBy: [{ isSelected: 'desc' }, { createdAt: 'asc' }],
     });
+
+    return rows.toSorted(bySetlistThenVotes).map((row) => shape(row, viewerId));
   }
 
   /**
@@ -91,13 +147,15 @@ export class MeetingSongService {
 
     // Suggesting the same song twice is the same wish, not a second entry.
     if (existing) {
-      return existing;
+      return shape(existing, suggestedByPersonId ?? '');
     }
 
-    return this.prisma.meetingSong.create({
+    const created = await this.prisma.meetingSong.create({
       data: { meetingId, songId, suggestedByPersonId },
       select: meetingSongSelect,
     });
+
+    return shape(created, suggestedByPersonId ?? '');
   }
 
   /**
@@ -119,33 +177,172 @@ export class MeetingSongService {
     await this.assertMeetingBelongsToHauskreis(hauskreisId, meetingId);
     await this.editRights.assertMayPickSongs(meetingId, actorPersonId);
 
-    const { count } = await this.prisma.meetingSong.updateMany({
-      where: { id, meetingId },
-      data: { isSelected: dto.isSelected },
+    // Wer in die Setlist kommt, kommt ans Ende — die Reihenfolge davor hat
+    // schon jemand gemacht. Wer herausfällt, verliert seinen Platz und ist
+    // wieder ein Vorschlag; seine Stimmen bleiben stehen.
+    const count = await this.prisma.$transaction(async (tx) => {
+      const last = await tx.meetingSong.findFirst({
+        where: { meetingId, isSelected: true },
+        orderBy: { position: { sort: 'desc', nulls: 'last' } },
+        select: { position: true },
+      });
+
+      const result = await tx.meetingSong.updateMany({
+        // Ein Lied, das schon in der Setlist steht, behält seinen Platz.
+        where: { id, meetingId, isSelected: { not: dto.isSelected } },
+        data: dto.isSelected
+          ? { isSelected: true, position: (last?.position ?? 0) + 1 }
+          : { isSelected: false, position: null },
+      });
+
+      if (result.count > 0) return result.count;
+
+      return tx.meetingSong.count({ where: { id, meetingId } });
     });
 
     if (count === 0) {
       throw new NotFoundException(`Song entry ${id} not found on this meeting`);
     }
 
-    return this.prisma.meetingSong.findUniqueOrThrow({
+    const row = await this.prisma.meetingSong.findUniqueOrThrow({
       where: { id },
       select: meetingSongSelect,
     });
+
+    return shape(row, actorPersonId);
   }
 
-  async remove(hauskreisId: string, meetingId: string, id: string) {
+  /**
+   * Die Reihenfolge der Setlist, neu gesetzt.
+   *
+   * Wer sie setzt, schickt die **ganze** Setlist — dieselbe Regel wie beim
+   * Abhaken (`assertMayPickSongs`): vor dem Abend das Musik-Team, danach
+   * jede:r. Eine Liste, die nicht genau die Setlist ist, wird abgelehnt statt
+   * geraten: Hat jemand inzwischen ein Lied dazugenommen, sähe man sonst eine
+   * Reihenfolge, die keiner gewählt hat.
+   */
+  async reorder(
+    hauskreisId: string,
+    meetingId: string,
+    dto: ReorderSetlistDto,
+    actorPersonId: string,
+  ) {
     await this.assertMeetingBelongsToHauskreis(hauskreisId, meetingId);
+    await this.editRights.assertMayPickSongs(meetingId, actorPersonId);
+
+    await this.prisma.$transaction(async (tx) => {
+      const setlist = await tx.meetingSong.findMany({
+        where: { meetingId, isSelected: true },
+        select: { id: true },
+      });
+
+      const current = new Set(setlist.map((row) => row.id));
+      const wanted = new Set(dto.meetingSongIds);
+
+      if (
+        wanted.size !== dto.meetingSongIds.length ||
+        wanted.size !== current.size ||
+        [...wanted].some((id) => !current.has(id))
+      ) {
+        throw new BadRequestException(
+          'Die Reihenfolge muss genau die Lieder der Setlist enthalten — lade die Seite neu.',
+        );
+      }
+
+      await Promise.all(
+        dto.meetingSongIds.map((id, index) =>
+          tx.meetingSong.update({
+            where: { id },
+            data: { position: index + 1 },
+          }),
+        ),
+      );
+    });
+
+    return this.findAll(hauskreisId, meetingId, actorPersonId);
+  }
+
+  /**
+   * Eine Stimme für einen Vorschlag — oder ihre Rücknahme.
+   *
+   * Jede:r darf, solange der Abend nicht abgesagt ist: Eine Stimme ist ein
+   * Wunsch und keine Entscheidung, die trifft weiterhin das Musik-Team.
+   */
+  async setVote(
+    hauskreisId: string,
+    meetingId: string,
+    id: string,
+    personId: string,
+    voted: boolean,
+  ) {
+    const meeting = await this.assertMeetingBelongsToHauskreis(
+      hauskreisId,
+      meetingId,
+    );
+
+    if (meeting.status === MeetingStatus.CANCELLED) {
+      throw new BadRequestException(
+        'Der Abend ist abgesagt — da gibt es nichts mehr zu wünschen.',
+      );
+    }
+
+    const entry = await this.prisma.meetingSong.findFirst({
+      where: { id, meetingId },
+      select: { id: true },
+    });
+
+    if (!entry) {
+      throw new NotFoundException(`Song entry ${id} not found on this meeting`);
+    }
+
+    if (voted) {
+      await this.prisma.meetingSongVote.upsert({
+        where: { meetingSongId_personId: { meetingSongId: id, personId } },
+        create: { meetingSongId: id, personId },
+        update: {},
+      });
+    } else {
+      await this.prisma.meetingSongVote.deleteMany({
+        where: { meetingSongId: id, personId },
+      });
+    }
+
+    return this.findAll(hauskreisId, meetingId, personId);
+  }
+
+  /**
+   * Nimmt einen Eintrag vom Abend.
+   *
+   * Einen **Vorschlag** darf jede:r löschen — er ist ein Wunsch, und wer sich
+   * vertan hat, soll ihn wieder loswerden. Ein Lied in der **Setlist** dagegen
+   * hat das Musik-Team dorthin gestellt; herausnehmen darf es nur, wer es
+   * auch hineinstellen darf (`assertMayPickSongs`). Bis hierher prüfte diese
+   * Route gar nichts.
+   */
+  async remove(
+    hauskreisId: string,
+    meetingId: string,
+    id: string,
+    actorPersonId: string,
+  ) {
+    await this.assertMeetingBelongsToHauskreis(hauskreisId, meetingId);
+
+    const entry = await this.prisma.meetingSong.findFirst({
+      where: { id, meetingId },
+      select: { isSelected: true },
+    });
+
+    if (!entry) {
+      throw new NotFoundException(`Song entry ${id} not found on this meeting`);
+    }
+
+    if (entry.isSelected) {
+      await this.editRights.assertMayPickSongs(meetingId, actorPersonId);
+    }
 
     // The song itself stays in the database — it was suggested once and may be
     // wanted again.
-    const { count } = await this.prisma.meetingSong.deleteMany({
-      where: { id, meetingId },
-    });
-
-    if (count === 0) {
-      throw new NotFoundException(`Song entry ${id} not found on this meeting`);
-    }
+    await this.prisma.meetingSong.deleteMany({ where: { id, meetingId } });
   }
 
   findLeaders(hauskreisId: string, meetingId: string) {
@@ -244,10 +441,10 @@ export class MeetingSongService {
   private async assertMeetingBelongsToHauskreis(
     hauskreisId: string,
     meetingId: string,
-  ): Promise<{ date: Date; endDate: Date | null }> {
+  ): Promise<{ date: Date; endDate: Date | null; status: MeetingStatus }> {
     const meeting = await this.prisma.meeting.findFirst({
       where: { id: meetingId, hauskreisId },
-      select: { date: true, endDate: true },
+      select: { date: true, endDate: true, status: true },
     });
 
     if (!meeting) {

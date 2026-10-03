@@ -138,6 +138,36 @@ describe('upcomingMeetingDates', () => {
     ).toEqual(['2026-07-30', '2026-08-06', '2026-08-13']);
   });
 
+  it('beginnt bei heute, auch wenn der Anker weit vorne liegt', () => {
+    // Der Normalfall im Betrieb: Der späteste erzeugte Abend ist der siebte
+    // im Voraus. Die Reihe darf dort nicht anfangen — sonst legt jeder Lauf
+    // sechs Termine dahinter an.
+    expect(
+      reihe({ from: '2026-07-27', count: 7, anchor: '2026-09-08' }),
+    ).toEqual(reihe({ from: '2026-07-27', count: 7 }));
+  });
+
+  it('hält bei einem Anker vorne auch den Takt von vierzehn Tagen', () => {
+    expect(
+      reihe({
+        from: '2026-07-27',
+        count: 3,
+        everyWeeks: 2,
+        // Zwölf Wochen nach dem 28. Juli — also derselbe Takt.
+        anchor: '2026-10-20',
+      }),
+    ).toEqual(['2026-07-28', '2026-08-11', '2026-08-25']);
+    // Und eine Woche verschoben die andere Hälfte der Wochen.
+    expect(
+      reihe({
+        from: '2026-07-27',
+        count: 3,
+        everyWeeks: 2,
+        anchor: '2026-10-27',
+      }),
+    ).toEqual(['2026-08-04', '2026-08-18', '2026-09-01']);
+  });
+
   it('überspringt einen Anker, der lange zurückliegt', () => {
     expect(
       reihe({

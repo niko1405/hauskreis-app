@@ -29,6 +29,12 @@ import { GroupClockService } from './group-clock.service';
 import { MeetingNotificationService } from './meeting-notification.service';
 import { RoleReleaseService } from './role-release.service';
 import { CustomMeetingNotificationService } from './custom-meeting-notification.service';
+import {
+  ANNOUNCED_SLOTS,
+  SlotChangeAnnouncer,
+  type SlotState,
+} from './slot-change-announcer.service';
+import { RecapAnnouncer } from '../recap/recap-announcer.service';
 import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { RoleAttendanceService } from '../attendance/role-attendance.service';
 import { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
@@ -115,6 +121,10 @@ export class MeetingService {
     private readonly customMeetingNotifications: CustomMeetingNotificationService,
     private readonly topicLinks: TopicLinkService,
     private readonly schedule: MeetingScheduleConfigService,
+    // Vor der Uhr: Die Tests reichen sie per `withClock` nach und zählen die
+    // Stellen davor nicht ab.
+    private readonly slotChanges: SlotChangeAnnouncer,
+    private readonly recaps: RecapAnnouncer,
     private readonly clock: GroupClockService,
   ) {}
 
@@ -501,6 +511,37 @@ export class MeetingService {
         before.startTime,
         viewer.personId,
       );
+    }
+
+    // Ein Baustein dazu oder weg ändert, was am Abend gebraucht wird. Gemerkt
+    // und nicht sofort geschickt: Wer drei Haken umsetzt, soll den anderen
+    // eine Nachricht schicken und nicht drei (`SlotChangeAnnouncer`).
+    const slotsBefore = slotStateOf(before);
+    const slotsAfter = slotStateOf(updated);
+    if (
+      ANNOUNCED_SLOTS.some((slot) => slotsBefore[slot] !== slotsAfter[slot])
+    ) {
+      this.slotChanges.noteChange({
+        hauskreisId,
+        meetingId: id,
+        before: slotsBefore,
+        after: slotsAfter,
+        actorPersonId: viewer.personId,
+      });
+    }
+
+    // Die erste Zusammenfassung, der erste Actionstep des letzten Abends — die
+    // eine Nachricht nach dem Abend, auf die die anderen warten.
+    if (dto.summaryText !== undefined || dto.actionstepText !== undefined) {
+      await this.recaps.afterWrite({
+        meetingId: id,
+        actorPersonId: viewer.personId,
+        source: 'meeting',
+        before: {
+          summary: before.summaryText,
+          actionstep: before.actionstepText,
+        },
+      });
     }
 
     // Wer neu eingeteilt ist, ist an dem Abend dabei. Nur beim echten Wechsel,
@@ -1273,4 +1314,11 @@ function buildMeetingSearch(search: string | undefined) {
       },
     ],
   };
+}
+
+/** Die geplanten Bausteine eines Abends, ohne den Rest seiner Antwort. */
+function slotStateOf(meeting: SlotState): SlotState {
+  return Object.fromEntries(
+    ANNOUNCED_SLOTS.map((slot) => [slot, meeting[slot]]),
+  ) as SlotState;
 }

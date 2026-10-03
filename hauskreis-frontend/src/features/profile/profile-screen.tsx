@@ -232,21 +232,21 @@ function Loaded({ personId }: { personId: string }) {
 
             <Checkbox
               label="Ich kann ein Instrument spielen"
-              description="Dann tauchst du bei den Musik-Vorschlägen auf."
+              info="Dann tauchst du bei den Musik-Vorschlägen auf."
               checked={playsInstrument}
               onChange={(event) => setPlaysInstrument(event.target.checked)}
             />
 
             <Checkbox
               label="Ich kann gerade hosten"
-              description="Nimm den Haken raus, wenn du längerfristig den Umständen bedingt nicht hosten kannst. ACHTUNG: Nicht zu verwechseln mit dem Setzen einer Abwesenheit, die nur einzelne Abende betrifft!"
+              info="Nimm den Haken raus, wenn du längerfristig den Umständen bedingt nicht hosten kannst. ACHTUNG: Nicht zu verwechseln mit dem Setzen einer Abwesenheit, die nur einzelne Abende betrifft!"
               checked={canHost}
               onChange={(event) => setCanHost(event.target.checked)}
             />
 
             <Checkbox
               label="Ich bin grundsätzlich dabei"
-              description={
+              info={
                 'Sagt kommende Abende gleich für dich zu, statt sie auf „weiß noch nicht“ ' +
                 'zu lassen - Abwesenheiten und Absagen werden berücksichtigt.'
               }
@@ -259,7 +259,7 @@ function Loaded({ personId }: { personId: string }) {
                 ohnehin raus — dieser Haken ist für alles davor. */}
             <Checkbox
               label="Mein Testimony habe ich schon erzählt"
-              description={
+              info={
                 'Setz den Haken, wenn du vor dieser App dran warst — dann schlägt sie dich ' +
                 'dafür nicht mehr vor. Abende, an denen du es hier erzählt hast, kennt sie selbst.'
               }

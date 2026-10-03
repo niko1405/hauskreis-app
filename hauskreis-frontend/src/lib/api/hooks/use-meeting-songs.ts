@@ -33,7 +33,27 @@ export function useAddMeetingSong(meetingId: string) {
   );
 }
 
-/** Auch ein Schalter, also auch vorgreifend. */
+/**
+ * Dieselbe Ordnung wie der Server (`bySetlistThenVotes`): die Setlist nach
+ * Platz, dann die Vorschläge nach Stimmen und bei Gleichstand nach Alter. Die
+ * optimistischen Fassungen sortieren hiermit nach, sonst spränge eine Zeile
+ * erst mit der Antwort an ihren Platz.
+ */
+export function sortMeetingSongs(songs: readonly MeetingSong[]): MeetingSong[] {
+  return songs.toSorted((a, b) => {
+    if (a.isSelected !== b.isSelected) return a.isSelected ? -1 : 1;
+    const age = a.createdAt.localeCompare(b.createdAt);
+    if (a.isSelected) {
+      return (a.position ?? Infinity) - (b.position ?? Infinity) || age;
+    }
+    return b.votes - a.votes || age;
+  });
+}
+
+/**
+ * Auch ein Schalter, also auch vorgreifend. In die Setlist heißt ans Ende,
+ * heraus heißt zurück zu den Vorschlägen — die Stimmen bleiben dabei stehen.
+ */
 export function useSetMeetingSongSelected(meetingId: string) {
   const { hauskreisId, keys } = useHk();
 
@@ -54,11 +74,79 @@ export function useSetMeetingSongSelected(meetingId: string) {
     {
       invalidateKeys: [keys.meetings.songs(meetingId), keys.songs.all],
       optimistic: (input, patch) =>
+        patch<MeetingSong[]>(keys.meetings.songs(meetingId), (songs) => {
+          const last = Math.max(
+            0,
+            ...songs.map((entry) => entry.position ?? 0),
+          );
+          return sortMeetingSongs(
+            songs.map((entry) =>
+              entry.id === input.meetingSongId
+                ? {
+                    ...entry,
+                    isSelected: input.isSelected,
+                    position: input.isSelected ? last + 1 : null,
+                  }
+                : entry,
+            ),
+          );
+        }),
+    },
+  );
+}
+
+/**
+ * Die Setlist in neuer Reihenfolge — vorgreifend, sonst spränge die gerade
+ * losgelassene Zeile an ihren alten Platz zurück, bis die Antwort da ist.
+ */
+export function useReorderSetlist(meetingId: string) {
+  const { hauskreisId, keys } = useHk();
+
+  return useApiMutation(
+    (meetingSongIds: string[]) =>
+      meetingSongsApi.reorderSetlist(hauskreisId, meetingId, meetingSongIds),
+    {
+      invalidateKeys: [keys.meetings.songs(meetingId)],
+      optimistic: (meetingSongIds, patch) =>
         patch<MeetingSong[]>(keys.meetings.songs(meetingId), (songs) =>
-          songs.map((entry) =>
-            entry.id === input.meetingSongId
-              ? { ...entry, isSelected: input.isSelected }
-              : entry,
+          sortMeetingSongs(
+            songs.map((entry) => {
+              const index = meetingSongIds.indexOf(entry.id);
+              return index === -1 ? entry : { ...entry, position: index + 1 };
+            }),
+          ),
+        ),
+    },
+  );
+}
+
+/** Eine Stimme setzen oder zurücknehmen, vorgreifend samt neuer Reihenfolge. */
+export function useVoteMeetingSong(meetingId: string) {
+  const { hauskreisId, keys } = useHk();
+
+  return useApiMutation(
+    ({ meetingSongId, voted }: { meetingSongId: string; voted: boolean }) =>
+      meetingSongsApi.voteMeetingSong(
+        hauskreisId,
+        meetingId,
+        meetingSongId,
+        voted,
+      ),
+    {
+      invalidateKeys: [keys.meetings.songs(meetingId)],
+      optimistic: (input, patch) =>
+        patch<MeetingSong[]>(keys.meetings.songs(meetingId), (songs) =>
+          sortMeetingSongs(
+            songs.map((entry) =>
+              entry.id === input.meetingSongId &&
+              entry.votedByMe !== input.voted
+                ? {
+                    ...entry,
+                    votedByMe: input.voted,
+                    votes: entry.votes + (input.voted ? 1 : -1),
+                  }
+                : entry,
+            ),
           ),
         ),
     },

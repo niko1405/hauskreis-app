@@ -127,6 +127,15 @@ enum NotificationType {
   /// ein Gespräch. „Du bist kein Admin mehr" beantwortet keine Frage, die es
   /// nicht selbst aufwirft.
   ADMIN_GRANTED
+  /// Am nächsten Abend ist ein Baustein dazugekommen oder weggefallen — an
+  /// die, die zugesagt haben oder noch unentschieden sind.
+  MEETING_SLOTS_CHANGED
+  /// Am nächsten Abend ist noch eine Rolle frei. An den Wochentagen, die
+  /// jede:r selbst wählt.
+  ROLE_OPEN_REMINDER
+  /// Am letzten Abend steht zum ersten Mal eine Zusammenfassung oder ein
+  /// Actionstep — an alle außer dem, der sie geschrieben hat.
+  RECAP_ADDED
 
   @@map("notification_type")
 }
@@ -338,6 +347,7 @@ model Person {
   giftIdeasFor            GiftIdea[]                @relation("GiftIdeaFor")
   giftIdeasProposed       GiftIdea[]                @relation("GiftIdeaBy")
   giftIdeaVotes           GiftIdeaVote[]            @relation("GiftIdeaVoter")
+  songVotes               MeetingSongVote[]         @relation("MeetingSongVoter")
   groupIdeas              GroupIdea[]               @relation("GroupIdeaBy")
   groupIdeasDone          GroupIdea[]               @relation("GroupIdeaDoneBy")
   giftPairingFor          BirthdayGiftPairing[]     @relation("GiftPairingFor")
@@ -864,16 +874,39 @@ model MeetingSong {
   songId              String   @map("song_id") @db.Uuid
   suggestedByPersonId String?  @map("suggested_by_person_id") @db.Uuid
   isSelected          Boolean  @default(false) @map("is_selected")
+  /// Der Platz in der Setlist, ab 1. Nur bei `isSelected` gesetzt: Ein
+  /// Vorschlag hat keinen Platz, er hat Stimmen. Wird ein Lied aus der Setlist
+  /// genommen, fällt er weg und das Lied ist wieder ein Vorschlag.
+  position            Int?
   createdAt           DateTime @default(now()) @map("created_at")
 
-  meeting     Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  song        Song    @relation(fields: [songId], references: [id], onDelete: Cascade)
-  suggestedBy Person? @relation("SongSuggester", fields: [suggestedByPersonId], references: [id], onDelete: SetNull)
+  meeting     Meeting           @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  song        Song              @relation(fields: [songId], references: [id], onDelete: Cascade)
+  suggestedBy Person?           @relation("SongSuggester", fields: [suggestedByPersonId], references: [id], onDelete: SetNull)
+  votes       MeetingSongVote[]
 
   /// One entry per song per evening — suggesting it twice is the same wish.
   @@unique([meetingId, songId])
   @@index([songId])
   @@map("meeting_song")
+}
+
+/// Eine Stimme für einen Liedvorschlag — „das würde ich gern singen".
+///
+/// Gebaut wie `GiftIdeaVote`: eine Zeile je Person und Vorschlag, der
+/// Primärschlüssel ist die Entdopplung. Eine Zahl am Vorschlag wüsste nicht,
+/// wer schon gestimmt hat, und ließe sich zweimal hochzählen.
+model MeetingSongVote {
+  meetingSongId String   @map("meeting_song_id") @db.Uuid
+  personId      String   @map("person_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  meetingSong MeetingSong @relation(fields: [meetingSongId], references: [id], onDelete: Cascade)
+  person      Person      @relation("MeetingSongVoter", fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([meetingSongId, personId])
+  @@index([personId])
+  @@map("meeting_song_vote")
 }
 
 /// Wann der Hauskreis regelmäßig zusammenkommt — Wochentag und Uhrzeit.
@@ -1131,6 +1164,12 @@ model NotificationLog {
   /// einmal im Leben an. `relatedPersonId` reicht dafür nicht: Mira hat jedes
   /// Jahr Geburtstag.
   relatedOccasionId     String?          @map("related_occasion_id") @db.Uuid
+  /// Ein freier Unterscheider für „derselbe Gegenstand, anderer Anlass": der
+  /// Tag bei Erinnerungen an mehreren Wochentagen (`ACTIONSTEP_REMINDER`,
+  /// `ROLE_OPEN_REMINDER`), das Feld beim Rückblick (`RECAP_ADDED`: `summary`
+  /// oder `actionstep`). Text statt einer weiteren Fremdschlüssel-Spalte, weil
+  /// es kein Gegenstand ist, auf den man zeigen könnte.
+  relatedKey            String?          @map("related_key")
   sentAt                DateTime         @default(now()) @map("sent_at")
 
   /// Was drinstand — der Grund, warum diese Tabelle mehr ist als Buchführung.
@@ -1171,7 +1210,7 @@ model NotificationLog {
   /// making that query an index lookup.
   /// Der Name ist gesetzt, weil der abgeleitete abgeschnitten würde und sich
   /// mit jeder weiteren Spalte änderte.
-  @@unique([personId, type, relatedMeetingId, relatedGroupId, relatedPersonId, relatedRole, relatedReleaseVersion, relatedOccasionId], map: "notification_log_dedup_key")
+  @@unique([personId, type, relatedMeetingId, relatedGroupId, relatedPersonId, relatedRole, relatedReleaseVersion, relatedOccasionId, relatedKey], map: "notification_log_dedup_key")
   @@index([personId, sentAt])
   /// Die Box: „meine ungelesenen, neueste zuerst". Ohne ihn läse jedes Öffnen
   /// der Glocke alle Zeilen einer Person — und die wachsen mit jedem Abend.

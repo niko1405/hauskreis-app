@@ -108,6 +108,8 @@ export async function clearSongSelectionIfUnled(
 
   await db.meetingSong.updateMany({
     where: { meetingId: { in: orphaned }, isSelected: true },
-    data: { isSelected: false },
+    // Mit dem Haken fällt auch der Platz: Wer die Musik neu übernimmt, fängt
+    // mit einer leeren Setlist an und nicht mit einer Reihenfolge ohne Lieder.
+    data: { isSelected: false, position: null },
   });
 }

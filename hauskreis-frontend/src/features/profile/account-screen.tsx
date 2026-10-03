@@ -62,7 +62,11 @@ export function AccountScreen() {
   if (!current) {
     return (
       <div>
-        <PageHeader title="Konto" subtitle="Anmeldung, E-Mail und Löschen" />
+        <PageHeader
+          title="Konto"
+          subtitle="Anmeldung, E-Mail und Löschen"
+          back="/profil"
+        />
         <div className="px-5">
           {person.error ? (
             <ErrorState
@@ -121,7 +125,11 @@ function Loaded({
 
   return (
     <div>
-      <PageHeader title="Konto" subtitle="Anmeldung, E-Mail und Löschen" />
+      <PageHeader
+        title="Konto"
+        subtitle="Anmeldung, E-Mail und Löschen"
+        back="/profil"
+      />
 
       <div className="px-5">
         <Card className="space-y-4">

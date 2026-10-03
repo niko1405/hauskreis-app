@@ -692,6 +692,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/meetings/{meetingId}/songs/order': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['MeetingSongController_reorder'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/meetings/{meetingId}/songs/{id}': {
     parameters: {
       query?: never;
@@ -706,6 +722,22 @@ export interface paths {
     options?: never;
     head?: never;
     patch: operations['MeetingSongController_setSelected'];
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/meetings/{meetingId}/songs/{id}/vote': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['MeetingSongController_vote'];
+    post?: never;
+    delete: operations['MeetingSongController_unvote'];
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   '/api/hauskreise/{hauskreisId}/meetings/{meetingId}/topic-choices': {
@@ -1982,7 +2014,10 @@ export interface components {
         | 'BIRTHDAY_GIFT_DECIDED'
         | 'MEETING_TODAY'
         | 'NOTES_REMINDER'
-        | 'ADMIN_GRANTED';
+        | 'ADMIN_GRANTED'
+        | 'MEETING_SLOTS_CHANGED'
+        | 'ROLE_OPEN_REMINDER'
+        | 'RECAP_ADDED';
       /** @enum {string} */
       category:
         | 'Deine Rollen'
@@ -2044,7 +2079,10 @@ export interface components {
         | 'BIRTHDAY_GIFT_DECIDED'
         | 'MEETING_TODAY'
         | 'NOTES_REMINDER'
-        | 'ADMIN_GRANTED';
+        | 'ADMIN_GRANTED'
+        | 'MEETING_SLOTS_CHANGED'
+        | 'ROLE_OPEN_REMINDER'
+        | 'RECAP_ADDED';
       /** @enum {string} */
       category:
         | 'Deine Rollen'
@@ -2144,7 +2182,10 @@ export interface components {
           | 'BIRTHDAY_GIFT_DECIDED'
           | 'MEETING_TODAY'
           | 'NOTES_REMINDER'
-          | 'ADMIN_GRANTED';
+          | 'ADMIN_GRANTED'
+          | 'MEETING_SLOTS_CHANGED'
+          | 'ROLE_OPEN_REMINDER'
+          | 'RECAP_ADDED';
         title: string;
         body: string;
         url: string | null;
@@ -2179,7 +2220,10 @@ export interface components {
           | 'BIRTHDAY_GIFT_DECIDED'
           | 'MEETING_TODAY'
           | 'NOTES_REMINDER'
-          | 'ADMIN_GRANTED';
+          | 'ADMIN_GRANTED'
+          | 'MEETING_SLOTS_CHANGED'
+          | 'ROLE_OPEN_REMINDER'
+          | 'RECAP_ADDED';
         title: string;
         body: string;
         url: string | null;
@@ -3391,6 +3435,9 @@ export interface components {
       /** Format: uuid */
       id: string;
       isSelected: boolean;
+      position: number | null;
+      votes: number;
+      votedByMe: boolean;
       /** Format: date-time */
       createdAt: string;
       song: {
@@ -3409,6 +3456,9 @@ export interface components {
         photoUpdatedAt: string | null;
       } | null;
     }[];
+    ReorderSetlistDto: {
+      meetingSongIds: string[];
+    };
     AddMeetingSongDto: {
       /** Format: uuid */
       songId?: string;
@@ -3421,6 +3471,9 @@ export interface components {
       /** Format: uuid */
       id: string;
       isSelected: boolean;
+      position: number | null;
+      votes: number;
+      votedByMe: boolean;
       /** Format: date-time */
       createdAt: string;
       song: {
@@ -3689,6 +3742,7 @@ export interface components {
         } | null;
         /** @enum {string} */
         myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
+        summaryText: string | null;
       } | null;
       lastMeeting: {
         /** Format: uuid */
@@ -3754,6 +3808,7 @@ export interface components {
         } | null;
         /** @enum {string} */
         myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
+        summaryText: string | null;
       } | null;
       nextMeeting: {
         /** Format: uuid */
@@ -3819,6 +3874,7 @@ export interface components {
         } | null;
         /** @enum {string} */
         myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
+        summaryText: string | null;
       } | null;
       myRoles: {
         /** @enum {string} */
@@ -7975,6 +8031,69 @@ export interface operations {
       };
     };
   };
+  MeetingSongController_reorder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        meetingId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReorderSetlistDto'];
+      };
+    };
+    responses: {
+      /** @description Die ganze Liste, Setlist in neuer Reihenfolge */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MeetingSongListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
   MeetingSongController_remove: {
     parameters: {
       query?: never;
@@ -8047,6 +8166,126 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['MeetingSongResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeetingSongController_vote: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        meetingId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Die ganze Liste, Vorschläge neu nach Stimmen sortiert */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MeetingSongListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  MeetingSongController_unvote: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        meetingId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Die ganze Liste, Vorschläge neu nach Stimmen sortiert */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MeetingSongListResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -11720,7 +11959,10 @@ export interface operations {
           | 'BIRTHDAY_GIFT_DECIDED'
           | 'MEETING_TODAY'
           | 'NOTES_REMINDER'
-          | 'ADMIN_GRANTED';
+          | 'ADMIN_GRANTED'
+          | 'MEETING_SLOTS_CHANGED'
+          | 'ROLE_OPEN_REMINDER'
+          | 'RECAP_ADDED';
       };
       cookie?: never;
     };

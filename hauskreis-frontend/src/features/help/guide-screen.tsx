@@ -19,15 +19,14 @@
  * dabei herauskommt, ist immer der aktuelle Stand. Die Regeln dafür stehen im
  * `@media print`-Block in `globals.css`.
  */
-import { ArrowLeft, Printer } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { Button, IconButton } from '@/components/ui/button';
+import { Printer } from 'lucide-react';
+import { BackButton } from '@/components/layout/back-button';
+import { Button } from '@/components/ui/button';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { FAQ_ENTRIES } from './faq-content';
 import { FaqAnswer } from './faq-answer';
 
 export function GuideScreen() {
-  const router = useRouter();
   const { hauskreis } = useHauskreis();
 
   // Die Reihenfolge der Datei ist die gedachte Reihenfolge — erst „was ist
@@ -41,9 +40,7 @@ export function GuideScreen() {
   return (
     <div className="px-5 pt-safe-4 pb-10">
       <div className="mb-6 flex items-center justify-between gap-3 print:hidden">
-        <IconButton label="Zurück" onClick={() => router.back()}>
-          <ArrowLeft size={18} />
-        </IconButton>
+        <BackButton fallback="/admin" />
 
         <Button variant="secondary" onClick={() => window.print()}>
           <Printer size={14} />

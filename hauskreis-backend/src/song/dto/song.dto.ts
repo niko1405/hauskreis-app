@@ -56,6 +56,15 @@ export const updateMeetingSongSchema = z.object({
   isSelected: z.boolean(),
 });
 
+/**
+ * Die ganze Setlist in der neuen Reihenfolge. Die ganze und nicht ein
+ * „von Platz 3 nach Platz 1": So kann der Server prüfen, dass niemand
+ * inzwischen ein Lied dazugenommen hat, und muss keine Verschiebung rechnen.
+ */
+export const reorderSetlistSchema = z.object({
+  meetingSongIds: z.array(z.uuid()).max(100),
+});
+
 export const setSongLeadersSchema = z.object({
   /// Replaces the current list. Empty is valid — an evening may have no songs
   /// at all, and then nobody is needed.
@@ -82,6 +91,7 @@ export class UpdateMeetingSongDto extends createZodDto(
   updateMeetingSongSchema,
 ) {}
 export class SetSongLeadersDto extends createZodDto(setSongLeadersSchema) {}
+export class ReorderSetlistDto extends createZodDto(reorderSetlistSchema) {}
 export class MeetingSongParamsDto extends createZodDto(
   meetingSongParamsSchema,
 ) {}

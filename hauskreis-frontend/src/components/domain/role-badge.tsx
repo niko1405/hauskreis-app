@@ -7,6 +7,7 @@
 import { BookOpen, Cookie, Gift, House, Mic, Music, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { shortName } from '@/lib/person';
 import type { AssignmentRole, PersonRef } from '@/lib/api/types';
 
 export const ROLE_ICON: Record<AssignmentRole, LucideIcon> = {
@@ -62,7 +63,7 @@ export function RoleChip({
     <>
       <Icon size={12} className="shrink-0" />
       <span className="font-extrabold">
-        {people.map((p) => p.name).join(', ')}
+        {people.map((p) => shortName(p.name)).join(', ')}
       </span>
     </>
   ) : (
@@ -79,11 +80,21 @@ export function RoleChip({
     className,
   );
 
-  if (!onClick) return <span className={classes}>{content}</span>;
+  // Der volle Name dort, wo er gekürzt dasteht.
+  const title = filled ? people.map((p) => p.name).join(', ') : undefined;
+
+  if (!onClick) {
+    return (
+      <span className={classes} title={title}>
+        {content}
+      </span>
+    );
+  }
 
   return (
     <button
       type="button"
+      title={title}
       onClick={(event) => {
         event.stopPropagation();
         onClick();

@@ -39,7 +39,7 @@ describe('clearSongSelectionIfUnled', () => {
 
     expect(updateMany).toHaveBeenCalledWith({
       where: { meetingId: { in: ['m1'] }, isSelected: true },
-      data: { isSelected: false },
+      data: { isSelected: false, position: null },
     });
   });
 
@@ -66,7 +66,7 @@ describe('clearSongSelectionIfUnled', () => {
 
     expect(updateMany).toHaveBeenCalledWith({
       where: { meetingId: { in: ['m1', 'm3'] }, isSelected: true },
-      data: { isSelected: false },
+      data: { isSelected: false, position: null },
     });
   });
 

@@ -11,8 +11,10 @@ import {
   Circle,
   CircleCheckBig,
   Navigation,
+  ScrollText,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
+import { PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
 import { RoleChip } from '@/components/domain/role-badge';
@@ -25,7 +27,7 @@ import {
   formatRelativeDay,
   groupNow,
 } from '@/lib/date';
-import { actionstepProgress, mapsUrl, meetingHeadline } from '@/lib/meeting';
+import { mapsUrl, meetingHeadline } from '@/lib/meeting';
 import { firstName } from '@/lib/person';
 import { ScreenHeader } from '@/components/layout/screen-header';
 import { ReleaseBanner } from '@/features/releases/release-banner';
@@ -121,7 +123,7 @@ export function HomeScreen() {
             <SectionTitle>Aktueller Termin</SectionTitle>
             {/* Grün wie das „Läuft"-Abzeichen am Termin und wie der abgehakte
                 Actionstep darüber: die Farbe von „gilt gerade". */}
-            <NextMeetingCard
+            <PastOrCurrentMeeting
               meeting={currentMeeting}
               className="border-success-line bg-success-bg/30"
             />
@@ -176,7 +178,7 @@ export function HomeScreen() {
                 (`#14100d` gegen `#26201b`); dort sah der Abend nicht gedämpft
                 aus, sondern wie ein Loch in der Seite. Ohne Schatten aus
                 demselben Grund: Was flach liegt, wirft keinen. */}
-            <NextMeetingCard
+            <PastOrCurrentMeeting
               meeting={lastMeeting}
               className="bg-canvas shadow-none"
             />
@@ -191,9 +193,10 @@ export function HomeScreen() {
  * Der Actionstep der Woche, mit dem eigenen Haken.
  *
  * Die Karte verschwindet beim Abhaken **nicht**. Erstens ließe sich der Haken
- * dann nicht zurücknehmen, zweitens ist „geschafft" auch eine Nachricht — und
- * daneben steht, wie es der Gruppe damit geht. Still wird es nur bei der
- * Erinnerung: der Reminder überspringt, wer abgehakt hat.
+ * dann nicht zurücknehmen, zweitens ist „geschafft" auch eine Nachricht. Wie
+ * es den anderen damit geht, steht hier nicht mehr — nur der eigene Haken
+ * (siehe `ActionstepCheck`). Still wird es bei der Erinnerung: der Reminder
+ * überspringt, wer abgehakt hat.
  *
  * Und sie verschwindet auch nicht, wenn es gar keinen gibt. Ein Platz, der mal
  * da ist und mal nicht, verschiebt jedes Mal alles darunter — und die Frage
@@ -267,12 +270,75 @@ function OpenActionstepCard({ step }: { step: HomeActionstep }) {
             {step.text}
           </p>
           <p className="mt-0.5 text-[11px] text-stone-400">
-            vom {formatDay(step.date)} ·{' '}
-            {actionstepProgress(step.doneCount, step.peopleCount)}
+            vom {formatDay(step.date)}
           </p>
         </div>
       </div>
     </Card>
+  );
+}
+
+/**
+ * Der laufende oder der letzte Abend — als Rückblick, sobald es einen gibt.
+ *
+ * Am Mittwochmorgen ist „was war" die Nachricht und nicht „wo war es": Datum,
+ * Uhrzeit und Ort des Abends von gestern kennt man, die Zusammenfassung hat
+ * man vielleicht verpasst. Steht eine da, tritt sie **an die Stelle** der
+ * Karte, und darunter führt ein Knopf zum Termin. Ohne Zusammenfassung bleibt
+ * es die Karte wie immer — eine leere Rückblick-Fläche wäre eine Aufforderung
+ * an alle, die nichts schreiben dürfen.
+ */
+function PastOrCurrentMeeting({
+  meeting,
+  className,
+}: {
+  meeting: HomeNextMeeting;
+  className?: string;
+}) {
+  if (!meeting.summaryText) {
+    return <NextMeetingCard meeting={meeting} className={className} />;
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Dieselbe Kante wie die Infos am Termin: terracotta links heißt in
+          der App „hier steht, was jemand der Gruppe sagt". */}
+      <Card
+        // Die Kante nach der Tönung: Ein `border-…`-Farbton für alle Seiten
+        // (das Grün des laufenden Abends) schlüge sonst auch die linke.
+        className={cn(
+          'bg-card',
+          className,
+          'border-l-[3px] border-l-terracotta-500',
+        )}
+      >
+        <p className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
+          <ScrollText size={12} />
+          Zusammenfassung
+        </p>
+        <p className="mt-0.5 text-[11px] text-stone-400">
+          {meeting.endDate
+            ? formatDayRange(meeting.date, meeting.endDate)
+            : formatRelativeDay(meeting.date)}{' '}
+          · {meetingHeadline(meeting)}
+        </p>
+        {/* Nach acht Zeilen ist Schluss: Der Rest steht am Termin, und der
+            Startbildschirm soll darunter noch etwas zeigen. */}
+        <p className="mt-3 line-clamp-8 text-sm leading-relaxed whitespace-pre-line text-stone-700">
+          {meeting.summaryText}
+        </p>
+      </Card>
+
+      <Link
+        href={`/termin?id=${meeting.id}`}
+        className={cn(
+          'inline-flex items-center gap-1 rounded-full bg-terracotta-50 px-4 py-2 text-sm font-semibold text-terracotta-700 transition-colors hover:bg-terracotta-100',
+          PRESSABLE,
+        )}
+      >
+        Zum Termin <ChevronRight size={15} />
+      </Link>
+    </div>
   );
 }
 

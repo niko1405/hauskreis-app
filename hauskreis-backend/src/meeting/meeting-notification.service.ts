@@ -10,6 +10,7 @@ import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
 import { formatWallClock } from '../common/time/wall-clock';
 import { GroupClockService } from './group-clock.service';
 import { appPath } from '../notification/app-paths';
+import { findNextMeetingId, type RoleFlags } from './next-meeting';
 import type { ReleasedRoles } from './role-release.service';
 
 /**
@@ -103,18 +104,14 @@ export class MeetingNotificationService {
 
     // Dieselbe Frage wie auf dem Startbildschirm: welcher Abend steht als
     // nächster an. Zwei Formulierungen davon wären zwei Gelegenheiten, sie
-    // verschieden zu beantworten.
-    const next = await this.prisma.meeting.findFirst({
-      where: {
-        hauskreisId: meeting.hauskreisId,
-        date: { gte: await this.clock.today(meeting.hauskreisId) },
-        status: MeetingStatus.PLANNED,
-      },
-      orderBy: { date: 'asc' },
-      select: { id: true },
-    });
+    // verschieden zu beantworten — und hier stand lange eine zweite.
+    const next = await findNextMeetingId(
+      this.prisma,
+      meeting.hauskreisId,
+      await this.clock.today(meeting.hauskreisId),
+    );
 
-    if (next?.id !== meeting.id) {
+    if (next !== meeting.id) {
       return 0;
     }
 
@@ -274,7 +271,7 @@ export class MeetingNotificationService {
     personId: string,
     released: ReleasedRoles,
   ): Promise<void> {
-    if (!describeReleased(released)) return;
+    if (!describeRoles(released)) return;
 
     const meeting = await this.prisma.meeting.findUnique({
       where: { id: meetingId },
@@ -311,7 +308,7 @@ export class MeetingNotificationService {
     personId: string,
     released: ReleasedRoles,
   ): Promise<void> {
-    const what = describeReleased(released);
+    const what = describeRoles(released);
     if (!what) return;
 
     const [person, others] = await Promise.all([
@@ -442,7 +439,8 @@ export class MeetingNotificationService {
 }
 
 /**
- * „Gastgeber und Musik sind wieder frei." — oder nichts, wenn nichts frei wurde.
+ * „Gastgeber und Musik sind" — der Anfang von „… wieder frei" und „… noch
+ * frei", oder `null`, wenn keine Rolle gemeint ist.
  *
  * Als Liste und nicht als geschachtelte Bedingung: bei zwei Rollen ließ sich
  * das noch mit einem Dreifach-Fragezeichen schreiben, bei vieren wären es
@@ -456,7 +454,7 @@ export class MeetingNotificationService {
  * wäre der Satz, den ein Mensch als Erstes bemerkt. Aus dem Wort ablesen ließe
  * sie sich nicht (ein „s" am Ende hat auch „Der Gastgeber-Platz" nicht).
  */
-function describeReleased(released: ReleasedRoles): string | null {
+export function describeRoles(released: RoleFlags): string | null {
   const free = [
     released.host && { text: 'Der Gastgeber-Platz', plural: false },
     released.topic && { text: 'Das Thema', plural: false },

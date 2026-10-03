@@ -103,6 +103,10 @@ const homeMeetingSchema = z.object({
   testimonyPerson: personRefSchema.nullable(),
   /// Was *du* für diesen Abend geantwortet hast. Ohne Antwort `UNKNOWN`.
   myAttendance: z.enum(AttendanceStatus),
+  /// Die Zusammenfassung — nur am laufenden und am letzten Abend, am nächsten
+  /// immer `null`. Steht eine da, zeigt der Startbildschirm sie **statt** der
+  /// Karte: Am Mittwochmorgen ist „was war" die Nachricht, nicht „wo war es".
+  summaryText: z.string().nullable(),
 });
 
 /**

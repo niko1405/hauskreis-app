@@ -5,6 +5,7 @@
  * Spalte links und mehr Breite für Tabelle und Kalender.
  */
 import { cn } from '@/lib/cn';
+import { BackButton } from './back-button';
 import { BottomSlotOutlet, BottomSlotProvider } from './bottom-slot';
 import { GlobalProgress } from './global-progress';
 import { PullToRefresh } from './pull-to-refresh';
@@ -71,10 +72,19 @@ export function PageHeader({
   title,
   subtitle,
   action,
+  back,
 }: {
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
+  /**
+   * Ein Zurück-Pfeil über dem Titel; der Wert ist das Ziel, falls es kein
+   * „zurück" gibt (`BackButton`). Die Tabs tragen keinen — sie sind die Ebene,
+   * auf die man zurückkehrt. Jede andere Seite mit diesem Kopf trägt einen:
+   * Ohne ihn war der Weg hinaus die Tab-Leiste, also ein Sprung auf eine
+   * andere Seite statt zurück auf die, von der man kam.
+   */
+  back?: string;
 }) {
   // Auf den Tabs liegt die Kopfleiste darüber, sonst stünde der Titel dahinter.
   // Gefragt wird hier und nicht über eine Prop: Termine und Archiv tragen sie,
@@ -92,6 +102,7 @@ export function PageHeader({
       )}
     >
       <div>
+        {back && <BackButton fallback={back} className="mb-3" />}
         <h1 className="font-serif text-3xl leading-tight font-bold text-stone-900">
           {title}
         </h1>

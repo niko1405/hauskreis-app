@@ -152,6 +152,27 @@ describe('MeetingGeneratorService.generateFor', () => {
     expect(createMany).not.toHaveBeenCalled();
   });
 
+  it('legt nichts an, wenn der Anker der siebte Abend im Voraus ist', async () => {
+    // Der Zustand nach jedem Lauf: Der späteste erzeugte Abend liegt vorne.
+    // Die Reihe fing einmal dort an statt bei heute, und jede Nacht kamen
+    // sechs Termine dazu.
+    const allDates = [
+      '2026-07-28',
+      '2026-08-04',
+      '2026-08-11',
+      '2026-08-18',
+      '2026-08-25',
+      '2026-09-01',
+      '2026-09-08',
+    ].map(utc);
+    const { service, createMany } = setup(allDates, {}, utc('2026-09-08'));
+
+    const result = await service.generateFor('hk-1', MONDAY);
+
+    expect(result).toEqual({ created: 0, skipped: MEETINGS_AHEAD });
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
   it('leaves an existing meeting alone and only fills the gaps', async () => {
     // The group put a birthday on 2026-08-04; it must survive untouched.
     const { service, createMany } = setup([utc('2026-08-04')]);

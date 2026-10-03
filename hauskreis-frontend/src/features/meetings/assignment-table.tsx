@@ -22,7 +22,7 @@
  * je zugeteilter Person. Ein Abend, an dem noch niemand steht, erzeugt dort
  * also nichts — und fehlte hier. Genau der Abend ist aber der, den man in einer
  * Planungstabelle sucht. Die Terminliste liefert ohnehin schon Gastgeber,
- * Thema, Musik und Testimony mit, es kostet also keine zweite Abfrage.
+ * Thema, Musik, Testimony und Snacks mit, es kostet also keine zweite Abfrage.
  */
 import { CheckCircle2, Minus, Plus } from 'lucide-react';
 import Link from '@/components/ui/link';
@@ -39,6 +39,7 @@ import {
 } from '@/lib/api/hooks';
 import { addDays, formatDay, formatRelativeDay, today } from '@/lib/date';
 import {
+  MEETING_ROLE_ORDER,
   ROLE_LABEL,
   meetingRoles,
   planningComplete,
@@ -177,21 +178,20 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
             marginBottom: `${(scale - 1) * 100}px`,
           }}
         >
-          <table className="w-full min-w-[42rem] border-separate border-spacing-y-2">
+          <table className="w-full min-w-[48rem] border-separate border-spacing-y-2">
             <thead>
               <tr>
                 <th className="w-32 px-3 pb-1 text-left text-[10px] font-bold tracking-widest text-stone-400 uppercase">
                   Termin
                 </th>
-                {/* Musik vor Testimony: die Musik wird an fast jedem Abend
-                    zugeteilt, ein Testimony nur einmal im Monat. Was öfter
-                    gebraucht wird, steht näher am Datum. */}
-                {['Host', 'Thema', 'Musik', 'Testimony'].map((label) => (
+                {/* Aus derselben Aufstellung wie die Zellen darunter — warum,
+                    steht bei `MEETING_ROLE_ORDER`. */}
+                {MEETING_ROLE_ORDER.map((role) => (
                   <th
-                    key={label}
+                    key={role}
                     className="px-3 pb-1 text-left text-[10px] font-bold tracking-widest text-stone-400 uppercase"
                   >
-                    {label}
+                    {ROLE_LABEL[role]}
                   </th>
                 ))}
               </tr>

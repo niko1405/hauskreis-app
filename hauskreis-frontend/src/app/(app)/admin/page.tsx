@@ -14,6 +14,7 @@ export default function AdminPage() {
       <PageHeader
         title="Verwaltung"
         subtitle="Verwalte hier deine Hauskreis-Gruppe."
+        back="/profil"
       />
       <div className="space-y-6 px-5">
         <GuideCard />

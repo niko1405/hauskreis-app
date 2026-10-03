@@ -137,7 +137,11 @@ export function HelpScreen() {
 
   return (
     <div>
-      <PageHeader title="Hilfe" subtitle="Wie die App funktioniert" />
+      <PageHeader
+        title="Hilfe"
+        subtitle="Wie die App funktioniert"
+        back="/profil"
+      />
 
       <div className="space-y-4 px-5">
         <div className="relative">

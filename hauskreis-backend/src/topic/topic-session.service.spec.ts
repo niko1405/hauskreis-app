@@ -16,6 +16,7 @@ import {
 import { TopicSessionService } from './topic-session.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { TopicLinkService } from './topic-link.service';
+import type { RecapAnnouncer } from '../recap/recap-announcer.service';
 import type { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
 import type { RoleAttendanceService } from '../attendance/role-attendance.service';
 import type { AvailabilityService } from '../role-suggestion/availability.service';
@@ -169,6 +170,9 @@ function setup(
         findAvailable: jest.fn().mockResolvedValue([]),
       } as unknown as AvailabilityService,
       links as unknown as TopicLinkService,
+      {
+        afterWrite: jest.fn().mockResolvedValue(0),
+      } as unknown as RecapAnnouncer,
     ),
   );
 

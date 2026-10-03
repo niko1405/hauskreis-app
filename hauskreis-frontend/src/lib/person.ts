@@ -58,6 +58,20 @@ export function displayName(
   return person.id === meId ? 'Du' : person.name;
 }
 
+/**
+ * „Christop…" — ein Name, der in eine Rollen-Pille passt.
+ *
+ * Acht Zeichen, dann ist Schluss. In einer Zeile stehen bis zu fünf Rollen
+ * nebeneinander, und ein langer Name machte aus einer Pille einen Balken, der
+ * die anderen in die nächste Zeile schob. Den vollen Namen trägt der `title`
+ * daneben. Gezählt wird über `Array.from`, damit ein Umlaut aus zwei Code-
+ * Einheiten oder ein Emoji nicht mittendurch geschnitten wird.
+ */
+export function shortName(name: string, max = 8): string {
+  const chars = Array.from(name.trim());
+  return chars.length > max ? `${chars.slice(0, max).join('')}…` : name.trim();
+}
+
 export function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] ?? name;
 }

@@ -28,6 +28,7 @@ import { useEffect, useRef } from 'react';
 import { IconButton } from './button';
 import { lockOverlay } from './overlay-lock';
 import { dismissed } from './swipe';
+import { cn } from '@/lib/cn';
 
 export function Sheet({
   open,
@@ -36,6 +37,7 @@ export function Sheet({
   subtitle,
   children,
   footer,
+  size = 'auto',
 }: {
   open: boolean;
   onClose: () => void;
@@ -48,6 +50,16 @@ export function Sheet({
    * müsste erst scrollen, um abbrechen zu können.
    */
   footer?: React.ReactNode;
+  /**
+   * `auto` wächst mit dem Inhalt bis an seine Obergrenze. `tall` steht fest
+   * auf dieser Höhe — für einen Körper, der eine **Suche** ist: Dessen Höhe
+   * ändert sich mit jedem Buchstaben, und ein unten verankertes Sheet, das mit
+   * ihm schrumpft, rutscht mit seinen wenigen Treffern genau hinter die
+   * Tastatur. Fest hoch bleiben Feld und erste Treffer oben, wo man sie sieht.
+   * `dvh` und nicht `vh`: Bei ausgefahrener Adressleiste wäre `85vh` höher als
+   * der sichtbare Bereich, und der Kopf stünde unter dem Rand.
+   */
+  size?: 'auto' | 'tall';
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const drag = useDragControls();
@@ -124,7 +136,10 @@ export function Sheet({
             onDragEnd={(_, info) => {
               if (dismissed(info)) onClose();
             }}
-            className="relative z-10 mx-auto flex max-h-[85vh] w-full max-w-md flex-col rounded-t-sheet border-t border-line bg-canvas p-6 pb-10 shadow-2xl outline-none"
+            className={cn(
+              'relative z-10 mx-auto flex w-full max-w-md flex-col rounded-t-sheet border-t border-line bg-canvas p-6 pb-10 shadow-2xl outline-none',
+              size === 'tall' ? 'h-[85dvh]' : 'max-h-[85vh]',
+            )}
           >
             {/* Der Ziehbereich: Griff und Titelzeile. `touch-none`, damit der
                 Browser hier nicht stattdessen zu scrollen versucht — und nur

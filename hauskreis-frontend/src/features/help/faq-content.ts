@@ -445,7 +445,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     question:
       'Warum sehe ich Titel und Zusammenfassung eines Abends noch nicht?',
     answer:
-      'Weil er noch nicht angefangen hat. Titel, Actionstep und Zusammenfassung einer noch nicht gehaltenen Einheit sehen nur die, die dafür zuständig sind — damit die Vorbereitung eine Vorbereitung bleiben darf und nicht schon halb vorgetragen ist.\n\nMaßgeblich ist die **Treffpunktzeit dieses Termins**, nicht der Kalendertag und keine feste Uhrzeit. Fängt der Abend um 19 Uhr an, wird um 19 Uhr aufgeschlossen.\n\nWer schon abgehakt hat, ist übrigens immer zu sehen — das sagt nichts über den Inhalt.',
+      'Weil er noch nicht angefangen hat. Titel, Actionstep und Zusammenfassung einer noch nicht gehaltenen Einheit sehen nur die, die dafür zuständig sind — damit die Vorbereitung eine Vorbereitung bleiben darf und nicht schon halb vorgetragen ist.\n\nMaßgeblich ist die **Treffpunktzeit dieses Termins**, nicht der Kalendertag und keine feste Uhrzeit. Fängt der Abend um 19 Uhr an, wird um 19 Uhr aufgeschlossen.',
     keywords: ['verborgen', 'nicht sichtbar', 'geheim', 'gesperrt'],
   },
   {
@@ -477,9 +477,9 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
   {
     id: 'songs-abhaken',
     category: 'songs',
-    question: 'Warum kann ich die Lieder nicht abhaken?',
+    question: 'Warum kann ich die Setlist nicht ändern?',
     answer:
-      '**Vor dem Abend darf nur abhaken, wer an dem Abend die Musik macht.** Das Abhaken ist da noch eine Entscheidung — „das singen wir" — und die trifft, wer die Lieder üben muss.\n\n**Ist der Abend vorbei, darf es jede:r.** Dann ist es ein Protokoll: „das haben wir gesungen", und daran erinnern sich alle gleich gut.\n\nZwei Dinge sind hier bewusst anders als sonst in der App: Es gibt **keinen Admin-Freifahrtschein**, und „niemand ist zugeteilt" heißt **nicht** „alle dürfen". Ist niemand eingetragen, darf vor dem Abend niemand abhaken — dann trägt sich erst jemand ein.',
+      '**Vor dem Abend macht die Setlist, wer an dem Abend die Musik macht** — Lieder übernehmen, die Reihenfolge ziehen, etwas herausnehmen. Die Setlist ist da noch eine Entscheidung — „das singen wir" — und die trifft, wer die Lieder üben muss. Du erkennst es an den Nummern: gefüllt heißt, du darfst sie ändern.\n\n**Ist der Abend vorbei, darf es jede:r.** Dann ist es ein Protokoll: „das haben wir gesungen", und daran erinnern sich alle gleich gut.\n\n**Bearbeiten darf trotzdem jede:r**: Wisch ein Lied nach links und tipp auf den Stift, etwa um einen kaputten Link zu reparieren. Der Link gehört dem Lied und gilt danach überall.\n\nZwei Dinge sind hier bewusst anders als sonst in der App: Es gibt **keinen Admin-Freifahrtschein**, und „niemand ist zugeteilt" heißt **nicht** „alle dürfen". Ist niemand eingetragen, darf vor dem Abend niemand die Setlist ändern — dann trägt sich erst jemand ein.',
     keywords: ['haken', 'auswählen', 'gesperrt', 'grau', 'darf nicht'],
   },
   {
@@ -487,7 +487,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'songs',
     question: 'Wie schlage ich ein Lied für einen Abend vor?',
     answer:
-      'Auf der Terminseite unter „Lieder". Du kannst eines aus der Datenbank suchen oder ein neues eintragen — dann landet es gleich in der Datenbank und steht beim nächsten Mal zur Auswahl.\n\nVorschlagen darf jede:r, unabhängig davon, wer die Musik macht. Was davon gesungen wird, hakt die Musik ab.\n\nDenselben Song zweimal vorzuschlagen macht keinen zweiten Eintrag — es ist derselbe Wunsch.',
+      'Auf der Terminseite unter „Lieder". Du kannst eines aus der Datenbank suchen oder ein neues eintragen — dann landet es gleich in der Datenbank und steht beim nächsten Mal zur Auswahl.\n\nVorschlagen darf jede:r, unabhängig davon, wer die Musik macht. Was davon gesungen wird, übernimmt das Musik-Team in die Setlist.\n\n**Mit dem Pfeil stimmst du für einen Vorschlag**, ein zweiter Tipp nimmt die Stimme zurück. Die Vorschläge stehen nach Stimmen sortiert — so sieht das Musik-Team, was die anderen gern singen würden.\n\nDenselben Song zweimal vorzuschlagen macht keinen zweiten Eintrag — es ist derselbe Wunsch. Einen Vorschlag wieder löschen darf jede:r: nach links wischen.',
     keywords: ['wunsch', 'vorschlag', 'lied', 'song', 'eintragen'],
   },
   {
@@ -770,7 +770,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'notes',
     question: 'Warum kann ich den Actionstep noch nicht abhaken?',
     answer:
-      'Weil der Abend noch nicht angefangen hat. Maßgeblich ist die **Treffpunktzeit**, nicht der Kalendertag — einen Vorsatz für heute Abend hakt man heute früh nicht ab.\n\nDer Haken gilt pro Person und hängt am Termin; er funktioniert für beide Fälle gleich, ob der Actionstep nun vom Thema oder vom Baustein kommt.\n\nWieder abhaken darfst du jederzeit. Und du siehst, wie weit die anderen sind — bei null steht dort „Noch niemand hat abgehakt" und nicht „0 von 9", was sich wie ein Vorwurf läse.',
+      'Weil der Abend noch nicht angefangen hat. Maßgeblich ist die **Treffpunktzeit**, nicht der Kalendertag — einen Vorsatz für heute Abend hakt man heute früh nicht ab.\n\nDer Haken gilt pro Person und hängt am Termin; er funktioniert für beide Fälle gleich, ob der Actionstep nun vom Thema oder vom Baustein kommt.\n\nWieder abhaken darfst du jederzeit. Zu sehen ist nur dein eigener Haken — wie es den anderen mit ihrem Vorsatz ging, erzählen sie am nächsten Abend.',
     keywords: ['haken', 'erledigt', 'abhaken', 'gesperrt'],
   },
 
@@ -862,7 +862,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'app',
     question: 'Wie schalte ich Benachrichtigungen ein, und welche gibt es?',
     answer:
-      'Im Profil unter „Benachrichtigungen". Du musst sie einmal je Gerät erlauben — auf dem iPhone geht das nur, wenn die App vom Home-Bildschirm gestartet wurde, nicht im Safari-Tab.\n\nJede Art lässt sich einzeln schalten. Bei den Erinnerungen stellst du außerdem ein, **wie viele Tage vorher** sie kommen sollen; beim Actionstep, an welchen Wochentagen (auch mehrere).\n\nEs gibt Erinnerungen an deine eigenen Aufgaben (hosten, Thema, Musik, Testimony, Actionstep) und Nachrichten über die Gruppe (eingeteilt worden, neue Gebetsbuddys, Abend fällt aus oder findet doch statt, geänderte Uhrzeit, jemand sagt ab, bei euch wäre jetzt Platz, jemand verlässt den Hauskreis, ein besonderer Termin, Neues in der App).',
+      'Im Profil unter „Benachrichtigungen". Du musst sie einmal je Gerät erlauben — auf dem iPhone geht das nur, wenn die App vom Home-Bildschirm gestartet wurde, nicht im Safari-Tab.\n\nJede Art lässt sich einzeln schalten. Bei den Erinnerungen stellst du außerdem ein, **wie viele Tage vorher** sie kommen sollen; beim Actionstep und bei „am nächsten Abend ist noch etwas frei", an welchen Wochentagen (auch mehrere).\n\nEs gibt Erinnerungen an deine eigenen Aufgaben (hosten, Thema, Musik, Testimony, Actionstep) und Nachrichten über die Gruppe (eingeteilt worden, neue Gebetsbuddys, Abend fällt aus oder findet doch statt, geänderte Uhrzeit, am nächsten Abend kommt etwas dazu oder fällt weg, am nächsten Abend ist noch eine Rolle frei, die Zusammenfassung oder der Actionstep vom letzten Abend ist da, jemand sagt ab, bei euch wäre jetzt Platz, jemand verlässt den Hauskreis, ein besonderer Termin, Neues in der App).',
     keywords: ['push', 'erinnerung', 'benachrichtigung', 'einstellen'],
   },
   {

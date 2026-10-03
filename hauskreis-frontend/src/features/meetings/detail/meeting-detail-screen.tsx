@@ -49,7 +49,7 @@ import {
   ErrorState,
 } from '@/components/ui/states';
 import { cn } from '@/lib/cn';
-import { namesOf } from '@/lib/person';
+import { namesOf, shortName } from '@/lib/person';
 import {
   useMe,
   useMeeting,
@@ -986,11 +986,14 @@ function RoleRow({
           people.map((person) => (
             <span
               key={person.id}
+              title={person.name}
               className="flex max-w-full items-center gap-1.5 rounded-full bg-canvas py-0.5 pr-2.5 pl-0.5"
             >
               <Avatar person={person} size="xs" />
+              {/* Gekürzt wie in den Chips der Terminkarte (`shortName`): Bei
+                  drei Leuten für die Musik passen so alle in eine Zeile. */}
               <span className="truncate text-[13px] font-bold text-stone-800">
-                {person.name}
+                {shortName(person.name)}
               </span>
             </span>
           ))
