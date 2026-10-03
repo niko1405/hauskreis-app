@@ -37,6 +37,7 @@ export function ReleasesScreen() {
       <PageHeader
         title="Neu in Acts2"
         subtitle="Was zuletzt dazugekommen ist"
+        back="/profil"
       />
 
       <div className="space-y-4 px-5">

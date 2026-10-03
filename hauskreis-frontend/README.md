@@ -497,6 +497,15 @@ wählt `pt-header-6` statt `pt-safe-6`. Über eine Prop ginge es auch — dann
 müssten Termine und Archiv es sich merken und Verwaltung, Hilfe und „Was ist
 neu" das Gegenteil.
 
+**Ein Bildschirm kann sie wegschicken** (`header-suppress.ts`), und das ist
+die eine Ausnahme von „weg ohne Übergang": Der Suchmodus im Archiv
+(`archive-screen.tsx`) bittet sie zu gehen, und dort fährt sie sichtbar hinaus.
+Beim Scrollen sähe man dabei den Balken, den man nicht sehen soll — beim Tipp
+ins Suchfeld scrollt niemand, man sieht den Schleier gehen, und das ist die
+Antwort auf den Tipp. Gebaut wie `overlay-lock.ts`: ein Zähler, eine Rücknahme
+im Aufräumteil des Effekts. Damit kommt sie auch dann zurück, wenn man mitten in
+der Suche den Tab wechselt.
+
 ## Der Kopfbereich mit Bild
 
 `components/layout/screen-header.tsx` trägt vier Bildschirme: Heute, Gebet,
@@ -1485,6 +1494,12 @@ Verlauf _dieser_ Sitzung an einer Stelle, die nichts davon weiß.
 Kommt nichts Neues, sagt ein Toast das auch. Sonst sähe der zweite Druck aus,
 als hätte er nichts getan.
 
+**„Aus dem Archiv" steht fest hoch** (`Sheet` mit `size="tall"`). Ein Sheet
+wächst sonst mit seinem Inhalt, und eine Suche ändert ihre Höhe mit jedem
+Buchstaben: Bei drei Treffern sackte es nach unten — genau hinter die Tastatur,
+die man zum Tippen offen hat. Feld und Sortierung kleben zudem oben im Körper,
+damit man zum Weitertippen nicht erst zurückscrollt.
+
 ## Zuteilen: Sheet und Tabelle
 
 **Das Sheet zeigt das ganze Ranking, nicht nur die Spitze.** Der Endpunkt
@@ -1618,6 +1633,23 @@ als eigene Ressource, ihr ETag liegt also nirgends im Cache. Dasselbe Muster wie
 
 **Die Knöpfe eines Lieds gibt ein Wisch nach links frei** — siehe
 „Wischen statt Drücken" weiter unten.
+
+### Der Suchmodus
+
+Wer ins Suchfeld tippt, will suchen und nicht lesen, was das Archiv ist. Also
+gehen Kopf und Kopfleiste, das Feld rückt mit den Registern nach oben und bleibt
+dort kleben, darunter scrollen die Treffer — wie bei Spotify. Drei Dinge daran:
+
+- **Er endet nur über „Abbrechen"** (oder Escape), nicht wenn das Feld den Fokus
+  verliert. Auf dem Telefon schließt schon das Scrollen durch die Treffer die
+  Tastatur, und dann spränge der Kopf mitten in der Liste zurück. Enter schließt
+  nur die Tastatur.
+- **Abbrechen leert das Feld.** Ein Filter, der nach dem Verlassen weiter wirkt,
+  sähe aus wie ein Archiv, in dem etwas fehlt.
+- **Der Kopf schrumpft in der Höhe, er fährt nicht weg.** Ein `transform` am
+  Seiteninhalt würde zum Bezugsrahmen der Sheets darin (dieselbe Regel wie in
+  `pull-to-refresh.tsx`). Gleichzeitig wächst über dem Feld der sichere Rand
+  (`transition-[padding]`) — beides zusammen ist der Übergang.
 
 ## Wischen statt Drücken
 
@@ -1996,6 +2028,23 @@ dieselbe Bauform wie „In Maps öffnen" am Termin). So ist das Freischalten sp�
 eine Zeile, und es gibt keinen Zwischenzustand, in dem ein Link ins Leere zeigt.
 Ein wortlos ausgegrauter Knopf wäre das, was an den Lied-Haken einmal falsch
 war: kein Hinweis, sondern ein Fehler.
+
+**Unter den Haken steht kein Kleingedrucktes mehr**, sondern ein Info-Symbol
+(`Checkbox` mit `info`, dahinter `components/ui/info-bubble.tsx`). Vier Haken mit
+vier Absätzen Erklärung machten aus „Deine Angaben" eine Karte, die mehr aus
+Erklärung bestand als aus Angaben — und gebraucht wird die Erklärung einmal,
+beim ersten Ankreuzen. Sie klappt als **Sprechblase** am Symbol auf, nicht als
+Sheet: Ein Sheet beantwortet „wähle etwas aus" und schöbe sich für zwei Sätze
+über den halben Bildschirm. Das Symbol steht **neben** dem `<label>` und nicht
+darin, sonst schaltete der Tipp aufs Symbol den Haken um.
+
+**Jede Unterseite hat einen Zurück-Pfeil** (`PageHeader` mit `back`, dahinter
+`components/layout/back-button.tsx`): Präferenzen, Konto, Hilfe, „Was ist neu",
+Verwaltung — dazu Gruppe und Anleitung, die ihn vorher je als eigene Kopie
+trugen. Ohne ihn war der Weg hinaus die Tab-Leiste, also ein Sprung woandershin
+statt zurück. Er geht zurück, wohin man kam (`router.back()`), und nur ohne
+Vorgeschichte — eine Push-Nachricht, die direkt auf `/neu` führt — auf das Ziel
+in `back`. Und er fragt nach Ungespeichertem wie jeder Link.
 
 ## Was das Frontend bewusst nicht tut
 

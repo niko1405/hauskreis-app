@@ -103,6 +103,7 @@ export function NotificationPreferencesScreen() {
       <PageHeader
         title="Präferenzen"
         subtitle="Welche Nachrichten du bekommst"
+        back="/profil"
       />
 
       <div className="space-y-4 px-5">

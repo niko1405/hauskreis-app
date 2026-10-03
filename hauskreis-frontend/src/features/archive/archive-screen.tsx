@@ -16,9 +16,11 @@ import {
   Trash2,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
+import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
-import { useDeferredValue, useState } from 'react';
+import { useDeferredValue, useEffect, useRef, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
+import { suppressHeader } from '@/components/layout/header-suppress';
 import { AvatarStack } from '@/components/ui/avatar';
 import { Button, PRESSABLE } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -60,6 +62,32 @@ export function ArchiveScreen() {
   const deferred = useDeferredValue(search).trim();
   const summary = useArchiveSummary();
 
+  // Der Suchmodus, wie man ihn von Spotify kennt: Wer ins Feld tippt, will
+  // suchen und nicht lesen, was das Archiv ist. Kopf und Kopfleiste gehen,
+  // das Feld rückt nach oben und bleibt dort, darunter die Register und die
+  // Treffer. **Er endet nur über „Abbrechen"**, nicht beim Verlassen des
+  // Felds: Auf dem Telefon schließt schon das Scrollen durch die Treffer die
+  // Tastatur, und dann spränge der Kopf mitten in der Liste zurück.
+  const [searching, setSearching] = useState(false);
+  const field = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!searching) return;
+    // Nach oben, damit das Feld dort ankommt, wo es stehen bleibt — und nicht
+    // irgendwo in der Mitte klebt, weil man vorher gescrollt hatte.
+    window.scrollTo({ top: 0 });
+    return suppressHeader();
+  }, [searching]);
+
+  // Abbrechen heißt auch: Der Begriff ist weg. Ein Filter, der nach dem
+  // Verlassen weiter wirkt, sähe aus wie ein Archiv, in dem etwas fehlt.
+  const leaveSearch = () => {
+    setSearch('');
+    setSearching(false);
+    field.current?.blur();
+    window.scrollTo({ top: 0 });
+  };
+
   // „Termine" gab es einmal nicht, und der Grund war gut: nebeneinander
   // gestellt sahen Termine und Themen aus wie zwei Sichten auf dasselbe. Seit
   // es die **Nachbereitung** gibt, stimmt das nicht mehr — ein Abend ohne Thema
@@ -87,47 +115,110 @@ export function ArchiveScreen() {
           Listen und sucht eine Zeile. Ein Foto darüber wäre nur Weg bis zur
           ersten — und anders als auf „Heute" oder „Gebet" kommt man hierher
           selten zum Verweilen. */}
-      <PageHeader
-        title="Archiv"
-        subtitle="Durchsuche vergangene Termine, Themen, Locations und Lieder."
-      />
+      {/* Höhe statt Verschiebung: Ein `transform` am Seiteninhalt würde zum
+          Bezugsrahmen der `fixed`-Sheets darin (`pull-to-refresh.tsx`). */}
+      <AnimatePresence initial={false}>
+        {!searching && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 260 }}
+            className="overflow-hidden"
+          >
+            <PageHeader
+              title="Archiv"
+              subtitle="Durchsuche vergangene Termine, Themen, Locations und Lieder."
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="space-y-4 px-5">
-        <div className="relative">
-          <Search
-            size={15}
-            className="absolute top-1/2 left-3.5 -translate-y-1/2 text-stone-300"
-          />
-          <TextInput
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Durchsuchen …"
-            className="pl-9"
-            aria-label="Archiv durchsuchen"
-          />
-        </div>
+        {/* Feld und Register sind ein Block, der im Suchmodus oben klebt. Er
+            reicht mit `-mx-5` über die volle Breite, sonst schauen die Treffer
+            an den Rändern darunter hervor. Der sichere Rand wächst weich mit,
+            während der Kopf darüber schrumpft — beides zusammen ist der
+            Übergang. */}
+        <div
+          className={cn(
+            '-mx-5 space-y-4 bg-canvas px-5 transition-[padding] duration-300',
+            searching && 'sticky top-0 z-30 pt-safe-4 pb-3',
+          )}
+        >
+          <div className="flex items-center">
+            <div className="relative flex-1">
+              <Search
+                size={15}
+                className="absolute top-1/2 left-3.5 -translate-y-1/2 text-stone-300"
+              />
+              <TextInput
+                ref={field}
+                value={search}
+                onFocus={() => setSearching(true)}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setSearching(true);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') leaveSearch();
+                  // Enter schließt nur die Tastatur — gesucht wird ohnehin schon
+                  // beim Tippen, und den Modus beendet allein „Abbrechen".
+                  if (event.key === 'Enter') event.currentTarget.blur();
+                }}
+                enterKeyHint="search"
+                placeholder="Durchsuchen …"
+                className="pl-9"
+                aria-label="Archiv durchsuchen"
+              />
+            </div>
 
-        <div className="no-scrollbar flex gap-2 overflow-x-auto">
-          {tabs.map(({ key, label, count }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setTab(key)}
-              aria-pressed={tab === key}
-              className={cn(
-                'shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-colors',
-                PRESSABLE,
-                tab === key
-                  ? 'border-terracotta-500 bg-terracotta-500 text-white'
-                  : 'border-line bg-card text-stone-500 hover:border-line-strong',
+            <AnimatePresence initial={false}>
+              {searching && (
+                <motion.div
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 'auto', opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                  className="shrink-0 overflow-hidden"
+                >
+                  <button
+                    type="button"
+                    onClick={leaveSearch}
+                    className={cn(
+                      'pl-3 text-sm font-semibold whitespace-nowrap text-terracotta-600',
+                      PRESSABLE,
+                    )}
+                  >
+                    Abbrechen
+                  </button>
+                </motion.div>
               )}
-            >
-              {label}
-              {count !== undefined && (
-                <span className="ml-1.5 opacity-60">{count}</span>
-              )}
-            </button>
-          ))}
+            </AnimatePresence>
+          </div>
+
+          <div className="no-scrollbar flex gap-2 overflow-x-auto">
+            {tabs.map(({ key, label, count }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                aria-pressed={tab === key}
+                className={cn(
+                  'shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-colors',
+                  PRESSABLE,
+                  tab === key
+                    ? 'border-terracotta-500 bg-terracotta-500 text-white'
+                    : 'border-line bg-card text-stone-500 hover:border-line-strong',
+                )}
+              >
+                {label}
+                {count !== undefined && (
+                  <span className="ml-1.5 opacity-60">{count}</span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {tab === 'themen' && <TopicArchive search={deferred} />}

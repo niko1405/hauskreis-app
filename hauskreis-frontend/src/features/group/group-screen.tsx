@@ -25,9 +25,9 @@
  * Der Knopf steht am Fuß der Beschreibung und nicht neben dem Namen: Dort ist
  * man beim Lesen angekommen, und er meint ohnehin beides.
  */
-import { ArrowLeft, Check, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Check, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { BackButton } from '@/components/layout/back-button';
 import { IconButton, PRESSABLE } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FieldLabel, TextArea, TextInput } from '@/components/ui/field';
@@ -46,7 +46,6 @@ import type { Hauskreis } from '@/lib/api/types';
 
 export function GroupScreen() {
   const detail = useHauskreisDetail();
-  const router = useRouter();
 
   const hauskreis = detail.data?.data;
 
@@ -57,9 +56,7 @@ export function GroupScreen() {
           haben. Hierher führt die Pille aus der Kopfleiste, und die steht über
           allen fünf Tabs: Ein festes `/profil` schickte jemanden, der von
           „Heute" kam, woanders hin als dorthin, wo er war. */}
-      <IconButton label="Zurück" onClick={() => router.back()}>
-        <ArrowLeft size={18} />
-      </IconButton>
+      <BackButton fallback="/" />
 
       {detail.isLoading && <CardSkeleton />}
 

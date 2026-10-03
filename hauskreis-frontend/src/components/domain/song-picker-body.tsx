@@ -55,37 +55,41 @@ export function SongPickerBody({
 
   return (
     <div className="space-y-3">
-      <div className="relative">
-        <Search
-          size={15}
-          className="absolute top-1/2 left-3 -translate-y-1/2 text-stone-400"
-        />
-        <TextInput
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Titel oder Artist"
-          aria-label="Lieder durchsuchen"
-          className="pl-9"
-        />
-      </div>
+      {/* Feld und Sortierung bleiben oben stehen, während die Treffer darunter
+          scrollen — wer weiter tippen will, soll nicht erst zurückscrollen. */}
+      <div className="sticky top-0 z-10 space-y-3 bg-canvas pb-1">
+        <div className="relative">
+          <Search
+            size={15}
+            className="absolute top-1/2 left-3 -translate-y-1/2 text-stone-400"
+          />
+          <TextInput
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Titel oder Artist"
+            aria-label="Lieder durchsuchen"
+            className="pl-9"
+          />
+        </div>
 
-      <div className="flex gap-2">
-        {SORTS.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setSort(key)}
-            aria-pressed={sort === key}
-            className={cn(
-              'rounded-full px-3 py-1 text-[11px] font-semibold transition-colors',
-              sort === key
-                ? 'bg-inverse text-inverse-fg'
-                : 'bg-stone-100 text-stone-500 hover:bg-stone-200',
-            )}
-          >
-            {label}
-          </button>
-        ))}
+        <div className="flex gap-2">
+          {SORTS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSort(key)}
+              aria-pressed={sort === key}
+              className={cn(
+                'rounded-full px-3 py-1 text-[11px] font-semibold transition-colors',
+                sort === key
+                  ? 'bg-inverse text-inverse-fg'
+                  : 'bg-stone-100 text-stone-500 hover:bg-stone-200',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {query.isLoading && <Skeleton className="h-24 w-full" />}

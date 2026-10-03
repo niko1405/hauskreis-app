@@ -8,6 +8,7 @@ import { Check, Pencil, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { IconButton, PRESSABLE } from './button';
+import { InfoBubble } from './info-bubble';
 
 // `min-w-0` neben `w-full`: In einer Flex-Zeile ist die Mindestbreite eines
 // Eingabefelds seine eingebaute Feldbreite (rund 20 Zeichen), und `w-full`
@@ -94,13 +95,20 @@ export function Select({
 export function Checkbox({
   label,
   description,
+  info,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & {
   label: string;
   description?: string;
+  /**
+   * Eine Erklärung hinter einem Info-Symbol statt als Text darunter — für
+   * das, was man einmal wissen muss und danach nicht mehr lesen will
+   * (`InfoBubble`).
+   */
+  info?: string;
 }) {
-  return (
-    <label className="flex cursor-pointer items-start gap-3">
+  const box = (
+    <label className="flex flex-1 cursor-pointer items-start gap-3">
       <input
         type="checkbox"
         className="mt-0.5 h-5 w-5 shrink-0 rounded border-line-strong text-terracotta-500 focus:ring-terracotta-500"
@@ -115,6 +123,18 @@ export function Checkbox({
         )}
       </span>
     </label>
+  );
+
+  if (!info) return box;
+
+  // Das Symbol steht **neben** dem Label und nicht darin: Ein Knopf in einem
+  // `<label>` gibt seinen Tipp an das Kästchen weiter, und wer nur nachlesen
+  // wollte, hätte den Haken umgeschaltet.
+  return (
+    <div className="flex items-start gap-2">
+      {box}
+      <InfoBubble label={label}>{info}</InfoBubble>
+    </div>
   );
 }
 

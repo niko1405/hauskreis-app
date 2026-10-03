@@ -12,6 +12,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useOverlayOpen } from '@/components/ui/overlay-lock';
 import { useHeaderPreference } from '@/lib/header-preference';
+import { useHeaderSuppressed } from './header-suppress';
 import { NAV_ITEMS } from './nav';
 
 /** Ab hier gilt die Seite nicht mehr als „ganz oben". */
@@ -34,11 +35,17 @@ const TOP_THRESHOLD = 8;
  */
 const DIRECTION_THRESHOLD = 6;
 
-export function useHeaderScroll(): { atTop: boolean; hidden: boolean } {
+export function useHeaderScroll(): {
+  atTop: boolean;
+  hidden: boolean;
+  /** Ein Bildschirm hat sie weggeschickt (`header-suppress.ts`). */
+  suppressed: boolean;
+} {
   const [atTop, setAtTop] = useState(true);
   const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
   const overlay = useOverlayOpen();
+  const suppressed = useHeaderSuppressed();
 
   // Ein Wechsel des Ziels beginnt oben — Next scrollt dorthin zurück. Ohne
   // das bliebe die Leiste auf einer frisch geöffneten Seite weggefahren.
@@ -87,7 +94,10 @@ export function useHeaderScroll(): { atTop: boolean; hidden: boolean } {
   // Liegt ein Sheet darüber, bleibt sie stehen. `lockOverlay` friert den
   // Hintergrund ohnehin ein; ohne diese Zeile bliebe sie in dem Zustand
   // hängen, in dem sie beim Öffnen gerade war — meistens weggefahren.
-  return { atTop, hidden: hidden && !overlay };
+  //
+  // Die Bitte eines Bildschirms sticht beides: Im Suchmodus soll sie auch dann
+  // weg sein, wenn darüber gerade ein Sheet liegt.
+  return { atTop, hidden: (hidden && !overlay) || suppressed, suppressed };
 }
 
 /**

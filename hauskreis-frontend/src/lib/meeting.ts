@@ -267,6 +267,24 @@ export interface MeetingRoleSlot {
  * Der Kern ist der Unterschied zwischen *fehlt* und *gibt es hier nicht*: ein
  * Geburtstagsabend ohne Thema ist nicht offen, er hat keins.
  */
+/**
+ * Die Reihenfolge der Rollen an einem Abend — für die Zeilen am Termin wie für
+ * die Spalten der Planung.
+ *
+ * Musik vor Testimony: die Musik wird an fast jedem Abend zugeteilt, ein
+ * Testimony nur einmal im Monat. Was öfter gebraucht wird, steht näher am
+ * Datum. **Sie steht hier und nicht in der Tabelle**, weil die Tabelle ihre
+ * Überschriften einmal selbst aufzählte: Als die Snacks dazukamen, bekamen die
+ * Zeilen eine fünfte Zelle und der Kopf keine fünfte Überschrift.
+ */
+export const MEETING_ROLE_ORDER: readonly MeetingRole[] = [
+  'HOST',
+  'TOPIC',
+  'SONG',
+  'TESTIMONY',
+  'SNACK',
+];
+
 export function meetingRoles(meeting: {
   hostPersonId: string | null;
   host: PersonRef | null;
@@ -280,8 +298,8 @@ export function meetingRoles(meeting: {
   songLeaders: readonly { person: PersonRef }[];
   snackResponsibles: readonly { person: PersonRef }[];
 }): MeetingRoleSlot[] {
-  return [
-    {
+  const slots: Record<MeetingRole, MeetingRoleSlot> = {
+    HOST: {
       role: 'HOST',
       people: meeting.host ? [meeting.host] : [],
       // Einen Gastgeber-Baustein gibt es nicht — man trifft sich immer
@@ -293,27 +311,29 @@ export function meetingRoles(meeting: {
           ? 'not-needed'
           : null,
     },
-    {
+    TOPIC: {
       role: 'TOPIC',
       people: meeting.topicResponsibles.map((row) => row.person),
       absent: meeting.hasTopicSlot ? null : 'slot-off',
     },
-    {
+    SONG: {
       role: 'SONG',
       people: meeting.songLeaders.map((row) => row.person),
       absent: meeting.hasSongSlot ? null : 'slot-off',
     },
-    {
+    TESTIMONY: {
       role: 'TESTIMONY',
       people: meeting.testimonyPerson ? [meeting.testimonyPerson] : [],
       absent: meeting.hasTestimonySlot ? null : 'slot-off',
     },
-    {
+    SNACK: {
       role: 'SNACK',
       people: meeting.snackResponsibles.map((row) => row.person),
       absent: meeting.hasSnackSlot ? null : 'slot-off',
     },
-  ];
+  };
+
+  return MEETING_ROLE_ORDER.map((role) => slots[role]);
 }
 
 /** Die Rollen, die es an diesem Abend wirklich gibt. */

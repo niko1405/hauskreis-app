@@ -105,6 +105,9 @@ export function SongSuggestSheet({
       title={chrome.title}
       subtitle={chrome.subtitle}
       footer={chrome.footer}
+      // Nur die Suche steht fest hoch: Die beiden anderen Schritte haben
+      // einen Inhalt, der sich beim Tippen nicht in der Höhe ändert.
+      size={step === 'archiv' ? 'tall' : 'auto'}
     >
       {step === 'root' && (
         <div className="space-y-2">
