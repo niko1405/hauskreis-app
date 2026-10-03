@@ -18,6 +18,7 @@ import {
   AddMeetingSongDto,
   MeetingSongListParamsDto,
   MeetingSongParamsDto,
+  ReorderSetlistDto,
   SetSongLeadersDto,
   UpdateMeetingSongDto,
 } from './dto/song.dto';
@@ -53,8 +54,80 @@ export class MeetingSongController {
 
   @Get('songs')
   @ApiZodResponse(MeetingSongListResponseDto)
-  findAll(@Param() params: MeetingSongListParamsDto) {
-    return this.meetingSongs.findAll(params.hauskreisId, params.meetingId);
+  async findAll(
+    @Param() params: MeetingSongListParamsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    // Wer fragt, für `votedByMe` — die Liste ist sonst für alle dieselbe.
+    const person = await this.people.resolveForUser(user);
+
+    return this.meetingSongs.findAll(
+      params.hauskreisId,
+      params.meetingId,
+      person.id,
+    );
+  }
+
+  /**
+   * Die Reihenfolge der Setlist. Vor `songs/:id`, damit `order` nicht als Id
+   * gelesen wird — die Params prüfen ohnehin auf eine UUID, aber die
+   * Reihenfolge der Routen soll das nicht erst brauchen.
+   */
+  @Put('songs/order')
+  @ApiZodResponse(MeetingSongListResponseDto, {
+    description: 'Die ganze Liste, Setlist in neuer Reihenfolge',
+  })
+  async reorder(
+    @Param() params: MeetingSongListParamsDto,
+    @Body() dto: ReorderSetlistDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const person = await this.people.resolveForUser(user);
+
+    return this.meetingSongs.reorder(
+      params.hauskreisId,
+      params.meetingId,
+      dto,
+      person.id,
+    );
+  }
+
+  @Put('songs/:id/vote')
+  @ApiZodResponse(MeetingSongListResponseDto, {
+    description: 'Die ganze Liste, Vorschläge neu nach Stimmen sortiert',
+  })
+  async vote(
+    @Param() params: MeetingSongParamsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const person = await this.people.resolveForUser(user);
+
+    return this.meetingSongs.setVote(
+      params.hauskreisId,
+      params.meetingId,
+      params.id,
+      person.id,
+      true,
+    );
+  }
+
+  @Delete('songs/:id/vote')
+  @ApiZodResponse(MeetingSongListResponseDto, {
+    description: 'Die ganze Liste, Vorschläge neu nach Stimmen sortiert',
+  })
+  async unvote(
+    @Param() params: MeetingSongParamsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const person = await this.people.resolveForUser(user);
+
+    return this.meetingSongs.setVote(
+      params.hauskreisId,
+      params.meetingId,
+      params.id,
+      person.id,
+      false,
+    );
   }
 
   /** Takes either `{ songId }` or a new song's `{ title, artist?, lyricsUrl? }`. */
@@ -99,11 +172,18 @@ export class MeetingSongController {
   @Delete('songs/:id')
   @ApiZodNoContent()
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param() params: MeetingSongParamsDto) {
+  async remove(
+    @Param() params: MeetingSongParamsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    // Ein Lied aus der Setlist nimmt nur heraus, wer es hineinstellen darf.
+    const person = await this.people.resolveForUser(user);
+
     return this.meetingSongs.remove(
       params.hauskreisId,
       params.meetingId,
       params.id,
+      person.id,
     );
   }
 

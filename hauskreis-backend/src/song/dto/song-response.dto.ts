@@ -45,6 +45,13 @@ export const songWithFactsSchema = songResponseSchema.extend({
 export const meetingSongResponseSchema = z.object({
   id: z.uuid(),
   isSelected: z.boolean(),
+  /// Der Platz in der Setlist, ab 1 — `null` für einen Vorschlag.
+  position: z.int().nullable(),
+  /// Wie viele dafür gestimmt haben, und ob du dabei bist. Wer die anderen
+  /// sind, steht nicht drin: Gefragt ist „wie sehr wollen wir das", nicht
+  /// „wer will es".
+  votes: z.int(),
+  votedByMe: z.boolean(),
   createdAt: isoDateTimeOut,
   song: z.object({
     id: z.uuid(),

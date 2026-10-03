@@ -347,6 +347,7 @@ model Person {
   giftIdeasFor            GiftIdea[]                @relation("GiftIdeaFor")
   giftIdeasProposed       GiftIdea[]                @relation("GiftIdeaBy")
   giftIdeaVotes           GiftIdeaVote[]            @relation("GiftIdeaVoter")
+  songVotes               MeetingSongVote[]         @relation("MeetingSongVoter")
   groupIdeas              GroupIdea[]               @relation("GroupIdeaBy")
   groupIdeasDone          GroupIdea[]               @relation("GroupIdeaDoneBy")
   giftPairingFor          BirthdayGiftPairing[]     @relation("GiftPairingFor")
@@ -873,16 +874,39 @@ model MeetingSong {
   songId              String   @map("song_id") @db.Uuid
   suggestedByPersonId String?  @map("suggested_by_person_id") @db.Uuid
   isSelected          Boolean  @default(false) @map("is_selected")
+  /// Der Platz in der Setlist, ab 1. Nur bei `isSelected` gesetzt: Ein
+  /// Vorschlag hat keinen Platz, er hat Stimmen. Wird ein Lied aus der Setlist
+  /// genommen, fällt er weg und das Lied ist wieder ein Vorschlag.
+  position            Int?
   createdAt           DateTime @default(now()) @map("created_at")
 
-  meeting     Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  song        Song    @relation(fields: [songId], references: [id], onDelete: Cascade)
-  suggestedBy Person? @relation("SongSuggester", fields: [suggestedByPersonId], references: [id], onDelete: SetNull)
+  meeting     Meeting           @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  song        Song              @relation(fields: [songId], references: [id], onDelete: Cascade)
+  suggestedBy Person?           @relation("SongSuggester", fields: [suggestedByPersonId], references: [id], onDelete: SetNull)
+  votes       MeetingSongVote[]
 
   /// One entry per song per evening — suggesting it twice is the same wish.
   @@unique([meetingId, songId])
   @@index([songId])
   @@map("meeting_song")
+}
+
+/// Eine Stimme für einen Liedvorschlag — „das würde ich gern singen".
+///
+/// Gebaut wie `GiftIdeaVote`: eine Zeile je Person und Vorschlag, der
+/// Primärschlüssel ist die Entdopplung. Eine Zahl am Vorschlag wüsste nicht,
+/// wer schon gestimmt hat, und ließe sich zweimal hochzählen.
+model MeetingSongVote {
+  meetingSongId String   @map("meeting_song_id") @db.Uuid
+  personId      String   @map("person_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  meetingSong MeetingSong @relation(fields: [meetingSongId], references: [id], onDelete: Cascade)
+  person      Person      @relation("MeetingSongVoter", fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([meetingSongId, personId])
+  @@index([personId])
+  @@map("meeting_song_vote")
 }
 
 /// Wann der Hauskreis regelmäßig zusammenkommt — Wochentag und Uhrzeit.

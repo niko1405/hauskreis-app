@@ -477,9 +477,9 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
   {
     id: 'songs-abhaken',
     category: 'songs',
-    question: 'Warum kann ich die Lieder nicht abhaken?',
+    question: 'Warum kann ich die Setlist nicht ändern?',
     answer:
-      '**Vor dem Abend darf nur abhaken, wer an dem Abend die Musik macht.** Das Abhaken ist da noch eine Entscheidung — „das singen wir" — und die trifft, wer die Lieder üben muss.\n\n**Ist der Abend vorbei, darf es jede:r.** Dann ist es ein Protokoll: „das haben wir gesungen", und daran erinnern sich alle gleich gut.\n\nZwei Dinge sind hier bewusst anders als sonst in der App: Es gibt **keinen Admin-Freifahrtschein**, und „niemand ist zugeteilt" heißt **nicht** „alle dürfen". Ist niemand eingetragen, darf vor dem Abend niemand abhaken — dann trägt sich erst jemand ein.',
+      '**Vor dem Abend macht die Setlist, wer an dem Abend die Musik macht** — Lieder übernehmen, die Reihenfolge ziehen, etwas herausnehmen. Die Setlist ist da noch eine Entscheidung — „das singen wir" — und die trifft, wer die Lieder üben muss. Du erkennst es an den Nummern: gefüllt heißt, du darfst sie ändern.\n\n**Ist der Abend vorbei, darf es jede:r.** Dann ist es ein Protokoll: „das haben wir gesungen", und daran erinnern sich alle gleich gut.\n\n**Bearbeiten darf trotzdem jede:r**: Wisch ein Lied nach links und tipp auf den Stift, etwa um einen kaputten Link zu reparieren. Der Link gehört dem Lied und gilt danach überall.\n\nZwei Dinge sind hier bewusst anders als sonst in der App: Es gibt **keinen Admin-Freifahrtschein**, und „niemand ist zugeteilt" heißt **nicht** „alle dürfen". Ist niemand eingetragen, darf vor dem Abend niemand die Setlist ändern — dann trägt sich erst jemand ein.',
     keywords: ['haken', 'auswählen', 'gesperrt', 'grau', 'darf nicht'],
   },
   {
@@ -487,7 +487,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'songs',
     question: 'Wie schlage ich ein Lied für einen Abend vor?',
     answer:
-      'Auf der Terminseite unter „Lieder". Du kannst eines aus der Datenbank suchen oder ein neues eintragen — dann landet es gleich in der Datenbank und steht beim nächsten Mal zur Auswahl.\n\nVorschlagen darf jede:r, unabhängig davon, wer die Musik macht. Was davon gesungen wird, hakt die Musik ab.\n\nDenselben Song zweimal vorzuschlagen macht keinen zweiten Eintrag — es ist derselbe Wunsch.',
+      'Auf der Terminseite unter „Lieder". Du kannst eines aus der Datenbank suchen oder ein neues eintragen — dann landet es gleich in der Datenbank und steht beim nächsten Mal zur Auswahl.\n\nVorschlagen darf jede:r, unabhängig davon, wer die Musik macht. Was davon gesungen wird, übernimmt das Musik-Team in die Setlist.\n\n**Mit dem Pfeil stimmst du für einen Vorschlag**, ein zweiter Tipp nimmt die Stimme zurück. Die Vorschläge stehen nach Stimmen sortiert — so sieht das Musik-Team, was die anderen gern singen würden.\n\nDenselben Song zweimal vorzuschlagen macht keinen zweiten Eintrag — es ist derselbe Wunsch. Einen Vorschlag wieder löschen darf jede:r: nach links wischen.',
     keywords: ['wunsch', 'vorschlag', 'lied', 'song', 'eintragen'],
   },
   {

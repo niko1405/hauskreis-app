@@ -10,29 +10,49 @@
  * Der Songtext wird nicht gespeichert, nur verlinkt (CLAUDE.md §6) — der Link
  * darf auf ein Akkordblatt zeigen, deshalb heißt das Feld nicht „Songtext".
  */
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import { ConflictBanner } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
-import { useCreateSong, useSong, useUpdateSong } from '@/lib/api/hooks';
+import { useCreateSong, useHk, useSong, useUpdateSong } from '@/lib/api/hooks';
 import type { SongListItem } from '@/lib/api/types';
 import { OpenLinkButton } from './lyrics-link';
 import { SongAiAssist } from './song-ai-assist';
+
+/**
+ * Was zum Bearbeiten reicht: ein Eintrag aus der Liederliste oder das Lied an
+ * einem Termin. Den ETag lädt `EditSong` ohnehin selbst nach; nur die Liste
+ * im Archiv weiß, wie oft das Lied schon gesungen wurde.
+ */
+type EditableSong = Pick<
+  SongListItem,
+  'id' | 'title' | 'artist' | 'lyricsUrl'
+> & {
+  timesPlayed?: number;
+};
 
 export function SongSheet({
   open,
   onClose,
   song,
+  meetingId,
 }: {
   open: boolean;
   onClose: () => void;
   /** Gesetzt heißt: bearbeiten statt anlegen. */
-  song?: SongListItem;
+  song?: EditableSong;
+  /**
+   * Der Termin, an dem bearbeitet wird. Seine Liederliste hat einen eigenen
+   * Zwischenspeicher, und ohne den Hinweis stünde dort nach dem Speichern
+   * weiter der kaputte Link, den man gerade repariert hat.
+   */
+  meetingId?: string;
 }) {
   return song ? (
-    <EditSong open={open} onClose={onClose} song={song} />
+    <EditSong open={open} onClose={onClose} song={song} meetingId={meetingId} />
   ) : (
     <CreateSong open={open} onClose={onClose} />
   );
@@ -170,11 +190,15 @@ function EditSong({
   open,
   onClose,
   song,
+  meetingId,
 }: {
   open: boolean;
   onClose: () => void;
-  song: SongListItem;
+  song: EditableSong;
+  meetingId?: string;
 }) {
+  const queryClient = useQueryClient();
+  const { keys } = useHk();
   // Schreiben verlangt einen ETag, und der liegt beim geladenen Einzelstand —
   // die Liste aus dem Archiv bringt keinen mit.
   const resource = useSong(song.id);
@@ -202,9 +226,11 @@ function EditSong({
       onClose={onClose}
       title="Lied bearbeiten"
       subtitle={
-        song.timesPlayed > 0
+        song.timesPlayed !== undefined && song.timesPlayed > 0
           ? `${song.timesPlayed}× gesungen — die Änderung gilt auch für diese Abende.`
-          : undefined
+          : meetingId
+            ? 'Die Änderung gilt überall, wo das Lied steht.'
+            : undefined
       }
       footer={
         <div className="flex gap-2">
@@ -224,6 +250,11 @@ function EditSong({
                 },
                 {
                   onSuccess: () => {
+                    if (meetingId) {
+                      void queryClient.invalidateQueries({
+                        queryKey: keys.meetings.songs(meetingId),
+                      });
+                    }
                     toast.success('Gespeichert.');
                     onClose();
                   },

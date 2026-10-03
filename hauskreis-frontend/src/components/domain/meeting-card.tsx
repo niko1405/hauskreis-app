@@ -13,9 +13,9 @@ import { cn } from '@/lib/cn';
 import { formatDayRange, formatRelativeDay } from '@/lib/date';
 import {
   attendanceCounts,
-  isMeetingPast,
   meetingHeadline,
   meetingKindLabel,
+  meetingPhase,
 } from '@/lib/meeting';
 import { useMe, usePeople } from '@/lib/api/hooks';
 import type { AttendanceStatus, MeetingListItem } from '@/lib/api/types';
@@ -40,7 +40,10 @@ export function MeetingCard({
   const [noteFor, setNoteFor] = useState<AttendanceStatus | null>(null);
 
   const cancelled = meeting.status === 'CANCELLED';
-  const past = isMeetingPast(meeting);
+  const phase = meetingPhase(meeting);
+  const past = phase === 'past';
+  // Abgesagt läuft nichts — auch wenn die Uhr es sagen würde.
+  const running = phase === 'running' && !cancelled;
   const counts = attendanceCounts(people.data ?? [], meeting.attendances);
   // An einem kommenden Abend die Menge, mit der geplant wird (Zusagen plus
   // Unentschiedene); an einem vergangenen oder abgesagten nur, wer da war.
@@ -68,6 +71,10 @@ export function MeetingCard({
           // ist, sagen die Überschrift und die Chips darunter — und eine
           // getönte Karte in einer Liste sah aus, als sei sie hervorgehoben.
           'border-line bg-card',
+          // Dieselbe Tönung wie „Aktueller Termin" auf „Heute": Grün ist die
+          // Farbe von „gilt gerade". In einer Liste über Wochen ist der Abend,
+          // an dem man sitzt, der eine, den man sofort finden will.
+          running && 'border-success-line bg-success-bg/30',
           cancelled && 'opacity-60',
         )}
       >
@@ -97,6 +104,7 @@ export function MeetingCard({
                     {formatRelativeDay(meeting.date)}
                   </span>
                 )}
+                {running && <Badge variant="success">Läuft</Badge>}
                 {cancelled && <Badge variant="alert">Abgesagt</Badge>}
               </div>
 

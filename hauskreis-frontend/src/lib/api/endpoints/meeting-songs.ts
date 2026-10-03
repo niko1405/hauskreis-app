@@ -56,6 +56,37 @@ export function setMeetingSongSelected(
   ).then((r) => r.data);
 }
 
+/**
+ * Die ganze Setlist in neuer Reihenfolge. Der Server lehnt eine Liste ab, die
+ * nicht genau die Setlist ist — hat inzwischen jemand ein Lied dazugenommen,
+ * kommt ein Fehler statt einer Reihenfolge, die keiner gewählt hat.
+ */
+export function reorderSetlist(
+  hauskreisId: string,
+  meetingId: string,
+  meetingSongIds: string[],
+): Promise<MeetingSong[]> {
+  return apiPut<MeetingSong[]>(
+    `${base(hauskreisId, meetingId)}/songs/order`,
+    { meetingSongIds },
+    UNCONDITIONAL,
+  ).then((r) => r.data);
+}
+
+/** Eine Stimme für einen Vorschlag — oder ihre Rücknahme. */
+export function voteMeetingSong(
+  hauskreisId: string,
+  meetingId: string,
+  meetingSongId: string,
+  voted: boolean,
+): Promise<MeetingSong[]> {
+  const path = `${base(hauskreisId, meetingId)}/songs/${meetingSongId}/vote`;
+
+  return voted
+    ? apiPut<MeetingSong[]>(path, {}, UNCONDITIONAL).then((r) => r.data)
+    : apiDelete<MeetingSong[]>(path);
+}
+
 export function removeMeetingSong(
   hauskreisId: string,
   meetingId: string,

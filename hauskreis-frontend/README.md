@@ -1070,6 +1070,32 @@ musste selbst darauf kommen, dass noch nichts gewählt ist. Was an ihrer Stelle
 steht, hängt daran, wer liest — für das Musik-Team eine Aufforderung, für alle
 anderen eine Auskunft.
 
+**Zwei Karten, zwei Ordnungen.** Die Setlist hat eine **Reihenfolge**, die
+das Musik-Team macht (`meeting_song.position`), die Vorschläge haben
+**Stimmen**, nach denen sie stehen (`meeting_song_vote`). Beides in einer Karte
+sah aus wie eine Liste mit einem Bruch in der Mitte. Die Setlist trägt einen
+terracotta Schein, weil sie die Antwort auf die Frage ist, mit der man kommt.
+
+- **Gezogen wird nur am Griff** (`Reorder` aus `motion/react`,
+  `dragListener={false}` plus `useDragControls`). Die Zeile wischt schon nach
+  links, und zwei Gesten auf derselben Fläche bräuchten eine Regel, welche
+  gewinnt — dieselbe Überlegung wie am Sheet. Der Griff hört **nativ** auf
+  `pointerdown` und hält das Ereignis an: Die Wisch-Zeile darüber hört
+  ebenfalls nativ zu und bekäme den Druck sonst vor React mit.
+- **Gespeichert wird beim Loslassen**, einmal je Zug — die ganze Setlist, damit
+  der Server ablehnen kann, wenn inzwischen jemand ein Lied dazugenommen hat.
+  Optimistisch, sonst spränge die Zeile bis zur Antwort an den alten Platz.
+- **Herausnehmen heißt zurück zu den Vorschlägen**, samt Stimmen. Am Rechner
+  über ein Minus, das beim Überfahren der Nummer erscheint — nur mit einem
+  Zeiger, der schweben kann (`@media (hover: hover)`), sonst würde ein
+  Antippen schon entfernen. Auf dem Telefon über den Wisch.
+- **Bearbeiten darf jede:r**, an beiden Karten: Gemeint ist der kaputte Link,
+  den irgendwer beim Üben bemerkt. `SongSheet` nimmt dafür ein Lied vom Termin
+  entgegen und lädt danach die Liederliste des Termins neu — sie hat ihren
+  eigenen Zwischenspeicher.
+- **Die Stimmen-Pille** ist gefüllt, wenn die eigene Stimme dabei ist. Am
+  vergangenen Abend bleibt nur die Zahl, ohne Knopf.
+
 **Das Gewählte ist terracotta.** „Im Set" ist eine **Auswahl**, und Auswahl ist
 überall terracotta: der aktive Tab, der gewählte Chip, der erste Platz einer
 Rangliste. Es war einmal grün, in der Farbe, die damals der Musik-Rolle
