@@ -600,28 +600,35 @@ und acht davon einzeln zu laden, nur um acht Haken setzen zu können, wäre die
 falsche Antwort darauf. Der ETag ist bei dieser App ohnehin kein Hash, sondern
 die Fassungsnummer.
 
-### Das Bild groß, aber nur wo es etwas zeigt
+### Das Bild groß, überall wo es frei ist
 
-`components/ui/avatar.tsx` kennt eine Prop `zoomable`. Antippen öffnet ein
-`Sheet` mit demselben Bild in voller Breite — es liegt ohnehin schon da
-(`usePersonPhoto`, Data-URL, `staleTime: Infinity`), und der Server kennt gar
-keine zweite Größe: eine Datei, 512×512, WebP.
+`components/ui/avatar.tsx` kennt eine Prop `zoomable`, **voreingestellt an**.
+Antippen öffnet ein `Sheet` mit demselben Bild in voller Breite — es liegt
+ohnehin schon da (`usePersonPhoto`, Data-URL, `staleTime: Infinity`), und der
+Server kennt gar keine zweite Größe: eine Datei, 512×512, WebP.
 
-Gesetzt ist sie da, wo ein Bild **neben einem Namen für sich steht**: in der
-Mitgliederliste und auf dem Gebets-Bildschirm bei „Du betest für" / „Für dich
-betet". Genau dort will man wissen, wer das ist.
+Es war einmal nur an zwei Stellen gesetzt, in der Mitgliederliste und bei „Du
+betest für". Wer ein Gesicht sah, konnte aber nicht wissen, an welchen beiden —
+ein Bild, das sich hier öffnen lässt und dort nicht, liest sich als Fehler.
+Deshalb jetzt überall, und `zoomable={false}` nur, **wo die Fläche schon eine
+Aktion hat**: Terminkarte und Geburtstagskarte (Links), die Buddy-Karte auf
+„Heute", die Zellen der Planung, das eigene Bild im Profil (öffnet die
+Dateiauswahl) und die Auswahllisten in den Sheets. Dort wäre der Avatar ein
+Knopf im Knopf, und der Tipp gehört der Aktion. `AvatarStack` reicht die Prop
+durch.
 
-Zwei Einschränkungen sind Absicht. **Ohne Bild ist der Avatar kein Knopf** — ein
-Fenster, das zwei Buchstaben vergrößert, zeigt nichts, was die Zeile nicht schon
-zeigt. Und **nicht überall**: In einer Rollen-Pille ist der Avatar die
-Beschriftung eines Namens und kein Bild; in der Gruppenübersicht des
-Gebets-Bildschirms überlappen sich `xs`-Avatare zu einer Kette, die als Tippziel
-zu klein wäre; und die Buddy-Karte auf „Heute" ist ganz ein Link nach `/gebet` —
-ein zweites Ziel darin wäre eines zu viel.
+Drei Dinge sind daran Absicht:
 
-Groß steht es **quadratisch** da (`rounded-card`), nicht rund. Gespeichert ist
-ein quadratischer Zuschnitt (`AVATAR_CROP`); in klein ist die runde Form
-Schmuck, in groß wäre sie ein zweiter Beschnitt.
+- **Ohne Bild ist der Avatar kein Knopf** — ein Fenster, das zwei Buchstaben
+  vergrößert, zeigt nichts, was die Zeile nicht schon zeigt.
+- **Das Sheet hängt an `document.body`** (`createPortal`). `Sheet` rendert
+  sonst ohne Portal, und ein Avatar in einem Vorfahren mit `transform` — eine
+  gedrückte Karte, eine wischbare Zeile — machte diesen zum Bezugsrahmen für
+  `position: fixed`. Erzeugt wird es erst beim ersten Öffnen: vorher braucht
+  es niemand, und auf dem Server gibt es kein `document`.
+- Groß steht es **quadratisch** da (`rounded-card`), nicht rund. Gespeichert ist
+  ein quadratischer Zuschnitt (`AVATAR_CROP`); in klein ist die runde Form
+  Schmuck, in groß wäre sie ein zweiter Beschnitt.
 
 ## Der Startbildschirm
 
@@ -664,10 +671,13 @@ des Abends antwortet, tut es auf der oberen.
 
 **Die Begrüßung wechselt.** „Hallo Niko! Schön, dass du da bist." stand dort
 jeden Tag, und einen Satz, den man jeden Tag liest, liest man irgendwann nicht
-mehr. `features/home/greeting.ts` hält eine Handvoll — hochdeutsch,
-österreichisch, schwäbisch, fränkisch —, jede in drei Tageszeiten.
+mehr. `features/home/greeting.ts` wählt aus **fünf Grüßen, ohne Mundart**:
+„Hallo" und „Servus" passen immer, „Guten Morgen" (bis 10:30), „Mahlzeit"
+(11:30–14:00) und „Guten Abend" (ab 17:00) nur zu ihrer Tageszeit. Es gab
+einmal Schwäbisch, Fränkisch und Österreichisch daneben — übrig sind die Grüße,
+die tatsächlich fallen.
 
-Welche es ist, kommt aus `hash(tag + personId)`, nicht aus `Math.random`: sie
+Welcher es ist, kommt aus `hash(tag + personId)`, nicht aus `Math.random`: er
 soll pro Tag feststehen und nicht bei jeder Query-Aktualisierung unter dem
 Daumen wegspringen. Die Personen-Id geht mit ein, damit nicht alle neun am
 selben Tag denselben Satz lesen. Tag und Uhrzeit kommen aus `groupNow()` —
@@ -1001,7 +1011,7 @@ hatte:
 | Was am Modus hing        | Wo es jetzt steht                                          |
 | ------------------------ | ---------------------------------------------------------- |
 | Titel, Uhrzeit, Infos    | `MeetingEditSheet`, hinter „Bearbeiten" oben rechts        |
-| Bausteine                | `SlotCard`, immer da und zugeklappt, mit Zähler im Kopf    |
+| Bausteine                | im Bearbeiten-Sheet, gespeichert mit „Speichern"           |
 | eigenes Gebetsanliegen   | Stift und „entfernen" am eigenen Kasten, ohne Vorbedingung |
 | Löschen eines Vorschlags | `SwipeActions`, wie an jeder anderen Liste der App         |
 | Nachbereitung            | `notesOpen` — ein Merker für „gerade angelegt, noch leer"  |

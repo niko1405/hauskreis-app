@@ -2,87 +2,43 @@
  * Die Begrüßung auf dem Startbildschirm.
  *
  * „Hallo Niko! Schön, dass du da bist." stand dort jeden Tag, und ein Satz, den
- * man jeden Tag liest, liest man irgendwann nicht mehr. Also mehrere — und
- * nicht nur auf Hochdeutsch: die Gruppe redet nicht wie eine Bedienungsanleitung.
+ * man jeden Tag liest, liest man irgendwann nicht mehr. Also mehrere.
  *
- * Der Ton soll warm klingen und nicht wie eine Parodie. Kurze, gebräuchliche
- * Grüße, wie sie tatsächlich fallen, keine ausbuchstabierte Mundart.
+ * **Fünf Grüße und keine Mundart.** Hier standen einmal Schwäbisch, Fränkisch
+ * und Österreichisch daneben, ausbuchstabiert bis zum Apostroph. Übrig sind
+ * die Grüße, die tatsächlich fallen: „Hallo" und „Servus" zu jeder Zeit, dazu
+ * je einer, der zur Tageszeit gehört — „Guten Morgen", „Mahlzeit", „Guten
+ * Abend". Wer mittags „Guten Morgen" liest, fühlt sich ertappt; wer abends
+ * „Mahlzeit" liest, wundert sich. Deshalb hängt der eigene Gruß an der Uhr,
+ * und dazwischen bleibt es bei den beiden, die immer passen.
  *
  * Reine Daten und eine reine Funktion, kein React: die Auswahl hängt an Tag,
  * Uhrzeit und Person, an sonst nichts.
  */
 import type { CalendarDay } from '@/lib/date';
 
-type Daytime = 'morgen' | 'tag' | 'abend';
-
-interface Greeting {
-  /** Nur zur Orientierung beim Lesen der Liste. */
-  ton: 'hochdeutsch' | 'österreichisch' | 'schwäbisch' | 'fränkisch';
-  /** Enthält `{name}` — der Vorname wird eingesetzt. */
-  hallo: Record<Daytime, string>;
-  zeile: string;
-}
-
-const GREETINGS: Greeting[] = [
-  {
-    ton: 'hochdeutsch',
-    hallo: {
-      morgen: 'Guten Morgen, {name}!',
-      tag: 'Hallo {name}!',
-      abend: 'Schönen Abend, {name}!',
-    },
-    zeile: 'Schön, dass du da bist. Das steht bei dir an.',
-  },
-  {
-    ton: 'hochdeutsch',
-    hallo: {
-      morgen: 'Moin {name}!',
-      tag: 'Hey {name}!',
-      abend: 'N’Abend, {name}!',
-    },
-    zeile: 'Das hast du diese Woche vor dir.',
-  },
-  {
-    ton: 'österreichisch',
-    hallo: {
-      morgen: 'Guat’n Morgn, {name}!',
-      tag: 'Servus {name}!',
-      abend: 'Schön’n Obend, {name}!',
-    },
-    zeile: 'Fein, dass du da bist. Des steht bei dir an.',
-  },
-  {
-    ton: 'schwäbisch',
-    hallo: {
-      morgen: 'Guada Morga, {name}!',
-      tag: 'Grüß di, {name}!',
-      abend: 'N’Obed, {name}!',
-    },
-    zeile: 'Schee, dass d’ do bisch. Des isch dei Wochaprogramm.',
-  },
-  {
-    ton: 'fränkisch',
-    hallo: {
-      morgen: 'Guudn Morgn, {name}!',
-      tag: 'Servusla, {name}!',
-      abend: 'Guudn Ohmd, {name}!',
-    },
-    zeile: 'Schee, dassd du do bist. Des schdehd bei dir o.',
-  },
-];
+/** Enthält `{name}` — der Vorname wird eingesetzt. */
+const ALWAYS = ['Hallo {name}!', 'Servus {name}!'];
 
 /**
- * Die Tageszeit, grob und großzügig geschnitten.
+ * Der Gruß, der nur zu einer Tageszeit passt — oder keiner.
  *
  * Halb elf statt zwölf für das Ende des Morgens: „Guten Morgen" um 11:45 klingt
- * nach Vorwurf. Und ab fünf ist Abend, weil die Gruppe sich um sechs trifft —
- * wer kurz vorher hereinschaut, ist auf dem Weg dorthin.
+ * nach Vorwurf. „Mahlzeit" gilt um die Mittagspause, nicht den ganzen Tag.
+ * Und ab fünf ist Abend, weil die Gruppe sich um sechs trifft — wer kurz
+ * vorher hereinschaut, ist auf dem Weg dorthin.
  */
-function daytimeOf(minutes: number): Daytime {
-  if (minutes < 10 * 60 + 30) return 'morgen';
-  if (minutes < 17 * 60) return 'tag';
-  return 'abend';
+function daytimeGreeting(minutes: number): string | null {
+  if (minutes < 10 * 60 + 30) return 'Guten Morgen, {name}!';
+  if (minutes >= 11 * 60 + 30 && minutes < 14 * 60) return 'Mahlzeit, {name}!';
+  if (minutes >= 17 * 60) return 'Guten Abend, {name}!';
+  return null;
 }
+
+const LINES = [
+  'Schön, dass du da bist. Das steht bei dir an.',
+  'Das hast du diese Woche vor dir.',
+];
 
 /**
  * Ein kleiner, stabiler Hash (djb2).
@@ -105,7 +61,9 @@ function hash(text: string): number {
  * Welche Begrüßung heute dransteht.
  *
  * `seed` ist die eigene Personen-Id: sonst läsen alle neun am selben Tag
- * denselben Satz, und aus der Abwechslung würde ein Kalenderblatt.
+ * denselben Satz, und aus der Abwechslung würde ein Kalenderblatt. Innerhalb
+ * eines Tages wechselt der Gruß nur mit der Tageszeit — aus „Guten Morgen"
+ * wird mittags „Mahlzeit" oder eben „Hallo".
  */
 export function greetingOf(
   day: CalendarDay,
@@ -113,10 +71,12 @@ export function greetingOf(
   seed: string,
   name: string,
 ): { hallo: string; zeile: string } {
-  const greeting = GREETINGS[hash(day + seed) % GREETINGS.length] as Greeting;
+  const own = daytimeGreeting(minutes);
+  const choices = own ? [own, ...ALWAYS] : ALWAYS;
+  const pick = hash(day + seed);
 
   return {
-    hallo: greeting.hallo[daytimeOf(minutes)].replace('{name}', name),
-    zeile: greeting.zeile,
+    hallo: (choices[pick % choices.length] as string).replace('{name}', name),
+    zeile: LINES[pick % LINES.length] as string,
   };
 }

@@ -44,7 +44,7 @@ export function BirthdayCard({
         )}
       >
         <div className="flex items-center gap-3">
-          <Avatar person={occasion.person} size="md" />
+          <Avatar person={occasion.person} size="md" zoomable={false} />
 
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold text-stone-800">
@@ -88,7 +88,7 @@ function Duty({ occasion }: { occasion: BirthdayOccasion }) {
 
   return (
     <span className="flex items-center gap-1.5 text-[11px] text-stone-500">
-      <Avatar person={occasion.responsible} size="xs" />
+      <Avatar person={occasion.responsible} size="xs" zoomable={false} />
       <span className="font-semibold text-stone-700">
         {occasion.responsible.name}
       </span>
@@ -178,7 +178,7 @@ export function MyDutyCard({ occasion }: { occasion: BirthdayOccasion }) {
         )}
       >
         <div className="flex items-center gap-3">
-          <Avatar person={occasion.person} size="md" />
+          <Avatar person={occasion.person} size="md" zoomable={false} />
 
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold text-stone-800">

@@ -190,6 +190,7 @@ export function SuggestionRow({
           {suggestion.rank}
         </span>
         <Avatar
+          zoomable={false}
           person={{
             id: suggestion.personId,
             name: suggestion.name,

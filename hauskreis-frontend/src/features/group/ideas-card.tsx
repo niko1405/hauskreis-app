@@ -13,18 +13,18 @@
  * Abhaken und Umformulieren sagen etwas über die Welt („haben wir gemacht",
  * „so war es gemeint"), Löschen etwas über die Liste („das wollten wir nie").
  *
- * **Die Knöpfe liegen hinter einem langen Druck** — dasselbe Idiom wie an der
- * Liederliste im Archiv (`useLongPress`). Der Papierkorb stand vorher dauerhaft
- * neben jedem Eintrag: ein Ziel am Rand einer Liste, durch die man scrollt, und
- * der Daumen fand es zuverlässiger als den Text. Ein Stift daneben hätte das
- * verdoppelt.
+ * **Die Knöpfe liegen hinter einem Wisch nach links** (`SwipeActions`), wie an
+ * der Liederliste im Archiv. Der Papierkorb stand vorher dauerhaft neben jedem
+ * Eintrag: ein Ziel am Rand einer Liste, durch die man scrollt, und der Daumen
+ * fand es zuverlässiger als den Text.
  */
-import { Pencil, Plus, Trash2, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
-import { TextArea, TextInput } from '@/components/ui/field';
+import { Field, TextArea, TextInput } from '@/components/ui/field';
+import { Sheet } from '@/components/ui/sheet';
 import { CardSkeleton } from '@/components/ui/states';
 import { SwipeActions } from '@/components/ui/swipe-actions';
 import { cn } from '@/lib/cn';
@@ -39,7 +39,11 @@ import type { GroupIdea } from '@/lib/api/types';
 
 export function IdeasCard() {
   const ideas = useIdeas();
-  const [adding, setAdding] = useState(false);
+  // Die Idee bleibt beim Schließen stehen, damit das Sheet mit seinem Titel
+  // hinausfährt und nicht mittendrin zu „Neue Idee" wird.
+  const [sheet, setSheet] = useState<{ open: boolean; idea: GroupIdea | null }>(
+    { open: false, idea: null },
+  );
 
   const open = (ideas.data ?? []).filter((idea) => idea.doneAt === null);
   const done = (ideas.data ?? []).filter((idea) => idea.doneAt !== null);
@@ -48,16 +52,15 @@ export function IdeasCard() {
     <section>
       <div className="flex items-center justify-between gap-4">
         <SectionTitle>Ideen &amp; Aktionen</SectionTitle>
-        {!adding && (
-          <IconButton label="Idee hinzufügen" onClick={() => setAdding(true)}>
-            <Plus size={16} />
-          </IconButton>
-        )}
+        <IconButton
+          label="Idee hinzufügen"
+          onClick={() => setSheet({ open: true, idea: null })}
+        >
+          <Plus size={16} />
+        </IconButton>
       </div>
 
       <Card className="space-y-2">
-        {adding && <AddForm onDone={() => setAdding(false)} />}
-
         {ideas.isLoading && <CardSkeleton />}
 
         {!ideas.isLoading && open.length === 0 && done.length === 0 && (
@@ -67,7 +70,11 @@ export function IdeasCard() {
         )}
 
         {open.map((idea) => (
-          <Row key={idea.id} idea={idea} />
+          <Row
+            key={idea.id}
+            idea={idea}
+            onEdit={() => setSheet({ open: true, idea })}
+          />
         ))}
 
         {/* Erledigtes bleibt stehen, aber rückt weg: Es ist Gedächtnis und
@@ -77,108 +84,134 @@ export function IdeasCard() {
           <div className="border-t border-line pt-2" />
         )}
         {done.map((idea) => (
-          <Row key={idea.id} idea={idea} />
+          <Row
+            key={idea.id}
+            idea={idea}
+            onEdit={() => setSheet({ open: true, idea })}
+          />
         ))}
       </Card>
+
+      <IdeaSheet
+        open={sheet.open}
+        idea={sheet.idea}
+        onClose={() => setSheet((current) => ({ ...current, open: false }))}
+      />
     </section>
   );
 }
 
 /**
- * Titel und Notiz — für beide Wege derselbe Rumpf.
+ * Titel und Notiz — anlegen und ändern im selben Sheet.
  *
- * Anlegen und Ändern fragen dasselbe; zwei Formulare wären zwei Meinungen
- * darüber, was eine Idee ausmacht.
+ * Beides stand einmal inline in der Karte: das Anlegen oben, das Ändern an
+ * Stelle der Zeile. Das schob beim Öffnen die Liste darunter weg, und auf dem
+ * Telefon lag das Feld dann hinter der Tastatur. Ein Sheet steht unten fest,
+ * trägt seine Knöpfe außerhalb des Scrollbereichs und sieht aus wie jedes
+ * andere Formular der App.
+ *
+ * **Ein Sheet für beide Wege**: Anlegen und Ändern fragen dasselbe, und zwei
+ * Formulare wären zwei Meinungen darüber, was eine Idee ausmacht.
  */
-function IdeaForm({
-  initial,
-  submitLabel,
-  pending,
-  onSubmit,
-  onCancel,
+function IdeaSheet({
+  open,
+  idea,
+  onClose,
 }: {
-  initial?: GroupIdea;
-  submitLabel: string;
-  pending: boolean;
-  onSubmit: (values: { title: string; note: string | null }) => void;
-  onCancel: () => void;
+  open: boolean;
+  /** Gesetzt heißt: ändern statt anlegen. */
+  idea: GroupIdea | null;
+  onClose: () => void;
 }) {
-  const [title, setTitle] = useState(initial?.title ?? '');
-  const [note, setNote] = useState(initial?.note ?? '');
+  const create = useCreateIdea();
+  const update = useUpdateIdea();
+  const [title, setTitle] = useState('');
+  const [note, setNote] = useState('');
 
-  // Der Fokus über einen Effekt und nicht über `autoFocus` — dieselbe Lösung
-  // wie in `InlineEdit`: Das Attribut greift nur beim allerersten Rendern und
-  // wird zu Recht als Barriere beanstandet. Hier ist es unbedenklich, weil das
-  // Feld erst auf einen Knopfdruck hin entsteht.
-  const input = useRef<HTMLInputElement>(null);
+  // Bei jedem Öffnen frisch: Ein angefangener Titel von vorhin gehört nicht
+  // in die Idee, die man jetzt ändern will.
+  //
+  // An der Id und nicht am Objekt: Lädt die Liste im Hintergrund neu, kommt
+  // dieselbe Idee als neues Objekt — und das überschriebe, was man gerade
+  // tippt.
+  const ideaId = idea?.id;
   useEffect(() => {
-    input.current?.focus();
-  }, []);
+    if (!open) return;
+    setTitle(idea?.title ?? '');
+    setNote(idea?.note ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, ideaId]);
+
+  const pending = create.isPending || update.isPending;
 
   const submit = () => {
     const trimmed = title.trim();
     if (!trimmed) return;
-    onSubmit({ title: trimmed, note: note.trim() === '' ? null : note.trim() });
+    const values = {
+      title: trimmed,
+      note: note.trim() === '' ? null : note.trim(),
+    };
+
+    if (idea) {
+      update.mutate({ idea, input: values }, { onSuccess: onClose });
+    } else {
+      create.mutate(values, { onSuccess: onClose });
+    }
   };
 
   return (
-    <div className="space-y-2 rounded-md border border-line bg-canvas p-3">
-      <TextInput
-        ref={input}
-        value={title}
-        placeholder="Grillabend im Schlosspark"
-        aria-label="Idee"
-        onChange={(event) => setTitle(event.target.value)}
-        // Genug für einen Titel; wer mehr sagen will, nimmt die Notiz.
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') submit();
-          if (event.key === 'Escape') onCancel();
-        }}
-      />
-      <TextArea
-        value={note}
-        placeholder="Notiz (optional)"
-        aria-label="Notiz"
-        className="min-h-16"
-        onChange={(event) => setNote(event.target.value)}
-      />
-      <div className="flex gap-2">
-        <Button
-          size="sm"
-          className="flex-1"
-          disabled={title.trim() === ''}
-          loading={pending}
-          onClick={submit}
-        >
-          {submitLabel}
-        </Button>
-        <IconButton label="Abbrechen" onClick={onCancel}>
-          <X size={16} />
-        </IconButton>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={idea ? 'Idee bearbeiten' : 'Neue Idee'}
+      subtitle={idea ? undefined : 'Was ihr als Gruppe einmal machen wollt.'}
+      footer={
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
+            Abbrechen
+          </Button>
+          <Button
+            className="flex-1"
+            disabled={title.trim() === ''}
+            loading={pending}
+            onClick={submit}
+          >
+            {idea ? 'Speichern' : 'Hinzufügen'}
+          </Button>
+        </div>
+      }
+    >
+      {/* Ohne `autoFocus`, wie bei der Notiz zur Antwort: Die Tastatur
+          schöbe das Sheet sonst hoch, bevor es angekommen ist. */}
+      <div className="space-y-4">
+        <Field label="Titel">
+          <TextInput
+            value={title}
+            placeholder="Grillabend im Schlosspark"
+            onChange={(event) => setTitle(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') submit();
+            }}
+          />
+        </Field>
+        <Field label="Notiz" hint="Optional">
+          <TextArea
+            value={note}
+            rows={3}
+            placeholder="Wann, wo, wer kümmert sich?"
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </Field>
       </div>
-    </div>
+    </Sheet>
   );
 }
 
-function AddForm({ onDone }: { onDone: () => void }) {
-  const create = useCreateIdea();
-
-  return (
-    <IdeaForm
-      submitLabel="Hinzufügen"
-      pending={create.isPending}
-      onCancel={onDone}
-      onSubmit={(values) => create.mutate(values, { onSuccess: onDone })}
-    />
-  );
-}
-
-function Row({ idea }: { idea: GroupIdea }) {
+function Row({ idea, onEdit }: { idea: GroupIdea; onEdit: () => void }) {
   const update = useUpdateIdea();
   const remove = useDeleteIdea();
   const confirm = useConfirm();
   const { me, isAdmin } = useMe();
-  const [editing, setEditing] = useState(false);
 
   const done = idea.doneAt !== null;
   // Dieselbe Regel wie im Server. Sie steht hier ein zweites Mal, weil der
@@ -195,23 +228,6 @@ function Row({ idea }: { idea: GroupIdea }) {
     if (ok) remove.mutate(idea.id);
   };
 
-  if (editing) {
-    return (
-      <IdeaForm
-        initial={idea}
-        submitLabel="Speichern"
-        pending={update.isPending}
-        onCancel={() => setEditing(false)}
-        onSubmit={(values) =>
-          update.mutate(
-            { idea, input: values },
-            { onSuccess: () => setEditing(false) },
-          )
-        }
-      />
-    );
-  }
-
   return (
     <SwipeActions
       className="-mx-2 rounded-md"
@@ -219,7 +235,7 @@ function Row({ idea }: { idea: GroupIdea }) {
         {
           icon: <Pencil size={14} />,
           label: `${idea.title} bearbeiten`,
-          onClick: () => setEditing(true),
+          onClick: onEdit,
         },
         ...(mayDelete
           ? [

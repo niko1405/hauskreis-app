@@ -110,7 +110,7 @@ export function SnackSheet({
                     'hover:bg-canvas',
                   )}
                 >
-                  <Avatar person={person} size="sm" />
+                  <Avatar person={person} size="sm" zoomable={false} />
                   <span className="flex-1 text-sm font-medium text-stone-700">
                     {person.name}
                   </span>

@@ -106,7 +106,12 @@ function BuddyCard({
             : 'h-full transition-colors hover:border-line-strong'
         }
       >
-        <Avatar person={person} size="lg" className={wide ? '' : 'mb-3'} />
+        <Avatar
+          person={person}
+          size="lg"
+          className={wide ? '' : 'mb-3'}
+          zoomable={false}
+        />
         <div className="min-w-0">
           <p className="flex items-center gap-1 text-[10px] font-bold tracking-widest text-stone-400 uppercase">
             {icon}

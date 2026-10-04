@@ -60,6 +60,7 @@ export function PhotoPicker({ person }: { person: Person }) {
         className="group relative block rounded-full"
       >
         <Avatar
+          zoomable={false}
           person={person}
           size="lg"
           className={busy ? 'opacity-50' : ''}

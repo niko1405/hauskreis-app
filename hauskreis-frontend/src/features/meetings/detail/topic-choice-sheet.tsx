@@ -791,7 +791,7 @@ function CreateStep({
           onClick={onPeople}
           className="flex items-center gap-3 rounded-md p-1 transition-colors hover:bg-canvas"
         >
-          <AvatarStack people={responsibles} size="md" />
+          <AvatarStack people={responsibles} size="md" zoomable={false} />
           <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-line-strong text-stone-400">
             <Plus size={16} />
           </span>

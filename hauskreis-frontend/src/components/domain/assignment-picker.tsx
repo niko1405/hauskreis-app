@@ -252,7 +252,7 @@ export function AssignmentPicker({
                     )}
                   >
                     <span className="flex min-w-0 items-center gap-3">
-                      <Avatar person={person} size="sm" />
+                      <Avatar person={person} size="sm" zoomable={false} />
                       <span className="min-w-0 text-left">
                         <span className="flex items-center gap-2">
                           <span className="truncate font-bold text-stone-800">
