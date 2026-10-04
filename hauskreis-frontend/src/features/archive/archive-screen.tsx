@@ -692,7 +692,7 @@ function TopicEntry({ topic }: { topic: TopicListItem }) {
         )}
 
         <div className="mt-3 flex items-center justify-between gap-3 pl-[25px]">
-          <AvatarStack people={leute} size="xs" />
+          <AvatarStack people={leute} size="xs" zoomable={false} />
           <span className="text-[11px] text-stone-400">
             {topic.standalone
               ? einzelne?.meeting

@@ -229,14 +229,10 @@ Dazu kommen die **Bausteine**, die man an- und abschalten kann:
 - **Snacks** — wer etwas zu essen mitbringt. Voreingestellt aus; wer sie an
   jedem erzeugten Termin haben will, hakt das einmal in der Verwaltung an.
 
-Angehakt wird das am Fuß der Termin-Ansicht unter **„Was gehört dazu"**. Der
-Kasten ist zugeklappt und sagt im Kopf, wie viele Bausteine an sind; ein Klick
-auf ein Häkchen wirkt sofort. Nimmst du einen weg, an dem etwas hängt, fragt die
-App vorher nach und sagt, was verlorengeht.
-
-**Titel, Uhrzeit und den Info-Text** ändert der Knopf **„Bearbeiten"** oben
-rechts: ein Formular für alle drei, ein Speichern. Manche Felder darf nur
-ändern, wer die passende Rolle hat.
+Angehakt wird das über den Knopf **„Bearbeiten"** oben rechts am Termin, unter
+**„Was gehört dazu"** — im selben Formular wie **Titel, Uhrzeit und Info-Text**,
+mit einem Speichern für alles. Nimmst du einen Baustein weg, an dem etwas hängt,
+fragt die App beim Speichern nach und sagt, was verlorengeht.
 
 ### 6.4 Die Rollen
 

@@ -62,7 +62,7 @@ export function PeoplePickerSheet({
                   'hover:bg-canvas disabled:opacity-50',
                 )}
               >
-                <Avatar person={person} size="sm" />
+                <Avatar person={person} size="sm" zoomable={false} />
                 <span className="text-sm font-medium text-stone-700">
                   {person.name}
                 </span>

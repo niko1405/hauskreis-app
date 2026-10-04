@@ -353,7 +353,7 @@ function CellButton({
       <span className="flex items-center gap-1">
         {cell.people.map((person) => (
           <span key={person.id} title={person.name}>
-            <Avatar person={person} size="xs" />
+            <Avatar person={person} size="xs" zoomable={false} />
           </span>
         ))}
       </span>
