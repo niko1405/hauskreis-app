@@ -26,11 +26,17 @@
  * trotzdem. Ging es nicht; `assertAvailable` lehnt genau das ab. Beim Host fiel
  * es nie auf, weil es dort gar keine Liste darunter gibt.
  *
- * Übrig bleibt der eine Grund, der wirklich nur ein Vorschlags-Filter ist: **bei
- * Musik, wer kein Instrument spielt.** Die Gruppe darf eintragen, worauf sie
- * sich geeinigt hat, und `setLeaders` fragt nicht nach Instrumenten. Bei Thema
- * und Testimony bleibt danach niemand übrig — dort ist jede:r bewertet, der an
- * dem Abend kann —, und der Abschnitt verschwindet von selbst.
+ * **Wer kein Instrument spielt, steht bei der Musik gar nicht da.** Er stand
+ * einmal darunter, als „Nicht im Ranking" — ein Vorschlags-Filter und keine
+ * Regel, `setLeaders` fragt nicht nach Instrumenten. In der Benutzung war es
+ * eine zweite Liste voller Leute, die für diese Rolle nie in Frage kommen, und
+ * sie sah aus wie die Fortsetzung der ersten. Wer doch die Musik macht, hakt im
+ * Profil „spielt ein Instrument" an. Stehen bleibt nur, wer **schon
+ * eingetragen** ist: sonst ließe er sich nicht mehr austragen.
+ *
+ * Übrig bleibt damit das Testimony, wo darunter steht, wer es schon erzählt
+ * hat. Bei Thema und Musik bleibt meistens niemand übrig, und der Abschnitt
+ * verschwindet von selbst.
  */
 import { X } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
@@ -77,7 +83,9 @@ export type AssignmentKind = Exclude<
 const UNRANKED_HINT: Record<AssignmentKind, string> = {
   HOST: '',
   TOPIC: '',
-  SONG: 'Vorgeschlagen wird nur, wer ein Instrument spielt.',
+  // Die Zeile selbst sagt es („spielt kein Instrument"), und sie steht nur noch
+  // da, wenn jemand schon eingetragen ist.
+  SONG: '',
   TESTIMONY:
     'Sein Testimony erzählt man nur einmal — vorgeschlagen wird deshalb nur, wer noch nicht dran war.',
 };
@@ -122,10 +130,10 @@ export function AssignmentPicker({
    *
    * Bei einem vergangenen Abend gibt es keine Rangliste, dann sind es alle.
    * Beim Host ist es niemand: die Rangliste **ist** dort die vollständige Menge
-   * der gültigen Antworten. Bei der Musik ist es, wer kein Instrument spielt,
-   * beim Testimony, wer es schon erzählt hat — eintragen darf die Gruppe
-   * trotzdem, worauf sie sich geeinigt hat. Beim Thema bleibt niemand übrig,
-   * und der Abschnitt fällt weg.
+   * der gültigen Antworten. Beim Testimony ist es, wer es schon erzählt hat —
+   * eintragen darf die Gruppe trotzdem, worauf sie sich geeinigt hat. Bei der
+   * Musik nur, wer schon eingetragen ist und kein Instrument spielt, beim Thema
+   * niemand; dann fällt der Abschnitt weg.
    *
    * **Eingeladene stehen hier nicht**, auch nicht beim Nachtragen. Der Server
    * lehnt sie ab — eine offene Einladung ist niemand, dem man einen Abend
@@ -164,10 +172,11 @@ export function AssignmentPicker({
           (person) =>
             !rankedIds.has(person.id) &&
             !abgesagt.has(person.id) &&
-            // Der einzige Grund, der bleibt: ein Vorschlags-Filter und keine
-            // Regel. Alles andere, was jemanden aus dem Ranking hält, hält ihn
-            // auch aus der Zuteilung.
-            (kind === 'SONG' ? !person.playsInstrument : true),
+            // Ohne Instrument nicht angeboten — nur, wer schon drinsteht,
+            // bleibt sichtbar, damit er sich austragen lässt.
+            (kind === 'SONG'
+              ? !person.playsInstrument && selectedIds.includes(person.id)
+              : true),
         );
 
   return (
@@ -230,7 +239,7 @@ export function AssignmentPicker({
           <h3 className="mb-1 text-[10px] font-bold tracking-widest text-stone-400 uppercase">
             {withoutSuggestions ? 'Alle Personen' : 'Nicht im Ranking'}
           </h3>
-          {/* Nur wo es etwas zu erklären gibt — bei Musik. Sonst stand hier
+          {/* Nur wo es etwas zu erklären gibt — beim Testimony. Sonst stand hier
               ein leerer Absatz mit Abstand darüber und darunter. */}
           {!withoutSuggestions && UNRANKED_HINT[kind] && (
             <p className="mb-3 text-[11px] leading-relaxed text-stone-400">

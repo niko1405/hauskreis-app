@@ -97,6 +97,29 @@ export function AssignmentSheet({
       onClose={onClose}
       title={ROLE_QUESTION[kind]}
       subtitle={multiple ? 'Mehrere möglich' : undefined}
+      // Im Fuß des Sheets und nicht am Ende der Liste: Bei Musik oder Thema
+      // stehen neun Namen darüber, und wer ganz oben zwei angetippt hat, musste
+      // für den Abschluss erst ans Ende scrollen. Der Fuß bleibt stehen, die
+      // Liste scrollt darüber hinweg.
+      footer={
+        multiple && (
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={onClose}>
+              Abbrechen
+            </Button>
+            <Button
+              className="flex-1"
+              loading={saving}
+              onClick={() => {
+                onSubmit(draft);
+                onClose();
+              }}
+            >
+              Übernehmen
+            </Button>
+          </div>
+        )
+      }
     >
       {hint && (
         <p className="mb-4 flex gap-2 rounded-md border border-info-line bg-info-bg px-3 py-2.5 text-[11px] leading-relaxed text-info">
@@ -114,24 +137,6 @@ export function AssignmentSheet({
         onToggle={toggle}
         onClear={clear}
       />
-
-      {multiple && (
-        <div className="flex gap-2 border-t border-line pt-4">
-          <Button variant="ghost" className="flex-1" onClick={onClose}>
-            Abbrechen
-          </Button>
-          <Button
-            className="flex-1"
-            loading={saving}
-            onClick={() => {
-              onSubmit(draft);
-              onClose();
-            }}
-          >
-            Übernehmen
-          </Button>
-        </div>
-      )}
     </Sheet>
   );
 }

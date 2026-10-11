@@ -73,9 +73,6 @@ export function ArchiveScreen() {
 
   useEffect(() => {
     if (!searching) return;
-    // Nach oben, damit das Feld dort ankommt, wo es stehen bleibt — und nicht
-    // irgendwo in der Mitte klebt, weil man vorher gescrollt hatte.
-    window.scrollTo({ top: 0 });
     return suppressHeader();
   }, [searching]);
 
@@ -117,7 +114,15 @@ export function ArchiveScreen() {
           selten zum Verweilen. */}
       {/* Höhe statt Verschiebung: Ein `transform` am Seiteninhalt würde zum
           Bezugsrahmen der `fixed`-Sheets darin (`pull-to-refresh.tsx`). */}
-      <AnimatePresence initial={false}>
+      {/* Nach oben erst, wenn der Kopf **fertig** eingeklappt ist. Im selben
+          Zug wie das Einklappen gerechnet, stimmte der Sprung nur, solange man
+          ohnehin oben stand: Mit sichtbarer Kopfleiste und etwas gescrollt
+          landete das Feld zu weit oben, weil sich das Layout darunter noch
+          bewegte. Bis dahin hält es `sticky` an seinem Platz. */}
+      <AnimatePresence
+        initial={false}
+        onExitComplete={() => window.scrollTo({ top: 0 })}
+      >
         {!searching && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}

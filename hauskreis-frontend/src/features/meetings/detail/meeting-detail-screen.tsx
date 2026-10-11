@@ -19,9 +19,11 @@
  * sie weiterhin im Backend (`MeetingService.resolveVenue`).
  *
  * **Ein vergangener Abend ist ein eigener Zustand**, nicht ein ausgegrauter
- * kommender. Nachtragen geht, aber mit Rückfrage und ohne Vorschläge; Lieder
- * stehen fest; und „absagen" heißt dort „hat nicht stattgefunden" und schickt
- * niemandem mehr eine Benachrichtigung.
+ * kommender. Er steht zuerst **zum Lesen** da — ohne Stifte, ohne Maps, ohne
+ * Vorschläge —, und erst „Bearbeiten" unten macht ihn wieder zu der Seite, auf
+ * der man nachträgt (`edit-bar.tsx`). Nachtragen geht dann ohne Vorschläge;
+ * und „absagen" heißt dort „hat nicht stattgefunden" und schickt niemandem
+ * mehr eine Benachrichtigung.
  */
 import {
   ArrowLeft,
@@ -78,6 +80,7 @@ import type { MeetingRole } from '@/lib/meeting';
 import type { AssignmentRole, PersonRef } from '@/lib/api/types';
 import { AnswerBar } from './answer-bar';
 import { AttendanceCard } from './attendance-card';
+import { EditBar } from './edit-bar';
 import {
   CancelledNotice,
   CancelMeetingBlock,
@@ -181,13 +184,26 @@ function Loaded({
    * fünf verschiedene Dinge, von „dieses Feld ist beschreibbar" bis „hier darf
    * gelöscht werden".
    *
-   * Übrig bleibt ein gewöhnliches Formular hinter einem gewöhnlichen Knopf.
-   * Alles andere steht jetzt für sich: Die Bausteine tragen ihren eigenen
-   * Aufklapper, das Löschen eines Liedes liegt hinter dem Wisch, mit dem man
+   * Übrig bleibt ein gewöhnliches Formular hinter einem gewöhnlichen Knopf,
+   * und darin stehen inzwischen auch die Bausteine. Alles andere steht für
+   * sich: das Löschen eines Liedes liegt hinter dem Wisch, mit dem man
    * überall in dieser App löscht, und die Textfelder haben ihren Stift ohnehin
    * selbst (`InlineEdit`).
+   *
+   * **Am vergangenen Abend gibt es den Modus wieder** (`editMode`) — dort ist
+   * Bearbeiten der Ausnahmefall, wie auf der Themenseite, und nicht das, wozu
+   * man herkommt. Siehe `edit-bar.tsx`.
    */
   const [editing, setEditing] = useState(false);
+
+  /**
+   * Ob ein vergangener Abend gerade bearbeitet wird — sonst steht er zum Lesen
+   * da (`edit-bar.tsx`).
+   *
+   * Lokal und nicht in der Adresse: Wer die Seite verlässt und wiederkommt,
+   * kommt zum Nachlesen, nicht zum Weiterbearbeiten.
+   */
+  const [editMode, setEditMode] = useState(false);
 
   /**
    * Ob die Nachbereitungs-Karte gerade offensteht, obwohl noch nichts
@@ -238,6 +254,20 @@ function Loaded({
   const locked = past || cancelled;
 
   /**
+   * Die Leseansicht eines vergangenen Abends.
+   *
+   * Weg ist, was nur zum Umbauen da ist: der Formular-Knopf oben, die Stifte an
+   * den Rollen, Maps, Liedvorschläge, ein Thema-Kasten ohne Thema, Absagen und
+   * Löschen. **Die Nachbereitung bleibt offen**, und das ist kein Versehen: Sie
+   * ist das, was man am Morgen danach an einem vergangenen Abend tut, und
+   * dorthin führt die Erinnerung (`NOTES_REMINDER`). Ein Schritt mehr davor
+   * wäre ein Hindernis vor dem Einzigen, das hier noch geschrieben werden soll.
+   * Der eigene Actionstep-Haken bleibt aus demselben Grund: Er ist der eigene
+   * Vorsatz, kein Umbau des Abends.
+   */
+  const reading = past && !editMode;
+
+  /**
    * Welche Rollen dieser Abend hat und wer sie trägt.
    *
    * Aus `meetingRoles` und nicht aus fünf `{slot && <RoleRow …>}` in der
@@ -264,32 +294,10 @@ function Loaded({
     return roles.assignSongLeaders;
   };
 
-  /**
-   * Rückfrage, bevor an einem vergangenen Abend etwas umgetragen wird. Das ist
-   * fast immer ein Fehlgriff aus dem Archiv heraus — und in den seltenen
-   * Fällen, in denen es keiner ist, kostet ein Klick nichts.
-   */
-  const nachtragenErlaubt = async (was: string) => {
-    if (!past) return true;
-
-    return confirm({
-      title: 'Dieser Abend ist vorbei',
-      body: `Möchtest du wirklich nachtragen, ${was}?`,
-      confirmLabel: 'Nachtragen',
-    });
-  };
-
-  const openSheet = async (role: SheetRole) => {
-    const ok = await nachtragenErlaubt(
-      `wer ${ROLE_LABEL[role].toLowerCase()} war`,
-    );
-    if (ok) setSheet(role);
-  };
-
-  const openVenue = async () => {
-    const ok = await nachtragenErlaubt('wo ihr wart');
-    if (ok) setChoosingVenue(true);
-  };
+  // Hier stand einmal eine Rückfrage vor jedem Nachtragen („Dieser Abend ist
+  // vorbei — wirklich nachtragen?"), gegen den Fehlgriff aus dem Archiv. Den
+  // fängt jetzt die Leseansicht ab: Wer einen Stift sieht, hat „Bearbeiten"
+  // gedrückt. Zwei Schranken hintereinander wären eine zu viel.
 
   /**
    * Ein Eingang für fünf Zeilen — jede führt woandershin.
@@ -300,10 +308,10 @@ function Loaded({
    * sie kennt nur ihre Rolle.
    */
   const openRole = (role: MeetingRole) => {
-    if (role === 'HOST') return void openVenue();
-    if (role === 'SNACK') return void setChoosingSnacks(true);
+    if (role === 'HOST') return setChoosingVenue(true);
+    if (role === 'SNACK') return setChoosingSnacks(true);
 
-    return void openSheet(role);
+    return setSheet(role);
   };
 
   /**
@@ -510,13 +518,18 @@ function Loaded({
           {/* **Oben, wo man ankommt** — und nicht mehr als Schalter am
               Seitenende. Er meint Titel, Uhrzeit und Infos zusammen: drei
               Angaben derselben Sache, hinter einem Knopf und einem Formular. */}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setEditing(true)}
-          >
-            <Pencil size={14} /> Bearbeiten
-          </Button>
+          {/* In der Leseansicht nicht: Dort öffnet „Bearbeiten" unten erst
+              den Modus, und ein zweiter Knopf gleichen Namens oben wäre eine
+              Abkürzung daran vorbei. */}
+          {!reading && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setEditing(true)}
+            >
+              <Pencil size={14} /> Bearbeiten
+            </Button>
+          )}
         </div>
       </div>
 
@@ -632,7 +645,9 @@ function Loaded({
                 deaktivierter Anker in `bg-gray-300` — den einzigen
                 Nicht-Token-Farben dieser Seite, die im Dunkelmodus falsch
                 aussehen. Ein toter Knopf ist kein Hinweis. */}
-            {meeting.location && (
+            {/* Und beim Nachlesen auch nicht: „Wie komme ich hin" fragt an
+                einem Abend, der vorbei ist, niemand. */}
+            {meeting.location && !reading && (
               <a
                 href={mapsUrl(meeting.location)}
                 target="_blank"
@@ -678,7 +693,9 @@ function Loaded({
                     ? 'Host oder Treffpunkt fehlt'
                     : 'Noch niemand'
                 }
-                onEdit={cancelled ? undefined : () => openRole(slot.role)}
+                onEdit={
+                  cancelled || reading ? undefined : () => openRole(slot.role)
+                }
               />
             ))}
           </div>
@@ -689,6 +706,7 @@ function Loaded({
             meetingId={meetingId}
             readOnly={locked}
             mayPick={mayPickSongs}
+            setlistOnly={reading}
           />
         )}
 
@@ -698,11 +716,15 @@ function Loaded({
             Termintag gehört er denen, die ihn vorbereiten. Der Actionstep der
             nächsten Woche eine Woche zu früh für alle wäre genau das Gegenteil
             von dem, wozu er da ist. */}
-        {meeting.hasTopicSlot && (
+        {/* Beim Nachlesen nur mit Thema: Ein Kasten, der „noch nichts gewählt"
+            sagt, beschreibt an einem vergangenen Abend keine offene Aufgabe,
+            sondern eine Lücke im Protokoll — und die schließt man unter
+            „Bearbeiten". */}
+        {meeting.hasTopicSlot && (!reading || meeting.topicSession) && (
           <TopicCard
             meeting={meeting}
             responsibles={roles.topicPeople}
-            mayChoose={mayChooseTopic}
+            mayChoose={mayChooseTopic && !reading}
             saving={update.isPending || roles.saving || session.saving}
             onChoose={openTopicChoice}
           >
@@ -749,9 +771,21 @@ function Loaded({
         )}
       </div>
 
-      {!cancelled && <CancelMeetingBlock meeting={meeting} past={past} />}
+      {!reading && (
+        <>
+          {!cancelled && <CancelMeetingBlock meeting={meeting} past={past} />}
+          <DeleteMeetingBlock meeting={meeting} />
+        </>
+      )}
 
-      <DeleteMeetingBlock meeting={meeting} />
+      {/* Nur an einem vergangenen Abend. Am kommenden steht dort der
+          Antwort-Balken, an einem abgesagten kommenden die Tab-Leiste. */}
+      {past && (
+        <EditBar
+          editing={editMode}
+          onToggle={() => setEditMode((current) => !current)}
+        />
+      )}
 
       <MeetingEditSheet
         open={editing}
@@ -841,7 +875,10 @@ function RoleRow({
   role: MeetingRole;
   people: PersonRef[];
   emptyLabel: string;
-  /** Fehlt an einem abgesagten Abend: dort gibt es nichts mehr einzuteilen. */
+  /**
+   * Fehlt an einem abgesagten Abend — dort gibt es nichts mehr einzuteilen —
+   * und in der Leseansicht eines vergangenen.
+   */
   onEdit?: () => void;
 }) {
   const Icon = ROLE_ICON[role];
