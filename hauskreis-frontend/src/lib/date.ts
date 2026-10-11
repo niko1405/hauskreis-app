@@ -196,6 +196,17 @@ export function formatDay(day: CalendarDay): string {
   return `${WEEKDAY_SHORT.format(date)}, ${DAY_MONTH_SHORT.format(date)}`;
 }
 
+/**
+ * `11. Aug.` — ohne Wochentag, für Aufzählungen in einer Zeile.
+ *
+ * Unter einem Vorschlag stehen bis zu zwei Termine nebeneinander; mit
+ * Wochentag wäre die Zeile breiter als die Karte, und dass es Dienstage sind,
+ * weiß ohnehin jede:r.
+ */
+export function formatDayShort(day: CalendarDay): string {
+  return DAY_MONTH_SHORT.format(parseDay(day));
+}
+
 /** `11. August` */
 export function formatDayMonth(day: CalendarDay): string {
   return DAY_MONTH.format(parseDay(day));

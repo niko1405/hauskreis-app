@@ -64,6 +64,7 @@ export function SongsCard({
   meetingId,
   readOnly = false,
   mayPick = true,
+  setlistOnly = false,
 }: {
   meetingId: string;
   /**
@@ -81,6 +82,15 @@ export function SongsCard({
    * Genau deshalb hängt es **nicht** an `readOnly`.
    */
   mayPick?: boolean;
+  /**
+   * Die Leseansicht eines vergangenen Abends: nur, was gesungen wurde.
+   *
+   * Vorschläge beantworten „was wollen wir singen" — eine Frage, die sich am
+   * Abend danach nicht mehr stellt. Ohne Ordnen, Herausnehmen und Wischen, und
+   * ohne Setlist gar nichts: Eine leere Karte „nichts notiert" ist beim
+   * Nachlesen eine Zeile, die nichts sagt. Nachtragen geht über „Bearbeiten".
+   */
+  setlistOnly?: boolean;
 }) {
   const songs = useMeetingSongs(meetingId);
   const [suggesting, setSuggesting] = useState(false);
@@ -89,6 +99,22 @@ export function SongsCard({
   const all = songs.data ?? [];
   const setlist = all.filter((entry) => entry.isSelected);
   const rest = all.filter((entry) => !entry.isSelected);
+
+  if (setlistOnly) {
+    if (songs.isLoading || setlist.length === 0) return null;
+
+    return (
+      <section>
+        <SectionTitle>Gesungen</SectionTitle>
+        <SetlistCard
+          meetingId={meetingId}
+          setlist={setlist}
+          mayPick={false}
+          readOnly
+        />
+      </section>
+    );
+  }
 
   const suggest = !readOnly && (
     // Ein Knopf für eine Absicht. Was für ein Lied es ist — eines aus dem
@@ -254,7 +280,8 @@ function SetlistCard({
   setlist: MeetingSong[];
   mayPick: boolean;
   readOnly: boolean;
-  onEdit: (song: EditedSong) => void;
+  /** Fehlt in der Leseansicht: dort wischt keine Zeile. */
+  onEdit?: (song: EditedSong) => void;
 }) {
   const reorder = useReorderSetlist(meetingId);
   const ids = setlist.map((entry) => entry.id);
@@ -351,7 +378,7 @@ function SetlistRow({
   number: number;
   meetingId: string;
   mayPick: boolean;
-  onEdit: (song: EditedSong) => void;
+  onEdit?: (song: EditedSong) => void;
   onDragEnd: () => void;
 }) {
   const controls = useDragControls();
@@ -444,29 +471,33 @@ function SetlistRow({
       onDragEnd={onDragEnd}
       className="relative"
     >
-      <SwipeActions
-        className="rounded-2xl"
-        actions={[
-          {
-            icon: <Pencil size={14} />,
-            label: `${entry.song.title} bearbeiten`,
-            onClick: () => onEdit(entry.song),
-          },
-          ...(mayPick
-            ? [
-                {
-                  icon: <Minus size={16} />,
-                  label: `${entry.song.title} aus der Setlist nehmen`,
-                  tone: 'danger' as const,
-                  disabled: select.isPending,
-                  onClick: takeOut,
-                },
-              ]
-            : []),
-        ]}
-      >
-        {row}
-      </SwipeActions>
+      {onEdit ? (
+        <SwipeActions
+          className="rounded-2xl"
+          actions={[
+            {
+              icon: <Pencil size={14} />,
+              label: `${entry.song.title} bearbeiten`,
+              onClick: () => onEdit(entry.song),
+            },
+            ...(mayPick
+              ? [
+                  {
+                    icon: <Minus size={16} />,
+                    label: `${entry.song.title} aus der Setlist nehmen`,
+                    tone: 'danger' as const,
+                    disabled: select.isPending,
+                    onClick: takeOut,
+                  },
+                ]
+              : []),
+          ]}
+        >
+          {row}
+        </SwipeActions>
+      ) : (
+        row
+      )}
     </Reorder.Item>
   );
 }

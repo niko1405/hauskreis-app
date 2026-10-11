@@ -82,6 +82,25 @@ export function SnackSheet({
       onClose={onClose}
       title={ROLE_QUESTION.SNACK}
       subtitle="Mehrere möglich"
+      // Im Fuß, damit er beim Scrollen durch die Namen stehen bleibt — wie im
+      // Zuteilungs-Sheet.
+      footer={
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
+            Abbrechen
+          </Button>
+          <Button
+            className="flex-1"
+            loading={saving}
+            onClick={() => {
+              onSubmit(draft);
+              onClose();
+            }}
+          >
+            Übernehmen
+          </Button>
+        </div>
+      }
     >
       {waehlbar.length === 0 ? (
         <p className="py-4 text-sm text-stone-400">
@@ -130,22 +149,6 @@ export function SnackSheet({
           })}
         </ul>
       )}
-
-      <div className="mt-4 flex gap-2 border-t border-line pt-4">
-        <Button variant="ghost" className="flex-1" onClick={onClose}>
-          Abbrechen
-        </Button>
-        <Button
-          className="flex-1"
-          loading={saving}
-          onClick={() => {
-            onSubmit(draft);
-            onClose();
-          }}
-        >
-          Übernehmen
-        </Button>
-      </div>
     </Sheet>
   );
 }

@@ -271,7 +271,10 @@ keine zwei Listen.
 
 Daneben stehen die Fakten, die zu dieser Reihenfolge geführt haben. Ganz oben
 das, was an **diesem** Abend schon ansteht („an diesem Abend schon Thema") —
-der stärkste Grund, jemand anderen zu nehmen. Du kannst aber jederzeit
+der stärkste Grund, jemand anderen zu nehmen. Danach, was jemand sonst noch
+vor sich hat („hat noch Musik (18. Aug.) vor sich"), dann wann er zuletzt dran
+war und wie oft — dieselbe Reihenfolge, in der sortiert wird. Steht jemand weit
+unten, sagt die erste Zeile meistens schon, warum. Du kannst aber jederzeit
 eintragen, wen du willst; die Gruppe weiß Dinge, die die App nicht weiß.
 
 Alle Abstände zählen dabei **von dem Abend aus, den du gerade planst**, nicht
@@ -286,9 +289,9 @@ erscheint nur, wenn nicht die ganze Gruppe hineinpasst.
 
 **Wer für den Abend abgesagt hat, steht gar nicht zur Auswahl** — in keiner der
 vier Rollen. Wer nicht da ist, kann sie nicht übernehmen, und der Server lehnt
-es auch ab. Unter der Rangliste stehen deshalb nur noch zwei Sorten: bei der
-**Musik**, wer kein Instrument spielt, und beim **Testimony**, wer seines schon
-erzählt hat. Eintragen kannst du beide trotzdem — die Gruppe weiß besser, wer
+es auch ab. Bei der **Musik** steht nur zur Wahl, wer im Profil ein Instrument
+angehakt hat. Unter der Rangliste steht beim **Testimony**, wer seines schon
+erzählt hat — eintragen kannst du ihn trotzdem, die Gruppe weiß besser, wer
 den Abend trägt.
 
 Denn ein **Testimony erzählt man einmal**. Wer dran war, wird nicht mehr
@@ -307,6 +310,11 @@ dort, wo niemand für den einzelnen Abend geantwortet hat.
 
 Bei einem **vergangenen** Abend gilt das alles nicht: Dort stehen alle, denn
 nachgetragen wird, was war.
+
+Ein vergangener Abend steht zuerst **zum Lesen** da — nur die Setlist, kein
+Maps, keine Stifte an den Rollen. Zum Nachtragen tippst du unten auf
+**„Bearbeiten"**, danach auf **„Fertig"**. Die Nachbereitung und deinen
+Actionstep-Haken erreichst du auch ohne.
 
 ### 6.6 Absagen und Abwesenheiten
 

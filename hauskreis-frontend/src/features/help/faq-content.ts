@@ -120,7 +120,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'suggestions',
     question: 'Wie kommt die App auf ihre Vorschläge?',
     answer:
-      'Sie sortiert alle in Frage kommenden Leute nach vier Dingen, in dieser Reihenfolge:\n\n1. **Wer gerade am wenigsten zu tun hat.** Gezählt wird über alle Aufgaben hinweg — Gastgeber, Thema, Musik, Testimony — und zwar für die nächsten acht Wochen. Was danach kommt, zählt nicht mit.\n2. **Wer am längsten nicht mehr diese eine Aufgabe hatte.** Wer sie noch nie hatte, steht ganz oben.\n3. **Wer sie insgesamt am seltensten hatte.**\n4. Der Name, damit die Liste beim Neuladen nicht durcheinandergerät.\n\nNeben jedem Namen stehen die Fakten, die zu dieser Reihenfolge geführt haben: wann derjenige zuletzt dran war, wie oft insgesamt, und was er sonst noch vor sich hat.',
+      'Sie sortiert alle in Frage kommenden Leute nach vier Dingen, in dieser Reihenfolge:\n\n1. **Wer gerade am wenigsten zu tun hat.** Gezählt wird über alle Aufgaben hinweg — Gastgeber, Thema, Musik, Testimony — und zwar für die nächsten acht Wochen. Was danach kommt, zählt nicht mit.\n2. **Wer am längsten nicht mehr diese eine Aufgabe hatte.** Wer sie noch nie hatte, steht ganz oben.\n3. **Wer sie insgesamt am seltensten hatte.**\n4. Der Name, damit die Liste beim Neuladen nicht durcheinandergerät.\n\nNeben jedem Namen stehen die Fakten, die zu dieser Reihenfolge geführt haben — in derselben Reihenfolge: was er sonst noch vor sich hat („hat noch Musik (18. Aug.) vor sich"), wann er zuletzt dran war und wie oft insgesamt. Steht jemand weit unten, sagt die erste Zeile meistens schon, warum.',
     keywords: ['smart', 'reihenfolge', 'sortierung', 'algorithmus', 'fair'],
   },
   {
@@ -469,8 +469,15 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Kann sich ein vergangener Abend noch ändern?',
     answer:
-      'Gegen **beiläufige** Änderungen ist er eingefroren: Seine Einheit bleibt daran hängen, und wer sie gehalten hat, bleibt vermerkt. Eine Absage oder ein Rollenwechsel von heute schreibt nicht um, was war.\n\n**Ausdrücklich schon.** Stellt sich heraus, dass der Abend gar kein Thema hatte, leerst du in der Termin-Ansicht die Rolle „Thema" — dann wird gefragt, und ein Ja nimmt den Baustein weg. Die Einheit löst sich dabei vom Abend und wartet mit allem, was darin steht, unter „Angefangenes"; der Abend bekommt stattdessen seine Nachbereitung.\n\nTexte lassen sich ohnehin weiter bearbeiten — es geht um die Zuordnung, nicht um den Inhalt.',
-    keywords: ['eingefroren', 'vergangen', 'ändern', 'nachträglich'],
+      'Gegen **beiläufige** Änderungen ist er eingefroren: Seine Einheit bleibt daran hängen, und wer sie gehalten hat, bleibt vermerkt. Eine Absage oder ein Rollenwechsel von heute schreibt nicht um, was war.\n\n**Ausdrücklich schon.** Stellt sich heraus, dass der Abend gar kein Thema hatte, leerst du in der Termin-Ansicht die Rolle „Thema" — dann wird gefragt, und ein Ja nimmt den Baustein weg. Die Einheit löst sich dabei vom Abend und wartet mit allem, was darin steht, unter „Angefangenes"; der Abend bekommt stattdessen seine Nachbereitung.\n\nTexte lassen sich ohnehin weiter bearbeiten — es geht um die Zuordnung, nicht um den Inhalt.\n\nEin vergangener Abend steht zuerst **zum Lesen** da: nur die Setlist, keine Stifte, kein Maps. Zum Nachtragen tippst du unten auf **„Bearbeiten"**, danach auf **„Fertig"**. Die Nachbereitung und deinen Actionstep-Haken erreichst du auch ohne.',
+    keywords: [
+      'eingefroren',
+      'vergangen',
+      'ändern',
+      'nachträglich',
+      'bearbeiten',
+      'lesen',
+    ],
   },
 
   // ── Musik & Lieder ────────────────────────────────────────────────────────
@@ -528,7 +535,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     question:
       'Muss man ein Instrument spielen, um für die Musik eingetragen zu werden?',
     answer:
-      'Für den **Vorschlag** ja — vorgeschlagen wird nur, wer im Profil angehakt hat, dass er ein Instrument spielt. Alle anderen stehen darunter unter „Nicht im Ranking", mit „spielt kein Instrument" als Grund.\n\nFür den **Eintrag** nein. Die Gruppe bleibt frei, einzutragen, worauf sie sich geeinigt hat; die App redet da nicht hinein.\n\nWas sie prüft, ist die Anwesenheit: Wer für den Abend abgesagt hat, kann die Rolle nicht übernehmen — das gilt inzwischen für alle vier Rollen, auch fürs Testimony. Bei einem vergangenen Abend prüft sie auch das nicht mehr; Nachtragen ist Buchführung, keine Planung.',
+      'Ja — zur Auswahl steht nur, wer im Profil angehakt hat, dass er ein Instrument spielt. Wer singt und die Musik trotzdem macht, setzt dort den Haken. Ist schon jemand ohne Haken eingetragen, steht er weiter da, damit du ihn austragen kannst.\n\nBeim **Nachtragen** eines vergangenen Abends stehen alle zur Wahl — da zählt, wer es war.\n\nWas sie prüft, ist die Anwesenheit: Wer für den Abend abgesagt hat, kann die Rolle nicht übernehmen — das gilt inzwischen für alle vier Rollen, auch fürs Testimony. Bei einem vergangenen Abend prüft sie auch das nicht mehr; Nachtragen ist Buchführung, keine Planung.',
     keywords: ['instrument', 'spielen', 'musik', 'zuteilen'],
   },
   {

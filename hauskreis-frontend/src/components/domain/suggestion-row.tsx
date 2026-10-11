@@ -11,13 +11,14 @@
  */
 import { Check, Plane } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
-import { formatDay, formatDayGap } from '@/lib/date';
+import { formatDayGap, formatDayShort } from '@/lib/date';
 import { cn } from '@/lib/cn';
 import { ROLE_LABEL } from '@/lib/meeting';
 import type {
   HostHomeFacts,
   HostSuggestion,
   RoleSuggestion,
+  UpcomingCommitment,
 } from '@/lib/api/types';
 
 type AnySuggestion = RoleSuggestion | HostSuggestion;
@@ -41,21 +42,36 @@ const DEFERRED_REASON: Record<string, string> = {
   TOO_SMALL: 'Wohnung zu klein für die erwartete Runde',
 };
 
-/** Die Fakten als kurze Sätze, in der Reihenfolge ihrer Wichtigkeit. */
+/**
+ * Die Fakten als kurze Sätze — **in der Reihenfolge, in der sortiert wird.**
+ *
+ * Hier stand die Auslastung einmal zuletzt: erst „zuletzt vor drei Wochen",
+ * dann „2× insgesamt", dann was noch ansteht. In der knappen Fassung sind nur
+ * zwei Zeilen zu sehen, und damit fehlte ausgerechnet das **erste**
+ * Sortierkriterium genau dort, wo es den Platz erklärt: Wer beim Thema ganz
+ * unten stand, weil er in zwei Wochen die Musik macht, las sich wie jemand, der
+ * einfach öfter dran war. Jetzt folgen die Zeilen `compare` in `ranking.ts` —
+ * an diesem Abend, sonstige Auslastung, zuletzt, wie oft.
+ */
 export function suggestionFacts(suggestion: AnySuggestion): string[] {
   const facts = suggestion.facts;
   const lines: string[] = [];
 
   // **Zuerst**, was an diesem Abend schon ansteht. Das ist der schärfste Grund,
-  // jemanden nicht zu nehmen, und in der knappen Fassung sind nur die ersten
-  // zwei Zeilen zu sehen — hinten angestellt wäre es genau dort unsichtbar, wo
-  // es am meisten zählt.
+  // jemanden nicht zu nehmen.
   const heute = facts.upcomingCommitments.filter((c) => c.thisEvening);
   const spaeter = facts.upcomingCommitments.filter((c) => !c.thisEvening);
 
   for (const commitment of heute) {
     lines.push(`an diesem Termin schon ${ROLE_LABEL[commitment.role]}`);
   }
+
+  // Die übrige Auslastung als **eine** Zeile und nicht als eine je Dienst: Sie
+  // ist ein Kriterium, und in der knappen Fassung verdrängten zwei Zeilen dafür
+  // das nächste. Fehlt sie, steht hier nichts — „hat sonst nichts vor sich"
+  // unter jedem zweiten Namen wäre eine Zeile, die man überliest.
+  const load = loadLine(spaeter);
+  if (load) lines.push(load);
 
   // **Gemessen am Abend, nicht an heute.** Hier stand `formatRelativeDay`, und
   // das rechnet gegen den heutigen Tag: Wer in vier Tagen die Musik macht, las
@@ -73,12 +89,6 @@ export function suggestionFacts(suggestion: AnySuggestion): string[] {
 
   if (facts.timesAssigned > 0) {
     lines.push(`${facts.timesAssigned}× insgesamt`);
-  }
-
-  for (const commitment of spaeter.slice(0, 2)) {
-    lines.push(
-      `hat am ${formatDay(commitment.date)} schon ${ROLE_LABEL[commitment.role]}`,
-    );
   }
 
   if (isHostSuggestion(suggestion)) {
@@ -102,6 +112,24 @@ export function suggestionFacts(suggestion: AnySuggestion): string[] {
   }
 
   return lines;
+}
+
+/**
+ * „hat noch Musik (18. Aug.) und Host (25. Aug.) vor sich" — oder ab drei
+ * Diensten die Zahl vorneweg, weil die dann mehr sagt als die Liste.
+ */
+function loadLine(commitments: UpcomingCommitment[]): string | null {
+  if (commitments.length === 0) return null;
+
+  const named = commitments
+    .slice(0, 2)
+    .map((c) => `${ROLE_LABEL[c.role]} (${formatDayShort(c.date)})`);
+
+  if (commitments.length <= 2) {
+    return `hat noch ${named.join(' und ')} vor sich`;
+  }
+
+  return `hat noch ${commitments.length} Aufgaben vor sich: ${named.join(', ')} …`;
 }
 
 /**

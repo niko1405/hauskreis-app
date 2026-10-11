@@ -45,7 +45,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Foto. Hier beginnt sie an der Kante, und `main` behält seinen
               Abstand für den Inhalt. */}
             <SmartHeader />
-            <main className="flex-1 overflow-x-hidden pt-2 pb-6">
+            {/* **`clip` und nicht `hidden`.** Abgeschnitten wird beides gleich,
+              aber `overflow-x: hidden` macht aus `overflow-y` ein `auto` — und
+              damit `main` zu einem Scroll-Container, der selbst nie scrollt.
+              Jedes `sticky` darin klebte an *ihm* statt am Fenster, also gar
+              nicht: Das Suchfeld im Archiv scrollte weg und landete je nach
+              Scrollstand mal hier, mal zu weit oben. `clip` schneidet ab, ohne
+              einen Scroll-Container aufzumachen (Safari ab 16). */}
+            <main className="flex-1 overflow-x-clip pt-2 pb-6">
               <PullToRefresh>{children}</PullToRefresh>
             </main>
             {/* Unten steht die Navigation — es sei denn, ein Bildschirm hat

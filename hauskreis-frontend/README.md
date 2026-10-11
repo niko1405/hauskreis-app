@@ -407,8 +407,11 @@ auf nichts — und der Nächste hätte darin wieder eine Rollenfarbe vermutet.
 `min-width: auto` ihr, unter ihre Inhaltsbreite zu schrumpfen. Eine einzige
 breite Zeile — eine Pillenreihe, eine Tabelle, ein langes Wort — drückte damit
 die **ganze** Spalte auf, und die Karten liefen darüber hinaus; das
-`overflow-x-hidden` an `<main>` schnitt danach nur noch ab, was längst zu breit
-war. Dieselbe Klasse steht aus demselben Grund in `CONTROL` (`ui/field.tsx`):
+`overflow-x-clip` an `<main>` schneidet danach nur noch ab, was längst zu breit
+war. **`clip` und nicht `hidden`:** `overflow-x: hidden` macht aus `overflow-y`
+ein `auto`, und damit wird `main` ein Scroll-Container, der selbst nie scrollt —
+jedes `sticky` darin klebte an ihm statt am Fenster, also gar nicht. Aufgefallen
+ist das am Suchmodus im Archiv, dessen Feld wegscrollte. Dieselbe Klasse steht aus demselben Grund in `CONTROL` (`ui/field.tsx`):
 Die Mindestbreite eines Eingabefelds ist seine eingebaute Feldbreite, und
 `w-full` allein kommt dagegen nicht an.
 
@@ -867,7 +870,8 @@ Wahl-Sheet. Der Formularrumpf dafür ist als
 
 |                 |                                                                               |
 | --------------- | ----------------------------------------------------------------------------- |
-| Rolle eintragen | nur nach Rückfrage, und ohne Vorschläge (`withoutSuggestions`)                |
+| Ansicht         | zuerst **zum Lesen**; „Bearbeiten" unten öffnet den Modus (siehe unten)       |
+| Rolle eintragen | im Modus, und ohne Vorschläge (`withoutSuggestions`)                          |
 | Lieder          | unveränderlich — sonst verrutschen `timesPlayed` und `lastPlayedAt` im Archiv |
 | Absage          | heißt „als abgesagt markieren" und verschickt nichts                          |
 
@@ -1033,6 +1037,31 @@ Schreibvorgänge wären drei Gelegenheiten für einen Versionskonflikt.
 Anwesenheit und Actionstep-Haken bleiben ebenfalls immer bedienbar — das ist
 Teilnahme, keine Bearbeitung. Absagen und Löschen stehen dauerhaft ganz unten:
 sie sind keine Bearbeitung, sondern eine Entscheidung über den Abend als Ganzes.
+
+**Am vergangenen Abend gibt es den Modus wieder** — und zwar aus dem Grund, aus
+dem die Themenseite ihren behalten hat: Dort ist Bearbeiten der Ausnahmefall.
+Man kommt zum Nachlesen her, meistens aus dem Archiv, und Stifte an jeder
+Rolle, ein Maps-Knopf und zwölf Liedvorschläge bedienen dort eine Frage, die
+sich nicht mehr stellt. Unten steht statt der Tab-Leiste ein Balken
+„Bearbeiten"/„Fertig" (`edit-bar.tsx`, über `BottomSlot` wie der
+Antwort-Balken). Die Leseansicht (`reading` in der Detailseite) lässt weg:
+
+| Weg in der Leseansicht         | Warum                                                |
+| ------------------------------ | ---------------------------------------------------- |
+| „Bearbeiten" oben rechts       | erst im Modus; zwei Wege dorthin wären einer zu viel |
+| Stifte an den Rollen           | nachgetragen wird im Modus                           |
+| Maps                           | „wie komme ich hin" fragt nach dem Abend niemand     |
+| Liedvorschläge (`setlistOnly`) | nur, was gesungen wurde; ohne Setlist keine Sektion  |
+| Thema-Kasten ohne Einheit      | eine Lücke im Protokoll, keine offene Aufgabe        |
+| Absagen und Löschen            | Entscheidungen über den Abend, also Bearbeiten       |
+
+**Die Nachbereitung bleibt offen**, und der eigene Actionstep-Haken auch. Sie
+ist das, was man am Morgen danach an einem vergangenen Abend tut — dorthin führt
+`NOTES_REMINDER` —, und ein Schritt mehr davor wäre ein Hindernis vor dem
+Einzigen, das hier noch geschrieben werden soll. Dafür ist die **Rückfrage vor
+dem Nachtragen** weg („Dieser Abend ist vorbei — wirklich nachtragen?"): Sie war
+der Schutz gegen den Fehlgriff aus dem Archiv, und den übernimmt jetzt der
+Modus. Zwei Schranken hintereinander wären eine zu viel.
 
 `InlineEdit` hat ein optionales `onSave`: fehlt es, gibt es keinen Stift. Ihn zu
 zeigen und dann mit `403` zu antworten wäre eine Einladung ins Leere. Dasselbe
@@ -1326,11 +1355,13 @@ Nützlicheres an ihrer Stelle steht.
 **Wie „unten" funktioniert** (`layout/bottom-slot.tsx`): `AppShell` rendert
 statt `<TabBar />` einen `BottomSlotOutlet`, der die Leiste zeigt, solange
 niemand den Platz beansprucht. Der Balken wird von der Terminseite gerendert —
-also tief in `<main>` — und **portiert** sich dorthin. Er kann nicht bleiben, wo
-er entsteht: `main` trägt `overflow-x-hidden`, damit wird `overflow-y` zu `auto`,
-und ein `sticky bottom-0` in einem Scroll-Container klebt an dessen Unterkante,
-die weit unter dem Bildschirm liegt. Genau darum ist auch die Leiste selbst ein
-Geschwister von `main` und nicht sein Kind.
+also tief in `<main>` — und **portiert** sich dorthin. Er **ersetzt** die
+Leiste, und die ist ein Geschwister von `main`; stünden beide in verschiedenen
+Kästen, gäbe es beim Wechsel zwei Balken übereinander. (Früher kam ein zweiter
+Grund dazu: `main` trug `overflow-x-hidden` und war damit ein Scroll-Container,
+an dem jedes `sticky` darin festhing. Seit `overflow-x-clip` gilt das nicht
+mehr.) Dasselbe tut am vergangenen Abend der Balken „Bearbeiten"
+(`edit-bar.tsx`).
 
 Der Ziel-Kasten trägt `display: contents`, sonst wäre er der Elternkasten des
 Balkens und exakt so hoch wie er — `sticky` hätte keinen Weg zu kleben. Und der
@@ -1552,12 +1583,30 @@ Drei Abschnitte, und der dritte ist kein Beiwerk:
 | **Restliche**        | Platz 4 aufwärts, dieselbe Zeile in kompakt      |
 | **Nicht im Ranking** | wen der Endpunkt gar nicht bewertet — samt Grund |
 
-Am lebenden Datenstand: Host 3 + 6 + 0, Thema 3 + 7 + 0, **Musik 3 + 1 + 6**.
-Die Musikzeile ist der Grund für den dritten Abschnitt — nur vier von zehn
-spielen ein Instrument, und ohne ihn wären die anderen sechs gar nicht
-eintragbar. Beim Host bleibt der Abschnitt leer, und das ist richtig: dort
-_ist_ das Ranking die vollständige Menge der gültigen Antworten, alles andere
-lehnt der Server ab.
+Der dritte Abschnitt war einmal der Grund, aus dem man bei der **Musik** auch
+jemanden ohne Instrument eintragen konnte — am lebenden Datenstand 3 + 1 + 6,
+sechs Namen, die für diese Rolle nie in Frage kommen und wie die Fortsetzung
+der Rangliste aussahen. Sie stehen dort nicht mehr. Wer doch die Musik macht,
+hakt im Profil „spielt ein Instrument" an; stehen bleibt nur, wer **schon
+eingetragen** ist, damit er sich austragen lässt. Übrig bleibt der Abschnitt
+beim Testimony (wer es schon erzählt hat) und beim Nachtragen („Alle
+Personen"). Beim Host bleibt er leer, und das ist richtig: dort _ist_ das
+Ranking die vollständige Menge der gültigen Antworten, alles andere lehnt der
+Server ab.
+
+**Die Fakten stehen in der Reihenfolge, in der sortiert wird**
+(`suggestionFacts`): an diesem Abend schon dran, sonstige Auslastung („hat noch
+Musik (18. Aug.) vor sich"), zuletzt dran, wie oft insgesamt. Die Auslastung
+stand einmal zuletzt — und die kompakte Zeile unter „Restliche" zeigt nur zwei
+Fakten. Ausgerechnet das erste Kriterium fehlte also genau dort, wo jemand weit
+unten steht: Wer beim Thema hinten lag, weil er in zwei Wochen die Musik macht,
+las sich wie jemand, der einfach öfter dran war. Die Auslastung ist **eine**
+Zeile, nicht eine je Dienst — zwei Zeilen dafür verdrängten in der knappen
+Fassung wieder das nächste Kriterium.
+
+Die Knöpfe „Abbrechen" und „Übernehmen" stehen bei Mehrfachauswahl im **Fuß**
+des Sheets (`footer`), nicht am Ende der Liste: Bei neun Namen musste man für
+den Abschluss sonst erst ans Ende scrollen. Dasselbe im Snack-Sheet.
 
 **Die Planungstabelle ist jetzt eine Tabelle**, auch auf dem Telefon. Vorher
 war sie dort eine Liste mit Chips, weil drei Spalten auf 390 px nicht lesbar
@@ -1676,6 +1725,12 @@ Wer ins Suchfeld tippt, will suchen und nicht lesen, was das Archiv ist. Also
 gehen Kopf und Kopfleiste, das Feld rückt mit den Registern nach oben und bleibt
 dort kleben, darunter scrollen die Treffer — wie bei Spotify. Drei Dinge daran:
 
+- **Er klebt wirklich.** Das tat er anfangs nicht: `main` war durch
+  `overflow-x-hidden` ein Scroll-Container, und `sticky` klebte an ihm statt am
+  Fenster (siehe „Eine Klasse, die den Rechner rettet"). Das Feld scrollte weg und landete beim
+  Öffnen je nach Scrollstand zu weit oben. Den Rücksprung nach oben gibt es
+  außerdem erst, wenn der Kopf fertig eingeklappt ist (`onExitComplete`) —
+  vorher rechnete er gegen ein Layout, das sich darunter noch bewegte.
 - **Er endet nur über „Abbrechen"** (oder Escape), nicht wenn das Feld den Fokus
   verliert. Auf dem Telefon schließt schon das Scrollen durch die Treffer die
   Tastatur, und dann spränge der Kopf mitten in der Liste zurück. Enter schließt

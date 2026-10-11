@@ -9,13 +9,15 @@
  * oben links. Die Frage „bist du dabei?" dagegen stellt sich bei jedem Besuch.
  *
  * **Warum ein Portal.** Der Balken wird von der Terminseite gerendert, also
- * tief in `<main>`. Dort kann er nicht bleiben: `main` trägt
- * `overflow-x-hidden`, und damit wird `overflow-y` zu `auto` — es ist ein
- * Scroll-Container, und ein `sticky bottom-0` darin klebte an *seiner*
- * Unterkante, die weit unter dem Bildschirm liegt. Genau deshalb ist auch die
- * Tab-Leiste ein Geschwister von `main` und nicht sein Kind. Der Balken muss
- * also im DOM dorthin, wo die Leiste steht, und im React-Baum bleiben, wo
- * seine Daten sind.
+ * tief in `<main>`, und er **ersetzt** die Tab-Leiste — die ein Geschwister
+ * von `main` ist und nicht sein Kind. Steht beides in `main`, gäbe es während
+ * des Wechsels zwei Balken übereinander, und die Leiste müsste wissen, wer sie
+ * gerade vertritt. Der Balken muss also im DOM dorthin, wo die Leiste steht,
+ * und im React-Baum bleiben, wo seine Daten sind.
+ *
+ * (Ein zweiter Grund ist weggefallen: `main` trug `overflow-x-hidden` und war
+ * damit ein Scroll-Container, an dem jedes `sticky` darin festhing. Seit es
+ * `overflow-x-clip` ist, klebt dort, was kleben soll — siehe `app-shell.tsx`.)
  *
  * **Ein Zähler und kein Schalter**, aus demselben Grund wie in
  * `overlay-lock.ts`: React montiert Effekte im Strict Mode doppelt, und ein
