@@ -136,6 +136,13 @@ enum NotificationType {
   /// Am letzten Abend steht zum ersten Mal eine Zusammenfassung oder ein
   /// Actionstep — an alle außer dem, der sie geschrieben hat.
   RECAP_ADDED
+  /// Halbzeit einer Gebetsrunde — für wen man gerade betet, noch einmal.
+  PRAYER_BUDDY_HALFTIME
+  /// Jemand hat einen Geschenk-Vorschlag kommentiert, den du gemacht oder
+  /// kommentiert hast.
+  GIFT_IDEA_COMMENTED
+  /// Wer das Geschenk besorgt, bittet die anderen um Vorschläge.
+  BIRTHDAY_IDEAS_REQUESTED
 
   @@map("notification_type")
 }
@@ -347,6 +354,7 @@ model Person {
   giftIdeasFor            GiftIdea[]                @relation("GiftIdeaFor")
   giftIdeasProposed       GiftIdea[]                @relation("GiftIdeaBy")
   giftIdeaVotes           GiftIdeaVote[]            @relation("GiftIdeaVoter")
+  giftIdeaComments        GiftIdeaComment[]         @relation("GiftIdeaCommentBy")
   songVotes               MeetingSongVote[]         @relation("MeetingSongVoter")
   groupIdeas              GroupIdea[]               @relation("GroupIdeaBy")
   groupIdeasDone          GroupIdea[]               @relation("GroupIdeaDoneBy")
@@ -1468,6 +1476,7 @@ model GiftIdea {
   forPerson  Person             @relation("GiftIdeaFor", fields: [forPersonId], references: [id], onDelete: Cascade)
   proposedBy Person?            @relation("GiftIdeaBy", fields: [proposedByPersonId], references: [id], onDelete: SetNull)
   votes      GiftIdeaVote[]
+  comments   GiftIdeaComment[]
   chosenAt   BirthdayOccasion[] @relation("GiftIdeaChosen")
 
   @@index([hauskreisId, forPersonId])
@@ -1491,6 +1500,32 @@ model GiftIdeaVote {
   @@id([giftIdeaId, personId])
   @@index([personId])
   @@map("gift_idea_vote")
+}
+
+/// Ein Kommentar zu einem Geschenk-Vorschlag.
+///
+/// Lange gab es das bewusst nicht: Vorschläge mit Zustimmung sollten dieselbe
+/// Frage beantworten, ohne einen zweiten Chat neben WhatsApp aufzumachen. In der
+/// Benutzung fehlte aber genau der eine Satz daneben — „gibt's auch in Blau",
+/// „hat sie schon" —, und der landete dann doch wieder in WhatsApp, wo ihn
+/// das Geburtstagskind mitliest. Hier sieht es ihn nie: Kommentare hängen an
+/// den Vorschlägen, und die bekommt es nicht geschickt.
+///
+/// `SetNull` wie bei `GiftIdea.proposedBy`: Konto löschen heißt anonymisieren,
+/// und ein Satz ohne Urheber steht als „Ehemaliges Mitglied" da.
+model GiftIdeaComment {
+  id             String   @id @default(uuid()) @db.Uuid
+  giftIdeaId     String   @map("gift_idea_id") @db.Uuid
+  authorPersonId String?  @map("author_person_id") @db.Uuid
+  text           String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  giftIdea GiftIdea @relation(fields: [giftIdeaId], references: [id], onDelete: Cascade)
+  author   Person?  @relation("GiftIdeaCommentBy", fields: [authorPersonId], references: [id], onDelete: SetNull)
+
+  @@index([giftIdeaId, createdAt])
+  @@index([authorPersonId])
+  @@map("gift_idea_comment")
 }
 
 /// Eine Idee der Gruppe — „lasst uns mal grillen".

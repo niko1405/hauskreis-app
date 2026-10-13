@@ -244,6 +244,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/birthdays/{id}/ideas/{ideaId}/comments': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['BirthdayController_comment'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/birthdays/{id}/ideas/{ideaId}/comments/{commentId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: operations['BirthdayController_removeComment'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/birthdays/{id}/ideas/{ideaId}/vote': {
     parameters: {
       query?: never;
@@ -255,6 +287,22 @@ export interface paths {
     put: operations['BirthdayController_approve'];
     post?: never;
     delete: operations['BirthdayController_withdraw'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/birthdays/{id}/nudge': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['BirthdayController_nudge'];
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -2017,7 +2065,10 @@ export interface components {
         | 'ADMIN_GRANTED'
         | 'MEETING_SLOTS_CHANGED'
         | 'ROLE_OPEN_REMINDER'
-        | 'RECAP_ADDED';
+        | 'RECAP_ADDED'
+        | 'PRAYER_BUDDY_HALFTIME'
+        | 'GIFT_IDEA_COMMENTED'
+        | 'BIRTHDAY_IDEAS_REQUESTED';
       /** @enum {string} */
       category:
         | 'Deine Rollen'
@@ -2082,7 +2133,10 @@ export interface components {
         | 'ADMIN_GRANTED'
         | 'MEETING_SLOTS_CHANGED'
         | 'ROLE_OPEN_REMINDER'
-        | 'RECAP_ADDED';
+        | 'RECAP_ADDED'
+        | 'PRAYER_BUDDY_HALFTIME'
+        | 'GIFT_IDEA_COMMENTED'
+        | 'BIRTHDAY_IDEAS_REQUESTED';
       /** @enum {string} */
       category:
         | 'Deine Rollen'
@@ -2185,7 +2239,10 @@ export interface components {
           | 'ADMIN_GRANTED'
           | 'MEETING_SLOTS_CHANGED'
           | 'ROLE_OPEN_REMINDER'
-          | 'RECAP_ADDED';
+          | 'RECAP_ADDED'
+          | 'PRAYER_BUDDY_HALFTIME'
+          | 'GIFT_IDEA_COMMENTED'
+          | 'BIRTHDAY_IDEAS_REQUESTED';
         title: string;
         body: string;
         url: string | null;
@@ -2223,7 +2280,10 @@ export interface components {
           | 'ADMIN_GRANTED'
           | 'MEETING_SLOTS_CHANGED'
           | 'ROLE_OPEN_REMINDER'
-          | 'RECAP_ADDED';
+          | 'RECAP_ADDED'
+          | 'PRAYER_BUDDY_HALFTIME'
+          | 'GIFT_IDEA_COMMENTED'
+          | 'BIRTHDAY_IDEAS_REQUESTED';
         title: string;
         body: string;
         url: string | null;
@@ -2466,10 +2526,28 @@ export interface components {
             votedByMe: boolean;
             /** Format: date */
             giftedOn: string | null;
+            canRemove: boolean;
+            comments: {
+              /** Format: uuid */
+              id: string;
+              text: string;
+              author: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+                /** Format: date-time */
+                photoUpdatedAt: string | null;
+              } | null;
+              /** Format: date-time */
+              createdAt: string;
+              mine: boolean;
+            }[];
           }[]
         | null;
       canPropose: boolean;
       canDecide: boolean;
+      canNudge: boolean;
+      nudgedToday: boolean;
     };
     DecideGiftDto: {
       /** Format: uuid */
@@ -2497,7 +2575,26 @@ export interface components {
       votedByMe: boolean;
       /** Format: date */
       giftedOn: string | null;
+      canRemove: boolean;
+      comments: {
+        /** Format: uuid */
+        id: string;
+        text: string;
+        author: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+        /** Format: date-time */
+        createdAt: string;
+        mine: boolean;
+      }[];
     }[];
+    CreateGiftIdeaCommentDto: {
+      text: string;
+    };
     MeetingPageResponseDto: {
       items: {
         /** Format: uuid */
@@ -5365,6 +5462,129 @@ export interface operations {
       };
     };
   };
+  BirthdayController_comment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+        ideaId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateGiftIdeaCommentDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GiftIdeaListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_removeComment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+        ideaId: string;
+        commentId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GiftIdeaListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
   BirthdayController_approve: {
     parameters: {
       query?: never;
@@ -5443,6 +5663,64 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['GiftIdeaListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_nudge: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BirthdayDetailResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -11962,7 +12240,10 @@ export interface operations {
           | 'ADMIN_GRANTED'
           | 'MEETING_SLOTS_CHANGED'
           | 'ROLE_OPEN_REMINDER'
-          | 'RECAP_ADDED';
+          | 'RECAP_ADDED'
+          | 'PRAYER_BUDDY_HALFTIME'
+          | 'GIFT_IDEA_COMMENTED'
+          | 'BIRTHDAY_IDEAS_REQUESTED';
       };
       cookie?: never;
     };

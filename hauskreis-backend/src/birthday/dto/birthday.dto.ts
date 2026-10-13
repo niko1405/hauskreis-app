@@ -13,6 +13,15 @@ export class GiftIdeaParamsDto extends createZodDto(
   z.object({ ...hauskreisParams, id: z.uuid(), ideaId: z.uuid() }),
 ) {}
 
+export class GiftIdeaCommentParamsDto extends createZodDto(
+  z.object({
+    ...hauskreisParams,
+    id: z.uuid(),
+    ideaId: z.uuid(),
+    commentId: z.uuid(),
+  }),
+) {}
+
 /**
  * Ein Geschenk-Vorschlag: ein Satz, und wo man es bekommt.
  *
@@ -26,6 +35,14 @@ export const createGiftIdeaSchema = z.object({
   url: z.url().max(2000).nullish(),
 });
 export class CreateGiftIdeaDto extends createZodDto(createGiftIdeaSchema) {}
+
+/** Ein Satz zu einem Vorschlag. Länger als der Vorschlag selbst darf er sein. */
+export const createGiftIdeaCommentSchema = z.object({
+  text: z.string().trim().min(1).max(1000),
+});
+export class CreateGiftIdeaCommentDto extends createZodDto(
+  createGiftIdeaCommentSchema,
+) {}
 
 /**
  * Was der Zuständige entscheiden darf: welches Geschenk, und was es gekostet

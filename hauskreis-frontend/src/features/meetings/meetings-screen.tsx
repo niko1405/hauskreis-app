@@ -56,10 +56,10 @@ const VIEWS: { key: View; label: string }[] = [
 /**
  * Ob die Adresse ein bestimmtes Register meint.
  *
- * Nur beim ersten Rendern gelesen und danach nicht mehr — das Register ist
- * eine Ansicht, kein Ort: Wer weiterklickt, soll nicht in seiner Historie
- * vier Einträge für dieselbe Seite finden. Gebraucht wird es für den Weg von
- * außen, etwa aus einer Benachrichtigung.
+ * Nur beim ersten Rendern gelesen — gebraucht für den Weg von außen (eine
+ * Benachrichtigung) und für den Weg **zurück**: Das gewählte Register schreibt
+ * `selectView` in die Adresse, also kommt man von einem Geburtstag dorthin
+ * zurück, wo man ihn angetippt hat — Liste oder Register.
  */
 function initialView(tab: string | null): View {
   return VIEWS.some((view) => view.key === tab) ? (tab as View) : 'liste';
@@ -69,6 +69,26 @@ export function MeetingsScreen() {
   const tab = useSearchParams().get('tab');
   const [view, setView] = useState<View>(() => initialView(tab));
   const [creating, setCreating] = useState(false);
+
+  /**
+   * Das Register wechseln — und es in die Adresse schreiben, **ohne** einen
+   * Eintrag in der Historie.
+   *
+   * Ohne die Adresse fiel jeder Rückweg auf die Liste zurück, und der
+   * Geburtstag führte deshalb fest ins Register „Geburtstage", auch wer aus
+   * der Liste kam. `replaceState` und nicht `push`: Das Register ist eine
+   * Ansicht und kein Ort — wer viermal umschaltet, soll mit „zurück" nicht
+   * viermal auf derselben Seite landen. Next gleicht den nativen Aufruf mit
+   * seinem Router ab.
+   */
+  const selectView = (key: View) => {
+    setView(key);
+    window.history.replaceState(
+      null,
+      '',
+      key === 'liste' ? '/termine' : `/termine?tab=${key}`,
+    );
+  };
 
   return (
     <div>
@@ -90,7 +110,7 @@ export function MeetingsScreen() {
           <button
             key={key}
             type="button"
-            onClick={() => setView(key)}
+            onClick={() => selectView(key)}
             aria-pressed={view === key}
             className={cn(
               'shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-colors',

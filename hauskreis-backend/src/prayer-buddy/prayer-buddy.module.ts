@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrayerBuddyController } from './prayer-buddy.controller';
 import { PrayerBuddyService } from './prayer-buddy.service';
 import { PrayerBuddyGeneratorService } from './prayer-buddy-generator.service';
+import { PrayerBuddyReminderService } from './prayer-buddy-reminder.service';
 import { NotificationModule } from '../notification/notification.module';
 
 /**
@@ -12,7 +13,11 @@ import { NotificationModule } from '../notification/notification.module';
 @Module({
   imports: [NotificationModule],
   controllers: [PrayerBuddyController],
-  providers: [PrayerBuddyService, PrayerBuddyGeneratorService],
+  providers: [
+    PrayerBuddyService,
+    PrayerBuddyGeneratorService,
+    PrayerBuddyReminderService,
+  ],
   exports: [PrayerBuddyService, PrayerBuddyGeneratorService],
 })
 export class PrayerBuddyModule {}

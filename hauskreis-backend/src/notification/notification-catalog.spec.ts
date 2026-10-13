@@ -113,6 +113,13 @@ describe('appliesTo', () => {
     expect(regel(kontext({ prayerBuddies: false }))).toBe(false);
   });
 
+  it('verschweigt auch die Halbzeit, wenn es keine Gebetsbuddys gibt', () => {
+    const regel = regelFuer(NotificationType.PRAYER_BUDDY_HALFTIME);
+
+    expect(regel(kontext())).toBe(true);
+    expect(regel(kontext({ prayerBuddies: false }))).toBe(false);
+  });
+
   it('verschweigt den Actionstep der Woche, wenn er abgeschaltet ist', () => {
     const regel = regelFuer(NotificationType.ACTIONSTEP_REMINDER);
 
@@ -133,6 +140,7 @@ describe('appliesTo', () => {
       [
         NotificationType.ACTIONSTEP_REMINDER,
         NotificationType.PRAYER_BUDDY_ASSIGNED,
+        NotificationType.PRAYER_BUDDY_HALFTIME,
         NotificationType.HOST_CAPACITY_UNLOCKED,
       ].toSorted(),
     );

@@ -11,6 +11,7 @@ import { ANGEKOMMEN } from '../person/angekommen';
 import { GroupClockService } from '../meeting/group-clock.service';
 import { CRON_TIME_ZONE } from '../common/time/local-evening';
 import { GroupFeaturesService } from '../hauskreis/group-features.service';
+import { circleFor, formatDate } from './prayer-buddy-copy';
 
 /**
  * How many rounds should always be planned, the running one included.
@@ -723,43 +724,4 @@ export class PrayerBuddyGeneratorService {
 /** Whole days from `from` to `to`; negative when `to` lies earlier. */
 function daysBetween(from: Date, to: Date): number {
   return Math.round((to.getTime() - from.getTime()) / 86_400_000);
-}
-
-const dateFormat = new Intl.DateTimeFormat('de-DE', {
-  day: 'numeric',
-  month: 'long',
-  timeZone: 'UTC',
-});
-
-function formatDate(iso: string): string {
-  return dateFormat.format(new Date(`${iso}T00:00:00.000Z`));
-}
-
-/**
- * Wer für wen — aus der Sicht der Person auf `position`.
- *
- * Beim **Paar** bleibt es schlicht: „betest du mit Anna". Die Richtung trägt
- * dort keine Information — ihr betet füreinander —, und sie auszuschreiben wäre
- * eine Unterscheidung ohne Unterschied. Dann liest man sie beim Trio auch nicht
- * mehr, und dort sagt sie etwas.
- */
-function circleFor(
-  members: readonly { name: string }[],
-  position: number,
-): string {
-  const n = members.length;
-
-  if (n <= 1) {
-    return 'betest du allein';
-  }
-
-  const fuer = members[(position + 1) % n].name;
-
-  if (n === 2) {
-    return `betest du mit ${fuer}`;
-  }
-
-  const vonWem = members[(position - 1 + n) % n].name;
-
-  return `betest du für ${fuer} — ${vonWem} betet für dich`;
 }

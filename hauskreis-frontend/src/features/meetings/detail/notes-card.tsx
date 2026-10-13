@@ -89,8 +89,9 @@ export function NotesCard({
   meeting,
   /**
    * Ob geschrieben werden darf. An einem **vergangenen** Abend ja — die
-   * Nachbereitung entsteht ja erst danach; an einem **abgesagten** nicht, dort
-   * gibt es nichts zu protokollieren.
+   * Nachbereitung entsteht ja erst danach —, aber nur unter „Bearbeiten": In
+   * der Leseansicht steht sie zum Lesen da, ohne Stift und ohne Löschknopf. An
+   * einem **abgesagten** gar nicht, dort gibt es nichts zu protokollieren.
    */
   editable,
   /** Ob der Abend schon angefangen hat. Entscheidet über den Abhak-Block. */

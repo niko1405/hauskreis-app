@@ -7,6 +7,7 @@ import { useHk } from './use-hk';
 import { useApiMutation, useResource, useResourceUpdate } from './use-resource';
 import type {
   BirthdayGiftConfig,
+  CreateGiftIdeaCommentInput,
   CreateGiftIdeaInput,
   DecideGiftInput,
   UpdateBirthdayGiftConfigInput,
@@ -88,6 +89,43 @@ export function useVoteGiftIdea(occasionId: string) {
         input.ideaId,
         input.approve,
       ),
+    { invalidateKeys: birthdayKeys(keys, occasionId) },
+  );
+}
+
+export function useCommentGiftIdea(occasionId: string) {
+  const { hauskreisId, keys } = useHk();
+
+  return useApiMutation(
+    (input: { ideaId: string } & CreateGiftIdeaCommentInput) =>
+      birthdaysApi.commentGiftIdea(hauskreisId, occasionId, input.ideaId, {
+        text: input.text,
+      }),
+    { invalidateKeys: birthdayKeys(keys, occasionId) },
+  );
+}
+
+export function useRemoveGiftIdeaComment(occasionId: string) {
+  const { hauskreisId, keys } = useHk();
+
+  return useApiMutation(
+    (input: { ideaId: string; commentId: string }) =>
+      birthdaysApi.removeGiftIdeaComment(
+        hauskreisId,
+        occasionId,
+        input.ideaId,
+        input.commentId,
+      ),
+    { invalidateKeys: birthdayKeys(keys, occasionId) },
+  );
+}
+
+/** Alle anderen an die Vorschläge erinnern — der Knopf des Zuständigen. */
+export function useNudgeBirthday(occasionId: string) {
+  const { hauskreisId, keys } = useHk();
+
+  return useApiMutation(
+    () => birthdaysApi.nudgeBirthday(hauskreisId, occasionId),
     { invalidateKeys: birthdayKeys(keys, occasionId) },
   );
 }

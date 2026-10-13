@@ -15,7 +15,11 @@ import { currentDay } from '../meeting/meeting-schedule';
 import { ageAt, daysUntil } from './birthday-dates';
 import { frozen } from './birthday-planner.service';
 import { BirthdayConfigService } from './birthday-config.service';
-import type { CreateGiftIdeaDto, DecideGiftDto } from './dto/birthday.dto';
+import type {
+  CreateGiftIdeaCommentDto,
+  CreateGiftIdeaDto,
+  DecideGiftDto,
+} from './dto/birthday.dto';
 
 /**
  * Wie lange sich ein Geschenk noch nachtragen lässt.
@@ -185,16 +189,26 @@ export class BirthdayService {
     if (shaped.isOwn) {
       // Nichts. Kein leeres Array, das man auffüllen könnte, kein `canPropose`
       // mit einer Begründung — die Antwort trägt schlicht keine Vorschläge.
-      return { ...shaped, ideas: null, canPropose: false, canDecide: false };
+      return {
+        ...shaped,
+        ideas: null,
+        canPropose: false,
+        canDecide: false,
+        canNudge: false,
+        nudgedToday: false,
+      };
     }
 
     const settling = daysUntil(occasion.occursOn, today) >= -SETTLE_DAYS;
+    const mayNudge = this.mayNudge(occasion, viewerId, today);
 
     return {
       ...shaped,
       ideas: await this.ideasFor(hauskreisId, occasion.person.id, viewerId),
       canPropose: settling,
       canDecide: settling && occasion.responsible?.id === viewerId,
+      canNudge: mayNudge,
+      nudgedToday: mayNudge && (await this.nudgedOn(id, today)),
     };
   }
 
@@ -264,6 +278,180 @@ export class BirthdayService {
     await this.prisma.giftIdea.delete({ where: { id: ideaId } });
 
     return this.ideasFor(hauskreisId, occasion.person.id, viewerId);
+  }
+
+  /**
+   * Einen Satz zu einem Vorschlag schreiben.
+   *
+   * Dieselben Grenzen wie beim Vorschlagen: nicht am eigenen Geburtstag, und
+   * nur solange sich überhaupt noch etwas eintragen lässt. Danach erfahren es
+   * die, die schon beteiligt sind — wer den Vorschlag gemacht und wer dort
+   * schon etwas geschrieben hat. Alle anderen lesen es, wenn sie vorbeischauen;
+   * sonst wäre jeder Satz eine Nachricht an die ganze Gruppe.
+   */
+  async commentIdea(
+    hauskreisId: string,
+    id: string,
+    ideaId: string,
+    dto: CreateGiftIdeaCommentDto,
+    viewerId: string,
+  ) {
+    const occasion = await this.load(hauskreisId, id);
+    this.assertNotOwn(occasion, viewerId);
+    await this.assertSettling(hauskreisId, occasion);
+
+    const idea = await this.prisma.giftIdea.findFirst({
+      where: { id: ideaId, hauskreisId, forPersonId: occasion.person.id },
+      select: {
+        id: true,
+        text: true,
+        proposedByPersonId: true,
+        comments: { select: { authorPersonId: true } },
+      },
+    });
+
+    if (!idea) throw new NotFoundException('Diesen Vorschlag gibt es nicht');
+
+    const comment = await this.prisma.giftIdeaComment.create({
+      data: { giftIdeaId: ideaId, authorPersonId: viewerId, text: dto.text },
+      select: { id: true, author: { select: { name: true } } },
+    });
+
+    const involved = new Set(
+      [
+        idea.proposedByPersonId,
+        ...idea.comments.map((row) => row.authorPersonId),
+      ].filter((personId): personId is string => personId !== null),
+    );
+    // Wer schreibt, muss es nicht hören; das Geburtstagskind darf es nie. Es
+    // kann hier zwar nichts geschrieben haben, aber die Regel steht besser
+    // ausdrücklich da als auf einer Annahme.
+    involved.delete(viewerId);
+    involved.delete(occasion.person.id);
+
+    if (involved.size > 0) {
+      const audience = await this.prisma.person.findMany({
+        where: { hauskreisId, ...ANGEKOMMEN, id: { in: [...involved] } },
+        select: { id: true },
+      });
+
+      await Promise.all(
+        audience.map((person) =>
+          this.notifications.notify({
+            personId: person.id,
+            type: NotificationType.GIFT_IDEA_COMMENTED,
+            relatedOccasionId: id,
+            // Je Kommentar eine Nachricht — ohne den Schlüssel käme je Person
+            // und Geburtstag genau eine durch, für immer.
+            relatedKey: comment.id,
+            payload: {
+              title: `Geschenk für ${occasion.person.name}`,
+              body: `${comment.author?.name ?? 'Jemand'} zu „${shorten(idea.text, 40)}“: ${shorten(dto.text, 140)}`,
+              url: appPath.birthday(id),
+            },
+          }),
+        ),
+      );
+    }
+
+    return this.ideasFor(hauskreisId, occasion.person.id, viewerId);
+  }
+
+  /** Den eigenen Kommentar wieder wegnehmen. Einen fremden nicht. */
+  async removeComment(
+    hauskreisId: string,
+    id: string,
+    ideaId: string,
+    commentId: string,
+    viewerId: string,
+  ) {
+    const occasion = await this.load(hauskreisId, id);
+    this.assertNotOwn(occasion, viewerId);
+
+    const comment = await this.prisma.giftIdeaComment.findFirst({
+      where: {
+        id: commentId,
+        giftIdeaId: ideaId,
+        giftIdea: { hauskreisId, forPersonId: occasion.person.id },
+      },
+      select: { authorPersonId: true },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Diesen Kommentar gibt es nicht');
+    }
+
+    if (comment.authorPersonId !== viewerId) {
+      throw new ForbiddenException(
+        'Wegnehmen kann einen Kommentar nur, wer ihn geschrieben hat',
+      );
+    }
+
+    await this.prisma.giftIdeaComment.delete({ where: { id: commentId } });
+
+    return this.ideasFor(hauskreisId, occasion.person.id, viewerId);
+  }
+
+  /**
+   * Alle anderen an die Vorschläge erinnern — der Knopf für den, der das
+   * Geschenk besorgt.
+   *
+   * Er ist es, der die Ideen braucht, und der Einzige, der weiß, ob die drei,
+   * die dastehen, reichen. **Höchstens einmal am Tag**: Eine Bitte ist eine
+   * Nachricht, drei hintereinander sind Lärm. Der Tag steht deshalb als
+   * Schlüssel an der Nachricht, und gefragt wird genau danach.
+   */
+  async nudge(hauskreisId: string, id: string, viewerId: string) {
+    const zone = await this.clock.zoneOf(hauskreisId);
+    const today = currentDay(zone);
+    const occasion = await this.load(hauskreisId, id);
+    const responsible = occasion.responsible;
+
+    if (!responsible || responsible.id !== viewerId) {
+      throw new ForbiddenException(
+        'Erinnern darf nur, wer das Geschenk besorgt',
+      );
+    }
+
+    if (!this.mayNudge(occasion, viewerId, today)) {
+      throw new BadRequestException(
+        'Der Geburtstag ist vorbei — jetzt braucht es keine Ideen mehr',
+      );
+    }
+
+    if (await this.nudgedOn(id, today)) {
+      throw new BadRequestException(
+        'Du hast heute schon an die Vorschläge erinnert',
+      );
+    }
+
+    const audience = await this.prisma.person.findMany({
+      where: {
+        hauskreisId,
+        ...ANGEKOMMEN,
+        // Das Geburtstagskind nicht — und wer bittet, bittet nicht sich selbst.
+        id: { notIn: [occasion.person.id, viewerId] },
+      },
+      select: { id: true },
+    });
+
+    await Promise.all(
+      audience.map((person) =>
+        this.notifications.notify({
+          personId: person.id,
+          type: NotificationType.BIRTHDAY_IDEAS_REQUESTED,
+          relatedOccasionId: id,
+          relatedKey: dayKey(today),
+          payload: {
+            title: `Ideen für ${occasion.person.name}`,
+            body: `${responsible.name} besorgt das Geschenk zum ${dayFormat.format(occasion.occursOn)} und freut sich über eure Vorschläge.`,
+            url: appPath.birthday(id),
+          },
+        }),
+      ),
+    );
+
+    return this.detail(hauskreisId, id, viewerId);
   }
 
   /** Zustimmen oder die Zustimmung zurücknehmen. */
@@ -385,6 +573,16 @@ export class BirthdayService {
         createdAt: true,
         proposedBy: { select: personRefSelect },
         votes: { select: { personId: true } },
+        comments: {
+          select: {
+            id: true,
+            text: true,
+            createdAt: true,
+            authorPersonId: true,
+            author: { select: personRefSelect },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
         chosenAt: {
           select: { occursOn: true },
           orderBy: { occursOn: 'desc' },
@@ -402,6 +600,18 @@ export class BirthdayService {
         votes: idea.votes.length,
         votedByMe: idea.votes.some((vote) => vote.personId === viewerId),
         giftedOn: idea.chosenAt[0]?.occursOn ?? null,
+        // Dieselbe Bedingung, die `removeIdea` prüft — einmal hier gefragt,
+        // damit niemand einen Papierkorb sieht, der nur eine Fehlermeldung
+        // auslöst.
+        canRemove:
+          idea.proposedBy?.id === viewerId && idea.chosenAt.length === 0,
+        comments: idea.comments.map((comment) => ({
+          id: comment.id,
+          text: comment.text,
+          author: comment.author,
+          createdAt: comment.createdAt,
+          mine: comment.authorPersonId === viewerId,
+        })),
         createdAt: idea.createdAt,
       }))
       .toSorted(
@@ -460,6 +670,52 @@ export class BirthdayService {
       throw new NotFoundException('Diesen Geburtstag gibt es nicht');
 
     return occasion;
+  }
+
+  /**
+   * Ob noch etwas eingetragen werden darf — dieselbe Frist, nach der `detail`
+   * `canPropose` beantwortet.
+   */
+  private async assertSettling(
+    hauskreisId: string,
+    occasion: OccasionRow,
+  ): Promise<void> {
+    const today = currentDay(await this.clock.zoneOf(hauskreisId));
+
+    if (daysUntil(occasion.occursOn, today) < -SETTLE_DAYS) {
+      throw new BadRequestException(
+        'Der Geburtstag ist zu lange her, um daran noch etwas zu ändern',
+      );
+    }
+  }
+
+  /** Erinnern darf, wer besorgt — bis zum Geburtstag selbst, nicht danach. */
+  private mayNudge(
+    occasion: OccasionRow,
+    viewerId: string,
+    today: Date,
+  ): boolean {
+    return (
+      occasion.responsible?.id === viewerId &&
+      daysUntil(occasion.occursOn, today) >= 0
+    );
+  }
+
+  /**
+   * Ob heute schon erinnert wurde. Gefragt wird die Box und nicht der Push:
+   * Den Eintrag gibt es immer, auch bei abgeschalteter Art (`notify`).
+   */
+  private async nudgedOn(occasionId: string, today: Date): Promise<boolean> {
+    const entry = await this.prisma.notificationLog.findFirst({
+      where: {
+        type: NotificationType.BIRTHDAY_IDEAS_REQUESTED,
+        relatedOccasionId: occasionId,
+        relatedKey: dayKey(today),
+      },
+      select: { id: true },
+    });
+
+    return entry !== null;
   }
 
   private assertNotOwn(occasion: OccasionRow, viewerId: string): void {
@@ -539,4 +795,20 @@ const euroFormat = new Intl.NumberFormat('de-DE', {
 
 function euros(cents: number): string {
   return euroFormat.format(cents / 100);
+}
+
+const dayFormat = new Intl.DateTimeFormat('de-DE', {
+  day: 'numeric',
+  month: 'long',
+  timeZone: 'UTC',
+});
+
+/** Der Kalendertag als Schlüssel — `today` ist Mitternacht UTC. */
+function dayKey(day: Date): string {
+  return day.toISOString().slice(0, 10);
+}
+
+/** Kürzt auf eine Länge, die in eine Benachrichtigung passt. */
+function shorten(text: string, max: number): string {
+  return text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
 }

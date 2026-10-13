@@ -267,6 +267,18 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     defaultEnabled: true,
   },
   {
+    type: NotificationType.PRAYER_BUDDY_HALFTIME,
+    category: 'Gebet',
+    appliesTo: (context) => context.prayerBuddies,
+    label: 'Halbzeit der Gebetsrunde',
+    // Ein Ereignis und keine Vorlaufzeit: Die Mitte einer Runde ist ein Tag,
+    // den der Rhythmus der Gruppe festlegt, nicht die eigene Woche.
+    description:
+      'Mitten in der Runde noch einmal, für wen du gerade betest — damit es in der zweiten Woche nicht einschläft.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
     type: NotificationType.MEETING_CANCELLED,
     category: 'Termine',
     label: 'Hauskreis fällt aus',
@@ -422,6 +434,31 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     label: 'Ein Geschenk steht fest',
     description:
       'Wenn entschieden ist, was es wird, oder was es gekostet hat. Wer Geburtstag hat, bekommt davon nichts mit.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
+    type: NotificationType.BIRTHDAY_IDEAS_REQUESTED,
+    category: 'Geburtstage',
+    label: 'Ideen für ein Geschenk gesucht',
+    // Von Hand ausgelöst, von dem, der das Geschenk besorgt — höchstens einmal
+    // am Tag. Ein eigener Schalter und nicht „Ein Geburtstag steht an": Der
+    // ist eine Erinnerung an die eigene Aufgabe, das hier eine Bitte von
+    // jemand anderem.
+    description:
+      'Wenn die Person, die ein Geburtstagsgeschenk besorgt, um Vorschläge bittet. Wer Geburtstag hat, bekommt davon nichts mit.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
+    type: NotificationType.GIFT_IDEA_COMMENTED,
+    category: 'Geburtstage',
+    label: 'Kommentare zu Geschenkideen',
+    // Nur an die, die schon beteiligt sind: wer den Vorschlag gemacht oder
+    // dort etwas geschrieben hat. Alle anderen lesen es, wenn sie
+    // vorbeischauen — sonst wäre jeder Satz eine Nachricht an neun Leute.
+    description:
+      'Wenn jemand einen Vorschlag kommentiert, den du gemacht oder selbst kommentiert hast.',
     schedule: { kind: 'EVENT' },
     defaultEnabled: true,
   },

@@ -1837,6 +1837,210 @@
         ]
       }
     },
+    "/api/hauskreise/{hauskreisId}/birthdays/{id}/ideas/{ideaId}/comments": {
+      "post": {
+        "operationId": "BirthdayController_comment",
+        "parameters": [
+          {
+            "name": "hauskreisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "ideaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGiftIdeaCommentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GiftIdeaListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Birthday"
+        ]
+      }
+    },
+    "/api/hauskreise/{hauskreisId}/birthdays/{id}/ideas/{ideaId}/comments/{commentId}": {
+      "delete": {
+        "operationId": "BirthdayController_removeComment",
+        "parameters": [
+          {
+            "name": "hauskreisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "ideaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "commentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GiftIdeaListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Birthday"
+        ]
+      }
+    },
     "/api/hauskreise/{hauskreisId}/birthdays/{id}/ideas/{ideaId}/vote": {
       "put": {
         "operationId": "BirthdayController_approve",
@@ -1969,6 +2173,88 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GiftIdeaListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Eingabe passt nicht zum Schema — `errors` nennt die Felder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token fehlt, ist abgelaufen oder gehört zu einem fremden Client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Angemeldet, aber ohne das nötige Recht",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nicht vorhanden — oder gehört zu einem anderen Hauskreis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Birthday"
+        ]
+      }
+    },
+    "/api/hauskreise/{hauskreisId}/birthdays/{id}/nudge": {
+      "post": {
+        "operationId": "BirthdayController_nudge",
+        "parameters": [
+          {
+            "name": "hauskreisId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BirthdayDetailResponseDto"
                 }
               }
             }
@@ -10827,7 +11113,10 @@
                 "ADMIN_GRANTED",
                 "MEETING_SLOTS_CHANGED",
                 "ROLE_OPEN_REMINDER",
-                "RECAP_ADDED"
+                "RECAP_ADDED",
+                "PRAYER_BUDDY_HALFTIME",
+                "GIFT_IDEA_COMMENTED",
+                "BIRTHDAY_IDEAS_REQUESTED"
               ]
             }
           }
@@ -13158,7 +13447,10 @@
                 "ADMIN_GRANTED",
                 "MEETING_SLOTS_CHANGED",
                 "ROLE_OPEN_REMINDER",
-                "RECAP_ADDED"
+                "RECAP_ADDED",
+                "PRAYER_BUDDY_HALFTIME",
+                "GIFT_IDEA_COMMENTED",
+                "BIRTHDAY_IDEAS_REQUESTED"
               ]
             },
             "category": {
@@ -13343,7 +13635,10 @@
               "ADMIN_GRANTED",
               "MEETING_SLOTS_CHANGED",
               "ROLE_OPEN_REMINDER",
-              "RECAP_ADDED"
+              "RECAP_ADDED",
+              "PRAYER_BUDDY_HALFTIME",
+              "GIFT_IDEA_COMMENTED",
+              "BIRTHDAY_IDEAS_REQUESTED"
             ]
           },
           "category": {
@@ -13666,7 +13961,10 @@
                     "ADMIN_GRANTED",
                     "MEETING_SLOTS_CHANGED",
                     "ROLE_OPEN_REMINDER",
-                    "RECAP_ADDED"
+                    "RECAP_ADDED",
+                    "PRAYER_BUDDY_HALFTIME",
+                    "GIFT_IDEA_COMMENTED",
+                    "BIRTHDAY_IDEAS_REQUESTED"
                   ]
                 },
                 "title": {
@@ -13740,7 +14038,10 @@
                     "ADMIN_GRANTED",
                     "MEETING_SLOTS_CHANGED",
                     "ROLE_OPEN_REMINDER",
-                    "RECAP_ADDED"
+                    "RECAP_ADDED",
+                    "PRAYER_BUDDY_HALFTIME",
+                    "GIFT_IDEA_COMMENTED",
+                    "BIRTHDAY_IDEAS_REQUESTED"
                   ]
                 },
                 "title": {
@@ -14717,6 +15018,67 @@
                   "format": "date",
                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
                   "nullable": true
+                },
+                "canRemove": {
+                  "type": "boolean"
+                },
+                "comments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "author": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "photoUpdatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "photoUpdatedAt"
+                        ],
+                        "additionalProperties": false,
+                        "nullable": true
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                      },
+                      "mine": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "text",
+                      "author",
+                      "createdAt",
+                      "mine"
+                    ],
+                    "additionalProperties": false
+                  }
                 }
               },
               "required": [
@@ -14726,7 +15088,9 @@
                 "proposedBy",
                 "votes",
                 "votedByMe",
-                "giftedOn"
+                "giftedOn",
+                "canRemove",
+                "comments"
               ],
               "additionalProperties": false
             },
@@ -14736,6 +15100,12 @@
             "type": "boolean"
           },
           "canDecide": {
+            "type": "boolean"
+          },
+          "canNudge": {
+            "type": "boolean"
+          },
+          "nudgedToday": {
             "type": "boolean"
           }
         },
@@ -14753,7 +15123,9 @@
           "priceCents",
           "ideas",
           "canPropose",
-          "canDecide"
+          "canDecide",
+          "canNudge",
+          "nudgedToday"
         ],
         "additionalProperties": false
       },
@@ -14849,6 +15221,67 @@
               "format": "date",
               "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
               "nullable": true
+            },
+            "canRemove": {
+              "type": "boolean"
+            },
+            "comments": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "author": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "photoUpdatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                        "nullable": true
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "photoUpdatedAt"
+                    ],
+                    "additionalProperties": false,
+                    "nullable": true
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                  },
+                  "mine": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "text",
+                  "author",
+                  "createdAt",
+                  "mine"
+                ],
+                "additionalProperties": false
+              }
             }
           },
           "required": [
@@ -14858,10 +15291,25 @@
             "proposedBy",
             "votes",
             "votedByMe",
-            "giftedOn"
+            "giftedOn",
+            "canRemove",
+            "comments"
           ],
           "additionalProperties": false
         }
+      },
+      "CreateGiftIdeaCommentDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "text"
+        ]
       },
       "MeetingPageResponseDto": {
         "type": "object",
