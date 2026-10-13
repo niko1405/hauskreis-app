@@ -272,4 +272,6 @@ export type UpdateBirthdayGiftConfigInput = S['UpdateBirthdayGiftConfigDto'];
 export type GiftPairings = S['GiftPairingListResponseDto'];
 export type UpdateGiftPairingsInput = S['UpdateGiftPairingsDto'];
 export type CreateGiftIdeaInput = S['CreateGiftIdeaDto'];
+export type CreateGiftIdeaCommentInput = S['CreateGiftIdeaCommentDto'];
+export type GiftIdeaComment = GiftIdea['comments'][number];
 export type DecideGiftInput = S['DecideGiftDto'];

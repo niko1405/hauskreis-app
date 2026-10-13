@@ -16,6 +16,21 @@ import {
  * einmal genommen wurde, um es nicht zweimal zu schenken, und was übrig blieb,
  * weil es immer noch eine gute Idee ist.
  */
+/**
+ * Ein Satz zu einem Vorschlag — „gibt's auch in Blau", „hat sie schon".
+ *
+ * `mine` statt eines Vergleichs im Frontend: Löschen darf nur, wer ihn
+ * geschrieben hat, und wer das ist, weiß der Server.
+ */
+export const giftIdeaCommentResponseSchema = z.object({
+  id: z.uuid(),
+  text: z.string(),
+  /// `null` heißt: ehemaliges Mitglied.
+  author: personRefSchema.nullable(),
+  createdAt: isoDateTimeOut,
+  mine: z.boolean(),
+});
+
 export const giftIdeaResponseSchema = z.object({
   id: z.uuid(),
   text: z.string(),
@@ -26,6 +41,12 @@ export const giftIdeaResponseSchema = z.object({
   votedByMe: z.boolean(),
   /// Wann dieser Vorschlag schon einmal verschenkt wurde, falls er das wurde.
   giftedOn: isoDateOut.nullable(),
+  /// Ob der Betrachter ihn wegnehmen darf: nur, wer ihn gemacht hat, und nur,
+  /// solange er nie verschenkt wurde. Der Server prüfte das längst — gezeigt
+  /// wurde der Papierkorb trotzdem allen.
+  canRemove: z.boolean(),
+  /// Älteste zuerst, wie man ein Gespräch liest.
+  comments: z.array(giftIdeaCommentResponseSchema),
 });
 
 /**
@@ -109,6 +130,12 @@ export const birthdayDetailResponseSchema =
     canPropose: z.boolean(),
     /// Ob der Betrachter auswählen und den Preis eintragen darf.
     canDecide: z.boolean(),
+    /// Ob der Betrachter alle anderen an die Vorschläge erinnern darf — nur,
+    /// wer das Geschenk besorgt, und nur bis zum Geburtstag.
+    canNudge: z.boolean(),
+    /// Ob heute schon erinnert wurde. Einmal am Tag ist eine Bitte, öfter
+    /// wäre es Lärm.
+    nudgedToday: z.boolean(),
   });
 
 export const giftPairingResponseSchema = z.object({
@@ -136,11 +163,13 @@ export class GiftPairingListResponseDto extends createZodDto(
 /**
  * Die ganze Liste, nicht der eine Vorschlag.
  *
- * Alle vier schreibenden Wege — vorschlagen, zurückziehen, zustimmen,
- * zurücknehmen — geben sie zurück, weil sich mit jedem von ihnen die
+ * Alle schreibenden Wege — vorschlagen, zurückziehen, zustimmen,
+ * zurücknehmen, kommentieren — geben sie zurück, weil sich mit jedem von ihnen die
  * **Sortierung** ändert: Die Liste steht nach Zustimmung, eine Stimme
  * verschiebt also mehr als die eine Zeile. Nur den betroffenen Vorschlag zu
- * antworten hieße, das Frontend die neue Reihenfolge raten zu lassen.
+ * antworten hieße, das Frontend die neue Reihenfolge raten zu lassen. Ein
+ * Kommentar verschiebt nichts, nimmt aber denselben Weg: Eine zweite Form der
+ * Antwort für einen Fall wäre ein zweiter Cache-Eintrag für dieselbe Liste.
  */
 export const giftIdeaListResponseSchema = z.array(giftIdeaResponseSchema);
 

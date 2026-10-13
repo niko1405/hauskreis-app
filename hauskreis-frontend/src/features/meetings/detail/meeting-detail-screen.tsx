@@ -258,11 +258,16 @@ function Loaded({
    *
    * Weg ist, was nur zum Umbauen da ist: der Formular-Knopf oben, die Stifte an
    * den Rollen, Maps, Liedvorschläge, ein Thema-Kasten ohne Thema, Absagen und
-   * Löschen. **Die Nachbereitung bleibt offen**, und das ist kein Versehen: Sie
-   * ist das, was man am Morgen danach an einem vergangenen Abend tut, und
-   * dorthin führt die Erinnerung (`NOTES_REMINDER`). Ein Schritt mehr davor
-   * wäre ein Hindernis vor dem Einzigen, das hier noch geschrieben werden soll.
-   * Der eigene Actionstep-Haken bleibt aus demselben Grund: Er ist der eigene
+   * Löschen — **und auch die Stifte der Nachbereitung** samt „Nachbereitung
+   * entfernen". Sie stand hier einmal offen, weil sie das ist, was man am
+   * Morgen danach tut. Aber eine Leseansicht, in der genau ein Block
+   * beschreibbar ist, ist keine: Man las die Zusammenfassung und hatte einen
+   * Stift und einen Löschknopf im Blick.
+   *
+   * Der **Weg hinein** bleibt dafür kurz. Fehlt die Nachbereitung noch, steht
+   * oben weiter der Hinweis, und ein Tipp darauf schaltet gleich in
+   * „Bearbeiten" (`addNotes`) — dorthin führt die Erinnerung am Morgen danach
+   * (`NOTES_REMINDER`). Der eigene Actionstep-Haken bleibt: Er ist der eigene
    * Vorsatz, kein Umbau des Abends.
    */
   const reading = past && !editMode;
@@ -438,7 +443,10 @@ function Loaded({
    * überhaupt erst entstehen.
    */
   const notesContent = Boolean(meeting.summaryText || meeting.actionstepText);
-  const showNotes = meeting.hasNotesSlot && (notesContent || notesOpen);
+  // `!reading`: Wer eine leer geöffnete Karte mit „Fertig" verlässt, soll den
+  // Hinweis zurückbekommen und keine leere Karte, die er nicht mehr füllen kann.
+  const showNotes =
+    meeting.hasNotesSlot && (notesContent || (notesOpen && !reading));
 
   /**
    * Ob der Hinweis „Nachbereitung hinzufügen" dasteht.
@@ -457,9 +465,13 @@ function Loaded({
    * gespeicherten Satz erschiene, gäbe es nicht, in den man ihn tippt. Den
    * Baustein schaltet er nur an, wenn er aus war: nach einer Karte, die leer
    * geblieben ist, steht er noch.
+   *
+   * An einem vergangenen Abend schaltet er zugleich in „Bearbeiten": Er ist
+   * dort der eine Einstieg, den die Leseansicht offenlässt.
    */
   const addNotes = () => {
     if (!meeting.hasNotesSlot) patch({ hasNotesSlot: true });
+    if (reading) setEditMode(true);
     setNotesOpen(true);
   };
 
@@ -761,12 +773,12 @@ function Loaded({
         {showNotes && (
           <NotesCard
             meeting={meeting}
-            editable={!cancelled}
+            editable={!cancelled && !reading}
             started={started}
             saving={update.isPending}
             onSummary={(next) => patch({ summaryText: next })}
             onActionstep={(next) => patch({ actionstepText: next })}
-            onRemove={cancelled ? undefined : removeNotes}
+            onRemove={cancelled || reading ? undefined : removeNotes}
           />
         )}
       </div>

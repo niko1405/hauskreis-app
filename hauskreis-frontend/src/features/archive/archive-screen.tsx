@@ -70,16 +70,69 @@ export function ArchiveScreen() {
   // Tastatur, und dann spränge der Kopf mitten in der Liste zurück.
   const [searching, setSearching] = useState(false);
   const field = useRef<HTMLInputElement>(null);
+  const head = useRef<HTMLDivElement>(null);
+
+  /**
+   * Von welcher Höhe der Kopf einklappt — nicht immer von seiner vollen.
+   *
+   * War schon gescrollt (die Kopfleiste war da), klappte er bisher bei
+   * stehendem Scrollstand ein, und `scrollTo(0)` danach setzte das Feld noch
+   * einmal um: erst klebte es zu hoch, dann sprang es an seinen Platz. Jetzt
+   * wird **zuerst** nach oben gescrollt, und der Kopf verliert im selben Zug
+   * genau die Strecke, die schon weggescrollt war. Das Feld steht danach, wo
+   * es stand, und gleitet von dort nach oben — gleich, wie weit gescrollt war.
+   */
+  const [collapseFrom, setCollapseFrom] = useState<number | null>(null);
 
   useEffect(() => {
     if (!searching) return;
     return suppressHeader();
   }, [searching]);
 
+  /**
+   * Scrollen durch die Treffer schließt die Tastatur — wie bei Spotify.
+   *
+   * Nicht nur aus Gewohnheit: Bei offener Tastatur schiebt iOS den sichtbaren
+   * Ausschnitt gegen das Layout, und `sticky` klebt am Layout. Das Feld
+   * rutschte damit beim Scrollen aus dem Bild, obwohl es „oben klebte". Ohne
+   * Tastatur sind beide dasselbe. Den Modus beendet das nicht — nur die
+   * Eingabe; weitertippen heißt einmal ins Feld tippen.
+   */
+  useEffect(() => {
+    if (!searching) return;
+
+    const onTouchMove = (event: TouchEvent) => {
+      const input = field.current;
+      if (!input || document.activeElement !== input) return;
+      if (event.target instanceof Node && input.contains(event.target)) return;
+      input.blur();
+    };
+
+    document.addEventListener('touchmove', onTouchMove, { passive: true });
+    return () => document.removeEventListener('touchmove', onTouchMove);
+  }, [searching]);
+
+  const enterSearch = () => {
+    if (searching) return;
+
+    const height = head.current?.offsetHeight ?? 0;
+    const from = Math.max(height - window.scrollY, 0);
+
+    // Beides im selben Takt, damit kein Bild dazwischen liegt, in dem der
+    // Kopf schon wieder voll da und das Feld nach unten gerutscht ist. Die
+    // Inline-Höhe überbrückt den einen Render bis zum Einklappen.
+    if (head.current) head.current.style.height = `${from}px`;
+    window.scrollTo({ top: 0 });
+
+    setCollapseFrom(from);
+    setSearching(true);
+  };
+
   // Abbrechen heißt auch: Der Begriff ist weg. Ein Filter, der nach dem
   // Verlassen weiter wirkt, sähe aus wie ein Archiv, in dem etwas fehlt.
   const leaveSearch = () => {
     setSearch('');
+    setCollapseFrom(null);
     setSearching(false);
     field.current?.blur();
     window.scrollTo({ top: 0 });
@@ -114,20 +167,27 @@ export function ArchiveScreen() {
           selten zum Verweilen. */}
       {/* Höhe statt Verschiebung: Ein `transform` am Seiteninhalt würde zum
           Bezugsrahmen der `fixed`-Sheets darin (`pull-to-refresh.tsx`). */}
-      {/* Nach oben erst, wenn der Kopf **fertig** eingeklappt ist. Im selben
-          Zug wie das Einklappen gerechnet, stimmte der Sprung nur, solange man
-          ohnehin oben stand: Mit sichtbarer Kopfleiste und etwas gescrollt
-          landete das Feld zu weit oben, weil sich das Layout darunter noch
-          bewegte. Bis dahin hält es `sticky` an seinem Platz. */}
+      {/* Eingeklappt wird von `collapseFrom` aus und bei Scrollstand 0 — siehe
+          `enterSearch`. Das `scrollTo` am Ende ist nur noch Absicherung: Steht
+          alles, wie es soll, tut es nichts. */}
       <AnimatePresence
         initial={false}
+        custom={collapseFrom}
         onExitComplete={() => window.scrollTo({ top: 0 })}
       >
         {!searching && (
           <motion.div
+            ref={head}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            exit="collapsed"
+            custom={collapseFrom}
+            variants={{
+              collapsed: (from: number | null) => ({
+                height: from === null ? 0 : [from, 0],
+                opacity: 0,
+              }),
+            }}
             transition={{ type: 'spring', damping: 30, stiffness: 260 }}
             className="overflow-hidden"
           >
@@ -144,11 +204,18 @@ export function ArchiveScreen() {
             reicht mit `-mx-5` über die volle Breite, sonst schauen die Treffer
             an den Rändern darunter hervor. Der sichere Rand wächst weich mit,
             während der Kopf darüber schrumpft — beides zusammen ist der
-            Übergang. */}
+            Übergang.
+
+            **`-mt-2` hebt das `pt-2` von `<main>` auf.** Ohne das lag der Block
+            in Ruhe acht Pixel tiefer, als er klebte: Beim ersten Scrollen
+            rutschte er hoch, und am Ende des Einklappens sprang er herunter.
+            Ruheplatz und Klebeplatz sind jetzt derselbe. `overflow-anchor`
+            hält Chrome davon ab, während des Einklappens selbst nachzuscrollen. */}
         <div
           className={cn(
-            '-mx-5 space-y-4 bg-canvas px-5 transition-[padding] duration-300',
-            searching && 'sticky top-0 z-30 pt-safe-4 pb-3',
+            '-mx-5 space-y-4 bg-canvas px-5 transition-[padding,margin] duration-300',
+            searching &&
+              'sticky top-0 z-30 -mt-2 pt-safe-4 pb-3 [overflow-anchor:none]',
           )}
         >
           <div className="flex items-center">
@@ -160,10 +227,10 @@ export function ArchiveScreen() {
               <TextInput
                 ref={field}
                 value={search}
-                onFocus={() => setSearching(true)}
+                onFocus={enterSearch}
                 onChange={(event) => {
                   setSearch(event.target.value);
-                  setSearching(true);
+                  enterSearch();
                 }}
                 onKeyDown={(event) => {
                   if (event.key === 'Escape') leaveSearch();

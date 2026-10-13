@@ -154,6 +154,10 @@ sind es lauter Paare; geht sie nicht auf, gibt es eine Dreiergruppe.
   betet für dich. Beides steht oben mit eigener Beschriftung, und in der
   Übersicht siehst du den Kreis als Kette — „Anna → Ben → Carla → Anna".
 
+**Zur Halbzeit** einer Runde erinnert dich die App noch einmal, für wen du gerade
+betest. Abschalten lässt sich das unter **Profil → Benachrichtigungen →
+„Halbzeit der Gebetsrunde"**.
+
 Kommt jemand **mitten in einer Runde** dazu, wird nicht neu gewürfelt: Er rückt
 in die kleinste Gruppe nach, die noch Platz hat. Sind alle voll, macht er eine
 neue auf, und aus einer Dreiergruppe zieht der zuletzt Dazugekommene zu ihm —
@@ -493,6 +497,12 @@ Archiv unter „Termine".
   ihr **Geschenk-Vorschläge** und stimmt ab; **wer zuständig ist, entscheidet
   am Ende und trägt den Preis ein.** Vorschläge hängen an der Person, nicht am
   Jahr — was übrig blieb, ist nächstes Jahr immer noch eine gute Idee.
+- Zu jedem Vorschlag könnt ihr **kommentieren** („gibt's auch in Blau"). Wer
+  den Vorschlag gemacht oder dort schon geschrieben hat, bekommt eine
+  Nachricht. **Wegnehmen** kann einen Vorschlag oder Kommentar nur, wer ihn
+  geschrieben hat — dafür die Zeile nach links wischen.
+- Wer das Geschenk besorgt, findet unten den Knopf **„Alle an die Vorschläge
+  erinnern"** — einmal am Tag, an alle außer dem Geburtstagskind.
 - **Das Geburtstagskind sieht diese Seite nicht.** 
 
 **Wichtig für den Anfang:** Die Geschenke-Zuteilung ist **standardmäßig

@@ -713,6 +713,7 @@ jeder mit Label, Begründung und Default-Rhythmus.
 | `ACTIONSTEP_REMINDER`    | Actionstep vom letzten Mal                    | alle                                                   | freitags      |
 | `ROLE_ASSIGNED`          | jemand trägt dich für einen Abend ein         | die eingeteilte Person                                 | sofort        |
 | `PRAYER_BUDDY_ASSIGNED`  | neue Rotation                                 | alle                                                   | sofort        |
+| `PRAYER_BUDDY_HALFTIME`  | Halbzeit der laufenden Rotation               | alle in einer Gruppe ab zwei                           | morgens       |
 | `MEETING_CANCELLED`      | Abend fällt aus — oder findet doch statt      | alle                                                   | sofort        |
 | `MEETING_TIME_CHANGED`   | der **nächste** Abend fängt anders an         | alle außer der Person, die es geändert hat             | sofort        |
 | `ATTENDANCE_DECLINED`    | jemand sagt ab                                | der Host — und alle, wenn dadurch eine Rolle frei wird | sofort        |
@@ -738,12 +739,12 @@ ein Import zurück schlösse den Kreis. Ohne `related*`-Feld kommt sie **einmal 
 Person** — wer ein zweites Mal ernannt wird, weiß schon, wo die Verwaltung steht.
 
 Ein Eintrag kann ein optionales `appliesTo(context)` tragen und erscheint dann
-nur bei den Leuten, für die er überhaupt etwas bewirken kann. Drei tun das:
+nur bei den Leuten, für die er überhaupt etwas bewirken kann. Vier tun das:
 
 - `HOST_CAPACITY_UNLOCKED` kann niemanden erreichen, dessen Wohnung für die
   volle Gruppe reicht
-- `PRAYER_BUDDY_ASSIGNED` und `ACTIONSTEP_REMINDER` fallen weg, wenn die Gruppe
-  den jeweiligen Baustein abgeschaltet hat
+- `PRAYER_BUDDY_ASSIGNED`, `PRAYER_BUDDY_HALFTIME` und `ACTIONSTEP_REMINDER`
+  fallen weg, wenn die Gruppe den jeweiligen Baustein abgeschaltet hat
 
 Bei allen anderen stünde ein Schalter, der nie etwas tut, und ein Schalter ohne
 Wirkung ist schlimmer als keiner, weil man ihm glaubt.
@@ -3339,6 +3340,22 @@ ist dieses Jahr immer noch eine gute Idee; was genommen wurde, muss man kennen,
 um es nicht zweimal zu schenken. `gift_idea_vote` ist eine Zustimmung als bloße
 Zeile, wie `meeting_actionstep_done`.
 
+`gift_idea_comment` hängt am Vorschlag und geht mit ihm (`CASCADE`); der Urheber
+darf gehen, ohne ihn mitzunehmen (`SET NULL`). Damit gilt für Kommentare
+automatisch dieselbe Regel wie für Vorschläge: Wer Geburtstag hat, bekommt
+`ideas: null` und damit auch kein Wort davon. Ein neuer Kommentar meldet sich
+(`GIFT_IDEA_COMMENTED`, `related_key` = Kommentar-Id) bei dem, der den Vorschlag
+gemacht hat, und bei allen, die dort schon geschrieben haben — sonst bei
+niemandem. Löschen darf Vorschläge wie Kommentare nur, wer sie geschrieben hat;
+die Antwort sagt es mit `canRemove` bzw. `mine`, damit das Frontend keinen
+Papierkorb zeigt, der nur eine 403 auslöst.
+
+`POST …/birthdays/:id/nudge` ist der Knopf für den, der das Geschenk besorgt:
+alle Angekommenen außer Geburtstagskind und ihm selbst bekommen
+`BIRTHDAY_IDEAS_REQUESTED`. Höchstens einmal am Tag — der Tag steht als
+`related_key`, und `nudgedToday` im Detail fragt genau danach. Gefragt wird die
+Box und nicht der Push: Den Eintrag gibt es auch bei abgeschalteter Art.
+
 ### Wer Geburtstag hat, bekommt nichts geschickt
 
 Die Regel steht in `BirthdayService.shapeOccasion()` und gilt für **jede**
@@ -3374,6 +3391,8 @@ ist nichts, worauf man zeigen könnte.
   `notify`; die Entdopplung dahinter sah er nicht.
 - **Das Feld** beim Rückblick (`RECAP_ADDED`: `summary` oder `actionstep`).
   Zusammenfassung und Actionstep desselben Abends sind zwei Nachrichten.
+- **Der Kommentar** bei `GIFT_IDEA_COMMENTED` und **der Tag** bei
+  `BIRTHDAY_IDEAS_REQUESTED` — dieselbe Runde, viele Anlässe.
 
 Bestehende Zeilen tragen `NULL` und behalten genau die Bedeutung, die sie
 hatten.

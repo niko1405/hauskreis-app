@@ -15,8 +15,10 @@ import { BirthdayPlannerService } from './birthday-planner.service';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import {
   BirthdayParamsDto,
+  CreateGiftIdeaCommentDto,
   CreateGiftIdeaDto,
   DecideGiftDto,
+  GiftIdeaCommentParamsDto,
   GiftIdeaParamsDto,
   UpdateBirthdayGiftConfigDto,
   UpdateGiftPairingsDto,
@@ -153,6 +155,20 @@ export class BirthdayController {
     );
   }
 
+  /**
+   * Alle anderen an die Vorschläge erinnern — nur, wer das Geschenk besorgt,
+   * und höchstens einmal am Tag.
+   */
+  @Post(':id/nudge')
+  @HttpCode(HttpStatus.OK)
+  @ApiZodResponse(BirthdayDetailResponseDto)
+  nudge(
+    @Param() params: BirthdayParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.birthdays.nudge(params.hauskreisId, params.id, membership.id);
+  }
+
   @Post(':id/ideas')
   @ApiZodResponse(GiftIdeaListResponseDto, { status: 201 })
   propose(
@@ -211,6 +227,38 @@ export class BirthdayController {
       params.ideaId,
       membership.id,
       false,
+    );
+  }
+
+  @Post(':id/ideas/:ideaId/comments')
+  @ApiZodResponse(GiftIdeaListResponseDto, { status: 201 })
+  comment(
+    @Param() params: GiftIdeaParamsDto,
+    @Body() dto: CreateGiftIdeaCommentDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.birthdays.commentIdea(
+      params.hauskreisId,
+      params.id,
+      params.ideaId,
+      dto,
+      membership.id,
+    );
+  }
+
+  @Delete(':id/ideas/:ideaId/comments/:commentId')
+  @ApiZodResponse(GiftIdeaListResponseDto)
+  @HttpCode(HttpStatus.OK)
+  removeComment(
+    @Param() params: GiftIdeaCommentParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.birthdays.removeComment(
+      params.hauskreisId,
+      params.id,
+      params.ideaId,
+      params.commentId,
+      membership.id,
     );
   }
 }

@@ -21,6 +21,7 @@ import type {
   BirthdayDetail,
   BirthdayGiftConfig,
   BirthdayOverview,
+  CreateGiftIdeaCommentInput,
   CreateGiftIdeaInput,
   DecideGiftInput,
   GiftIdea,
@@ -76,6 +77,43 @@ export function removeGiftIdea(
 ): Promise<GiftIdea[]> {
   return apiDelete<GiftIdea[]>(
     `${base(hauskreisId)}/${occasionId}/ideas/${ideaId}`,
+  );
+}
+
+/**
+ * Alle anderen an die Vorschläge erinnern — nur, wer das Geschenk besorgt, und
+ * höchstens einmal am Tag.
+ */
+export function nudgeBirthday(
+  hauskreisId: string,
+  occasionId: string,
+): Promise<BirthdayDetail> {
+  return apiPost<BirthdayDetail>(
+    `${base(hauskreisId)}/${occasionId}/nudge`,
+    {},
+  );
+}
+
+export function commentGiftIdea(
+  hauskreisId: string,
+  occasionId: string,
+  ideaId: string,
+  input: CreateGiftIdeaCommentInput,
+): Promise<GiftIdea[]> {
+  return apiPost<GiftIdea[]>(
+    `${base(hauskreisId)}/${occasionId}/ideas/${ideaId}/comments`,
+    input,
+  );
+}
+
+export function removeGiftIdeaComment(
+  hauskreisId: string,
+  occasionId: string,
+  ideaId: string,
+  commentId: string,
+): Promise<GiftIdea[]> {
+  return apiDelete<GiftIdea[]>(
+    `${base(hauskreisId)}/${occasionId}/ideas/${ideaId}/comments/${commentId}`,
   );
 }
 

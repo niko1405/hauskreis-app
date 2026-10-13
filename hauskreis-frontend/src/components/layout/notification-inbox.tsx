@@ -42,6 +42,7 @@
  */
 import {
   Bell,
+  BellRing,
   Blocks,
   CakeSlice,
   CalendarClock,
@@ -51,9 +52,11 @@ import {
   Gift,
   Guitar,
   HandHelping,
+  HeartHandshake,
   Home,
   ListChecks,
   Megaphone,
+  MessageCircle,
   MessageSquareX,
   NotebookPen,
   ScrollText,
@@ -92,6 +95,7 @@ const ICONS: Record<NotificationEntry['type'], typeof Bell> = {
   ACTIONSTEP_REMINDER: Check,
   ROLE_ASSIGNED: Users,
   PRAYER_BUDDY_ASSIGNED: Users,
+  PRAYER_BUDDY_HALFTIME: HeartHandshake,
   MEETING_CANCELLED: CalendarX,
   MEETING_TIME_CHANGED: CalendarClock,
   MEETING_SLOTS_CHANGED: Blocks,
@@ -107,6 +111,8 @@ const ICONS: Record<NotificationEntry['type'], typeof Bell> = {
   BIRTHDAY_GIFT_ASSIGNED: Gift,
   BIRTHDAY_GIFT_REMINDER: CakeSlice,
   BIRTHDAY_GIFT_DECIDED: Gift,
+  BIRTHDAY_IDEAS_REQUESTED: BellRing,
+  GIFT_IDEA_COMMENTED: MessageCircle,
   ADMIN_GRANTED: ShieldCheck,
   RELEASE_NOTES: Megaphone,
 };
