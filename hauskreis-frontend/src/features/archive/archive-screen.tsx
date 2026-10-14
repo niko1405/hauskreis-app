@@ -16,7 +16,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, animate, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useDeferredValue, useEffect, useRef, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
@@ -56,6 +56,9 @@ import type { SongListItem, TopicListItem } from '@/lib/api/types';
 
 type Tab = 'themen' | 'lieder' | 'orte' | 'termine';
 
+/** Die Feder, mit der der Kopf ein- und ausklappt — eine für beide Wege. */
+const HEAD_SPRING = { type: 'spring', damping: 30, stiffness: 260 } as const;
+
 export function ArchiveScreen() {
   const [tab, setTab] = useState<Tab>('themen');
   const [search, setSearch] = useState('');
@@ -69,25 +72,62 @@ export function ArchiveScreen() {
   // Felds: Auf dem Telefon schließt schon das Scrollen durch die Treffer die
   // Tastatur, und dann spränge der Kopf mitten in der Liste zurück.
   const [searching, setSearching] = useState(false);
-  const field = useRef<HTMLInputElement>(null);
-  const head = useRef<HTMLDivElement>(null);
 
   /**
-   * Von welcher Höhe der Kopf einklappt — nicht immer von seiner vollen.
+   * Ob die Suchleiste gerade oben klebt — auch ohne Suchmodus.
    *
-   * War schon gescrollt (die Kopfleiste war da), klappte er bisher bei
-   * stehendem Scrollstand ein, und `scrollTo(0)` danach setzte das Feld noch
-   * einmal um: erst klebte es zu hoch, dann sprang es an seinen Platz. Jetzt
-   * wird **zuerst** nach oben gescrollt, und der Kopf verliert im selben Zug
-   * genau die Strecke, die schon weggescrollt war. Das Feld steht danach, wo
-   * es stand, und gleitet von dort nach oben — gleich, wie weit gescrollt war.
+   * Wer im Archiv nach unten scrollt, behält das Feld oben, statt es mit dem
+   * Kopf aus dem Bild zu schieben; wer wieder hochscrollt, scrollt über die
+   * Leiste hinweg zurück zum Kopf. Das ist nur das Kleben und nicht der
+   * Suchmodus: kein „Abbrechen", kein eingeklappter Kopf — der steht weiter
+   * oberhalb und ist mit einem Wisch erreichbar.
    */
-  const [collapseFrom, setCollapseFrom] = useState<number | null>(null);
+  const [pinned, setPinned] = useState(false);
+
+  const field = useRef<HTMLInputElement>(null);
+  const head = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
+  const headAnimation = useRef<ReturnType<typeof animate> | null>(null);
+
+  // Die Kopfleiste geht im Suchmodus **und** solange die Leiste klebt. Sonst
+  // führe sie beim kleinsten Hochwischen über das Feld, das gerade oben
+  // stehen soll — zurück kommt sie erst, wenn man über die Leiste hinweg
+  // wieder beim Kopf ist.
+  const keepHeaderAway = searching || pinned;
 
   useEffect(() => {
-    if (!searching) return;
+    if (!keepHeaderAway) return;
     return suppressHeader();
-  }, [searching]);
+  }, [keepHeaderAway]);
+
+  // Klebt sie? Gefragt wird die Leiste selbst: `sticky` hält sie bei 0,
+  // sobald sie dort ankommt — und nur dann steht sie genau dort. Gedrosselt
+  // auf ein Bild wie in `use-header-scroll.ts`.
+  useEffect(() => {
+    let frame = 0;
+
+    const read = () => {
+      frame = 0;
+      const element = bar.current;
+      if (!element) return;
+      setPinned(Math.abs(element.getBoundingClientRect().top) < 1);
+    };
+
+    const onScroll = () => {
+      if (frame !== 0) return;
+      frame = requestAnimationFrame(read);
+    };
+
+    read();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (frame !== 0) cancelAnimationFrame(frame);
+    };
+  }, []);
 
   /**
    * Scrollen durch die Treffer schließt die Tastatur — wie bei Spotify.
@@ -112,30 +152,85 @@ export function ArchiveScreen() {
     return () => document.removeEventListener('touchmove', onTouchMove);
   }, [searching]);
 
+  /**
+   * In den Suchmodus — mit **einer** Bewegung.
+   *
+   * Hier liefen einmal zwei gegeneinander: Der Kopf klappte mit einer Feder
+   * ein, und gleichzeitig wuchs der sichere Rand der Leiste per Transition von
+   * null auf seine volle Höhe. Die Feder war schneller, das Feld schoss über
+   * seinen Platz hinaus und kam zurück — am deutlichsten, wenn schon gescrollt
+   * war, weil der Kopf dann von einer kleinen Resthöhe startete und fast
+   * sofort weg war. Jetzt trägt die Leiste ihren Rand immer
+   * (`pt-safe-4 -mt-safe-4`), und es bewegt sich allein die Höhe des Kopfs.
+   *
+   * Alles synchron im Handler, also im selben Bild gemalt: erst messen, dann
+   * nach ganz oben scrollen und dem Kopf genau die Höhe geben, bei der das
+   * Feld dort steht, wo es eben stand. Von dort klappt er auf die Höhe ein,
+   * bei der die Leiste in Ruhe genau oben liegt — Ruhe- und Klebeplatz sind
+   * dann derselbe, und die Treffer liegen nicht unter ihr. Wer schon klebte,
+   * hat beide Höhen gleich: Das Feld bleibt stehen, nur die Liste beginnt
+   * wieder oben.
+   */
   const enterSearch = () => {
     if (searching) return;
 
-    const height = head.current?.offsetHeight ?? 0;
-    const from = Math.max(height - window.scrollY, 0);
+    const headElement = head.current;
+    const barElement = bar.current;
 
-    // Beides im selben Takt, damit kein Bild dazwischen liegt, in dem der
-    // Kopf schon wieder voll da und das Feld nach unten gerutscht ist. Die
-    // Inline-Höhe überbrückt den einen Render bis zum Einklappen.
-    if (head.current) head.current.style.height = `${from}px`;
-    window.scrollTo({ top: 0 });
+    if (headElement && barElement) {
+      const padding = parseFloat(getComputedStyle(barElement).paddingTop) || 0;
+      const headTop = headElement.getBoundingClientRect().top + window.scrollY;
+      const end = Math.max(padding - headTop, 0);
+      const start = Math.max(
+        barElement.getBoundingClientRect().top + padding - headTop,
+        end,
+      );
 
-    setCollapseFrom(from);
+      headAnimation.current?.stop();
+      headElement.style.height = `${start}px`;
+      window.scrollTo({ top: 0 });
+      headAnimation.current = animate(
+        headElement,
+        { height: [start, end], opacity: 0 },
+        HEAD_SPRING,
+      );
+    }
+
     setSearching(true);
   };
 
   // Abbrechen heißt auch: Der Begriff ist weg. Ein Filter, der nach dem
   // Verlassen weiter wirkt, sähe aus wie ein Archiv, in dem etwas fehlt.
+  // Der Kopf klappt mit derselben Feder wieder auf; danach steht seine Höhe
+  // wieder auf `auto`, damit er mit dem Fenster mitwächst.
   const leaveSearch = () => {
     setSearch('');
-    setCollapseFrom(null);
     setSearching(false);
+    // Von Hand und nicht über den Scroll-Listener: Im Suchmodus steht man
+    // schon bei 0, `scrollTo` löst also kein Ereignis aus — und die Leiste
+    // gälte weiter als klebend, während der Kopf sie längst nach unten schiebt.
+    setPinned(false);
     field.current?.blur();
     window.scrollTo({ top: 0 });
+
+    const headElement = head.current;
+    if (!headElement) return;
+
+    headAnimation.current?.stop();
+    const from = headElement.offsetHeight;
+    headElement.style.height = 'auto';
+    const full = headElement.offsetHeight;
+    headElement.style.height = `${from}px`;
+
+    const controls = animate(
+      headElement,
+      { height: [from, full], opacity: 1 },
+      HEAD_SPRING,
+    );
+    headAnimation.current = controls;
+    void controls.then(() => {
+      if (headAnimation.current === controls) headElement.style.height = '';
+    });
   };
 
   // „Termine" gab es einmal nicht, und der Grund war gut: nebeneinander
@@ -160,62 +255,45 @@ export function ArchiveScreen() {
   ];
 
   return (
-    <div>
+    // `overflow-anchor` hält Chrome davon ab, während der Kopf ein- oder
+    // ausklappt, selbst nachzuscrollen — das wäre eine zweite Bewegung.
+    <div className="[overflow-anchor:none]">
       {/* Ohne Kopfbild, aus demselben Grund wie bei „Termine": hier liest man
           Listen und sucht eine Zeile. Ein Foto darüber wäre nur Weg bis zur
           ersten — und anders als auf „Heute" oder „Gebet" kommt man hierher
           selten zum Verweilen. */}
       {/* Höhe statt Verschiebung: Ein `transform` am Seiteninhalt würde zum
-          Bezugsrahmen der `fixed`-Sheets darin (`pull-to-refresh.tsx`). */}
-      {/* Eingeklappt wird von `collapseFrom` aus und bei Scrollstand 0 — siehe
-          `enterSearch`. Das `scrollTo` am Ende ist nur noch Absicherung: Steht
-          alles, wie es soll, tut es nichts. */}
-      <AnimatePresence
-        initial={false}
-        custom={collapseFrom}
-        onExitComplete={() => window.scrollTo({ top: 0 })}
-      >
-        {!searching && (
-          <motion.div
-            ref={head}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit="collapsed"
-            custom={collapseFrom}
-            variants={{
-              collapsed: (from: number | null) => ({
-                height: from === null ? 0 : [from, 0],
-                opacity: 0,
-              }),
-            }}
-            transition={{ type: 'spring', damping: 30, stiffness: 260 }}
-            className="overflow-hidden"
-          >
-            <PageHeader
-              title="Archiv"
-              subtitle="Durchsuche vergangene Termine, Themen, Locations und Lieder."
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+          Bezugsrahmen der `fixed`-Sheets darin (`pull-to-refresh.tsx`).
+          Immer gerendert und von `enterSearch`/`leaveSearch` geführt — im
+          Suchmodus ist er nur noch der Abstand, der die Leiste in Ruhe an den
+          oberen Rand legt. */}
+      <div ref={head} aria-hidden={searching} className="overflow-hidden">
+        <PageHeader
+          title="Archiv"
+          subtitle="Durchsuche vergangene Termine, Themen, Locations und Lieder."
+        />
+      </div>
 
-      <div className="space-y-4 px-5">
-        {/* Feld und Register sind ein Block, der im Suchmodus oben klebt. Er
-            reicht mit `-mx-5` über die volle Breite, sonst schauen die Treffer
-            an den Rändern darunter hervor. Der sichere Rand wächst weich mit,
-            während der Kopf darüber schrumpft — beides zusammen ist der
-            Übergang.
+      <div className="space-y-1 px-5">
+        {/* Feld und Register sind ein Block, der **immer** oben klebt — im
+            Suchmodus wie beim gewöhnlichen Scrollen. Er reicht mit `-mx-5`
+            über die volle Breite, sonst schauen die Treffer an den Rändern
+            darunter hervor.
 
-            **`-mt-2` hebt das `pt-2` von `<main>` auf.** Ohne das lag der Block
-            in Ruhe acht Pixel tiefer, als er klebte: Beim ersten Scrollen
-            rutschte er hoch, und am Ende des Einklappens sprang er herunter.
-            Ruheplatz und Klebeplatz sind jetzt derselbe. `overflow-anchor`
-            hält Chrome davon ab, während des Einklappens selbst nachzuscrollen. */}
+            **Den sicheren Rand trägt er immer** (`pt-safe-4`), und
+            `-mt-safe-4` hebt ihn im Fluss wieder auf. Dadurch liegt der Block
+            in Ruhe genau dort, wo er klebt: Das Feld gleitet beim Scrollen mit
+            dem Inhalt hoch und bleibt unter der Statusleiste stehen, ohne dass
+            irgendetwas wächst oder umspringt. Durchsichtig ist er, solange er
+            nicht klebt — dann liegt sein oberer Rand über dem Kopf; erst oben
+            braucht er eine Fläche, unter der die Treffer verschwinden. */}
         <div
+          ref={bar}
           className={cn(
-            '-mx-5 space-y-4 bg-canvas px-5 transition-[padding,margin] duration-300',
-            searching &&
-              'sticky top-0 z-30 -mt-2 pt-safe-4 pb-3 [overflow-anchor:none]',
+            'sticky top-0 z-30 -mx-5 -mt-safe-4 space-y-4 px-5 pt-safe-4 pb-3 transition-[background-color,box-shadow] duration-200',
+            pinned || searching
+              ? 'bg-canvas shadow-[0_1px_0_var(--color-line)]'
+              : 'bg-transparent',
           )}
         >
           <div className="flex items-center">
