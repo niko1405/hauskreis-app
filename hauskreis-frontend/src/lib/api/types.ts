@@ -72,9 +72,10 @@ export type Release = S['ReleaseListResponseDto'][number];
 export type FormerMember = S['FormerMemberListResponseDto'][number];
 export type InvitedPerson = S['InvitedPersonResponseDto'];
 /**
- * Achtung: `playsInstrument`, `canHost` und `autoAttend` sind **Pflicht**,
- * obwohl es ein PATCH ist — die Zod-Defaults machen sie im Schema
- * nicht-optional. Wer nur den Namen ändert, muss alle drei mitschicken.
+ * Ein echtes PATCH: Was fehlt, bleibt unverändert. Das war nicht immer so —
+ * Zod-Defaults machten einmal `playsInstrument`, `canHost` und `autoAttend`
+ * zur Pflicht, und wer nur den Namen schickte, schaltete sie stillschweigend
+ * zurück. Die Schalter im Profil schicken deshalb nur sich selbst.
  */
 export type UpdatePersonInput = S['UpdatePersonDto'];
 

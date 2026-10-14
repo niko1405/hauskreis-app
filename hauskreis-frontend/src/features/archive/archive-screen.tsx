@@ -59,6 +59,14 @@ type Tab = 'themen' | 'lieder' | 'orte' | 'termine';
 /** Die Feder, mit der der Kopf ein- und ausklappt — eine für beide Wege. */
 const HEAD_SPRING = { type: 'spring', damping: 30, stiffness: 260 } as const;
 
+/** Welches der Felder gerade den Fokus hat — oder keines. */
+function focusedOf(
+  ...inputs: (HTMLInputElement | null)[]
+): HTMLInputElement | null {
+  const active = document.activeElement;
+  return inputs.find((input) => input !== null && input === active) ?? null;
+}
+
 export function ArchiveScreen() {
   const [tab, setTab] = useState<Tab>('themen');
   const [search, setSearch] = useState('');
@@ -85,9 +93,13 @@ export function ArchiveScreen() {
   const [pinned, setPinned] = useState(false);
 
   const field = useRef<HTMLInputElement>(null);
+  /** Das unsichtbare Feld oben, das beim Tipp die Tastatur bekommt. */
+  const proxy = useRef<HTMLInputElement>(null);
   const head = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null);
   const headAnimation = useRef<ReturnType<typeof animate> | null>(null);
+  /** Womit zuletzt aufs Feld gedrückt wurde — Finger oder Maus. */
+  const pointer = useRef('mouse');
 
   // Die Kopfleiste geht im Suchmodus **und** solange die Leiste klebt. Sonst
   // führe sie beim kleinsten Hochwischen über das Feld, das gerade oben
@@ -142,14 +154,45 @@ export function ArchiveScreen() {
     if (!searching) return;
 
     const onTouchMove = (event: TouchEvent) => {
-      const input = field.current;
-      if (!input || document.activeElement !== input) return;
-      if (event.target instanceof Node && input.contains(event.target)) return;
-      input.blur();
+      const active = focusedOf(field.current, proxy.current);
+      if (!active) return;
+      if (event.target instanceof Node && active.contains(event.target)) return;
+      active.blur();
     };
 
     document.addEventListener('touchmove', onTouchMove, { passive: true });
     return () => document.removeEventListener('touchmove', onTouchMove);
+  }, [searching]);
+
+  /**
+   * Das Netz unter dem Hilfsfeld (`enterSearchByTouch`).
+   *
+   * Schiebt iOS den sichtbaren Ausschnitt trotzdem gegen das Layout, stünde
+   * das Feld halb unter der Uhr, bis die Tastatur wieder zugeht — genau das
+   * war der Fehler. Dann wird zurückgescrollt. Mit dem Hilfsfeld sollte das
+   * nie greifen; es steht hier, weil iOS seine Regeln dafür nicht
+   * veröffentlicht. Gegen ein Ziehen in der Liste kämpft es nicht: Das nimmt
+   * dem Feld vorher schon den Fokus.
+   */
+  useEffect(() => {
+    if (!searching) return;
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const settle = () => {
+      if (!focusedOf(field.current, proxy.current)) return;
+      if (viewport.offsetTop <= 0.5) return;
+      window.scrollTo({
+        top: Math.max(0, window.scrollY - viewport.offsetTop),
+      });
+    };
+
+    viewport.addEventListener('resize', settle);
+    viewport.addEventListener('scroll', settle);
+    return () => {
+      viewport.removeEventListener('resize', settle);
+      viewport.removeEventListener('scroll', settle);
+    };
   }, [searching]);
 
   /**
@@ -170,33 +213,73 @@ export function ArchiveScreen() {
    * dann derselbe, und die Treffer liegen nicht unter ihr. Wer schon klebte,
    * hat beide Höhen gleich: Das Feld bleibt stehen, nur die Liste beginnt
    * wieder oben.
+   *
+   * Zurück kommt die Bewegung selbst, damit `enterSearchByTouch` weiß, wann
+   * das Feld angekommen ist.
    */
-  const enterSearch = () => {
-    if (searching) return;
+  const enterSearch = (): Promise<void> => {
+    if (searching) return Promise.resolve();
+    setSearching(true);
 
     const headElement = head.current;
     const barElement = bar.current;
+    if (!headElement || !barElement) return Promise.resolve();
 
-    if (headElement && barElement) {
-      const padding = parseFloat(getComputedStyle(barElement).paddingTop) || 0;
-      const headTop = headElement.getBoundingClientRect().top + window.scrollY;
-      const end = Math.max(padding - headTop, 0);
-      const start = Math.max(
-        barElement.getBoundingClientRect().top + padding - headTop,
-        end,
-      );
+    const padding = parseFloat(getComputedStyle(barElement).paddingTop) || 0;
+    const headTop = headElement.getBoundingClientRect().top + window.scrollY;
+    const end = Math.max(padding - headTop, 0);
+    const start = Math.max(
+      barElement.getBoundingClientRect().top + padding - headTop,
+      end,
+    );
 
-      headAnimation.current?.stop();
-      headElement.style.height = `${start}px`;
-      window.scrollTo({ top: 0 });
-      headAnimation.current = animate(
-        headElement,
-        { height: [start, end], opacity: 0 },
-        HEAD_SPRING,
-      );
-    }
+    // Das Hilfsfeld liegt dort, wo das Feld ankommt: Der Kopf ist das erste
+    // Kind der Wurzel, also steht das Feld am Ende genau `end` unter ihr.
+    if (proxy.current) proxy.current.style.top = `${end}px`;
 
-    setSearching(true);
+    headAnimation.current?.stop();
+    headElement.style.height = `${start}px`;
+    window.scrollTo({ top: 0 });
+    const controls = animate(
+      headElement,
+      { height: [start, end], opacity: 0 },
+      HEAD_SPRING,
+    );
+    headAnimation.current = controls;
+    return controls.then(() => undefined);
+  };
+
+  /**
+   * Der Einstieg per Finger — mit der Tastatur **erst dort, wo das Feld
+   * ankommt**.
+   *
+   * Bekam das Feld den Fokus beim Tipp selbst, stand es danach mit offener
+   * Tastatur halb unter der Uhr, bis man daneben tippte. iOS schiebt beim
+   * Fokussieren den sichtbaren Ausschnitt gegen das Layout, um das Feld über
+   * der Tastatur zu zentrieren — und rechnet dabei mit der Lage im Moment des
+   * Tipps, unten unter dem Kopf. Gleich danach fährt das Feld nach oben, die
+   * Verschiebung aber bleibt, und `sticky` klebt am Layout, nicht am
+   * Ausschnitt. Ein Feld, das schon oben liegt, verschiebt iOS nicht.
+   *
+   * Also nimmt den Fokus zuerst das unsichtbare Hilfsfeld an der Endposition,
+   * noch in derselben Geste — sonst ginge die Tastatur gar nicht auf. Ist der
+   * Kopf eingeklappt, wandert der Fokus ins echte Feld; zwischen zwei Feldern
+   * bleibt die Tastatur offen, ohne dass es eine Geste braucht. Was man bis
+   * dahin tippt, landet über `search` schon im echten Feld.
+   */
+  const enterSearchByTouch = () => {
+    const stand = proxy.current;
+    const arrived = enterSearch();
+    if (!stand) return;
+
+    stand.focus({ preventScroll: true });
+    void arrived.then(() => {
+      const input = field.current;
+      if (!input || document.activeElement !== stand) return;
+      input.focus({ preventScroll: true });
+      const caret = input.value.length;
+      input.setSelectionRange(caret, caret);
+    });
   };
 
   // Abbrechen heißt auch: Der Begriff ist weg. Ein Filter, der nach dem
@@ -211,6 +294,7 @@ export function ArchiveScreen() {
     // gälte weiter als klebend, während der Kopf sie längst nach unten schiebt.
     setPinned(false);
     field.current?.blur();
+    proxy.current?.blur();
     window.scrollTo({ top: 0 });
 
     const headElement = head.current;
@@ -231,6 +315,14 @@ export function ArchiveScreen() {
     void controls.then(() => {
       if (headAnimation.current === controls) headElement.style.height = '';
     });
+  };
+
+  // Escape beendet den Modus, Enter nur die Eingabe — gesucht wird ohnehin
+  // schon beim Tippen, und den Modus beendet allein „Abbrechen". Für das
+  // Feld und das Hilfsfeld gleich.
+  const onSearchKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') leaveSearch();
+    if (event.key === 'Enter') event.currentTarget.blur();
   };
 
   // „Termine" gab es einmal nicht, und der Grund war gut: nebeneinander
@@ -257,7 +349,21 @@ export function ArchiveScreen() {
   return (
     // `overflow-anchor` hält Chrome davon ab, während der Kopf ein- oder
     // ausklappt, selbst nachzuscrollen — das wäre eine zweite Bewegung.
-    <div className="[overflow-anchor:none]">
+    // `relative` für das Hilfsfeld, das von hier aus gemessen wird.
+    <div className="relative [overflow-anchor:none]">
+      {/* Unsichtbar und nicht anzutippen; es nimmt nur den ersten Fokus
+          (`enterSearchByTouch`). `text-base`, damit iOS nicht hineinzoomt. */}
+      <input
+        ref={proxy}
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        onKeyDown={onSearchKey}
+        enterKeyHint="search"
+        autoComplete="off"
+        tabIndex={-1}
+        aria-hidden
+        className="pointer-events-none absolute inset-x-5 h-10 text-base caret-transparent opacity-0"
+      />
       {/* Ohne Kopfbild, aus demselben Grund wie bei „Termine": hier liest man
           Listen und sucht eine Zeile. Ein Foto darüber wäre nur Weg bis zur
           ersten — und anders als auf „Heute" oder „Gebet" kommt man hierher
@@ -286,14 +392,20 @@ export function ArchiveScreen() {
             dem Inhalt hoch und bleibt unter der Statusleiste stehen, ohne dass
             irgendetwas wächst oder umspringt. Durchsichtig ist er, solange er
             nicht klebt — dann liegt sein oberer Rand über dem Kopf; erst oben
-            braucht er eine Fläche, unter der die Treffer verschwinden. */}
+            braucht er eine Fläche, unter der die Treffer verschwinden.
+
+            Der Haarstrich darunter gehört nur zum Kleben **ohne** Suchmodus:
+            Dort trennt er die Leiste vom Archiv, das unter ihr weiterläuft.
+            Im Suchmodus sind Feld und Treffer eins, wie bei Spotify. */}
         <div
           ref={bar}
           className={cn(
             'sticky top-0 z-30 -mx-5 -mt-safe-4 space-y-4 px-5 pt-safe-4 pb-3 transition-[background-color,box-shadow] duration-200',
-            pinned || searching
-              ? 'bg-canvas shadow-[0_1px_0_var(--color-line)]'
-              : 'bg-transparent',
+            searching
+              ? 'bg-canvas'
+              : pinned
+                ? 'bg-canvas shadow-[0_1px_0_var(--color-line)]'
+                : 'bg-transparent',
           )}
         >
           <div className="flex items-center">
@@ -302,20 +414,32 @@ export function ArchiveScreen() {
                 size={15}
                 className="absolute top-1/2 left-3.5 -translate-y-1/2 text-stone-300"
               />
+              {/* Per Finger bekommt das Feld beim ersten Tipp keinen Fokus
+                  (`mousedown` ist der Weg dorthin, auch beim Tippen), sondern
+                  das Hilfsfeld — warum, steht bei `enterSearchByTouch`. Maus
+                  und Tab-Taste gehen den gewohnten Weg über `onFocus`. */}
               <TextInput
                 ref={field}
                 value={search}
-                onFocus={enterSearch}
+                onPointerDown={(event) => {
+                  pointer.current = event.pointerType;
+                }}
+                onMouseDown={(event) => {
+                  if (!searching && pointer.current !== 'mouse') {
+                    event.preventDefault();
+                  }
+                }}
+                onClick={() => {
+                  if (!searching && pointer.current !== 'mouse') {
+                    enterSearchByTouch();
+                  }
+                }}
+                onFocus={() => void enterSearch()}
                 onChange={(event) => {
                   setSearch(event.target.value);
-                  enterSearch();
+                  void enterSearch();
                 }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape') leaveSearch();
-                  // Enter schließt nur die Tastatur — gesucht wird ohnehin schon
-                  // beim Tippen, und den Modus beendet allein „Abbrechen".
-                  if (event.key === 'Enter') event.currentTarget.blur();
-                }}
+                onKeyDown={onSearchKey}
                 enterKeyHint="search"
                 placeholder="Durchsuchen …"
                 className="pl-9"

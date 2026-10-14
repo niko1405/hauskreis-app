@@ -13,6 +13,7 @@ import { useUnreadAdmin } from '@/features/admin/use-unread-admin';
 import { useMe } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
+import { useKeyboardOpen } from '@/lib/use-keyboard-open';
 
 export const NAV_ITEMS = [
   { href: '/', label: 'Heute', icon: Home },
@@ -112,11 +113,21 @@ export function TabBar() {
   const isActive = useIsActive();
   const unread = useUnreadProfile();
   const items = useNavItems();
+  const keyboard = useKeyboardOpen();
 
   return (
     <nav
       aria-label="Hauptnavigation"
-      className="pb-safe sticky bottom-0 z-30 border-t border-line bg-canvas/95 backdrop-blur md:hidden"
+      inert={keyboard}
+      // Bei offener Tastatur geht sie nach unten weg: Liegt das Feld weit
+      // unten, schiebt iOS den Ausschnitt an den Seitenfuß, und sonst stünde
+      // sie direkt über der Tastatur. **Verschoben, nicht entfernt** — sie
+      // klebt im Fluss, und `hidden` kürzte das Dokument um ihre Höhe; am
+      // Seitenende spränge der Inhalt dann mitten im Tippen.
+      className={cn(
+        'pb-safe sticky bottom-0 z-30 border-t border-line bg-canvas/95 backdrop-blur transition-[translate,opacity] duration-200 md:hidden',
+        keyboard && 'translate-y-full opacity-0',
+      )}
     >
       <ul className="flex items-stretch justify-around">
         {items.map(({ href, label, icon: Icon }) => {
@@ -158,7 +169,13 @@ export function Sidebar() {
       // Der sichere Rand kommt zum vorhandenen Abstand dazu: Auf dem iPad vom
       // Home-Bildschirm reicht die App bis unter die Statusleiste, und dort
       // stünde sonst „Hauskreis" unter der Uhr.
-      className="hidden w-56 shrink-0 border-r border-line px-4 pt-[calc(env(safe-area-inset-top)+2rem)] pb-8 md:block"
+      //
+      // **Sie bleibt stehen, während die Seite scrollt** (`sticky` mit der
+      // Fensterhöhe). Sie war ein gewöhnliches Kind der Zeile, so hoch wie die
+      // Seite, und die fünf Ziele scrollten mit dem Inhalt aus dem Bild — am
+      // Ende einer langen Liste war der Weg woandershin eine Bildschirmhöhe
+      // weit oben. Ihr Rand reicht damit auch immer über das ganze Fenster.
+      className="hidden w-56 shrink-0 border-r border-line px-4 pt-[calc(env(safe-area-inset-top)+2rem)] pb-8 md:sticky md:top-0 md:block md:h-dvh md:self-start md:overflow-y-auto"
     >
       <p className="mb-6 px-3 font-serif text-2xl font-bold text-stone-900">
         Hauskreis

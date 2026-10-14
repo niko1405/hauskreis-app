@@ -56,24 +56,27 @@ mit Internet — sonst hat sie beim ersten Start unterwegs noch nichts zu zeigen
 
 Das alles passiert im Tab **Profil**, von oben nach unten:
 
-1. **Profilbild und Anzeigename.** Ganz oben. Der Anzeigename ist der, den alle
-   anderen sehen — such dir einen coolen aus.
-2. **Deine Angaben.** Trage deinen **Geburtstag** ein und drück auf
-   **Speichern**. Ohne Geburtsdatum stehst du bei den Geburtstagen nirgends —
-   auch nicht als jemand, der ein Geschenk besorgt (mehr dazu in Kapitel 10).
+1. **Profilbild.** Ganz oben, über deinem Namen.
+2. **Über dich.** Dein **Anzeigename** ist der, den alle anderen sehen — such
+   dir einen coolen aus. Trage außerdem deinen **Geburtstag** ein und drück
+   auf **Speichern**; der Knopf erscheint, sobald du etwas geändert hast. Ohne
+   Geburtsdatum stehst du bei den Geburtstagen nirgends — auch nicht als
+   jemand, der ein Geschenk besorgt (mehr dazu in Kapitel 10).
 
-   In derselben Karte stehen vier Häkchen:
-   - **„Ich kann ein Instrument spielen"** — nur wer das anhakt, wird für die
+   Darunter, unter **Was du übernimmst**, stehen vier Schalter. Sie gelten
+   sofort, ohne Speichern, und unter jedem steht, was er gerade bewirkt:
+   - **„Ich spiele ein Instrument"** — nur wer das einschaltet, wird für die
      Musik überhaupt vorgeschlagen.
+   - **„Ich kann gerade hosten"** — schalte es aus, wenn du eine Weile nicht
+     dran sein möchtest. Dann schlägt dich die App nicht als Gastgeber vor.
+     Für einzelne Abende reicht eine Abwesenheit.
    - **„Ich bin grundsätzlich dabei"** — sagt kommende Abende gleich für dich
      zu, statt sie auf „weiß noch nicht" stehen zu lassen. Abwesenheiten und
      eigene Absagen zählen trotzdem.
-   - **„Ich kann gerade hosten"** — nimm den Haken raus, wenn du eine Weile
-     nicht dran sein möchtest. Dann schlägt dich die App nicht als Gastgeber
-     vor.
    - **„Mein Testimony habe ich schon erzählt"** — für alles **vor** dieser
-     App. Man erzählt es einmal; mit dem Haken schlägt dich die App dafür nicht
-     mehr vor. Abende, an denen du es hier erzählt hast, kennt sie selbst.
+     App. Man erzählt es einmal; ist der Schalter an, schlägt dich die App
+     dafür nicht mehr vor. Abende, an denen du es hier erzählt hast, kennt sie
+     selbst.
 3. **Wo du wohnst.** Adresse eintragen, dann **Adresse speichern**. Die
    **Kapazität** darüber ist optional: Ohne Angabe heißt es „alle passen rein",
    nur enge Wohnungen brauchen eine Zahl. Kommen an einem Abend mehr Leute als
@@ -304,7 +307,7 @@ wenigsten zu tun hat — „wer war am längsten nicht dran" ergibt hier keinen 
 weil niemand von ihnen je dran war. Trägst du jemanden ein, der für einen
 **anderen kommenden** Abend schon dafür vorgesehen war, zieht die Rolle einfach
 mit um: Der andere Abend ist danach wieder offen. Warst du **vor dieser App** schon dran,
-setz im Profil den Haken „Mein Testimony habe ich schon erzählt"; die Abende,
+schalte im Profil „Mein Testimony habe ich schon erzählt" ein; die Abende,
 die die App selbst kennt, zählt sie ohnehin.
 
 Ein **Abwesenheitszeitraum** wirkt dabei genauso — aber deine eigene Zusage

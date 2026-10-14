@@ -6,7 +6,16 @@
  * `canHost` ist die wichtigste Einstellung hier: sie steuert, ob man in den
  * Host-Vorschlägen überhaupt auftaucht (CLAUDE.md §5).
  */
-import { Ban, Guitar, LogOut, Shield, Users } from 'lucide-react';
+import {
+  Ban,
+  CalendarCheck,
+  Guitar,
+  Home,
+  LogOut,
+  Mic,
+  Shield,
+  Users,
+} from 'lucide-react';
 import { HauskreisCard } from './hauskreis-card';
 import Link from '@/components/ui/link';
 import { useEffect, useState } from 'react';
@@ -15,7 +24,8 @@ import { ScreenHeader } from '@/components/layout/screen-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { Checkbox, Field, TextInput } from '@/components/ui/field';
+import { Field, TextInput } from '@/components/ui/field';
+import { SwitchRow } from '@/components/ui/switch';
 import {
   CardSkeleton,
   ConflictBanner,
@@ -33,6 +43,11 @@ import { HomeCard } from './home-card';
 import { PhotoPicker } from './photo-picker';
 import { NotificationsCard } from './notifications-card';
 import { useUnreadAdmin } from '@/features/admin/use-unread-admin';
+import type { UpdatePersonInput } from '@/lib/api/types';
+
+/** Die vier Angaben, die als Schalter im Profil stehen und sofort gelten. */
+type Flag =
+  'playsInstrument' | 'canHost' | 'autoAttend' | 'testimonyToldBefore';
 
 export function ProfileScreen() {
   const me = useMe();
@@ -68,34 +83,29 @@ function Loaded({ personId }: { personId: string }) {
   const current = person.data?.data;
 
   const [name, setName] = useState('');
-  const [playsInstrument, setPlaysInstrument] = useState(false);
-  const [canHost, setCanHost] = useState(true);
-  const [autoAttend, setAutoAttend] = useState(false);
-  const [testimonyToldBefore, setTestimonyToldBefore] = useState(false);
   const [birthdate, setBirthdate] = useState('');
 
   // Den Serverstand übernehmen, sobald er da ist — und nach jedem Speichern.
+  // **Je Feld** und nicht am ganzen Datensatz: Die Schalter darunter
+  // schreiben sofort, und jede ihrer Antworten ist ein neuer Datensatz. Hinge
+  // das hier daran, löschte das Umlegen eines Schalters einen halb getippten
+  // Namen.
+  const serverName = current?.name;
+  const serverBirthdate = current?.birthdate;
   useEffect(() => {
-    if (!current) return;
-    setName(current.name);
-    setPlaysInstrument(current.playsInstrument);
-    setCanHost(current.canHost);
-    setAutoAttend(current.autoAttend);
-    setTestimonyToldBefore(current.testimonyToldBefore);
-    setBirthdate(current.birthdate ?? '');
-  }, [current]);
+    if (serverName !== undefined) setName(serverName);
+  }, [serverName]);
+  useEffect(() => {
+    if (serverBirthdate !== undefined) setBirthdate(serverBirthdate ?? '');
+  }, [serverBirthdate]);
 
   // Steht vor dem vorzeitigen Aussteigen, weil `useUnsavedGuard` ein Hook ist
   // und Hooks nicht hinter einem `return` stehen dürfen. Ohne Serverstand gibt
-  // es ohnehin nichts, wovon etwas abweichen könnte.
+  // es ohnehin nichts, wovon etwas abweichen könnte. Die Schalter zählen nicht:
+  // An ihnen gibt es nichts Ungespeichertes.
   const dirty =
     current !== undefined &&
-    (name !== current.name ||
-      playsInstrument !== current.playsInstrument ||
-      canHost !== current.canHost ||
-      autoAttend !== current.autoAttend ||
-      testimonyToldBefore !== current.testimonyToldBefore ||
-      birthdate !== (current.birthdate ?? ''));
+    (name !== current.name || birthdate !== (current.birthdate ?? ''));
 
   // Solange das gilt, fragt jeder Link nach, bevor er von hier wegführt.
   useUnsavedGuard(dirty);
@@ -112,19 +122,34 @@ function Loaded({ personId }: { personId: string }) {
     update.mutate(
       {
         name,
-        // Diese drei stehen in diesem Formular, also schickt dieses Formular
-        // sie. Weglassen hieße seit `updatePersonSchema` „unverändert" — was
-        // hier nicht stimmt, denn ein weggenommener Haken ist eine Änderung.
-        playsInstrument,
-        canHost,
-        autoAttend,
-        testimonyToldBefore,
         ...(birthdate === '' ? {} : { birthdate }),
       },
       {
         onSuccess: () => toast.success('Gespeichert.'),
       },
     );
+  };
+
+  /**
+   * Was ein Schalter gerade zeigt: während er schreibt den neuen Stand, sonst
+   * den des Servers. Ohne das bliebe er bis zur Antwort in der alten Lage
+   * stehen und spränge erst dann um — bei schlechtem Netz eine Sekunde, in
+   * der er kaputt aussieht.
+   */
+  const flag = (key: Flag): boolean => {
+    const pending = update.isPending ? update.variables?.[key] : undefined;
+    return pending ?? current[key];
+  };
+
+  // Einer nach dem anderen: Jeder Schreibvorgang trägt den ETag des vorigen,
+  // und ein zweiter, der vor der Antwort losgeht, wäre ein Konflikt mit sich
+  // selbst. Abgeblendet wird dabei nichts — der Moment ist zu kurz, als dass
+  // ein grauer Schalter etwas anderes wäre als ein Flackern.
+  const toggle = (key: Flag) => (next: boolean) => {
+    if (update.isPending) return;
+    const input: UpdatePersonInput = {};
+    input[key] = next;
+    update.mutate(input);
   };
 
   return (
@@ -205,8 +230,12 @@ function Loaded({ personId }: { personId: string }) {
           </section>
         )}
 
+        {/* „Deine Angaben" waren eine Karte: zwei Felder, vier Haken und ein
+            Speichern-Knopf für alles. Es sind aber zwei Sorten — wer du bist,
+            und wofür die App dich vorschlägt. Die erste tippt man und
+            speichert sie, die zweite legt man um, und sie gilt. */}
         <section>
-          <SectionTitle>Deine Angaben</SectionTitle>
+          <SectionTitle>Über dich</SectionTitle>
           <Card className="space-y-4">
             <Field label="Anzeigename">
               <TextInput
@@ -230,51 +259,85 @@ function Loaded({ personId }: { personId: string }) {
               />
             </Field>
 
-            <Checkbox
-              label="Ich kann ein Instrument spielen"
-              info="Dann tauchst du bei den Musik-Vorschlägen auf."
-              checked={playsInstrument}
-              onChange={(event) => setPlaysInstrument(event.target.checked)}
-            />
+            {/* Nur, wenn es etwas zu speichern gibt. Ein Knopf, der dauerhaft
+                ausgegraut dasteht, fragt nach einer Erklärung. */}
+            {dirty && (
+              <Button
+                className="w-full"
+                loading={update.isPending}
+                onClick={save}
+              >
+                Speichern
+              </Button>
+            )}
+          </Card>
+        </section>
 
-            <Checkbox
-              label="Ich kann gerade hosten"
-              info="Nimm den Haken raus, wenn du längerfristig den Umständen bedingt nicht hosten kannst. ACHTUNG: Nicht zu verwechseln mit dem Setzen einer Abwesenheit, die nur einzelne Abende betrifft!"
-              checked={canHost}
-              onChange={(event) => setCanHost(event.target.checked)}
-            />
-
-            <Checkbox
-              label="Ich bin grundsätzlich dabei"
-              info={
-                'Sagt kommende Abende gleich für dich zu, statt sie auf „weiß noch nicht“ ' +
-                'zu lassen - Abwesenheiten und Absagen werden berücksichtigt.'
+        {/* Unter jedem Schalter steht, was er **gerade** bewirkt — nicht eine
+            Erklärung beider Fälle. Das waren einmal vier Absätze, dann vier
+            Info-Symbole, hinter denen man sie suchen musste. Ein Satz, der
+            mit dem Schalter wechselt, ist kürzer als beides und beantwortet
+            die Frage, mit der man herkommt: „Was passiert, wenn ich das
+            umlege?" */}
+        <section>
+          <SectionTitle>Was du übernimmst</SectionTitle>
+          <Card className="divide-y divide-line py-1">
+            <SwitchRow
+              className="py-3.5"
+              icon={<Guitar size={17} />}
+              label="Ich spiele ein Instrument"
+              description={
+                flag('playsInstrument')
+                  ? 'Du stehst bei der Musik zur Wahl.'
+                  : 'Bei der Musik schlägt dich die App nicht vor.'
               }
-              checked={autoAttend}
-              onChange={(event) => setAutoAttend(event.target.checked)}
+              checked={flag('playsInstrument')}
+              onChange={toggle('playsInstrument')}
+            />
+
+            {/* Die Warnung vor der Verwechslung mit einer Abwesenheit steht
+                nur im ausgeschalteten Fall — dann, wenn sie gilt. */}
+            <SwitchRow
+              className="py-3.5"
+              icon={<Home size={17} />}
+              label="Ich kann gerade hosten"
+              description={
+                flag('canHost')
+                  ? 'Du stehst bei den Gastgebern zur Wahl.'
+                  : 'Bei den Gastgebern schlägt dich die App nicht vor. Für einzelne Abende reicht eine Abwesenheit.'
+              }
+              checked={flag('canHost')}
+              onChange={toggle('canHost')}
+            />
+
+            <SwitchRow
+              className="py-3.5"
+              icon={<CalendarCheck size={17} />}
+              label="Ich bin grundsätzlich dabei"
+              description={
+                flag('autoAttend')
+                  ? 'Neue Abende sagst du gleich zu — Abwesenheiten und Absagen gelten trotzdem.'
+                  : 'Neue Abende stehen bei dir auf „weiß noch nicht“.'
+              }
+              checked={flag('autoAttend')}
+              onChange={toggle('autoAttend')}
             />
 
             {/* Steht als Letztes, weil man es genau einmal anfasst: Ein
                 Testimony erzählt man einmal, und wer es hier erzählt hat, ist
-                ohnehin raus — dieser Haken ist für alles davor. */}
-            <Checkbox
+                ohnehin raus — dieser Schalter ist für alles davor. */}
+            <SwitchRow
+              className="py-3.5"
+              icon={<Mic size={17} />}
               label="Mein Testimony habe ich schon erzählt"
-              info={
-                'Setz den Haken, wenn du vor dieser App dran warst — dann schlägt sie dich ' +
-                'dafür nicht mehr vor. Abende, an denen du es hier erzählt hast, kennt sie selbst.'
+              description={
+                flag('testimonyToldBefore')
+                  ? 'Die App schlägt dich fürs Testimony nicht mehr vor.'
+                  : 'Die App schlägt dich fürs Testimony vor — Abende hier kennt sie selbst.'
               }
-              checked={testimonyToldBefore}
-              onChange={(event) => setTestimonyToldBefore(event.target.checked)}
+              checked={flag('testimonyToldBefore')}
+              onChange={toggle('testimonyToldBefore')}
             />
-
-            <Button
-              className="w-full"
-              disabled={!dirty}
-              loading={update.isPending}
-              onClick={save}
-            >
-              Speichern
-            </Button>
           </Card>
         </section>
 

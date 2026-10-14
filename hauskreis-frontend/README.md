@@ -1723,24 +1723,40 @@ als eigene Ressource, ihr ETag liegt also nirgends im Cache. Dasselbe Muster wie
 
 Wer ins Suchfeld tippt, will suchen und nicht lesen, was das Archiv ist. Also
 gehen Kopf und Kopfleiste, das Feld rückt mit den Registern nach oben und bleibt
-dort kleben, darunter scrollen die Treffer — wie bei Spotify. Drei Dinge daran:
+dort kleben, darunter scrollen die Treffer — wie bei Spotify. Was daran zählt:
 
 - **Er klebt wirklich.** Das tat er anfangs nicht: `main` war durch
   `overflow-x-hidden` ein Scroll-Container, und `sticky` klebte an ihm statt am
-  Fenster (siehe „Eine Klasse, die den Rechner rettet"). Das Feld scrollte weg und landete beim
-  Öffnen je nach Scrollstand zu weit oben. Den Rücksprung nach oben gibt es
-  außerdem erst, wenn der Kopf fertig eingeklappt ist (`onExitComplete`) —
-  vorher rechnete er gegen ein Layout, das sich darunter noch bewegte.
+  Fenster (siehe „Eine Klasse, die den Rechner rettet"). Das Feld scrollte weg
+  und landete beim Öffnen je nach Scrollstand zu weit oben.
+- **Die Leiste klebt auch ohne Suchmodus.** Wer nach unten scrollt, behält das
+  Feld oben; solange es klebt, bleibt die Kopfleiste weg, und zurück kommt sie
+  erst über die Leiste hinweg beim Kopf. Nur in diesem Zustand trägt die Leiste
+  einen Haarstrich — im Suchmodus sind Feld und Treffer eins.
+- **Der Einstieg ist eine Bewegung.** Die Leiste trägt ihren sicheren Rand
+  immer (`pt-safe-4` mit `-mt-safe-4`, die sich im Fluss aufheben), und es
+  bewegt sich allein die Höhe des Kopfs. Vorher wuchs der Rand per Transition,
+  während der Kopf mit einer Feder einklappte, und das Feld schoss über seinen
+  Platz hinaus. Höhe statt `transform`, weil ein `transform` am Seiteninhalt
+  zum Bezugsrahmen der Sheets darin würde (dieselbe Regel wie in
+  `pull-to-refresh.tsx`).
+- **Die Tastatur geht oben auf.** Per Finger bekommt das Feld beim ersten Tipp
+  keinen Fokus (`mousedown` wird verhindert), sondern ein unsichtbares
+  Hilfsfeld an der Endposition — in derselben Geste, sonst bliebe die Tastatur
+  zu. Ist der Kopf eingeklappt, wandert der Fokus ins echte Feld; zwischen zwei
+  Feldern bleibt die Tastatur offen. Der Grund: iOS schiebt beim Fokussieren
+  den sichtbaren Ausschnitt gegen das Layout, um das Feld über der Tastatur zu
+  zentrieren, und rechnet mit der Lage beim Tipp. Fuhr das Feld danach hoch,
+  stand es mit offener Tastatur halb unter der Uhr. Was man tippt, bevor der
+  Fokus übergeben ist, landet über denselben Zustand schon im echten Feld.
+  Darunter liegt ein Netz über `visualViewport`, das zurückscrollt, falls iOS
+  doch verschiebt.
 - **Er endet nur über „Abbrechen"** (oder Escape), nicht wenn das Feld den Fokus
   verliert. Auf dem Telefon schließt schon das Scrollen durch die Treffer die
   Tastatur, und dann spränge der Kopf mitten in der Liste zurück. Enter schließt
   nur die Tastatur.
 - **Abbrechen leert das Feld.** Ein Filter, der nach dem Verlassen weiter wirkt,
   sähe aus wie ein Archiv, in dem etwas fehlt.
-- **Der Kopf schrumpft in der Höhe, er fährt nicht weg.** Ein `transform` am
-  Seiteninhalt würde zum Bezugsrahmen der Sheets darin (dieselbe Regel wie in
-  `pull-to-refresh.tsx`). Gleichzeitig wächst über dem Feld der sichere Rand
-  (`transition-[padding]`) — beides zusammen ist der Übergang.
 
 ## Wischen statt Drücken
 
@@ -2081,10 +2097,10 @@ Eingriffe in den Verlauf, die ihn verbiegen. Abgedeckt sind alle Wege _in_ der
 App plus Neuladen und Schließen — das ist die ehrliche Reichweite, und sie steht
 im Doc-Kommentar.
 
-## Das Profil trägt, was man anhakt
+## Das Profil trägt, was man einstellt
 
 Zwei Blöcke sind ausgezogen, und beide aus demselben Grund: Sie standen als
-Karten zwischen lauter Einstellungen, die man anhakt, obwohl man sie zweimal im
+Karten zwischen lauter Einstellungen, die man umlegt, obwohl man sie zweimal im
 Jahr anfasst.
 
 **Die Benachrichtigungs-Arten** (`features/profile/notification-preferences-screen.tsx`,
@@ -2120,14 +2136,24 @@ eine Zeile, und es gibt keinen Zwischenzustand, in dem ein Link ins Leere zeigt.
 Ein wortlos ausgegrauter Knopf wäre das, was an den Lied-Haken einmal falsch
 war: kein Hinweis, sondern ein Fehler.
 
-**Unter den Haken steht kein Kleingedrucktes mehr**, sondern ein Info-Symbol
-(`Checkbox` mit `info`, dahinter `components/ui/info-bubble.tsx`). Vier Haken mit
-vier Absätzen Erklärung machten aus „Deine Angaben" eine Karte, die mehr aus
-Erklärung bestand als aus Angaben — und gebraucht wird die Erklärung einmal,
-beim ersten Ankreuzen. Sie klappt als **Sprechblase** am Symbol auf, nicht als
-Sheet: Ein Sheet beantwortet „wähle etwas aus" und schöbe sich für zwei Sätze
-über den halben Bildschirm. Das Symbol steht **neben** dem `<label>` und nicht
-darin, sonst schaltete der Tipp aufs Symbol den Haken um.
+**Was an oder aus ist und sofort gilt, ist ein Schalter** (`components/ui/switch.tsx`,
+`Switch` und `SwitchRow`). Das Häkchen (`Checkbox`) bleibt für das, was man
+auswählt oder abhakt, und für Angaben in einem Formular mit Speichern-Knopf —
+Bausteine eines Abends, der Entwurf der Geschenk-Verwaltung, erledigte Ideen,
+Filter. Vorher waren es überall Häkchen, auch an Einstellungen, die längst
+sofort schrieben. `SwitchRow` ist ein `<label>` über die ganze Zeile, und weil
+ein `button` beschriftbar ist, schaltet ein Tipp auf den Text mit.
+
+**„Deine Angaben" sind zwei Karten.** „Über dich" (Name, Geburtstag) speichert
+ein Knopf, der erst erscheint, wenn sich etwas geändert hat. „Was du
+übernimmst" sind vier Schalter, die sofort schreiben, und jeder schickt nur sich
+selbst (das PATCH ist partiell, siehe `UpdatePersonInput`). Während eine Anfrage
+läuft, zeigt der Schalter schon den neuen Stand (`update.variables`), nimmt aber
+keinen weiteren Klick an: Jeder Schreibvorgang trägt den ETag des vorigen. Unter
+jedem Schalter steht, **was er gerade bewirkt** — vorher standen dort erst vier
+Absätze, dann vier Info-Symbole mit Sprechblase. Name und Geburtstag übernimmt
+das Formular **je Feld** vom Server, sonst löschte ein umgelegter Schalter einen
+halb getippten Namen.
 
 **Jede Unterseite hat einen Zurück-Pfeil** (`PageHeader` mit `back`, dahinter
 `components/layout/back-button.tsx`): Präferenzen, Konto, Hilfe, „Was ist neu",
@@ -2136,6 +2162,23 @@ trugen. Ohne ihn war der Weg hinaus die Tab-Leiste, also ein Sprung woandershin
 statt zurück. Er geht zurück, wohin man kam (`router.back()`), und nur ohne
 Vorgeschichte — eine Push-Nachricht, die direkt auf `/neu` führt — auf das Ziel
 in `back`. Und er fragt nach Ungespeichertem wie jeder Link.
+
+## Tastatur und Seitenspalte
+
+**Solange getippt wird, ist die Tab-Leiste weg** — auf Touch-Geräten
+(`lib/use-keyboard-open.ts`). Liegt ein Feld weiter unten, schiebt iOS den
+Ausschnitt an den Seitenfuß, und dann stand die Leiste direkt über der Tastatur.
+Eine Frage „ist die Tastatur offen" kennt das Web nicht; die Antwort ist der
+Fokus eines Textfelds und, sobald einmal eine Tastatur zu sehen war, der
+geschrumpfte `visualViewport` — für Android, wo die Zurück-Taste die Tastatur
+schließt und den Fokus lässt. Die Leiste wird nach unten verschoben (`inert`,
+`translate-y-full`), nicht entfernt: Sie klebt im Fluss, und `hidden` kürzte
+das Dokument um ihre Höhe. Der Antwort-Balken im `BottomSlot` bleibt stehen —
+in ihm steht das Feld selbst.
+
+**Am Rechner bleibt die Seitenspalte stehen** (`md:sticky md:top-0 md:h-dvh`).
+Sie war ein gewöhnliches Kind der Zeile, so hoch wie die Seite, und scrollte mit
+dem Inhalt aus dem Bild.
 
 ## Was das Frontend bewusst nicht tut
 
