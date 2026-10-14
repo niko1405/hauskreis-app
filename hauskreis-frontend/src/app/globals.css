@@ -354,6 +354,15 @@ label,
 .pt-safe-6 {
   padding-top: calc(env(safe-area-inset-top, 0px) + 1.5rem);
 }
+
+/* Das Gegenstück zu `pt-safe-4` — für einen Block, der den sicheren Rand
+ * **immer** trägt, ohne dass man ihn sieht: die Suchleiste im Archiv. Padding
+ * und negativer Rand heben sich auf, solange sie im Fluss steht; klebt sie
+ * oben, ist das Padding genau die Fläche unter der Statusleiste. So sind
+ * Ruhe- und Klebeplatz derselbe, und es gibt nichts, das umspringen müsste. */
+.-mt-safe-4 {
+  margin-top: calc((env(safe-area-inset-top, 0px) + 1rem) * -1);
+}
 .px-safe {
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
