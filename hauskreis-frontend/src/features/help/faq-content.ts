@@ -102,7 +102,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'start',
     question: 'Was sind erste Schritte?',
     answer:
-      'Folgendes passiert ausschließlich über das Profil - das sind sinnvolle Schritte sobald du dich registriert und eingeloggt hast:\n\n1. Lege deinen Anzeigenamen und Profilbild im oberen Abschnitt fest. Trage außerdem deinen Geburtstag ein.\n2. Lege fest, ob du ein Instrument spielst und aktiviere die automatische Zusage-Funktion unter "Deine Angaben"\n3. Trage im Abschnitt "Wo du wohnst" die Adresse deiner Wohnung sowie die Kapazität dazu ein.\n4. Aktiviere Benachrichtigungen im unteren Abschnitt und lege dort deine Präferenzen fest.\n5. Wähle im Abschnitt "Darstellung" dein bevorzugtes helles/dunkles Design, ganz nach deinem Geschmack.\n6. Für Admins: Öffne die Admin-Verwaltung und erkunde die Funktionen (mehr dazu unter "Verwaltung").',
+      'Folgendes passiert ausschließlich über das Profil - das sind sinnvolle Schritte sobald du dich registriert und eingeloggt hast:\n\n1. Lege dein Profilbild ganz oben fest, deinen Anzeigenamen und Geburtstag unter "Über dich".\n2. Lege unter "Was du übernimmst" fest, ob du ein Instrument spielst, und schalte die automatische Zusage ein. Die Schalter dort gelten sofort.\n3. Trage im Abschnitt "Wo du wohnst" die Adresse deiner Wohnung sowie die Kapazität dazu ein.\n4. Aktiviere Benachrichtigungen im unteren Abschnitt und lege dort deine Präferenzen fest.\n5. Wähle im Abschnitt "Darstellung" dein bevorzugtes helles/dunkles Design, ganz nach deinem Geschmack.\n6. Für Admins: Öffne die Admin-Verwaltung und erkunde die Funktionen (mehr dazu unter "Verwaltung").',
     keywords: ['erste', 'schritte', 'profil', 'einrichtung', 'setup', 'neu'],
   },
   {
@@ -258,8 +258,8 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Was macht „Ich bin grundsätzlich dabei"?',
     answer:
-      'Der Haken sagt kommende Abende gleich für dich zu, statt sie auf „weiß noch nicht" stehen zu lassen. Er ist ausgeschaltet, solange du ihn nicht setzt — eine Zusage, die man nie gegeben hat, ist keine.\n\nZwei Dinge sind wichtig:\n\n**Er füllt nur Lücken.** Wo du schon geantwortet hast, rührt er nichts an — egal in welche Richtung.\n\n**Er gilt rückwirkend für alle kommenden Abende**, nicht erst ab dem nächsten. Wer ihn umlegt, meint die sieben Dienstage, die er vor sich sieht.\n\nAbwesenheiten stechen ihn: Trägst du Urlaub ein, gewinnt der Urlaub. Sagst du für einen Abend von Hand zu, gewinnt deine Zusage — auch mitten im Urlaub.',
-    keywords: ['grundsätzlich', 'automatisch zusagen', 'haken'],
+      'Der Schalter im Profil sagt kommende Abende gleich für dich zu, statt sie auf „weiß noch nicht" stehen zu lassen. Er ist aus, solange du ihn nicht einschaltest — eine Zusage, die man nie gegeben hat, ist keine.\n\nZwei Dinge sind wichtig:\n\n**Er füllt nur Lücken.** Wo du schon geantwortet hast, rührt er nichts an — egal in welche Richtung.\n\n**Er gilt rückwirkend für alle kommenden Abende**, nicht erst ab dem nächsten. Wer ihn umlegt, meint die sieben Dienstage, die er vor sich sieht.\n\nAbwesenheiten stechen ihn: Trägst du Urlaub ein, gewinnt der Urlaub. Sagst du für einen Abend von Hand zu, gewinnt deine Zusage — auch mitten im Urlaub.',
+    keywords: ['grundsätzlich', 'automatisch zusagen', 'schalter', 'haken'],
   },
   {
     id: 'meetings-rolle-zusage',
@@ -274,7 +274,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Warum werde ich fürs Testimony nicht vorgeschlagen?',
     answer:
-      'Weil man sein Testimony einmal erzählt. Wer dran war, steht nicht mehr in den Vorschlägen — und zwischen allen anderen entscheidet nur, wer an dem Abend am wenigsten zu tun hat. „Wer war am längsten nicht dran" ergibt hier keinen Sinn: Von denen, die noch dastehen, war niemand je dran.\n\nDie App zählt dazu die Abende, die sie selbst kennt. Warst du **vorher** schon dran — der Hauskreis ist ja älter als die App —, setz im Profil den Haken **„Mein Testimony habe ich schon erzählt"**.\n\nEintragen lässt sich trotzdem jede:r. Wer ein zweites erzählen will, darf; unter der Rangliste stehen die anderen mit genau diesem Hinweis.\n\nEin Testimony, für das du an einem **kommenden** Abend schon eingeteilt bist, nimmt dich nicht heraus — es zählt wie jede andere Aufgabe und rutscht dich nur nach unten. Wirst du trotzdem für den früheren Abend eingetragen, zieht die Rolle mit dir um: Der andere Abend ist danach wieder offen.',
+      'Weil man sein Testimony einmal erzählt. Wer dran war, steht nicht mehr in den Vorschlägen — und zwischen allen anderen entscheidet nur, wer an dem Abend am wenigsten zu tun hat. „Wer war am längsten nicht dran" ergibt hier keinen Sinn: Von denen, die noch dastehen, war niemand je dran.\n\nDie App zählt dazu die Abende, die sie selbst kennt. Warst du **vorher** schon dran — der Hauskreis ist ja älter als die App —, schalte im Profil **„Mein Testimony habe ich schon erzählt"** ein.\n\nEintragen lässt sich trotzdem jede:r. Wer ein zweites erzählen will, darf; unter der Rangliste stehen die anderen mit genau diesem Hinweis.\n\nEin Testimony, für das du an einem **kommenden** Abend schon eingeteilt bist, nimmt dich nicht heraus — es zählt wie jede andere Aufgabe und rutscht dich nur nach unten. Wirst du trotzdem für den früheren Abend eingetragen, zieht die Rolle mit dir um: Der andere Abend ist danach wieder offen.',
     keywords: ['testimony', 'erzählen', 'vorschlag', 'einmal', 'schon dran'],
   },
   {
@@ -535,7 +535,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     question:
       'Muss man ein Instrument spielen, um für die Musik eingetragen zu werden?',
     answer:
-      'Ja — zur Auswahl steht nur, wer im Profil angehakt hat, dass er ein Instrument spielt. Wer singt und die Musik trotzdem macht, setzt dort den Haken. Ist schon jemand ohne Haken eingetragen, steht er weiter da, damit du ihn austragen kannst.\n\nBeim **Nachtragen** eines vergangenen Abends stehen alle zur Wahl — da zählt, wer es war.\n\nWas sie prüft, ist die Anwesenheit: Wer für den Abend abgesagt hat, kann die Rolle nicht übernehmen — das gilt inzwischen für alle vier Rollen, auch fürs Testimony. Bei einem vergangenen Abend prüft sie auch das nicht mehr; Nachtragen ist Buchführung, keine Planung.',
+      'Ja — zur Auswahl steht nur, wer im Profil eingeschaltet hat, dass er ein Instrument spielt. Wer singt und die Musik trotzdem macht, schaltet es dort ein. Ist schon jemand ohne Instrument eingetragen, steht er weiter da, damit du ihn austragen kannst.\n\nBeim **Nachtragen** eines vergangenen Abends stehen alle zur Wahl — da zählt, wer es war.\n\nWas sie prüft, ist die Anwesenheit: Wer für den Abend abgesagt hat, kann die Rolle nicht übernehmen — das gilt inzwischen für alle vier Rollen, auch fürs Testimony. Bei einem vergangenen Abend prüft sie auch das nicht mehr; Nachtragen ist Buchführung, keine Planung.',
     keywords: ['instrument', 'spielen', 'musik', 'zuteilen'],
   },
   {
@@ -811,7 +811,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'account',
     question: 'Anzeigename und Anmeldename — was ist der Unterschied?',
     answer:
-      'Der **Anzeigename** ist, was die anderen sehen: auf den Karten, in den Vorschlägen, im Archiv. Groß- und Kleinschreibung wie du magst. Er steht im Profil unter „Deine Angaben".\n\nDer **Anmeldename** ist, womit du dich anmeldest. Er wird klein geschrieben und ist über alle Hauskreise hinweg eindeutig. Statt seiner geht auch immer deine E-Mail-Adresse. Er steht im Profil unter „Konto", direkt über der Adresse — beides sind Anmeldedaten und gehören zusammen.\n\nOhne die Trennung stünde auf jeder Karte „niko" statt „Niko".',
+      'Der **Anzeigename** ist, was die anderen sehen: auf den Karten, in den Vorschlägen, im Archiv. Groß- und Kleinschreibung wie du magst. Er steht im Profil unter „Über dich".\n\nDer **Anmeldename** ist, womit du dich anmeldest. Er wird klein geschrieben und ist über alle Hauskreise hinweg eindeutig. Statt seiner geht auch immer deine E-Mail-Adresse. Er steht im Profil unter „Konto", direkt über der Adresse — beides sind Anmeldedaten und gehören zusammen.\n\nOhne die Trennung stünde auf jeder Karte „niko" statt „Niko".',
     keywords: ['name', 'username', 'anzeigename', 'unterschied'],
   },
   {

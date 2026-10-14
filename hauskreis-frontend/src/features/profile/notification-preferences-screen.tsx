@@ -25,6 +25,7 @@ import { PageHeader } from '@/components/layout/app-shell';
 import { Card } from '@/components/ui/card';
 import { Select, TextInput } from '@/components/ui/field';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
+import { SwitchRow } from '@/components/ui/switch';
 import {
   useNotificationSettings,
   useUpdateNotificationSetting,
@@ -227,23 +228,12 @@ function SettingRow({ setting }: { setting: NotificationSetting }) {
 
   return (
     <div className="space-y-2">
-      <label className="flex items-start justify-between gap-3">
-        <span className="min-w-0">
-          <span className="block text-sm font-bold text-stone-800">
-            {setting.label}
-          </span>
-          <span className="block text-[11px] leading-relaxed text-stone-400">
-            {setting.description}
-          </span>
-        </span>
-        <input
-          type="checkbox"
-          aria-label={setting.label}
-          checked={setting.enabled}
-          onChange={(event) => change({ enabled: event.target.checked })}
-          className="mt-1 h-5 w-5 shrink-0 rounded border-line-strong text-terracotta-500 focus:ring-terracotta-500"
-        />
-      </label>
+      <SwitchRow
+        label={setting.label}
+        description={setting.description}
+        checked={setting.enabled}
+        onChange={(enabled) => change({ enabled })}
+      />
 
       {setting.enabled && setting.schedule.kind === 'LEAD_TIME' && (
         <Select

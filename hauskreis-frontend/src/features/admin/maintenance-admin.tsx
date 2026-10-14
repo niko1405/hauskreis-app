@@ -8,7 +8,8 @@
 import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { Checkbox, Field, Select, TextInput } from '@/components/ui/field';
+import { Field, Select, TextInput } from '@/components/ui/field';
+import { SwitchRow } from '@/components/ui/switch';
 import { ConflictBanner } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
@@ -122,22 +123,22 @@ function MeetingScheduleCard() {
         {/* Der Schalter steht über allem anderen, denn er entscheidet, ob das
             Übrige überhaupt eine Frage ist — dasselbe Muster wie bei den
             Gebetsbuddys. Er schreibt sofort, das Formular darunter auf
-            Knopfdruck: Ein Haken ist eine Entscheidung, ein Formular sind
+            Knopfdruck: Ein Schalter ist eine Entscheidung, ein Formular sind
             vier. */}
-        <Checkbox
+        <SwitchRow
           label="Termine automatisch anlegen"
           description="Die App hält immer sieben Abende im Voraus bereit. Aus heißt: Ihr legt eure Termine selbst an — was schon im Kalender steht, bleibt stehen."
           checked={anlegt}
           disabled={update.isPending}
-          onChange={(event) =>
+          onChange={(next) =>
             update.mutate(
-              { autoGenerate: event.target.checked },
+              { autoGenerate: next },
               {
                 onSuccess: () =>
                   toast.success(
-                    event.target.checked
-                      ? 'Ab jetzt legt ihr eure Termine selbst an.'
-                      : 'Die App legt wieder Termine an.',
+                    next
+                      ? 'Die App legt wieder Termine an.'
+                      : 'Ab jetzt legt ihr eure Termine selbst an.',
                   ),
               },
             )
@@ -249,18 +250,18 @@ function MeetingScheduleCard() {
             {/* Unter dem Speichern-Knopf und ohne ihn: Er sagt etwas über die
                 **Bausteine** der Abende, nicht über ihre Lage — und schreibt
                 deshalb sofort, wie der Schalter ganz oben. */}
-            <Checkbox
+            <SwitchRow
               label="Lobpreis- und Gebetsabende"
               description="Der jeweils letzte Termin im Monat bekommt Lieder und ein Testimony statt eines Themas. Gilt für neue Termine — was schon im Kalender steht, behält seine Bausteine."
               checked={current?.praiseEvenings ?? true}
               disabled={update.isPending}
-              onChange={(event) =>
+              onChange={(next) =>
                 update.mutate(
-                  { praiseEvenings: event.target.checked },
+                  { praiseEvenings: next },
                   {
                     onSuccess: () =>
                       toast.success(
-                        event.target.checked
+                        next
                           ? 'Der letzte Abend im Monat wird wieder ein Lobpreisabend.'
                           : 'Ab jetzt bekommt jeder erzeugte Abend ein Thema.',
                       ),
@@ -273,18 +274,18 @@ function MeetingScheduleCard() {
                 der erzeugten Abende. Anders als der Lobpreisabend ist dieser
                 voreingestellt **aus** — die Rolle ist eine Einladung, und wer
                 sie nicht will, soll sie nicht abwählen müssen. */}
-            <Checkbox
+            <SwitchRow
               label="Snacks vorbelegen"
               description="Erzeugte Termine bekommen den Baustein „Snacks“ gleich mit. Gilt für neue Termine — an einem einzelnen Abend lässt er sich immer anhaken, auch ohne diese Vorgabe."
               checked={current?.snackSlot ?? false}
               disabled={update.isPending}
-              onChange={(event) =>
+              onChange={(next) =>
                 update.mutate(
-                  { snackSlot: event.target.checked },
+                  { snackSlot: next },
                   {
                     onSuccess: () =>
                       toast.success(
-                        event.target.checked
+                        next
                           ? 'Neue Termine bringen die Snacks mit.'
                           : 'Neue Termine kommen ohne Snacks.',
                       ),
@@ -325,18 +326,18 @@ function WeeklyActionstepCard() {
     <section>
       <SectionTitle>Actionstep der Woche</SectionTitle>
       <Card>
-        <Checkbox
+        <SwitchRow
           label={'Auf „Heute" anzeigen'}
           description="Der Vorsatz vom letzten Abend, mit Haken, plus die wöchentliche Erinnerung. An Einheiten und über die Nachbereitung bleibt der Actionstep so oder so."
           checked={current?.weeklyActionstep ?? true}
           disabled={update.isPending}
-          onChange={(event) =>
+          onChange={(next) =>
             update.mutate(
-              { weeklyActionstep: event.target.checked },
+              { weeklyActionstep: next },
               {
                 onSuccess: () =>
                   toast.success(
-                    event.target.checked
+                    next
                       ? 'Der Actionstep steht wieder auf „Heute".'
                       : 'Der Actionstep der Woche ist aus.',
                   ),
@@ -371,20 +372,20 @@ function PrayerBuddyConfigCard() {
             Übrige überhaupt eine Frage ist. Aus heißt ganz aus: kein Tab, keine
             Karte auf „Heute", keine Benachrichtigungsart. Bestehende Runden
             bleiben stehen und sind beim Wiedereinschalten wieder da. */}
-        <Checkbox
+        <SwitchRow
           label="Gebetsbuddys"
           description="Alle paar Wochen neue Zweier- und Dreiergruppen, die füreinander beten. Ohne sie fällt der Gebets-Tab weg."
           checked={current?.enabled ?? true}
           disabled={update.isPending}
-          onChange={(event) =>
+          onChange={(next) =>
             update.mutate(
-              { enabled: event.target.checked },
+              { enabled: next },
               {
                 onSuccess: () =>
                   toast.success(
-                    event.target.checked
-                      ? 'Gebetsbuddys sind aus.'
-                      : 'Gebetsbuddys sind wieder da.',
+                    next
+                      ? 'Gebetsbuddys sind wieder da.'
+                      : 'Gebetsbuddys sind aus.',
                   ),
               },
             )
