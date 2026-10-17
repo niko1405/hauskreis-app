@@ -24,19 +24,31 @@
  *
  * Das Archiv steht oben, weil es meistens der richtige Weg ist: Die Gruppe
  * singt vieles wieder.
+ *
+ * **„Neues Lied" ist dasselbe Formular wie im Archiv** (`SongFields`), mit den
+ * Treffern der Liederliste unter dem Titel und der eigenen Version darunter.
+ * Hier stand einmal eine eigene Fassung mit drei Feldern ohne Beschriftung.
+ * Die eigene Version ist eine Ebene über dem Sheet; solange sie offen ist,
+ * ist das Sheet zu (`open && !editing`), wie im Archiv.
  */
 import { useDeferredValue, useState } from 'react';
 import { ArrowLeft, Check, Library, Music, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
+import { useToast } from '@/components/ui/toast';
+import { SongPickerBody } from '@/components/domain/song-picker-body';
+import {
+  SongFields,
+  songInput,
+  type SongFieldValues,
+} from '@/components/domain/song-fields';
 import { useAddMeetingSong, useSongSearch } from '@/lib/api/hooks';
 import { formatRelativeDay } from '@/lib/date';
-import { OpenLinkButton } from './lyrics-link';
-import { SongAiAssist } from './song-ai-assist';
-import { SongPickerBody } from './song-picker-body';
+import { useOwnVersionDraft } from './own-version-draft';
 
 type Step = 'root' | 'archiv' | 'neu';
+
+const EMPTY: SongFieldValues = { title: '', artist: '', lyricsUrl: '' };
 
 export function SongSuggestSheet({
   open,
@@ -99,39 +111,42 @@ export function SongSuggestSheet({
   }[step];
 
   return (
-    <Sheet
-      open={open}
-      onClose={close}
-      title={chrome.title}
-      subtitle={chrome.subtitle}
-      footer={chrome.footer}
-      // Nur die Suche steht fest hoch: Die beiden anderen Schritte haben
-      // einen Inhalt, der sich beim Tippen nicht in der Höhe ändert.
-      size={step === 'archiv' ? 'tall' : 'auto'}
-    >
-      {step === 'root' && (
-        <div className="space-y-2">
-          <ChoiceRow
-            icon={<Library size={16} />}
-            title="Aus dem Archiv"
-            hint="Lieder, die ihr schon kennt"
-            onSelect={() => setStep('archiv')}
-          />
-          <ChoiceRow
-            icon={<Plus size={16} />}
-            title="Neues Lied"
-            hint="Steht noch nicht in eurer Liederliste"
-            onSelect={() => setStep('neu')}
-          />
-        </div>
-      )}
+    <>
+      <Sheet
+        open={open && !form.editing}
+        onClose={close}
+        title={chrome.title}
+        subtitle={chrome.subtitle}
+        footer={chrome.footer}
+        // Nur die Suche steht fest hoch: Die beiden anderen Schritte haben
+        // einen Inhalt, der sich beim Tippen nicht in der Höhe ändert.
+        size={step === 'archiv' ? 'tall' : 'auto'}
+      >
+        {step === 'root' && (
+          <div className="space-y-2">
+            <ChoiceRow
+              icon={<Library size={16} />}
+              title="Aus dem Archiv"
+              hint="Lieder, die ihr schon kennt"
+              onSelect={() => setStep('archiv')}
+            />
+            <ChoiceRow
+              icon={<Plus size={16} />}
+              title="Neues Lied"
+              hint="Steht noch nicht in eurer Liederliste"
+              onSelect={() => setStep('neu')}
+            />
+          </div>
+        )}
 
-      {step === 'archiv' && (
-        <SongPickerBody meetingId={meetingId} alreadyPicked={alreadyPicked} />
-      )}
+        {step === 'archiv' && (
+          <SongPickerBody meetingId={meetingId} alreadyPicked={alreadyPicked} />
+        )}
 
-      {step === 'neu' && form.fields}
-    </Sheet>
+        {step === 'neu' && form.fields}
+      </Sheet>
+      {form.editor}
+    </>
   );
 }
 
@@ -166,13 +181,11 @@ function ChoiceRow({
 }
 
 /**
- * Das Eintrag-Formular — unverändert aus der Liederkarte hierher gezogen.
- *
- * Es stand dort als aufklappender Block mitten in der Karte und war damit die
- * einzige Eingabe der Seite ohne eigene Fläche.
+ * Das Eintrag-Formular.
  *
  * Als Haken und nicht als Komponente, weil sein Inhalt in zwei Attribute des
  * Sheets muss — Rumpf und Fußzeile. Dieselbe Lösung wie `useLocationForm`.
+ * Dazu kommt die Ebene der eigenen Version, die neben das Sheet gehört.
  */
 function useNewSongForm({
   meetingId,
@@ -184,117 +197,91 @@ function useNewSongForm({
   active: boolean;
   onAdded: () => void;
   onBack: () => void;
-}): { fields: React.ReactNode; footer: React.ReactNode; reset: () => void } {
-  const [title, setTitle] = useState('');
-  const [artist, setArtist] = useState('');
-  const [lyricsUrl, setLyricsUrl] = useState('');
+}): {
+  fields: React.ReactNode;
+  footer: React.ReactNode;
+  editor: React.ReactNode;
+  editing: boolean;
+  reset: () => void;
+} {
+  const toast = useToast();
+  const [values, setValues] = useState<SongFieldValues>(EMPTY);
   const [confirming, setConfirming] = useState(false);
 
+  const input = songInput(values);
+  const own = useOwnVersionDraft(input);
+
   // Wie im Archiv: die Eingabe bleibt flüssig, die Abfrage hinkt nach.
-  const search = useSongSearch(useDeferredValue(title), active);
+  const search = useSongSearch(useDeferredValue(values.title), active);
   const add = useAddMeetingSong(meetingId);
 
-  const trimmedTitle = title.trim();
   const hits = search.data?.items ?? [];
   /**
    * Ein Lied, das genau so schon in der Datenbank steht. Dann ist „neu
    * anlegen" fast immer ein Versehen — man hat den Treffer übersehen.
    */
   const exactHit = hits.find(
-    (song) => song.title.toLowerCase() === trimmedTitle.toLowerCase(),
+    (song) => song.title.toLowerCase() === input.title.toLowerCase(),
   );
 
   const reset = () => {
-    setTitle('');
-    setArtist('');
-    setLyricsUrl('');
+    setValues(EMPTY);
     setConfirming(false);
+    own.reset();
   };
 
   const submit = (songId?: string) => {
-    const payload = songId
-      ? { songId }
-      : {
-          title: trimmedTitle,
-          artist: artist.trim() === '' ? null : artist.trim(),
-          lyricsUrl: lyricsUrl.trim() === '' ? null : lyricsUrl.trim(),
-        };
+    if (!songId && input.title === '') return;
 
-    if (!songId && trimmedTitle === '') return;
-
-    add.mutate(payload, { onSuccess: onAdded });
+    add.mutate(songId ? { songId } : input, {
+      onSuccess: async (entry) => {
+        if (own.version) {
+          await own.persist(entry.song);
+          toast.success('Deine Version liegt auf diesem Gerät.');
+        }
+        onAdded();
+      },
+    });
   };
 
   const fields = (
-    <div className="space-y-2">
-      {/* Kein autoFocus: auf dem Telefon schöbe die Tastatur sonst genau die
-          Trefferliste aus dem Bild, die man gleich braucht. */}
-      <TextInput
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        placeholder="Titel"
-        aria-label="Titel des Liedes"
+    <div className="space-y-4">
+      <SongFields
+        values={values}
+        onChange={(patch) => setValues((current) => ({ ...current, ...patch }))}
+        afterTitle={
+          // Treffer aus der Liederliste: schneller und ohne Dubletten.
+          hits.length > 0 && (
+            <ul className="-mt-2 space-y-1">
+              {hits.map((song) => (
+                <li key={song.id}>
+                  <button
+                    type="button"
+                    onClick={() => submit(song.id)}
+                    className="flex w-full items-center gap-2 rounded-md border border-line bg-canvas px-3 py-2 text-left hover:border-terracotta-400"
+                  >
+                    <Music size={13} className="shrink-0 text-stone-400" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-bold text-stone-700">
+                        {song.title}
+                      </span>
+                      <span className="block truncate text-[10px] text-stone-400">
+                        {song.artist ?? 'Unbekannt'} · {song.timesPlayed}×
+                        gesungen
+                        {song.lastPlayedAt &&
+                          `, zuletzt ${formatRelativeDay(song.lastPlayedAt)}`}
+                      </span>
+                    </span>
+                    <Check size={13} className="shrink-0 text-stone-300" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )
+        }
       />
 
-      {/* Treffer aus der Song-Datenbank: schneller und ohne Dubletten. */}
-      {hits.length > 0 && (
-        <ul className="space-y-1">
-          {hits.map((song) => (
-            <li key={song.id}>
-              <button
-                type="button"
-                onClick={() => submit(song.id)}
-                className="flex w-full items-center gap-2 rounded-md border border-line bg-canvas px-3 py-2 text-left hover:border-terracotta-400"
-              >
-                <Music size={13} className="shrink-0 text-stone-400" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-xs font-bold text-stone-700">
-                    {song.title}
-                  </span>
-                  <span className="block truncate text-[10px] text-stone-400">
-                    {song.artist ?? 'Unbekannt'} · {song.timesPlayed}× gesungen
-                    {song.lastPlayedAt &&
-                      `, zuletzt ${formatRelativeDay(song.lastPlayedAt)}`}
-                  </span>
-                </span>
-                <Check size={13} className="shrink-0 text-stone-300" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <TextInput
-        value={artist}
-        onChange={(event) => setArtist(event.target.value)}
-        placeholder="Interpret (optional)"
-        aria-label="Interpret"
-      />
-
-      {/* Der Knopf daneben erscheint erst, wenn im Feld eine Adresse steht —
-          gerade beim KI-Vorschlag ist „einmal draufsehen" die nächste Frage. */}
-      <div className="flex items-center gap-2">
-        <TextInput
-          type="url"
-          inputMode="url"
-          value={lyricsUrl}
-          onChange={(event) => setLyricsUrl(event.target.value)}
-          placeholder="Link zu Text/Akkorden (optional)"
-          aria-label="Link zu Text/Akkorden"
-        />
-        <OpenLinkButton url={lyricsUrl.trim()} />
-      </div>
-
-      {/* Gespeichert wird nur der Link, nie der Text selbst (CLAUDE.md §6). */}
-
-      <SongAiAssist
-        draft={{ title, artist, lyricsUrl }}
-        onApply={(patch) => {
-          if (patch.title !== undefined) setTitle(patch.title);
-          if (patch.artist !== undefined) setArtist(patch.artist);
-          if (patch.lyricsUrl !== undefined) setLyricsUrl(patch.lyricsUrl);
-        }}
-      />
+      {own.field}
     </div>
   );
 
@@ -308,7 +295,7 @@ function useNewSongForm({
           </>
         ) : (
           <>
-            „{trimmedTitle}" kennt die App noch nicht. Neu anlegen? Es landet
+            „{input.title}" kennt die App noch nicht. Neu anlegen? Es landet
             dann in eurer Liederliste und lässt sich beim nächsten Mal einfach
             auswählen.
           </>
@@ -326,7 +313,7 @@ function useNewSongForm({
         <Button
           size="sm"
           className="flex-1"
-          loading={add.isPending}
+          loading={add.isPending || own.saving}
           onClick={() => submit()}
         >
           {exactHit ? 'Trotzdem anlegen' : 'Anlegen'}
@@ -340,7 +327,7 @@ function useNewSongForm({
       </Button>
       <Button
         className="flex-1"
-        disabled={trimmedTitle === ''}
+        disabled={input.title === ''}
         onClick={() => setConfirming(true)}
       >
         Hinzufügen
@@ -348,5 +335,5 @@ function useNewSongForm({
     </div>
   );
 
-  return { fields, footer, reset };
+  return { fields, footer, editor: own.editor, editing: own.editing, reset };
 }

@@ -7,6 +7,10 @@
 import { cn } from '@/lib/cn';
 import { BackButton } from './back-button';
 import { BottomSlotOutlet, BottomSlotProvider } from './bottom-slot';
+import {
+  FloatingActionAnchor,
+  FloatingActionProvider,
+} from './floating-action';
 import { GlobalProgress } from './global-progress';
 import { PullToRefresh } from './pull-to-refresh';
 import { SmartHeader } from './smart-header';
@@ -22,7 +26,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     // `min-h-dvh` statt `min-h-screen`: `100vh` rechnet auf mobilen Browsern
     // mit ausgefahrener Adressleiste und ist deshalb zu hoch.
-    <BottomSlotProvider>
+    <ShellProviders>
       <div className="px-safe flex min-h-dvh justify-center bg-shell">
         <GlobalProgress />
         <div className="flex w-full max-w-md flex-col border-line-strong/50 bg-canvas shadow-xl md:max-w-5xl md:flex-row md:border-x">
@@ -59,10 +63,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               dort etwas Besseres zu sagen. Auf der Terminseite ist das die
               eigene Zusage; sonst nirgends. Warum das über ein Portal läuft
               und nicht über eine Prop, steht in `bottom-slot.tsx`. */}
-            <BottomSlotOutlet fallback={<TabBar />} />
+            {/* Der Fuß klebt unten und trägt die Leiste — und über ihr den
+              Anker für die „+"-Fläche (`floating-action.tsx`). In einem
+              gemeinsamen Kasten, damit der Anker immer genau über der Leiste
+              steht, die gerade dort ist, und am Rechner ohne Leiste über dem
+              unteren Rand. */}
+            <div className="sticky bottom-0 z-30">
+              <FloatingActionAnchor />
+              <BottomSlotOutlet fallback={<TabBar />} />
+            </div>
           </div>
         </div>
       </div>
+    </ShellProviders>
+  );
+}
+
+/** Die beiden Plätze, in die Bildschirme etwas hineinreichen: unten und darüber. */
+function ShellProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <BottomSlotProvider>
+      <FloatingActionProvider>{children}</FloatingActionProvider>
     </BottomSlotProvider>
   );
 }

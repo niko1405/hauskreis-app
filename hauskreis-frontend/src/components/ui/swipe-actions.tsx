@@ -26,6 +26,11 @@
  * Knöpfe, und die ist je Zeile verschieden — bei den Ideen darf nicht jede:r
  * löschen, bei den Treffpunkten nur ein aktiver. Eine feste Zahl käme bei
  * jeder zweiten Zeile zu weit oder zu kurz.
+ *
+ * **Ein Wisch ist kein Tipp.** Steckt in der Zeile ein Link (die Setlist am
+ * Termin), endet ein Zug mit der Maus mit einem Klick auf ihn — und öffnete
+ * die Seite, die man gar nicht wollte. Der Klick nach einem Zug wird deshalb
+ * geschluckt; der nächste Druck setzt das zurück.
  */
 import { motion, useAnimationControls } from 'motion/react';
 import {
@@ -87,6 +92,7 @@ export function SwipeActions({
   const id = useId();
   const auf = useIstOffen(id);
   const knoepfe = useRef<HTMLDivElement>(null);
+  const gezogen = useRef(false);
   const [breite, setBreite] = useState(0);
   const controls = useAnimationControls();
 
@@ -166,6 +172,18 @@ export function SwipeActions({
         dragConstraints={{ left: -breite, right: 0 }}
         dragElastic={{ left: 0.05, right: 0 }}
         animate={controls}
+        onPointerDown={() => {
+          gezogen.current = false;
+        }}
+        onDragStart={() => {
+          gezogen.current = true;
+        }}
+        onClickCapture={(event) => {
+          if (!gezogen.current) return;
+          gezogen.current = false;
+          event.preventDefault();
+          event.stopPropagation();
+        }}
         onDragEnd={(_, info) => {
           if (pulledLeft(info)) zeigen();
           else if (pulledRight(info)) schliessen();

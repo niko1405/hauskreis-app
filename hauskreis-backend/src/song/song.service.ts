@@ -41,18 +41,7 @@ export class SongService {
    * but an extension to install.
    */
   async findAll(hauskreisId: string, query: ListSongsQueryDto) {
-    // Only evenings the song was actually picked for count as sung. A
-    // suggestion that did not make the list says something about one person's
-    // wish, not about the group's repertoire.
-    //
-    // `lte` auf den **Kalendertag** der Gruppe, nicht auf den Zeitpunkt: die
-    // Spalte ist ein Datum, und ein Lied, das für heute Abend auf der Liste
-    // steht, zählt zum Repertoire. Vorher stand hier `new Date()`, was in der
-    // Nacht nach dem Abend noch den Vortag meinte.
-    const played = {
-      isSelected: true,
-      meeting: { date: { lte: await this.clock.today(hauskreisId) } },
-    };
+    const played = await this.playedFilter(hauskreisId);
 
     const where = {
       hauskreisId,
@@ -187,6 +176,71 @@ export class SongService {
     );
   }
 
+  /**
+   * Which evenings count as "sung".
+   *
+   * Only evenings the song was actually picked for. A suggestion that did not
+   * make the list says something about one person's wish, not about the
+   * group's repertoire.
+   *
+   * `lte` auf den **Kalendertag** der Gruppe, nicht auf den Zeitpunkt: die
+   * Spalte ist ein Datum, und ein Lied, das für heute Abend auf der Liste
+   * steht, zählt zum Repertoire. Vorher stand hier `new Date()`, was in der
+   * Nacht nach dem Abend noch den Vortag meinte.
+   *
+   * Eine Stelle für Liste und Liedseite: Zwei Fassungen derselben Bedingung
+   * zählten irgendwann verschieden, und dann stünde auf der Liedseite eine
+   * andere Zahl als in der Zeile, von der man kam.
+   */
+  private async playedFilter(hauskreisId: string) {
+    return {
+      isSelected: true,
+      meeting: { date: { lte: await this.clock.today(hauskreisId) } },
+    };
+  }
+
+  /**
+   * Ein Lied für seine eigene Seite — mit denselben Zahlen wie in der Liste und
+   * einer dritten: an wie vielen Abenden es überhaupt steht.
+   *
+   * Die dritte zählt **jeden** Eintrag, Vorschläge eingeschlossen, denn genau
+   * daran hängt `remove`: Gelöscht wird nur, was an keinem Abend mehr steht.
+   * Die Seite sagt das vorher, statt einen Knopf anzubieten, der verlässlich
+   * eine Fehlermeldung erzeugt.
+   *
+   * Getrennt von `findOne`, das intern nur „gibt es das" beantwortet (beim
+   * Vorschlagen, vor dem Ändern) und dafür keine Zählung braucht.
+   */
+  async findDetail(hauskreisId: string, id: string) {
+    const played = await this.playedFilter(hauskreisId);
+
+    const song = await this.prisma.song.findFirst({
+      where: { id, hauskreisId },
+      select: {
+        ...songSelect,
+        pickedIn: {
+          where: played,
+          select: { meeting: { select: { date: true } } },
+          orderBy: { meeting: { date: 'desc' } },
+        },
+        _count: { select: { pickedIn: true } },
+      },
+    });
+
+    if (!song) {
+      throw new NotFoundException(`Song ${id} not found`);
+    }
+
+    const { pickedIn, _count, ...rest } = song;
+
+    return {
+      ...rest,
+      timesPlayed: pickedIn.length,
+      lastPlayedAt: pickedIn[0] ? isoDate(pickedIn[0].meeting.date) : null,
+      meetingCount: _count.pickedIn,
+    };
+  }
+
   async findOne(hauskreisId: string, id: string) {
     const song = await this.prisma.song.findFirst({
       where: { id, hauskreisId },
@@ -256,7 +310,7 @@ export class SongService {
           },
         }),
       exists: () => this.prisma.song.findFirst({ where: { id, hauskreisId } }),
-      reload: () => this.findOne(hauskreisId, id),
+      reload: () => this.findDetail(hauskreisId, id),
       notFoundMessage: `Song ${id} not found`,
     });
   }

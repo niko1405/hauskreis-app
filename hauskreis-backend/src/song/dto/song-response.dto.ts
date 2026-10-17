@@ -10,7 +10,9 @@ import {
 /**
  * Ein Lied aus der Sammlung, die mit der Zeit von allein entsteht.
  *
- * Der Text selbst wird nicht gespeichert — `lyricsUrl` zeigt nach draußen.
+ * Der Text selbst wird hier nie gespeichert — `lyricsUrl` zeigt nach draußen.
+ * Wer Text und Akkorde für sich hinterlegt, tut das im eigenen Gerät; davon
+ * erfährt der Server nichts (CLAUDE.md §6.7).
  */
 export const songResponseSchema = z.object({
   id: z.uuid(),
@@ -34,6 +36,15 @@ export const songWithFactsSchema = songResponseSchema.extend({
   timesPlayed: z.number().int().nonnegative(),
   /// Hier wirklich nur der Tag: der Dienst schneidet ihn selbst zu.
   lastPlayedAt: isoDateOut.nullable(),
+});
+
+/**
+ * Ein Lied für seine eigene Seite: die Zahlen der Liste und dazu, an wie
+ * vielen Abenden es überhaupt steht — Vorschläge eingeschlossen. Daran hängt,
+ * ob es sich löschen lässt (`SongService.remove`).
+ */
+export const songDetailSchema = songWithFactsSchema.extend({
+  meetingCount: z.number().int().nonnegative(),
 });
 
 /**
@@ -73,9 +84,10 @@ export const songLeadersResponseSchema = z.array(personRefSchema);
 export class SongPageResponseDto extends createZodDto(
   pageSchema(songWithFactsSchema),
 ) {}
-/// `findOne`, `create` und `update` liefern das Lied ohne die beiden Zahlen —
-/// die entstehen nur in der Liste, wo ohnehin über alle Vorkommen gezählt wird.
-export class SongResponseDto extends createZodDto(songResponseSchema) {}
+/// `GET`, `POST` und `PATCH` liefern das Lied mit seinen Zahlen. Sie fehlten
+/// hier einmal, weil sie nur die Liste brauchte; seit es eine Liedseite gibt,
+/// ist das einzelne Lied der Ort, an dem man nach ihnen sucht.
+export class SongResponseDto extends createZodDto(songDetailSchema) {}
 export class MeetingSongListResponseDto extends createZodDto(
   z.array(meetingSongResponseSchema),
 ) {}

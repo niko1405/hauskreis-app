@@ -584,8 +584,7 @@ Urheber oder ein Admin. Die Regel steht im Frontend ein zweites Mal, weil der
 Papierkorb sonst dastünde und mit `403` antwortete.
 
 **Stift und Papierkorb liegen hinter einem Wisch nach links**
-(`SwipeActions`, siehe unten), genau wie an der Liederliste im Archiv und den
-Treffpunkten. Der Papierkorb stand einmal dauerhaft neben jedem Eintrag — ein
+(`SwipeActions`, siehe unten), genau wie an den Treffpunkten. Der Papierkorb stand einmal dauerhaft neben jedem Eintrag — ein
 Ziel am Rand einer Liste, durch die man scrollt, und der Daumen fand es
 zuverlässiger als den Text; ein Stift daneben hätte das verdoppelt. Ändern gab
 es dabei überhaupt noch nicht: Server und `useUpdateIdea` konnten `title`/`note`
@@ -1113,25 +1112,33 @@ anderen eine Auskunft.
 das Musik-Team macht (`meeting_song.position`), die Vorschläge haben
 **Stimmen**, nach denen sie stehen (`meeting_song_vote`). Beides in einer Karte
 sah aus wie eine Liste mit einem Bruch in der Mitte. Die Setlist trägt einen
-terracotta Schein, weil sie die Antwort auf die Frage ist, mit der man kommt.
+Rand in Terracotta, weil sie die Auswahl ist; einen Schein um die Karte gab es
+einmal, und er ließ sie aus dem Rest der App heraustreten statt aus der Seite.
+Sie heißt „Setlist" — „Feste Setlist" sagte ein Wort zu viel.
 
 - **Gezogen wird nur am Griff** (`Reorder` aus `motion/react`,
-  `dragListener={false}` plus `useDragControls`). Die Zeile wischt schon nach
-  links, und zwei Gesten auf derselben Fläche bräuchten eine Regel, welche
-  gewinnt — dieselbe Überlegung wie am Sheet. Der Griff hört **nativ** auf
-  `pointerdown` und hält das Ereignis an: Die Wisch-Zeile darüber hört
-  ebenfalls nativ zu und bekäme den Druck sonst vor React mit.
+  `dragListener={false}` plus `useDragControls`). Titel und Interpret sind ein
+  Link auf die Seite des Lieds, und ein Tipp darauf soll sie öffnen, nicht das
+  Verschieben beginnen. Der Griff hört **nativ** auf `pointerdown` und hält
+  den Druck an: Die Wisch-Zeile darüber hört ebenfalls nativ zu und finge sonst
+  an, waagerecht mitzugehen, während die Zeile nach oben gezogen wird.
 - **Gespeichert wird beim Loslassen**, einmal je Zug — die ganze Setlist, damit
   der Server ablehnen kann, wenn inzwischen jemand ein Lied dazugenommen hat.
   Optimistisch, sonst spränge die Zeile bis zur Antwort an den alten Platz.
-- **Herausnehmen heißt zurück zu den Vorschlägen**, samt Stimmen. Am Rechner
-  über ein Minus, das beim Überfahren der Nummer erscheint — nur mit einem
-  Zeiger, der schweben kann (`@media (hover: hover)`), sonst würde ein
-  Antippen schon entfernen. Auf dem Telefon über den Wisch.
-- **Bearbeiten darf jede:r**, an beiden Karten: Gemeint ist der kaputte Link,
-  den irgendwer beim Üben bemerkt. `SongSheet` nimmt dafür ein Lied vom Termin
-  entgegen und lädt danach die Liederliste des Termins neu — sie hat ihren
-  eigenen Zwischenspeicher.
+- **Herausnehmen heißt zurück zu den Vorschlägen**, samt Stimmen: Setlist-Zeile
+  nach links wischen, „−" (`SwipeActions`, am Rechner beim Überfahren). Ein
+  **Vorschlag** wischt ebenso und gibt den Papierkorb frei, der ihn ohne
+  Rückfrage vom Abend nimmt — außer am vergangenen oder abgesagten Abend
+  (`readOnly`). Steckt ein Link in der Zeile, schluckt `SwipeActions` den Klick
+  nach einem Zug, sonst öffnete ein Maus-Zug die Liedseite.
+- **Ein Tipp auf ein Lied führt auf seine Seite** (`/lied?id=…&termin=…`).
+  Bearbeiten darf dort jede:r — gemeint ist der kaputte Link, den irgendwer beim
+  Üben bemerkt —, und danach lädt die Seite die Liederliste des Termins neu, die
+  ihren eigenen Zwischenspeicher hat. Vom Abend nehmen steht dort unten als
+  „Entfernen"; wer ein Setlist-Lied herausnehmen darf, fragt sie
+  `mayPickSongs` (`lib/meeting.ts`), dieselbe Funktion wie die Terminseite.
+- **Ein kleines Notenblatt neben dem Titel** heißt: Du hast eine eigene Version
+  (`useOwnSongIds`).
 - **Die Stimmen-Pille** ist gefüllt, wenn die eigene Stimme dabei ist. Am
   vergangenen Abend bleibt nur die Zahl, ohne Knopf.
 
@@ -1545,10 +1552,10 @@ Nebenbei: die Suche im Eintrag-Formular feuerte pro Tastendruck ab zwei Zeichen.
 Ein `useDeferredValue` bringt sie auf dieselbe Hausregel wie Archiv und
 Terminliste.
 
-**Der Songtext-Link gab es schon**, an beiden Stellen — aber als schmales graues
-Symbol ohne Beschriftung, das niemand als Link gelesen hat. Jetzt einmal in
-`components/domain/lyrics-link.tsx`: mit Wort, in Terracotta wie alles andere
-Anklickbare, und mit einer Trefferfläche, die auf einem Telefon getroffen wird.
+**Der Songtext-Link stand einmal an jeder Zeile**, erst als schmales graues
+Symbol, dann als Knopf „Text ↗". Seit ein Lied eine eigene Seite hat, steht der
+Link dort ganz oben, und die Zeile führt hin; `lyrics-link.tsx` hält nur noch
+`isHttpUrl` und den Prüf-Knopf neben dem Eingabefeld.
 
 **Der zweite Druck auf „Link suchen" heißt „Weitere suchen".** Vorher kam
 beliebig oft derselbe Zwischenspeicher zurück — wer einen schlechten Vorschlag
@@ -1716,8 +1723,20 @@ den ETag einer Einheit beim Schreiben selbst: sie steht im Termin-DTO und nicht
 als eigene Ressource, ihr ETag liegt also nirgends im Cache. Dasselbe Muster wie
 `useSetHostWeight`.
 
-**Die Knöpfe eines Lieds gibt ein Wisch nach links frei** — siehe
-„Wischen statt Drücken" weiter unten.
+**Ein Lied öffnet seine Seite**, statt Knöpfe hinter einem Wisch freizugeben —
+siehe „Lieder haben eine eigene Seite" weiter unten. Auf dem Telefon stehen dort
+oben an „Deine Version" Symbole statt Wörtern (Text, Akkorde, Tonart) und das
+Vollbild als großer Knopf ohne Wort; `Segmented` kann dafür je Option ein
+`icon` tragen, das Wort bleibt für Screenreader. „Lieder" teilt sich in
+„Meine Lieder" (mit eigener Version, aus dem Gerät) und „Alle Lieder". Das
+Register steht in der Adresse (`?register=lieder&lieder=meine`, per
+`replaceState`), sonst führte „zurück" von einer Liedseite auf „Themen".
+
+**Angelegt wird über das „+" unten rechts** (`components/layout/floating-action.tsx`),
+für Themen und Lieder. Es hängt an einem Anker im Fuß des Gerüsts, der mit der
+Leiste unten zusammen klebt (`app-shell.tsx`) — so schwebt es über der
+Tab-Leiste, am Rechner über dem unteren Rand, und muss deren Höhe nicht kennen.
+Bei offener Tastatur geht es weg.
 
 ### Der Suchmodus
 
@@ -1760,11 +1779,10 @@ dort kleben, darunter scrollen die Treffer — wie bei Spotify. Was daran zählt
 
 ## Wischen statt Drücken
 
-`components/ui/swipe-actions.tsx`. Vier Listen geben Stift und Papierkorb frei:
-die Lieder im Archiv, die Treffpunkte, die Ideen der Gruppe — und seit dem
-Wegfall des Bearbeitungsmodus auch die Liedvorschläge an einem Termin. Dort
-stand der Papierkorb vorher dauerhaft am Zeilenrand und war nur deshalb
-erträglich, weil ein Schalter am Seitenende ihn versteckte.
+`components/ui/swipe-actions.tsx`. Drei Listen geben Stift und Papierkorb frei:
+die Treffpunkte, die Ideen der Gruppe und die Geschenk-Vorschläge. Lieder taten
+es auch, im Archiv und am Termin — bis sie eine eigene Seite bekamen; dort steht
+beides jetzt unter „Bearbeiten", und die Zeile führt hin.
 
 **Was es ersetzt.** Erst standen die Knöpfe dauerhaft da — zwei Ziele am Rand
 jeder Zeile einer Liste, durch die man scrollt, und beide traf der Daumen
@@ -2162,6 +2180,129 @@ trugen. Ohne ihn war der Weg hinaus die Tab-Leiste, also ein Sprung woandershin
 statt zurück. Er geht zurück, wohin man kam (`router.back()`), und nur ohne
 Vorgeschichte — eine Push-Nachricht, die direkt auf `/neu` führt — auf das Ziel
 in `back`. Und er fragt nach Ungespeichertem wie jeder Link.
+
+## Lieder haben eine eigene Seite
+
+`/lied?id=…` (`features/songs/song-detail-screen.tsx`), vom Termin aus mit
+`&termin=…`. Oben, was alle sehen: Titel, „8× gesungen · zuletzt am …" und
+„Zum Liedtext". Die Zahlen kommen mit dem einzelnen Lied (`timesPlayed`,
+`lastPlayedAt`, dazu `meetingCount` — Löschen geht nur, wenn es an keinem Abend
+steht, nur für Admins und nur aus dem Archiv; die Seite sagt das, statt einen
+Knopf anzubieten, der mit `400` antwortet). Darunter „Deine Version", als Text;
+Akkorde sind ein Umschalter entfernt.
+
+Unten steht statt der Tab-Leiste `EditBar` (`components/layout/edit-bar.tsx`,
+dieselbe wie am vergangenen Termin): „Bearbeiten" für Angaben (`SongFields`),
+eigene Version und Löschen. Vom Termin aus steht daneben „Entfernen"
+(`EveningBar`) — bei einem Setlist-Lied mit der Frage „zurück zu den
+Vorschlägen oder ganz vom Termin?". Das Sheet dafür steht in der Seite und nicht
+im Balken: Der hängt im Fuß des Gerüsts, und dessen `backdrop-blur` machte ihn
+zum Bezugsrahmen eines `fixed`-Panels darin.
+
+Vom Termin aus blättert man (`useEveningPager`): oben rechts „‹ Setlist · Platz
+2 ›", auf Touch-Geräten auch per Wisch (`useHorizontalSwipe`, eigene
+Touch-Ereignisse — ab 72 px, doppelt so weit waagerecht wie senkrecht, nicht in
+einer Ebene darüber und nicht vom linken Rand, der Zurück-Geste des Systems).
+Geblättert wird in der Liste, aus der man kam, mit `router.replace`; die
+Nachbarn lädt `useSong` vor. Das neue Lied gleitet als Web Animation ohne `fill`
+herein — ein bleibendes `transform` machte den Kasten zum Bezugsrahmen von
+Editor und Vollbild darin.
+
+Ohne Link gibt es keine eigene Version; die Karte sagt „Link eintragen" und
+schaltet in „Bearbeiten". Beim Anlegen (Archiv und Termin) sperrt
+`useOwnVersionDraft` (`own-version-draft.tsx`) die Karte genauso.
+
+### Eigene Versionen — nur im Gerät
+
+Text und Akkorde hinterlegt jede:r **für sich**. Sie gehören dem, der sie
+geschrieben hat, und die App hat kein Recht, sie zu verbreiten — deshalb gibt es
+dafür keinen Endpunkt, kein Teilen, kein Vorausfüllen und keine Sicherung.
+
+- **Speicher:** IndexedDB (`lib/own-songs/store.ts`), ohne Bibliothek. Schlüssel
+  `[personId, songId]`, Index auf `[personId, hauskreisId]` — zwei Konten auf
+  einem Gerät sehen einander nichts. Beim ersten Speichern einmal
+  `navigator.storage.persist()`. Ohne IndexedDB (manches private Fenster) eine
+  Meldung statt eines Absturzes.
+- **Abfrage:** `use-own-songs.ts`, **eine** TanStack-Abfrage für alle Versionen
+  — viele Zeilen fragen gleichzeitig „hat dieses Lied eine?", und ein Lesevorgang
+  beantwortet alle. `networkMode: 'always'`, sonst hielte TanStack sie ohne Netz
+  an; `staleTime: Infinity`, denn ändern kann sie nur dieses Gerät, und das
+  schreibt den Zwischenspeicher selbst. Titel und Interpret liegen als
+  Schnappschuss daneben, für „Meine Lieder" ohne Netz; die Liedseite zieht sie
+  nach.
+- **Format:** ChordPro (`lib/chords/chordpro.ts`). „Akkorde über Text" hängt die
+  Stelle eines Akkords an Leerzeichen und kann zwei enge Akkorde gar nicht
+  hinschreiben. Die Zusage ist die **Rundreise** `parseSheet(toChordPro(s))`.
+- **Erkennen** (`lib/chords/parse.ts`): beide Formate ohne Auswahl; geschützte
+  Leerzeichen, Tabulatoren und `[ch]`-Marken werden weggeräumt, „Capo 2" und
+  „Key: A" werden Angaben, „Page 1/3" verschwindet. Eine Akkordzeile braucht
+  70 % Akkorde, sodass „Am I worthy" Text bleibt. Ein H macht das Blatt deutsch (B = Bb). Die Tonart
+  (`key.ts`) zählt Stufen über alle zwölf Dur-Tonarten, Anfang und Ende doppelt.
+- **Anzeige** (`chord-sheet-view.tsx`, `ChordLyricLine`): jede Zeile in
+  Segmente „Akkord über Textstück" zerlegt (`layout.ts`), damit sie auf dem
+  Telefon samt Akkorden umbricht; Segmente eines Wortes bleiben zusammen. Die
+  Akkorde stehen **absolut** über ihrem Stück und haben keine Breite — sonst
+  riss ein Akkord, der breiter ist als seine Silbe, eine Lücke in den Text.
+  `useChordSpacing` misst danach je Zeile und rückt per `translate` auseinander,
+  was sich berühren würde (bei jedem Rendern und über `ResizeObserver`). Das
+  letzte Segment einer Zeile behält seine Akkorde im Fluss, damit sie nicht aus
+  der Karte ragen; ein leeres Stück trägt `\u200b`, sonst stünde ein Akkord
+  hinter dem letzten Wort auf Texthöhe.
+
+Der Kern in `lib/chords` hat keine React- und keine `@/`-Importe. Es gibt im
+Frontend keine Test-Infrastruktur; geprüft wurde er, indem er mit `tsc` als
+CommonJS übersetzt und mit Beispielen gefüttert wurde (eine Kopie von Ultimate
+Guitar, ChordPro, H-Notation, Rundreise, Transponieren, Bearbeiten).
+
+### Der Editor
+
+`features/songs/own-version-editor.tsx`, nach dem Entwurf: Liedtext öffnen,
+einfügen, Vorschau mit „Akkorde erkannt" und der Tonart. Nach dem Einfügen
+klappt das Feld ein („Quelltext"), und die Vorschau steht oben. Gespeichert wird
+oben rechts, denn unten steht dauerhaft eine Leiste (`editor-toolbars.tsx`) —
+am Rechner (`lg`) als Seitenleiste rechts, mit umbrochenen Akkorden und Suche
+und Knöpfen oben (`order`).
+
+- **Der Text ist die einzige Quelle.** Die Vorschau ist `parseSheet` davon;
+  eine Änderung in der Vorschau läuft über die reinen Funktionen in `edit.ts`
+  und schreibt `toChordPro` zurück. „Rückgängig" ist ein Stapel alter Stände.
+- **Das Format ist Zustand** (`{ text, format }`): Was aus der Vorschau kommt,
+  ist `chordpro`; Einfügen und Tippen ins leere Feld setzen `auto`. Vorher hieß
+  „ChordPro" nur `text === initialText`, und ein Blatt ohne Akkorde wurde nach
+  der ersten Änderung als „Akkorde über Text" geraten. Bei `chordpro` zieht
+  `tidy` Leerzeilen nicht zusammen — selbst gesetzte bleiben.
+- **Zwei Leisten, je nach Ansicht.** Unter „Akkorde" (`ChordToolbar`): die
+  Akkorde des Lieds und der Tonart, eine Suche (`searchChords`), und ein Tipp
+  schaltet den Setzen-Modus ein (`armed`) — Rahmen um die Vorschau, Banner,
+  jeder Tipp auf Text setzt. Ist ein Akkord im Text angetippt, benennt die
+  Leiste ihn um, schiebt ihn oder entfernt ihn. Unter „Text" (`LineToolbar`):
+  Zeile ändern (`setLineText` — die Akkorde wandern mit), löschen, Leerzeile
+  oder neue Zeile darunter.
+- **Ziehen:** Pointer-Events mit Capture am Chip (`touch-none`), ab sechs Pixeln
+  ist es ein Zug. Ein Klon folgt dem Finger (bei Touch 28 px darüber, sonst
+  verdeckt ihn der Finger), ein Strich zeigt das Ziel. Getroffen wird über
+  `caretPositionFromPoint`/`caretRangeFromPoint` in der Textreihe unter dem
+  Klon; die Textstücke tragen `data-start`, die Zeilen `data-line`. In einer
+  reinen Akkordzeile zählt der Platz in der Reihe. Während des Ziehens steht das
+  Layout still; übernommen wird beim Loslassen, am alten Platz gar nicht.
+- **Tippen** auf Text setzt nur im Setzen-Modus einen Akkord, sonst nimmt es die
+  Auswahl zurück; mit der Maus zeigt der Strich schon beim Überfahren, wo er
+  landet. Ein Tipp auf einen Akkord wählt ihn für die Leiste.
+- **Eine Ebene im Baum, kein Portal**: `fixed inset-0 z-50`. `ConfirmProvider`
+  rendert seine Rückfrage hinter allen Kindern; ein Portal ans Ende von `body`
+  läge über ihr. Aus einem Anlege-Sheet heraus (Archiv und Termin) schließt das
+  Sheet, solange der Editor offen ist (`open && !editing`) — zwei Ebenen auf
+  Escape schlössen einander.
+
+### Das Vollbild
+
+`features/songs/sheet-fullscreen.tsx`: Text oder Akkorde, Transponieren
+(`transposer` in `key.ts` — die Vorzeichen richten sich nach der Ziel-Tonart),
+Schrift, Autoscroll. Der Autoscroll ist eine `requestAnimationFrame`-Schleife,
+die Bruchteile von Pixeln aufspart; `touchstart` hält ihn an. Wo es sie gibt:
+`requestFullscreen` und `navigator.wakeLock` (bei `visibilitychange` neu
+angefordert). Transposition und Tempo stehen an der eigenen Version, die
+Schriftgröße in `localStorage`.
 
 ## Tastatur und Seitenspalte
 

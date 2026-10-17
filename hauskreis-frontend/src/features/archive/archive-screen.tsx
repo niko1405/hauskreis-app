@@ -7,25 +7,26 @@
  */
 import {
   ArrowLeft,
+  ChevronRight,
+  FileMusic,
   FileText,
   Layers,
+  Lock,
   Music,
-  Pencil,
   Plus,
   Search,
-  Trash2,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { AnimatePresence, animate, motion } from 'motion/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useDeferredValue, useEffect, useRef, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
 import { suppressHeader } from '@/components/layout/header-suppress';
+import { FloatingAction } from '@/components/layout/floating-action';
 import { AvatarStack } from '@/components/ui/avatar';
 import { Button, PRESSABLE } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { useConfirm } from '@/components/ui/confirm';
 import { Field, TextArea, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import {
@@ -35,9 +36,7 @@ import {
   LoadMore,
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
-import { SwipeActions } from '@/components/ui/swipe-actions';
-import { LyricsLink } from '@/components/domain/lyrics-link';
-import { SongSheet } from '@/components/domain/song-sheet';
+import { NewSongSheet } from '@/features/songs/new-song-sheet';
 import { LocationsCard } from './locations-card';
 import { MeetingsArchive } from './meetings-archive';
 import { errorMessage } from '@/lib/api/errors';
@@ -45,16 +44,43 @@ import {
   useArchiveSummary,
   useCreateStandaloneSession,
   useCreateTopic,
-  useDeleteSong,
   useSongList,
   useTopicList,
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { formatDay } from '@/lib/date';
+import { useOwnSongIds, useOwnSongs } from '@/lib/own-songs/use-own-songs';
 import type { SongListParams } from '@/lib/api/params';
 import type { SongListItem, TopicListItem } from '@/lib/api/types';
 
 type Tab = 'themen' | 'lieder' | 'orte' | 'termine';
+
+/** „Meine Lieder" (mit eigener Version) oder alle der Gruppe. */
+type SongScope = 'meine' | 'alle';
+
+const TABS: readonly Tab[] = ['themen', 'lieder', 'orte', 'termine'];
+
+/**
+ * Wo man im Archiv steht, als Adresse.
+ *
+ * Seit ein Lied eine eigene Seite hat, führt aus „Lieder" ein Weg hinaus — und
+ * zurück landete man auf „Themen", weil das Register nur im Zustand stand.
+ * Jetzt steht es in der Adresse, wie die Register auf „Termine"
+ * (`meetings-screen.tsx`), geschrieben mit `replaceState`: Das Register ist
+ * eine Ansicht und kein Ort, und wer viermal umschaltet, soll mit „zurück"
+ * nicht viermal hier landen.
+ */
+function addressOf(tab: Tab, scope: SongScope): string {
+  if (tab === 'themen') return '/archiv';
+  if (tab === 'lieder' && scope === 'meine') {
+    return '/archiv?register=lieder&lieder=meine';
+  }
+  return `/archiv?register=${tab}`;
+}
+
+function initialTab(value: string | null): Tab {
+  return TABS.find((tab) => tab === value) ?? 'themen';
+}
 
 /** Die Feder, mit der der Kopf ein- und ausklappt — eine für beide Wege. */
 const HEAD_SPRING = { type: 'spring', damping: 30, stiffness: 260 } as const;
@@ -68,7 +94,13 @@ function focusedOf(
 }
 
 export function ArchiveScreen() {
-  const [tab, setTab] = useState<Tab>('themen');
+  const params = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => initialTab(params.get('register')));
+  const [songScope, setSongScope] = useState<SongScope>(() =>
+    params.get('lieder') === 'meine' ? 'meine' : 'alle',
+  );
+  /** Welches „+" gerade sein Sheet offen hat. */
+  const [creating, setCreating] = useState<'themen' | 'lieder' | null>(null);
   const [search, setSearch] = useState('');
   const deferred = useDeferredValue(search).trim();
   const summary = useArchiveSummary();
@@ -325,6 +357,16 @@ export function ArchiveScreen() {
     if (event.key === 'Enter') event.currentTarget.blur();
   };
 
+  const selectTab = (key: Tab) => {
+    setTab(key);
+    window.history.replaceState(null, '', addressOf(key, songScope));
+  };
+
+  const selectScope = (scope: SongScope) => {
+    setSongScope(scope);
+    window.history.replaceState(null, '', addressOf(tab, scope));
+  };
+
   // „Termine" gab es einmal nicht, und der Grund war gut: nebeneinander
   // gestellt sahen Termine und Themen aus wie zwei Sichten auf dasselbe. Seit
   // es die **Nachbereitung** gibt, stimmt das nicht mehr — ein Abend ohne Thema
@@ -380,7 +422,12 @@ export function ArchiveScreen() {
         />
       </div>
 
-      <div className="space-y-1 px-5">
+      <div
+        className={cn(
+          'space-y-1 px-5',
+          (tab === 'themen' || tab === 'lieder') && 'pb-20',
+        )}
+      >
         {/* Feld und Register sind ein Block, der **immer** oben klebt — im
             Suchmodus wie beim gewöhnlichen Scrollen. Er reicht mit `-mx-5`
             über die volle Breite, sonst schauen die Treffer an den Rändern
@@ -476,7 +523,7 @@ export function ArchiveScreen() {
               <button
                 key={key}
                 type="button"
-                onClick={() => setTab(key)}
+                onClick={() => selectTab(key)}
                 aria-pressed={tab === key}
                 className={cn(
                   'shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-colors',
@@ -496,10 +543,44 @@ export function ArchiveScreen() {
         </div>
 
         {tab === 'themen' && <TopicArchive search={deferred} />}
-        {tab === 'lieder' && <SongLibrary search={deferred} />}
+        {tab === 'lieder' && (
+          <SongLibrary
+            search={deferred}
+            scope={songScope}
+            onScope={selectScope}
+          />
+        )}
         {tab === 'orte' && <LocationsCard />}
         {tab === 'termine' && <MeetingsArchive search={deferred} />}
       </div>
+
+      {/* Anlegen über das „+" unten rechts. Es stand als Knopf über der Liste
+          und scrollte mit ihr weg; wer weit unten war, musste zurück nach
+          oben. Themen und Lieder haben es, weil man beides hier vorarbeitet —
+          ein Thema entstand lange nur beim Wählen an einem Abend, ein Lied
+          nur über einen Vorschlag. */}
+      {tab === 'themen' && (
+        <FloatingAction
+          label="Thema oder Einheit anlegen"
+          icon={<Plus size={24} />}
+          onClick={() => setCreating('themen')}
+        />
+      )}
+      {tab === 'lieder' && (
+        <FloatingAction
+          label="Lied hinzufügen"
+          icon={<Plus size={24} />}
+          onClick={() => setCreating('lieder')}
+        />
+      )}
+      <NewEntrySheet
+        open={creating === 'themen'}
+        onClose={() => setCreating(null)}
+      />
+      <NewSongSheet
+        open={creating === 'lieder'}
+        onClose={() => setCreating(null)}
+      />
     </div>
   );
 }
@@ -517,7 +598,6 @@ export function ArchiveScreen() {
  */
 function TopicArchive({ search }: { search: string }) {
   const [nurEigene, setNurEigene] = useState(false);
-  const [anlegen, setAnlegen] = useState(false);
   const summary = useArchiveSummary();
 
   const query = useTopicList({
@@ -535,34 +615,21 @@ function TopicArchive({ search }: { search: string }) {
         aria-label="Themen filtern"
         className="flex border-b border-line"
       >
-        <TopicTab
+        <ListTab
           active={nurEigene}
           count={summary.data?.totals.topicsMine}
           onSelect={() => setNurEigene(true)}
         >
           Eigene Themen
-        </TopicTab>
-        <TopicTab
+        </ListTab>
+        <ListTab
           active={!nurEigene}
           count={summary.data?.totals.topics}
           onSelect={() => setNurEigene(false)}
         >
           Alle Themen
-        </TopicTab>
+        </ListTab>
       </div>
-
-      {/* Ein Thema entstand lange nur beim Wählen an einem Abend. Wer eines
-          vorbereiten wollte, musste also erst auf einen Dienstag warten. */}
-      <Button
-        variant="secondary"
-        className="w-full"
-        onClick={() => setAnlegen(true)}
-      >
-        <Plus size={14} />
-        Neu anlegen
-      </Button>
-
-      <NewEntrySheet open={anlegen} onClose={() => setAnlegen(false)} />
 
       {query.isLoading && <CardSkeleton />}
       {query.error && <ErrorState error={query.error} />}
@@ -594,7 +661,11 @@ function TopicArchive({ search }: { search: string }) {
   );
 }
 
-function TopicTab({
+/**
+ * Ein unterstrichenes Register unter der Pillen-Leiste — „Eigene Themen" und
+ * „Alle Themen", „Meine Lieder" und „Alle Lieder".
+ */
+function ListTab({
   active,
   count,
   onSelect,
@@ -982,10 +1053,131 @@ function TopicEntry({ topic }: { topic: TopicListItem }) {
   );
 }
 
-function SongLibrary({ search }: { search: string }) {
+/**
+ * Die Lieder — die eigenen und alle der Gruppe.
+ *
+ * **„Meine Lieder" sind die mit eigener Version**, also Text und Akkorde, die
+ * jemand für sich hinterlegt hat. Sie kommen nicht vom Server, sondern aus dem
+ * Gerät (`lib/own-songs`), und stehen deshalb auch ohne Netz da. „Alle Lieder"
+ * ist die Liederliste der Gruppe, wie bisher.
+ */
+function SongLibrary({
+  search,
+  scope,
+  onScope,
+}: {
+  search: string;
+  scope: SongScope;
+  onScope: (scope: SongScope) => void;
+}) {
+  const summary = useArchiveSummary();
+  const own = useOwnSongs();
+
+  return (
+    <div className="space-y-3">
+      <div
+        role="tablist"
+        aria-label="Lieder filtern"
+        className="flex border-b border-line"
+      >
+        <ListTab
+          active={scope === 'meine'}
+          count={own.data?.length}
+          onSelect={() => onScope('meine')}
+        >
+          Meine Lieder
+        </ListTab>
+        <ListTab
+          active={scope === 'alle'}
+          count={summary.data?.totals.songs}
+          onSelect={() => onScope('alle')}
+        >
+          Alle Lieder
+        </ListTab>
+      </div>
+
+      {scope === 'meine' ? (
+        <MySongs search={search} />
+      ) : (
+        <AllSongs search={search} />
+      )}
+    </div>
+  );
+}
+
+function MySongs({ search }: { search: string }) {
+  const own = useOwnSongs();
+  const needle = search.toLowerCase();
+
+  const items = (own.data ?? [])
+    .filter(
+      (song) =>
+        needle === '' ||
+        song.title.toLowerCase().includes(needle) ||
+        (song.artist ?? '').toLowerCase().includes(needle),
+    )
+    .toSorted((a, b) => a.title.localeCompare(b.title, 'de'));
+
+  if (own.isLoading) return <CardSkeleton />;
+  if (own.error) return <ErrorState error={own.error} />;
+
+  return (
+    <>
+      {items.length === 0 ? (
+        <EmptyState
+          title={needle ? 'Nichts gefunden' : 'Noch keine eigene Version'}
+          hint={
+            needle
+              ? undefined
+              : 'Öffne ein Lied und hinterleg dir Text & Akkorde. Sie bleiben auf diesem Gerät.'
+          }
+        />
+      ) : (
+        <ul className="space-y-2">
+          {items.map((song) => (
+            <li key={song.songId}>
+              <Link
+                href={`/lied?id=${song.songId}`}
+                className={cn(
+                  'flex items-center gap-3 rounded-md border border-line bg-card p-3 transition-colors hover:border-line-strong',
+                  PRESSABLE,
+                )}
+              >
+                <FileMusic size={15} className="shrink-0 text-terracotta-500" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-stone-800">
+                    {song.title}
+                  </p>
+                  <p className="truncate text-[11px] text-stone-400">
+                    {[
+                      song.artist ?? 'Unbekannt',
+                      song.key && `Tonart ${song.key}`,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </div>
+                <ChevronRight size={15} className="shrink-0 text-stone-300" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Wo die Liste herkommt, steht an ihr selbst: Auf dem nächsten Gerät
+          ist sie leer, und das soll niemanden überraschen. */}
+      <p className="flex items-center justify-center gap-1.5 pt-1 text-[11px] text-stone-400">
+        <Lock size={11} />
+        Nur auf diesem Gerät gespeichert — niemand sonst sieht sie.
+      </p>
+    </>
+  );
+}
+
+function AllSongs({ search }: { search: string }) {
   const [sort, setSort] =
     useState<NonNullable<SongListParams['sort']>>('popular');
-  const [adding, setAdding] = useState(false);
+  const owned = useOwnSongIds();
 
   const query = useSongList({ search: search || undefined, sort });
 
@@ -996,7 +1188,7 @@ function SongLibrary({ search }: { search: string }) {
   ];
 
   return (
-    <div className="space-y-3">
+    <>
       <div className="flex gap-2">
         {sorts.map(({ key, label }) => (
           <button
@@ -1016,22 +1208,6 @@ function SongLibrary({ search }: { search: string }) {
         ))}
       </div>
 
-      {/* Bisher wuchs die Liederliste nur über die Vorschläge an einem Abend.
-          Ein Lied, das man kennt und erst nächsten Monat singen will, hatte
-          keinen Weg hinein — und der Weg, den es dann bekam, war ein
-          Plus-Symbol am Rand, das man suchen musste. Jetzt derselbe Knopf an
-          derselben Stelle wie „Neues Thema" nebenan. */}
-      <Button
-        variant="secondary"
-        className="w-full"
-        onClick={() => setAdding(true)}
-      >
-        <Plus size={14} />
-        Neues Lied
-      </Button>
-
-      <SongSheet open={adding} onClose={() => setAdding(false)} />
-
       {query.isLoading && <CardSkeleton />}
       {query.error && <ErrorState error={query.error} />}
       {!query.isLoading && query.items.length === 0 && (
@@ -1046,94 +1222,69 @@ function SongLibrary({ search }: { search: string }) {
           <SongRow
             key={song.id}
             song={song}
+            owned={owned.has(song.id)}
             rank={sort === 'popular' ? index + 1 : undefined}
           />
         ))}
       </ul>
 
       <LoadMore query={query} label="Mehr Lieder" />
-    </div>
+    </>
   );
 }
 
 /**
- * Eine Liedzeile — und ihre Knöpfe hinter einem Wisch nach links.
+ * Eine Liedzeile — und sie führt auf die Seite des Lieds.
  *
- * Stift und Papierkorb standen erst dauerhaft da (zwei Ziele an jeder Zeile
- * einer Liste, durch die man scrollt, und beide traf der Daumen zuverlässiger
- * als die Zeile), dann hinter einem langen Druck. Der war nicht zu erraten:
- * Wer ihn nicht kennt, hält die Liste für schreibgeschützt. Jetzt gibt ein
- * Wisch nach links sie frei — am Rechner reicht der Zeiger über der Zeile.
- *
- * Der „Fertig"-Knopf ist damit weg: Es ist immer nur eine Zeile offen, und die
- * schließt, sobald eine andere aufgeht oder man daneben tippt.
+ * Stift und Papierkorb lagen hier erst dauerhaft, dann hinter einem langen
+ * Druck, zuletzt hinter einem Wisch nach links. Seit ein Lied eine eigene
+ * Seite hat, steht dort beides unter „Bearbeiten", und die Zeile hat nur noch
+ * eine Aufgabe: dorthin zu führen. Der Knopf „Text" ist aus demselben Grund
+ * weg — der Link steht auf der Seite ganz oben.
  */
-function SongRow({ song, rank }: { song: SongListItem; rank?: number }) {
-  const remove = useDeleteSong();
-  const confirm = useConfirm();
-  const toast = useToast();
-  const [editing, setEditing] = useState(false);
-
-  const deleteSong = async () => {
-    const ok = await confirm({
-      title: `„${song.title}" löschen?`,
-      // Die Zahl gehört in die Rückfrage: ein Tippfehler von gestern und
-      // ein Lied, das an acht Abenden lief, sind nicht dieselbe
-      // Entscheidung.
-      body:
-        song.timesPlayed > 0
-          ? `Das Lied lief an ${song.timesPlayed} Abend${song.timesPlayed === 1 ? '' : 'en'}. Es verschwindet auch dort aus der Liste.`
-          : 'Das Lied wurde noch nie gesungen — es geht nichts verloren.',
-      confirmLabel: 'Löschen',
-      tone: 'danger',
-    });
-    if (!ok) return;
-
-    remove.mutate(song.id, {
-      onSuccess: () => toast.success(`„${song.title}" ist weg.`),
-    });
-  };
-
+function SongRow({
+  song,
+  owned,
+  rank,
+}: {
+  song: SongListItem;
+  owned: boolean;
+  rank?: number;
+}) {
   return (
     <li>
-      <SwipeActions
-        className="rounded-md border border-line"
-        actions={[
-          {
-            icon: <Pencil size={15} />,
-            label: `${song.title} bearbeiten`,
-            onClick: () => setEditing(true),
-          },
-          {
-            icon: <Trash2 size={15} />,
-            label: `${song.title} löschen`,
-            tone: 'danger',
-            onClick: () => void deleteSong(),
-          },
-        ]}
+      <Link
+        href={`/lied?id=${song.id}`}
+        className={cn(
+          'flex items-center gap-3 rounded-md border border-line bg-card p-3 transition-colors hover:border-line-strong',
+          PRESSABLE,
+        )}
       >
-        <div className="flex items-center gap-3 p-3">
-          {rank !== undefined && (
-            <span className="w-6 shrink-0 text-center text-xs font-bold text-stone-300">
-              {rank}
-            </span>
-          )}
-          <Music size={15} className="shrink-0 text-stone-300" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-stone-800">
+        {rank !== undefined && (
+          <span className="w-6 shrink-0 text-center text-xs font-bold text-stone-300">
+            {rank}
+          </span>
+        )}
+        <Music size={15} className="shrink-0 text-stone-300" />
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5">
+            <span className="truncate text-sm font-bold text-stone-800">
               {song.title}
-            </p>
-            <p className="truncate text-[11px] text-stone-400">
-              {song.artist ?? 'Unbekannt'} · {song.timesPlayed}×
-            </p>
-          </div>
-          <LyricsLink url={song.lyricsUrl} title={song.title} />
+            </span>
+            {owned && (
+              <FileMusic
+                size={13}
+                aria-label="Eigene Version vorhanden"
+                className="shrink-0 text-terracotta-500"
+              />
+            )}
+          </p>
+          <p className="truncate text-[11px] text-stone-400">
+            {song.artist ?? 'Unbekannt'} · {song.timesPlayed}×
+          </p>
         </div>
-      </SwipeActions>
-
-      {editing && (
-        <SongSheet open onClose={() => setEditing(false)} song={song} />
-      )}
+        <ChevronRight size={15} className="shrink-0 text-stone-300" />
+      </Link>
     </li>
   );
 }

@@ -62,6 +62,34 @@ export function isMeetingPast(meeting: MeetingWhen): boolean {
 }
 
 /**
+ * Ob jemand die Setlist eines Abends macht — übernehmen, ordnen, herausnehmen.
+ *
+ * Vor dem Abend, wer die Musik macht; danach jede:r. Nur an einem
+ * **abgesagten** Abend gar niemand: dort gibt es nichts zu protokollieren.
+ *
+ * Streng wie beim Thema: kein Admin-Freifahrtschein, und ein Abend ohne
+ * Musik-Zuteilung ist keiner, an dem alle bestimmen dürfen. Wer die Auswahl
+ * treffen will, trägt sich als Musik ein. Der Server hält dieselbe Grenze.
+ *
+ * Steht hier und nicht an der Terminseite, weil seit der Liedseite zwei
+ * Bildschirme danach fragen — dort steht „Aus der Setlist nehmen". Zwei
+ * Fassungen derselben Regel liefen irgendwann auseinander.
+ */
+export function mayPickSongs({
+  cancelled,
+  past,
+  leaders,
+  meId,
+}: {
+  cancelled: boolean;
+  past: boolean;
+  leaders: readonly { id: string }[];
+  meId: string | undefined;
+}): boolean {
+  return !cancelled && (past || leaders.some((person) => person.id === meId));
+}
+
+/**
  * Wie ein Abend heißt, wenn niemand ihm einen Namen gegeben hat.
  *
  * Abgeleitet und nicht gespeichert. Hier stand einmal `MEETING_TYPE_LABEL`, ein

@@ -1,286 +1,103 @@
 'use client';
 
 /**
- * Ein Lied in der Liederliste anlegen oder ändern.
+ * Ein Lied in der Liederliste anlegen — aus dem Archiv, über das „+".
  *
  * Das Gegenstück zum Vorschlagen am Termin, und bewusst etwas anderes: dort
  * geht es um *diesen Abend*, hier um den Eintrag selbst. Deshalb keine Suche
  * und keine Dubletten-Rückfrage — wer im Archiv steht, weiß, was schon da ist.
  *
- * Der Songtext wird nicht gespeichert, nur verlinkt (CLAUDE.md §6) — der Link
- * darf auf ein Akkordblatt zeigen, deshalb heißt das Feld nicht „Songtext".
+ * **Darunter, wahlweise, die eigene Version** (`useOwnVersionDraft`), sobald
+ * ein Link eingetragen ist.
+ *
+ * Geändert wird ein Lied nicht mehr hier, sondern auf seiner eigenen Seite im
+ * Bearbeitungsmodus. Dorthin führt das Anlegen auch gleich.
  */
-import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Field, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
-import { ConflictBanner } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
-import { useCreateSong, useHk, useSong, useUpdateSong } from '@/lib/api/hooks';
-import type { SongListItem } from '@/lib/api/types';
-import { OpenLinkButton } from './lyrics-link';
-import { SongAiAssist } from './song-ai-assist';
+import { useCreateSong } from '@/lib/api/hooks';
+import {
+  SongFields,
+  songInput,
+  type SongFieldValues,
+} from '@/components/domain/song-fields';
+import { useOwnVersionDraft } from './own-version-draft';
 
-/**
- * Was zum Bearbeiten reicht: ein Eintrag aus der Liederliste oder das Lied an
- * einem Termin. Den ETag lädt `EditSong` ohnehin selbst nach; nur die Liste
- * im Archiv weiß, wie oft das Lied schon gesungen wurde.
- */
-type EditableSong = Pick<
-  SongListItem,
-  'id' | 'title' | 'artist' | 'lyricsUrl'
-> & {
-  timesPlayed?: number;
-};
+const EMPTY: SongFieldValues = { title: '', artist: '', lyricsUrl: '' };
 
-export function SongSheet({
+export function NewSongSheet({
   open,
   onClose,
-  song,
-  meetingId,
 }: {
   open: boolean;
   onClose: () => void;
-  /** Gesetzt heißt: bearbeiten statt anlegen. */
-  song?: EditableSong;
-  /**
-   * Der Termin, an dem bearbeitet wird. Seine Liederliste hat einen eigenen
-   * Zwischenspeicher, und ohne den Hinweis stünde dort nach dem Speichern
-   * weiter der kaputte Link, den man gerade repariert hat.
-   */
-  meetingId?: string;
 }) {
-  return song ? (
-    <EditSong open={open} onClose={onClose} song={song} meetingId={meetingId} />
-  ) : (
-    <CreateSong open={open} onClose={onClose} />
-  );
-}
-
-/** Titel, Interpret, Link — an beiden Wegen dieselben drei Felder. */
-function SongFields({
-  title,
-  setTitle,
-  artist,
-  setArtist,
-  lyricsUrl,
-  setLyricsUrl,
-}: {
-  title: string;
-  setTitle: (value: string) => void;
-  artist: string;
-  setArtist: (value: string) => void;
-  lyricsUrl: string;
-  setLyricsUrl: (value: string) => void;
-}) {
-  return (
-    <>
-      <Field label="Titel">
-        <TextInput
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Gott ist gut"
-        />
-      </Field>
-
-      <Field label="Interpret">
-        <TextInput
-          value={artist}
-          onChange={(event) => setArtist(event.target.value)}
-          placeholder="Outbreakband"
-        />
-      </Field>
-
-      {/* Text *oder* Akkorde: bei uns spielen vier Leute, und ein Akkordblatt
-          ist für die genauso der richtige Link. */}
-      <Field label="Link zu Text/Chords">
-        {/* Der Knopf daneben, nicht darunter: er gehört zu diesem Feld und
-            erscheint erst, wenn darin etwas steht, das eine Adresse ist. */}
-        <div className="flex items-center gap-2">
-          <TextInput
-            type="url"
-            inputMode="url"
-            value={lyricsUrl}
-            onChange={(event) => setLyricsUrl(event.target.value)}
-            placeholder="https://…"
-          />
-          <OpenLinkButton url={lyricsUrl.trim()} />
-        </div>
-      </Field>
-
-      <SongAiAssist
-        draft={{ title, artist, lyricsUrl }}
-        onApply={(patch) => {
-          if (patch.title !== undefined) setTitle(patch.title);
-          if (patch.artist !== undefined) setArtist(patch.artist);
-          if (patch.lyricsUrl !== undefined) setLyricsUrl(patch.lyricsUrl);
-        }}
-      />
-    </>
-  );
-}
-
-function CreateSong({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [title, setTitle] = useState('');
-  const [artist, setArtist] = useState('');
-  const [lyricsUrl, setLyricsUrl] = useState('');
-
-  const create = useCreateSong();
+  const router = useRouter();
   const toast = useToast();
+  const create = useCreateSong();
+
+  const [values, setValues] = useState<SongFieldValues>(EMPTY);
+  const input = songInput(values);
+  const own = useOwnVersionDraft(input);
 
   const close = () => {
-    setTitle('');
-    setArtist('');
-    setLyricsUrl('');
+    setValues(EMPTY);
+    own.reset();
     onClose();
   };
 
-  return (
-    <Sheet
-      open={open}
-      onClose={close}
-      title="Lied hinzufügen"
-      subtitle="Es steht dann im Archiv und lässt sich bei Terminen auswählen."
-      footer={
-        <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={close}>
-            Abbrechen
-          </Button>
-          <Button
-            className="flex-1"
-            loading={create.isPending}
-            disabled={title.trim() === ''}
-            onClick={() =>
-              create.mutate(
-                {
-                  title: title.trim(),
-                  artist: artist.trim() === '' ? null : artist.trim(),
-                  lyricsUrl: lyricsUrl.trim() === '' ? null : lyricsUrl.trim(),
-                },
-                {
-                  onSuccess: (created) => {
-                    toast.success(`„${created.title}" steht in der Liste.`);
-                    close();
-                  },
-                },
-              )
-            }
-          >
-            Hinzufügen
-          </Button>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        <SongFields
-          title={title}
-          setTitle={setTitle}
-          artist={artist}
-          setArtist={setArtist}
-          lyricsUrl={lyricsUrl}
-          setLyricsUrl={setLyricsUrl}
-        />
-      </div>
-    </Sheet>
-  );
-}
-
-function EditSong({
-  open,
-  onClose,
-  song,
-  meetingId,
-}: {
-  open: boolean;
-  onClose: () => void;
-  song: EditableSong;
-  meetingId?: string;
-}) {
-  const queryClient = useQueryClient();
-  const { keys } = useHk();
-  // Schreiben verlangt einen ETag, und der liegt beim geladenen Einzelstand —
-  // die Liste aus dem Archiv bringt keinen mit.
-  const resource = useSong(song.id);
-  const update = useUpdateSong(song.id);
-  const toast = useToast();
-
-  const [title, setTitle] = useState(song.title);
-  const [artist, setArtist] = useState(song.artist ?? '');
-  const [lyricsUrl, setLyricsUrl] = useState(song.lyricsUrl ?? '');
-
-  // Kommt der frische Stand nach (oder ein fremder nach einem Konflikt),
-  // übernehmen die Felder ihn.
-  useEffect(() => {
-    const loaded = resource.data?.data;
-    if (!loaded) return;
-
-    setTitle(loaded.title);
-    setArtist(loaded.artist ?? '');
-    setLyricsUrl(loaded.lyricsUrl ?? '');
-  }, [resource.data]);
+  const submit = () =>
+    create.mutate(input, {
+      onSuccess: async (created) => {
+        await own.persist(created);
+        toast.success(`„${created.title}" steht in der Liste.`);
+        close();
+        router.push(`/lied?id=${created.id}`);
+      },
+    });
 
   return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      title="Lied bearbeiten"
-      subtitle={
-        song.timesPlayed !== undefined && song.timesPlayed > 0
-          ? `${song.timesPlayed}× gesungen — die Änderung gilt auch für diese Abende.`
-          : meetingId
-            ? 'Die Änderung gilt überall, wo das Lied steht.'
-            : undefined
-      }
-      footer={
-        <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={onClose}>
-            Abbrechen
-          </Button>
-          <Button
-            className="flex-1"
-            loading={update.isPending}
-            disabled={resource.isLoading || title.trim() === ''}
-            onClick={() =>
-              update.mutate(
-                {
-                  title: title.trim(),
-                  artist: artist.trim() === '' ? null : artist.trim(),
-                  lyricsUrl: lyricsUrl.trim() === '' ? null : lyricsUrl.trim(),
-                },
-                {
-                  onSuccess: () => {
-                    if (meetingId) {
-                      void queryClient.invalidateQueries({
-                        queryKey: keys.meetings.songs(meetingId),
-                      });
-                    }
-                    toast.success('Gespeichert.');
-                    onClose();
-                  },
-                },
-              )
+    <>
+      {/* Zu, solange der Editor offen ist: Zwei Ebenen, die beide auf Escape
+          hören, schlössen einander. Danach fährt es wieder herein, mit allem,
+          was darin stand — der Zustand liegt hier und nicht im Sheet. */}
+      <Sheet
+        open={open && !own.editing}
+        onClose={close}
+        title="Lied hinzufügen"
+        subtitle="Es steht dann im Archiv und lässt sich bei Terminen auswählen."
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={close}>
+              Abbrechen
+            </Button>
+            <Button
+              className="flex-1"
+              loading={create.isPending || own.saving}
+              disabled={input.title === ''}
+              onClick={submit}
+            >
+              Hinzufügen
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <SongFields
+            values={values}
+            onChange={(patch) =>
+              setValues((current) => ({ ...current, ...patch }))
             }
-          >
-            Speichern
-          </Button>
+          />
         </div>
-      }
-    >
-      <div className="space-y-4">
-        {update.conflict && (
-          <ConflictBanner onResolve={update.resolveConflict} />
-        )}
 
-        <SongFields
-          title={title}
-          setTitle={setTitle}
-          artist={artist}
-          setArtist={setArtist}
-          lyricsUrl={lyricsUrl}
-          setLyricsUrl={setLyricsUrl}
-        />
-      </div>
-    </Sheet>
+        {own.field}
+      </Sheet>
+
+      {own.editor}
+    </>
   );
 }

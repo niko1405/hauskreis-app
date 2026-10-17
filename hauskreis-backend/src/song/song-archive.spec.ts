@@ -148,3 +148,76 @@ describe('SongService.findAll usage facts', () => {
     expect(findMany.mock.calls[0][0].where.pickedIn).toBeDefined();
   });
 });
+
+describe('SongService.findDetail', () => {
+  function detail(playedOn: string[], onMeetings: number) {
+    const findFirst = jest.fn().mockResolvedValue({
+      id: 'song-1',
+      title: 'Gott ist gut',
+      artist: null,
+      lyricsUrl: null,
+      createdAt: utc('2026-01-01'),
+      version: 0,
+      createdBy: null,
+      pickedIn: playedOn
+        .toSorted((a, b) => b.localeCompare(a))
+        .map((date) => ({ meeting: { date: utc(date) } })),
+      _count: { pickedIn: onMeetings },
+    });
+
+    const service = withClock(
+      new SongService({ song: { findFirst } } as unknown as PrismaService),
+    );
+
+    return { service, findFirst };
+  }
+
+  it('carries the same facts as the list', async () => {
+    const { service } = detail(['2026-05-05', '2026-07-07'], 2);
+
+    const song = await service.findDetail('hk-1', 'song-1');
+
+    expect(song).toMatchObject({
+      timesPlayed: 2,
+      lastPlayedAt: '2026-07-07',
+    });
+    // Die Hilfsfelder der Abfrage gehören nicht in die Antwort.
+    expect(song).not.toHaveProperty('pickedIn');
+    expect(song).not.toHaveProperty('_count');
+  });
+
+  it('counts every evening it stands on, suggestions included', async () => {
+    // Zweimal vorgeschlagen, nie gesungen: gesungen 0, aber an zwei Abenden —
+    // und genau daran hängt, ob es sich löschen lässt.
+    const { service, findFirst } = detail([], 2);
+
+    const song = await service.findDetail('hk-1', 'song-1');
+
+    expect(song).toMatchObject({
+      timesPlayed: 0,
+      lastPlayedAt: null,
+      meetingCount: 2,
+    });
+    expect(findFirst.mock.calls[0][0]).toMatchObject({
+      select: {
+        _count: { select: { pickedIn: true } },
+        pickedIn: { where: { isSelected: true } },
+      },
+    });
+  });
+
+  it('reports a song of another group as missing', async () => {
+    const findFirst = jest.fn().mockResolvedValue(null);
+    const service = withClock(
+      new SongService({ song: { findFirst } } as unknown as PrismaService),
+    );
+
+    await expect(service.findDetail('hk-1', 'song-x')).rejects.toThrow(
+      'not found',
+    );
+    expect(findFirst.mock.calls[0][0].where).toEqual({
+      id: 'song-x',
+      hauskreisId: 'hk-1',
+    });
+  });
+});

@@ -179,8 +179,9 @@ Vier Register — **Themen**, **Lieder**, **Orte**, **Termine** — mit einer Su
 
 - **Themen**: umschaltbar zwischen „Eigene Themen" und „Alle Themen". Ein Klick
   auf ein Thema führt auf seine Seite mit allen Einheiten.
-- **Lieder**: die ganze Lieder-Datenbank. Neue lassen sich hier anlegen; zum
-  Ändern oder Löschen **lange auf ein Lied drücken**.
+- **Lieder**: umschaltbar zwischen **„Meine Lieder"** (die mit deiner eigenen
+  Version, siehe Kapitel 7) und **„Alle Lieder"** der Gruppe. Ein Tipp auf ein
+  Lied öffnet seine Seite; ändern und löschen geht dort unter **„Bearbeiten"**.
 - **Orte**: getrennt in **Zuhause** (wo jemand wohnt) und **Treffpunkte** (alles
   andere — Park, Café, Gemeindehaus). Treffpunkte darf jede:r anlegen; zum
   Ändern lange drücken.
@@ -188,7 +189,7 @@ Vier Register — **Themen**, **Lieder**, **Orte**, **Termine** — mit einer Su
   sofern etwas eingetragen wurde. Abgesagte blendet eine Checkbox ein.
 
 Das Archiv ist auch der Ort zum **Vorarbeiten**: Themen und Lieder kannst du
-hier anlegen, ohne auf einen Dienstag zu warten.
+hier anlegen, ohne auf einen Dienstag zu warten — über das **„+" unten rechts**.
 
 ### 5.5 Profil
 
@@ -360,7 +361,32 @@ kannst nur du sie selbst.
   schon eingetragen hast, wird nie überschrieben, sondern nur angeboten.
 - **Abhaken:** Vor dem Abend darf die Lieder nur abhaken, wer an dem Abend die
   Musik macht — das ist die Entscheidung „das singen wir". **Ist der Abend
-  vorbei, darf es jede:r**.
+  vorbei, darf es jede:r**. Zurück zu den Vorschlägen schickt man ein Lied,
+  indem man es in der Setlist **nach links wischt** und auf „−" tippt.
+- **Jedes Lied hat eine eigene Seite.** Ein Tipp auf ein Lied — im Archiv oder
+  am Termin — öffnet sie: oben „Zum Liedtext" und wie oft ihr es gesungen habt,
+  darunter deine eigene Version als Text. Kommst du vom Termin, blätterst du
+  oben rechts mit ‹ und › durch die Setlist bzw. die Vorschläge (auf dem
+  Telefon auch per Wisch). Unten auf der Seite steht
+  **„Bearbeiten"** (Titel, Interpret und Link ändern darf jede:r) und, wenn du
+  vom Termin kommst, **„Entfernen"**: Einen Vorschlag darf jede:r entfernen
+  (am Termin auch: nach links wischen, Papierkorb);
+  ein Lied aus der Setlist nur, wer die Setlist macht — dann fragt die App, ob
+  es zurück zu den Vorschlägen soll oder ganz weg vom Termin. **Löschen** geht
+  nur im Archiv, nur für Admins und nur für ein Lied, das an keinem Abend
+  steht.
+- **Deine eigene Version — Text und Akkorde, nur für dich.** Geht, sobald das
+  Lied einen Link zum Liedtext hat. Auf der Seite des Lieds „Eigene Version
+  anlegen": den Liedtext öffnen, alles kopieren, einfügen. Die App erkennt die
+  Akkorde und die Tonart. Unten steht eine Leiste: Akkord wählen (oder suchen),
+  dann auf die Stelle im Text tippen; einen Akkord ziehen, um ihn zu
+  verschieben, oder antippen, um ihn zu ändern. Unter „Text" änderst oder
+  löschst du Zeilen und fügst Leerzeilen ein. Gespeichert wird oben rechts. Die
+  Version liegt **nur auf deinem Gerät** — niemand sonst sieht sie, und auf
+  einem neuen Telefon ist sie nicht da.
+- **Vollbild** zum Spielen: zwischen Text und Akkorden umschalten,
+  transponieren, Schrift größer, und **Autoscroll** mit einstellbarem Tempo.
+  Tonart und Tempo merkt sich die App je Lied.
 
 ---
 

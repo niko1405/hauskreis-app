@@ -54,7 +54,7 @@ export class SongController {
   @Get(':id')
   @ApiZodResponse(SongResponseDto)
   findOne(@Param() params: SongParamsDto) {
-    return this.songs.findOne(params.hauskreisId, params.id);
+    return this.songs.findDetail(params.hauskreisId, params.id);
   }
 
   /** Returns the existing song if the group already knows it. */
@@ -66,7 +66,14 @@ export class SongController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     const person = await this.people.resolveForUser(user);
-    return this.songs.createOrReuse(params.hauskreisId, dto, person.id);
+    const song = await this.songs.createOrReuse(
+      params.hauskreisId,
+      dto,
+      person.id,
+    );
+    // Mit den Zahlen wie beim Lesen: Ein wiederverwendetes Lied kann längst
+    // an Abenden stehen, und die Antwort ist dieselbe Ressource wie `GET`.
+    return this.songs.findDetail(params.hauskreisId, song.id);
   }
 
   @Patch(':id')

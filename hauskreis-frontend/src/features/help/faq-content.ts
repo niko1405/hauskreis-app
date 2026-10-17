@@ -486,7 +486,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'songs',
     question: 'Warum kann ich die Setlist nicht ändern?',
     answer:
-      '**Vor dem Abend macht die Setlist, wer an dem Abend die Musik macht** — Lieder übernehmen, die Reihenfolge ziehen, etwas herausnehmen. Die Setlist ist da noch eine Entscheidung — „das singen wir" — und die trifft, wer die Lieder üben muss. Du erkennst es an den Nummern: gefüllt heißt, du darfst sie ändern.\n\n**Ist der Abend vorbei, darf es jede:r.** Dann ist es ein Protokoll: „das haben wir gesungen", und daran erinnern sich alle gleich gut.\n\n**Bearbeiten darf trotzdem jede:r**: Wisch ein Lied nach links und tipp auf den Stift, etwa um einen kaputten Link zu reparieren. Der Link gehört dem Lied und gilt danach überall.\n\nZwei Dinge sind hier bewusst anders als sonst in der App: Es gibt **keinen Admin-Freifahrtschein**, und „niemand ist zugeteilt" heißt **nicht** „alle dürfen". Ist niemand eingetragen, darf vor dem Abend niemand die Setlist ändern — dann trägt sich erst jemand ein.',
+      '**Vor dem Abend macht die Setlist, wer an dem Abend die Musik macht** — Lieder übernehmen, die Reihenfolge ziehen, etwas herausnehmen (Lied nach links wischen, dann „−"). Die Setlist ist da noch eine Entscheidung — „das singen wir" — und die trifft, wer die Lieder üben muss. Du erkennst es an den Nummern: gefüllt heißt, du darfst sie ändern.\n\n**Ist der Abend vorbei, darf es jede:r.** Dann ist es ein Protokoll: „das haben wir gesungen", und daran erinnern sich alle gleich gut.\n\n**Bearbeiten darf trotzdem jede:r**: Tipp auf das Lied und unten auf „Bearbeiten", etwa um einen kaputten Link zu reparieren. Der Link gehört dem Lied und gilt danach überall.\n\nZwei Dinge sind hier bewusst anders als sonst in der App: Es gibt **keinen Admin-Freifahrtschein**, und „niemand ist zugeteilt" heißt **nicht** „alle dürfen". Ist niemand eingetragen, darf vor dem Abend niemand die Setlist ändern — dann trägt sich erst jemand ein.',
     keywords: ['haken', 'auswählen', 'gesperrt', 'grau', 'darf nicht'],
   },
   {
@@ -494,7 +494,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'songs',
     question: 'Wie schlage ich ein Lied für einen Abend vor?',
     answer:
-      'Auf der Terminseite unter „Lieder". Du kannst eines aus der Datenbank suchen oder ein neues eintragen — dann landet es gleich in der Datenbank und steht beim nächsten Mal zur Auswahl.\n\nVorschlagen darf jede:r, unabhängig davon, wer die Musik macht. Was davon gesungen wird, übernimmt das Musik-Team in die Setlist.\n\n**Mit dem Pfeil stimmst du für einen Vorschlag**, ein zweiter Tipp nimmt die Stimme zurück. Die Vorschläge stehen nach Stimmen sortiert — so sieht das Musik-Team, was die anderen gern singen würden.\n\nDenselben Song zweimal vorzuschlagen macht keinen zweiten Eintrag — es ist derselbe Wunsch. Einen Vorschlag wieder löschen darf jede:r: nach links wischen.',
+      'Auf der Terminseite unter „Lieder". Du kannst eines aus der Datenbank suchen oder ein neues eintragen — dann landet es gleich in der Datenbank und steht beim nächsten Mal zur Auswahl.\n\nVorschlagen darf jede:r, unabhängig davon, wer die Musik macht. Was davon gesungen wird, übernimmt das Musik-Team in die Setlist.\n\n**Mit dem Pfeil stimmst du für einen Vorschlag**, ein zweiter Tipp nimmt die Stimme zurück. Die Vorschläge stehen nach Stimmen sortiert — so sieht das Musik-Team, was die anderen gern singen würden.\n\nDenselben Song zweimal vorzuschlagen macht keinen zweiten Eintrag — es ist derselbe Wunsch. Einen Vorschlag wieder entfernen darf jede:r: am Termin nach links wischen und auf den Papierkorb tippen — oder aufs Lied tippen, dann unten „Entfernen".\n\nAuf der Seite eines Lieds **blätterst du durch den Abend**: oben rechts mit ‹ und › durch die Setlist oder die Vorschläge — je nachdem, woher du kamst —, auf dem Telefon auch per Wisch.\n\nBeim **neuen Lied** kannst du wie im Archiv gleich deine eigene Version hinterlegen, sobald ein Link eingetragen ist.',
     keywords: ['wunsch', 'vorschlag', 'lied', 'song', 'eintragen'],
   },
   {
@@ -502,7 +502,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'songs',
     question: 'Was ist die Lieder-Datenbank?',
     answer:
-      'Alles, was jemals vorgeschlagen wurde, bleibt gespeichert — mit der Zeit wächst daraus euer Repertoire. Zu finden im Archiv unter „Lieder", durchsuchbar nach Titel und Interpret.\n\nSortieren kannst du nach Titel, nach „am häufigsten gesungen" und nach „zuletzt gesungen". Gezählt wird dabei nur, was an einem vergangenen Abend tatsächlich **abgehakt** war — ein Vorschlag, der es nicht auf die Liste geschafft hat, sagt etwas über einen Wunsch, nicht über das Repertoire.\n\nNeue Lieder kannst du auch direkt im Archiv anlegen, ohne Umweg über einen Termin.',
+      'Alles, was jemals vorgeschlagen wurde, bleibt gespeichert — mit der Zeit wächst daraus euer Repertoire. Zu finden im Archiv unter „Lieder", durchsuchbar nach Titel und Interpret.\n\nSortieren kannst du nach Titel, nach „am häufigsten gesungen" und nach „zuletzt gesungen". Gezählt wird dabei nur, was an einem vergangenen Abend tatsächlich **abgehakt** war — ein Vorschlag, der es nicht auf die Liste geschafft hat, sagt etwas über einen Wunsch, nicht über das Repertoire.\n\nNeue Lieder legst du direkt im Archiv an, ohne Umweg über einen Termin — über das **„+" unten rechts**. Ein Tipp auf ein Lied öffnet seine Seite mit Link, Zahlen und deiner eigenen Version.\n\nUnter **„Meine Lieder"** stehen die, für die du Text und Akkorde hinterlegt hast; unter **„Alle Lieder"** die ganze Liederliste der Gruppe.',
     keywords: ['repertoire', 'sammlung', 'suchen', 'archiv'],
   },
   {
@@ -539,11 +539,80 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     keywords: ['instrument', 'spielen', 'musik', 'zuteilen'],
   },
   {
+    id: 'songs-eigene-version',
+    category: 'songs',
+    question: 'Wie hinterlege ich Text und Akkorde für mich?',
+    answer:
+      'Öffne das Lied und tipp auf **„Eigene Version anlegen"**. Das geht, sobald das Lied einen **Link zum Liedtext** hat — fehlt er, trägst du ihn zuerst unter „Bearbeiten" ein. Dann zwei Schritte:\n\n1. **Sheet holen** — „Öffnen" führt zum Liedtext. Dort alles markieren und kopieren.\n2. **Hier einfügen** — ins Feld oder mit „Aus Zwischenablage einfügen".\n\nDarunter steht sofort die **Vorschau**: Die App erkennt Akkorde über dem Text genauso wie ChordPro, räumt auf, was beim Kopieren mitkommt (auch „Page 1/3"), und sagt dir die Tonart. Was nicht passt, bearbeitest du dort (siehe nächste Frage). Gespeichert wird **oben rechts**.\n\nBeim Anlegen eines neuen Lieds — im Archiv wie am Termin — kannst du die Version gleich mit hinterlegen.',
+    keywords: [
+      'text',
+      'akkorde',
+      'chords',
+      'lyrics',
+      'sheet',
+      'einfügen',
+      'chordpro',
+      'ultimate guitar',
+    ],
+  },
+  {
+    id: 'songs-akkorde-verschieben',
+    category: 'songs',
+    question: 'Wie bearbeite ich Akkorde und Text in meiner Version?',
+    answer:
+      'In der Vorschau des Editors, mit der Leiste unten. Oben an der Vorschau schaltest du zwischen **Akkorde** und **Text** um — die Leiste wechselt mit.\n\n**Unter „Akkorde":**\n\n- **Akkord setzen** — tipp unten auf einen Akkord (oder such ihn, z. B. „F#m7"). Er ist dann gewählt, die Vorschau hat einen Rahmen, und jeder Tipp auf den Text setzt ihn dort. Fertig? Auf das ✕ oder noch einmal auf den Akkord.\n- **Verschieben** — halt einen Akkord im Text fest und lass ihn über der Silbe los, auf die er gehört. Ein Strich zeigt, wo er landet; das geht auch in eine andere Zeile.\n- **Ändern** — tipp auf einen Akkord im Text: Unten kannst du ihn umbenennen, ein Zeichen nach links oder rechts schieben oder entfernen.\n\n**Unter „Text":** Tipp auf eine Zeile — dann kannst du sie ändern, löschen oder darunter eine Leerzeile oder eine neue Zeile einfügen. Ändert sich der Text, wandern die Akkorde der Zeile mit.\n\nVertan? „Rückgängig" steht oben an der Vorschau.',
+    keywords: [
+      'verschieben',
+      'falsch',
+      'akkord',
+      'korrigieren',
+      'ziehen',
+      'hinzufügen',
+      'suchen',
+      'zeile',
+      'löschen',
+      'leerzeile',
+      'text',
+    ],
+  },
+  {
+    id: 'songs-eigene-version-privat',
+    category: 'songs',
+    question: 'Sehen die anderen meine Version?',
+    answer:
+      'Nein. Text und Akkorde gehören denen, die sie geschrieben haben — deshalb hinterlegt jede:r sie nur für sich, und die App teilt sie nicht und füllt sie nicht vor.\n\nDeine Version liegt **nur auf diesem Gerät**, nicht auf dem Server. Das heißt auch: Auf einem anderen Gerät ist sie nicht da, und wenn du die App löschst oder das Telefon wechselst, ist sie weg. Eine Sicherung gibt es bewusst nicht — eine Datei zum Mitnehmen ließe sich genauso weitergeben.\n\nWas alle sehen, ist der Link zum Lied. Den kann jede:r unter „Bearbeiten" ändern.',
+    keywords: [
+      'privat',
+      'teilen',
+      'urheberrecht',
+      'gerät',
+      'sicherung',
+      'weg',
+      'andere',
+    ],
+  },
+  {
+    id: 'songs-vollbild',
+    category: 'songs',
+    question: 'Was kann das Vollbild — Transponieren, Autoscroll?',
+    answer:
+      'Auf der Seite des Lieds steht deine Version als Text; „Akkorde" oben an der Karte blendet sie ein. **„Vollbild"** öffnet sie zum Spielen. Unten eine Leiste:\n\n- **Text | Akkorde** — zum Mitsingen ohne Akkorde.\n- **Transponieren** — mit − und + in Halbtönen; die Mitte zeigt „A → B", ein Tipp darauf geht zurück zur Originaltonart.\n- **Aa** — die Schrift größer oder kleiner.\n- **Autoscroll** — ▶ startet, − und + ändern das Tempo. Ein Finger auf dem Blatt hält es an, solange er liegt.\n\nWährend es scrollt, tritt die Leiste zurück; ein Tipp holt sie wieder. Das Display bleibt an. Tonart und Tempo merkt sich die App für dieses Lied, die Schriftgröße für alle.',
+    keywords: [
+      'vollbild',
+      'transponieren',
+      'tonart',
+      'autoscroll',
+      'scrollen',
+      'schrift',
+      'spielen',
+    ],
+  },
+  {
     id: 'songs-loeschen',
     category: 'songs',
     question: 'Kann ich ein Lied aus der Datenbank löschen?',
     answer:
-      'Das können nur Admins, und auch die nur, solange das Lied an keinem Termin hängt. Sonst stünde im Archiv ein Abend mit einer Lücke.\n\nMeistens ist ohnehin **Umbenennen** gemeint — ein Tippfehler im Titel, ein falscher Interpret. Das darf jede:r, im Archiv unter „Lieder".',
+      'Das können nur Admins, nur aus dem **Archiv** und auch dort nur, solange das Lied an keinem Termin hängt. Sonst stünde im Archiv ein Abend mit einer Lücke.\n\n**Vom Termin aus wird ein Lied nur entfernt**, nicht gelöscht: aufs Lied tippen, unten „Entfernen". Steht es in der Setlist, fragt die App, ob es zurück zu den Vorschlägen soll oder ganz weg vom Termin — das darf nur, wer die Setlist macht.\n\nMeistens ist ohnehin **Umbenennen** gemeint — ein Tippfehler im Titel, ein falscher Interpret. Das darf jede:r, auf der Seite des Lieds unter „Bearbeiten".',
     keywords: ['löschen', 'entfernen', 'umbenennen', 'tippfehler'],
   },
 
