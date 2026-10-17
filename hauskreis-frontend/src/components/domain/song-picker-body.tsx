@@ -24,7 +24,6 @@ import { useAddMeetingSong, useSongList } from '@/lib/api/hooks';
 import { formatRelativeDay } from '@/lib/date';
 import { cn } from '@/lib/cn';
 import type { SongListParams } from '@/lib/api/params';
-import { LyricsLink } from './lyrics-link';
 
 type Sort = NonNullable<SongListParams['sort']>;
 
@@ -110,13 +109,13 @@ export function SongPickerBody({
           const alreadyThere = picked.has(song.id);
 
           return (
-            <li key={song.id} className="flex items-center gap-2">
+            <li key={song.id}>
               <button
                 type="button"
                 disabled={alreadyThere || add.isPending}
                 onClick={() => add.mutate({ songId: song.id })}
                 className={cn(
-                  'flex min-w-0 flex-1 items-center gap-2.5 rounded-md border p-2.5 text-left transition-colors',
+                  'flex w-full min-w-0 items-center gap-2.5 rounded-md border p-2.5 text-left transition-colors',
                   alreadyThere
                     ? 'cursor-default border-success-line bg-success-bg/50'
                     : 'border-line bg-card hover:border-terracotta-400',
@@ -142,8 +141,6 @@ export function SongPickerBody({
                   </span>
                 </span>
               </button>
-
-              <LyricsLink url={song.lyricsUrl} title={song.title} />
             </li>
           );
         })}

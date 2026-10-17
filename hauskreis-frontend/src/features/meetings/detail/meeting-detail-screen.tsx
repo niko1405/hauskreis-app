@@ -71,16 +71,17 @@ import {
   ROLE_LABEL,
   activeMeetingRoles,
   mapsUrl,
+  mayPickSongs,
   meetingHeadline,
   meetingPhase,
 } from '@/lib/meeting';
 import { ROLE_ICON } from '@/components/domain/role-badge';
 import { ActionstepCheck } from '@/components/domain/actionstep-check';
+import { EditBar } from '@/components/layout/edit-bar';
 import type { MeetingRole } from '@/lib/meeting';
 import type { AssignmentRole, PersonRef } from '@/lib/api/types';
 import { AnswerBar } from './answer-bar';
 import { AttendanceCard } from './attendance-card';
-import { EditBar } from './edit-bar';
 import {
   CancelledNotice,
   CancelMeetingBlock,
@@ -497,19 +498,13 @@ function Loaded({
     patch({ hasNotesSlot: false });
   };
 
-  /**
-   * Abhaken darf vor dem Abend, wer die Musik macht — danach jede:r. Nur an
-   * einem **abgesagten** Abend gar niemand: dort gibt es nichts zu protokollieren.
-   *
-   * Streng wie beim Thema: kein Admin-Freifahrtschein, und ein Abend ohne
-   * Musik-Zuteilung ist keiner, an dem alle bestimmen dürfen. Wer die Auswahl
-   * treffen will, trägt sich eine Zeile weiter oben ein. Der Server hält
-   * dieselbe Grenze.
-   */
-  const mayPickSongs =
-    !cancelled &&
-    (past ||
-      (songLeaders.data ?? []).some((person) => person.id === me.me?.id));
+  // Die Regel steht in `lib/meeting.ts`, weil die Liedseite sie auch braucht.
+  const maySelectSongs = mayPickSongs({
+    cancelled,
+    past,
+    leaders: songLeaders.data ?? [],
+    meId: me.me?.id,
+  });
 
   return (
     <div className="space-y-6 px-5 pt-safe-4 pb-10">
@@ -717,7 +712,7 @@ function Loaded({
           <SongsCard
             meetingId={meetingId}
             readOnly={locked}
-            mayPick={mayPickSongs}
+            mayPick={maySelectSongs}
             setlistOnly={reading}
           />
         )}

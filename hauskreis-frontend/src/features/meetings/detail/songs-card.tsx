@@ -21,26 +21,37 @@
  * Übernehmen; alle anderen sehen umrandete Nummern und sonst nichts davon. Ein
  * toter Knopf ist kein Hinweis, sondern ein Fehler.
  *
- * **Bearbeiten darf jede:r**, an der Setlist wie an den Vorschlägen — gemeint
- * ist der kaputte Link, den irgendwer beim Üben bemerkt. Er gehört dem Lied und
- * nicht dem Abend; wer ihn repariert, repariert ihn überall.
+ * **Ein Tipp auf ein Lied führt auf seine Seite** (`/lied`), mit dem Abend in
+ * der Adresse. Dort stehen der Link, die eigene Version, unter „Bearbeiten"
+ * die Angaben und unten „Entfernen" vom Abend. Eine Zeile hat dafür zu wenig
+ * Platz, seit ein Lied mehr ist als Titel und Link — und ein Knopf „Text" an
+ * jeder Zeile war ein zweiter Weg zu etwas, das die Seite ohnehin zeigt.
+ *
+ * **Die Zeilen wischen trotzdem**, für die beiden Handgriffe, die man beim
+ * Zusammenstellen zehnmal braucht — dafür jedes Mal eine Seite zu öffnen wäre
+ * ein Umweg. Eine Setlist-Zeile gibt für das Musik-Team „−" frei, das sie
+ * zurück zu den Vorschlägen schickt; ein Vorschlag für jede:r den Papierkorb,
+ * der ihn vom Abend nimmt (am vergangenen oder abgesagten nicht mehr).
  *
  * **Warum die Setlist terracotta ist.** „Im Set" ist eine **Auswahl**, und
  * Auswahl ist überall terracotta: der aktive Tab, der gewählte Chip, der erste
- * Platz einer Rangliste.
+ * Platz einer Rangliste. Ein Rand in dieser Farbe genügt dafür; einen Schein
+ * um die Karte gab es einmal, und er ließ sie aussehen wie eine Werbefläche.
  */
 import {
   ChevronDown,
   ChevronUp,
   Equal,
+  FileMusic,
   Minus,
   Music,
-  Pencil,
   Plus,
   Trash2,
 } from 'lucide-react';
 import { Reorder, useDragControls } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
+import Link from '@/components/ui/link';
+import { SwipeActions } from '@/components/ui/swipe-actions';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { EmptyState, Skeleton } from '@/components/ui/states';
 import { PRESSABLE } from '@/components/ui/button';
@@ -51,14 +62,10 @@ import {
   useSetMeetingSongSelected,
   useVoteMeetingSong,
 } from '@/lib/api/hooks';
-import { LyricsLink } from '@/components/domain/lyrics-link';
-import { SongSheet } from '@/components/domain/song-sheet';
-import { SongSuggestSheet } from '@/components/domain/song-suggest-sheet';
-import { SwipeActions } from '@/components/ui/swipe-actions';
+import { SongSuggestSheet } from '@/features/songs/song-suggest-sheet';
 import { cn } from '@/lib/cn';
+import { useOwnSongIds } from '@/lib/own-songs/use-own-songs';
 import type { MeetingSong } from '@/lib/api/types';
-
-type EditedSong = MeetingSong['song'];
 
 export function SongsCard({
   meetingId,
@@ -86,15 +93,15 @@ export function SongsCard({
    * Die Leseansicht eines vergangenen Abends: nur, was gesungen wurde.
    *
    * Vorschläge beantworten „was wollen wir singen" — eine Frage, die sich am
-   * Abend danach nicht mehr stellt. Ohne Ordnen, Herausnehmen und Wischen, und
+   * Abend danach nicht mehr stellt. Ohne Ordnen und Herausnehmen, und
    * ohne Setlist gar nichts: Eine leere Karte „nichts notiert" ist beim
    * Nachlesen eine Zeile, die nichts sagt. Nachtragen geht über „Bearbeiten".
    */
   setlistOnly?: boolean;
 }) {
   const songs = useMeetingSongs(meetingId);
+  const owned = useOwnSongIds();
   const [suggesting, setSuggesting] = useState(false);
-  const [editing, setEditing] = useState<EditedSong | null>(null);
 
   const all = songs.data ?? [];
   const setlist = all.filter((entry) => entry.isSelected);
@@ -109,6 +116,7 @@ export function SongsCard({
         <SetlistCard
           meetingId={meetingId}
           setlist={setlist}
+          owned={owned}
           mayPick={false}
           readOnly
         />
@@ -165,18 +173,18 @@ export function SongsCard({
           <SetlistCard
             meetingId={meetingId}
             setlist={setlist}
+            owned={owned}
             mayPick={mayPick}
             readOnly={readOnly}
-            onEdit={setEditing}
           />
 
           {(rest.length > 0 || !readOnly) && (
             <SuggestionsCard
               meetingId={meetingId}
               rest={rest}
+              owned={owned}
               mayPick={mayPick}
               readOnly={readOnly}
-              onEdit={setEditing}
               footer={
                 <>
                   {suggest}
@@ -202,15 +210,6 @@ export function SongsCard({
         meetingId={meetingId}
         alreadyPicked={all.map((entry) => entry.song.id)}
       />
-
-      {editing && (
-        <SongSheet
-          open
-          onClose={() => setEditing(null)}
-          song={editing}
-          meetingId={meetingId}
-        />
-      )}
     </section>
   );
 }
@@ -267,21 +266,59 @@ function songCount(n: number): string {
   return n === 1 ? '1 Song' : `${n} Songs`;
 }
 
+/**
+ * Titel und Interpret — und der Weg auf die Seite des Lieds.
+ *
+ * Nur dieser Teil der Zeile ist der Link. Kreis, Stimmen und Griff daneben sind
+ * eigene Knöpfe, und ein Knopf im Link wäre ein Ziel in einem Ziel.
+ */
+function SongLink({
+  entry,
+  meetingId,
+  owned,
+}: {
+  entry: MeetingSong;
+  meetingId: string;
+  owned: boolean;
+}) {
+  return (
+    <Link
+      href={`/lied?id=${entry.song.id}&termin=${meetingId}`}
+      className="min-w-0 flex-1 rounded-md focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none"
+    >
+      <span className="flex items-center gap-1.5">
+        <span className="truncate text-sm font-bold text-stone-800">
+          {entry.song.title}
+        </span>
+        {owned && (
+          <FileMusic
+            size={13}
+            aria-label="Eigene Version vorhanden"
+            className="shrink-0 text-terracotta-500"
+          />
+        )}
+      </span>
+      <span className="block truncate text-[11px] text-stone-400">
+        {entry.song.artist ?? 'Unbekannt'}
+      </span>
+    </Link>
+  );
+}
+
 // ------------------------------------------------------------------ Setlist
 
 function SetlistCard({
   meetingId,
   setlist,
+  owned,
   mayPick,
   readOnly,
-  onEdit,
 }: {
   meetingId: string;
   setlist: MeetingSong[];
+  owned: ReadonlySet<string>;
   mayPick: boolean;
   readOnly: boolean;
-  /** Fehlt in der Leseansicht: dort wischt keine Zeile. */
-  onEdit?: (song: EditedSong) => void;
 }) {
   const reorder = useReorderSetlist(meetingId);
   const ids = setlist.map((entry) => entry.id);
@@ -309,12 +346,13 @@ function SetlistCard({
   };
 
   return (
-    // Der Schein ist Teil der Aussage: Diese Karte ist die Antwort auf die
-    // Frage, mit der man hierherkommt, und sie soll aus der Seite treten.
-    <div className="rounded-card border border-terracotta-500/40 bg-gradient-to-b from-terracotta-500/15 to-card p-4 shadow-[0_0_48px_-16px_color-mix(in_oklab,var(--color-terracotta-500)_55%,transparent)] sm:p-5">
+    // Der Rand in Terracotta sagt „das ist die Auswahl". Ein Schein darum
+    // stand hier einmal und sollte die Karte aus der Seite treten lassen —
+    // sie trat vor allem aus dem Rest der App heraus.
+    <div className="rounded-card border border-terracotta-500/40 bg-card p-4 sm:p-5">
       <CardHead
         icon={<Music size={18} />}
-        title="Feste Setlist"
+        title="Setlist"
         subtitle={`${songCount(setlist.length)} ausgewählt`}
         tone="selected"
       />
@@ -354,8 +392,8 @@ function SetlistCard({
                 entry={entry}
                 number={index + 1}
                 meetingId={meetingId}
+                owned={owned.has(entry.song.id)}
                 mayPick={mayPick}
-                onEdit={onEdit}
                 onDragEnd={commit}
               />
             );
@@ -370,27 +408,23 @@ function SetlistRow({
   entry,
   number,
   meetingId,
+  owned,
   mayPick,
-  onEdit,
   onDragEnd,
 }: {
   entry: MeetingSong;
   number: number;
   meetingId: string;
+  owned: boolean;
   mayPick: boolean;
-  onEdit?: (song: EditedSong) => void;
   onDragEnd: () => void;
 }) {
   const controls = useDragControls();
   const select = useSetMeetingSongSelected(meetingId);
   const grip = useRef<HTMLSpanElement>(null);
 
-  const takeOut = () =>
-    select.mutate({ meetingSongId: entry.id, isSelected: false });
-
-  // **Gezogen wird nur am Griff.** Die Zeile wischt schon nach links
-  // (`SwipeActions`, `drag="x"`), und zwei Gesten auf derselben Fläche
-  // bräuchten eine Regel, welche gewinnt — dieselbe Überlegung wie am Sheet.
+  // **Gezogen wird nur am Griff.** Der Rest der Zeile ist ein Link, und ein
+  // Tipp darauf soll das Lied öffnen und nicht anfangen, es zu verschieben.
   //
   // Als natives `pointerdown` und nicht über React: Die Wisch-Zeile darüber
   // hört ebenfalls nativ zu und bekäme den Druck sonst vor React mit — sie
@@ -405,47 +439,22 @@ function SetlistRow({
     };
     node.addEventListener('pointerdown', start);
     return () => node.removeEventListener('pointerdown', start);
-  }, [controls]);
+  }, [controls, mayPick]);
 
   const row = (
     <div className="flex items-center gap-3 rounded-2xl border border-line bg-canvas p-3">
-      {/* Die Nummer — und für das Musik-Team beim Überfahren der Knopf, der
-          das Lied zurück zu den Vorschlägen schickt. Nur mit einem Zeiger,
-          der wirklich schweben kann: Ein Telefon kennt kein Überfahren, und
-          ein Antippen sollte hier nicht schon etwas entfernen. Dort ist der
-          Wisch der Weg. */}
-      <span className="group/num relative shrink-0">
-        <span
-          className={cn(
-            'flex h-8 w-8 items-center justify-center rounded-full font-serif text-sm font-bold',
-            mayPick
-              ? 'bg-terracotta-500 text-white'
-              : 'border border-terracotta-500/40 bg-terracotta-500/10 text-terracotta-500',
-          )}
-        >
-          {number}
-        </span>
-        {mayPick && (
-          <button
-            type="button"
-            aria-label={`${entry.song.title} aus der Setlist nehmen`}
-            title="Aus der Setlist nehmen"
-            onClick={takeOut}
-            className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-terracotta-500 text-white opacity-0 transition-opacity focus-visible:pointer-events-auto focus-visible:opacity-100 [@media(hover:hover)]:group-hover/num:pointer-events-auto [@media(hover:hover)]:group-hover/num:opacity-100"
-          >
-            <Minus size={16} strokeWidth={3} />
-          </button>
+      <span
+        className={cn(
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-serif text-sm font-bold',
+          mayPick
+            ? 'bg-terracotta-500 text-white'
+            : 'border border-terracotta-500/40 bg-terracotta-500/10 text-terracotta-500',
         )}
+      >
+        {number}
       </span>
 
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-stone-800">
-          {entry.song.title}
-        </p>
-        <p className="truncate text-[11px] text-stone-400">
-          {entry.song.artist ?? 'Unbekannt'}
-        </p>
-      </div>
+      <SongLink entry={entry} meetingId={meetingId} owned={owned} />
 
       {mayPick && (
         <span
@@ -458,8 +467,6 @@ function SetlistRow({
           <Equal size={18} />
         </span>
       )}
-
-      <LyricsLink url={entry.song.lyricsUrl} title={entry.song.title} />
     </div>
   );
 
@@ -471,26 +478,20 @@ function SetlistRow({
       onDragEnd={onDragEnd}
       className="relative"
     >
-      {onEdit ? (
+      {/* Zurück zu den Vorschlägen: nach links wischen, am Rechner beim
+          Überfahren. Neutral und nicht rot — es geht nichts verloren, die
+          Stimmen bleiben stehen. Ganz vom Abend nimmt es die Seite des Lieds. */}
+      {mayPick ? (
         <SwipeActions
           className="rounded-2xl"
           actions={[
             {
-              icon: <Pencil size={14} />,
-              label: `${entry.song.title} bearbeiten`,
-              onClick: () => onEdit(entry.song),
+              icon: <Minus size={16} strokeWidth={3} />,
+              label: `${entry.song.title} aus der Setlist nehmen`,
+              disabled: select.isPending,
+              onClick: () =>
+                select.mutate({ meetingSongId: entry.id, isSelected: false }),
             },
-            ...(mayPick
-              ? [
-                  {
-                    icon: <Minus size={16} />,
-                    label: `${entry.song.title} aus der Setlist nehmen`,
-                    tone: 'danger' as const,
-                    disabled: select.isPending,
-                    onClick: takeOut,
-                  },
-                ]
-              : []),
           ]}
         >
           {row}
@@ -507,16 +508,16 @@ function SetlistRow({
 function SuggestionsCard({
   meetingId,
   rest,
+  owned,
   mayPick,
   readOnly,
-  onEdit,
   footer,
 }: {
   meetingId: string;
   rest: MeetingSong[];
+  owned: ReadonlySet<string>;
   mayPick: boolean;
   readOnly: boolean;
-  onEdit: (song: EditedSong) => void;
   footer: React.ReactNode;
 }) {
   // Aufklappbar, aber offen voreingestellt: Ein Vorschlag ist dazu da,
@@ -539,7 +540,7 @@ function SuggestionsCard({
               className={cn('transition-transform', !open && '-rotate-90')}
             />
           }
-          title="Weitere Vorschläge"
+          title="Vorschläge"
           subtitle={`${songCount(rest.length)} in der Liste`}
           tone="muted"
         />
@@ -552,9 +553,9 @@ function SuggestionsCard({
               key={entry.id}
               entry={entry}
               meetingId={meetingId}
+              owned={owned.has(entry.song.id)}
               mayPick={mayPick}
               readOnly={readOnly}
-              onEdit={onEdit}
             />
           ))}
         </ul>
@@ -568,19 +569,19 @@ function SuggestionsCard({
 function SuggestionRow({
   entry,
   meetingId,
+  owned,
   mayPick,
   readOnly,
-  onEdit,
 }: {
   entry: MeetingSong;
   meetingId: string;
+  owned: boolean;
   mayPick: boolean;
   readOnly: boolean;
-  onEdit: (song: EditedSong) => void;
 }) {
   const select = useSetMeetingSongSelected(meetingId);
-  const remove = useRemoveMeetingSong(meetingId);
   const vote = useVoteMeetingSong(meetingId);
+  const remove = useRemoveMeetingSong(meetingId);
 
   const row = (
     <div className="flex items-center gap-3 rounded-2xl border border-line bg-canvas p-3">
@@ -596,14 +597,7 @@ function SuggestionRow({
         />
       )}
 
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-stone-800">
-          {entry.song.title}
-        </p>
-        <p className="truncate text-[11px] text-stone-400">
-          {entry.song.artist ?? 'Unbekannt'}
-        </p>
-      </div>
+      <SongLink entry={entry} meetingId={meetingId} owned={owned} />
 
       <VotePill
         votes={entry.votes}
@@ -614,39 +608,32 @@ function SuggestionRow({
           vote.mutate({ meetingSongId: entry.id, voted: !entry.votedByMe })
         }
       />
-
-      <LyricsLink url={entry.song.lyricsUrl} title={entry.song.title} />
     </div>
   );
 
+  // Einen Vorschlag darf jede:r wieder loswerden — er ist ein Wunsch. Ohne
+  // Rückfrage, wie bei den anderen Wisch-Listen: Der Wisch selbst ist schon
+  // die zweite Bewegung, und weg ist nur der Vorschlag, nicht das Lied.
   return (
     <li>
-      <SwipeActions
-        className="rounded-2xl"
-        actions={[
-          {
-            icon: <Pencil size={14} />,
-            label: `${entry.song.title} bearbeiten`,
-            onClick: () => onEdit(entry.song),
-          },
-          // Einen Vorschlag darf jede:r löschen — er ist ein Wunsch, und wer
-          // sich vertan hat, soll ihn wieder loswerden. Nur am vergangenen
-          // Abend nicht mehr: dort ist die Liste ein Protokoll.
-          ...(readOnly
-            ? []
-            : [
-                {
-                  icon: <Trash2 size={14} />,
-                  label: `${entry.song.title} löschen`,
-                  tone: 'danger' as const,
-                  disabled: remove.isPending,
-                  onClick: () => remove.mutate(entry.id),
-                },
-              ]),
-        ]}
-      >
-        {row}
-      </SwipeActions>
+      {readOnly ? (
+        row
+      ) : (
+        <SwipeActions
+          className="rounded-2xl"
+          actions={[
+            {
+              icon: <Trash2 size={15} />,
+              label: `${entry.song.title} vom Termin entfernen`,
+              tone: 'danger',
+              disabled: remove.isPending,
+              onClick: () => remove.mutate(entry.id),
+            },
+          ]}
+        >
+          {row}
+        </SwipeActions>
+      )}
     </li>
   );
 }

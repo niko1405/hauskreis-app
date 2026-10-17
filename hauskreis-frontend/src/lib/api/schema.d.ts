@@ -3515,6 +3515,10 @@ export interface components {
         /** Format: date-time */
         photoUpdatedAt: string | null;
       } | null;
+      timesPlayed: number;
+      /** Format: date */
+      lastPlayedAt: string | null;
+      meetingCount: number;
     };
     CreateSongDto: {
       title: string;

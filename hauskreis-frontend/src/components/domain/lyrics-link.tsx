@@ -1,13 +1,11 @@
 /**
- * Der Weg zu Text oder Akkorden.
+ * Links nach draußen, zu Text oder Akkorden — prüfen und öffnen.
  *
- * Es gab ihn schon an beiden Stellen, an denen Lieder stehen — aber als
- * schmales graues Symbol ohne Beschriftung, das sich niemand als Link
- * angesehen hat. Deshalb jetzt mit Wort daneben, in Terracotta wie alles
- * andere Anklickbare, und mit einer Trefferfläche, die auf einem Telefon auch
- * getroffen wird.
+ * Hier stand einmal auch `LyricsLink`, der Knopf „Text ↗" an jeder Liedzeile.
+ * Seit ein Lied eine eigene Seite hat, steht der Link dort ganz oben, und die
+ * Zeile führt hin; ein zweiter Weg an jeder Zeile wäre einer zu viel.
  *
- * Gespeichert wird nur die Adresse, nie der Text selbst (CLAUDE.md §6).
+ * Gespeichert wird nur die Adresse, nie der Text selbst (CLAUDE.md §6.7).
  */
 import { ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -29,38 +27,6 @@ export function isHttpUrl(value: string | null | undefined): value is string {
   } catch {
     return false;
   }
-}
-
-export function LyricsLink({
-  url,
-  title,
-  className,
-}: {
-  url: string | null | undefined;
-  /** Für Screenreader: „Text zu …" statt neunmal „Text". */
-  title: string;
-  className?: string;
-}) {
-  if (!isHttpUrl(url)) return null;
-
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      aria-label={`Text oder Akkorde zu ${title}`}
-      // Der Klick gehört dem Link, nicht der Zeile darunter.
-      onClick={(event) => event.stopPropagation()}
-      className={cn(
-        'flex shrink-0 items-center gap-1 rounded-full border border-line px-2.5 py-1.5',
-        'text-[11px] font-semibold text-terracotta-600 hover:border-terracotta-400 hover:bg-terracotta-50',
-        className,
-      )}
-    >
-      Text
-      <ExternalLink size={11} />
-    </a>
-  );
 }
 
 /**

@@ -95,12 +95,13 @@ export function BottomSlotOutlet({ fallback }: { fallback: React.ReactNode }) {
   return (
     <>
       {/* `contents`: Der Kasten hier erzeugt selbst keine Box, seine Kinder
-          hängen direkt in der Spalte des Gerüsts. Das ist nicht Kosmetik —
-          `position: sticky` wirkt nur innerhalb seines Elternkastens, und der
-          wäre hier genau so hoch wie der Balken selbst. Er hätte damit keinen
-          Weg zu kleben und säße einfach am Fuß der Seite, statt am unteren
-          Rand des Bildschirms zu bleiben. Genau daran scheiterte auch schon
-          der Gedanke, ihn in `<main>` zu rendern. */}
+          hängen direkt im Fuß des Gerüsts. Das war einmal tragend —
+          `position: sticky` wirkt nur innerhalb seines Elternkastens, und ein
+          Balken in einem Kasten seiner eigenen Höhe hätte keinen Weg zu
+          kleben. Inzwischen klebt der Fuß selbst (`app-shell.tsx`, er trägt
+          auch den Anker der „+"-Fläche), und die Leisten darin kleben nur
+          noch, wo sie ohne ihn stünden. Ohne eigene Box bleibt es trotzdem:
+          Ein Kasten mehr wäre eine Höhe mehr, die niemand meint. */}
       <div ref={setTarget} className="contents" />
       {!taken && fallback}
     </>
