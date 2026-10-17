@@ -4,6 +4,7 @@
  * Das Gerüst: mobil eine Telefon-Leinwand mit Leiste unten, ab `md` eine
  * Spalte links und mehr Breite für Tabelle und Kalender.
  */
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { BackButton } from './back-button';
 import { BottomSlotOutlet, BottomSlotProvider } from './bottom-slot';
@@ -16,12 +17,13 @@ import { PullToRefresh } from './pull-to-refresh';
 import { SmartHeader } from './smart-header';
 import { useHasSmartHeader } from './use-header-scroll';
 import { useInboxDeeplink } from './use-inbox-deeplink';
-import { Sidebar, TabBar } from './nav';
+import { isTabRoute, Sidebar, TabBar } from './nav';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   // Steht hier und nicht in der Glocke: Der Haken muss auch dann greifen, wenn
   // die Push-Nachricht auf einen Bildschirm ohne Kopfleiste führt.
   useInboxDeeplink();
+  const pathname = usePathname();
 
   return (
     // `min-h-dvh` statt `min-h-screen`: `100vh` rechnet auf mobilen Browsern
@@ -68,9 +70,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               gemeinsamen Kasten, damit der Anker immer genau über der Leiste
               steht, die gerade dort ist, und am Rechner ohne Leiste über dem
               unteren Rand. */}
+            {/* **Die Leiste nur auf den fünf Tabs** (`isTabRoute`). Auf
+              einer Unterseite — Gruppe, Verwaltung, Hilfe, ein Thema — ist
+              man in etwas drin, und der Weg heraus ist der Zurück-Pfeil. An
+              ihrer Stelle steht dort nur der sichere Rand, sonst läge das
+              Seitenende unter dem Home-Balken. */}
             <div className="sticky bottom-0 z-30">
               <FloatingActionAnchor />
-              <BottomSlotOutlet fallback={<TabBar />} />
+              <BottomSlotOutlet
+                fallback={
+                  isTabRoute(pathname) ? (
+                    <TabBar />
+                  ) : (
+                    <div className="pb-safe" />
+                  )
+                }
+              />
             </div>
           </div>
         </div>

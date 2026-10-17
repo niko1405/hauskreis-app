@@ -1,5 +1,6 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { STALE } from '../cache';
 import { topicsApi } from '../endpoints';
 import type { TopicListParams } from '../params';
@@ -152,6 +153,36 @@ export function useCreateTopicSession(topicId: string) {
   return useApiMutation(
     (input: CreateTopicSessionInput) =>
       topicsApi.createTopicSession(hauskreisId, topicId, input),
+    { invalidateKeys: [keys.topics.all, keys.meetings.all, ...derived] },
+  );
+}
+
+/**
+ * Die eigenen einzelnen Einheiten, die sich in dieses Thema holen lassen —
+ * nur gefragt, solange das Sheet dafür offen ist.
+ */
+export function useAdoptableSessions(topicId: string, active: boolean) {
+  const { hauskreisId, enabled, keys } = useHk();
+
+  return useQuery({
+    queryKey: keys.topics.adoptable(topicId),
+    queryFn: ({ signal }) =>
+      topicsApi.listAdoptableSessions(hauskreisId, topicId, signal),
+    enabled: enabled && active,
+    staleTime: STALE.detail,
+  });
+}
+
+/**
+ * Eine einzelne Einheit ins Thema holen. Sie verschwindet damit als eigener
+ * Eintrag aus dem Archiv, und ihr Abend zeigt danach das Thema.
+ */
+export function useAdoptSession(topicId: string) {
+  const { hauskreisId, keys, derived } = useHk();
+
+  return useApiMutation(
+    (sessionId: string) =>
+      topicsApi.adoptSession(hauskreisId, topicId, sessionId),
     { invalidateKeys: [keys.topics.all, keys.meetings.all, ...derived] },
   );
 }

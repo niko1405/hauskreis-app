@@ -14,6 +14,7 @@ export * as meetingPrayerRequestsApi from './meeting-prayer-requests';
 export * as meetingSongsApi from './meeting-songs';
 export * as meetingTopicsApi from './meeting-topics';
 export * as meetingsApi from './meetings';
+export * as notesApi from './notes';
 export * as notificationsApi from './notifications';
 export * as peopleApi from './people';
 export * as prayerBuddiesApi from './prayer-buddies';

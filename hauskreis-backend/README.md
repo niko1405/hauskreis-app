@@ -2373,6 +2373,8 @@ jemand neu wählen müsste.
 | `DELETE` | `…/topics/:id`                                  | Owner oder `admin`              |
 | `DELETE` | `…/topics/:id/collaborators/:personId`          | Owner oder `admin`              |
 | `POST`   | `…/topics/:id/sessions`                         | Owner/Mitarbeit                 |
+| `GET`    | `…/topics/:id/adoptable-sessions`               | Owner/Mitarbeit (nur eigene)    |
+| `POST`   | `…/topics/:id/sessions/adopt`                   | Owner/Mitarbeit + Hülle eigen   |
 | `GET`    | `…/topic-sessions/:id`                          | eingeloggt                      |
 | `PATCH`  | `…/topic-sessions/:id`                          | Owner/Mitarbeit (`If-Match`)    |
 | `DELETE` | `…/topic-sessions/:id`                          | Owner/Mitarbeit, nicht gehalten |
@@ -2394,6 +2396,19 @@ ist der Ort zum Vorarbeiten. Vorher ging nur der umgekehrte Weg — erst einen
 Termin belegen, dann dort schreiben. Der Titel ist dort **Pflicht**: ein Entwurf
 ohne Abend hat nichts als seinen Titel. Wer anlegt, wird seine Verantwortliche,
 sonst griffe die Rettung aus Spec 8.5 für handgemachte Entwürfe nicht.
+
+Eine **einzelne Einheit holt man in ein Thema** mit `POST
+…/topics/:id/sessions/adopt` (`{ sessionId }`), die Kandidaten liefert `GET
+…/topics/:id/adoptable-sessions`. Das ist der Weg in die andere Richtung zum
+Überthema (`PATCH …/topic-sessions/:id/topic`): Wer einen Abend für sich
+vorbereitet oder gehalten hat und merkt, dass er zu einem Thema gehört, hängt
+ihn dort ein. Geholt wird **nur Eigenes** — Hüllen, die man selbst angelegt hat
+—, und nur, wer am Ziel-Thema mitarbeitet. Die Einheit wechselt das Thema, die
+leere Hülle wird gelöscht; Abend, Inhalt und Crew hängen an der Einheit und
+bleiben. Wie beim Überthema ohne `If-Match`: Die Frage lässt sich genau einmal
+mit ja beantworten, ein zweiter Aufruf trifft keine Hülle mehr (409). Ein
+gehaltener Abend öffnet ein abgeschlossenes Thema nicht wieder, ein kommender
+schon (`touchTopic(…, { reopen })`).
 
 `DELETE …/topic-sessions/:id` geht nur, solange die Einheit **nicht gehalten**
 wurde (kein Abend, ein kommender, oder ein abgesagter — dasselbe `isHeld` wie
@@ -3531,6 +3546,36 @@ Gemeinsam in [`pagination.ts`](src/common/http/pagination.ts): neue Listen
 erweitern `paginationSchema` im DTO und geben `toPage(items, total, query)`
 zurück.
 
+## Notizen
+
+`src/note/`. Ein Text, an dem mehrere schreiben, ohne dass er an einem Abend
+hängt. Die Regeln stehen als reine Funktionen in `note-rules.ts`:
+
+- **`mayReadNote`**: Ersteller, Eingetragene (`note_member`) oder alle bei
+  `for_everyone`. Lesen heißt schreiben. Dieselbe Regel steht als Abfrage
+  (`visibleNotesWhere`) in Liste, Detail und der Archiv-Zahl; was jemand nicht
+  sehen darf, ist ein 404.
+- **`mayManageNote`**: Leute, „Ganze Gruppe" und Löschen — der Ersteller, und
+  wenn der gegangen ist, jede:r, der dabei ist (Notausgang wie bei Themen).
+- **Kein Admin-Weg.** Auch nicht beim Löschen, anders als bei den Ideen.
+
+**Abhaken ohne `If-Match`** (`POST …/notes/:id/check` mit `{ index, text,
+done }`): `index` zählt die Checklistenpunkte, `text` ist die Vorbedingung
+(`toggleCheck` in `note-text.ts`). Steht dort etwas anderes, gibt es 409. Der
+Dienst schreibt mit `version` als Bedingung und setzt bis zu dreimal neu an,
+wenn jemand anders dazwischen abgehakt hat — zwei Haken an einer Packliste sind
+kein Konflikt. Titel und Text (`PATCH`) gehen dagegen mit `If-Match`.
+
+**`PUT …/people`** ersetzt die Liste und hebt die Version, obwohl die Zeile
+selbst nur bei `forEveryone` angefasst würde: `members` steht in der Antwort.
+`NOTE_SHARED` geht an alle, die durch den Schreibvorgang **neu** hereinkommen
+(`relatedKey` = Notiz-Id, also einmal je Person und Notiz); nicht an den, der
+schreibt, und nie bei Änderungen am Text.
+
+Die Liste schickt statt des Texts `preview` und `checklist { done, total }`
+(`previewOf`, `checklistOf`). Konto löschen räumt die eigenen Plätze und die
+Notizen, die nur diese Person sehen konnte.
+
 ## Archiv
 
 Das Archiv ist eine **Sicht** auf Vorhandenes, kein eigener Datenbestand. Die
@@ -3867,6 +3912,11 @@ beide aus derselben Variable ab.
 | `GET`/`POST`            | `…/ideas`                                    | eingeloggt                                   |
 | `PATCH`                 | `…/ideas/:id`                                | eingeloggt (`If-Match`)                      |
 | `DELETE`                | `…/ideas/:id`                                | Urheber oder `admin`                         |
+| `GET`/`POST`            | `…/notes`                                    | eingeloggt (Liste nur, was man sehen darf)   |
+| `GET`/`PATCH`           | `…/notes/:id`                                | wer dabei ist (`PATCH` mit `If-Match`)       |
+| `PUT`                   | `…/notes/:id/people`                         | Ersteller (oder Notausgang)                  |
+| `POST`                  | `…/notes/:id/check`                          | wer dabei ist (ohne `If-Match`, s. u.)       |
+| `DELETE`                | `…/notes/:id`                                | Ersteller (oder Notausgang)                  |
 | `GET`                   | `/api/hauskreise/:hauskreisId/people`        | eingeloggt                                   |
 | `POST`                  | `/api/hauskreise/:hauskreisId/people`        | `admin`                                      |
 | `POST`                  | `/api/hauskreise/:hauskreisId/people/invite` | `admin`                                      |
@@ -3900,6 +3950,8 @@ beide aus derselben Variable ab.
 | `DELETE`                | `…/topics/:id`                               | Owner oder `admin`                           |
 | `DELETE`                | `…/topics/:id/collaborators/:personId`       | Owner oder `admin`                           |
 | `POST`                  | `…/topics/:id/sessions`                      | Owner/Mitarbeit                              |
+| `GET`                   | `…/topics/:id/adoptable-sessions`            | Owner/Mitarbeit (nur eigene Hüllen)          |
+| `POST`                  | `…/topics/:id/sessions/adopt`                | Owner/Mitarbeit, Hülle selbst angelegt       |
 | `GET`/`PATCH`/`DELETE`  | `…/topic-sessions/:id`                       | Owner/Mitarbeit                              |
 | `POST`                  | `…/topics/reminders`                         | `admin` (manueller Reminder-Trigger)         |
 | `GET`                   | `…/songs?search=&sort=&playedOnly=`          | eingeloggt (paginiert)                       |

@@ -254,6 +254,25 @@ export const topicChoicesResponseSchema = z.object({
   singleSessions: z.array(singleTopicSessionSchema),
 });
 
+/**
+ * Eine einzelne Einheit, die sich in ein Thema holen lässt — nur eigene, also
+ * solche, deren Hülle der Betrachter angelegt hat.
+ *
+ * `held` wie überall: Der Abend war und fiel nicht aus. Was schon war, lässt
+ * sich trotzdem holen — oft merkt man erst hinterher, wozu ein Abend gehört.
+ */
+export const adoptableSessionSchema = singleTopicSessionSchema.pick({
+  id: true,
+  title: true,
+  createdAt: true,
+  meeting: true,
+  held: true,
+});
+
+export const adoptableSessionsResponseSchema = z.object({
+  items: z.array(adoptableSessionSchema),
+});
+
 /** Wer an einem Abend das Thema vorbereitet. */
 export const topicResponsiblesResponseSchema = z.object({
   meetingId: z.uuid(),
@@ -272,6 +291,9 @@ export class TopicChoicesResponseDto extends createZodDto(
 ) {}
 export class TopicResponsiblesResponseDto extends createZodDto(
   topicResponsiblesResponseSchema,
+) {}
+export class AdoptableSessionsResponseDto extends createZodDto(
+  adoptableSessionsResponseSchema,
 ) {}
 export class TopicPageResponseDto extends createZodDto(
   pageSchema(topicResponseSchema),

@@ -7,7 +7,7 @@ const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
 function setup(
   dates: string[],
-  counts = { topics: 3, mine: 2, total: 4, songs: 20, played: 12 },
+  counts = { topics: 3, mine: 2, total: 4, songs: 20, played: 12, notes: 5 },
 ) {
   const findMany = jest
     .fn()
@@ -25,16 +25,18 @@ function setup(
     .fn()
     .mockResolvedValueOnce(counts.songs)
     .mockResolvedValueOnce(counts.played);
+  const noteCount = jest.fn().mockResolvedValue(counts.notes);
 
   const service = withClock(
     new ArchiveService({
       meeting: { findMany },
       topic: { count: topicCount },
       song: { count: songCount },
+      note: { count: noteCount },
     } as unknown as PrismaService),
   );
 
-  return { service, findMany, topicCount };
+  return { service, findMany, topicCount, noteCount };
 }
 
 describe('ArchiveService.summarise', () => {
@@ -66,8 +68,24 @@ describe('ArchiveService.summarise', () => {
       topicsTotal: 4,
       songs: 20,
       songsPlayed: 12,
+      notes: 5,
     });
     expect(summary.firstMeetingDate).toBe('2025-11-04');
+  });
+
+  it('zählt nur die Notizen, die diese Person sehen darf', async () => {
+    // Eine fremde Notiz mitzuzählen hieße zu verraten, dass es sie gibt.
+    const { service, noteCount } = setup([]);
+
+    await service.summarise('hk-1', 'niko');
+
+    const where = noteCount.mock.calls[0][0].where;
+    expect(where.hauskreisId).toBe('hk-1');
+    expect(where.OR).toEqual([
+      { forEveryone: true },
+      { createdByPersonId: 'niko' },
+      { members: { some: { personId: 'niko' } } },
+    ]);
   });
 
   it('zählt für die Kachel die Vereinigung, nicht die Summe', async () => {
@@ -107,6 +125,7 @@ describe('ArchiveService.summarise', () => {
       total: 0,
       songs: 0,
       played: 0,
+      notes: 0,
     });
 
     const summary = await service.summarise('hk-1', 'niko');

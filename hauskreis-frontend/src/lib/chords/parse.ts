@@ -63,6 +63,13 @@ const SECTION_PREFIX = new RegExp(
   'i',
 );
 
+/** „[Chorus]", „[Chorus]:", „[Intro] G D" — der Abschnitt und was dahinter steht. */
+const BRACKET_PREFIX = /^\[([^\]]+)\]:?\s*(.*)$/;
+/** „x2", „(2x)" — eine Wiederholung, die zum Abschnitt gehört. */
+const REPEAT = /^\(?\s*(?:x\s*\d+|\d+\s*x)\s*\)?$/i;
+/** „N.C." steht wie ein Akkord in Klammern, ist aber eine Pause. */
+const NO_CHORD = /^n\.?c\.?$/i;
+
 /** Zierrat in Akkordzeilen, der weder Akkord noch Text ist. */
 const DECORATION =
   /^(?:\|+:?|:?\|+|\/+|-+|\.+|\*+|x\d+|\d+x|\(x?\d+x?\)|n\.?c\.?|%|→|>|~)$/i;
@@ -146,11 +153,29 @@ function chordsOfLine(line: string): ChordAt[] | null {
   return chords.length / words >= 0.7 ? chords : null;
 }
 
+/**
+ * Ein Abschnitt in eckigen Klammern am Zeilenanfang, wie bei Ultimate Guitar.
+ *
+ * Er kommt nicht immer allein: „[Chorus]:", „[Chorus] x2", „[Intro] G D".
+ * Vorher galt nur die Zeile, die genau `[…]` ist, als Abschnitt — der Rest
+ * blieb Text, wurde als ChordPro gespeichert und beim nächsten Lesen zu einem
+ * Akkord namens „Chorus".
+ */
+function bracketOf(line: string): { label: string; rest: string } | null {
+  const [, inner, rest] = BRACKET_PREFIX.exec(line.trim()) ?? [];
+  const label = inner?.trim();
+  if (!label || isChord(label) || NO_CHORD.test(label)) return null;
+  return { label, rest: (rest ?? '').trim() };
+}
+
 function sectionOf(line: string): string | null {
   const trimmed = line.trim();
 
-  const inner = /^\[([^\]]+)\]$/.exec(trimmed)?.[1]?.trim();
-  if (inner && !isChord(inner)) return inner;
+  const bracket = bracketOf(trimmed);
+  if (bracket?.rest === '') return bracket.label;
+  if (bracket && REPEAT.test(bracket.rest)) {
+    return `${bracket.label} ${bracket.rest}`;
+  }
 
   const plain = SECTION_LINE.exec(trimmed)?.[1];
   if (plain) return plain.trim();
@@ -238,12 +263,22 @@ function parsePlain(raw: string[]): {
       continue;
     }
 
-    const [, label, rest] = SECTION_PREFIX.exec(trimmed) ?? [];
+    const [, word, after] = SECTION_PREFIX.exec(trimmed) ?? [];
+    const bracket = bracketOf(trimmed);
+    const label = word ?? bracket?.label;
+    const rest = word ? after : bracket?.rest;
     if (label && rest) {
       const chords = chordsOfLine(rest);
       if (chords) {
         lines.push({ kind: 'section', label: label.trim() });
         lines.push({ kind: 'lyric', text: '', chords });
+        continue;
+      }
+      // „[Chorus] (Repeat)" — die Klammer ist auch hier der Abschnitt. Nach
+      // dem Speichern als ChordPro läse sie sich ohnehin so.
+      if (bracket) {
+        lines.push({ kind: 'section', label: bracket.label });
+        lines.push({ kind: 'lyric', text: rest, chords: [] });
         continue;
       }
     }
@@ -361,6 +396,14 @@ function parseChordPro(raw: string[]): {
       continue;
     }
 
+    // „[Chorus] [G]Amazing" — erst der Abschnitt, dann die Zeile.
+    const bracket = bracketOf(trimmed);
+    if (bracket) {
+      lines.push({ kind: 'section', label: bracket.label });
+      lines.push(parseChordProLine(bracket.rest));
+      continue;
+    }
+
     lines.push(parseChordProLine(line));
   }
 
@@ -384,11 +427,13 @@ function looksLikeChordPro(raw: string[]): boolean {
     if (DIRECTIVE.test(trimmed)) return true;
     if (sectionOf(trimmed)) continue;
 
-    const bracketed = [...trimmed.matchAll(INLINE)].some(([, inner]) =>
+    // Hinter „[Intro]" zählt, was danach kommt.
+    const body = bracketOf(trimmed)?.rest ?? line;
+    const bracketed = [...body.matchAll(INLINE)].some(([, inner]) =>
       isChord((inner ?? '').trim()),
     );
     if (bracketed) inline += 1;
-    else if (chordsOfLine(line)) plain += 1;
+    else if (chordsOfLine(body)) plain += 1;
   }
 
   return inline > 0 && plain === 0;
@@ -418,16 +463,24 @@ export function parseSheet(
   };
 }
 
-/** Alle Akkorde des Blatts in Lesereihenfolge. */
+/**
+ * Alle Akkorde des Blatts in Lesereihenfolge — nur die, die die App versteht.
+ *
+ * In ChordPro ist alles in eckigen Klammern ein Akkord, auch ein „[Chorus]"
+ * mitten in der Zeile. Als Text bleibt es dort stehen; in die Liste der
+ * Griffbilder und die Vorschläge im Editor gehört es nicht.
+ */
 export function chordsOf(sheet: Sheet): string[] {
   return sheet.lines.flatMap((line) =>
-    line.kind === 'lyric' ? line.chords.map(({ chord }) => chord) : [],
+    line.kind === 'lyric'
+      ? line.chords
+          .map(({ chord }) => chord)
+          .filter((chord) => parseChord(chord, sheet.notation) !== null)
+      : [],
   );
 }
 
 /** Ob das Blatt überhaupt einen Akkord trägt, den die App versteht. */
 export function hasChords(sheet: Sheet): boolean {
-  return chordsOf(sheet).some(
-    (chord) => parseChord(chord, sheet.notation) !== null,
-  );
+  return chordsOf(sheet).length > 0;
 }

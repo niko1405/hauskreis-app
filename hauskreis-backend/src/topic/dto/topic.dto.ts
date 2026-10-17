@@ -195,6 +195,16 @@ export const setTopicResponsiblesSchema = z.object({
   personIds: z.array(z.uuid()).max(9),
 });
 
+/**
+ * Eine einzelne Einheit in ein Thema holen.
+ *
+ * Nur die Einheit: Ihre Hülle verschwindet dabei, und alles andere — Abend,
+ * Inhalt, wer sie vorbereitet — hängt schon an der Einheit selbst.
+ */
+export const adoptSessionSchema = z.object({
+  sessionId: z.uuid(),
+});
+
 /** Wen der Owner ausdrücklich zum Thema dazuholt. */
 export const addCollaboratorSchema = z.object({
   personId: z.uuid(),
@@ -229,6 +239,7 @@ export class CreateTopicSessionDto extends createZodDto(
   createTopicSessionSchema,
 ) {}
 export class NameTopicDto extends createZodDto(nameTopicSchema) {}
+export class AdoptSessionDto extends createZodDto(adoptSessionSchema) {}
 export class ChooseTopicSessionDto extends createZodDto(
   chooseTopicSessionSchema,
 ) {}

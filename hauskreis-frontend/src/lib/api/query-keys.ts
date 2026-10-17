@@ -7,6 +7,7 @@ import type {
   AbsenceListParams,
   AssignmentParams,
   MeetingListParams,
+  NoteListParams,
   PrayerBuddyListParams,
   SongListParams,
   TopicListParams,
@@ -116,6 +117,9 @@ export const qk = {
         /// steht sie ja mit drin.
         session: (sessionId: string) =>
           [...root, 'topics', 'session', sessionId] as const,
+        /// Die eigenen einzelnen Einheiten, die sich in ein Thema holen lassen.
+        adoptable: (topicId: string) =>
+          [...root, 'topics', 'adoptable', topicId] as const,
       },
 
       songs: {
@@ -145,6 +149,16 @@ export const qk = {
        * vom `HauskreisProvider` geladen, lange bevor jemand diesen Bildschirm
        * öffnet.
        */
+      notes: {
+        all: [...root, 'notes'] as const,
+        /// Alle Listen auf einmal — für Änderungen, nach denen der Einzelstand
+        /// schon frisch im Cache liegt und nicht noch einmal geladen werden muss.
+        lists: [...root, 'notes', 'list'] as const,
+        list: (params: NoteListParams) =>
+          [...root, 'notes', 'list', params] as const,
+        detail: (noteId: string) =>
+          [...root, 'notes', 'detail', noteId] as const,
+      },
       group: {
         all: [...root, 'group'] as const,
         /// Der Zeitstempel steckt im Schlüssel: ein neues Bild ist ein neuer

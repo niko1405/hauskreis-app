@@ -33,6 +33,7 @@ import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { InlineEdit } from '@/components/ui/field';
+import { SpeechBubble } from '@/components/ui/speech-bubble';
 import { Skeleton } from '@/components/ui/states';
 import {
   useMe,
@@ -176,12 +177,8 @@ export function PrayerRequestsCard({
  * Mit Avatar und Namen, weil man für jemanden betet und nicht für einen Text.
  * Und als Blase, weil genau das hier steht: ein Satz, den jemand der Gruppe
  * sagt. Vorher war es ein Kasten wie jeder andere auf der Seite, und ein Kasten
- * sieht aus wie ein Datenfeld.
- *
- * Der Zipfel ist ein gedrehtes Quadrat in derselben Fläche und Randfarbe, dem
- * über `clip-path` zwei Kanten fehlen — kein SVG, keine zweite Farbe, die beim
- * Umschalten auf Dunkel nachgezogen werden müsste. Die linke obere Ecke der
- * Blase bleibt eckig, damit er anschließt.
+ * sieht aus wie ein Datenfeld. Die Blase selbst steht in `speech-bubble.tsx`
+ * — Thema und Einheit zeigen damit, wer daran arbeitet.
  */
 function PrayerRequestRow({ entry }: { entry: PrayerRequest }) {
   const lookup = usePersonLookup();
@@ -191,24 +188,16 @@ function PrayerRequestRow({ entry }: { entry: PrayerRequest }) {
     <div className="flex items-start gap-2.5">
       <Avatar person={person} size="sm" className="mt-1 shrink-0" />
 
-      <div className="relative min-w-0 flex-1">
-        {/* Nach links aus der Blase heraus, auf Höhe des Namens. */}
-        <span
-          aria-hidden
-          className="absolute top-3 -left-[5px] size-2.5 rotate-45 border-b border-l border-line bg-shell"
-        />
-
-        <div className="rounded-lg rounded-tl-none border border-line bg-shell px-3.5 py-2.5">
-          <p className="text-sm font-bold text-terracotta-700">
-            {entry.person.name}
-          </p>
-          {/* `whitespace-pre-line`: Wer sein Anliegen in Zeilen aufteilt, hat
-              das so gemeint. */}
-          <p className="mt-1 text-sm leading-relaxed whitespace-pre-line text-stone-600">
-            {entry.text}
-          </p>
-        </div>
-      </div>
+      <SpeechBubble>
+        <p className="text-sm font-bold text-terracotta-700">
+          {entry.person.name}
+        </p>
+        {/* `whitespace-pre-line`: Wer sein Anliegen in Zeilen aufteilt, hat
+            das so gemeint. */}
+        <p className="mt-1 text-sm leading-relaxed whitespace-pre-line text-stone-600">
+          {entry.text}
+        </p>
+      </SpeechBubble>
     </div>
   );
 }

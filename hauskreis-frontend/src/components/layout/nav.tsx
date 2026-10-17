@@ -69,10 +69,27 @@ function useNavItems(): readonly (typeof NAV_ITEMS)[number][] {
   return prayer ? NAV_ITEMS : NAV_ITEMS.filter(({ href }) => href !== '/gebet');
 }
 
+/** Ob ein Ziel der Leiste zu dieser Adresse gehört. `/termin` ist kein `/termine`. */
+function matches(href: string, pathname: string): boolean {
+  return href === '/' ? pathname === '/' : pathname.startsWith(href);
+}
+
+/**
+ * Ob diese Adresse einer der fünf Tabs ist — und nicht eine Seite darunter.
+ *
+ * Daran hängen zwei Dinge: die Kopfleiste (`useHasSmartHeader`) und die Leiste
+ * unten (`app-shell.tsx`). Beide gibt es nur auf der Ebene, auf die man
+ * zurückkehrt. Eine Unterseite hat ihren Zurück-Pfeil, und die fünf Ziele
+ * darunter meinte dort niemand — auf der Gruppe, im Profil-Unterbau, in einem
+ * Thema oder einer Einheit ist man *in* etwas.
+ */
+export function isTabRoute(pathname: string): boolean {
+  return NAV_ITEMS.some(({ href }) => matches(href, pathname));
+}
+
 function useIsActive() {
   const pathname = usePathname();
-  return (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href);
+  return (href: string) => matches(href, pathname);
 }
 
 /**

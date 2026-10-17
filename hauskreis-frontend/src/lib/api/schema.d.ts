@@ -836,6 +836,70 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/notes': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['NoteController_findAll'];
+    put?: never;
+    post: operations['NoteController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/notes/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['NoteController_findOne'];
+    put?: never;
+    post?: never;
+    delete: operations['NoteController_remove'];
+    options?: never;
+    head?: never;
+    patch: operations['NoteController_update'];
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/notes/{id}/check': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['NoteController_check'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/notes/{id}/people': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['NoteController_setPeople'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/people': {
     parameters: {
       query?: never;
@@ -1220,6 +1284,22 @@ export interface paths {
     patch: operations['TopicController_update'];
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/topics/{id}/adoptable-sessions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['TopicController_adoptableSessions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/topics/{id}/collaborators': {
     parameters: {
       query?: never;
@@ -1262,6 +1342,22 @@ export interface paths {
     get?: never;
     put?: never;
     post: operations['TopicController_createSession'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/hauskreise/{hauskreisId}/topics/{id}/sessions/adopt': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['TopicController_adoptSession'];
     delete?: never;
     options?: never;
     head?: never;
@@ -2068,7 +2164,8 @@ export interface components {
         | 'RECAP_ADDED'
         | 'PRAYER_BUDDY_HALFTIME'
         | 'GIFT_IDEA_COMMENTED'
-        | 'BIRTHDAY_IDEAS_REQUESTED';
+        | 'BIRTHDAY_IDEAS_REQUESTED'
+        | 'NOTE_SHARED';
       /** @enum {string} */
       category:
         | 'Deine Rollen'
@@ -2136,7 +2233,8 @@ export interface components {
         | 'RECAP_ADDED'
         | 'PRAYER_BUDDY_HALFTIME'
         | 'GIFT_IDEA_COMMENTED'
-        | 'BIRTHDAY_IDEAS_REQUESTED';
+        | 'BIRTHDAY_IDEAS_REQUESTED'
+        | 'NOTE_SHARED';
       /** @enum {string} */
       category:
         | 'Deine Rollen'
@@ -2242,7 +2340,8 @@ export interface components {
           | 'RECAP_ADDED'
           | 'PRAYER_BUDDY_HALFTIME'
           | 'GIFT_IDEA_COMMENTED'
-          | 'BIRTHDAY_IDEAS_REQUESTED';
+          | 'BIRTHDAY_IDEAS_REQUESTED'
+          | 'NOTE_SHARED';
         title: string;
         body: string;
         url: string | null;
@@ -2283,7 +2382,8 @@ export interface components {
           | 'RECAP_ADDED'
           | 'PRAYER_BUDDY_HALFTIME'
           | 'GIFT_IDEA_COMMENTED'
-          | 'BIRTHDAY_IDEAS_REQUESTED';
+          | 'BIRTHDAY_IDEAS_REQUESTED'
+          | 'NOTE_SHARED';
         title: string;
         body: string;
         url: string | null;
@@ -3398,6 +3498,27 @@ export interface components {
       sessionIndex: number;
       sessionCount: number;
     };
+    AdoptableSessionsResponseDto: {
+      items: {
+        /** Format: uuid */
+        id: string;
+        title: string | null;
+        /** Format: date-time */
+        createdAt: string;
+        meeting: {
+          /** Format: uuid */
+          id: string;
+          /** Format: date */
+          date: string;
+          title: string | null;
+        } | null;
+        held: boolean;
+      }[];
+    };
+    AdoptSessionDto: {
+      /** Format: uuid */
+      sessionId: string;
+    };
     NameTopicDto: {
       title: string;
     };
@@ -3743,6 +3864,7 @@ export interface components {
         topicsTotal: number;
         songs: number;
         songsPlayed: number;
+        notes: number;
       };
       /** Format: date */
       firstMeetingDate: string | null;
@@ -4098,6 +4220,107 @@ export interface components {
       title?: string;
       note?: string | null;
       done?: boolean;
+    };
+    NotePageResponseDto: {
+      items: {
+        /** Format: uuid */
+        id: string;
+        title: string;
+        forEveryone: boolean;
+        createdBy: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+        updatedBy: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+        members: {
+          person: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: date-time */
+            photoUpdatedAt: string | null;
+          };
+        }[];
+        /** Format: date-time */
+        createdAt: string;
+        /** Format: date-time */
+        updatedAt: string;
+        version: number;
+        mayManage: boolean;
+        preview: string;
+        checklist: {
+          done: number;
+          total: number;
+        };
+      }[];
+      total: number;
+      take: number;
+      skip: number;
+      hasMore: boolean;
+    };
+    NoteResponseDto: {
+      /** Format: uuid */
+      id: string;
+      title: string;
+      body: string;
+      forEveryone: boolean;
+      createdBy: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      } | null;
+      updatedBy: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      } | null;
+      members: {
+        person: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        };
+      }[];
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      version: number;
+      mayManage: boolean;
+    };
+    CreateNoteDto: {
+      title: string;
+      body?: string;
+      forEveryone?: boolean;
+      personIds?: string[];
+    };
+    UpdateNoteDto: {
+      title?: string;
+      body?: string;
+    };
+    SetNotePeopleDto: {
+      forEveryone: boolean;
+      personIds: string[];
+    };
+    CheckNoteDto: {
+      index: number;
+      text: string;
+      done: boolean;
     };
     ReleaseListResponseDto: {
       version: string;
@@ -8898,6 +9121,439 @@ export interface operations {
       };
     };
   };
+  NoteController_findAll: {
+    parameters: {
+      query?: {
+        take?: number;
+        skip?: number;
+        search?: string;
+      };
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Die eigenen und geteilten Notizen, zuletzt geänderte zuerst */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NotePageResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  NoteController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateNoteDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NoteResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  NoteController_findOne: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NoteResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  NoteController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Gelöscht, kein Inhalt */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nicht angemeldet */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  NoteController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateNoteDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NoteResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Das `If-Match` ist veraltet — jemand anders hat inzwischen gespeichert. Neu laden und erneut versuchen. */
+      412: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Kein `If-Match` mitgeschickt. Den ETag aus dem vorangehenden GET verwenden. */
+      428: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  NoteController_check: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CheckNoteDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NoteResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  NoteController_setPeople: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetNotePeopleDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NoteResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
   PersonController_findAll: {
     parameters: {
       query?: never;
@@ -11190,6 +11846,64 @@ export interface operations {
       };
     };
   };
+  TopicController_adoptableSessions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AdoptableSessionsResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
   TopicController_addCollaborator: {
     parameters: {
       query?: never;
@@ -11313,6 +12027,68 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['TopicSessionDetailDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  TopicController_adoptSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AdoptSessionDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TopicResponseDto'];
         };
       };
       /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
@@ -12247,7 +13023,8 @@ export interface operations {
           | 'RECAP_ADDED'
           | 'PRAYER_BUDDY_HALFTIME'
           | 'GIFT_IDEA_COMMENTED'
-          | 'BIRTHDAY_IDEAS_REQUESTED';
+          | 'BIRTHDAY_IDEAS_REQUESTED'
+          | 'NOTE_SHARED';
       };
       cookie?: never;
     };

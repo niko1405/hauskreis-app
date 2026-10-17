@@ -30,6 +30,7 @@ import { ArchiveModule } from './archive/archive.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HeaderImageModule } from './header-image/header-image.module';
 import { GroupIdeaModule } from './group-idea/group-idea.module';
+import { NoteModule } from './note/note.module';
 import { ReleaseModule } from './release/release.module';
 
 @Module({
@@ -80,6 +81,7 @@ import { ReleaseModule } from './release/release.module';
     DashboardModule,
     HeaderImageModule,
     GroupIdeaModule,
+    NoteModule,
     ReleaseModule,
   ],
   controllers: [HealthController],

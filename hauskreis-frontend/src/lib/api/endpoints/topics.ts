@@ -24,6 +24,7 @@ import {
 import { hkPath } from './paths';
 import type { TopicListParams } from '../params';
 import type {
+  AdoptableSession,
   CreateTopicInput,
   CreateTopicSessionInput,
   NameTopicInput,
@@ -126,6 +127,29 @@ export function createTopicSession(
     `${base(hauskreisId)}/${topicId}/sessions`,
     input,
   );
+}
+
+/** Die eigenen einzelnen Einheiten, die sich in dieses Thema holen lassen. */
+export function listAdoptableSessions(
+  hauskreisId: string,
+  topicId: string,
+  signal?: AbortSignal,
+): Promise<{ items: AdoptableSession[] }> {
+  return apiGet<{ items: AdoptableSession[] }>(
+    `${base(hauskreisId)}/${topicId}/adoptable-sessions`,
+    { signal },
+  );
+}
+
+/** Eine einzelne Einheit ins Thema holen — ihre Hülle verschwindet dabei. */
+export function adoptSession(
+  hauskreisId: string,
+  topicId: string,
+  sessionId: string,
+): Promise<Topic> {
+  return apiPost<Topic>(`${base(hauskreisId)}/${topicId}/sessions/adopt`, {
+    sessionId,
+  });
 }
 
 /**

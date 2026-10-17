@@ -711,6 +711,7 @@ function OwnVersion({
           sheet={sheet}
           transpose={own.transpose}
           scrollSpeed={own.scrollSpeed}
+          voicings={own.voicings ?? {}}
           onSettings={(settings) =>
             update.mutate({ songId: song.id, settings })
           }

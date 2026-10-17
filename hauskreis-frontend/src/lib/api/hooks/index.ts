@@ -15,6 +15,7 @@ export * from './use-paginated';
 export * from './use-people';
 export * from './use-prayer-buddies';
 export * from './use-releases';
+export * from './use-notes';
 export * from './use-push';
 export * from './use-resource';
 export * from './use-song-lookup';

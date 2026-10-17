@@ -174,22 +174,31 @@ miteinander.
 
 ### 5.4 Archiv
 
-Vier Register — **Themen**, **Lieder**, **Orte**, **Termine** — mit einer Suche
-über alle hinweg.
+Fünf Register — **Themen**, **Lieder**, **Orte**, **Notizen**, **Termine** — mit
+einer Suche über alle hinweg.
 
 - **Themen**: umschaltbar zwischen „Eigene Themen" und „Alle Themen". Ein Klick
   auf ein Thema führt auf seine Seite mit allen Einheiten.
 - **Lieder**: umschaltbar zwischen **„Meine Lieder"** (die mit deiner eigenen
   Version, siehe Kapitel 7) und **„Alle Lieder"** der Gruppe. Ein Tipp auf ein
   Lied öffnet seine Seite; ändern und löschen geht dort unter **„Bearbeiten"**.
-- **Orte**: getrennt in **Zuhause** (wo jemand wohnt) und **Treffpunkte** (alles
-  andere — Park, Café, Gemeindehaus). Treffpunkte darf jede:r anlegen; zum
-  Ändern lange drücken.
+- **Orte**: umschaltbar zwischen **„Zuhause"** (wo jemand wohnt) und
+  **„Treffpunkte"** (alles andere — Park, Café, Gemeindehaus). Treffpunkte darf
+  jede:r anlegen, über das **„+" unten rechts**; zum Ändern oder Entfernen nach
+  links wischen.
+- **Notizen**: Texte, an denen ihr gemeinsam schreibt, ohne dass sie an einem
+  Abend hängen — eine Packliste, Ideen für den nächsten Kurs. Beim Anlegen
+  wählst du **„Nur ich"**, **„Ganze Gruppe"** (auch alle, die später
+  dazukommen) oder einzelne Leute; später geht das oben rechts über
+  **„Leute"**. Sehen kann eine Notiz nur, wer dabei ist, und wer dabei ist,
+  schreibt mit. Über dem Textfeld stehen Knöpfe für Überschrift, Liste,
+  **Checkliste** und Fett; Checklisten hakst du direkt in der Notiz ab.
 - **Termine**: alle vergangenen Abende mit Actionstep und Zusammenfassung,
   sofern etwas eingetragen wurde. Abgesagte blendet eine Checkbox ein.
 
-Das Archiv ist auch der Ort zum **Vorarbeiten**: Themen und Lieder kannst du
-hier anlegen, ohne auf einen Dienstag zu warten — über das **„+" unten rechts**.
+Das Archiv ist auch der Ort zum **Vorarbeiten**: Themen, Notizen und Lieder
+kannst du hier anlegen, ohne auf einen Dienstag zu warten — über das **„+" unten
+rechts**.
 
 ### 5.5 Profil
 
@@ -384,9 +393,13 @@ kannst nur du sie selbst.
   löschst du Zeilen und fügst Leerzeilen ein. Gespeichert wird oben rechts. Die
   Version liegt **nur auf deinem Gerät** — niemand sonst sieht sie, und auf
   einem neuen Telefon ist sie nicht da.
-- **Vollbild** zum Spielen: zwischen Text und Akkorden umschalten,
-  transponieren, Schrift größer, und **Autoscroll** mit einstellbarem Tempo.
-  Tonart und Tempo merkt sich die App je Lied.
+- **Vollbild** zum Spielen. Oben stehen alle Akkorde des Lieds als
+  **Griffbild** (seitwärts wischen), dazu Text/Akkorde, Transponieren und
+  **„Anpassen"** (Gitarre oder Klavier). Ein Tipp auf einen Akkord — oben oder
+  im Text — zeigt ihn groß; mit ‹ und › blätterst du durch die Varianten, und
+  die gewählte gilt für jede Stelle mit diesem Akkord. Unten: Schrift („Aa") und
+  **Autoscroll** mit einstellbarem Tempo. Tonart, Tempo und Griffe merkt sich
+  die App je Lied.
 
 ---
 
@@ -399,12 +412,21 @@ kannst nur du sie selbst.
   einzelne Einheit an, statt ein Thema zu erfinden, das nie ein zweites Mal
   vorkommt. In der Liste erkennst du beides am Symbol.
 - **Aus einer einzelnen Einheit wird jederzeit ein Thema.** Merkst du später,
-  dass mehr drinsteckt, gibst du ihr auf ihrer Seite ein **Überthema**; alles,
-  was drinsteht, bleibt stehen. Am Abend selbst geht es in einem Schritt über
+  dass mehr drinsteckt, gibst du ihr ein **Überthema** — auf ihrer Seite unten
+  unter „Bearbeiten"; alles, was drinsteht, bleibt stehen. Am Abend selbst geht es in einem Schritt über
   „Thema wählen" → „Einheit fortsetzen". Umgekehrt gilt: Eine zweite Einheit
   braucht immer erst ein Überthema.
+- **Eine einzelne Einheit lässt sich in ein Thema holen.** Auf der Seite des
+  Themas unten **„Bearbeiten"**, dann „Einheit hinzufügen": Dort stehen deine
+  eigenen einzelnen Einheiten, ein Tipp holt sie ins Thema. Ihr Abend und ihr
+  Inhalt bleiben. Hat das Thema noch keine Einheit, steht „Einheit hinzufügen"
+  auch ohne „Bearbeiten" da.
+- **Bearbeiten steht unten.** Auf einem Thema schaltet es den
+  Bearbeitungsmodus (Leute, Einheiten, Löschen); Titel, Zusammenfassung und
+  Status ändert dort „Bearbeiten" oben rechts. Auf einer Einheit öffnet es ein
+  Fenster mit Titel, Zusammenfassung, Actionstep und wer sie vorbereitet.
 - **Und wieder zurück**, solange es bei der einen Einheit geblieben ist: Auf
-  ihrer Seite steht dann „Überthema entfernen", und danach steht sie wieder für
+  ihrer Seite unter „Bearbeiten" steht dann „Überthema entfernen", und danach steht sie wieder für
   sich — **am selben Abend wie vorher**. Titel und Zusammenfassung des Themas
   fallen dabei weg. Sobald eine zweite Einheit dazugekommen ist, geht es nicht
   mehr; dann ist es ein Thema. Entfernen darf nur, wer es angelegt hat.
@@ -423,7 +445,8 @@ kannst nur du sie selbst.
   zugeteilt ist** — auch kein Admin.
 - **Wer mit vorbereitet, steht auf der Seite der Einheit.** Wählst du an einem
   Abend, kommst erst einmal nur du an die Einheit; wen du dazunimmst,
-  entscheidest du dort im Bearbeitungsmodus unter „Wer das vorbereitet". Wer
+  entscheidest du dort unten unter **„Bearbeiten"** → „Vorbereitet von": „×"
+  nimmt jemanden heraus, „Person hinzufügen" nimmt jemanden dazu. Wer
   dazukommt, darf **diese eine Einheit** ändern — sonst nichts am Thema.
 - **Einer bleibt immer stehen.** Eine Einheit braucht jemanden, der sie
   vorbereitet; den letzten Platz kannst du nicht räumen. Bei einem Thema über

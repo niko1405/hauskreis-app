@@ -10,6 +10,11 @@ export interface PageParams {
   skip?: number;
 }
 
+/** Die Notizen, die man sehen darf — durchsucht über Titel und Text. */
+export interface NoteListParams extends PageParams {
+  search?: string;
+}
+
 export const PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 100;
 

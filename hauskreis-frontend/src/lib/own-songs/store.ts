@@ -35,6 +35,11 @@ export interface OwnSong {
   transpose: number;
   /** Stufe 1–10 für den Autoscroll — ein langsames Lied scrollt langsam. */
   scrollSpeed: number;
+  /**
+   * Die gewählten Griffe im Vollbild, je `instrument:Akkord` die Nummer der
+   * Variante. Fehlt bei Versionen von vorher — dann gilt überall die erste.
+   */
+  voicings?: Record<string, number>;
   createdAt: string;
   updatedAt: string;
 }

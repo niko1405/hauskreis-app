@@ -29,9 +29,12 @@ export function EditBar({
   editing,
   onToggle,
   aside,
+  busy = false,
 }: {
   editing: boolean;
   onToggle: () => void;
+  /** „Fertig" speichert gerade — etwa an einer Notiz, wo es das Speichern ist. */
+  busy?: boolean;
   /** Ein Knopf links neben „Bearbeiten" — nur, solange nicht bearbeitet wird. */
   aside?: React.ReactNode;
 }) {
@@ -47,6 +50,7 @@ export function EditBar({
           <Button
             variant={editing ? 'primary' : 'secondary'}
             className="flex-1"
+            loading={busy}
             onClick={onToggle}
           >
             {editing ? (
