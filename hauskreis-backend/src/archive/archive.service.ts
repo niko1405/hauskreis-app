@@ -4,6 +4,7 @@ import { MeetingStatus } from '../../generated/prisma/enums';
 import { GroupClockService } from '../meeting/group-clock.service';
 import { finishedBefore } from '../meeting/meeting-schedule';
 import { topicScopeWhere } from '../topic/topic-shape';
+import { visibleNotesWhere } from '../note/note-rules';
 
 export interface ArchiveYear {
   year: number;
@@ -36,6 +37,11 @@ export interface ArchiveSummary {
     songs: number;
     /** Songs the group actually sang, as opposed to only suggested. */
     songsPlayed: number;
+    /**
+     * Die Notizen, die diese Person sehen darf — dieselbe Bedingung wie die
+     * Liste. Eine fremde Notiz mitzuzählen hieße zu verraten, dass es sie gibt.
+     */
+    notes: number;
   };
   /** Null before the group has met at all. */
   firstMeetingDate: string | null;
@@ -88,7 +94,7 @@ export class ArchiveService {
     // `date_part`, but Prisma cannot express that without a raw query — and at
     // roughly fifty evenings a year the whole column is a handful of kilobytes.
     // It also saves a second query for the count and the first date.
-    const [dates, topics, topicsMine, topicsTotal, songs, songsPlayed] =
+    const [dates, topics, topicsMine, topicsTotal, songs, songsPlayed, notes] =
       await Promise.all([
         this.prisma.meeting.findMany({
           where: past,
@@ -116,6 +122,9 @@ export class ArchiveService {
             },
           },
         }),
+        this.prisma.note.count({
+          where: visibleNotesWhere(hauskreisId, personId),
+        }),
       ]);
 
     const byYear = new Map<number, number>();
@@ -136,6 +145,7 @@ export class ArchiveService {
         topicsTotal,
         songs,
         songsPlayed,
+        notes,
       },
       firstMeetingDate: dates[0]
         ? dates[0].date.toISOString().slice(0, 10)

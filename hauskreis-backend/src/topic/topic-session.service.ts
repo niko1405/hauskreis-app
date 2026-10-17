@@ -1080,6 +1080,164 @@ export class TopicSessionService {
   }
 
   /**
+   * Einzelne Einheiten, die sich in dieses Thema holen lassen.
+   *
+   * Nur **eigene**: Hüllen, die der Betrachter angelegt hat. Eine fremde
+   * Einheit in das eigene Thema zu ziehen, hieße über die Arbeit eines anderen
+   * zu entscheiden — auch wenn man an ihr mitvorbereitet. Fragen darf, wer am
+   * Thema mitarbeitet; dieselbe Grenze wie beim Anlegen einer Einheit.
+   */
+  async adoptableSessions(
+    hauskreisId: string,
+    topicId: string,
+    viewer: Viewer,
+  ) {
+    await this.loadAdoptingTopic(hauskreisId, topicId, viewer);
+    const zone = await this.clock.zoneOf(hauskreisId);
+
+    const sessions = await this.prisma.topicSession.findMany({
+      where: {
+        topic: {
+          hauskreisId,
+          standalone: true,
+          ownerPersonId: viewer.personId,
+        },
+      },
+      select: {
+        id: true,
+        title: true,
+        createdAt: true,
+        meeting: {
+          select: { id: true, date: true, status: true, title: true },
+        },
+      },
+      // Was noch keinen Abend hat, zuerst — das ist meist gemeint —, danach
+      // die gehaltenen, der jüngste oben.
+      orderBy: [{ meeting: { date: 'desc' } }, { createdAt: 'desc' }],
+    });
+
+    return {
+      items: sessions.map(({ id, title, createdAt, meeting }) => ({
+        id,
+        title,
+        createdAt,
+        meeting: meeting && {
+          id: meeting.id,
+          date: meeting.date,
+          title: meeting.title,
+        },
+        held: isHeld(meeting, zone),
+      })),
+    };
+  }
+
+  /**
+   * Eine einzelne Einheit in dieses Thema holen.
+   *
+   * Der Weg in die andere Richtung zu `unnameTopic`: Wer einen Abend für sich
+   * vorbereitet oder gehalten hat und merkt, dass er zu einem Thema gehört,
+   * hängt ihn dort ein. Die Einheit wechselt das Thema, ihre Hülle verschwindet
+   * — sie trug nichts außer ihr. **Bindung an den Abend, Inhalt und Crew
+   * bleiben**, denn sie hängen an der Einheit. Wer sie vorbereitet hat, wird
+   * dadurch nicht Mitwirkende:r am Thema: Eine Einheit zu halten macht das nie.
+   *
+   * Ein gehaltener Abend öffnet ein abgeschlossenes Thema nicht wieder — er ist
+   * Geschichte, die nachgetragen wird. Ein kommender schon, wie beim Anlegen.
+   */
+  async adoptSession(
+    hauskreisId: string,
+    topicId: string,
+    sessionId: string,
+    viewer: Viewer,
+  ): Promise<void> {
+    await this.loadAdoptingTopic(hauskreisId, topicId, viewer);
+
+    const session = await this.prisma.topicSession.findFirst({
+      where: { id: sessionId, topic: { hauskreisId } },
+      select: {
+        id: true,
+        topicId: true,
+        meetingId: true,
+        topic: { select: { standalone: true, ownerPersonId: true } },
+        meeting: { select: { date: true, status: true } },
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException(`Topic session ${sessionId} not found`);
+    }
+
+    if (!session.topic.standalone) {
+      throw new BadRequestException(
+        'Diese Einheit gehört schon zu einem Thema.',
+      );
+    }
+
+    if (session.topic.ownerPersonId !== viewer.personId) {
+      throw new ForbiddenException(
+        'Eine einzelne Einheit holt ins Thema, wer sie angelegt hat.',
+      );
+    }
+
+    const held = isHeld(session.meeting, await this.clock.zoneOf(hauskreisId));
+
+    await this.prisma.$transaction(async (tx) => {
+      // Der beobachtete Stand steht in der Bedingung, wie bei `nameTopic`:
+      // Zwei gleichzeitige Griffe gehen nicht beide durch.
+      const { count } = await tx.topicSession.updateMany({
+        where: { id: session.id, topicId: session.topicId },
+        data: { topicId },
+      });
+
+      if (count === 0) {
+        throw new ConflictException(
+          'Jemand war schneller — diese Einheit hängt inzwischen woanders.',
+        );
+      }
+
+      // Die Hülle ist jetzt leer. Nur sie, und nur solange sie eine ist.
+      await tx.topic.deleteMany({
+        where: { id: session.topicId, standalone: true },
+      });
+
+      await touchTopic(tx, topicId, { reopen: !held });
+      await touchSession(tx, session.id);
+      // Der Termin zeigt „Zugehöriges Thema" — ohne den Sprung bliebe sein
+      // ETag stehen und dort stünde weiter eine einzelne Einheit.
+      await touchMeeting(tx, session.meetingId);
+    });
+  }
+
+  /** Das Thema, in das geholt wird — samt der Frage, ob man das darf. */
+  private async loadAdoptingTopic(
+    hauskreisId: string,
+    topicId: string,
+    viewer: Viewer,
+  ) {
+    const topic = await this.prisma.topic.findFirst({
+      where: { id: topicId, hauskreisId },
+      select: topicMembershipSelect,
+    });
+
+    if (!topic) throw new NotFoundException(`Topic ${topicId} not found`);
+
+    if (topic.standalone) throw new BadRequestException(BRAUCHT_UEBERTHEMA);
+
+    if (
+      !mayEditTopic({
+        personId: viewer.personId,
+        topic: membershipOf(topic),
+      })
+    ) {
+      throw new ForbiddenException(
+        'Einheiten holt ins Thema, wer daran mitarbeitet.',
+      );
+    }
+
+    return topic;
+  }
+
+  /**
    * Und der Weg zurück: aus dem Thema wird wieder eine einzelne Einheit.
    *
    * Er fehlte lange mit Absicht, und die Begründung war richtig: „Das Thema doch

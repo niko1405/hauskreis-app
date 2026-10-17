@@ -15,6 +15,7 @@ import { TopicService } from './topic.service';
 import { TopicSessionService } from './topic-session.service';
 import {
   AddCollaboratorDto,
+  AdoptSessionDto,
   CreateTopicDto,
   CreateTopicSessionDto,
   ListTopicsQueryDto,
@@ -37,6 +38,7 @@ import {
   ApiZodResponse,
 } from '../common/http/api-response.decorator';
 import {
+  AdoptableSessionsResponseDto,
   TopicPageResponseDto,
   TopicResponseDto,
   TopicSessionDetailDto,
@@ -201,6 +203,50 @@ export class TopicController {
       dto,
       viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
     );
+  }
+
+  /**
+   * Die eigenen einzelnen Einheiten, die sich in dieses Thema holen lassen.
+   */
+  @Get('topics/:id/adoptable-sessions')
+  @ApiZodResponse(AdoptableSessionsResponseDto)
+  async adoptableSessions(
+    @Param() params: TopicParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.sessions.adoptableSessions(
+      params.hauskreisId,
+      params.id,
+      viewerOf(membership, await this.clock.zoneOf(params.hauskreisId)),
+    );
+  }
+
+  /**
+   * Eine einzelne Einheit in dieses Thema holen — ihre Hülle verschwindet.
+   *
+   * Kein `If-Match`, wie beim Überthema: Die Frage „gehört das hierher?" lässt
+   * sich genau einmal mit ja beantworten, ein zweiter Aufruf trifft keine Hülle
+   * mehr und endet in einem 409.
+   */
+  @Post('topics/:id/sessions/adopt')
+  @HttpCode(HttpStatus.OK)
+  @ApiZodResponse(TopicResponseDto)
+  async adoptSession(
+    @Param() params: TopicParamsDto,
+    @Body() dto: AdoptSessionDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    const viewer = viewerOf(
+      membership,
+      await this.clock.zoneOf(params.hauskreisId),
+    );
+    await this.sessions.adoptSession(
+      params.hauskreisId,
+      params.id,
+      dto.sessionId,
+      viewer,
+    );
+    return this.topics.findOne(params.hauskreisId, params.id, viewer);
   }
 
   /**

@@ -81,6 +81,9 @@ function setup(
     // es gedacht war.
     giftIdea: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     giftIdeaVote: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    // Notizen, die nur sie sehen konnte, und ihre Plätze an fremden.
+    note: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    noteMember: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     // Die Transaktion reicht denselben Client durch; hier zählt nur, was
     // geschrieben werden wollte. Beide Formen: Callback und Array.
     $transaction: jest.fn((run: ((tx: unknown) => unknown) | unknown[]) =>
@@ -153,6 +156,7 @@ function setup(
     notify,
     removePhoto,
     discardInvitationAccount,
+    prisma,
   };
 }
 
@@ -501,6 +505,28 @@ describe('deleteAccount', () => {
     expect(anonymisiert?.[0]).toMatchObject({
       where: { id: 'p1' },
       data: { name: 'Ehemaliges Mitglied', email: null, birthdate: null },
+    });
+  });
+
+  it('löscht Notizen, die nur sie sehen konnte, und ihre Plätze an fremden', async () => {
+    const { service, prisma } = setup({ me: member, others: bleibt });
+
+    await service.deleteAccount('hk-1', 'p1', {});
+
+    const db = prisma as unknown as {
+      note: { deleteMany: jest.Mock };
+      noteMember: { deleteMany: jest.Mock };
+    };
+    // Geteilte bleiben stehen: Für die anderen ist es ihr Text.
+    expect(db.note.deleteMany).toHaveBeenCalledWith({
+      where: {
+        createdByPersonId: 'p1',
+        forEveryone: false,
+        members: { none: {} },
+      },
+    });
+    expect(db.noteMember.deleteMany).toHaveBeenCalledWith({
+      where: { personId: 'p1' },
     });
   });
 

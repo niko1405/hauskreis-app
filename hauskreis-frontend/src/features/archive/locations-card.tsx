@@ -13,11 +13,8 @@
  * - **Treffpunkt** — gehört niemandem, ist frei bearbeitbar und lässt sich
  *   stilllegen. Zu ändern gibt es Name und Anschrift.
  */
-import { Home, MapPin, Navigation, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Home, MapPin, Navigation, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
 import { EmptyState, Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -27,46 +24,60 @@ import { isHome } from '@/lib/location';
 import { mapsUrl } from '@/lib/meeting';
 import { SwipeActions } from '@/components/ui/swipe-actions';
 import type { Location } from '@/lib/api/types';
-import { cn } from '@/lib/cn';
+import { ListTab } from './list-tab';
 
-export function LocationsCard() {
+export type PlaceScope = 'zuhause' | 'treffpunkte';
+
+/**
+ * Zwei Register statt zwei Karten untereinander: Wer nach einem Treffpunkt
+ * sucht, scrollte an allen Wohnungen vorbei. Angelegt wird ein Treffpunkt über
+ * das „+" unten rechts, das auf diesem Register erscheint (`archive-screen`).
+ *
+ * **Stillgelegte stehen hier gar nicht mehr.** Sie gab es einmal hinter einem
+ * Haken, und genau das, was man beim Nachsehen nicht meint, wuchs mit den
+ * Jahren zu — ein ehemaliges Zuhause pro Umzug. An den Abenden, an denen die
+ * Gruppe dort war, stehen sie weiterhin.
+ */
+export function LocationsCard({
+  scope,
+  onScope,
+}: {
+  scope: PlaceScope;
+  onScope: (scope: PlaceScope) => void;
+}) {
   const locations = useLocations();
-  const [adding, setAdding] = useState(false);
-  const [showRetired, setShowRetired] = useState(false);
 
-  if (locations.isLoading) {
-    return <Skeleton className="h-40 w-full" />;
-  }
-
-  const all = locations.data ?? [];
-  const retired = all.filter((location) => !location.active).length;
-  // Stillgelegte standen bisher immer mit in der Liste, nur gedämpft. Bei einem
-  // ehemaligen Zuhause pro Umzug wächst das mit den Jahren zu — und es ist
-  // gerade das, was man beim Nachsehen *nicht* meint.
-  const shown = showRetired ? all : all.filter((location) => location.active);
-
-  const homes = shown.filter((location) => isHome(location));
-  const spots = shown.filter((location) => !isHome(location));
+  const active = (locations.data ?? []).filter((location) => location.active);
+  const homes = active.filter((location) => isHome(location));
+  const spots = active.filter((location) => !isHome(location));
 
   return (
-    <div className="space-y-4">
-      {retired > 0 && (
-        <label className="flex items-center gap-2 px-1 text-[11px] font-semibold text-stone-500">
-          <input
-            type="checkbox"
-            checked={showRetired}
-            onChange={(event) => setShowRetired(event.target.checked)}
-            className="h-3.5 w-3.5 accent-terracotta-500"
-          />
-          {retired} stillgelegte{retired === 1 ? 'n' : ''} anzeigen
-        </label>
-      )}
-
-      <Card className="space-y-3">
-        <h3 className="text-xs font-bold tracking-wide text-stone-400 uppercase">
+    <div className="space-y-3">
+      <div
+        role="tablist"
+        aria-label="Orte filtern"
+        className="flex border-b border-line"
+      >
+        <ListTab
+          active={scope === 'zuhause'}
+          count={locations.isLoading ? undefined : homes.length}
+          onSelect={() => onScope('zuhause')}
+        >
           Zuhause
-        </h3>
-        {homes.length === 0 ? (
+        </ListTab>
+        <ListTab
+          active={scope === 'treffpunkte'}
+          count={locations.isLoading ? undefined : spots.length}
+          onSelect={() => onScope('treffpunkte')}
+        >
+          Treffpunkte
+        </ListTab>
+      </div>
+
+      {locations.isLoading ? (
+        <Skeleton className="h-40 w-full" />
+      ) : scope === 'zuhause' ? (
+        homes.length === 0 ? (
           <EmptyState
             title="Noch keine Wohnung"
             hint="Wer hosten möchte, trägt seine Adresse im Profil ein."
@@ -77,32 +88,19 @@ export function LocationsCard() {
               <HomeRow key={location.id} location={location} />
             ))}
           </ul>
-        )}
-      </Card>
-
-      <Card className="space-y-3">
-        <h3 className="text-xs font-bold tracking-wide text-stone-400 uppercase">
-          Treffpunkte
-        </h3>
-        {spots.length > 0 && (
-          <ul className="space-y-2">
-            {spots.map((location) => (
-              <SpotRow key={location.id} location={location} />
-            ))}
-          </ul>
-        )}
-
-        <Button
-          variant="secondary"
-          className="w-full"
-          onClick={() => setAdding(true)}
-        >
-          <Plus size={14} />
-          Treffpunkt anlegen
-        </Button>
-      </Card>
-
-      <LocationSheet open={adding} onClose={() => setAdding(false)} />
+        )
+      ) : spots.length === 0 ? (
+        <EmptyState
+          title="Noch kein Treffpunkt"
+          hint={'Park, Café, Gemeindehaus — über das „+" unten rechts.'}
+        />
+      ) : (
+        <ul className="space-y-2 pb-24">
+          {spots.map((location) => (
+            <SpotRow key={location.id} location={location} />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -118,12 +116,7 @@ export function LocationsCard() {
  */
 function HomeRow({ location }: { location: Location }) {
   return (
-    <li
-      className={
-        'flex items-center gap-3 rounded-md border border-line p-3' +
-        (location.active ? '' : ' opacity-60')
-      }
-    >
+    <li className="flex items-center gap-3 rounded-md border border-line bg-card p-3">
       <Home size={15} className="shrink-0 text-stone-300" />
 
       <div className="min-w-0 flex-1">
@@ -134,8 +127,6 @@ function HomeRow({ location }: { location: Location }) {
           {location.address || 'Keine Adresse'}
         </p>
       </div>
-
-      {!location.active && <Badge variant="neutral">stillgelegt</Badge>}
 
       {/* Der Grund, warum die Anschrift überhaupt gespeichert wird: damit man
           am Dienstagabend nicht abtippen muss, wo es hingeht. */}
@@ -155,7 +146,7 @@ function HomeRow({ location }: { location: Location }) {
 }
 
 /**
- * Ein Treffpunkt: gehört niemandem, also frei bearbeitbar und stilllegbar.
+ * Ein Treffpunkt: gehört niemandem, also frei bearbeitbar und entfernbar.
  *
  * Stift und Papierkorb liegen hinter einem Wisch nach links (am Rechner hinter
  * dem Zeiger über der Zeile). Vorher war es ein langer Druck — und dazu eine
@@ -196,28 +187,19 @@ function SpotRow({ location }: { location: Location }) {
   return (
     <li>
       <SwipeActions
-        className={cn(
-          'rounded-md border border-line',
-          !location.active && 'opacity-60',
-        )}
+        className="rounded-md border border-line"
         actions={[
           {
             icon: <Pencil size={15} />,
             label: `${location.name} bearbeiten`,
             onClick: () => setEditing(true),
           },
-          // Ein stillgelegter Ort ist schon weg — ihn ein zweites Mal zu
-          // entfernen gibt es nicht.
-          ...(location.active
-            ? [
-                {
-                  icon: <Trash2 size={15} />,
-                  label: `${location.name} entfernen`,
-                  tone: 'danger' as const,
-                  onClick: () => void entfernen(),
-                },
-              ]
-            : []),
+          {
+            icon: <Trash2 size={15} />,
+            label: `${location.name} entfernen`,
+            tone: 'danger',
+            onClick: () => void entfernen(),
+          },
         ]}
       >
         <div className="flex items-center gap-3 p-3">
@@ -231,8 +213,6 @@ function SpotRow({ location }: { location: Location }) {
               {location.address ?? 'Ohne Anschrift'}
             </p>
           </div>
-
-          {!location.active && <Badge variant="neutral">stillgelegt</Badge>}
 
           {location.address && (
             <a

@@ -558,22 +558,19 @@ handelt. `members-card.tsx` ist deshalb nach `features/group/` gezogen;
 **Ändern darf jede:r** — Bild, Name, Beschreibung —, wie beim Kopfbild: Bei
 neun Leuten ist die Selbstbeschreibung keine Verwaltungsangelegenheit.
 
-**Ein Knopf für Name und Beschreibung.** Beide hatten einen eigenen Weg hinein —
-oben ein Stift am Namen, unten ein „Bearbeiten" unter dem Text. Es sind aber zwei
-Felder derselben Sache: wer ihr seid. Also ein Zustand (`Identity`), ein Knopf
-und **ein** `update.mutate({ name, description })`; zwei getrennte Schreiber auf
-dieselbe Zeile wären zwei Gelegenheiten für einen Versionskonflikt, und zwei
-Toasts für einen Vorgang.
-
-Der Knopf ist ein Wort und kein Bleistift: „Bearbeiten", terracotta und ohne
-Fläche, am **Fuß** der Beschreibung. Ein Symbol muss man deuten, und ein Stift
-sitzt oben rechts — also am Anfang von etwas, das man erst zu Ende liest. Am Fuß
-ist man beim Lesen angekommen, und er meint ohnehin beides.
+**Ein Knopf für Name und Beschreibung, oben rechts.** Beide hatten einen eigenen
+Weg hinein — oben ein Stift am Namen, unten ein „Bearbeiten" unter dem Text. Es
+sind aber zwei Felder derselben Sache: wer ihr seid. Also ein Knopf, ein Sheet
+(`GroupEditSheet`) und **ein** `update.mutate({ name, description })`; zwei
+getrennte Schreiber auf dieselbe Zeile wären zwei Gelegenheiten für einen
+Versionskonflikt. Er stand danach als Wort am Fuß der Beschreibung und machte
+die Karte dort zum Formular; jetzt steht er neben dem Zurück-Pfeil, wo auf den
+anderen Unterseiten das Bearbeiten steht, und `Identity` zeigt nur noch an.
 
 Leerer Name heißt „unverändert" — einen Hauskreis ohne Namen gibt es nicht;
 leere Beschreibung heißt `null`, denn dort ist Leeren eine Aussage. Der
-`key={hauskreis.version}` an `Identity` wirft den Entwurf weg, sobald von außen
-eine neue Fassung kommt: Sonst stünde nach dem Speichern der eigene Text noch im
+`key={hauskreis.version}` am Sheet wirft den Entwurf weg, sobald von außen eine
+neue Fassung kommt: Sonst stünde nach dem Speichern der eigene Text noch im
 Zustand und beim nächsten Öffnen wieder da.
 
 Die Ideen sind eine Liste mit Haken und nichts weiter: kein Zustimmen, keine
@@ -805,7 +802,10 @@ jemand der Gruppe sagt; als Kasten mit Rahmen sah er aus wie ein Datenfeld. Der
 Zipfel ist ein gedrehtes Quadrat in derselben Fläche und Randfarbe — kein SVG
 und keine zweite Farbe, die beim Umschalten auf Dunkel nachgezogen werden
 müsste. Das **eigene** Anliegen bleibt sichtbar davon unterschieden: Es ist das
-einzige, das man bearbeitet.
+einzige, das man bearbeitet. Die Blase steht in `components/ui/speech-bubble.tsx`
+(`surface: 'shell' | 'card'` — in einer Karte oder direkt auf der Seite);
+`PersonBubble` in `components/domain/` setzt Gesicht, Name und Satz hinein und
+zeigt am Thema und an der Einheit, wer daran arbeitet.
 
 **In der Thema-Karte stehen zwei Aussagen an zwei Plätzen**: links, wo man zu
 lesen anfängt, das Überthema mit seinem Link; rechts das wievielte Stück davon
@@ -1678,7 +1678,10 @@ Vorschlagslogik — sie haben nur keine eigene Liste mehr. Erreichbar sind sie
 über die Terminliste („Vergangene") und den Kalender.
 
 Die Themenliste ist eine **Liste**: Titel, Zusammenfassung, wer daran arbeitet,
-wie viele Abende. Die Abende selbst stehen auf der eigenen Seite des Themas
+wie viele Abende. Jede Karte (`TopicEntry`) ist gebaut wie der Kopf der
+Themenseite, nur knapp — Symbol in einer Kachel, daneben in einer Spalte Titel,
+eine Zeile Zusammenfassung, Gesichter und die Zahl der Einheiten (bei einer
+einzelnen ihr Abend). Die Abende selbst stehen auf der eigenen Seite des Themas
 (`/archiv/themen/[id]`) — ein Thema mit fünf Einheiten machte die Liste sonst zu
 einer Wand.
 
@@ -1836,7 +1839,13 @@ Ordnungsliebe, sondern weil jede eine andere Frage an eine andere Person ist.
 | Name      | abgeleitet bzw. Treffpunkt-Form | eine Wohnung heißt nach ihren Bewohner:innen, ein Park nach sich selbst     |
 | Gewicht   | **Verwaltung**                  | „wie oft wollen wir bei dir sein" ist eine Aussage der Gruppe, keine Angabe |
 
-Im Archiv steht eine Wohnung deshalb nur noch da: Name, Anschrift, Link zur
+Im Archiv sind Orte **zwei Register**, „Zuhause" und „Treffpunkte" (`ListTab`
+aus `list-tab.tsx`, in der Adresse als `&orte=treffpunkte`), statt zwei Karten
+untereinander. Auf „Treffpunkte" legt das „+" unten rechts einen an; Wohnungen
+entstehen im Profil. **Stillgelegte stehen gar nicht mehr da**, auch nicht
+hinter einem Haken — ein ehemaliges Zuhause pro Umzug wuchs mit den Jahren zu.
+
+Eine Wohnung steht dort nur: Name, Anschrift, Link zur
 Karte. Kein Stift, weil es dort nichts zu ändern gäbe, und kein Gewicht, weil
 eine 0,5 neben dem eigenen Namen, die man nicht ändern kann und deren Herkunft
 man nicht kennt, nur Fragen aufwirft. Treffpunkte bleiben frei bearbeitbar —
@@ -2235,7 +2244,10 @@ dafür keinen Endpunkt, kein Teilen, kein Vorausfüllen und keine Sicherung.
   hinschreiben. Die Zusage ist die **Rundreise** `parseSheet(toChordPro(s))`.
 - **Erkennen** (`lib/chords/parse.ts`): beide Formate ohne Auswahl; geschützte
   Leerzeichen, Tabulatoren und `[ch]`-Marken werden weggeräumt, „Capo 2" und
-  „Key: A" werden Angaben, „Page 1/3" verschwindet. Eine Akkordzeile braucht
+  „Key: A" werden Angaben, „Page 1/3" verschwindet. Ein Abschnitt in Klammern
+  bleibt einer, auch mit etwas dahinter („[Chorus]:", „[Intro] G D",
+  `bracketOf`); `chordsOf` liefert nur Akkorde, die `parseChord` versteht —
+  in ChordPro ist sonst alles in eckigen Klammern einer. Eine Akkordzeile braucht
   70 % Akkorde, sodass „Am I worthy" Text bleibt. Ein H macht das Blatt deutsch (B = Bb). Die Tonart
   (`key.ts`) zählt Stufen über alle zwölf Dur-Tonarten, Anfang und Ende doppelt.
 - **Anzeige** (`chord-sheet-view.tsx`, `ChordLyricLine`): jede Zeile in
@@ -2296,13 +2308,100 @@ und Knöpfen oben (`order`).
 
 ### Das Vollbild
 
-`features/songs/sheet-fullscreen.tsx`: Text oder Akkorde, Transponieren
-(`transposer` in `key.ts` — die Vorzeichen richten sich nach der Ziel-Tonart),
-Schrift, Autoscroll. Der Autoscroll ist eine `requestAnimationFrame`-Schleife,
-die Bruchteile von Pixeln aufspart; `touchstart` hält ihn an. Wo es sie gibt:
-`requestFullscreen` und `navigator.wakeLock` (bei `visibilitychange` neu
-angefordert). Transposition und Tempo stehen an der eigenen Version, die
-Schriftgröße in `localStorage`.
+`features/songs/sheet-fullscreen.tsx`. **Oben** eine Karte „Akkorde" mit allen
+Akkorden des Lieds als Griffbild (`ChordStrip` in `chord-panels.tsx`, auf dem
+Telefon seitwärts zu scrollen), dazu Text/Akkorde, Transponieren (`transposer`
+in `key.ts` — die Vorzeichen richten sich nach der Ziel-Tonart) und „Anpassen"
+(Gitarre oder Klavier). Sie scrollt mit weg. **Unten** nur Schrift („Aa" klappt
+die Größe auf) und Autoscroll mit Tempo. Der Autoscroll ist eine
+`requestAnimationFrame`-Schleife, die Bruchteile von Pixeln aufspart;
+`touchstart` hält ihn an. Wo es sie gibt: `requestFullscreen` und
+`navigator.wakeLock` (bei `visibilitychange` neu angefordert).
+
+**Ein Tipp auf einen Akkord** — oben oder im Text (`ChordSheetView` mit
+`onChord`) — öffnet ihn im Detail, mit allen Varianten zum Durchblättern. Detail
+und Anpassen sind Flächen **in** der Ebene des Vollbilds (`Panel`) und keine
+Sheets: Zwei Ebenen, die beide auf Escape hören, schlössen einander; das
+Vollbild fragt selbst, ob eine offen ist. Die gewählte Variante gilt für jede
+Stelle mit genau diesem Akkord und steht an der eigenen Version
+(`voicings: Record<"guitar:C", number>`), wie Transposition und Tempo;
+Schriftgröße und Instrument stehen in `localStorage`.
+
+**Die Griffe sind gerechnet** (`lib/chords/voicing.ts`):
+
+- `chordTones` liest aus dem Namen die nötigen und die verzichtbaren Intervalle
+  (Terz, Quinte, Septime, `sus`, `add`, Optionen, Alterationen, Powerchord,
+  Slash-Bass). Unbekanntes fällt auf den Dreiklang zurück.
+- `guitarVoicings` sucht in Vier-Bund-Fenstern vom offenen Akkord bis zum
+  zwölften Bund: je Saite stumm, leer (nur unten am Hals) oder ein Bund, der
+  einen Akkordton trifft. Gültig ist, was alle nötigen Töne hat, den Grundton
+  bzw. Slash-Bass unten, stumme Saiten nur als Block von unten (plus höchstens
+  die oberste) und höchstens vier Finger — sonst ein Barré auf dem tiefsten Bund
+  über alle Saiten dazwischen. Leere Saiten nur, solange kein Bund über dem
+  dritten liegt und der Bass nicht im ersten (sonst entstehen gültige Formen wie
+  x10331 für Bb, die niemand spielt).
+- Die **Wertung** (niedriger ist besser): Lage am Hals, stumme Saiten (die
+  oberste extra), leere Saiten als Bonus, Barré, Finger, Spreizung, fehlende
+  verzichtbare Töne, eine Sekunde ganz unten, klingende Saiten als Bonus. Geprüft
+  im Prüfskript gegen die Liederbuchformen (C x32010, G 320003, D xx0232, F
+  133211, Bm x24432, G/B x20003, Cadd9 x32030, Bb x13331 …).
+- `pianoVoicings`: Grundstellung und Umkehrungen; Optionen liegen eine Oktave
+  über dem Kern, ein Slash-Bass eine Oktave unter dem Akkord.
+
+`chord-diagram.tsx` zeichnet beides als SVG aus den Farb-Tokens, damit das dunkle
+Thema ohne Sonderfall mitgeht.
+
+## Notizen
+
+Ein eigenes Register im Archiv (`?register=notizen`, `features/notes/`), hinter
+„Orte"; das „+" unten rechts öffnet `NewNoteSheet` (Titel und „Nur
+ich | Ganze Gruppe | Auswählen"), danach geht es auf `/notiz?id=…&neu=1`
+direkt ins Schreiben. `&neu=1` wird nach dem Öffnen aus der Adresse genommen,
+damit ein Neuladen nicht wieder dorthin springt.
+
+**Text:** `lib/notes/markdown.ts`, rein und ohne `@/`, geprüft im Skript wie die
+Akkorde. `parseNote` liest Zeile für Zeile — jede Zeile bleibt eine Zeile, anders
+als `prose.tsx` für die Rechtstexte —, `parseInline` fett, Links (nur
+`http(s)`) und nackte Adressen. `applyFormat` und `continueList` stehen hinter
+den Knöpfen und der Enter-Taste im `NoteEditor`; die Knöpfe nehmen dem Feld
+den Fokus nicht (`preventDefault` beim Herunterdrücken), sonst ginge auf dem
+Telefon die Tastatur zu. `NoteBody` zeichnet die Blöcke; ein Checklistenpunkt
+ist ein `div role="checkbox"`, weil darin ein Link stehen darf.
+
+**Abhaken** (`useCheckNote`) greift im Einzelstand vor und schreibt danach die
+Antwort samt ETag in den Cache (`apiPostWithPrecondition` mit `UNCONDITIONAL`).
+**Schreiben** (`useUpdateNote`) merkt sich den Stand beim Öffnen (`base`) und
+schickt nur, was sich dagegen geändert hat. Bei 412 bleibt der Entwurf; der
+Hinweis bietet „Meine Fassung speichern" (`resolveConflict`, dann noch einmal)
+und „Ihre übernehmen".
+
+**Leute** (`NotePeopleSheet`) nutzen `PeopleListEditor` aus
+`components/domain/` — dieselbe Liste wie die Vorbereiter einer Einheit, mit
+„×", „Person hinzufügen" und einem Grund, wo jemand bleiben muss.
+
+## Die Leiste unten gibt es nur auf den Tabs
+
+`isTabRoute` in `nav.tsx` beantwortet „ist das einer der fünf Tabs" einmal, für
+die Kopfleiste (`useHasSmartHeader`) und für die Leiste unten
+(`app-shell.tsx`). Auf einer Unterseite steht an ihrer Stelle nur ein Kasten mit
+`pb-safe`, damit das Seitenende nicht unter dem Home-Balken liegt; Termin, Lied,
+Thema und Einheit stellen über `BottomSlot` ihre eigenen Balken hinein.
+
+**Thema und Einheit** haben unten `EditBar`, nur für die, die schreiben dürfen
+(`mayEdit`). Auf der Themenseite schaltet er den Bearbeitungsmodus; Titel,
+Zusammenfassung und Status liegen darin hinter „Bearbeiten" oben rechts in
+`TopicEditSheet`, geschickt wird nur, was sich geändert hat. „Einheit
+hinzufügen" (`AddSessionSheet`, ein Sheet mit Schritten) legt neu an oder holt
+eine eigene einzelne Einheit herein (`useAdoptableSessions`, `useAdoptSession`);
+ohne Einheit steht der Knopf auch außerhalb des Modus. Die Einheit hat keinen
+Modus mehr: `EditBar editing={false}` öffnet `SessionEditSheet` mit Text, den
+Leuten (eine Liste mit „×" und „Person hinzufügen", das die übrigen im selben
+Sheet aufklappt), Überthema entfernen und Löschen — gespeichert mit
+`mutateAsync` erst der Text (If-Match), dann die Crew. Bei einer einzelnen
+Einheit fragt es dort auch nach dem Überthema (`onName` schließt es und öffnet
+`NameTopicSheet`, nach Rückfrage, wenn etwas ungespeichert ist). Oben rechts steht, wozu
+die Einheit gehört (`TopicLink`, „Teil von · 1 von 3"), auf der Themenseite an
+derselben Stelle der Stand; eine weitere Einheit legt nur die Themenseite an.
 
 ## Tastatur und Seitenspalte
 

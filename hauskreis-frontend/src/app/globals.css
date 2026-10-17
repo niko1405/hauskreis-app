@@ -318,6 +318,25 @@ label,
   scrollbar-width: none;
 }
 
+/* Datum und Uhrzeit bleiben in ihrem Feld.
+ *
+ * Safari gibt dem eigenen Datumsfeld eine Mindestbreite, die `width: 100%`
+ * nicht kennt — im Profil ragte der Geburtstag über die Karte, in der
+ * Abwesenheit „Von" und „Bis" über ihre Spalten. Ohne das Aussehen des Systems
+ * (`appearance: none`) gilt die Breite wieder; die Höhe muss dann jemand
+ * anders sagen, sonst fällt ein leeres Feld in sich zusammen. */
+input[type='date'],
+input[type='time'] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  min-height: 2.75rem;
+}
+input[type='date']::-webkit-date-and-time-value,
+input[type='time']::-webkit-date-and-time-value {
+  text-align: left;
+}
+
 /* Sichere Ränder.
  *
  * `viewport-fit=cover` (siehe layout.tsx) lässt die Seite bis in die Ecken

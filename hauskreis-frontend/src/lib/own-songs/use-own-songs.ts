@@ -84,7 +84,7 @@ export interface OwnSongDraft {
 
 /** Die Felder, die sich ohne neuen Text ändern. */
 export type OwnSongSettings = Partial<
-  Pick<OwnSong, 'transpose' | 'scrollSpeed' | 'title' | 'artist'>
+  Pick<OwnSong, 'transpose' | 'scrollSpeed' | 'voicings' | 'title' | 'artist'>
 >;
 
 const DEFAULT_SCROLL_SPEED = 4;

@@ -10,3 +10,4 @@ export * from './key';
 export * from './layout';
 export * from './parse';
 export * from './search';
+export * from './voicing';

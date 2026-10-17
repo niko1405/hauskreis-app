@@ -62,6 +62,7 @@ import {
   ScrollText,
   ShieldCheck,
   Sparkles,
+  StickyNote,
   UserMinus,
   Users,
 } from 'lucide-react';
@@ -113,6 +114,7 @@ const ICONS: Record<NotificationEntry['type'], typeof Bell> = {
   BIRTHDAY_GIFT_DECIDED: Gift,
   BIRTHDAY_IDEAS_REQUESTED: BellRing,
   GIFT_IDEA_COMMENTED: MessageCircle,
+  NOTE_SHARED: StickyNote,
   ADMIN_GRANTED: ShieldCheck,
   RELEASE_NOTES: Megaphone,
 };

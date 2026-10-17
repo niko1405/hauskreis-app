@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { useOverlayOpen } from '@/components/ui/overlay-lock';
 import { useHeaderPreference } from '@/lib/header-preference';
 import { useHeaderSuppressed } from './header-suppress';
-import { NAV_ITEMS } from './nav';
+import { isTabRoute } from './nav';
 
 /** Ab hier gilt die Seite nicht mehr als „ganz oben". */
 const TOP_THRESHOLD = 8;
@@ -107,9 +107,10 @@ export function useHeaderScroll(): {
  * eigenen Zurück-Pfeil, und eine Navigationsleiste darüber wäre eine Ebene zu
  * viel: Dort ist man *in* etwas drin und nicht auf Navigations-Ebene.
  *
- * Gegen `NAV_ITEMS` geprüft und nicht gegen eine zweite Liste — dieselbe Regel
- * wie `useIsActive`, damit es genau eine Aufzählung der Tabs gibt. `/termin`
- * fällt dabei von selbst heraus: Es ist kein Präfix von `/termine`.
+ * Gegen `isTabRoute` geprüft und nicht gegen eine zweite Liste — dieselbe
+ * Regel wie für die Leiste unten, damit es genau eine Aufzählung der Tabs
+ * gibt. `/termin` fällt dabei von selbst heraus: Es ist kein Präfix von
+ * `/termine`.
  *
  * **Und ob man sie überhaupt haben will.** Die Einstellung liegt im Gerät
  * (`useHeaderPreference`) und hängt hier — an genau einer Zeile, von der alles
@@ -122,10 +123,5 @@ export function useHasSmartHeader(): boolean {
   const pathname = usePathname();
   const { shown } = useHeaderPreference();
 
-  return (
-    shown &&
-    NAV_ITEMS.some(({ href }) =>
-      href === '/' ? pathname === '/' : pathname.startsWith(href),
-    )
-  );
+  return shown && isTabRoute(pathname);
 }

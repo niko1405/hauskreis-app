@@ -21,6 +21,9 @@
  *
  * Im Modus `text` verschwinden Akkorde ganz, samt der Zeilen, die nur aus
  * Akkorden bestehen: Wer mitsingt, braucht kein Vorspiel.
+ *
+ * Mit `onChord` (im Vollbild) ist jeder Akkord ein Knopf — ein Tipp zeigt, wie
+ * man ihn greift.
  */
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import {
@@ -38,13 +41,14 @@ type LyricLine = Extract<SheetLine, { kind: 'lyric' }>;
 const UNCHANGED = (symbol: string) => symbol;
 
 /** Das Zeichen ohne Breite, das einem leeren Textstück seine Höhe gibt. */
-const NO_WIDTH = '​';
+const NO_WIDTH = '\u200b';
 
 export function ChordSheetView({
   sheet,
   chord = UNCHANGED,
   mode = 'chords',
   scale = 1,
+  onChord,
   className,
 }: {
   sheet: Sheet;
@@ -53,6 +57,8 @@ export function ChordSheetView({
   mode?: SheetMode;
   /** Schriftgröße relativ zur Grundgröße, für das Vollbild. */
   scale?: number;
+  /** Ein Akkord wurde angetippt — mit dem Namen, wie er dasteht. */
+  onChord?: (shown: string) => void;
   className?: string;
 }) {
   const root = useRef<HTMLDivElement>(null);
@@ -67,8 +73,14 @@ export function ChordSheetView({
       {/* Eine Zeile hat keine Identität außer ihrem Platz im Blatt — gleiche
           Zeilen kommen in jedem Refrain vor. */}
       {sheet.lines.map((line, index) => (
-        // eslint-disable-next-line react/no-array-index-key
-        <SheetLineView key={index} line={line} chord={chord} mode={mode} />
+        <SheetLineView
+          // eslint-disable-next-line react/no-array-index-key
+          key={index}
+          line={line}
+          chord={chord}
+          mode={mode}
+          onChord={onChord}
+        />
       ))}
     </div>
   );
@@ -78,11 +90,34 @@ function SheetLineView({
   line,
   chord,
   mode,
+  onChord,
 }: {
   line: SheetLine;
   chord: (symbol: string) => string;
   mode: SheetMode;
+  onChord?: (shown: string) => void;
 }) {
+  const label = (symbol: string, key: number) => {
+    const shown = chord(symbol);
+    if (!onChord) return <ChordLabel key={key}>{shown}</ChordLabel>;
+    // Ein Knopf, und der Tipp bleibt bei ihm: Die Fläche darunter schaltet im
+    // Vollbild die Leiste.
+    return (
+      <button
+        key={key}
+        type="button"
+        aria-label={`So greift man ${shown}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          onChord(shown);
+        }}
+        className="-mx-0.5 rounded px-0.5 hover:bg-terracotta-50"
+      >
+        <ChordLabel>{shown}</ChordLabel>
+      </button>
+    );
+  };
+
   if (line.kind === 'blank') return <div className="h-[0.9em]" />;
 
   if (line.kind === 'section') {
@@ -99,11 +134,9 @@ function SheetLineView({
   if (line.text === '') {
     return (
       <p className="flex flex-wrap gap-x-[1.1em] py-0.5">
-        {line.chords.map((entry, index) => (
-          // Zwei gleiche Akkorde an derselben Stelle sind möglich (`[A][A]`).
-          // eslint-disable-next-line react/no-array-index-key
-          <ChordLabel key={index}>{chord(entry.chord)}</ChordLabel>
-        ))}
+        {/* Zwei gleiche Akkorde an derselben Stelle sind möglich (`[A][A]`),
+            deshalb der Platz als Schlüssel. */}
+        {line.chords.map((entry, index) => label(entry.chord, index))}
       </p>
     );
   }
@@ -111,9 +144,7 @@ function SheetLineView({
   return (
     <ChordLyricLine
       line={line}
-      renderChord={(entry) => (
-        <ChordLabel key={entry.index}>{chord(entry.chord)}</ChordLabel>
-      )}
+      renderChord={(entry) => label(entry.chord, entry.index)}
     />
   );
 }

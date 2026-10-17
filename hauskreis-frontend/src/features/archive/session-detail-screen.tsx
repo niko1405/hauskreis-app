@@ -11,39 +11,52 @@
  * Zwei Sorten teilen sich diesen Bildschirm, und der Unterschied ist eine
  * Kopfzeile:
  *
- * - **Teil eines Themas** — oben steht, wozu sie gehört, samt Weg dorthin und
- *   „Einheit 2 von 3".
- * - **Alleinstehend** — dort steht stattdessen das Angebot, ihr ein Überthema
- *   zu geben. Das ist der Moment, in dem aus einem Abend ein Thema wird, und
- *   er lässt sich nicht vorhersehen: Man hält den Abend und merkt danach, dass
- *   da mehr drinsteckt.
+ * - **Teil eines Themas** — oben rechts steht, wozu sie gehört, als Weg
+ *   dorthin und mit „1 von 3". Weitere Einheiten legt man dort an, auf der
+ *   Seite des Themas, und nicht von einer seiner Einheiten aus.
+ * - **Alleinstehend** — dort steht „Einzelne Einheit", und unter „Bearbeiten"
+ *   das Angebot, ihr ein Überthema zu geben. Das ist der Moment, in dem aus
+ *   einem Abend ein Thema wird, und er lässt sich nicht vorhersehen: Man hält
+ *   den Abend und merkt danach, dass da mehr drinsteckt.
  *
- * Wie überall ist der **Lesemodus der Normalfall**; die Stifte erscheinen auf
- * Knopfdruck, gespeichert wird trotzdem sofort.
+ * **Die Seite ist zum Lesen da.** Wer die Einheit vorbereitet, hat unten statt
+ * der Tab-Leiste „Bearbeiten" (`EditBar`), und dahinter liegt **ein** Sheet mit
+ * allem, was sich ändern lässt: Titel, Zusammenfassung, Actionstep und wer sie
+ * vorbereitet — dazu, abgesetzt, Überthema entfernen und Löschen. Vorher stand
+ * an jedem Feld ein Stift, im Bearbeitungsmodus, und die Seite war in diesem
+ * Modus ein Formular aus vier Teilen mit vier Speichern.
+ *
+ * **Der Actionstep steht hervorgehoben**, wie „Actionstep der Woche" auf
+ * „Heute": Er ist das, was man vom Abend mitnimmt, und der eigene Haken sitzt
+ * gleich in der Karte.
  */
 import {
   ArrowLeft,
   ArrowUpRight,
   CalendarDays,
-  Check,
+  CheckCircle2,
+  Circle,
   FileText,
+  Footprints,
   Info,
   Layers,
-  Pencil,
-  Plus,
   Trash2,
   Unlink,
-  UserMinus,
-  UserPlus,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { EditBar } from '@/components/layout/edit-bar';
 import { Badge } from '@/components/ui/badge';
-import { Button, IconButton } from '@/components/ui/button';
+import { Button, PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
-import { FieldLabel, InlineEdit, TextInput } from '@/components/ui/field';
+import {
+  FieldLabel,
+  InlineEdit,
+  TextArea,
+  TextInput,
+} from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import {
   CardSkeleton,
@@ -51,20 +64,22 @@ import {
   ErrorState,
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
-import { ActionstepCheck } from '@/components/domain/actionstep-check';
-import { PeoplePickerSheet } from '@/components/domain/people-picker-sheet';
-import { Avatar, AvatarStack } from '@/components/ui/avatar';
+import { PeopleListEditor } from '@/components/domain/people-list-editor';
+import { PersonBubble } from '@/components/domain/person-bubble';
 import { errorMessage } from '@/lib/api/errors';
 import {
   useDeleteTopicSession,
+  useMe,
   useNameTopic,
+  usePeople,
+  useSetActionstepDone,
   useSetSessionResponsibles,
   useTopicSession,
   useUnnameTopic,
   useUpdateTopicSession,
 } from '@/lib/api/hooks';
+import { cn } from '@/lib/cn';
 import { formatDay, hasStarted } from '@/lib/date';
-import { namesOf } from '@/lib/person';
 import type { TopicSession } from '@/lib/api/types';
 
 export function SessionDetailScreen({
@@ -91,18 +106,11 @@ function Loaded({
   session: TopicSession;
   von?: string | null;
 }) {
-  const router = useRouter();
-  const toast = useToast();
-  const confirm = useConfirm();
-  const update = useUpdateTopicSession(session.id);
-  const remove = useDeleteTopicSession();
-  const unname = useUnnameTopic(session.id);
-
-  const [editing, setEditing] = useState(false);
+  const [editSheet, setEditSheet] = useState(false);
   const [benennen, setBenennen] = useState(false);
 
-  const darf = editing && session.mayEdit;
   const allein = session.topic.standalone;
+  const leute = session.responsibles.map((row) => row.person);
 
   /**
    * Dieselbe Grenze wie auf der Terminseite: einen Vorsatz für heute Abend hakt
@@ -135,15 +143,377 @@ function Loaded({
         ? { href: '/archiv', label: 'Archiv' }
         : { href: `/thema?id=${session.topic.id}`, label: 'Zum Thema' };
 
-  /**
-   * Das Überthema wieder abgeben — die Einheit steht danach für sich.
-   *
-   * Der Satz über die Zusammenfassung steht unbedingt da, obwohl sie oft leer
-   * ist: Die Einheitenseite kennt `topic.summaryText` nicht (`topicRefSchema`
-   * trägt Id, Titel, Status und `standalone`), und ein Feld quer durch die
-   * ganze Kette zu reichen, nur um einen Halbsatz zu bedingen, wäre der
-   * teurere Weg.
-   */
+  return (
+    <div className="space-y-6 px-5 pt-safe-4 pb-10">
+      {/* Die Kopfzeile: links zurück, rechts, wozu das hier gehört. Bei einer
+          alleinstehenden Einheit steht dort nicht „kein Thema" — das wäre eine
+          Lücke, wo keine ist —, sondern was sie ist. */}
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href={zurueck.href}
+          className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-terracotta-600"
+        >
+          <ArrowLeft size={14} />
+          {zurueck.label}
+        </Link>
+        {allein ? (
+          <Badge>
+            <FileText size={11} />
+            Einzelne Einheit
+          </Badge>
+        ) : (
+          <TopicLink session={session} />
+        )}
+      </div>
+
+      {/* Wie auf der Themenseite: das Symbol vor dem Titel — dort Ebenen für
+          das Thema, hier das eine Blatt für den einen Abend. */}
+      <header>
+        <div className="flex items-start gap-3">
+          <FileText
+            aria-hidden
+            className="mt-1 size-7 shrink-0 text-terracotta-500"
+            strokeWidth={1.75}
+          />
+          <h1
+            className={cn(
+              'min-w-0 font-serif text-3xl leading-tight font-bold break-words',
+              session.title ? 'text-stone-900' : 'text-stone-400',
+            )}
+          >
+            {session.title ?? 'Ohne eigenen Titel'}
+          </h1>
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-2 pl-10">
+          {session.meeting ? (
+            <Link href={`/termin?id=${session.meeting.id}`}>
+              <Badge variant={session.held ? 'neutral' : 'warn'}>
+                <CalendarDays size={11} />
+                {session.held ? 'gehalten am' : 'am'}{' '}
+                {formatDay(session.meeting.date)}
+                <ArrowUpRight className="size-3" />
+              </Badge>
+            </Link>
+          ) : (
+            <Badge>noch an keinem Abend</Badge>
+          )}
+        </div>
+      </header>
+
+      {!session.contentVisible && (
+        <Card>
+          <p className="text-sm text-stone-400">
+            Zu sehen gibt es das am Abend — bis dahin gehört es denen, die es
+            vorbereiten.
+          </p>
+        </Card>
+      )}
+
+      {session.contentVisible && session.actionstepText && (
+        <ActionstepFeature session={session} abhakbar={abhakbar} />
+      )}
+
+      {session.contentVisible && (
+        <section>
+          <SectionTitle>Zusammenfassung</SectionTitle>
+          <Card>
+            <InlineEdit
+              label="Zusammenfassung"
+              multiline
+              value={session.summaryText}
+              emptyLabel="Noch nichts — hilft allen, die nicht da waren."
+            />
+          </Card>
+        </section>
+      )}
+
+      {/* Wer sie vorbereitet — als Sprechblasen, wie am Thema. Geändert wird
+          es im Sheet hinter „Bearbeiten". */}
+      {leute.length > 0 && (
+        <section>
+          <SectionTitle>
+            {session.held ? 'Gehalten von' : 'Vorbereitet von'}
+          </SectionTitle>
+          <div className="space-y-3">
+            {leute.map((person) => (
+              <PersonBubble
+                key={person.id}
+                person={person}
+                note={
+                  session.held
+                    ? 'hat sie gehalten'
+                    : allein && person.id === session.topic.ownerPersonId
+                      ? 'hat sie angelegt'
+                      : 'bereitet sie vor'
+                }
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {session.mayEdit && (
+        <EditBar editing={false} onToggle={() => setEditSheet(true)} />
+      )}
+
+      {/* Das Überthema fragt das Sheet: Es ist eine Änderung an der Einheit,
+          und die Seite bleibt zum Lesen. Ein Sheet nach dem anderen, nicht
+          zwei übereinander. */}
+      {editSheet && (
+        <SessionEditSheet
+          session={session}
+          onClose={() => setEditSheet(false)}
+          onName={() => {
+            setEditSheet(false);
+            setBenennen(true);
+          }}
+        />
+      )}
+
+      {benennen && (
+        <NameTopicSheet
+          sessionId={session.id}
+          sessionTitle={session.title}
+          onClose={() => setBenennen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Wozu die Einheit gehört — oben rechts, als Weg dorthin.
+ *
+ * Es stand links als Überschrift über dem Titel und las sich wie ein zweiter
+ * Titel. Oben rechts ist es, was es ist: der Ort darüber, eine Ebene höher,
+ * wie das Abzeichen „Setlist · Platz 2" auf der Seite eines Lieds.
+ */
+function TopicLink({ session }: { session: TopicSession }) {
+  return (
+    <Link
+      href={`/thema?id=${session.topic.id}`}
+      className={cn(
+        'group flex max-w-[68%] min-w-0 items-center gap-2.5 rounded-xl border border-terracotta-100 bg-terracotta-50/50 py-1.5 pr-2.5 pl-1.5 transition-colors hover:border-terracotta-300',
+        PRESSABLE,
+      )}
+    >
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-card text-terracotta-600">
+        <Layers size={15} />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[9px] font-bold tracking-widest whitespace-nowrap text-terracotta-600 uppercase">
+          Teil von · {session.sessionIndex} von {session.sessionCount}
+        </span>
+        <span className="block truncate font-serif text-sm leading-tight font-bold text-stone-900">
+          {session.topic.title ?? 'Thema ohne Titel'}
+        </span>
+      </span>
+      <ArrowUpRight className="size-3.5 shrink-0 text-stone-400 transition-colors group-hover:text-terracotta-600" />
+    </Link>
+  );
+}
+
+/**
+ * Der Actionstep — hervorgehoben, wie „Actionstep der Woche" auf „Heute".
+ *
+ * Er ist das, was man vom Abend mitnimmt, und stand bisher wie jedes andere
+ * Feld in einer Karte mit Überschrift. Ab dem Abend sitzt der eigene Haken
+ * gleich vorn; abgehakt wird die Karte grün, wie auf „Heute". Davor steht dort
+ * das Symbol: einen Vorsatz für heute Abend hakt man heute früh nicht ab.
+ */
+function ActionstepFeature({
+  session,
+  abhakbar,
+}: {
+  session: TopicSession;
+  abhakbar: boolean;
+}) {
+  const me = useMe();
+  // Der Haken hängt am Termin. Ohne Abend wird der Knopf nie gezeigt, und der
+  // Haken läuft ins Leere — Hooks gibt es trotzdem nur unbedingt.
+  const setDone = useSetActionstepDone(session.meeting?.id ?? '');
+  const done =
+    abhakbar &&
+    session.actionstepDone.some((row) => row.person.id === me.me?.id);
+
+  return (
+    <Card
+      className={cn(
+        'transition-colors',
+        done
+          ? 'border-success-line bg-success-bg/40'
+          : 'border-terracotta-100 bg-terracotta-50/40',
+      )}
+    >
+      <div className="flex items-start gap-4">
+        {abhakbar ? (
+          <button
+            type="button"
+            aria-pressed={done}
+            aria-label={done ? 'Haken wieder wegnehmen' : 'Actionstep abhaken'}
+            disabled={!me.me || setDone.isPending}
+            onClick={() => setDone.mutate(!done)}
+            className={cn(
+              'flex size-11 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-50',
+              'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+              done
+                ? 'bg-success-bg text-success'
+                : 'bg-card text-stone-300 hover:text-terracotta-500',
+            )}
+          >
+            {done ? <CheckCircle2 size={22} /> : <Circle size={22} />}
+          </button>
+        ) : (
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card text-terracotta-500">
+            <Footprints size={20} />
+          </span>
+        )}
+        <div className="min-w-0 pt-0.5">
+          <p
+            className={cn(
+              'text-[10px] font-bold tracking-widest uppercase',
+              done ? 'text-success' : 'text-terracotta-500',
+            )}
+          >
+            Actionstep
+          </p>
+          <p className="mt-0.5 font-serif text-lg leading-snug font-bold whitespace-pre-line text-stone-900">
+            {session.actionstepText}
+          </p>
+          {abhakbar && (
+            <p className="mt-1 text-[11px] text-stone-400">
+              {done
+                ? 'Du hast es geschafft.'
+                : 'Tipp auf den Kreis, wenn du es geschafft hast.'}
+            </p>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * Alles, was sich an einer Einheit ändern lässt — in einem Sheet.
+ *
+ * **Wer vorbereitet, steht als Liste da**, mit einem „×" zum Herausnehmen und
+ * darunter „Person hinzufügen", das die übrigen aufklappt — im selben Sheet,
+ * nicht in einem zweiten darüber. Es war eine Liste der ganzen Gruppe zum
+ * Anhaken; die beantwortete aber „wer könnte", und „wer macht es" musste man
+ * sich aus den Haken zusammensuchen. Zwei Regeln stehen als fehlendes „×" da
+ * statt als Fehlermeldung danach: Der letzte Platz bleibt besetzt, und bei
+ * einer einzelnen Einheit bleibt, wer sie angelegt hat — es gibt kein Thema
+ * darüber, an dem er sonst noch stünde.
+ *
+ * Gespeichert wird in zwei Schritten, aber mit **einem** Knopf: erst der Text
+ * (mit `If-Match`, ein fremder Stand zeigt den Konflikt), dann die Leute —
+ * und beides nur, wenn sich etwas geändert hat. Löschen und das Überthema
+ * entfernen stehen abgesetzt darunter; sie standen vorher lose auf der Seite.
+ *
+ * **Bei einer einzelnen Einheit steht hier auch „Überthema hinzufügen"** —
+ * vorher eine Karte „Soll mehr daraus werden?" auf der Seite, die jeden Besuch
+ * dieselbe Frage stellte. `onName` schließt dieses Sheet und öffnet das des
+ * Überthemas; wer vorher etwas geändert hat, wird gefragt, ob es verworfen
+ * werden darf.
+ */
+function SessionEditSheet({
+  session,
+  onClose,
+  onName,
+}: {
+  session: TopicSession;
+  onClose: () => void;
+  onName: () => void;
+}) {
+  const router = useRouter();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const people = usePeople();
+  const update = useUpdateTopicSession(session.id);
+  const setCrew = useSetSessionResponsibles(session.id);
+  const remove = useDeleteTopicSession();
+  const unname = useUnnameTopic(session.id);
+
+  const [title, setTitle] = useState(session.title ?? '');
+  const [summary, setSummary] = useState(session.summaryText ?? '');
+  const [actionstep, setActionstep] = useState(session.actionstepText ?? '');
+  const [crew, setCrewIds] = useState(() =>
+    session.responsibles.map((row) => row.person.id),
+  );
+  const allein = session.topic.standalone;
+  const festerPlatz = allein ? session.topic.ownerPersonId : null;
+  const kommenderAbend =
+    session.meeting && session.meeting.status !== 'CANCELLED' && !session.held
+      ? session.meeting
+      : null;
+
+  // Wer schon vorbereitet, steht in der Antwort der Einheit; wer dazukommen
+  // kann, in der Gruppe. Beides zusammen, damit eine Person, die gerade aus
+  // der Gruppe ging, in der Liste nicht als leere Zeile dasteht.
+  const byId = new Map(
+    [
+      ...session.responsibles.map((row) => row.person),
+      ...(people.data ?? []),
+    ].map((person) => [person.id, person]),
+  );
+  const dabei = crew.flatMap((id) => byId.get(id) ?? []);
+  // Eingeladene zählen nicht: Wer sich noch nie angemeldet hat, kann nichts
+  // vorbereiten.
+  const dazu = (people.data ?? []).filter(
+    (person) => person.acceptedAt !== null && !crew.includes(person.id),
+  );
+
+  const herausnehmen = (personId: string) =>
+    setCrewIds((current) => current.filter((id) => id !== personId));
+  const hinzunehmen = (personId: string) =>
+    setCrewIds((current) => [...current, personId]);
+
+  const trimmedTitle = title.trim();
+  const text = {
+    title: trimmedTitle,
+    summaryText: summary.trim() === '' ? null : summary.trim(),
+    actionstepText: actionstep.trim() === '' ? null : actionstep.trim(),
+  };
+  const changedText = {
+    ...(text.title !== session.title ? { title: text.title } : {}),
+    ...(text.summaryText !== session.summaryText
+      ? { summaryText: text.summaryText }
+      : {}),
+    ...(text.actionstepText !== session.actionstepText
+      ? { actionstepText: text.actionstepText }
+      : {}),
+  };
+  const before = session.responsibles.map((row) => row.person.id).toSorted();
+  const crewChanged = crew.toSorted().join() !== before.join();
+  const saving = update.isPending || setCrew.isPending;
+
+  const speichern = async () => {
+    try {
+      if (Object.keys(changedText).length > 0) {
+        await update.mutateAsync(changedText);
+      }
+      if (crewChanged) await setCrew.mutateAsync(crew);
+      toast.success('Gespeichert.');
+      onClose();
+    } catch {
+      // Gemeldet haben die Hooks selbst — der Toast oder, bei einem fremden
+      // Stand, der Hinweis oben im Sheet. Das Sheet bleibt offen.
+    }
+  };
+
+  const benennen = async () => {
+    if (Object.keys(changedText).length > 0 || crewChanged) {
+      const ok = await confirm({
+        title: 'Änderungen verwerfen?',
+        body: 'Was du hier geändert hast, ist noch nicht gespeichert. Speichere zuerst, wenn du es behalten willst.',
+        confirmLabel: 'Verwerfen',
+      });
+      if (!ok) return;
+    }
+    onName();
+  };
+
   const aufloesen = async () => {
     const ok = await confirm({
       title: 'Überthema entfernen?',
@@ -153,7 +523,10 @@ function Loaded({
     if (!ok) return;
 
     unname.mutate(undefined, {
-      onSuccess: () => toast.success('Steht jetzt für sich.'),
+      onSuccess: () => {
+        toast.success('Steht jetzt für sich.');
+        onClose();
+      },
       onError: (error) => toast.error(errorMessage(error)),
     });
   };
@@ -181,418 +554,154 @@ function Loaded({
   };
 
   return (
-    <div className="space-y-6 px-5 pt-safe-4 pb-10">
-      <Link
-        href={zurueck.href}
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-terracotta-600"
-      >
-        <ArrowLeft size={14} />
-        {zurueck.label}
-      </Link>
-
-      {update.conflict && <ConflictBanner onResolve={update.resolveConflict} />}
-
-      {/* Die Kopfzeile: wozu das hier gehört. Bei einer alleinstehenden Einheit
-          steht dort nicht „kein Thema" — das wäre eine Lücke, wo keine ist —,
-          sondern was sie ist. */}
-      {allein ? (
-        <p className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-stone-400 uppercase">
-          <FileText size={12} />
-          Einzelne Einheit
-        </p>
-      ) : (
-        <div>
-          <FieldLabel>Teil von</FieldLabel>
-          <Link
-            href={`/thema?id=${session.topic.id}`}
-            className="inline-flex items-baseline gap-1 font-serif text-lg font-bold text-stone-900 hover:text-terracotta-600"
+    <Sheet
+      open
+      onClose={onClose}
+      title="Einheit bearbeiten"
+      subtitle={
+        allein ? 'Einzelne Einheit' : (session.topic.title ?? undefined)
+      }
+      footer={
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
+            Abbrechen
+          </Button>
+          <Button
+            className="flex-1"
+            loading={saving}
+            disabled={trimmedTitle === '' || crew.length === 0}
+            onClick={() => void speichern()}
           >
-            {session.topic.title ?? 'Thema ohne Titel'}
-            <ArrowUpRight className="size-4 shrink-0 self-center text-stone-400" />
-          </Link>
-          <p className="mt-0.5 text-[11px] text-stone-400">
-            Einheit {session.sessionIndex} von {session.sessionCount}
-          </p>
+            Speichern
+          </Button>
         </div>
-      )}
-
-      <header>
-        <InlineEdit
-          label="Titel der Einheit"
-          value={session.title}
-          emptyLabel="Ohne eigenen Titel"
-          placeholder="Worum geht es an diesem Abend?"
-          className="font-serif text-3xl leading-tight font-bold text-stone-900"
-          saving={update.isPending}
-          onSave={darf ? (title) => update.mutate({ title }) : undefined}
-        />
-
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          {session.meeting ? (
-            <Link href={`/termin?id=${session.meeting.id}`}>
-              <Badge variant={session.held ? 'neutral' : 'warn'}>
-                <CalendarDays size={11} />
-                {session.held ? 'gehalten am' : 'am'}{' '}
-                {formatDay(session.meeting.date)}
-                <ArrowUpRight className="size-3" />
-              </Badge>
-            </Link>
-          ) : (
-            <Badge>noch an keinem Abend</Badge>
-          )}
-        </div>
-      </header>
-
-      <Crew session={session} editing={editing} />
-
-      {!session.contentVisible && (
-        <Card>
-          <p className="text-sm text-stone-400">
-            Zu sehen gibt es das am Abend — bis dahin gehört es denen, die es
-            vorbereiten.
-          </p>
-        </Card>
-      )}
-
-      {session.contentVisible && (
-        <>
-          <section>
-            <SectionTitle>Zusammenfassung</SectionTitle>
-            <Card>
-              <InlineEdit
-                label="Zusammenfassung"
-                multiline
-                value={session.summaryText}
-                emptyLabel="Noch nichts — hilft allen, die nicht da waren."
-                saving={update.isPending}
-                onSave={
-                  darf
-                    ? (summaryText) => update.mutate({ summaryText })
-                    : undefined
-                }
-              />
-            </Card>
-          </section>
-
-          <section>
-            <SectionTitle>Actionstep</SectionTitle>
-            <Card>
-              <InlineEdit
-                label="Actionstep"
-                value={session.actionstepText}
-                emptyLabel="Noch kein Actionstep für die Woche"
-                saving={update.isPending}
-                onSave={
-                  darf
-                    ? (actionstepText) => update.mutate({ actionstepText })
-                    : undefined
-                }
-              />
-              {/* Abhaken darf jede:r für sich, auch wer den Text nicht ändern
-                  darf — es ist der eigene Vorsatz. */}
-              {abhakbar && (
-                <ActionstepCheck
-                  meetingId={session.meeting!.id}
-                  done={session.actionstepDone}
-                />
-              )}
-            </Card>
-          </section>
-        </>
-      )}
-
-      {/* „Weitere Einheit anlegen" hängt am **Thema** — das darf nicht, wer nur
-          diesen einen Abend vorbereitet. „Überthema hinzufügen" schon: Es gibt
-          der eigenen Einheit einen Bogen und räumt in keinem fremden Thema. */}
-      {(allein ? session.mayEdit : session.mayEditTopic) && (
-        <Weitergehen
-          allein={allein}
-          topicId={session.topic.id}
-          onName={() => setBenennen(true)}
-        />
-      )}
-
-      {session.mayEdit && (
-        <Button
-          variant={editing ? 'primary' : 'secondary'}
-          className="w-full"
-          onClick={() => setEditing((current) => !current)}
-        >
-          {editing ? (
-            <>
-              <Check size={16} /> Fertig
-            </>
-          ) : (
-            <>
-              <Pencil size={14} /> Bearbeiten
-            </>
-          )}
-        </Button>
-      )}
-
-      {/* Der Weg zurück, und nur solange genau eine Einheit am Thema hängt —
-          das entscheidet der Server über `mayUnname`. Kein `text-alert`: Hier
-          wird nichts gelöscht, die Einheit bleibt samt ihrem Abend stehen. */}
-      {session.mayUnname && (
-        <Button
-          variant="ghost"
-          className="w-full"
-          loading={unname.isPending}
-          onClick={aufloesen}
-        >
-          <Unlink size={15} />
-          Überthema entfernen
-        </Button>
-      )}
-
-      {/* Wer und wann, entscheidet der Server (`mayDeleteSession`): vor dem
-          Abend, wer am Thema mitarbeitet; danach gar nicht mehr — außer bei
-          einer alleinstehenden Einheit, denn dort *ist* sie das ganze Thema,
-          und das darf sein Owner löschen. */}
-      {session.mayDelete && (
-        <Button
-          variant="ghost"
-          className="w-full text-alert"
-          loading={remove.isPending}
-          onClick={loeschen}
-        >
-          <Trash2 size={15} />
-          Einheit löschen
-        </Button>
-      )}
-
-      {benennen && (
-        <NameTopicSheet
-          sessionId={session.id}
-          sessionTitle={session.title}
-          onClose={() => setBenennen(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-/**
- * Wer diese Einheit vorbereitet — und der Ort, an dem sich das ändert.
- *
- * Bis eben war das eine Zeile unter der Überschrift: eine Tatsache, die man
- * ablas. Sie ist jetzt eine Entscheidung, weil sie es immer schon war und nur
- * am falschen Ort getroffen wurde — nämlich über die Zuteilung am Termin, die
- * damit zwei Fragen zugleich beantwortete. Wer hier steht, darf **diese**
- * Einheit schreiben, sonst nichts am Thema.
- *
- * Die eine Nebenwirkung steht daneben, bevor man sie auslöst: Hängt die Einheit
- * an einem kommenden Abend, kommt wer dazukommt auch in dessen Rolle „Thema".
- * Andersherum nicht — wer hier herausfällt, bleibt am Abend eingetragen.
- */
-function Crew({
-  session,
-  editing,
-}: {
-  session: TopicSession;
-  editing: boolean;
-}) {
-  const toast = useToast();
-  const confirm = useConfirm();
-  const setCrew = useSetSessionResponsibles(session.id);
-  const [waehlen, setWaehlen] = useState(false);
-
-  const leute = session.responsibles.map((row) => row.person);
-  const ids = leute.map((person) => person.id);
-  const darf = editing && session.mayEdit;
-
-  /**
-   * Bei einer einzelnen Einheit liegt der Platz dessen fest, der sie angelegt
-   * hat. Diese Liste ist dort alles, was man sieht — wer sich herausnahm,
-   * verschwand daraus und behielt trotzdem jedes Recht. Bei einem Thema geht es
-   * weiterhin: Da gibt man einen Abend ab und behält das Thema.
-   */
-  const festerPlatz = session.topic.standalone
-    ? session.topic.ownerPersonId
-    : null;
-
-  const kommenderAbend =
-    session.meeting && session.meeting.status !== 'CANCELLED' && !session.held
-      ? session.meeting
-      : null;
-
-  const dazu = (personId: string) =>
-    setCrew.mutate([...ids, personId], {
-      onSuccess: () => {
-        toast.success('Dazugenommen.');
-        setWaehlen(false);
-      },
-      onError: (error) => toast.error(errorMessage(error)),
-    });
-
-  const heraus = async (personId: string, name: string) => {
-    const ok = await confirm({
-      title: `${name} herausnehmen?`,
-      body: kommenderAbend
-        ? `${name} kann diese Einheit danach nicht mehr ändern. Für den Abend bleibt ${name} eingetragen — das trägst du am Termin aus.`
-        : `${name} kann diese Einheit danach nicht mehr ändern.`,
-      confirmLabel: 'Herausnehmen',
-      tone: 'danger',
-    });
-    if (!ok) return;
-
-    setCrew.mutate(
-      ids.filter((id) => id !== personId),
-      {
-        onSuccess: () => toast.success(`${name} herausgenommen.`),
-        onError: (error) => toast.error(errorMessage(error)),
-      },
-    );
-  };
-
-  // Außerhalb des Bearbeitungsmodus bleibt es, was es war: eine Zeile mit
-  // Gesichtern. Eine Sektion mit Karte drumherum für „von Jonas vorbereitet"
-  // wäre eine Überschrift über einem Halbsatz.
-  if (!darf) {
-    if (leute.length === 0) return null;
-
-    return (
-      <div className="flex items-center gap-2">
-        <AvatarStack people={leute} size="xs" />
-        <span className="text-[11px] text-stone-400">
-          {session.held ? 'gehalten von' : 'vorbereitet von'} {namesOf(leute)}
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <section>
-      <SectionTitle>Wer das vorbereitet</SectionTitle>
-      <Card className="space-y-2">
-        {kommenderAbend && (
-          <p className="rounded-lg border border-info-line bg-info-bg p-2.5 text-xs leading-relaxed text-info">
-            <Info size={13} className="mr-1.5 inline shrink-0 align-[-2px]" />
-            Wer hier dazukommt, wird für {formatDay(kommenderAbend.date)} auch
-            als zuständig eingetragen.
-          </p>
+      }
+    >
+      <div className="space-y-5">
+        {update.conflict && (
+          <ConflictBanner onResolve={update.resolveConflict} />
         )}
 
-        {leute.map((person) => (
-          <div key={person.id} className="flex items-center gap-2.5">
-            <Avatar person={person} size="sm" />
-            <span className="flex-1 text-sm font-medium text-stone-700">
-              {person.name}
-            </span>
-            {/* Der letzte Platz bleibt besetzt, und bei einer Hülle auch der
-                des Erstellers. Ein sichtbarer Knopf, der nur eine
-                Fehlermeldung auslöst, wäre eine Einladung in eine Sackgasse —
-                deshalb steht darunter, warum er fehlt. */}
-            {leute.length > 1 && person.id !== festerPlatz && (
-              <IconButton
-                label={`${person.name} herausnehmen`}
-                disabled={setCrew.isPending}
-                onClick={() => heraus(person.id, person.name)}
+        <div>
+          <FieldLabel>Titel</FieldLabel>
+          <TextInput
+            aria-label="Titel der Einheit"
+            value={title}
+            placeholder="Worum geht es an diesem Abend?"
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </div>
+
+        <div>
+          <FieldLabel>Zusammenfassung</FieldLabel>
+          <TextArea
+            aria-label="Zusammenfassung"
+            rows={4}
+            value={summary}
+            placeholder="Hilft allen, die nicht da waren."
+            onChange={(event) => setSummary(event.target.value)}
+          />
+        </div>
+
+        <div>
+          <FieldLabel>Actionstep</FieldLabel>
+          <TextArea
+            aria-label="Actionstep"
+            rows={2}
+            value={actionstep}
+            placeholder="Was nimmt die Gruppe mit in die Woche?"
+            onChange={(event) => setActionstep(event.target.value)}
+          />
+        </div>
+
+        <div>
+          <FieldLabel>Vorbereitet von</FieldLabel>
+          <p className="-mt-0.5 mb-2 text-[11px] leading-relaxed text-stone-400">
+            {allein
+              ? 'Wer hier steht, darf alles an dieser Einheit.'
+              : 'Wer hier steht, darf diese Einheit ändern — sonst nichts am Thema.'}
+          </p>
+
+          <PeopleListEditor
+            chosen={dabei}
+            candidates={dazu}
+            fixed={(person) =>
+              person.id === festerPlatz
+                ? 'hat sie angelegt — bleibt dabei'
+                : crew.length === 1
+                  ? 'eine Einheit braucht immer jemanden'
+                  : null
+            }
+            onAdd={hinzunehmen}
+            onRemove={herausnehmen}
+          />
+
+          {kommenderAbend && crew.some((id) => !before.includes(id)) && (
+            <p className="mt-2 rounded-lg border border-info-line bg-info-bg p-2.5 text-xs leading-relaxed text-info">
+              <Info size={13} className="mr-1.5 inline shrink-0 align-[-2px]" />
+              Wer dazukommt, wird für {formatDay(kommenderAbend.date)} auch als
+              zuständig eingetragen.
+            </p>
+          )}
+        </div>
+
+        {/* Zwei Abende, über denen nichts steht, sind kein Thema, sondern zwei
+            Abende — deshalb steht hier nicht „weitere Einheit", sondern der
+            Satz, der sagt, was dafür fehlt. */}
+        {allein && (
+          <div className="rounded-lg border border-dashed border-line-strong p-3">
+            <p className="text-sm font-bold text-stone-800">
+              Soll mehr daraus werden?
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-stone-500">
+              Für eine zweite Einheit braucht es ein Überthema — den Bogen, den
+              die Abende zusammen spannen. Alles, was hier steht, bleibt dabei
+              stehen.
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-3 w-full"
+              onClick={() => void benennen()}
+            >
+              <Layers size={15} />
+              Überthema hinzufügen
+            </Button>
+          </div>
+        )}
+
+        {(session.mayUnname || session.mayDelete) && (
+          <div className="space-y-1 border-t border-line pt-4">
+            {/* Der Weg zurück, und nur solange genau eine Einheit am Thema
+                hängt — das entscheidet der Server über `mayUnname`. Kein
+                `text-alert`: Hier wird nichts gelöscht. */}
+            {session.mayUnname && (
+              <Button
+                variant="ghost"
+                className="w-full"
+                loading={unname.isPending}
+                onClick={() => void aufloesen()}
               >
-                <UserMinus size={14} />
-              </IconButton>
+                <Unlink size={15} />
+                Überthema entfernen
+              </Button>
+            )}
+            {/* Wer und wann, entscheidet der Server (`mayDeleteSession`). */}
+            {session.mayDelete && (
+              <Button
+                variant="ghost"
+                className="w-full text-alert"
+                loading={remove.isPending}
+                onClick={() => void loeschen()}
+              >
+                <Trash2 size={15} />
+                Einheit löschen
+              </Button>
             )}
           </div>
-        ))}
-
-        {leute.length === 1 && (
-          <p className="text-[11px] leading-relaxed text-stone-400">
-            Eine Einheit braucht jemanden, der sie vorbereitet. Nimm erst jemand
-            anderen dazu.
-          </p>
         )}
-
-        {leute.length > 1 && festerPlatz !== null && (
-          <p className="text-[11px] leading-relaxed text-stone-400">
-            Wer die Einheit angelegt hat, bleibt dabei — es gibt hier kein Thema
-            darüber, an dem er sonst noch stünde.
-          </p>
-        )}
-
-        {/* Kann es noch geben, aus der Zeit vor dieser Regel. Der Satz stand
-            hier einmal als „dann darf jede:r etwas ändern" — von der
-            Themenseite kopiert, wo eine leere Liste tatsächlich verwaist heißt.
-            Hier heißt sie das nicht: Das Recht fällt auf das Thema zurück. */}
-        {leute.length === 0 && (
-          <p className="text-sm text-stone-400">
-            Niemand eingetragen — ändern darf, wer zum Thema gehört.
-          </p>
-        )}
-
-        <Button
-          variant="secondary"
-          size="sm"
-          className="w-full"
-          loading={setCrew.isPending}
-          onClick={() => setWaehlen(true)}
-        >
-          <UserPlus size={15} />
-          Jemanden dazunehmen
-        </Button>
-      </Card>
-
-      {waehlen && (
-        <PeoplePickerSheet
-          title="Wer bereitet mit vor?"
-          subtitle={
-            session.topic.standalone
-              ? 'Sie darf danach alles an dieser Einheit — ein Thema darüber, von dem sie ausgeschlossen wäre, gibt es nicht.'
-              : 'Sie darf danach diese Einheit ändern — sonst nichts am Thema.'
-          }
-          excludeIds={ids}
-          saving={setCrew.isPending}
-          onPick={dazu}
-          onClose={() => setWaehlen(false)}
-        />
-      )}
-    </section>
-  );
-}
-
-/**
- * Der Weg nach oben — und warum er bei einer alleinstehenden Einheit über das
- * Überthema führt.
- *
- * Zwei Abende, über denen nichts steht, sind kein Thema, sondern zwei Abende.
- * Deshalb steht hier nicht einfach ein gesperrter Knopf, sondern der Satz, der
- * sagt, was fehlt — und gleich daneben, wie man es bekommt.
- */
-function Weitergehen({
-  allein,
-  topicId,
-  onName,
-}: {
-  allein: boolean;
-  topicId: string;
-  onName: () => void;
-}) {
-  if (!allein) {
-    return (
-      <Link href={`/thema?id=${topicId}`} className="block">
-        <Button variant="secondary" className="w-full">
-          <Layers size={15} />
-          Weitere Einheit im Thema anlegen
-        </Button>
-      </Link>
-    );
-  }
-
-  return (
-    <Card className="space-y-3 border-dashed">
-      <div>
-        <p className="text-sm font-bold text-stone-800">
-          Soll mehr daraus werden?
-        </p>
-        <p className="mt-1 text-xs leading-relaxed text-stone-500">
-          Für eine zweite Einheit braucht es ein Überthema — den Bogen, den die
-          Abende zusammen spannen. Alles, was hier steht, bleibt dabei stehen.
-        </p>
       </div>
-      <Button variant="secondary" className="w-full" onClick={onName}>
-        <Plus size={15} />
-        Überthema hinzufügen
-      </Button>
-    </Card>
+    </Sheet>
   );
 }
 

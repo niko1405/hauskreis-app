@@ -31,6 +31,8 @@ function sideTables() {
     // unterwegs ist, steht als `awayToday` an der Person.
     absencePeriod: { deleteMany: jest.fn(), findMany: jest.fn() },
     meetingPrayerRequest: { deleteMany: jest.fn() },
+    note: { deleteMany: jest.fn() },
+    noteMember: { deleteMany: jest.fn() },
   };
 }
 

@@ -143,6 +143,9 @@ enum NotificationType {
   GIFT_IDEA_COMMENTED
   /// Wer das Geschenk besorgt, bittet die anderen um Vorschläge.
   BIRTHDAY_IDEAS_REQUESTED
+  /// Jemand hat dich zu einer Notiz dazugenommen — oder sie für die ganze
+  /// Gruppe geöffnet.
+  NOTE_SHARED
 
   @@map("notification_type")
 }
@@ -226,6 +229,7 @@ model Hauskreis {
   birthdayOccasions    BirthdayOccasion[]
   giftIdeas            GiftIdea[]
   ideas                GroupIdea[]
+  notes                Note[]
 
   @@map("hauskreis")
 }
@@ -358,6 +362,9 @@ model Person {
   songVotes               MeetingSongVote[]         @relation("MeetingSongVoter")
   groupIdeas              GroupIdea[]               @relation("GroupIdeaBy")
   groupIdeasDone          GroupIdea[]               @relation("GroupIdeaDoneBy")
+  notesCreated            Note[]                    @relation("NoteBy")
+  notesUpdated            Note[]                    @relation("NoteUpdatedBy")
+  noteMemberships         NoteMember[]
   giftPairingFor          BirthdayGiftPairing[]     @relation("GiftPairingFor")
   giftPairingBy           BirthdayGiftPairing[]     @relation("GiftPairingBy")
   birthdayGiftConfigEdits BirthdayGiftConfig[]      @relation("BirthdayGiftConfigEditor")
@@ -1561,4 +1568,66 @@ model GroupIdea {
   /// Offene zuerst, erledigte darunter — genau die eine Abfrage, die es gibt.
   @@index([hauskreisId, doneAt])
   @@map("group_idea")
+}
+
+/// Eine Notiz — ein Text, an dem mehrere schreiben, ohne dass er an einem
+/// Abend hängt.
+///
+/// Thema und Einheit gehören zu Abenden: Eine Einheit steht erst für alle da,
+/// wenn sie gehalten wurde, und ein Thema trägt Zuteilung und Vorschlagslogik.
+/// Eine Packliste für die Freizeit, Gedanken für den nächsten Bibelkurs, eine
+/// Liste mit Liedwünschen hat davon nichts.
+///
+/// **Lesen darf nur, wer dabei ist** — wer sie angelegt hat, wer in
+/// `note_member` steht, oder alle, wenn `forEveryone` gesetzt ist. Lesen heißt
+/// hier zugleich schreiben: Wen man dazunimmt, nimmt man zum Mitschreiben dazu.
+/// Kein Admin-Weg: Eine Notiz unter zweien ist nichts, was die Verwaltung
+/// angeht.
+model Note {
+  id          String  @id @default(uuid()) @db.Uuid
+  hauskreisId String  @map("hauskreis_id") @db.Uuid
+  title       String
+  /// Leichte Auszeichnung: Überschriften, Listen, **fett**, Links und
+  /// Checklisten (`- [ ]`). Gelesen wird sie im Frontend; der Server kennt nur
+  /// die Checklisten, weil er sie abhakt.
+  body        String  @default("")
+  /// Die ganze Gruppe, auch wer später dazukommt. Ein Schalter und keine
+  /// Liste aller, sonst müsste jemand jeden Neuen von Hand nachtragen.
+  forEveryone Boolean @default(false) @map("for_everyone")
+
+  /// `SetNull` wie bei `GroupIdea`: Konto löschen heißt anonymisieren.
+  createdByPersonId String?  @map("created_by_person_id") @db.Uuid
+  /// Wer zuletzt geschrieben oder abgehakt hat — „zuletzt geändert von".
+  updatedByPersonId String?  @map("updated_by_person_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  /// Optimistic locking counter, see docs/conditional requests.
+  version           Int      @default(0)
+
+  hauskreis Hauskreis    @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  createdBy Person?      @relation("NoteBy", fields: [createdByPersonId], references: [id], onDelete: SetNull)
+  updatedBy Person?      @relation("NoteUpdatedBy", fields: [updatedByPersonId], references: [id], onDelete: SetNull)
+  members   NoteMember[]
+
+  /// Die Liste: zuletzt Geändertes zuerst.
+  @@index([hauskreisId, updatedAt])
+  @@index([createdByPersonId])
+  @@map("note")
+}
+
+/// Wer an einer Notiz mitschreibt — außer dem, der sie angelegt hat.
+///
+/// Eine Zeile ist ein Recht und keine Zuschreibung, deshalb `Cascade` an
+/// beiden Enden.
+model NoteMember {
+  noteId   String   @map("note_id") @db.Uuid
+  personId String   @map("person_id") @db.Uuid
+  addedAt  DateTime @default(now()) @map("added_at")
+
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, personId])
+  @@index([personId])
+  @@map("note_member")
 }

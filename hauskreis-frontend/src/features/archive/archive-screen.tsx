@@ -37,8 +37,12 @@ import {
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { NewSongSheet } from '@/features/songs/new-song-sheet';
-import { LocationsCard } from './locations-card';
+import { LocationSheet } from '@/components/domain/location-sheet';
+import { ListTab } from './list-tab';
+import { LocationsCard, type PlaceScope } from './locations-card';
 import { MeetingsArchive } from './meetings-archive';
+import { NewNoteSheet } from '@/features/notes/new-note-sheet';
+import { NotesArchive } from '@/features/notes/notes-list';
 import { errorMessage } from '@/lib/api/errors';
 import {
   useArchiveSummary,
@@ -53,12 +57,12 @@ import { useOwnSongIds, useOwnSongs } from '@/lib/own-songs/use-own-songs';
 import type { SongListParams } from '@/lib/api/params';
 import type { SongListItem, TopicListItem } from '@/lib/api/types';
 
-type Tab = 'themen' | 'lieder' | 'orte' | 'termine';
+type Tab = 'themen' | 'lieder' | 'orte' | 'notizen' | 'termine';
 
 /** „Meine Lieder" (mit eigener Version) oder alle der Gruppe. */
 type SongScope = 'meine' | 'alle';
 
-const TABS: readonly Tab[] = ['themen', 'lieder', 'orte', 'termine'];
+const TABS: readonly Tab[] = ['themen', 'lieder', 'orte', 'notizen', 'termine'];
 
 /**
  * Wo man im Archiv steht, als Adresse.
@@ -70,10 +74,13 @@ const TABS: readonly Tab[] = ['themen', 'lieder', 'orte', 'termine'];
  * eine Ansicht und kein Ort, und wer viermal umschaltet, soll mit „zurück"
  * nicht viermal hier landen.
  */
-function addressOf(tab: Tab, scope: SongScope): string {
+function addressOf(tab: Tab, scope: SongScope, place: PlaceScope): string {
   if (tab === 'themen') return '/archiv';
   if (tab === 'lieder' && scope === 'meine') {
     return '/archiv?register=lieder&lieder=meine';
+  }
+  if (tab === 'orte' && place === 'treffpunkte') {
+    return '/archiv?register=orte&orte=treffpunkte';
   }
   return `/archiv?register=${tab}`;
 }
@@ -99,8 +106,13 @@ export function ArchiveScreen() {
   const [songScope, setSongScope] = useState<SongScope>(() =>
     params.get('lieder') === 'meine' ? 'meine' : 'alle',
   );
+  const [placeScope, setPlaceScope] = useState<PlaceScope>(() =>
+    params.get('orte') === 'treffpunkte' ? 'treffpunkte' : 'zuhause',
+  );
   /** Welches „+" gerade sein Sheet offen hat. */
-  const [creating, setCreating] = useState<'themen' | 'lieder' | null>(null);
+  const [creating, setCreating] = useState<
+    'themen' | 'notizen' | 'lieder' | 'orte' | null
+  >(null);
   const [search, setSearch] = useState('');
   const deferred = useDeferredValue(search).trim();
   const summary = useArchiveSummary();
@@ -359,12 +371,21 @@ export function ArchiveScreen() {
 
   const selectTab = (key: Tab) => {
     setTab(key);
-    window.history.replaceState(null, '', addressOf(key, songScope));
+    window.history.replaceState(
+      null,
+      '',
+      addressOf(key, songScope, placeScope),
+    );
   };
 
   const selectScope = (scope: SongScope) => {
     setSongScope(scope);
-    window.history.replaceState(null, '', addressOf(tab, scope));
+    window.history.replaceState(null, '', addressOf(tab, scope, placeScope));
+  };
+
+  const selectPlace = (place: PlaceScope) => {
+    setPlaceScope(place);
+    window.history.replaceState(null, '', addressOf(tab, songScope, place));
   };
 
   // „Termine" gab es einmal nicht, und der Grund war gut: nebeneinander
@@ -382,6 +403,8 @@ export function ArchiveScreen() {
     // Orte gehören hierher und nicht in die Verwaltung: sie sind Teil dessen,
     // was die Gruppe über sich gesammelt hat, und jede:r darf sie pflegen.
     { key: 'orte', label: 'Orte' },
+    // Die Zahl zählt nur, was man sehen darf — wie die Liste darunter.
+    { key: 'notizen', label: 'Notizen', count: summary.data?.totals.notes },
     // `totals.meetings` zählt ohne abgesagte — dasselbe, was die Liste in ihrer
     // Vorgabe zeigt. Eine Zahl, die größer ist als das, was darunter steht,
     // wirft genau die Frage auf, die sie beantworten soll.
@@ -425,7 +448,8 @@ export function ArchiveScreen() {
       <div
         className={cn(
           'space-y-1 px-5',
-          (tab === 'themen' || tab === 'lieder') && 'pb-20',
+          (tab === 'themen' || tab === 'notizen' || tab === 'lieder') &&
+            'pb-20',
         )}
       >
         {/* Feld und Register sind ein Block, der **immer** oben klebt — im
@@ -543,6 +567,7 @@ export function ArchiveScreen() {
         </div>
 
         {tab === 'themen' && <TopicArchive search={deferred} />}
+        {tab === 'notizen' && <NotesArchive search={deferred} />}
         {tab === 'lieder' && (
           <SongLibrary
             search={deferred}
@@ -550,7 +575,9 @@ export function ArchiveScreen() {
             onScope={selectScope}
           />
         )}
-        {tab === 'orte' && <LocationsCard />}
+        {tab === 'orte' && (
+          <LocationsCard scope={placeScope} onScope={selectPlace} />
+        )}
         {tab === 'termine' && <MeetingsArchive search={deferred} />}
       </div>
 
@@ -558,12 +585,20 @@ export function ArchiveScreen() {
           und scrollte mit ihr weg; wer weit unten war, musste zurück nach
           oben. Themen und Lieder haben es, weil man beides hier vorarbeitet —
           ein Thema entstand lange nur beim Wählen an einem Abend, ein Lied
-          nur über einen Vorschlag. */}
+          nur über einen Vorschlag. Notizen entstehen nur hier. Und
+          Treffpunkte, weil sie hier wohnen; Wohnungen entstehen im Profil. */}
       {tab === 'themen' && (
         <FloatingAction
           label="Thema oder Einheit anlegen"
           icon={<Plus size={24} />}
           onClick={() => setCreating('themen')}
+        />
+      )}
+      {tab === 'notizen' && (
+        <FloatingAction
+          label="Notiz anlegen"
+          icon={<Plus size={24} />}
+          onClick={() => setCreating('notizen')}
         />
       )}
       {tab === 'lieder' && (
@@ -573,8 +608,23 @@ export function ArchiveScreen() {
           onClick={() => setCreating('lieder')}
         />
       )}
+      {tab === 'orte' && placeScope === 'treffpunkte' && (
+        <FloatingAction
+          label="Treffpunkt anlegen"
+          icon={<Plus size={24} />}
+          onClick={() => setCreating('orte')}
+        />
+      )}
+      <LocationSheet
+        open={creating === 'orte'}
+        onClose={() => setCreating(null)}
+      />
       <NewEntrySheet
         open={creating === 'themen'}
+        onClose={() => setCreating(null)}
+      />
+      <NewNoteSheet
+        open={creating === 'notizen'}
         onClose={() => setCreating(null)}
       />
       <NewSongSheet
@@ -658,42 +708,6 @@ function TopicArchive({ search }: { search: string }) {
         </>
       )}
     </div>
-  );
-}
-
-/**
- * Ein unterstrichenes Register unter der Pillen-Leiste — „Eigene Themen" und
- * „Alle Themen", „Meine Lieder" und „Alle Lieder".
- */
-function ListTab({
-  active,
-  count,
-  onSelect,
-  children,
-}: {
-  active: boolean;
-  count: number | undefined;
-  onSelect: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onSelect}
-      className={cn(
-        'flex-1 border-b-2 pb-2.5 text-sm font-semibold transition-colors',
-        active
-          ? 'border-terracotta-500 text-terracotta-600'
-          : 'border-transparent text-stone-400 hover:text-stone-600',
-      )}
-    >
-      {children}
-      {count !== undefined && (
-        <span className="ml-1.5 text-xs opacity-60">({count})</span>
-      )}
-    </button>
   );
 }
 
@@ -971,6 +985,11 @@ function NewSessionStep({
  * Hülle gibt es keinen Themen-Titel — dort steht der Titel der Einheit, ihre
  * Zusammenfassung und ihr Abend. Ein „1 Einheit" darunter wäre keine Auskunft,
  * sondern eine Selbstverständlichkeit.
+ *
+ * **Aufgebaut wie die Kopfzeile der Themenseite**, nur knapp: Symbol in einer
+ * Kachel, daneben Titel, eine Zeile Zusammenfassung und darunter, wer daran
+ * arbeitet und wie viel es ist. Alles hängt an der Spalte neben der Kachel —
+ * eine Kante, kein Trennstrich, keine Pille.
  */
 function TopicEntry({ topic }: { topic: TopicListItem }) {
   // Bei einer Hülle ist die eine Einheit der ganze Eintrag. Sie kann fehlen,
@@ -1010,43 +1029,52 @@ function TopicEntry({ topic }: { topic: TopicListItem }) {
       }
       className={cn('block', PRESSABLE)}
     >
-      <Card className="transition-colors hover:border-line-strong">
-        <div className="flex items-start gap-2.5">
-          <span
-            className="mt-0.5 shrink-0 text-stone-300"
-            aria-label={topic.standalone ? 'Einzelne Einheit' : 'Thema'}
-          >
-            {topic.standalone ? <FileText size={15} /> : <Layers size={15} />}
-          </span>
+      <Card className="flex gap-3 p-3.5 transition-colors hover:border-line-strong">
+        <span
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-terracotta-50 text-terracotta-600"
+          aria-label={topic.standalone ? 'Einzelne Einheit' : 'Thema'}
+        >
+          {topic.standalone ? <FileText size={17} /> : <Layers size={17} />}
+        </span>
 
-          <h3 className="min-w-0 flex-1 font-serif text-base font-bold text-stone-900">
-            {titel}
-          </h3>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-2">
+            <h3 className="line-clamp-2 min-w-0 flex-1 font-serif text-base leading-snug font-bold text-stone-900">
+              {titel}
+            </h3>
+            {/* Nur für die eigenen: bei einem fremden Thema sagt „läuft"
+                nichts, was man tun könnte. */}
+            {topic.mine && !topic.standalone && topic.status === 'RUNNING' && (
+              <Badge
+                variant="terracotta"
+                className="px-2 py-0.5 text-[9px] tracking-wider uppercase"
+              >
+                Läuft
+              </Badge>
+            )}
+          </div>
 
-          {/* Nur für die eigenen: bei einem fremden Thema sagt „läuft" nichts,
-              was man tun könnte. */}
-          {topic.mine && !topic.standalone && topic.status === 'RUNNING' && (
-            <Badge variant="warn">läuft</Badge>
+          {text && (
+            <p className="mt-0.5 line-clamp-1 text-xs text-stone-500">{text}</p>
           )}
-        </div>
 
-        {text && (
-          <p className="mt-1.5 line-clamp-2 pl-[25px] text-xs leading-relaxed text-stone-500">
-            {text}
-          </p>
-        )}
-
-        <div className="mt-3 flex items-center justify-between gap-3 pl-[25px]">
-          <AvatarStack people={leute} size="xs" zoomable={false} />
-          <span className="text-[11px] text-stone-400">
-            {topic.standalone
-              ? einzelne?.meeting
-                ? formatDay(einzelne.meeting.date)
-                : 'noch keinem Termin zugeordnet'
-              : topic.sessions.length === 1
-                ? '1 Einheit'
-                : `${topic.sessions.length} Einheiten`}
-          </span>
+          <div className="mt-2.5 flex items-center justify-between gap-3">
+            <AvatarStack people={leute} size="xs" zoomable={false} />
+            <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-medium text-stone-400">
+              {topic.standalone
+                ? einzelne?.meeting
+                  ? formatDay(einzelne.meeting.date)
+                  : 'noch ohne Abend'
+                : topic.sessions.length === 1
+                  ? '1 Einheit'
+                  : `${topic.sessions.length} Einheiten`}
+              <ChevronRight
+                aria-hidden
+                size={13}
+                className="text-terracotta-500"
+              />
+            </span>
+          </div>
         </div>
       </Card>
     </Link>

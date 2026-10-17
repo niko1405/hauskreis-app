@@ -290,6 +290,17 @@ export class MembershipService {
         // selbst bleibt brauchbar.
         this.prisma.giftIdea.deleteMany({ where: { forPersonId: personId } }),
         this.prisma.giftIdeaVote.deleteMany({ where: { personId } }),
+        // Notizen, die nur sie sehen konnte — sie gehören danach niemandem,
+        // und lesen könnte sie auch niemand mehr. Geteilte bleiben stehen; um
+        // deren Kreis kümmern sich dann die anderen (Notausgang).
+        this.prisma.note.deleteMany({
+          where: {
+            createdByPersonId: personId,
+            forEveryone: false,
+            members: { none: {} },
+          },
+        }),
+        this.prisma.noteMember.deleteMany({ where: { personId } }),
       ]);
     }
 

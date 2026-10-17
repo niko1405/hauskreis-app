@@ -140,6 +140,15 @@ export type HostSuggestionFacts = HostSuggestion['facts'];
 export type HostHomeFacts = HostSuggestionFacts['home'];
 export type UpcomingCommitment = SuggestionFacts['upcomingCommitments'][number];
 
+// ── Notizen ─────────────────────────────────────────────────────────────────
+
+export type Note = S['NoteResponseDto'];
+export type NoteListItem = S['NotePageResponseDto']['items'][number];
+export type CreateNoteInput = S['CreateNoteDto'];
+export type UpdateNoteInput = S['UpdateNoteDto'];
+export type SetNotePeopleInput = S['SetNotePeopleDto'];
+export type CheckNoteInput = S['CheckNoteDto'];
+
 // ── Themen ──────────────────────────────────────────────────────────────────
 
 export type Topic = S['TopicResponseDto'];
@@ -180,6 +189,10 @@ export type TopicChoiceTopic = TopicChoices['topics'][number];
  * immer noch zu einem Thema fortsetzen.
  */
 export type SingleTopicSession = TopicChoices['singleSessions'][number];
+/** Eine eigene einzelne Einheit, die sich in ein Thema holen lässt. */
+export type AdoptableSession =
+  S['AdoptableSessionsResponseDto']['items'][number];
+export type AdoptSessionInput = S['AdoptSessionDto'];
 export type TopicResponsibles = S['TopicResponsiblesResponseDto'];
 
 // ── Lieder ──────────────────────────────────────────────────────────────────

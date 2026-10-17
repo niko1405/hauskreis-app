@@ -3,16 +3,23 @@
 /**
  * Die eigene Version im Vollbild — zum Spielen und Mitsingen.
  *
- * Unten eine Leiste, wo der Daumen ist: Text oder Akkorde, Transponieren,
- * Schriftgröße, Autoscroll. Läuft der Autoscroll, tritt sie nach ein paar
- * Sekunden zurück, damit das Blatt den ganzen Bildschirm hat; ein Tipp holt sie
- * wieder.
+ * **Oben die Akkorde, unten das Spielen.** Über dem Blatt steht eine Karte mit
+ * allen Akkorden des Lieds als Griffbild (`chord-panels.tsx`), dazu der
+ * Umschalter Text/Akkorde, das Transponieren und „Anpassen" (Gitarre oder
+ * Klavier). Das sind Fragen, die man einmal vor dem Lied beantwortet — sie
+ * scrollen mit weg. Unten bleibt nur, was man während des Spielens braucht:
+ * Schrift und Autoscroll mit seinem Tempo. Läuft der Autoscroll, tritt die
+ * Leiste nach ein paar Sekunden zurück; ein Tipp aufs Blatt holt sie wieder.
  *
- * **Was gemerkt wird, und wo.** Transposition und Tempo hängen am Lied — ein
- * Lied in einer anderen Tonart zu spielen ist eine Aussage über dieses Lied,
- * und ein langsames scrollt langsam. Sie stehen deshalb an der eigenen
- * Version im Gerät. Die Schriftgröße hängt am Bildschirm und gilt für alle
- * Lieder (`localStorage`).
+ * **Ein Tipp auf einen Akkord** — oben oder im Text — zeigt ihn groß, mit allen
+ * Varianten zum Durchblättern. Die gewählte gilt für jede Stelle mit genau
+ * diesem Akkord.
+ *
+ * **Was gemerkt wird, und wo.** Transposition, Tempo und die gewählten Griffe
+ * hängen am Lied — ein Lied in einer anderen Tonart zu spielen ist eine
+ * Aussage über dieses Lied, und ein langsames scrollt langsam. Sie stehen
+ * deshalb an der eigenen Version im Gerät. Schriftgröße und Instrument hängen
+ * an dem, der spielt, und gelten für alle Lieder (`localStorage`).
  *
  * **Das Display bleibt an** (`navigator.wakeLock`), solange das Vollbild offen
  * ist. Mitten im Lied geht sonst nach dreißig Sekunden das Licht aus. Wo es die
@@ -21,17 +28,35 @@
  *
  * Wie der Editor eine Ebene im Baum und kein Portal, aus demselben Grund.
  */
-import { Minus, Pause, Play, Plus, RotateCcw, X } from 'lucide-react';
+import {
+  Minus,
+  Pause,
+  Play,
+  Plus,
+  RotateCcw,
+  SlidersHorizontal,
+  X,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { IconButton, PRESSABLE } from '@/components/ui/button';
+import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { lockOverlay } from '@/components/ui/overlay-lock';
 import { Segmented } from '@/components/ui/segmented';
 import {
   ChordSheetView,
   type SheetMode,
 } from '@/components/domain/chord-sheet-view';
-import { hasChords, transposer, type Sheet } from '@/lib/chords';
+import type { Instrument } from '@/components/domain/chord-diagram';
+import { chordsOf, hasChords, transposer, type Sheet } from '@/lib/chords';
 import { cn } from '@/lib/cn';
+import {
+  AdjustPanelContent,
+  ChordDetail,
+  ChordStrip,
+  Panel,
+  readInstrument,
+  voicingKey,
+  writeInstrument,
+} from './chord-panels';
 
 const SCALE_KEY = 'hauskreis-lied-schrift';
 const SCALE_MIN = 0.8;
@@ -67,12 +92,21 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+export interface FullscreenSettings {
+  transpose: number;
+  scrollSpeed: number;
+  voicings: Record<string, number>;
+}
+
+type OpenPanel = { kind: 'chord'; chord: string } | { kind: 'adjust' } | null;
+
 export function SheetFullscreen({
   title,
   artist,
   sheet,
   transpose: initialTranspose,
   scrollSpeed: initialSpeed,
+  voicings: initialVoicings,
   onSettings,
   onClose,
 }: {
@@ -81,8 +115,10 @@ export function SheetFullscreen({
   sheet: Sheet;
   transpose: number;
   scrollSpeed: number;
-  /** Tonart und Tempo haben sich geändert — für die eigene Version merken. */
-  onSettings: (settings: { transpose: number; scrollSpeed: number }) => void;
+  /** Die gewählten Griffe, je `instrument:Akkord` (`voicingKey`). */
+  voicings: Record<string, number>;
+  /** Tonart, Tempo oder Griffe haben sich geändert — für die eigene Version merken. */
+  onSettings: (settings: FullscreenSettings) => void;
   onClose: () => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
@@ -95,15 +131,36 @@ export function SheetFullscreen({
   const [scale, setScale] = useState(SCALE_DEFAULT);
   const [playing, setPlaying] = useState(false);
   const [toolbar, setToolbar] = useState(true);
+  const [scaleOpen, setScaleOpen] = useState(false);
+  const [instrument, setInstrument] = useState<Instrument>('guitar');
+  const [choices, setChoices] = useState(initialVoicings);
+  const [panel, setPanel] = useState<OpenPanel>(null);
 
   const shift = useMemo(() => transposer(sheet, transpose), [sheet, transpose]);
   const original = useMemo(() => transposer(sheet, 0).key, [sheet]);
 
-  // Die Schriftgröße erst im Browser lesen — beim ersten Rendern gibt es noch
-  // keinen Speicher, aus dem sie käme.
+  /** Die Akkorde, wie sie dastehen — jeder einmal, in der Reihenfolge des Lieds. */
+  const shown = useMemo(
+    () => [...new Set(chordsOf(sheet).map((symbol) => shift.chord(symbol)))],
+    [sheet, shift],
+  );
+
+  // Schriftgröße und Instrument erst im Browser lesen — beim ersten Rendern
+  // gibt es noch keinen Speicher, aus dem sie kämen.
   useEffect(() => {
     setScale(readScale());
+    setInstrument(readInstrument());
   }, []);
+
+  // Escape nimmt zuerst zurück, was gerade offen ist, dann das Vollbild.
+  const onEscape = useRef(() => {});
+  useEffect(() => {
+    onEscape.current = () => {
+      if (panel) setPanel(null);
+      else if (scaleOpen) setScaleOpen(false);
+      else onClose();
+    };
+  });
 
   // Überlagerung, Escape, echtes Vollbild und Wachhalten — alles für die
   // Dauer, die das hier offen ist.
@@ -115,7 +172,7 @@ export function SheetFullscreen({
   useEffect(() => {
     const release = lockOverlay();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') latestClose.current();
+      if (event.key === 'Escape') onEscape.current();
     };
     document.addEventListener('keydown', onKeyDown);
 
@@ -174,7 +231,8 @@ export function SheetFullscreen({
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
 
-  // Tonart und Tempo merken — nicht beim ersten Rendern, da ist nichts neu.
+  // Tonart, Tempo und Griffe merken — nicht beim ersten Rendern, da ist nichts
+  // neu.
   const latestSettings = useRef(onSettings);
   useEffect(() => {
     latestSettings.current = onSettings;
@@ -185,8 +243,12 @@ export function SheetFullscreen({
       settled.current = true;
       return;
     }
-    latestSettings.current({ transpose, scrollSpeed: speed });
-  }, [transpose, speed]);
+    latestSettings.current({
+      transpose,
+      scrollSpeed: speed,
+      voicings: choices,
+    });
+  }, [transpose, speed, choices]);
 
   // Der Autoscroll: Bild für Bild, mit Bruchteilen von Pixeln aufgespart,
   // damit auch die langsamste Stufe gleichmäßig läuft. Ein Finger auf dem
@@ -247,7 +309,10 @@ export function SheetFullscreen({
   // Läuft er, tritt die Leiste nach einer Weile zurück. Steht er, bleibt sie.
   useEffect(() => {
     if (!playing || !toolbar) return;
-    const timer = window.setTimeout(() => setToolbar(false), 2500);
+    const timer = window.setTimeout(() => {
+      setToolbar(false);
+      setScaleOpen(false);
+    }, 2500);
     return () => window.clearTimeout(timer);
   }, [playing, toolbar]);
 
@@ -273,6 +338,23 @@ export function SheetFullscreen({
     setPlaying((current) => !current);
   };
 
+  const chooseInstrument = (next: Instrument) => {
+    setInstrument(next);
+    writeInstrument(next);
+  };
+
+  const prefix = `${instrument}:`;
+  const chosen = Object.entries(choices).filter(
+    ([key, index]) => key.startsWith(prefix) && index !== 0,
+  ).length;
+
+  const resetChoices = () =>
+    setChoices((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([key]) => !key.startsWith(prefix)),
+      ),
+    );
+
   const keyLabel =
     transpose === 0 || !original
       ? (original ?? 'Tonart')
@@ -296,7 +378,7 @@ export function SheetFullscreen({
         className="flex-1 overflow-y-auto overscroll-contain"
       >
         <div className="mx-auto w-full max-w-3xl px-5 pt-safe-4 pb-[45vh]">
-          <header className="mb-6 pr-12">
+          <header className="mb-5 pr-12">
             <h1 className="font-serif text-2xl leading-tight font-bold text-stone-900">
               {title}
             </h1>
@@ -304,11 +386,88 @@ export function SheetFullscreen({
               <p className="mt-0.5 text-sm text-stone-400">{artist}</p>
             )}
           </header>
+
+          {chords && (
+            // Die Karte ist kein Blatt: Ein Tipp darauf schaltet die Leiste
+            // nicht um.
+            // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+            <section
+              onClick={(event) => event.stopPropagation()}
+              className="mb-6 rounded-card border border-line bg-card p-4"
+            >
+              <div className="flex items-center gap-2">
+                <p className="mr-auto text-[11px] font-bold tracking-widest text-stone-400 uppercase">
+                  Akkorde
+                </p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setPanel({ kind: 'adjust' })}
+                >
+                  <SlidersHorizontal size={13} />
+                  Anpassen
+                </Button>
+              </div>
+
+              {mode === 'chords' && (
+                <div className="mt-2">
+                  <ChordStrip
+                    chords={shown}
+                    instrument={instrument}
+                    notation={sheet.notation}
+                    choices={choices}
+                    onOpen={(chord) => setPanel({ kind: 'chord', chord })}
+                  />
+                </div>
+              )}
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Segmented
+                  size="sm"
+                  label="Ansicht"
+                  value={mode}
+                  onChange={setMode}
+                  options={[
+                    { value: 'text', label: 'Text' },
+                    { value: 'chords', label: 'Akkorde' },
+                  ]}
+                />
+                {mode === 'chords' && (
+                  <Stepper
+                    label="Transponieren"
+                    onDown={() => setTranspose((value) => (value - 1) % 12)}
+                    onUp={() => setTranspose((value) => (value + 1) % 12)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setTranspose(0)}
+                      disabled={transpose === 0}
+                      title={
+                        transpose === 0
+                          ? undefined
+                          : 'Zurück zur Originaltonart'
+                      }
+                      className="flex min-w-16 items-center justify-center gap-1 px-1 text-sm font-bold text-terracotta-600 disabled:text-stone-700"
+                    >
+                      {keyLabel}
+                      {transpose !== 0 && <RotateCcw size={12} />}
+                    </button>
+                  </Stepper>
+                )}
+              </div>
+            </section>
+          )}
+
           <ChordSheetView
             sheet={sheet}
             chord={shift.chord}
             mode={mode}
             scale={scale}
+            onChord={
+              chords && mode === 'chords'
+                ? (chord) => setPanel({ kind: 'chord', chord })
+                : undefined
+            }
           />
         </div>
       </div>
@@ -324,6 +483,7 @@ export function SheetFullscreen({
         <X size={18} />
       </IconButton>
 
+      {/* Unten nur, was man beim Spielen braucht: Schrift und Autoscroll. */}
       <div
         inert={!toolbar}
         className={cn(
@@ -331,92 +491,116 @@ export function SheetFullscreen({
           !toolbar && 'translate-y-full opacity-0',
         )}
       >
-        <div className="mx-auto w-full max-w-3xl space-y-3 px-5 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {chords && (
-              <Segmented
-                value={mode}
-                onChange={setMode}
-                options={[
-                  { value: 'text', label: 'Text' },
-                  { value: 'chords', label: 'Akkorde' },
-                ]}
-              />
-            )}
-
-            {chords && mode === 'chords' && (
+        <div className="mx-auto w-full max-w-3xl px-5 pt-2 pb-3">
+          {scaleOpen && (
+            <div className="mb-2 flex justify-center">
               <Stepper
-                label="Transponieren"
-                onDown={() => setTranspose((value) => (value - 1) % 12)}
-                onUp={() => setTranspose((value) => (value + 1) % 12)}
+                label="Schrift"
+                onDown={() => changeScale(-0.1)}
+                onUp={() => changeScale(0.1)}
+                downLabel="Schrift kleiner"
+                upLabel="Schrift größer"
               >
-                <button
-                  type="button"
-                  onClick={() => setTranspose(0)}
-                  disabled={transpose === 0}
-                  title={
-                    transpose === 0 ? undefined : 'Zurück zur Originaltonart'
-                  }
-                  className="flex min-w-16 items-center justify-center gap-1 px-1 text-sm font-bold text-terracotta-600 disabled:text-stone-700"
-                >
-                  {keyLabel}
-                  {transpose !== 0 && <RotateCcw size={12} />}
-                </button>
-              </Stepper>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Stepper
-              label="Schrift"
-              onDown={() => changeScale(-0.1)}
-              onUp={() => changeScale(0.1)}
-              downLabel="Schrift kleiner"
-              upLabel="Schrift größer"
-            >
-              <span className="min-w-10 text-center text-sm font-bold text-stone-700">
-                Aa
-              </span>
-            </Stepper>
-
-            <div className="flex items-center gap-2">
-              <Stepper
-                label="Tempo"
-                onDown={() =>
-                  setSpeed((value) => clamp(value - 1, SPEED_MIN, SPEED_MAX))
-                }
-                onUp={() =>
-                  setSpeed((value) => clamp(value + 1, SPEED_MIN, SPEED_MAX))
-                }
-                downLabel="Langsamer scrollen"
-                upLabel="Schneller scrollen"
-              >
-                <span className="min-w-8 text-center text-sm font-bold text-stone-700 tabular-nums">
-                  {speed}
+                <span className="min-w-12 text-center text-sm font-bold text-stone-700 tabular-nums">
+                  {Math.round(scale * 100)} %
                 </span>
               </Stepper>
-              <button
-                type="button"
-                onClick={togglePlay}
-                aria-pressed={playing}
-                aria-label={
-                  playing ? 'Autoscroll anhalten' : 'Autoscroll starten'
-                }
-                className={cn(
-                  'flex size-11 items-center justify-center rounded-full bg-terracotta-500 text-white shadow-sm hover:bg-terracotta-700',
-                  PRESSABLE,
-                )}
-              >
-                {playing ? (
-                  <Pause size={18} />
-                ) : (
-                  <Play size={18} className="ml-0.5" />
-                )}
-              </button>
             </div>
+          )}
+
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+            <button
+              type="button"
+              aria-pressed={scaleOpen}
+              aria-label="Schriftgröße"
+              onClick={() => setScaleOpen((current) => !current)}
+              className={cn(
+                'flex size-11 items-center justify-center justify-self-start rounded-full border font-serif text-base font-bold transition-colors',
+                PRESSABLE,
+                scaleOpen
+                  ? 'border-terracotta-500 bg-terracotta-500/10 text-terracotta-600'
+                  : 'border-line bg-card text-stone-700',
+              )}
+            >
+              Aa
+            </button>
+
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-2">
+                <IconButton
+                  label="Langsamer scrollen"
+                  onClick={() =>
+                    setSpeed((value) => clamp(value - 1, SPEED_MIN, SPEED_MAX))
+                  }
+                  className="border border-line bg-card"
+                >
+                  <Minus size={16} />
+                </IconButton>
+                <button
+                  type="button"
+                  onClick={togglePlay}
+                  aria-pressed={playing}
+                  aria-label={
+                    playing ? 'Autoscroll anhalten' : 'Autoscroll starten'
+                  }
+                  className={cn(
+                    'flex size-14 items-center justify-center rounded-full bg-terracotta-500 text-white shadow-sm hover:bg-terracotta-700',
+                    PRESSABLE,
+                  )}
+                >
+                  {playing ? (
+                    <Pause size={22} />
+                  ) : (
+                    <Play size={22} className="ml-0.5" />
+                  )}
+                </button>
+                <IconButton
+                  label="Schneller scrollen"
+                  onClick={() =>
+                    setSpeed((value) => clamp(value + 1, SPEED_MIN, SPEED_MAX))
+                  }
+                  className="border border-line bg-card"
+                >
+                  <Plus size={16} />
+                </IconButton>
+              </div>
+              <span className="mt-1 text-[11px] font-semibold text-stone-400 tabular-nums">
+                Scrollen · Tempo {speed}
+              </span>
+            </div>
+
+            <span />
           </div>
         </div>
       </div>
+
+      {panel?.kind === 'chord' && (
+        <Panel title="Akkord" onClose={() => setPanel(null)}>
+          <ChordDetail
+            chord={panel.chord}
+            instrument={instrument}
+            notation={sheet.notation}
+            index={choices[voicingKey(instrument, panel.chord)] ?? 0}
+            onIndex={(index) =>
+              setChoices((current) => ({
+                ...current,
+                [voicingKey(instrument, panel.chord)]: index,
+              }))
+            }
+          />
+        </Panel>
+      )}
+
+      {panel?.kind === 'adjust' && (
+        <Panel title="Anpassen" onClose={() => setPanel(null)}>
+          <AdjustPanelContent
+            instrument={instrument}
+            onInstrument={chooseInstrument}
+            chosen={chosen}
+            onReset={resetChoices}
+          />
+        </Panel>
+      )}
     </div>
   );
 }

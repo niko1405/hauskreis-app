@@ -463,6 +463,17 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     defaultEnabled: true,
   },
   {
+    type: NotificationType.NOTE_SHARED,
+    category: 'Gruppe & App',
+    label: 'Notizen, bei denen du mitschreibst',
+    // Nur das Hereinkommen, nicht jede Änderung: Wer bei jedem Satz in einer
+    // Packliste eine Nachricht bekäme, hätte einen zweiten Chat.
+    description:
+      'Wenn dich jemand zu einer Notiz dazunimmt oder sie für die ganze Gruppe öffnet.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
     type: NotificationType.ADMIN_GRANTED,
     category: 'Gruppe & App',
     label: 'Du wirst Admin',

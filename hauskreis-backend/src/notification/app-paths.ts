@@ -29,6 +29,8 @@ export const appPath = {
    * Entscheidung aus diesem — sie sähen für ihn gleich aus.
    */
   birthday: (occasionId: string) => `/geburtstag?id=${occasionId}`,
+  /** Eine Notiz — wer dazugenommen wird, landet gleich darin. */
+  note: (noteId: string) => `/notiz?id=${noteId}`,
   home: () => '/',
   /**
    * „Neu in Acts2".

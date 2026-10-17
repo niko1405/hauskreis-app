@@ -25,6 +25,8 @@ export const FAQ_CATEGORIES = [
   { id: 'suggestions', label: 'Vorschläge' },
   { id: 'meetings', label: 'Termine' },
   { id: 'topics', label: 'Themen' },
+  // `notes` ist schon die Nachbereitung.
+  { id: 'notizen', label: 'Notizen' },
   { id: 'songs', label: 'Musik & Lieder' },
   { id: 'locations', label: 'Orte & Hosten' },
   { id: 'prayer', label: 'Gebetsbuddys' },
@@ -346,7 +348,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Kann ich ein Thema vorbereiten, ohne dass ein Abend feststeht?',
     answer:
-      'Ja, und das ist ausdrücklich vorgesehen. Im Archiv unter „Themen" legst du eines an, wann immer du Lust hast — du musst nicht auf einen Dienstag warten, an dem du zufällig dran bist.\n\nEine Einheit ohne Abend wartet unter **„Angefangenes"**. Sobald du (oder jemand anders, dem du sie überlässt) an einem Abend zugeteilt bist, kannst du sie dort aufnehmen.\n\n**Zu zweit geht das auch.** Auf der Seite der Einheit steht im Bearbeitungsmodus „Wer das vorbereitet" — wen du dort dazunimmst, darf sie mit dir schreiben und findet sie unter „Angefangenes" wieder. Hängt sie schon an einem kommenden Abend, wird die Person dort gleich als zuständig eingetragen.\n\nSolange sie an keinem Abend hängt, sehen sie nur die Leute, die daran arbeiten. Ein Entwurf ist nichts, was die ganze Gruppe schon lesen muss.',
+      'Ja, und das ist ausdrücklich vorgesehen. Im Archiv unter „Themen" legst du eines an, wann immer du Lust hast — du musst nicht auf einen Dienstag warten, an dem du zufällig dran bist.\n\nEine Einheit ohne Abend wartet unter **„Angefangenes"**. Sobald du (oder jemand anders, dem du sie überlässt) an einem Abend zugeteilt bist, kannst du sie dort aufnehmen.\n\n**Zu zweit geht das auch.** Auf der Seite der Einheit unten auf **„Bearbeiten"**, dort steht „Vorbereitet von" — wen du dort über **„Person hinzufügen"** dazunimmst, darf sie mit dir schreiben und findet sie unter „Angefangenes" wieder. Hängt sie schon an einem kommenden Abend, wird die Person dort gleich als zuständig eingetragen.\n\nSolange sie an keinem Abend hängt, sehen sie nur die Leute, die daran arbeiten. Ein Entwurf ist nichts, was die ganze Gruppe schon lesen muss.',
     keywords: [
       'angefangenes',
       'entwurf',
@@ -370,11 +372,26 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     ],
   },
   {
+    id: 'topics-einheit-holen',
+    category: 'topics',
+    question: 'Eine einzelne Einheit nachträglich in ein Thema holen?',
+    answer:
+      'Ja. Auf der Seite des Themas unten auf **„Bearbeiten"**, dann **„Einheit hinzufügen"**. Oben steht „Neue Einheit vorbereiten", darunter deine einzelnen Einheiten — ein Tipp holt sie ins Thema.\n\nGezeigt werden nur **deine eigenen**, also die, die du selbst angelegt hast — gehalten oder nicht. Eine fremde Einheit in dein Thema zu ziehen, entscheidest nicht du.\n\nDie Einheit steht danach im Thema und nicht mehr für sich im Archiv. Ihr Abend, was darin steht und wer sie vorbereitet, bleibt. Wer sie vorbereitet hat, wird dadurch nicht Mitwirkende:r am ganzen Thema.\n\nHat das Thema noch gar keine Einheit, steht „Einheit hinzufügen" auch ohne „Bearbeiten" da.',
+    keywords: [
+      'holen',
+      'aufnehmen',
+      'einzelne einheit',
+      'zum thema',
+      'hinzufügen',
+      'verschieben',
+    ],
+  },
+  {
     id: 'topics-ueberthema',
     category: 'topics',
     question: 'Aus einer einzelnen Einheit doch ein Thema machen — und zurück?',
     answer:
-      'Beides geht — das erste ist genau der Fall, den man vorher nicht kommen sieht: Du hältst einen Abend und merkst danach, dass da mehr drinsteckt.\n\nAuf der Seite der Einheit steht dafür **„Überthema hinzufügen"**. Du gibst den Titel ein, den die Abende zusammen tragen; alles, was in der Einheit steht, bleibt genau so stehen, samt Termin und Beteiligten.\n\nAm Abend selbst geht es in einem Schritt: unter „Thema wählen" → **„Einheit fortsetzen"**. Dort stehen auch die schon gehaltenen. Du gibst den Titel des Überthemas **und** den dieses Abends an — beide Pflicht —, dazu gleich Zusammenfassung und Actionstep der neuen Einheit. Die alte bleibt an ihrem Abend, und dieser wird die zweite.\n\n**Der Weg zurück** steht auf derselben Seite: „Überthema entfernen", solange es bei der einen Einheit geblieben ist. Sie steht danach wieder für sich, **am selben Abend wie vorher** — nur Titel und Zusammenfassung des Themas fallen weg. Entfernen darf, wer das Thema angelegt hat.\n\nSobald eine zweite Einheit dazugekommen ist, ist der Knopf weg: Was dann aufgelöst werden soll, wäre nicht mehr eindeutig. Und deshalb braucht eine zweite Einheit auch immer erst ein Überthema — zwei Abende, über denen nichts steht, sind kein Thema, sondern zwei Abende.',
+      'Beides geht — das erste ist genau der Fall, den man vorher nicht kommen sieht: Du hältst einen Abend und merkst danach, dass da mehr drinsteckt.\n\nAuf der Seite der Einheit unten auf **„Bearbeiten"**, dort steht **„Überthema hinzufügen"**. Du gibst den Titel ein, den die Abende zusammen tragen; alles, was in der Einheit steht, bleibt genau so stehen, samt Termin und Beteiligten.\n\nAm Abend selbst geht es in einem Schritt: unter „Thema wählen" → **„Einheit fortsetzen"**. Dort stehen auch die schon gehaltenen. Du gibst den Titel des Überthemas **und** den dieses Abends an — beide Pflicht —, dazu gleich Zusammenfassung und Actionstep der neuen Einheit. Die alte bleibt an ihrem Abend, und dieser wird die zweite.\n\n**Der Weg zurück** steht auf derselben Seite unten unter „Bearbeiten": „Überthema entfernen", solange es bei der einen Einheit geblieben ist. Sie steht danach wieder für sich, **am selben Abend wie vorher** — nur Titel und Zusammenfassung des Themas fallen weg. Entfernen darf, wer das Thema angelegt hat.\n\nSobald eine zweite Einheit dazugekommen ist, ist der Knopf weg: Was dann aufgelöst werden soll, wäre nicht mehr eindeutig. Und deshalb braucht eine zweite Einheit auch immer erst ein Überthema — zwei Abende, über denen nichts steht, sind kein Thema, sondern zwei Abende.',
     keywords: [
       'überthema',
       'fortsetzen',
@@ -413,7 +430,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Wer darf an einem Thema schreiben, wer darf es löschen?',
     answer:
-      'Drei Ebenen, und sie sind verschieden weit.\n\n**Wem das Thema gehört**, darf alles: jede Einheit ändern, neue anlegen, Leute verwalten, löschen. Es gehört dem, der zuerst wählt — nicht dem, der zuerst zugeteilt wurde. Oder dem, der es im Archiv anlegt.\n\n**Mitwirkende am Thema** dürfen ebenfalls jede Einheit ändern und neue anlegen. Dort steht man nicht von selbst: Der Owner trägt einen auf der Themenseite unter „Wer daran arbeitet" ein. Vorher passierte das automatisch, sobald jemand eine Einheit hielt — und gab damit jemandem, der einmal aushalf, Hoheit über ein Thema, das über Monate läuft.\n\n**Wer eine Einheit vorbereitet**, darf genau **sie** ändern. Das steht auf der Seite der Einheit unter „Wer das vorbereitet".\n\nDie **Zuteilung am Abend** gibt keines von alledem. Sie sagt, wer an dem Abend dafür einsteht. Lesen darf man deshalb, was man vorträgt — ändern nicht.\n\n**Löschen** darf nur, wem das Thema gehört (und ein Admin). Eine einzelne Einheit löscht, wer am Thema mitarbeitet — aber nur, solange ihr Abend noch bevorsteht. Danach ist sie Protokoll; sie geht dann nur mit dem ganzen Thema, und bei einer Einheit, die für sich steht, ist das dieselbe Tat.\n\nWer ein Thema angelegt hat, **behält sein Schreibrecht auch dann**, wenn er einen einzelnen Abend abgibt. Das eine hängt am Thema, das andere an der Einheit.',
+      'Drei Ebenen, und sie sind verschieden weit.\n\n**Wem das Thema gehört**, darf alles: jede Einheit ändern, neue anlegen, Leute verwalten, löschen. Es gehört dem, der zuerst wählt — nicht dem, der zuerst zugeteilt wurde. Oder dem, der es im Archiv anlegt.\n\n**Mitwirkende am Thema** dürfen ebenfalls jede Einheit ändern und neue anlegen. Dort steht man nicht von selbst: Der Owner trägt einen auf der Themenseite unter „Wer daran arbeitet" ein. Vorher passierte das automatisch, sobald jemand eine Einheit hielt — und gab damit jemandem, der einmal aushalf, Hoheit über ein Thema, das über Monate läuft.\n\n**Wer eine Einheit vorbereitet**, darf genau **sie** ändern. Das steht auf der Seite der Einheit unter „Bearbeiten" → „Vorbereitet von".\n\nDie **Zuteilung am Abend** gibt keines von alledem. Sie sagt, wer an dem Abend dafür einsteht. Lesen darf man deshalb, was man vorträgt — ändern nicht.\n\n**Löschen** darf nur, wem das Thema gehört (und ein Admin). Eine einzelne Einheit löscht, wer am Thema mitarbeitet — aber nur, solange ihr Abend noch bevorsteht. Danach ist sie Protokoll; sie geht dann nur mit dem ganzen Thema, und bei einer Einheit, die für sich steht, ist das dieselbe Tat.\n\nWer ein Thema angelegt hat, **behält sein Schreibrecht auch dann**, wenn er einen einzelnen Abend abgibt. Das eine hängt am Thema, das andere an der Einheit.',
     keywords: [
       'owner',
       'besitzer',
@@ -429,7 +446,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Wer darf meine einzelne Einheit ändern?',
     answer:
-      'Alle, die sie mit vorbereiten — und zwar gleichberechtigt. Bei einer einzelnen Einheit gibt es die mittlere Ebene nicht: Es steht kein Thema darüber, von dem jemand ausgeschlossen sein könnte. Wer unter „Wer das vorbereitet" steht, darf sie ändern, ihr ein Überthema geben und eine zweite Einheit anlegen.\n\n**Nur Löschen bleibt bei dem, der sie angefangen hat.** Und der bleibt auch in der Liste stehen: Sein Platz lässt sich nicht räumen, die anderen schon. Vorher ging das — man verschwand dann aus der einzigen Liste, die es dort gibt, und durfte trotzdem weiter alles ändern. Zwei Auskünfte über dieselbe Person, von denen die sichtbare falsch war.\n\nIm Archiv siehst du deshalb auch alle auf der Karte, nicht nur einen.\n\nBei einem **Thema über mehrere Abende** ist es anders herum: Dort darfst du als Mitvorbereitende:r genau diesen einen Abend ändern, und wer am ganzen Thema mitarbeiten soll, wird ausdrücklich eingetragen. Wer einmal aushilft, bekommt keine Hoheit über etwas, das über Monate läuft.',
+      'Alle, die sie mit vorbereiten — und zwar gleichberechtigt. Bei einer einzelnen Einheit gibt es die mittlere Ebene nicht: Es steht kein Thema darüber, von dem jemand ausgeschlossen sein könnte. Wer unter „Vorbereitet von" steht, darf sie ändern, ihr ein Überthema geben und eine zweite Einheit anlegen.\n\n**Nur Löschen bleibt bei dem, der sie angefangen hat.** Und der bleibt auch in der Liste stehen: Sein Platz lässt sich nicht räumen, die anderen schon. Vorher ging das — man verschwand dann aus der einzigen Liste, die es dort gibt, und durfte trotzdem weiter alles ändern. Zwei Auskünfte über dieselbe Person, von denen die sichtbare falsch war.\n\nIm Archiv siehst du deshalb auch alle auf der Karte, nicht nur einen.\n\nBei einem **Thema über mehrere Abende** ist es anders herum: Dort darfst du als Mitvorbereitende:r genau diesen einen Abend ändern, und wer am ganzen Thema mitarbeiten soll, wird ausdrücklich eingetragen. Wer einmal aushilft, bekommt keine Hoheit über etwas, das über Monate läuft.',
     keywords: [
       'einzelne einheit',
       'alleinstehend',
@@ -596,7 +613,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'songs',
     question: 'Was kann das Vollbild — Transponieren, Autoscroll?',
     answer:
-      'Auf der Seite des Lieds steht deine Version als Text; „Akkorde" oben an der Karte blendet sie ein. **„Vollbild"** öffnet sie zum Spielen. Unten eine Leiste:\n\n- **Text | Akkorde** — zum Mitsingen ohne Akkorde.\n- **Transponieren** — mit − und + in Halbtönen; die Mitte zeigt „A → B", ein Tipp darauf geht zurück zur Originaltonart.\n- **Aa** — die Schrift größer oder kleiner.\n- **Autoscroll** — ▶ startet, − und + ändern das Tempo. Ein Finger auf dem Blatt hält es an, solange er liegt.\n\nWährend es scrollt, tritt die Leiste zurück; ein Tipp holt sie wieder. Das Display bleibt an. Tonart und Tempo merkt sich die App für dieses Lied, die Schriftgröße für alle.',
+      'Auf der Seite des Lieds steht deine Version als Text; „Akkorde" oben an der Karte blendet sie ein. **„Vollbild"** öffnet sie zum Spielen.\n\n**Oben, in der Karte „Akkorde":**\n\n- alle Akkorde des Lieds als **Griffbild** — auf dem Telefon seitwärts wischen.\n- **Text | Akkorde** — zum Mitsingen ohne Akkorde.\n- **Transponieren** — mit − und + in Halbtönen; die Mitte zeigt „A → B", ein Tipp darauf geht zurück zur Originaltonart. Die Griffbilder gehen mit.\n- **Anpassen** — Gitarre oder Klavier.\n\n**Ein Tipp auf einen Akkord** — oben oder im Text — zeigt ihn groß. Mit ‹ und › blätterst du durch die Varianten („4 von 17"); die gewählte gilt für jede Stelle mit genau diesem Akkord und bleibt für dieses Lied gemerkt.\n\n**Unten:** „Aa" für die Schrift und ▶ für den Autoscroll, − und + daneben ändern das Tempo. Ein Finger auf dem Blatt hält ihn an, solange er liegt. Während es scrollt, tritt die Leiste zurück; ein Tipp holt sie wieder.\n\nDas Display bleibt an. Tonart, Tempo und gewählte Griffe merkt sich die App für dieses Lied, Schrift und Instrument für alle.',
     keywords: [
       'vollbild',
       'transponieren',
@@ -605,6 +622,12 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
       'scrollen',
       'schrift',
       'spielen',
+      'griff',
+      'griffbild',
+      'gitarre',
+      'klavier',
+      'piano',
+      'variante',
     ],
   },
   {
@@ -672,7 +695,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'locations',
     question: 'Wer darf Treffpunkte anlegen?',
     answer:
-      'Jede:r — dafür braucht es keine Admin-Rechte. Ein Ort entsteht im Vorbeigehen, beim Planen eines Abends; wer dafür erst jemanden fragen muss, trägt ihn gar nicht erst ein.\n\nDu findest die Liste im Archiv unter „Orte". Dort lassen sich Treffpunkte auch umbenennen und stilllegen.\n\nEine Wohnung löschen kannst du nicht, solange dort noch jemand wohnt — die verschwindet, indem ihre Bewohner:innen im Profil eine andere Adresse eintragen.',
+      'Jede:r — dafür braucht es keine Admin-Rechte. Ein Ort entsteht im Vorbeigehen, beim Planen eines Abends; wer dafür erst jemanden fragen muss, trägt ihn gar nicht erst ein.\n\nIm Archiv unter „Orte" → **„Treffpunkte"** legst du über das „+" unten rechts einen an. Dort lassen sich Treffpunkte auch umbenennen und entfernen: nach links wischen.\n\nEine Wohnung löschen kannst du nicht, solange dort noch jemand wohnt — die verschwindet, indem ihre Bewohner:innen im Profil eine andere Adresse eintragen.',
     keywords: ['anlegen', 'neuer ort', 'café', 'rechte'],
   },
 
@@ -816,6 +839,56 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
       'Ja, und es ist sogar die Vorgabe. In der Verwaltung unter „Geburtstags-Geschenke" lässt sich das Einteilen ganz abschalten: Dann stehen die Geburtstage weiter im Kalender und in der Liste, aber niemand bekommt eine Aufgabe und niemand eine Nachricht.\n\nDort lässt sich statt „der Reihe nach" auch eine **feste** Zuteilung wählen, die Jahr für Jahr gleich bleibt. Ändert sich dabei die Gruppe, schließt das System entstehende Lücken selbst und weist in der Verwaltung darauf hin — der Modus bleibt trotzdem „fest".',
     keywords: ['ausschalten', 'deaktivieren', 'fest', 'manuell', 'verwaltung'],
   },
+  // ── Notizen ───────────────────────────────────────────────────────────────
+  {
+    id: 'notizen-was',
+    category: 'notizen',
+    question: 'Was sind Notizen — und wer sieht sie?',
+    answer:
+      'Ein Text, an dem ihr gemeinsam schreibt, **ohne dass er an einem Abend hängt**: eine Packliste für die Freizeit, Ideen für den nächsten Kurs, Liedwünsche. Du findest sie im Archiv unter **„Notizen"**; das „+" unten rechts legt eine an.\n\n**Sehen kann eine Notiz nur, wer dabei ist** — du, wenn du sie angelegt hast, und wen du dazunimmst. Alle anderen sehen sie gar nicht, auch die Verwaltung nicht. Wer dabei ist, darf mitschreiben.',
+    keywords: ['notiz', 'notizen', 'dokument', 'packliste', 'liste', 'text'],
+  },
+  {
+    id: 'notizen-leute',
+    category: 'notizen',
+    question: 'Wie nehme ich Leute zu einer Notiz dazu?',
+    answer:
+      'Beim Anlegen wählst du **„Nur ich"**, **„Ganze Gruppe"** oder **„Auswählen"**. Später geht es auf der Notiz oben rechts über **„Leute"**.\n\n**„Ganze Gruppe"** heißt wirklich alle — auch, wer später zum Hauskreis dazukommt. Einzelne nimmst du mit „Person hinzufügen" dazu und mit „×" wieder heraus.\n\nWer dazukommt, bekommt eine Nachricht. Wer bei einer Notiz dabei ist, bekommt dagegen keine Nachricht, wenn jemand etwas daran ändert.\n\nWer mitschreibt, darf den Text ändern. Die Leute ändern und die Notiz löschen darf nur, wer sie angelegt hat.',
+    keywords: [
+      'notiz',
+      'teilen',
+      'hinzufügen',
+      'alle',
+      'gruppe',
+      'leute',
+      'mitschreiben',
+    ],
+  },
+  {
+    id: 'notizen-format',
+    category: 'notizen',
+    question: 'Wie mache ich Überschriften, Listen und Checklisten?',
+    answer:
+      'Unten auf **„Bearbeiten"** — über dem Textfeld stehen Knöpfe für **Überschrift**, **Liste**, **Checkliste** und **Fett**. Sie wirken auf die Zeile, in der du stehst, oder auf alle markierten. Ein zweiter Druck nimmt es wieder weg.\n\nIn einer Liste setzt Enter sie fort; Enter auf einem leeren Punkt beendet sie.\n\n**Checklisten hakst du direkt in der Notiz ab**, ohne „Bearbeiten". Hakt jemand anders gleichzeitig einen anderen Punkt ab, bleiben beide Haken stehen.\n\nWer lieber tippt: `# ` und `## ` für Überschriften, `- ` für Listen, `- [ ] ` für Checklisten, `**fett**`.',
+    keywords: [
+      'formatieren',
+      'überschrift',
+      'liste',
+      'checkliste',
+      'abhaken',
+      'fett',
+      'markdown',
+    ],
+  },
+  {
+    id: 'notizen-gleichzeitig',
+    category: 'notizen',
+    question: 'Was passiert, wenn zwei gleichzeitig schreiben?',
+    answer:
+      'Wer zuerst speichert, gewinnt nicht einfach. Speicherst du, nachdem jemand anders gespeichert hat, sagt dir die App das — **dein Text bleibt dabei stehen**.\n\nDu kannst dann **„Meine Fassung speichern"** (es gilt, was du geändert hast) oder **„Ihre übernehmen"** (dein Entwurf fällt weg).',
+    keywords: ['gleichzeitig', 'konflikt', 'überschrieben', 'speichern'],
+  },
+
   // ── Nachbereitung ─────────────────────────────────────────────────────────
   {
     id: 'notes-wo',

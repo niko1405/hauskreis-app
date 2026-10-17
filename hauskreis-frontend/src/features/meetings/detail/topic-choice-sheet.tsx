@@ -24,7 +24,7 @@
  * 5. `people` — der Personen-Picker aus der Rollenzuteilung. Er ist hier eine
  *    **Abkürzung**: was er einträgt, ist die Rolle „Thema" an diesem Abend.
  *    Schreibrecht an der Vorbereitung gibt sie nicht — das steht auf der Seite
- *    der Einheit unter „Wer das vorbereitet".
+ *    der Einheit unter „Vorbereitet von".
  *
  * Hier stand einmal je ein Textfeld mit einem Knopf daneben, zweimal, für zwei
  * verschiedene Dinge. Es passte in eine Zeile und fragte deshalb nur nach dem

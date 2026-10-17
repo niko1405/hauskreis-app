@@ -31,6 +31,8 @@ export const archiveSummarySchema = z.object({
     songs: z.number().int().nonnegative(),
     /// Davon die, die auch wirklich gesungen wurden.
     songsPlayed: z.number().int().nonnegative(),
+    /// Die Notizen, die diese Person sehen darf — wie die Liste darunter.
+    notes: z.number().int().nonnegative(),
   }),
   /// `null`, solange es keinen einzigen Termin gibt.
   firstMeetingDate: isoDateOut.nullable(),

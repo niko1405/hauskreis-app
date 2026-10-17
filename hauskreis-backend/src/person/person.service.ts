@@ -670,6 +670,18 @@ export class PersonService {
         this.prisma.meetingPrayerRequest.deleteMany({
           where: { personId: { in: ids } },
         }),
+        // Notizen, die nur sie sehen konnte, und die eigenen Plätze an
+        // fremden — wie beim Löschen aus einer Gruppe heraus.
+        this.prisma.note.deleteMany({
+          where: {
+            createdByPersonId: { in: ids },
+            forEveryone: false,
+            members: { none: {} },
+          },
+        }),
+        this.prisma.noteMember.deleteMany({
+          where: { personId: { in: ids } },
+        }),
       ]);
     }
 
