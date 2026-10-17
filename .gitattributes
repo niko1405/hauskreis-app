@@ -1,0 +1,5 @@
+# Shell-Skripte immer mit LF auschecken, auch unter Windows mit
+# `core.autocrlf=true`. Mit CRLF bricht Bash schon in der ersten Zeile ab
+# (`set -euo pipefail` wird zu `pipefail\r`), und die Skripte laufen sowohl in
+# Git Bash als auch auf dem Server.
+*.sh text eol=lf
