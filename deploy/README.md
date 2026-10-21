@@ -191,12 +191,50 @@ ablesen ließe.
 ```bash
 sudo mkdir -p /root/hauskreis-app && sudo chown "$USER" /root/hauskreis-app
 git clone https://github.com/niko1405/hauskreis-app.git /root/hauskreis-app
-cd /root/hauskreis-app/hauskreis-backend
-
-cp .env.prod.example .env.prod
-chmod 600 .env.prod
-$EDITOR .env.prod          # jede leere Zeile füllen, Passwörter mit `openssl rand -base64 32`
 ```
+
+**Die Secrets kommen aus dem Repo.** Sie liegen dort mit age verschlüsselt
+(`hauskreis-backend/.env.prod.sops.env`, siehe [Secrets ändern](#secrets-ändern)),
+und der Server braucht zum Lesen einen eigenen Schlüssel:
+
+```bash
+sudo apt install -y age
+# sops steht nicht in den Paketquellen — das .deb aus den Releases, Version fest
+V=3.13.3
+curl -LO "https://github.com/getsops/sops/releases/download/v${V}/sops_${V}_amd64.deb"
+curl -LO "https://github.com/getsops/sops/releases/download/v${V}/sops-v${V}.checksums.txt"
+grep " sops_${V}_amd64.deb\$" "sops-v${V}.checksums.txt" | sha256sum -c -
+sudo apt install -y "./sops_${V}_amd64.deb"
+
+sudo mkdir -p /root/.config/sops/age
+sudo age-keygen -o /root/.config/sops/age/keys.txt    # druckt den öffentlichen Schlüssel
+sudo chmod 600 /root/.config/sops/age/keys.txt
+```
+
+Den öffentlichen Schlüssel (`age1…`) **auf deinem Rechner** in `.sops.yaml`
+eintragen und die Secrets für ihn mitverschlüsseln:
+
+```bash
+sops updatekeys hauskreis-backend/.env.prod.sops.env
+git commit -am 'chore: neuer Server als sops-Empfänger' && git push
+```
+
+Danach auf dem Server einmal von Hand entschlüsseln — ab dem ersten Deploy
+übernimmt das `deploy.sh`:
+
+```bash
+cd /root/hauskreis-app && git pull
+cd hauskreis-backend
+(umask 077 && sops decrypt .env.prod.sops.env > .env.prod)
+```
+
+Der Schlüssel des Servers wird **nicht** gesichert. Er stirbt mit dem Server, und
+das ist richtig so: Ein neuer Server bekommt einen neuen, der alte fliegt aus
+`.sops.yaml`. Gesichert ist der Schlüssel deines Rechners.
+
+Gibt es die verschlüsselte Datei noch gar nicht — die allererste Installation —,
+entsteht sie auf deinem Rechner aus der Vorlage; wie, steht im Kopf von
+[`.env.prod.example`](../hauskreis-backend/.env.prod.example).
 
 Ist das GitHub-Repository privat, braucht der Server einmalig Zugang zur
 Registry — ein Token mit `read:packages` genügt:
@@ -243,9 +281,15 @@ fertiges DNS und ein gültiges Zertifikat voraus.
 
 ```bash
 cd hauskreis-backend
-set -a && source /pfad/zur/.env.prod && set +a
-./scripts/setup-keycloak.sh --production
+( set -a && source <(sops decrypt .env.prod.sops.env) && set +a &&
+  ./scripts/setup-keycloak.sh --production )
 ```
+
+Die Klammern sind Absicht: Ohne sie stünden danach alle Secrets in der Shell,
+`DATABASE_URL` eingeschlossen — und ein `pnpm db:migrate` im selben Fenster
+liefe gegen die Produktion, sobald der Tunnel offen ist. Unter Windows in Git
+Bash; dort liest Bash die Prozess-Substitution selbst, `sops.exe` schreibt nur
+hinein.
 
 Es bricht ab, solange `SMTP_HOST`, `SMTP_FROM`, `KEYCLOAK_URL`, `FRONTEND_URL`,
 `KEYCLOAK_CLIENT_SECRET` oder `KEYCLOAK_ADMIN_PASSWORD` noch auf einer
@@ -257,7 +301,8 @@ Danach in der Admin-Konsole (`https://auth.acts2.de/admin`):
 
 1. Ein **persönliches** Admin-Konto anlegen, im `master`-Realm, mit **OTP**.
 2. Das Bootstrap-Konto aus `KEYCLOAK_ADMIN_USER` deaktivieren.
-3. `KEYCLOAK_ADMIN_USER` und `KEYCLOAK_ADMIN_PASSWORD` aus `.env.prod` löschen —
+3. `KEYCLOAK_ADMIN_USER` und `KEYCLOAK_ADMIN_PASSWORD` aus den Secrets löschen
+   (`sops edit`, siehe [Secrets ändern](#secrets-ändern)) —
    sie wirken ohnehin nur beim allerersten Start auf leerer Datenbank, und was
    danach bleibt, ist ein Passwort, das niemand mehr wechselt.
 4. Im `master`-Realm die Brute-Force-Erkennung einschalten. Im `hauskreis`-Realm
@@ -326,7 +371,10 @@ age-keygen -o acts2-backup.key
 ```
 
 Auf den Server kommt nur der **öffentliche** Schlüssel. Der private gehört in
-deinen Passwortspeicher — und nirgendwo sonst hin. Läge er auf dem VPS, hätte
+deinen Passwortspeicher — in Bitwarden, als sichere Notiz — und nirgendwo sonst
+hin. Er ist ein anderer als der, mit dem die Secrets verschlüsselt sind
+([Secrets ändern](#secrets-ändern)): Der liegt auch auf deinem Rechner, dieser
+hier nur im Tresor. Läge er auf dem VPS, hätte
 jemand, der den Server übernimmt, damit auch alle Sicherungen, und das Off-Site
 wäre nur noch eine zweite Kopie am selben Schloss.
 
@@ -444,7 +492,7 @@ nicht abdeckt: einen Prozess, der lebt und nicht mehr antwortet.
 
 Was **blockiert**, solange es fehlt:
 
-- [ ] **SMTP für `acts2.de`** in `.env.prod`, dann `setup-keycloak.sh --production`
+- [ ] **SMTP für `acts2.de`** in den Secrets, dann `setup-keycloak.sh --production`
       erneut. Ohne funktionierenden Mailversand kommt niemand herein, auch du
       nicht: der Realm verlangt eine bestätigte Adresse, und der `AuthGuard`
       weist jedes Token ohne sie ab. Das Skript bricht deshalb ab, solange
@@ -459,10 +507,13 @@ Was **nicht blockiert**, aber vor dem Einladen der anderen acht erledigt sein
 sollte:
 
 - [ ] **VAPID-Schlüssel** erzeugen (`npx web-push generate-vapid-keys`) und in
-      `.env.prod` eintragen — sonst gibt es keine Erinnerungen, und das ist eine
+      die Secrets eintragen — sonst gibt es keine Erinnerungen, und das ist eine
       der Funktionen, wegen der die App überhaupt existiert.
 - [ ] **Persönliches Keycloak-Admin-Konto mit OTP**, Bootstrap-Konto abschalten,
-      `KEYCLOAK_ADMIN_USER`/`KEYCLOAK_ADMIN_PASSWORD` aus `.env.prod` entfernen.
+      `KEYCLOAK_ADMIN_USER`/`KEYCLOAK_ADMIN_PASSWORD` aus den Secrets entfernen.
+- [ ] **sops-Schlüssel deines Rechners in Bitwarden**, dazu Bitwardens eigener
+      Wiederherstellungscode auf Papier ([Secrets ändern](#secrets-ändern)).
+      Ohne beides kommt nach dem Verlust des Servers niemand mehr an die Secrets.
 - [ ] **Brute-Force-Erkennung im `master`-Realm** einschalten (im `hauskreis`-Realm
       hat das Setup-Skript sie gesetzt).
 - [ ] **`unattended-upgrades`** aktiv (`systemctl status unattended-upgrades`).
@@ -553,10 +604,14 @@ Geht weiterhin, und ist der Weg, wenn die CI klemmt:
 ```bash
 cd /root/hauskreis-app && git pull
 cd hauskreis-backend
+(umask 077 && sops decrypt .env.prod.sops.env > .env.prod)
 docker compose -f docker-compose.prod.yml --env-file .env.prod pull
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 docker image prune -f
 ```
+
+Oder nach dem `git pull` einfach `/root/hauskreis-app/deploy/deploy.sh` — das tut
+dasselbe wie die CI, samt Warten auf `healthy`.
 
 Der Server baut nichts — das Image kommt fertig aus der CI. `git pull` ist nur
 für Compose-Datei und Skripte nötig. Der `migrate`-Service läuft bei jedem `up`
@@ -580,6 +635,71 @@ zurück** — ein Rollback über eine Schemaänderung hinweg braucht das Backup.
 
 Das Frontend deployt Cloudflare selbst, bei jedem Push nach `main`.
 
+### Secrets ändern
+
+Die Produktions-Secrets liegen **verschlüsselt im Repo**, in
+`hauskreis-backend/.env.prod.sops.env`. Verschlüsselt sind die Werte; die Namen
+bleiben lesbar, sie stehen ohnehin in `.env.prod.example`. `deploy.sh` schreibt
+daraus bei jedem Deploy die `.env.prod`, die Compose liest. Auf dem Server gibt
+es damit nichts mehr von Hand zu pflegen — wer dort `.env.prod` ändert, verliert
+es beim nächsten Deploy —, und auf deinem Rechner gibt es gar keine `.env.prod`
+mehr.
+
+Warum so und nicht ein Tresor in der Cloud: Die Secrets stehen im selben Commit
+wie Compose-Datei und Image, ein Rollback nimmt ihren Stand also mit. Es gibt
+keine zweite Kopie, die auseinanderläuft — vorher lag dieselbe Datei auf dem
+Server und auf dem Rechner, und keine war gesichert. Und der Deploy hängt an
+keinem Dienst, der an dem Abend nicht erreichbar ist.
+
+**Was es nicht leistet:** Zur Laufzeit stehen die Werte auf dem Server im
+Klartext, in `.env.prod` und in Dockers eigener Container-Konfiguration. Gegen
+jemanden, der den Server übernimmt, hilft kein Tresor.
+
+```bash
+# auf deinem Rechner, im Repo. Unter Windows einmal: setx EDITOR "code --wait"
+sops edit hauskreis-backend/.env.prod.sops.env
+git commit -am 'chore: Secrets …' && git push       # die CI rollt aus
+```
+
+Compose legt danach nur die Container neu an, deren Umgebung sich geändert hat.
+Geht etwas schief, liegt der vorige Stand auf dem Server als `.env.prod.prev`:
+
+```bash
+cd /root/hauskreis-app/hauskreis-backend
+cp -p .env.prod.prev .env.prod
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+```
+
+Danach den Commit zurücknehmen — sonst schreibt der nächste Deploy den Fehler
+wieder hin.
+
+**Wer entschlüsseln kann**, steht in [`.sops.yaml`](../.sops.yaml) im
+Wurzelverzeichnis:
+
+| Schlüssel                    | liegt                             | gesichert                                                                             |
+| ---------------------------- | --------------------------------- | ------------------------------------------------------------------------------------- |
+| dein Rechner                 | `%AppData%\sops\age\keys.txt`     | **in Bitwarden**, als sichere Notiz „acts2: sops-Schlüssel PC"                        |
+| der Server                   | `/root/.config/sops/age/keys.txt` | nicht — er stirbt mit dem Server, ein neuer bekommt einen neuen                       |
+| Backups (`acts2-backup.key`) | nur in Bitwarden                  | ein **anderer** Schlüssel ([Backups](#9-backups-scharf-schalten)), nie auf dem Server |
+
+Der Schlüssel deines Rechners ist der eine, an dem nach dem Verlust des Servers
+alles hängt. Und Bitwardens eigener Wiederherstellungscode gehört auf Papier,
+sonst hängt am Master-Passwort wiederum alles.
+
+Ein Empfänger kommt dazu oder fällt weg — neuer Rechner, neuer Server:
+
+```bash
+# erst .sops.yaml anpassen, dann
+sops updatekeys hauskreis-backend/.env.prod.sops.env
+```
+
+**Ist ein privater Schlüssel weg oder in fremden Händen, reicht `updatekeys`
+nicht.** Die git-Historie hält jede frühere Fassung der Datei, verschlüsselt für
+die damaligen Empfänger — wer den alten Schlüssel hat, liest sie weiter. Dann
+die **Secrets selbst** wechseln, nicht nur die Schlüssel. Dasselbe gilt, wenn
+`checks.yml` „Klartext" meldet: dann stand ein Wert offen im Repo, und das
+öffentliche Log nennt bewusst nur die Zeilennummer.
+
 ### In die Datenbank sehen
 
 Kein pgAdmin. Postgres hängt an `127.0.0.1:5432` und ist von außen nicht
@@ -589,10 +709,21 @@ erreichbar; der Weg hinein ist ein Tunnel:
 ssh -N -L 5433:127.0.0.1:5432 niko@vps      # läuft im Vordergrund
 
 psql postgresql://hauskreis@localhost:5433/hauskreis
-# oder, schöner, weil es das Schema kennt:
-DATABASE_URL='postgresql://hauskreis:…@localhost:5433/hauskreis' pnpm prisma studio
+# oder, schöner, weil es das Schema kennt (DATABASE_URL in den Secrets, siehe
+# .env.prod.example):
+pnpm db:studio:prod
 # oder DBeaver / TablePlus auf localhost:5433
 ```
+
+`db:studio:prod` entschlüsselt die Secrets mit `sops exec-file` in eine Datei,
+die nur so lange lebt wie Studio, und Node liest sie über `--env-file` **für
+diesen einen Prozess**; `dotenv/config` in `prisma.config.ts` überschreibt
+nichts, was schon gesetzt ist. `--no-fifo`, weil sops unter Windows keine
+benannte Pipe anlegen kann — die Datei liegt dort im Temp-Ordner und
+verschwindet, wenn Studio endet. Der naheliegende andere Weg — `DOTENV_CONFIG_PATH=.env.prod` in der
+Shell — bliebe dort stehen, und das nächste `pnpm db:migrate` im selben Fenster
+liefe als `prisma migrate dev` gegen die Produktion. Das bietet bei Abweichungen
+an, die Datenbank zurückzusetzen.
 
 **Wichtiger als das Werkzeug ist, wann man es nicht nimmt.** Drei Regeln des
 Datenmodells stehen nicht in der Datenbank, sondern im Code darüber:
@@ -607,6 +738,10 @@ Für „Termin löschen", „Reminder-Lauf anstoßen", „Gewichtung ändern" gi
 **Verwaltungs-Bildschirm** in der App. Der Tunnel ist zum Nachsehen da.
 
 ### Restore
+
+Die Secrets sind nicht im Backup — sie liegen verschlüsselt im Repo. Auf einem
+**neuen** Server deshalb zuerst Schritt 3 der Erstinstallation (sops, eigener
+Schlüssel, `updatekeys` von deinem Rechner aus, entschlüsseln), dann:
 
 ```bash
 cd /root/hauskreis-app/hauskreis-backend
@@ -688,12 +823,12 @@ Keine Ausgabe heißt: in Ordnung.
 | Erinnerungen kommen zur falschen Stunde      | `CRON_TIME_ZONE` in `src/common/time/local-evening.ts`                                                                                                             |
 | `413 Request Entity Too Large` beim Kopfbild | `client_max_body_size` in `api.conf` (10 MB erlaubt die App, 12 MB steht dort)                                                                                     |
 | Platte voll                                  | `docker system df`. Alte Images (`docker image prune -f`) oder Logs — die Rotation steht im Compose                                                                |
-| Registrierung klappt, aber keine Mail        | Der Realm kennt kein echtes SMTP. Werte in `.env.prod` allein reichen nicht — siehe „Mailversand nachziehen" unten                                                 |
+| Registrierung klappt, aber keine Mail        | Der Realm kennt kein echtes SMTP. Werte in den Secrets allein reichen nicht — siehe „Mailversand nachziehen" unten                                                 |
 | iOS zeigt auf dem Home-Bildschirm kein Logo  | Fast immer Safaris Symbol-Zwischenspeicher, nicht die Auslieferung. Erst nachmessen (`curl -I https://acts2.de/icons/apple-touch-icon.png` → `200`, `image/png`)   |
 
 ### Mailversand nachziehen
 
-Keycloak liest SMTP **aus dem Realm**, nicht aus der Umgebung. `.env.prod` ist
+Keycloak liest SMTP **aus dem Realm**, nicht aus der Umgebung. Die Secrets sind
 nur die Quelle, aus der `setup-keycloak.sh` schöpft — wer dort etwas ändert und
 das Skript nicht erneut laufen lässt, ändert nichts am laufenden Betrieb.
 
@@ -714,8 +849,8 @@ Rechner gibt es hier nicht, und jede Mail scheitert still. Richtigstellen:
 
 ```bash
 cd hauskreis-backend
-set -a && source /pfad/zur/.env.prod && set +a
-./scripts/setup-keycloak.sh --production
+( set -a && source <(sops decrypt .env.prod.sops.env) && set +a &&
+  ./scripts/setup-keycloak.sh --production )
 ```
 
 Danach in der Admin-Konsole unter **Realm settings → Email** einmal

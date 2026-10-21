@@ -15,6 +15,12 @@ node_modules/
 .env.*.local
 .env.prod
 !.env.example
+# Alles, was neben .env.prod entsteht (deploy.sh legt .env.prod.prev ab), ist
+# ebenfalls Klartext. Getrackt werden nur die Vorlage und die von sops
+# verschlüsselte Fassung — Letztere prüft checks.yml auf ENC[…].
+.env.prod.*
+!.env.prod.example
+!.env.prod.sops.env
 
 # Build- und Testausgaben
 coverage/

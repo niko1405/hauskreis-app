@@ -13,8 +13,9 @@
 # Lauf, ein Ordner, ein Zeitstempel.
 #
 # Was hier bewusst *nicht* gesichert wird: die Container-Images (kommen aus der
-# CI) und .env.prod (gehört in einen Passwortspeicher, nicht in ein Backup, das
-# jede Nacht irgendwohin kopiert wird).
+# CI) und .env.prod. Die ist nur abgeleitet — die Secrets liegen verschlüsselt
+# im Repo (.env.prod.sops.env), der Schlüssel dazu in Bitwarden. In ein Backup,
+# das jede Nacht irgendwohin kopiert wird, gehören sie im Klartext nicht.
 set -euo pipefail
 
 # Das Verzeichnis mit der Compose-Datei, nicht die Wurzel des Auscheckens —

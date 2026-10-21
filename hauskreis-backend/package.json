@@ -13,6 +13,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node prisma/seed.ts",
+    "db:studio:prod": "sops exec-file --no-fifo .env.prod.sops.env \"node --env-file={} node_modules/prisma/build/index.js studio\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "oxlint",

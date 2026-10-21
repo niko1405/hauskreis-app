@@ -1,0 +1,14 @@
+# Wer die Produktions-Secrets lesen kann (hauskreis-backend/.env.prod.sops.env).
+#
+# Hier stehen nur öffentliche Schlüssel. Die privaten liegen auf dem PC (und
+# gesichert in Bitwarden) und auf dem Server. Kommt ein Empfänger dazu oder
+# fällt einer weg, reicht diese Datei allein nicht: erst `sops updatekeys`
+# verschlüsselt die Secrets für die neue Liste. Ablauf: deploy/README.md,
+# „Secrets ändern".
+#
+# Im Wurzelverzeichnis und nicht im Backend: sops sucht die Datei vom aktuellen
+# Ordner aufwärts, und hier prüft sie kein Prettier.
+creation_rules:
+  - path_regex: \.env\.prod\.sops\.env$
+    # Kommagetrennt und ohne Leerzeichen — PC, dann Server.
+    age: age1ggannk77ycral2l3dtg7qgz7k7qj9ylp96c2fj0mcz3ml6ne0a7qf800cs,age1lqnjzdqyrmzmw90uyx2kxf3f404yr4hvp8pr333kadsat88g5elsj5cq9n

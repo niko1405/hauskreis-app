@@ -3634,10 +3634,14 @@ stattgefunden", und das Archiv soll beides unterscheiden können.
 ## Produktion: Docker
 
 ```bash
-cp .env.prod.example .env.prod && chmod 600 .env.prod   # ausfüllen
+(umask 077 && sops decrypt .env.prod.sops.env > .env.prod)   # macht sonst deploy.sh
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 ./scripts/setup-keycloak.sh --production
 ```
+
+Die Secrets liegen mit age verschlüsselt im Repo (`.env.prod.sops.env`);
+`.env.prod` ist nur noch das, was der Server daraus macht. Ändern, Schlüssel,
+Wiederherstellen: Betriebs-Handbuch, „Secrets ändern".
 
 Alles, was **außerhalb** der Container liegt — Server härten, nginx, TLS,
 Backups, Restore, der Weg in die Datenbank —, steht im

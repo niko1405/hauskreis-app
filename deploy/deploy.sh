@@ -72,6 +72,59 @@ compose() {
   docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" "$@"
 }
 
+# ---------------------------------------------------------------------------
+# Secrets: .env.prod entsteht aus der verschlüsselten Fassung im Repo.
+#
+# Die Wahrheit ist `.env.prod.sops.env`, mit age verschlüsselt und im selben
+# Commit wie Compose-Datei und Image — ein Rollback nimmt die Secrets dieses
+# Stands also mit. `.env.prod` ist nur noch abgeleitet und wird bei jedem
+# Deploy neu geschrieben; wer sie hier von Hand ändert, verliert es beim
+# nächsten. Ändern: deploy/README.md, „Secrets ändern".
+#
+# Fehlt die verschlüsselte Datei, ist das ein Commit von vor der Umstellung:
+# dann bleibt, was da ist. Liegt sie da und lässt sich nicht entschlüsseln —
+# kein sops, kein Schlüssel, Schlüssel nicht unter den Empfängern —, bricht der
+# Deploy ab, statt mit einem Stand weiterzulaufen, den niemand gewählt hat.
+#
+# Der vorige Stand bleibt als `.env.prod.prev` liegen. Geht nach einer Änderung
+# an den Secrets etwas schief, ist das der Weg zurück, ohne erst einen Commit
+# rückgängig zu machen und auf die CI zu warten.
+# ---------------------------------------------------------------------------
+SOPS_FILE=.env.prod.sops.env
+export SOPS_AGE_KEY_FILE="${SOPS_AGE_KEY_FILE:-/root/.config/sops/age/keys.txt}"
+
+if [ -f "${SOPS_FILE}" ]; then
+  if ! command -v sops >/dev/null; then
+    echo "[deploy] ${SOPS_FILE} liegt im Repo, aber 'sops' fehlt auf dem Server." >&2
+    echo "[deploy] Einrichtung: deploy/README.md, „Stack ablegen\"." >&2
+    exit 2
+  fi
+
+  log "Secrets entschlüsseln"
+  # In eine eigene Datei und erst danach an ihren Platz: Scheitert sops
+  # mittendrin, steht sonst eine halbe .env.prod da, und der nächste
+  # `compose`-Aufruf von Hand liest sie.
+  if ! (
+    umask 077
+    {
+      printf '# Erzeugt von deploy.sh aus %s. Änderungen hier gehen beim\n' "${SOPS_FILE}"
+      printf '# nächsten Deploy verloren — siehe deploy/README.md, „Secrets ändern".\n'
+      sops decrypt --input-type dotenv --output-type dotenv "${SOPS_FILE}"
+    } >"${ENV_FILE}.neu"
+  ); then
+    rm -f "${ENV_FILE}.neu"
+    echo "[deploy] ${SOPS_FILE} ließ sich nicht entschlüsseln (Schlüssel: ${SOPS_AGE_KEY_FILE})." >&2
+    exit 1
+  fi
+
+  if [ -f "${ENV_FILE}" ]; then
+    cp -p "${ENV_FILE}" "${ENV_FILE}.prev"
+  fi
+  mv -f "${ENV_FILE}.neu" "${ENV_FILE}"
+else
+  log "Kein ${SOPS_FILE} in diesem Stand — ${ENV_FILE} bleibt, wie sie ist"
+fi
+
 log "Image holen"
 IMAGE_TAG="${TAG}" compose pull --quiet api
 

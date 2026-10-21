@@ -27,6 +27,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Die Produktions-Secrets liegen verschlüsselt im Repo, und der eine
+      # Fehler, den dieser Ansatz hat, ist Klartext an ihrer Stelle — ein
+      # `cp .env.prod .env.prod.sops.env` statt `sops encrypt`. Das fällt hier
+      # erst nach dem Push auf; dann ist das Secret draußen und wird rotiert
+      # (deploy/README.md, „Secrets ändern"). Ausgegeben werden deshalb nur
+      # Zeilennummern, nie Zeilen: ein öffentliches CI-Log wäre die zweite Stelle.
+      - name: Secrets verschlüsselt?
+        run: |
+          f=.env.prod.sops.env
+          [ -f "$f" ] || exit 0
+          if ! grep -q '^sops_mac=ENC\[' "$f"; then
+            echo "::error file=hauskreis-backend/$f::nicht von sops verschlüsselt (kein sops_mac)"
+            exit 1
+          fi
+          bad=$(grep -nvE '^[[:space:]]*(#|$)|^sops_' "$f" | grep -v '=ENC\[' | cut -d: -f1 | tr '\n' ' ' || true)
+          if [ -n "$bad" ]; then
+            echo "::error file=hauskreis-backend/$f::Klartext in Zeile(n) $bad"
+            exit 1
+          fi
+
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: hauskreis-backend/package.json
