@@ -557,8 +557,9 @@ describe('DashboardService.build', () => {
   });
 
   /**
-   * Abgeschaltet heißt „gibt es hier nicht", und beide Karten fallen im
-   * Frontend an genau diesem `null` von selbst weg.
+   * Abgeschaltet heißt „gibt es hier nicht". Beim Actionstep sagt das der
+   * Schalter selbst — ein bloßes `null` hieße auch „diese Woche keiner", und
+   * dafür steht auf „Heute" ein Platzhalter.
    */
   it('lässt Gebetsbuddys und Wochen-Actionstep weg, wenn sie aus sind', async () => {
     const { service } = setup({
@@ -568,6 +569,16 @@ describe('DashboardService.build', () => {
     const home = await service.build('hk-1', NIKO, { now: NOW });
 
     expect(home.prayerBuddies).toBeNull();
+    expect(home.weeklyActionstep).toBe(false);
+    expect(home.openActionstep).toBeNull();
+  });
+
+  it('meldet den eingeschalteten Wochen-Actionstep auch ohne Vorsatz', async () => {
+    const { service } = setup({ actionstep: null });
+
+    const home = await service.build('hk-1', NIKO, { now: NOW });
+
+    expect(home.weeklyActionstep).toBe(true);
     expect(home.openActionstep).toBeNull();
   });
 });

@@ -127,6 +127,8 @@ export interface HomeScreen {
    */
   myRoles: Assignment[];
   /** From the most recent past evening that has one. */
+  /** Ob der Actionstep der Woche auf „Heute" gehört (Verwaltung). */
+  weeklyActionstep: boolean;
   openActionstep: {
     text: string;
     meetingId: string;
@@ -395,8 +397,11 @@ export class DashboardService {
       lastMeeting: shape(last, { recap: true }),
       nextMeeting: shape(next, { recap: false }),
       myRoles: myRoles.filter((role) => role.role !== 'PRAYER_BUDDY'),
-      // Abgeschaltet heißt nicht „leer", sondern „gibt es hier nicht" — beide
-      // Karten fallen im Frontend an genau diesem `null` von selbst weg.
+      // Abgeschaltet heißt nicht „leer", sondern „gibt es hier nicht": Ohne
+      // den Schalter könnte „Heute" nicht unterscheiden, ob diese Woche
+      // keiner geplant ist (Platzhalter-Karte) oder es die Karte gar nicht
+      // gibt.
+      weeklyActionstep: features.weeklyActionstep,
       openActionstep:
         features.weeklyActionstep && actionstep
           ? {

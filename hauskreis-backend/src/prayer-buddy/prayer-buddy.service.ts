@@ -3,6 +3,7 @@ import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { toPage } from '../common/http/pagination';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
+import { touchHauskreis } from '../hauskreis/hauskreis-version';
 import type { IfMatchCondition } from '../common/http/etag';
 import { addDays } from '../meeting/meeting-schedule';
 import { GroupClockService } from '../meeting/group-clock.service';
@@ -86,9 +87,9 @@ export class PrayerBuddyService {
     updatedByPersonId: string | null,
     condition?: IfMatchCondition,
   ) {
-    await this.getConfig(hauskreisId);
+    const before = await this.getConfig(hauskreisId);
 
-    return updateWithVersionCheck({
+    const updated = await updateWithVersionCheck({
       condition,
       update: (versionConstraint) =>
         this.prisma.prayerBuddyCycleConfig.updateMany({
@@ -110,6 +111,13 @@ export class PrayerBuddyService {
       reload: () => this.getConfig(hauskreisId),
       notFoundMessage: `No prayer buddy config for Hauskreis ${hauskreisId}`,
     });
+
+    // Der Schalter steht als `features` auch in der Antwort des Hauskreises.
+    if (dto.enabled !== undefined && dto.enabled !== before.enabled) {
+      await touchHauskreis(this.prisma, hauskreisId);
+    }
+
+    return updated;
   }
 
   /** The assignment covering `on`, or null if nobody is assigned right now. */

@@ -63,6 +63,7 @@ export function HomeScreen() {
     lastMeeting,
     nextMeeting,
     myRoles,
+    weeklyActionstep,
     openActionstep,
     prayerBuddies,
   } = home.data;
@@ -90,7 +91,8 @@ export function HomeScreen() {
             sieht hier nichts mehr. */}
         <ReleaseBanner />
 
-        <ActionstepCard step={openActionstep} />
+        {/* Abgeschaltet heißt: keine Karte, auch kein Platzhalter. */}
+        {weeklyActionstep && <ActionstepCard step={openActionstep} />}
 
         <PrayerBuddyCard buddies={prayerBuddies} myId={me.me?.id} />
 
@@ -201,7 +203,8 @@ export function HomeScreen() {
  * Und sie verschwindet auch nicht, wenn es gar keinen gibt. Ein Platz, der mal
  * da ist und mal nicht, verschiebt jedes Mal alles darunter — und die Frage
  * „habe ich diese Woche etwas vergessen?" bleibt unbeantwortet, statt ein Nein
- * zu bekommen.
+ * zu bekommen. Weg ist sie nur, wenn die Gruppe den Actionstep der Woche in
+ * der Verwaltung abgeschaltet hat.
  */
 function ActionstepCard({ step }: { step: HomeActionstep | null }) {
   if (!step) {

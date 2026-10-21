@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
+import { touchHauskreis } from '../hauskreis/hauskreis-version';
 import type { IfMatchCondition } from '../common/http/etag';
 import { EVENING_HOUR } from '../common/time/local-evening';
 import { GroupClockService } from './group-clock.service';
@@ -122,14 +123,14 @@ export class MeetingScheduleConfigService {
     updatedByPersonId: string | null,
     condition?: IfMatchCondition,
   ) {
-    await this.getConfig(hauskreisId);
+    const before = await this.getConfig(hauskreisId);
 
     // Die Zone hängt im Zwischenspeicher der Uhr. Vor dem Schreiben abgeräumt
     // und nicht danach: schlägt der Versionsvergleich fehl, ist ein leerer
     // Zwischenspeicher ohne Folgen — ein alter Wert dagegen bliebe stehen.
     this.clock.forget(hauskreisId);
 
-    return updateWithVersionCheck({
+    const updated = await updateWithVersionCheck({
       condition,
       update: (versionConstraint) =>
         this.prisma.meetingScheduleConfig.updateMany({
@@ -154,6 +155,16 @@ export class MeetingScheduleConfigService {
       reload: () => this.getConfig(hauskreisId),
       notFoundMessage: `No meeting schedule for Hauskreis ${hauskreisId}`,
     });
+
+    // Der Schalter steht als `features` auch in der Antwort des Hauskreises.
+    if (
+      dto.weeklyActionstep !== undefined &&
+      dto.weeklyActionstep !== before.weeklyActionstep
+    ) {
+      await touchHauskreis(this.prisma, hauskreisId);
+    }
+
+    return updated;
   }
 }
 

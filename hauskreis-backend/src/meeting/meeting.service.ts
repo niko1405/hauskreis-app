@@ -99,7 +99,7 @@ const meetingInclude = {
     // sortierte beide längst aus, also sagten die zwei Bildschirme über
     // denselben Abend zwei verschiedene Zahlen.
     where: { person: ANGEKOMMEN },
-    select: { personId: true, status: true, note: true },
+    select: { personId: true, status: true, note: true, lateMinutes: true },
   },
   cancelledBy: { select: personRefSelect },
 } as const;
@@ -924,20 +924,27 @@ export class MeetingService {
       select: { status: true },
     });
 
-    // Die Notiz gehört zu **dieser** Antwort, nicht zur Person.
+    // Notiz und Verspätung gehören zu **dieser** Antwort, nicht zur Person.
     //
-    // Wird sie mitgeschickt, gilt sie (`null` löscht). Wird sie weggelassen,
-    // hängt es am Status: Bleibt er, war das ein zweiter Druck auf denselben
-    // Knopf und die Notiz steht weiter da. Wechselt er, ist sie hinfällig —
-    // „komme 20 Min später" hat auf einer Absage nichts verloren. Genau dieser
-    // Fall ist der Normalfall: Die kompakten Umschalter auf Startbildschirm,
-    // Terminkarte und Kalender schicken nur `status`.
-    const note =
-      dto.note !== undefined
-        ? dto.note
+    // Wird ein Feld mitgeschickt, gilt es (`null` löscht). Wird es
+    // weggelassen, hängt es am Status: Bleibt er, war das ein zweiter Druck
+    // auf denselben Knopf und das Feld bleibt stehen. Wechselt er, ist es
+    // hinfällig — eine Verspätung hat auf einer Absage nichts verloren. Das
+    // ist der Normalfall: Die kompakten Umschalter in Terminliste und
+    // Kalender schicken nur `status`.
+    const keepOrClear = <T>(sent: T | null | undefined) =>
+      sent !== undefined
+        ? sent
         : previous?.status === dto.status
           ? undefined
           : null;
+    const note = keepOrClear(dto.note);
+    // Eine Verspätung gibt es nur bei einer Zusage; das DTO lehnt sie bei den
+    // anderen Antworten schon ab, und hier wird sie für sie geleert.
+    const lateMinutes =
+      dto.status === AttendanceStatus.ATTENDING
+        ? keepOrClear(dto.lateMinutes)
+        : null;
 
     const attendance = await this.prisma.$transaction(async (tx) => {
       const row = await tx.meetingAttendance.upsert({
@@ -947,13 +954,19 @@ export class MeetingService {
         // Answering by hand claims the row, even when an absence period wrote
         // it. Without this a "doch, ich komme" would keep the ABSENCE marker and
         // the next sync would feel free to delete it again.
-        update: { status: dto.status, source: AttendanceSource.SELF, note },
+        update: {
+          status: dto.status,
+          source: AttendanceSource.SELF,
+          note,
+          lateMinutes,
+        },
         create: {
           meetingId: id,
           personId: dto.personId,
           status: dto.status,
           source: AttendanceSource.SELF,
           note: note ?? null,
+          lateMinutes: lateMinutes ?? null,
         },
       });
 

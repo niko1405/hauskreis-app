@@ -40,9 +40,12 @@ export function HostWeightsAdmin() {
       <SectionTitle>Gewichtung</SectionTitle>
       <Card className="space-y-3">
         <p className="text-[11px] leading-relaxed text-stone-400">
-          Wie oft die Gruppe bei wem sein möchte, im Verhältnis zueinander.
+          Für das Vorschlagen von Hosts nach Ranking in der App wird die hier
+          angegebene Gewichtung verwendet. Dabei geben Zahlen an, wie oft die
+          Gruppe bei wem sein möchte, im Verhältnis zueinander.
           <strong className="font-semibold text-stone-500"> 1</strong> heißt so
-          oft wie alle anderen,
+          oft wie alle anderen, kleiner als 1 heißt seltener, größer als 1 heißt
+          öfter.
           <strong className="font-semibold text-stone-500"> 0</strong> heißt:
           nie vorschlagen. Wer sich zusammen eine Wohnung teilt, teilt sich auch
           die Zahl.

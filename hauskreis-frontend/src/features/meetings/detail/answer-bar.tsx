@@ -38,10 +38,10 @@ import { AnimatePresence, motion, useDragControls } from 'motion/react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BottomSlot } from '@/components/layout/bottom-slot';
 import { Button } from '@/components/ui/button';
-import { TextArea } from '@/components/ui/field';
 import { lockOverlay } from '@/components/ui/overlay-lock';
 import { dismissed, raised } from '@/components/ui/swipe';
-import { ANSWERS, NOTE_FIELD } from '@/components/domain/attendance-answers';
+import { ANSWERS, ownAnswerLine } from '@/components/domain/attendance-answers';
+import { AttendanceNoteFields } from '@/components/domain/attendance-note-fields';
 import { useAttendanceAnswer } from '@/components/domain/use-attendance-answer';
 import { useMe, useSetAttendance } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
@@ -62,6 +62,7 @@ export function AnswerBar({ meeting }: { meeting: Meeting }) {
         personId={myId}
         status={row?.status ?? 'UNKNOWN'}
         note={row?.note ?? null}
+        lateMinutes={row?.lateMinutes ?? null}
       />
     </BottomSlot>
   );
@@ -72,11 +73,13 @@ function Bar({
   personId,
   status,
   note,
+  lateMinutes,
 }: {
   meeting: Meeting;
   personId: string;
   status: AttendanceStatus;
   note: string | null;
+  lateMinutes: number | null;
 }) {
   // Der Status läuft über den gemeinsamen Hook: Auf „Weiß noch nicht" zu gehen
   // gibt die eigenen Rollen dieses Abends frei, und danach wird gefragt. Die
@@ -88,15 +91,27 @@ function Bar({
 
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(note ?? '');
-  // Der Entwurf folgt dem Server, solange niemand tippt — sonst stünde nach
-  // einem Statuswechsel (der die Notiz löscht) der alte Satz noch im Feld.
+  const [lateDraft, setLateDraft] = useState(lateMinutes);
+  // Der Entwurf folgt dem Server, solange niemand etwas ändert — sonst stünde
+  // nach einem Statuswechsel (der Notiz und Verspätung löscht) der alte Stand
+  // noch im Feld.
   const [touched, setTouched] = useState(false);
   const shown = touched ? draft : (note ?? '');
+  const shownLate =
+    status === 'ATTENDING' ? (touched ? lateDraft : lateMinutes) : null;
 
-  const field = NOTE_FIELD[status];
-  const FieldIcon = field.icon;
   const trimmed = shown.trim();
-  const changed = (trimmed === '' ? null : trimmed) !== note;
+  const changed =
+    (trimmed === '' ? null : trimmed) !== note || shownLate !== lateMinutes;
+
+  // Beim ersten Eingriff übernimmt der Entwurf beide Felder vom Server, damit
+  // das andere nicht auf einem veralteten Stand losläuft.
+  const touch = () => {
+    if (touched) return;
+    setDraft(note ?? '');
+    setLateDraft(lateMinutes);
+    setTouched(true);
+  };
 
   const head = useRef<HTMLDivElement>(null);
   const reserve = useMeasuredHeight(head);
@@ -232,8 +247,10 @@ function Bar({
               aus dem man den Balken sonst aufklappen müsste, und zugleich der
               Hinweis, dass überhaupt einer dasteht. Ausgeklappt steht er im
               Feld darunter — zweimal wäre er eine Behauptung zu viel. */}
-          {!open && note && (
-            <p className="mt-2 truncate text-[11px] text-stone-400">„{note}"</p>
+          {!open && ownAnswerLine({ note, lateMinutes }) && (
+            <p className="mt-2 truncate text-[11px] text-stone-400">
+              {ownAnswerLine({ note, lateMinutes })}
+            </p>
           )}
         </div>
 
@@ -247,19 +264,19 @@ function Bar({
               className="overflow-hidden"
             >
               <div className="space-y-2 px-5 pt-1 pb-4">
-                <p className="flex items-center gap-1.5 text-[11px] font-semibold text-stone-500">
-                  <FieldIcon size={13} className="text-stone-400" />
-                  {field.label}
-                </p>
-                <TextArea
-                  value={shown}
-                  placeholder={field.placeholder}
-                  aria-label={field.label}
-                  className="min-h-16"
-                  onChange={(event) => {
-                    setTouched(true);
-                    setDraft(event.target.value);
+                <AttendanceNoteFields
+                  status={status}
+                  note={shown}
+                  lateMinutes={shownLate}
+                  onNoteChange={(next) => {
+                    touch();
+                    setDraft(next);
                   }}
+                  onLateChange={(next) => {
+                    touch();
+                    setLateDraft(next);
+                  }}
+                  textAreaClassName="min-h-16"
                 />
                 <div className="flex justify-end">
                   {/* Immer da, aber nur bedienbar, wenn es etwas zu speichern
@@ -276,6 +293,7 @@ function Bar({
                         personId,
                         status,
                         note: trimmed === '' ? null : trimmed,
+                        lateMinutes: shownLate,
                       });
                     }}
                   >

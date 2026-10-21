@@ -87,16 +87,18 @@ export const ANSWER = Object.fromEntries(
  *
  * Eine Spalte für alle drei (`meeting_attendance.note`) und nicht drei: Es ist
  * immer dieselbe Sache, was jemand den anderen zu diesem Abend noch sagen will.
- * Nur die Beschriftung wechselt.
+ * Nur die Beschriftung wechselt. Eine **Verspätung** steht daneben in Minuten
+ * (`lateMinutes`), damit die Liste sie von einer bloßen Info unterscheiden
+ * kann.
  */
 export const NOTE_FIELD: Record<
   AttendanceStatus,
   { label: string; placeholder: string; icon: typeof Clock }
 > = {
   ATTENDING: {
-    label: 'Verspätung oder Info (optional)',
-    placeholder: 'z.B. Komme 20 Min später…',
-    icon: Clock,
+    label: 'Info (optional)',
+    placeholder: 'z.B. Bringe noch jemanden mit…',
+    icon: MessageSquare,
   },
   UNKNOWN: {
     label: "Woran liegt's? (hilft bei der Planung)",
@@ -109,3 +111,37 @@ export const NOTE_FIELD: Record<
     icon: MessageSquare,
   },
 };
+
+/** Wie viel später man kommen kann — die Chips unter „Verspätung". */
+export const LATE_OPTIONS = [15, 30, 45, 60] as const;
+
+/** Das Symbol einer Verspätung, in der Liste wie im Formular. */
+export const LATE_ICON = Clock;
+
+/** „ca. 15 Min später", „ca. 1 Std später". */
+export function lateLabel(minutes: number): string {
+  if (minutes % 60 === 0) return `ca. ${minutes / 60} Std später`;
+  return `ca. ${minutes} Min später`;
+}
+
+/**
+ * Die eigene Antwort in einer Zeile — Verspätung und Satz, wie sie auf der
+ * Terminkarte, im Kalender und im eingeklappten Antwort-Balken stehen.
+ * `null`, wenn nichts dazugesagt ist.
+ */
+export function ownAnswerLine(
+  row:
+    | {
+        note: string | null;
+        lateMinutes: number | null;
+      }
+    | null
+    | undefined,
+): string | null {
+  if (!row) return null;
+  const parts = [
+    row.lateMinutes !== null ? lateLabel(row.lateMinutes) : null,
+    row.note ? `„${row.note}"` : null,
+  ].filter((part) => part !== null);
+  return parts.length > 0 ? parts.join(' · ') : null;
+}

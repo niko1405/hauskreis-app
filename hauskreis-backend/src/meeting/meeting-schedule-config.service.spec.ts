@@ -23,14 +23,16 @@ function setup(existing: Record<string, unknown> | null = null) {
     }),
   );
   const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+  const touchHauskreis = jest.fn().mockResolvedValue({ count: 1 });
 
   const service = withClock(
     new MeetingScheduleConfigService({
       meetingScheduleConfig: { findUnique, create, updateMany },
+      hauskreis: { updateMany: touchHauskreis },
     } as unknown as PrismaService),
   );
 
-  return { service, findUnique, create, updateMany };
+  return { service, findUnique, create, updateMany, touchHauskreis };
 }
 
 describe('getConfig', () => {
@@ -139,5 +141,54 @@ describe('updateConfig', () => {
     );
 
     expect(create).toHaveBeenCalled();
+  });
+
+  /**
+   * Der Schalter steht als `features` in der Antwort des Hauskreises, deren
+   * ETag an `hauskreis.version` hängt — ohne den Griff bekäme der Client `304`
+   * und behielte den alten Stand.
+   */
+  it('hebt die Version des Hauskreises, wenn der Actionstep-Schalter kippt', async () => {
+    const { service, touchHauskreis } = setup({
+      id: 'cfg-1',
+      weekday: 2,
+      startMinutes: 1080,
+      weeklyActionstep: true,
+      version: 0,
+      updatedBy: null,
+    });
+
+    await service.updateConfig(
+      'hk-1',
+      { weeklyActionstep: false },
+      'niko',
+      EGAL,
+    );
+
+    expect(touchHauskreis).toHaveBeenCalledWith({
+      where: { id: 'hk-1' },
+      data: { version: { increment: 1 } },
+    });
+  });
+
+  it('lässt den Hauskreis in Ruhe, wenn sich der Schalter nicht ändert', async () => {
+    const { service, touchHauskreis } = setup({
+      id: 'cfg-1',
+      weekday: 2,
+      startMinutes: 1080,
+      weeklyActionstep: true,
+      version: 0,
+      updatedBy: null,
+    });
+
+    await service.updateConfig('hk-1', { weekday: 4 }, 'niko', EGAL);
+    await service.updateConfig(
+      'hk-1',
+      { weeklyActionstep: true },
+      'niko',
+      EGAL,
+    );
+
+    expect(touchHauskreis).not.toHaveBeenCalled();
   });
 });

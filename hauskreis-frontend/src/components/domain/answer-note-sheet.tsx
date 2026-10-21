@@ -18,10 +18,9 @@
  */
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { TextArea } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import { useSetAttendance } from '@/lib/api/hooks';
-import { NOTE_FIELD } from './attendance-answers';
+import { AttendanceNoteFields } from './attendance-note-fields';
 import type { AttendanceStatus } from '@/lib/api/types';
 
 export function AnswerNoteSheet({
@@ -31,12 +30,14 @@ export function AnswerNoteSheet({
   status,
   /** Was zu diesem Abend schon dasteht. */
   note,
+  lateMinutes,
   onClose,
 }: {
   meetingId: string;
   personId: string;
   status: AttendanceStatus | null;
   note: string | null;
+  lateMinutes: number | null;
   onClose: () => void;
 }) {
   // Beim Schließen fährt das Sheet nach unten, und `status` ist da schon `null`.
@@ -64,6 +65,7 @@ export function AnswerNoteSheet({
           personId={personId}
           status={shown}
           note={note}
+          lateMinutes={lateMinutes}
           onClose={onClose}
         />
       )}
@@ -76,19 +78,20 @@ function Form({
   personId,
   status,
   note,
+  lateMinutes,
   onClose,
 }: {
   meetingId: string;
   personId: string;
   status: AttendanceStatus;
   note: string | null;
+  lateMinutes: number | null;
   onClose: () => void;
 }) {
   const setAttendance = useSetAttendance(meetingId);
   const [draft, setDraft] = useState(note ?? '');
+  const [late, setLate] = useState(status === 'ATTENDING' ? lateMinutes : null);
 
-  const field = NOTE_FIELD[status];
-  const FieldIcon = field.icon;
   const trimmed = draft.trim();
 
   const save = () => {
@@ -96,34 +99,36 @@ function Form({
     // `useSetAttendance` „behalten, solange der Status bleibt" — und der Server
     // bekäme gar keinen.
     setAttendance.mutate(
-      { personId, status, note: trimmed === '' ? null : trimmed },
+      {
+        personId,
+        status,
+        note: trimmed === '' ? null : trimmed,
+        lateMinutes: status === 'ATTENDING' ? late : null,
+      },
       { onSuccess: onClose },
     );
   };
 
   return (
     <div className="space-y-2">
-      <p className="flex items-center gap-1.5 text-[11px] font-semibold text-stone-500">
-        <FieldIcon size={13} className="text-stone-400" />
-        {field.label}
-      </p>
       {/* Kein `autoFocus`: Auf dem Telefon schöbe die Tastatur das Sheet sofort
           hoch, und der Satz darüber — „deine Antwort ist schon gespeichert" —
           wäre weg, bevor jemand ihn gelesen hat. Dieselbe Entscheidung wie am
           Termin und im Lied-Vorschlag. */}
-      <TextArea
-        value={draft}
-        placeholder={field.placeholder}
-        aria-label={field.label}
-        className="min-h-24"
-        onChange={(event) => setDraft(event.target.value)}
+      <AttendanceNoteFields
+        status={status}
+        note={draft}
+        lateMinutes={late}
+        onNoteChange={setDraft}
+        onLateChange={setLate}
+        textAreaClassName="min-h-24"
       />
       <div className="flex gap-2 pt-2">
         {/* „Schließen", sobald schon ein Satz dasteht: „Ohne Notiz" läse sich
             dort wie „nimm ihn weg", und weggenommen wird er durch ein leeres
             Feld und Speichern. */}
         <Button variant="secondary" className="flex-1" onClick={onClose}>
-          {note ? 'Schließen' : 'Ohne Notiz'}
+          {note || lateMinutes !== null ? 'Schließen' : 'Ohne Notiz'}
         </Button>
         <Button
           className="flex-1"

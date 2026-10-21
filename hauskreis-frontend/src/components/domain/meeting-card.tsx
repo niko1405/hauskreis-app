@@ -20,6 +20,7 @@ import {
 import { useMe, usePeople } from '@/lib/api/hooks';
 import type { AttendanceStatus, MeetingListItem } from '@/lib/api/types';
 import { AnswerNoteSheet } from './answer-note-sheet';
+import { ownAnswerLine } from './attendance-answers';
 import { AnswerButtons, isAnswerable } from './answer-buttons';
 import { DateBox, TimeAndPlace } from './date-box';
 import { RoleChip } from './role-badge';
@@ -52,8 +53,8 @@ export function MeetingCard({
   const shown = past || cancelled ? counts.attending : counts.planned;
   const topicPeople = meeting.topicResponsibles.map((r) => r.person);
 
-  const myNote =
-    meeting.attendances.find((row) => row.personId === me?.id)?.note ?? null;
+  const myRow = meeting.attendances.find((row) => row.personId === me?.id);
+  const myLine = ownAnswerLine(myRow);
   const answerable = isAnswerable(meeting, me?.id);
 
   return (
@@ -203,8 +204,8 @@ export function MeetingCard({
         {/* Der eigene Satz, einzeilig — wie im eingeklappten Antwort-Balken. Er
             ist der Grund, aus dem man die Karte sonst öffnen müsste, um zu
             sehen, ob man überhaupt etwas dazugesagt hat. */}
-        {answerable && myNote && (
-          <p className="mt-2 truncate text-[11px] text-stone-400">„{myNote}"</p>
+        {answerable && myLine && (
+          <p className="mt-2 truncate text-[11px] text-stone-400">{myLine}</p>
         )}
       </Link>
 
@@ -217,7 +218,8 @@ export function MeetingCard({
           meetingId={meeting.id}
           personId={me.id}
           status={noteFor}
-          note={myNote}
+          note={myRow?.note ?? null}
+          lateMinutes={myRow?.lateMinutes ?? null}
           onClose={() => setNoteFor(null)}
         />
       )}

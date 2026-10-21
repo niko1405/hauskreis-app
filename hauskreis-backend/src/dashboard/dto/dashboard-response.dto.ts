@@ -141,9 +141,12 @@ export const homeScreenSchema = z.object({
   nextMeeting: homeMeetingSchema.nullable(),
   /// Die eigenen Aufgaben der nächsten acht Wochen, früheste zuerst.
   myRoles: z.array(assignmentSchema),
+  /// Ob die Gruppe den Actionstep der Woche auf „Heute" haben will
+  /// (Verwaltung). Aus heißt: keine Karte, auch kein Platzhalter.
+  weeklyActionstep: z.boolean(),
   /// Vom jüngsten vergangenen Abend. Ein leerer Abend beendet den Vorsatz von
   /// davor; nur ein besonderer Termin ohne Actionstep wird übersprungen
-  /// (`latestActionstep`).
+  /// (`latestActionstep`). Immer `null`, wenn `weeklyActionstep` aus ist.
   openActionstep: z
     .object({
       text: z.string(),

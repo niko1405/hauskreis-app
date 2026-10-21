@@ -1268,23 +1268,27 @@ model NotificationPreference {
 }
 
 model MeetingAttendance {
-  meetingId String           @map("meeting_id") @db.Uuid
-  personId  String           @map("person_id") @db.Uuid
-  status    AttendanceStatus @default(UNKNOWN)
+  meetingId   String           @map("meeting_id") @db.Uuid
+  personId    String           @map("person_id") @db.Uuid
+  status      AttendanceStatus @default(UNKNOWN)
   /// Who put this answer here. An absence period writes rows on the person's
   /// behalf, and without this column a later re-sync could not tell them from a
   /// deliberate "doch, ich komme" and would silently overwrite it.
-  source    AttendanceSource @default(SELF)
-  /// Der eine Satz zur Antwort — „komme 20 Min später", „muss schauen, wann
-  /// Feierabend ist", „bin im Urlaub". Freiwillig und ohne eigene Bedeutung
-  /// für die Logik; sie steht nur in der Teilnehmerliste.
+  source      AttendanceSource @default(SELF)
+  /// Der eine Satz zur Antwort — „bringe noch jemanden mit", „muss schauen,
+  /// wann Feierabend ist", „bin im Urlaub". Freiwillig und ohne eigene
+  /// Bedeutung für die Logik; sie steht nur in der Teilnehmerliste.
   ///
   /// Ein Feld für alle drei Status und nicht drei Felder: Es ist immer
   /// dieselbe Sache — was man den anderen zu diesem Abend noch sagen will.
-  /// Beim **Wechsel** des Status wird sie geleert (`MeetingService`), denn
-  /// eine Verspätung gehört nicht auf eine Absage.
-  note      String?
-  updatedAt DateTime         @updatedAt @map("updated_at")
+  /// Beim **Wechsel** des Status wird sie geleert (`MeetingService`).
+  note        String?
+  /// Wie viel später jemand kommt, in Minuten — nur bei einer Zusage. `null`
+  /// heißt pünktlich. Eine eigene Spalte und nicht Teil des Satzes, damit die
+  /// Liste eine Verspätung von einer bloßen Info unterscheiden kann. Fällt
+  /// wie `note` beim Statuswechsel weg.
+  lateMinutes Int?             @map("late_minutes")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
 
   meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
   person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)

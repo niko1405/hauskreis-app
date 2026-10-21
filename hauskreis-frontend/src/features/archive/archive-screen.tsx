@@ -441,7 +441,7 @@ export function ArchiveScreen() {
       <div ref={head} aria-hidden={searching} className="overflow-hidden">
         <PageHeader
           title="Archiv"
-          subtitle="Durchsuche vergangene Termine, Themen, Locations und Lieder."
+          subtitle="Durchsuche Themen, Lieder, Locations, Notizen und Termine."
         />
       </div>
 

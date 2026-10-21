@@ -134,6 +134,8 @@ export const meetingResponseSchema = z.object({
       /// Freiwillig und für alle sichtbar: Der Satz ist an die Gruppe
       /// gerichtet, nicht an die App.
       note: z.string().nullable(),
+      /// Wie viel später jemand kommt, in Minuten; `null` heißt pünktlich.
+      lateMinutes: z.number().int().nullable(),
     }),
   ),
 });
@@ -169,6 +171,7 @@ export const attendanceResponseSchema = z.object({
   status: z.enum(AttendanceStatus),
   source: z.enum(AttendanceSource),
   note: z.string().nullable(),
+  lateMinutes: z.number().int().nullable(),
   updatedAt: isoDateTimeOut,
 });
 

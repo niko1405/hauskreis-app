@@ -2865,6 +2865,7 @@ export interface components {
           /** @enum {string} */
           status: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
           note: string | null;
+          lateMinutes: number | null;
         }[];
       }[];
       total: number;
@@ -3077,6 +3078,7 @@ export interface components {
         /** @enum {string} */
         status: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
         note: string | null;
+        lateMinutes: number | null;
       }[];
     };
     HostSuggestionListResponseDto: {
@@ -3193,6 +3195,7 @@ export interface components {
       /** @enum {string} */
       status: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
       note?: string | null;
+      lateMinutes?: number | null;
     };
     AttendanceResponseDto: {
       /** Format: uuid */
@@ -3204,6 +3207,7 @@ export interface components {
       /** @enum {string} */
       source: 'SELF' | 'ABSENCE' | 'AUTO' | 'ROLE';
       note: string | null;
+      lateMinutes: number | null;
       /** Format: date-time */
       updatedAt: string;
     };
@@ -4128,6 +4132,7 @@ export interface components {
         occasionId: string | null;
         label: string | null;
       }[];
+      weeklyActionstep: boolean;
       openActionstep: {
         text: string;
         /** Format: uuid */

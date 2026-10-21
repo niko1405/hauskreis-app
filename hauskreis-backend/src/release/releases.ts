@@ -35,6 +35,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: '1.7.0',
+    date: '2026-10-21',
+    title: 'Notizen, eigene Liedtexte und Design-Updates',
+    highlights: [
+      'Neu: Notizen im Archiv — gemeinsam schreiben, unabhängig von einem Abend, mit Checklisten zum Abhaken. Du bestimmst, wer mitschreibt: einzelne Leute oder die ganze Gruppe.',
+      'Jedes Lied hat eine eigene Seite. Text und Akkorde hinterlegst du dort für dich (nur auf deinem Gerät) und spielst sie im Vollbild — mit Transponieren, Autoscroll und Griffbildern.',
+      'Die Setlist hat eine Reihenfolge, Vorschläge bekommen Stimmen.',
+      'Neue Rolle „Snacks": Wer etwas mitbringt, trägt sich am Abend ein und wird zwei Tage vorher erinnert.',
+      'Zu- und absagen geht auch in der Terminliste und im Kalender, mit einem Satz dazu — bei einer Zusage auch als Verspätung.',
+      'Vergangene Termine öffnen sich zum Nachlesen; wer nicht da war, steht gesammelt unter „War nicht da".',
+      'Neue Nachrichten: am Morgen des Termins, solange am nächsten Abend eine Rolle frei ist, und zur Halbzeit der Gebetsrunde.',
+      'Geschenk-Vorschläge lassen sich kommentieren.',
+      'Aufgeräumteres Design: Datum als Kästchen auf den Karten, Ändern und Löschen per Wisch nach links, Fenster lassen sich nach unten wegwischen.',
+    ],
+  },
+  {
     version: '1.6.0',
     date: '2026-08-30',
     title:
