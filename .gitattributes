@@ -3,3 +3,10 @@
 # (`set -euo pipefail` wird zu `pipefail\r`), und die Skripte laufen sowohl in
 # Git Bash als auch auf dem Server.
 *.sh text eol=lf
+
+# Dasselbe für die von sops verschlüsselten Secrets, und hier ist der Fehler
+# leiser: Mit CRLF entschlüsselt sops die Datei gar nicht mehr — es liest das
+# `\r` als Teil seines eigenen Zeitstempels („parsing time … extra text"). Unter
+# Windows hieße das: nach dem nächsten `git switch` kein `sops edit` und kein
+# `db:studio:prod` mehr.
+*.sops.env text eol=lf
