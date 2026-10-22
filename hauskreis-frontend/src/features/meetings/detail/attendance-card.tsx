@@ -3,37 +3,35 @@
 /**
  * Wer kommt — und was die Einzelnen dazu zu sagen haben.
  *
- * **„Weiß noch nicht" zählt mit.** Die Karte sagte „3 von 9" und meinte damit
- * nur die ausdrücklichen Zusagen; die Kapazitätsregel des Servers rechnet seit
- * jeher mit `groupSize − declined` (`countExpectedAttendance`), also mit allen
- * außer den Absagen. Zwei Zahlen über denselben Abend, und die sichtbare war
- * die knappere — als Gastgeber plant man lieber mit einem zu viel als mit einem
- * zu wenig. Jetzt steht dort dieselbe Menge, nach der auch eingeteilt wird.
- *
- * **Eine Liste statt eines Rasters.** Vorher standen die Zusagen als Kacheln
- * da, und Absagen wie Schweigen verschwanden gemeinsam hinter einer aufklappbaren
- * Zeile mit Namen in einer Reihe. Wer plant, will sie aber nebeneinander sehen:
- * oben die Sicheren, darunter die Unentschiedenen — und die Abgesagten für sich,
+ * **„Weiß noch nicht" zählt mit.** Oben stehen Zusagen und Unentschiedene
+ * zusammen: Der Server plant mit derselben Menge (`countExpectedAttendance`,
+ * alle außer den Absagen), und als Gastgeber plant man lieber mit einem zu
+ * viel als mit einem zu wenig. Die Abgesagten stehen für sich, zugeklappt,
  * weil sie eine andere Frage beantworten.
  *
- * **Der eine Satz zur Antwort** ist das, was vorher in WhatsApp stand. Er hängt
- * an der Anwesenheitszeile (`note`), gilt für alle drei Status und wechselt nur
- * seine Beschriftung: eine Verspätung, ein „muss schauen, wann Feierabend ist",
- * ein Grund fürs Fehlen.
+ * **Am vergangenen Abend** steht oben, wer da war, und zugeklappt darunter
+ * „War nicht da" — wer abgesagt hatte und wer unsicher war oder nie
+ * geantwortet hat. Jede Zeile trägt dort ihren eigenen Status.
  *
- * **Die eigene Antwort steht nicht mehr hier**, sondern unten am Bildschirm
- * (`answer-bar.tsx`). Diese Karte sagt, wer kommt; dass man selbst dazugehört,
- * ist eine andere Frage, und die soll nicht am Ende einer Liste stehen, zu der
- * man erst scrollen muss. Farben, Kurzformen und die Symbole der Sätze sind mit
- * ihr in `domain/attendance-answers.ts` gezogen — beide brauchen sie, und zwei
- * Kopien wären zwei Meinungen darüber, welche Farbe „abgesagt" hat.
+ * **Der eine Satz zur Antwort** hängt an der Anwesenheitszeile (`note`), gilt
+ * für alle drei Status und wechselt nur seine Beschriftung. Eine Verspätung
+ * steht daneben als eigene Zeile (`lateMinutes`).
+ *
+ * Die eigene Antwort steht unten am Bildschirm (`answer-bar.tsx`); Farben,
+ * Kurzformen und Symbole teilen sich beide über
+ * `domain/attendance-answers.ts`.
  */
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useMe, usePeople } from '@/lib/api/hooks';
-import { ANSWER, NOTE_FIELD } from '@/components/domain/attendance-answers';
+import {
+  ANSWER,
+  LATE_ICON,
+  NOTE_FIELD,
+  lateLabel,
+} from '@/components/domain/attendance-answers';
 import { cn } from '@/lib/cn';
 import type { AttendanceStatus, Meeting, Person } from '@/lib/api/types';
 
@@ -47,7 +45,7 @@ export function AttendanceCard({
 }) {
   const people = usePeople();
   const me = useMe();
-  const [showAbsent, setShowAbsent] = useState(false);
+  const [showAway, setShowAway] = useState(false);
 
   const rowOf = (personId: string) =>
     meeting.attendances.find((entry) => entry.personId === personId);
@@ -56,10 +54,9 @@ export function AttendanceCard({
 
   // Eingeladene zählen nicht mit: Wer sich noch nie angemeldet hat, kann nicht
   // antworten und stünde auf ewig unter „weiß noch nicht". Der Server rechnet
-  // für „alle haben abgesagt" mit derselben Menge. Ausgetretene kommen gar
-  // nicht erst an — die sortiert `findAll` aus. Dieselbe Regel steht als
-  // `attendanceCounts` in `lib/meeting.ts`, wo die Terminkarte sie liest; hier
-  // werden neben der Zahl auch die Namen gebraucht.
+  // für „alle haben abgesagt" mit derselben Menge, die Terminkarte ebenso
+  // (`attendanceCounts` in `lib/meeting.ts`); hier werden neben der Zahl auch
+  // die Namen gebraucht.
   const active = (people.data ?? []).filter(
     (person) => person.acceptedAt !== null,
   );
@@ -67,9 +64,11 @@ export function AttendanceCard({
   const unknown = active.filter((p) => statusOf(p.id) === 'UNKNOWN');
   const absent = active.filter((p) => statusOf(p.id) === 'ABSENT');
 
-  // An einem vergangenen Abend zählt nur, wer da war: „geplant für" ist keine
-  // Aussage über gestern.
+  // An einem vergangenen Abend zählt oben nur, wer da war: „geplant für" ist
+  // keine Aussage über gestern. Wer abgesagt hatte und wer unsicher war, steht
+  // dann gemeinsam unter „War nicht da".
   const planned = readOnly ? attending : [...attending, ...unknown];
+  const away = readOnly ? [...absent, ...unknown] : absent;
 
   return (
     <>
@@ -95,6 +94,7 @@ export function AttendanceCard({
                   person={person}
                   status={statusOf(person.id)}
                   note={rowOf(person.id)?.note ?? null}
+                  lateMinutes={rowOf(person.id)?.lateMinutes ?? null}
                   isMe={person.id === me.me?.id}
                 />
               ))}
@@ -103,37 +103,38 @@ export function AttendanceCard({
         </Card>
       </section>
 
-      {/* Eine eigene Gruppe und zugeklappt: Wer abgesagt hat, gehört nicht in
-          die Planung — aber der Gastgeber will trotzdem nachsehen können, wer
+      {/* Eine eigene Gruppe und zugeklappt: Wer fehlt, gehört nicht in die
+          Planung — aber der Gastgeber will trotzdem nachsehen können, wer
           fehlt und warum. */}
-      {absent.length > 0 && (
+      {away.length > 0 && (
         <div className="rounded-lg border border-line">
           <button
             type="button"
-            aria-expanded={showAbsent}
-            onClick={() => setShowAbsent((open) => !open)}
+            aria-expanded={showAway}
+            onClick={() => setShowAway((open) => !open)}
             className="flex w-full items-center justify-between gap-3 p-3 text-left"
           >
             <span className="text-xs font-semibold text-stone-500">
-              Abgesagt ({absent.length})
+              {readOnly ? 'War nicht da' : 'Abgesagt'} ({away.length})
             </span>
             <ChevronDown
               size={16}
               className={cn(
                 'shrink-0 text-stone-400 transition-transform',
-                showAbsent && 'rotate-180',
+                showAway && 'rotate-180',
               )}
             />
           </button>
 
-          {showAbsent && (
+          {showAway && (
             <ul className="divide-y divide-line border-t border-line">
-              {absent.map((person) => (
+              {away.map((person) => (
                 <PersonRow
                   key={person.id}
                   person={person}
-                  status="ABSENT"
+                  status={statusOf(person.id)}
                   note={rowOf(person.id)?.note ?? null}
+                  lateMinutes={null}
                   isMe={person.id === me.me?.id}
                 />
               ))}
@@ -149,47 +150,49 @@ function PersonRow({
   person,
   status,
   note,
+  lateMinutes,
   isMe,
 }: {
   person: Person;
   status: AttendanceStatus;
   note: string | null;
+  lateMinutes: number | null;
   isMe: boolean;
 }) {
   const answer = ANSWER[status];
   const NoteIcon = NOTE_FIELD[status].icon;
+  const late = status === 'ATTENDING' ? lateMinutes : null;
+  const twoLines = Boolean(note) || late !== null;
 
   return (
-    // Ohne Notiz ist die Zeile eine Zeile, und dann sitzt der Name mittig neben
-    // dem Bild. Die Ausrichtung nach oben samt der beiden Ausgleichs-Margen gilt
-    // dem zweizeiligen Fall — ohne zweite Zeile war sie nur eine Leerfläche
-    // unter dem Namen.
+    // Ohne zweite Zeile sitzt der Name mittig neben dem Bild; die Ausrichtung
+    // nach oben samt der Ausgleichs-Margen gilt nur dem mehrzeiligen Fall.
     <li
       className={cn(
         'flex gap-3 px-4 py-3',
-        note ? 'items-start' : 'items-center',
+        twoLines ? 'items-start' : 'items-center',
       )}
     >
       <Avatar
         person={person}
         size="sm"
-        className={cn('shrink-0', note && 'mt-0.5')}
+        className={cn('shrink-0', twoLines && 'mt-0.5')}
       />
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-stone-800">
           {isMe ? 'Du' : person.name}
         </p>
+        {/* Die Verspätung sticht heraus, der Satz nicht: Sie ändert etwas am
+            Abend selbst, ein Satz erklärt nur. */}
+        {late !== null && (
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs font-semibold text-terracotta-600">
+            <LATE_ICON size={13} className="shrink-0" />
+            {lateLabel(late)}
+          </p>
+        )}
         {note && (
-          <p
-            className={cn(
-              'mt-0.5 flex items-start gap-1.5 text-xs leading-relaxed',
-              // Die Verspätung sticht heraus, die anderen beiden nicht: Sie
-              // ändert etwas am Abend selbst, während „muss schauen" und ein
-              // Absagegrund nur erklären.
-              status === 'ATTENDING' ? 'text-terracotta-600' : 'text-stone-500',
-            )}
-          >
+          <p className="mt-0.5 flex items-start gap-1.5 text-xs leading-relaxed text-stone-500">
             <NoteIcon size={13} className="mt-0.5 shrink-0" />
             <span className="min-w-0">{note}</span>
           </p>
@@ -199,7 +202,7 @@ function PersonRow({
       <span
         className={cn(
           'flex shrink-0 items-center gap-1.5 text-[11px] font-semibold',
-          note && 'mt-1',
+          twoLines && 'mt-1',
           answer.text,
         )}
       >

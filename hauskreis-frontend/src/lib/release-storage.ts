@@ -10,10 +10,8 @@
  * | `seen`       | „Neu in Acts2" öffnen   | den Punkt **und** den Hinweis |
  * | `dismissed`  | „Später" im Hinweis     | nur den Hinweis             |
  *
- * Vorher tat „Später" dasselbe wie das Öffnen. Für einen Hinweis, den man
- * wegschiebt, ist das richtig; für einen Punkt, der „hier gibt es etwas Neues"
- * bedeutet, wäre es falsch — wer wegschiebt, hat nichts gelesen, und der Punkt
- * wäre trotzdem weg.
+ * „Später" ist nicht dasselbe wie das Öffnen: Wer wegschiebt, hat nichts
+ * gelesen — der Punkt, der „hier gibt es etwas Neues" bedeutet, bleibt.
  *
  * Beides im Gerät und nicht am Konto — dieselbe Überlegung wie beim Farbmodus
  * ([[theme-storage]]): Wer den Hinweis am Telefon weggeklickt hat, soll ihn am

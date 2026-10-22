@@ -4,10 +4,7 @@
  * Die drei Antworten auf „bist du dabei" — wie sie heißen, aussehen und wonach
  * sie fragen.
  *
- * **Warum das eine eigene Datei ist.** Die Tabellen standen in
- * `attendance-card.tsx`, solange die eigene Antwort dort wohnte. Seit sie unten
- * am Bildschirm steht (`answer-bar.tsx`) und seit die Terminkarte sie wieder
- * anbietet, brauchen sie drei Stellen: Die Karte am Termin malt die Zeilen der
+ * **Warum das eine eigene Datei ist.** Drei Stellen brauchen die Tabellen: Die Karte am Termin malt die Zeilen der
  * anderen (Farbe, Kurzform, Symbol des Satzes), Balken und Terminkarte die
  * eigene Antwort (Beschriftung, Symbol, Beispiel). Eine Komponente, die eine
  * andere importiert, um an eine Konstante zu kommen, ist eine Abhängigkeit, die
@@ -26,8 +23,8 @@ import type { AttendanceStatus } from '@/lib/api/types';
  * **`label` ist ein Verb, `short` ein Zustand** — und das ist kein Versehen,
  * sondern die ganze Unterscheidung: `label` steht auf einem Knopf, den man
  * drückt („Zusagen"), `short` in einer Zeile über jemand anderen, die etwas
- * feststellt („Dabei"). Vorher stand auf dem Knopf ebenfalls der Zustand, und
- * „Dabei" als Aufforderung zu lesen musste man erst lernen.
+ * feststellt („Dabei"). „Dabei" als Aufforderung zu lesen müsste man erst
+ * lernen.
  *
  * Der aktive Knopf färbt sich **nach seiner Bedeutung** und nicht einheitlich
  * terracotta: zusagen ist die gute Nachricht, absagen die, die dem Gastgeber
@@ -87,16 +84,18 @@ export const ANSWER = Object.fromEntries(
  *
  * Eine Spalte für alle drei (`meeting_attendance.note`) und nicht drei: Es ist
  * immer dieselbe Sache, was jemand den anderen zu diesem Abend noch sagen will.
- * Nur die Beschriftung wechselt.
+ * Nur die Beschriftung wechselt. Eine **Verspätung** steht daneben in Minuten
+ * (`lateMinutes`), damit die Liste sie von einer bloßen Info unterscheiden
+ * kann.
  */
 export const NOTE_FIELD: Record<
   AttendanceStatus,
   { label: string; placeholder: string; icon: typeof Clock }
 > = {
   ATTENDING: {
-    label: 'Verspätung oder Info (optional)',
-    placeholder: 'z.B. Komme 20 Min später…',
-    icon: Clock,
+    label: 'Info (optional)',
+    placeholder: 'z.B. Bringe noch jemanden mit…',
+    icon: MessageSquare,
   },
   UNKNOWN: {
     label: "Woran liegt's? (hilft bei der Planung)",
@@ -109,3 +108,37 @@ export const NOTE_FIELD: Record<
     icon: MessageSquare,
   },
 };
+
+/** Wie viel später man kommen kann — die Chips unter „Verspätung". */
+export const LATE_OPTIONS = [15, 30, 45, 60] as const;
+
+/** Das Symbol einer Verspätung, in der Liste wie im Formular. */
+export const LATE_ICON = Clock;
+
+/** „ca. 15 Min später", „ca. 1 Std später". */
+export function lateLabel(minutes: number): string {
+  if (minutes % 60 === 0) return `ca. ${minutes / 60} Std später`;
+  return `ca. ${minutes} Min später`;
+}
+
+/**
+ * Die eigene Antwort in einer Zeile — Verspätung und Satz, wie sie auf der
+ * Terminkarte, im Kalender und im eingeklappten Antwort-Balken stehen.
+ * `null`, wenn nichts dazugesagt ist.
+ */
+export function ownAnswerLine(
+  row:
+    | {
+        note: string | null;
+        lateMinutes: number | null;
+      }
+    | null
+    | undefined,
+): string | null {
+  if (!row) return null;
+  const parts = [
+    row.lateMinutes !== null ? lateLabel(row.lateMinutes) : null,
+    row.note ? `„${row.note}"` : null,
+  ].filter((part) => part !== null);
+  return parts.length > 0 ? parts.join(' · ') : null;
+}

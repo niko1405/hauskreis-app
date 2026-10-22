@@ -199,8 +199,7 @@ export class MeetingController {
    * ihn wirklich.
    *
    * Nur Admins. Die eigene Teilnahme abzusagen ist etwas anderes und geht über
-   * `PUT :id/attendance` — vorher stand hier für jedes Mitglied ein roter Knopf,
-   * der den Abend für alle absagte.
+   * `PUT :id/attendance`.
    */
   @Post(':id/cancel')
   @HauskreisAdmin()

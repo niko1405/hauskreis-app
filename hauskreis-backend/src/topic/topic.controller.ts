@@ -146,8 +146,7 @@ export class TopicController {
 
   /**
    * Holt jemanden ausdrücklich als Mitarbeitende:n ans Thema — der einzige Weg
-   * zum themaweiten Schreibrecht, seit eine gehaltene Einheit keines mehr
-   * mitbringt.
+   * zum themaweiten Schreibrecht; eine gehaltene Einheit bringt keines mit.
    */
   @Post('topics/:id/collaborators')
   @ApiZodNoContent()

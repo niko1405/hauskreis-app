@@ -1,8 +1,7 @@
 /**
  * Woher der Actionstep eines Abends kommt.
  *
- * Seit es den Baustein „Nachbereitung" gibt, sind es **zwei** Orte: die Einheit
- * eines Themas (`TopicSession.actionstepText`) und der Abend selbst
+ * Es sind **zwei** Orte: die Einheit eines Themas (`TopicSession.actionstepText`) und der Abend selbst
  * (`Meeting.actionstepText`). Welcher gilt, entscheidet der Baustein — die
  * beiden schließen einander aus, ein Abend hat also nie zwei.
  *
@@ -52,12 +51,10 @@ export interface ActionstepSource {
  * können gleichzeitig gefüllt sein, und ein `??` spielte dann den Text eines
  * Themas aus, das an diesem Abend gar nicht mehr dazugehört.
  *
- * Der Weg dorthin ist enger geworden — `TopicLinkService.detach` löst beim
- * Abschalten des Bausteins inzwischen auch vergangene Abende —, aber es gibt
- * ihn noch: Abende, an denen das früher unterblieben ist, tragen ihre Einheit
- * weiterhin. Die Entscheidung am Baustein wäre ohnehin die richtige, auch wenn
- * der Fall gar nicht mehr entstünde: Sie liest die Aussage des Abends statt zu
- * raten, welches Feld gemeint ist.
+ * `TopicLinkService.detach` löst beim Abschalten des Bausteins die Einheit,
+ * ältere Abende können sie trotzdem noch tragen. Die Entscheidung am Baustein
+ * ist ohnehin die richtige: Sie liest die Aussage des Abends statt zu raten,
+ * welches Feld gemeint ist.
  *
  * Ein leerer Text zählt als keiner: das Feld ist Freitext, und ein Leerzeichen
  * ist niemanden zu unterbrechen wert.
@@ -103,11 +100,10 @@ export type LatestActionstep = Prisma.MeetingGetPayload<{
  * Actionstep, und bleib beim ersten stehen, der übrig bleibt. Hat der einen,
  * gilt er; hat er keinen, gilt keiner.
  *
- * **Warum überhaupt stehen bleiben.** Gesucht wurde bisher „der jüngste
- * vergangene Abend, *der einen hat*" — ein leerer Dienstag wurde also
- * übersprungen, und der Vorsatz von vorletzter Woche stand eine Woche zu lang
- * da, als wäre er frisch. Ein neuer Abend beendet den alten Vorsatz, auch wenn
- * er selbst keinen hinterlässt: Was besprochen wurde, ist besprochen.
+ * **Warum überhaupt stehen bleiben.** Ein neuer Abend beendet den alten
+ * Vorsatz, auch wenn er selbst keinen hinterlässt: Was besprochen wurde, ist
+ * besprochen. Würde ein leerer Dienstag übersprungen, stünde der Vorsatz von
+ * vorletzter Woche eine Woche zu lang da, als wäre er frisch.
  *
  * **Warum der besondere Termin die Ausnahme ist.** Ein Geburtstag oder eine
  * Freizeit ist kein Hauskreis-Abend im Sinne dieses Vorsatzes. Zwischen zwei

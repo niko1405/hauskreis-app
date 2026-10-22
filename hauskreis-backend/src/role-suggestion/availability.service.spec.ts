@@ -390,8 +390,7 @@ describe('RoleReleaseService.releaseFor', () => {
   });
 
   /**
-   * Bis vor Kurzem blieb das Thema stehen, weil die Zuständigkeit am *Thema*
-   * hing und nicht am Abend. Jetzt ist es eine Zuteilung wie die anderen drei.
+   * Das Thema ist eine Zuteilung am Abend wie die anderen.
    */
   it('gibt auch die Themen-Rolle frei', async () => {
     const { service, topicLinks } = setupRelease();

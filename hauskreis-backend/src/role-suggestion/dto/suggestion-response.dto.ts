@@ -64,11 +64,10 @@ const homeFactsSchema = z.object({
   actualShare: z.number(),
   /// Über wie viele vergangene Abende die beiden Anteile gerechnet sind.
   ///
-  /// Die Oberfläche druckt daraus **keine Zahl** mehr: „3 von 14, üblich wären
-  /// 5" war zwar nachzählbar, aber unter einem Namen in einer Liste liest
-  /// niemand eine Rechnung. Sie sagt jetzt nur noch „seltener als üblich".
-  /// Gebraucht wird der Wert trotzdem — als Prüfung, ob es überhaupt eine
-  /// Historie gibt: bei `0` ist auch das Urteil eine Behauptung über nichts.
+  /// Die Oberfläche druckt daraus **keine Zahl** — unter einem Namen in einer
+  /// Liste liest niemand eine Rechnung —, sondern nur „seltener als üblich".
+  /// Gebraucht wird der Wert als Prüfung, ob es überhaupt eine Historie gibt:
+  /// bei `0` ist auch das Urteil eine Behauptung über nichts.
   meetingsCounted: z.number().int().nonnegative(),
   /// Wie viele im Hauskreis überhaupt sind. Steht **nur** hier, um zu
   /// entscheiden, ob `capacity` eine Frage aufwirft: In eine Wohnung, in die
@@ -90,10 +89,10 @@ export const hostSuggestionSchema = roleSuggestionSchema.extend({
     /// `AWAY` = der ganze Haushalt ist weg, `TOO_SMALL` = passt an dem Abend
     /// nicht. Beides sind Unmöglichkeiten — mehr steht hier nicht.
     ///
-    /// `HOUSEHOLD_BUSY` gab es einmal daneben und war keine: Wer das Thema
-    /// hält, kann trotzdem seine Tür aufmachen. Dass jemand an dem Abend schon
-    /// etwas hat, sagt der Vorschlag in denselben Worten wie überall sonst
-    /// („an diesem Abend schon Thema") und rutscht dafür im Ranking nach unten.
+    /// Dass jemand an dem Abend schon etwas hat, ist keine Unmöglichkeit — wer
+    /// das Thema hält, kann trotzdem seine Tür aufmachen. Das sagt der
+    /// Vorschlag in denselben Worten wie überall sonst („an diesem Abend schon
+    /// Thema") und rutscht dafür im Ranking nach unten.
     deferredReason: z.enum(['AWAY', 'TOO_SMALL']).nullable(),
     home: homeFactsSchema,
   }),

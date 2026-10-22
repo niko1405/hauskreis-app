@@ -102,7 +102,7 @@ export function NewNoteSheet({
           <TextInput
             aria-label="Titel der Notiz"
             value={title}
-            placeholder="Packliste Freizeit, Ideen für den Kurs …"
+            placeholder="Packliste Freizeit, Ideen …"
             onChange={(event) => setTitle(event.target.value)}
           />
         </div>

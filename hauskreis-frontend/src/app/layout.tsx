@@ -46,13 +46,11 @@ export const metadata: Metadata = {
      *
      * Mit `default` setzt iOS die WebView **unter** die Statusleiste. Damit ist
      * `env(safe-area-inset-top)` null — jedes `calc(env(safe-area-inset-top) +
-     * …)` im Projekt fiel still auf seine Konstante zusammen, und den Streifen
-     * darüber malte iOS selbst aus `themeColor`. Genau das war der schwarze
-     * Balken: eine Farbe, die zur Schale gehört, über einer Leinwand, die
-     * anders aussieht.
+     * …)` im Projekt fiele still auf seine Konstante zusammen, und den Streifen
+     * darüber malte iOS selbst aus `themeColor`.
      *
-     * `black-translucent` gibt uns die Fläche zurück. Der Preis: Uhr, Netz und
-     * Batterie sind ab jetzt **immer weiß**, einen zweiten Wert gibt es nicht.
+     * `black-translucent` gibt uns die Fläche. Der Preis: Uhr, Netz und Batterie
+     * sind **immer weiß**, einen zweiten Wert gibt es nicht.
      * Deshalb liegt im `AppShell` ein Schleier über dem sicheren Rand — ohne
      * ihn wäre die Uhr im Hellmodus unsichtbar.
      */
@@ -74,10 +72,10 @@ export const viewport: Viewport = {
    *
    * Das ist `--color-canvas`, nicht `--color-shell`. Die Schale ist die Farbe
    * *neben* der Telefonspalte und erst ab `md` zu sehen; auf dem Handy füllt
-   * die Leinwand den Bildschirm. Hier standen die Schalenwerte, und die Kante
-   * darüber war im Dunkelmodus der schwarze Balken.
+   * die Leinwand den Bildschirm; mit den Schalenwerten säße im Dunkelmodus ein
+   * schwarzer Balken darüber.
    *
-   * Seit `statusBarStyle: 'black-translucent'` ist der Streifen unter iOS
+   * Mit `statusBarStyle: 'black-translucent'` ist der Streifen unter iOS
    * durchsichtig — diese Farbe ist der Rückfall. Er zählt zweimal: unter
    * Android malt Chrome den Streifen immer daraus, und `black-translucent`
    * führt Apple als veraltet, es kann also eines Tages wieder ein Streifen
@@ -95,10 +93,9 @@ export const viewport: Viewport = {
   /**
    * Kein Zoom per Geste.
    *
-   * Hier stand einmal das Gegenteil („Hineinzoomen darf man immer können").
-   * Für eine Seite stimmt das; für eine App, die man vom Home-Bildschirm
-   * startet, ist das Auseinanderziehen der ganzen Oberfläche kein Werkzeug,
-   * sondern ein Versehen. Im Safari-Tab ignoriert Apple die Sperre ohnehin,
+   * Für eine Seite darf man immer hineinzoomen können; für eine App, die man
+   * vom Home-Bildschirm startet, ist das Auseinanderziehen der ganzen
+   * Oberfläche kein Werkzeug, sondern ein Versehen. Im Safari-Tab ignoriert Apple die Sperre ohnehin,
    * und die Systemschrift-Größe wirkt weiterhin.
    */
   maximumScale: 1,

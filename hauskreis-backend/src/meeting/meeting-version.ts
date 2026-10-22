@@ -6,10 +6,8 @@ import { Prisma } from '../../generated/prisma/client';
  * Der ETag eines Termins entsteht allein aus `meeting.version`
  * (`EtagInterceptor`). Zuteilung und gewählte Einheit stehen aber mit in
  * `MeetingResponseDto` — wer sie ändert, ohne die Version anzuheben, hinterlässt
- * einen ETag, der den Körper nicht mehr beschreibt. Die Folge sah man im
- * Frontend: die Anfrage ging raus, der Server antwortete `304`, und der
- * Bildschirm zeigte weiter den alten Stand. Erst ein Reload half, weil dann kein
- * `If-None-Match` mitkam.
+ * einen ETag, der den Körper nicht mehr beschreibt: Der Server antwortete
+ * `304`, und der Bildschirm zeigte weiter den alten Stand.
  *
  * Dass damit auch ausstehende `If-Match`-Token ungültig werden, ist kein
  * Nebenschaden, sondern derselbe Satz von der anderen Seite: wer den Termin vor
@@ -40,12 +38,10 @@ export async function touchMeeting(
  *
  * Die Anwesenheit steht mit in `MeetingResponseDto`, und **wer sie schreibt,
  * schreibt am Termin** — auch wenn er die Zeile in einer anderen Tabelle
- * anlegt. Zwei Läufe taten das bisher nicht: das Auffüllen der Auto-Zusagen und
- * der Abwesenheits-Abgleich. Beide fassen viele Abende auf einmal an, und für
- * beide sah man dieselbe Folge — die Terminliste zeigte die neue Zusage (ihr
- * ETag ist ein Inhalts-Hash), die Detailseite antwortete `304` und blieb beim
- * alten Stand. Mal war die Person dabei, mal nicht, je nachdem, welcher der
- * beiden Bildschirme gerade frisch geladen hatte.
+ * anlegt — etwa das Auffüllen der Auto-Zusagen und der Abwesenheits-Abgleich.
+ * Sonst zeigte die Terminliste die neue Zusage (ihr ETag ist ein
+ * Inhalts-Hash), während die Detailseite `304` bekäme und beim alten Stand
+ * bliebe.
  *
  * Doppelte Ids schaden nicht (`in` fasst sie zusammen), eine leere Liste spart
  * die Abfrage.

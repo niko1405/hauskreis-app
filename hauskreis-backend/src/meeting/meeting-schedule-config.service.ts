@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { personRefSelect } from '../common/dto/response';
 import { PrismaService } from '../prisma/prisma.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
+import { touchHauskreis } from '../hauskreis/hauskreis-version';
 import type { IfMatchCondition } from '../common/http/etag';
 import { EVENING_HOUR } from '../common/time/local-evening';
 import { GroupClockService } from './group-clock.service';
@@ -37,10 +38,8 @@ const configInclude = {
 /**
  * Wann sich die Gruppe trifft.
  *
- * Bis eben war das keine Frage, sondern eine Konstante: dienstags, 18 Uhr, im
- * Code. Für die eine Gruppe, für die das geschrieben wurde, stimmte es — für
- * jede zweite nicht, und eine App, die vier Wochentage nicht kennt, ist keine
- * App für Hauskreise.
+ * Eine Einstellung der Gruppe und keine Konstante: Nicht jeder Hauskreis
+ * trifft sich dienstags um 18 Uhr.
  *
  * Angelegt beim ersten Lesen, nicht beim Anlegen des Hauskreises: so steht die
  * Vorgabe an einer Stelle, und eine Gruppe, die nie etwas einstellt, trägt
@@ -113,8 +112,8 @@ export class MeetingScheduleConfigService {
    *
    * Wer den Wochentag umstellt, verschiebt nichts, was schon im Kalender steht:
    * für die stehenden Termine haben Leute zugesagt, ein Thema vorbereitet, das
-   * Wohnzimmer eingeplant. Der Generator füllt ab jetzt den neuen Tag auf, die
-   * alten laufen aus.
+   * Wohnzimmer eingeplant. Der Generator füllt den neuen Tag auf, die alten
+   * laufen aus.
    */
   async updateConfig(
     hauskreisId: string,
@@ -122,14 +121,14 @@ export class MeetingScheduleConfigService {
     updatedByPersonId: string | null,
     condition?: IfMatchCondition,
   ) {
-    await this.getConfig(hauskreisId);
+    const before = await this.getConfig(hauskreisId);
 
     // Die Zone hängt im Zwischenspeicher der Uhr. Vor dem Schreiben abgeräumt
     // und nicht danach: schlägt der Versionsvergleich fehl, ist ein leerer
     // Zwischenspeicher ohne Folgen — ein alter Wert dagegen bliebe stehen.
     this.clock.forget(hauskreisId);
 
-    return updateWithVersionCheck({
+    const updated = await updateWithVersionCheck({
       condition,
       update: (versionConstraint) =>
         this.prisma.meetingScheduleConfig.updateMany({
@@ -154,6 +153,16 @@ export class MeetingScheduleConfigService {
       reload: () => this.getConfig(hauskreisId),
       notFoundMessage: `No meeting schedule for Hauskreis ${hauskreisId}`,
     });
+
+    // Der Schalter steht als `features` auch in der Antwort des Hauskreises.
+    if (
+      dto.weeklyActionstep !== undefined &&
+      dto.weeklyActionstep !== before.weeklyActionstep
+    ) {
+      await touchHauskreis(this.prisma, hauskreisId);
+    }
+
+    return updated;
   }
 }
 

@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * Die Läufe, die sonst der Zeitplaner im Backend anstößt — hier von Hand
- * auslösbar, mit dem Ergebnis daneben. Nützlich beim Einrichten und wenn
- * jemand wissen will, ob eine Erinnerung wirklich rausging.
+ * Die Einstellungen der Gruppe (Rhythmus, Actionstep, Gebet) und die Läufe,
+ * die sonst nachts von selbst passieren — hier von Hand auslösbar, mit dem
+ * Ergebnis daneben.
  */
 import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -81,9 +81,6 @@ const ZONES: string[] = Intl.supportedValuesOf?.('timeZone') ?? [
  * Beides in einem Formular und mit einem Speichern-Knopf, weil es ein Satz ist:
  * „wir treffen uns dienstags um 18 Uhr". Getrennt wären es zwei Entscheidungen,
  * von denen man die zweite vergisst.
- *
- * Wochentag und Uhrzeit standen bis eben als Konstanten im Backend — für die
- * eine Gruppe, für die das geschrieben wurde, stimmten sie.
  */
 function MeetingScheduleCard() {
   const schedule = useMeetingSchedule();
@@ -201,9 +198,7 @@ function MeetingScheduleCard() {
             </Field>
 
             {/* Die dritte Angabe desselben Satzes: „dienstags um 18 Uhr" ist ohne
-            sie nicht zu deuten — und „welchen Tag haben wir" ebenso wenig. Ein
-            Server in UTC hielt den Termin von gestern bis zwei Uhr nachts für
-            kommend. */}
+            sie nicht zu deuten — und „welchen Tag haben wir" ebenso wenig. */}
             <Field
               label="Zeitzone"
               hint="In dieser Zone gilt die Uhrzeit — und in ihr zählt die App die Tage."
@@ -325,10 +320,16 @@ function WeeklyActionstepCard() {
   return (
     <section>
       <SectionTitle>Actionstep der Woche</SectionTitle>
-      <Card>
+      <Card className="space-y-4">
+        {/* Eine eigene Mutation neben der des Rhythmus — kippt sie wegen einer
+            fremden Änderung (412), sagt das der Hinweis statt eines Schalters,
+            der still zurückspringt. */}
+        {update.conflict && (
+          <ConflictBanner onResolve={update.resolveConflict} />
+        )}
         <SwitchRow
           label={'Auf „Heute" anzeigen'}
-          description="Der Vorsatz vom letzten Abend, mit Haken, plus die wöchentliche Erinnerung. An Einheiten und über die Nachbereitung bleibt der Actionstep so oder so."
+          description="Der Vorsatz vom letzten Abend zum Abhaken, plus die wöchentliche Erinnerung. An Einheiten und über die Nachbereitung bleibt der Actionstep stehen, wenn diese Option ausgeschalten ist."
           checked={current?.weeklyActionstep ?? true}
           disabled={update.isPending}
           onChange={(next) =>
@@ -445,8 +446,8 @@ function PrayerBuddyConfigCard() {
               </Button>
             </div>
 
-            {/* Nicht mehr „neu würfeln": seit fünf Runden im Voraus stehen, wird
-            nicht neu ausgelost, sondern die nächste geplante vorgezogen. */}
+            {/* Nicht „neu würfeln": Fünf Runden stehen im Voraus, also wird die
+            nächste geplante vorgezogen. */}
             <p className="text-[11px] leading-relaxed text-stone-400">
               Beendet die laufende Runde und zieht die nächste geplante auf
               heute vor. Danach steht der Vorlauf wieder voll.
@@ -477,11 +478,10 @@ function JobsCard() {
   // Die Hooks stehen einzeln da und nicht in einer Schleife — die Reihenfolge
   // von Hook-Aufrufen muss über Renderdurchläufe hinweg dieselbe sein.
   //
-  // **Die Erinnerungs-Läufe standen einmal hier und sind weg.** Sieben Knöpfe,
-  // die alle dasselbe taten: eine Nachricht von Hand auslösen, die der Cron um
-  // neun ohnehin schickt. Sie waren zum Ausprobieren da; was blieb, waren
-  // sieben Gelegenheiten, der Gruppe versehentlich etwas zu schicken. Übrig
-  // sind die Läufe, die etwas anlegen oder aufräumen.
+  // Nur Läufe, die etwas anlegen oder aufräumen. Erinnerungen gibt es hier
+  // bewusst nicht: Sie verschickt der Server um neun ohnehin, und ein Knopf
+  // dafür wäre nur eine Gelegenheit, der Gruppe versehentlich etwas zu
+  // schicken.
   const generate = useGenerateMeetings();
   const planRounds = usePlanPrayerBuddyRounds();
   const repairRound = useRepairPrayerBuddyRound();
@@ -493,7 +493,7 @@ function JobsCard() {
   const jobs: Job[] = [
     {
       label: 'Termine vorausplanen',
-      hint: 'Legt Abende an, bis sieben im Voraus stehen.',
+      hint: 'Legt Abende an, bis sieben im Voraus stehen. Sinnvoll direkt nach einer Änderung am Rhythmus.',
       pending: generate.isPending,
       run: () =>
         generate.mutate(undefined, {
@@ -504,7 +504,7 @@ function JobsCard() {
     },
     {
       label: 'Gebetsrunden vorausplanen',
-      hint: 'Legt Runden an, bis fünf im Voraus stehen. Meldet niemandem etwas — das passiert, wenn eine Runde beginnt.',
+      hint: 'Legt Runden an, bis fünf im Voraus stehen. Meldet niemandem etwas — das passiert erst, wenn eine Runde beginnt.',
       pending: planRounds.isPending,
       run: () =>
         planRounds.mutate(undefined, {
@@ -519,7 +519,7 @@ function JobsCard() {
     },
     {
       label: 'Gebetsrunde prüfen',
-      hint: 'Zieht die laufende Runde nach: niemand steht draußen, niemand bleibt allein, keine Gruppe größer als drei. Wird nicht neu gewürfelt.',
+      hint: 'Sinnvoll, wenn jemand neu dazugekommen oder gegangen ist: Die laufende Runde wird nachgezogen — niemand steht draußen, niemand bleibt allein, keine Gruppe größer als drei. Neu gewürfelt wird nicht.',
       pending: repairRound.isPending,
       run: () =>
         repairRound.mutate(undefined, {
@@ -534,7 +534,7 @@ function JobsCard() {
     },
     {
       label: 'Abwesenheiten abgleichen',
-      hint: 'Sagt Termine ab, für die jemand als abwesend eingetragen ist.',
+      hint: 'Sagt Termine ab, für die jemand als abwesend eingetragen ist. Sinnvoll, wenn ein Urlaub einen Abend noch nicht abgesagt hat.',
       pending: syncAbsences.isPending,
       run: () =>
         syncAbsences.mutate(undefined, {
@@ -547,7 +547,7 @@ function JobsCard() {
     },
     {
       label: 'Verwaiste Orte wegräumen',
-      hint: 'Löscht stillgelegte Orte, an denen kein Termin und niemand mehr hängt.',
+      hint: 'Löscht stillgelegte Orte, an denen kein Termin und niemand mehr hängt. Läuft nie von selbst.',
       pending: purgeLocations.isPending,
       run: () =>
         purgeLocations.mutate(undefined, {
@@ -566,6 +566,14 @@ function JobsCard() {
     <section>
       <SectionTitle>Läufe</SectionTitle>
       <Card className="space-y-3">
+        <p className="text-[11px] leading-relaxed text-stone-400">
+          Normalerweise brauchst du hier nichts zu tun: Termine vorausplanen,
+          Gebetsrunden planen und prüfen und Abwesenheiten abgleichen erledigt
+          die App jede Nacht von selbst. Die Knöpfe sind für den Fall, dass du
+          nicht bis morgen warten willst — etwa direkt nach einer Änderung am
+          Rhythmus oder wenn jemand neu dazugekommen ist. Jeder Lauf erledigt
+          nur, was noch fehlt; zweimal drücken schadet nicht.
+        </p>
         {jobs.map((job) => (
           <div
             key={job.label}

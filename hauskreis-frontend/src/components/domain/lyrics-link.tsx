@@ -1,9 +1,8 @@
 /**
  * Links nach draußen, zu Text oder Akkorden — prüfen und öffnen.
  *
- * Hier stand einmal auch `LyricsLink`, der Knopf „Text ↗" an jeder Liedzeile.
- * Seit ein Lied eine eigene Seite hat, steht der Link dort ganz oben, und die
- * Zeile führt hin; ein zweiter Weg an jeder Zeile wäre einer zu viel.
+ * Der Link steht auf der Seite des Lieds ganz oben, und die Liedzeile führt
+ * hin; ein zweiter Weg an jeder Zeile wäre einer zu viel.
  *
  * Gespeichert wird nur die Adresse, nie der Text selbst (CLAUDE.md §6.7).
  */
@@ -35,8 +34,8 @@ export function isHttpUrl(value: string | null | undefined): value is string {
  * Steht neben dem Eingabefeld und nicht in der Liste: dort ist die Frage „was
  * steht auf der Seite", hier „stimmt das überhaupt". Besonders bei einem
  * Vorschlag des Sprachmodells — der sieht immer plausibel aus, und ob er zum
- * richtigen Lied führt, sieht man nur, wenn man draufklickt. Bisher hieß das:
- * markieren, kopieren, woanders einfügen.
+ * richtigen Lied führt, sieht man nur, wenn man draufklickt — ohne den Knopf
+ * hieße das: markieren, kopieren, woanders einfügen.
  *
  * Ohne gültige Adresse gibt es den Knopf nicht. Er ausgegraut dastehen zu lassen
  * wäre ein Ziel für den Daumen, das nichts tut.

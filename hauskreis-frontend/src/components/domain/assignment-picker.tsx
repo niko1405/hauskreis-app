@@ -20,18 +20,14 @@
  * wegzuwerfen — und wer nicht den ersten Vorschlag nimmt, ist genau die Person,
  * die eine Begründung braucht.
  *
- * **Unten steht nur, wen der Server auch annähme.** Das war einmal weiter
- * gefasst und darum falsch: Wer für den Abend abgesagt hatte, fiel aus dem
- * Ranking und tauchte darunter wieder auf — mit dem Hinweis, eintragen ginge
- * trotzdem. Ging es nicht; `assertAvailable` lehnt genau das ab. Beim Host fiel
- * es nie auf, weil es dort gar keine Liste darunter gibt.
+ * **Unten steht nur, wen der Server auch annähme.** Wer für den Abend abgesagt
+ * hat, fehlt deshalb auch dort — `assertAvailable` lehnt genau das ab.
  *
- * **Wer kein Instrument spielt, steht bei der Musik gar nicht da.** Er stand
- * einmal darunter, als „Nicht im Ranking" — ein Vorschlags-Filter und keine
- * Regel, `setLeaders` fragt nicht nach Instrumenten. In der Benutzung war es
- * eine zweite Liste voller Leute, die für diese Rolle nie in Frage kommen, und
- * sie sah aus wie die Fortsetzung der ersten. Wer doch die Musik macht, hakt im
- * Profil „spielt ein Instrument" an. Stehen bleibt nur, wer **schon
+ * **Wer kein Instrument spielt, steht bei der Musik gar nicht da.** Das ist ein
+ * Vorschlags-Filter und keine Regel (`setLeaders` fragt nicht nach
+ * Instrumenten), aber eine zweite Liste voller Leute, die für diese Rolle nie
+ * in Frage kommen, sähe aus wie die Fortsetzung der ersten. Wer doch die Musik
+ * macht, schaltet im Profil „spielt ein Instrument" ein. Stehen bleibt nur, wer **schon
  * eingetragen** ist: sonst ließe er sich nicht mehr austragen.
  *
  * Übrig bleibt damit das Testimony, wo darunter steht, wer es schon erzählt

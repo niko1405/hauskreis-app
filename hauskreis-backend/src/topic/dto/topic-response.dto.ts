@@ -216,7 +216,7 @@ export const singleTopicSessionSchema = z.object({
   createdAt: isoDateTimeOut,
   /// Das Thema darüber — `null` bei einer alleinstehenden Einheit.
   ///
-  /// Seit die Liste auch gebundene Einheiten trägt (jede, die ich vorbereite),
+  /// Die Liste trägt auch gebundene Einheiten (jede, die ich vorbereite), also
   /// braucht die Zeile diese Herkunft: „Teil 3" ohne das Thema davor wäre
   /// dasselbe Angebot wie ein einzelner Abend, und das ist es nicht.
   topic: z.object({ id: z.uuid(), title: z.string().nullable() }).nullable(),
@@ -234,7 +234,7 @@ export const singleTopicSessionSchema = z.object({
  * mehreren Abenden, oder ein Abend für sich. Neu anfangen braucht keine Daten
  * und steht deshalb nicht hier.
  *
- * `singleSessions` heißt nicht mehr „ohne Thema", sondern **„meine offenen
+ * `singleSessions` heißt nicht „ohne Thema", sondern **„meine offenen
  * Einheiten"** — auch die unter einem fremden Thema, an denen ich als
  * Verantwortliche:r stehe. Sonst wäre eine Einheit, zu der mich jemand
  * dazugeholt hat, an meinem eigenen Abend nicht wählbar.

@@ -33,10 +33,9 @@ services:
   # `migrate deploy` only applies what is already in prisma/migrations and never
   # generates or resets anything, so a restart is harmless.
   #
-  # **Dasselbe Image wie `api`, nur ein anderes `command`.** Es war einmal ein
-  # eigenes, weil `prisma` als devDependency im Runtime-Image fehlte; seit beide
-  # unter `dependencies` stehen (siehe Dockerfile), gibt es nichts mehr zu
-  # trennen — und die CI muss nur eines bauen und pushen.
+  # **Dasselbe Image wie `api`, nur ein anderes `command`.** `prisma` steht
+  # unter `dependencies` (siehe Dockerfile), es gibt also nichts zu trennen —
+  # und die CI muss nur eines bauen und pushen.
   migrate:
     image: ${API_IMAGE:-ghcr.io/niko1405/hauskreis-backend}:${IMAGE_TAG:-latest}
     # Direkt der Binary, nicht `pnpm exec`: Im Image ist corepack zwar
@@ -165,12 +164,10 @@ services:
     # `start`, not `start-dev`: enforces the hostname, expects a proxy in front
     # and refuses the shortcuts the dev mode allows.
     #
-    # **Ohne `--optimized`**, obwohl das hier einmal stand. Der Flag verspricht
-    # Keycloak, dass die Bauphase (`kc.sh build`) schon gelaufen ist — beim
-    # allerersten Start ist sie das nicht, und Keycloak verweigert den Dienst mit
-    # „The '--optimized' flag was used for first ever server start". Der
-    # Container lief dann in einer Neustartschleife, und zwar genau einmal: beim
-    # Aufsetzen. Ihn richtig zu nutzen hieße, ein eigenes Keycloak-Image zu bauen
+    # **Ohne `--optimized`.** Der Flag verspricht Keycloak, dass die Bauphase
+    # (`kc.sh build`) schon gelaufen ist — beim allerersten Start ist sie das
+    # nicht, und Keycloak verweigert den Dienst mit „The '--optimized' flag was
+    # used for first ever server start": eine Neustartschleife beim Aufsetzen. Ihn richtig zu nutzen hieße, ein eigenes Keycloak-Image zu bauen
     # und zu pflegen — für ein paar Sekunden Startzeit bei einem Dienst, der
     # monatelang durchläuft.
     #

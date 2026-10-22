@@ -13,8 +13,8 @@
  *
  * **„Später" ist hier etwas anderes als „gelesen".** Es schiebt diesen Kasten
  * weg und sonst nichts: Der Punkt an der Profil-Leiste bleibt stehen, bis man
- * tatsächlich nachgesehen hat. Vorher hat „Später" beides erledigt — was heißt,
- * dass man das Neue wegklicken konnte, ohne es je zu sehen.
+ * tatsächlich nachgesehen hat — sonst ließe sich das Neue wegklicken, ohne es
+ * je zu sehen.
  */
 import { ArrowRight, Sparkles } from 'lucide-react';
 import Link from '@/components/ui/link';

@@ -253,8 +253,8 @@ describe('BirthdayPlannerService.plan', () => {
 
   it('teilt auch innerhalb der Frist zu, wenn noch niemand zuständig ist', async () => {
     // Der Fall beim Einschalten: Wer die Geschenke aktiviert, während der
-    // nächste Geburtstag schon in der Frist liegt, bekam für ihn früher nie
-    // jemanden — und ausgerechnet der eine, um den es ging, blieb leer.
+    // nächste Geburtstag schon in der Frist liegt, bekommt für ihn trotzdem
+    // jemanden.
     const { service, occasionUpdate } = setup({
       people: [
         { id: 'a', name: 'Anna', birthdate: day('1990-01-10') },

@@ -33,11 +33,10 @@ export class MeController {
    * Wer bin ich.
    *
    * `resolveForUser` gibt die vollständige Zeile zurück, also auch die
-   * `keycloakUserId`. Das Antwort-Schema schneidet sie weg; ohne es stand sie
-   * bis hierher in der Antwort, obwohl `…/people` sie längst zurückhielt.
+   * `keycloakUserId`. Das Antwort-Schema schneidet sie weg.
    *
-   * Die Rollen aus dem Token stehen nicht mehr dabei: ob jemand Admin ist,
-   * hängt am Hauskreis und steht als `role` an der Person selbst.
+   * Die Rollen aus dem Token stehen nicht dabei: ob jemand Admin ist, hängt am
+   * Hauskreis und steht als `role` an der Person selbst.
    */
   @Get()
   @ApiZodResponse(MeResponseDto, {

@@ -1,13 +1,11 @@
 'use client';
 
 /**
- * Vergangene Abende im Archiv — das Register, das es einmal gab und das
- * abgeschafft wurde, weil es dasselbe zeigte wie die Themen.
+ * Vergangene Abende im Archiv.
  *
- * Seit es die **Nachbereitung** gibt, stimmt das nicht mehr: ein Abend ohne
- * Thema trägt jetzt eigenen Inhalt, den keine Themenseite abdeckt. Genau der
- * Lobpreisabend, an dem sich die Gruppe etwas vorgenommen hat, war vorher
- * nirgends nachzulesen.
+ * Ein Abend ohne Thema trägt mit der **Nachbereitung** eigenen Inhalt, den
+ * keine Themenseite abdeckt — der Lobpreisabend, an dem sich die Gruppe etwas
+ * vorgenommen hat, ist hier nachzulesen.
  *
  * Es steht trotzdem an letzter Stelle: was man im Archiv sucht, ist meistens ein
  * Thema oder ein Lied, und nur manchmal ein Abend.

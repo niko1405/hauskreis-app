@@ -1,8 +1,8 @@
 /**
- * Die Tür, die es bis eben gar nicht gab.
+ * Die Tür zum Hauskreis.
  *
- * `hauskreisId` war ein reiner Pfadparameter; wer eine fremde Id kannte, konnte
- * dort alles. Diese Tests halten fest, dass das nicht wiederkommt.
+ * `hauskreisId` ist ein Pfadparameter; ohne diesen Guard könnte, wer eine
+ * fremde Id kennt, dort alles. Diese Tests halten das fest.
  */
 import { ForbiddenException } from '@nestjs/common';
 import type { ExecutionContext } from '@nestjs/common';
@@ -109,8 +109,7 @@ describe('HauskreisMemberGuard — Admin gilt pro Hauskreis', () => {
   });
 
   /**
-   * Der ganze Punkt der Umstellung: vorher stand „Admin" im Token und galt
-   * damit in jedem Hauskreis.
+   * „Admin" gilt pro Hauskreis und nicht über ein Token in jedem.
    */
   it('weist Mitglieder auf geschützten Routen ab', async () => {
     const { guard } = setup({

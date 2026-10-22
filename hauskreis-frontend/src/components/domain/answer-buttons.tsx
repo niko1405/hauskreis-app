@@ -3,14 +3,13 @@
 /**
  * „Bist du dabei?" als drei Knöpfe — in der Terminliste und im Kalender.
  *
- * **Ein Schalter aus drei Feldern, nicht drei Knöpfe.** Sie standen einmal als
- * drei einzeln umrandete Pillen nebeneinander, und damit sah jede aus wie eine
- * eigene Handlung — dabei ist es *eine* Frage, von deren drei Antworten genau
- * eine gilt. Der Rahmen liegt deshalb außen herum; gefüllt ist nur die, die
+ * **Ein Schalter aus drei Feldern, nicht drei Knöpfe.** Drei einzeln umrandete
+ * Pillen sähen aus wie drei eigene Handlungen — dabei ist es *eine* Frage, von
+ * deren drei Antworten genau eine gilt. Der Rahmen liegt deshalb außen herum; gefüllt ist nur die, die
  * gerade gewählt ist, die übrigen tragen keinen eigenen.
  *
- * **Warum das eine eigene Datei ist.** Der Kalender bekommt seine Antwort
- * zurück, und damit gäbe es die Knöpfe zweimal — an zwei Stellen, die
+ * **Warum das eine eigene Datei ist.** Terminliste und Kalender brauchen die
+ * Knöpfe beide — an zwei Stellen, die
  * verschieden aussehen sollen und trotzdem dasselbe tun müssen. Was hier steht,
  * ist nur die Form; die Regel dahinter (die Rückfrage, wenn eine Rolle
  * dranhängt) wohnt weiter in `useAttendanceAnswer`.

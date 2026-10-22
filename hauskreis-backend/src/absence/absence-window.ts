@@ -57,12 +57,10 @@ export class AbsenceCalendar {
   /**
    * Derselbe Kalender, aber an **einem** Abend sticht die ausdrückliche Zusage.
    *
-   * „Doch, ich komme" gewinnt gegen einen pauschalen Zeitraum — das galt
-   * überall sonst schon (`AbsenceSyncService` fasst eine `SELF`-Zeile nie an,
-   * und die Hilfe sagt es genauso), nur bei der Frage „wer kann eine Rolle
-   * übernehmen" nicht: Dort wurde der Zeitraum getrennt gefragt und schlug die
-   * eigene Antwort. Wer aus dem Urlaub heraus wieder zusagte, fiel weiter aus
-   * jeder Vorschlagsliste — und der Server hätte ihn auch abgelehnt.
+   * „Doch, ich komme" gewinnt gegen einen pauschalen Zeitraum — wie überall
+   * sonst (`AbsenceSyncService` fasst eine `SELF`-Zeile nie an). Ohne das fiele
+   * jemand, der aus dem Urlaub heraus wieder zusagt, weiter aus jeder
+   * Vorschlagsliste, und der Server lehnte ihn ab.
    *
    * **Nur an diesem einen Abend**, und das ist der Grund für den Parameter: Die
    * Rangfolge spielt die ganze Historie durch und fragt für jeden vergangenen

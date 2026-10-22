@@ -155,34 +155,49 @@ export function useSetAttendance(meetingId: string) {
       optimistic: async (input, patch, patchAll) => {
         /**
          * Dieselbe Regel wie im Server, und sie muss hier stehen: Ohne sie
-         * bliebe „komme 20 Min später" beim Absagen sichtbar, bis die Antwort
+         * bliebe eine Verspätung beim Absagen sichtbar, bis die Antwort
          * eintrifft — also genau in dem Moment, in dem man hinschaut.
          *
          * Mitgeschickt gilt; weggelassen heißt „behalten", solange der Status
          * bleibt, und „weg", sobald er wechselt. Eine Antwort ohne Notiz
          * schickt genau das: nur den Status — der Satz kommt danach und
-         * getrennt (`answer-note-sheet.tsx`).
+         * getrennt (`answer-note-sheet.tsx`). Eine Verspätung gibt es nur bei
+         * einer Zusage.
          */
         const answered = (
           attendances: {
             personId: string;
             status: AttendanceStatus;
             note: string | null;
+            lateMinutes: number | null;
           }[],
         ) => {
           const before = attendances.find(
             (entry) => entry.personId === input.personId,
           );
-          const note =
-            input.note !== undefined
-              ? input.note
+          const keepOrClear = <T>(
+            sent: T | null | undefined,
+            kept: T | null,
+          ) =>
+            sent !== undefined
+              ? sent
               : before?.status === input.status
-                ? (before?.note ?? null)
+                ? kept
                 : null;
+          const note = keepOrClear(input.note, before?.note ?? null);
+          const lateMinutes =
+            input.status === 'ATTENDING'
+              ? keepOrClear(input.lateMinutes, before?.lateMinutes ?? null)
+              : null;
 
           return [
             ...attendances.filter((entry) => entry.personId !== input.personId),
-            { personId: input.personId, status: input.status, note },
+            {
+              personId: input.personId,
+              status: input.status,
+              note,
+              lateMinutes,
+            },
           ];
         };
 
@@ -215,11 +230,10 @@ export function useSetAttendance(meetingId: string) {
           }),
         );
 
-        // Den Startbildschirm greift hier **nichts** vor. Er zeigte die
-        // Antwort einmal selbst („Bist du dabei?") und musste deshalb sofort
-        // umspringen; seit die Frage am Termin und auf der Terminkarte steht,
-        // liest `myAttendance` niemand mehr. Ein Feld optimistisch zu pflegen,
-        // das keiner anzeigt, ist Arbeit, die stillschweigend veraltet.
+        // Den Startbildschirm greift hier **nichts** vor: Dort wird nicht
+        // geantwortet, und `myAttendance` liest niemand. Ein Feld optimistisch
+        // zu pflegen, das keiner anzeigt, ist Arbeit, die stillschweigend
+        // veraltet.
         //
         // Die Entwertung von `keys.home` bleibt (sie steckt in `derived`): Wer
         // auf „weiß noch nicht" geht, gibt seine Rollen frei, und „Deine
@@ -408,9 +422,15 @@ export function useUpdateMeetingSchedule() {
     // Bestehende Termine bleiben, wie sie sind — der Rhythmus gilt für neue.
     // `keys.meetings.all` fällt trotzdem mit: Wer die Erzeugung wieder
     // anschaltet, bekommt beim nächsten Lauf Abende dazu und soll sie sehen,
-    // ohne die App neu zu laden. `qk.hauskreise` hängt an
-    // `features.weeklyActionstep`.
-    invalidateKeys: [qk.hauskreise, keys.meetings.all],
+    // ohne die App neu zu laden. Am Schalter „Actionstep der Woche" hängen
+    // die Karte auf „Heute" (`keys.home`), `features` am Hauskreis und die
+    // Liste der Benachrichtigungsarten.
+    invalidateKeys: [
+      qk.hauskreise,
+      keys.meetings.all,
+      keys.home,
+      qk.push.settings,
+    ],
   });
 }
 

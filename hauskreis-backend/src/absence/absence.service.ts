@@ -187,7 +187,7 @@ export class AbsenceService {
 /**
  * The two facts every write needs about the caller.
  *
- * Kommt jetzt aus der Mitgliedschaft statt aus einer Realm-Rolle: „Admin" gilt
+ * Kommt aus der Mitgliedschaft und nicht aus einer Realm-Rolle: „Admin" gilt
  * pro Hauskreis, nicht überall.
  */
 export function actorFrom(membership: HauskreisMembership): {

@@ -203,8 +203,8 @@ describe('repairPairings', () => {
   /**
    * Und derselbe Weg noch einmal, so wie er in der App entsteht: Man lädt
    * jemanden ein, dann noch jemanden — der Planer läuft nach jedem Zugang.
-   * Beim zweiten Mal war die Zuteilung schon schief, und die alte Fassung
-   * schrieb die Schieflage fort.
+   * Beim zweiten Mal darf eine Schieflage aus dem ersten nicht fortgeschrieben
+   * werden.
    */
   it('bleibt rund, wenn nacheinander zwei dazukommen', () => {
     const kreis = new Map([
@@ -236,7 +236,7 @@ describe('repairPairings', () => {
 
   /**
    * Eine doppelte Zuständigkeit kann nur aus alten Daten kommen — die
-   * Verwaltung lässt sie nicht mehr zu. Sie wird auf eine Kante zurückgeführt,
+   * Verwaltung lässt sie nicht zu. Sie wird auf eine Kante zurückgeführt,
    * und zwar auf dieselbe bei jedem Lauf.
    */
   it('löst eine doppelte Zuständigkeit auf', () => {

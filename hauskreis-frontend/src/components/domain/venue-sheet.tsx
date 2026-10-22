@@ -3,10 +3,8 @@
 /**
  * „Wo trefft ihr euch?" — Gastgeber und Treffpunkt in **einer** Frage.
  *
- * Vorher waren es zwei Bedienelemente an zwei Stellen: ein Auswahlfeld für den
- * Treffpunkt im Termin-Detail und daneben das Personen-Sheet für den Gastgeber.
- * Aus der Planungstabelle war der Ort überhaupt nicht erreichbar. Dabei ist es
- * eine Entscheidung mit zwei Antworten — bei jemandem zu Hause, oder woanders.
+ * Es ist eine Entscheidung mit zwei Antworten — bei jemandem zu Hause, oder
+ * woanders —, und deshalb ein Bedienelement, auch aus der Planungstabelle.
  *
  * Der Server erzwingt das ohnehin (`MeetingService.resolveVenue`):
  *
@@ -16,9 +14,8 @@
  * - Den Gastgeber herausnehmen räumt seine Wohnung mit weg, ein Treffpunkt
  *   bleibt stehen.
  *
- * Zwei getrennte Bedienelemente konnten diese Kopplung nur nacherzählen. Hier
- * schickt jede Wahl beide Felder auf einmal, und die Regel ist keine Fehlermeldung
- * mehr, sondern das Register, in dem man gerade steht.
+ * Hier schickt jede Wahl beide Felder auf einmal, und die Regel ist keine
+ * Fehlermeldung, sondern das Register, in dem man gerade steht.
  *
  * Drei Schritte in einem Sheet, kein Stapel: `Sheet` rendert ohne Portal auf
  * derselben Ebene und registriert je einen eigenen Escape-Handler — zwei

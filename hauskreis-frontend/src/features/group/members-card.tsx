@@ -3,18 +3,15 @@
 /**
  * Wer alles dabei ist — sichtbar für alle, nicht nur für Admins.
  *
- * Die Verwaltung unter `/admin` bleibt, wie sie ist: sie ist zum **Einladen und
- * Entfernen** da. Diese Karte beantwortet eine andere Frage — „wer gehört
+ * Die Verwaltung unter `/admin` ist zum **Einladen und Entfernen** da. Diese Karte beantwortet eine andere Frage — „wer gehört
  * eigentlich dazu, und wer kann gerade was" —, und die stellt sich jede:r, nicht
  * nur wer Rechte hat.
  *
  * Die Abzeichen sind deshalb die, nach denen man beim Planen sucht: Instrument,
  * hostet gerade nicht, gerade abwesend, Einladung offen.
  *
- * **Sie stand einmal im Profil.** Dort war sie die achte Karte, zwischen den
- * eigenen Abwesenheiten und dem Erscheinungsbild — auf einem Bildschirm über
- * *dich*. Wer dabei ist, gehört zur Gruppe, und die hat jetzt ihren eigenen
- * Ort.
+ * Sie steht auf dem Gruppen-Bildschirm und nicht im Profil: Wer dabei ist,
+ * gehört zur Gruppe, nicht zu *dir*.
  */
 import { Ban, Clock, Guitar, Palmtree, Shield } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
@@ -60,13 +57,12 @@ export function MembersCard() {
  * „Admin" allein wäre ein Absatz für ein Wort. Ab dem dritten wird es eng, und
  * dann rutschen sie darunter.
  *
- * Vorher stand hier ein fester Umbruch ab Mobilgröße, und davor gar keiner: ein
- * Behälter mit `shrink-0` **und** `flex-wrap`, also die Kombination, die nicht
- * funktioniert — `shrink-0` gibt keinen Pixel her, der Umbruch greift nie (der
- * Behälter hat keine Breitengrenze, er wächst mit seinem Inhalt), und nachgeben
- * muss die Namensspalte. Bei fünf Abzeichen blieb vom Namen nichts übrig.
+ * Nicht `shrink-0` **und** `flex-wrap` zusammen: `shrink-0` gibt keinen Pixel
+ * her, der Umbruch griffe nie (der Behälter wächst mit seinem Inhalt), und
+ * nachgeben müsste die Namensspalte — bei fünf Abzeichen bliebe vom Namen
+ * nichts übrig.
  *
- * `shrink-0` steht deshalb jetzt nur im Zweig, in dem es stimmt: bei höchstens
+ * `shrink-0` steht deshalb nur im Zweig, in dem es stimmt: bei höchstens
  * vier Abzeichen ist die Breite beschränkt und das Nachgeben ist die richtige
  * Aufgabe für den Namen. Ab `sm` ist ohnehin Platz für alles nebeneinander.
  */

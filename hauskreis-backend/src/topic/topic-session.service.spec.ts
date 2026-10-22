@@ -219,9 +219,9 @@ describe('choose — A) neues Thema', () => {
   /**
    * Zwei Ebenen, zwei Titel — und die Einheit bekommt ihre Felder.
    *
-   * Vorher war `dto.title` der Titel des *Themas*, und für die erste Einheit
-   * blieb nichts übrig: Sie entstand leer, obwohl das Formular nach Actionstep
-   * und Zusammenfassung gefragt hatte.
+   * `dto.title` ist der Titel des *Themas*; die erste Einheit bekommt ihre
+   * eigenen Felder, sonst entstünde sie leer, obwohl das Formular nach
+   * Actionstep und Zusammenfassung gefragt hat.
    */
   it('füllt auch die erste Einheit', async () => {
     const { service, topicCreate, sessionCreate } = setup({ assigned: ['p1'] });
@@ -262,10 +262,9 @@ describe('choose — A) neues Thema', () => {
   /**
    * Spec §3: die Reihenfolge der *Zuteilung* zählt nicht — p1 hat gewählt.
    *
-   * Und an die Einheit kommt **nur er**. Bis eben rutschten alle Zugeteilten
-   * als Mitwirkende mit hinein, samt Schreibrecht am ganzen Thema; wer an dem
-   * Abend nur vorne steht, hat damit aber inhaltlich nichts zu tun. Wen er
-   * dazunimmt, entscheidet er auf der Seite der Einheit.
+   * Und an die Einheit kommt **nur er**, nicht alle Zugeteilten: Wer an dem
+   * Abend nur vorne steht, hat mit der Vorbereitung inhaltlich nichts zu tun.
+   * Wen er dazunimmt, entscheidet er auf der Seite der Einheit.
    */
   it('macht nur den Wählenden zum Mitwirkenden', async () => {
     const { service, links, topicCreate } = setup({ assigned: ['p2', 'p1'] });
@@ -287,7 +286,7 @@ describe('choose — A) neues Thema', () => {
 
   /**
    * „Ist niemand zugeteilt, darf jede:r" gilt hier bewusst **nicht** — und
-   * inzwischen nirgends mehr, wo etwas *belegt* wird. Wer wählen will, trägt
+   * nirgends, wo etwas *belegt* wird. Wer wählen will, trägt
    * sich vorher als zuständig ein; dieselbe Grenze hält die Liedauswahl
    * (`EditRightsService.assertMayPickSongs`).
    */
@@ -350,8 +349,7 @@ describe('choose — A) neues Thema', () => {
    * Ein Protokoll entsteht nach dem Abend, nicht davor.
    *
    * Man hält den Abend, kommt vor lauter Abend nicht zum Eintragen und holt es
-   * hinterher nach — genau dafür ist die Sperre gefallen, die hier früher
-   * geprüft wurde.
+   * hinterher nach — deshalb gibt es hier keine Sperre für vergangene Abende.
    */
   it('lässt einen Wechsel an einem vergangenen Abend zu', async () => {
     const { service, sessionUpdateMany, topicCreate } = setup({
@@ -654,17 +652,12 @@ describe('unlink', () => {
  * Wer **dazukommt**, entscheidet über das Schicksal einer schon getroffenen
  * Wahl (`TopicLinkService.reconcile`). Ableiten lässt es sich dort nicht: Wenn
  * `reconcile` läuft, stehen die neuen Zeilen schon, und die alten sind weg.
- * Fiele die Angabe hier still unter den Tisch, verhielte sich alles wieder wie
- * vorher — ohne dass irgendetwas fehlschlüge.
+ * Fiele die Angabe hier still unter den Tisch, merkte es kein Test.
  */
 describe('setResponsibles', () => {
   /**
-   * Was `reconcile` bekommt, ist seit der Trennung nur noch die neue Liste.
-   *
-   * `departing`, `arriving` und `actorPersonId` standen hier, solange eine
-   * Rollenänderung an fremder Vorbereitung herumoperieren musste — wer dazukam,
-   * setzte die Wahl zurück, es sei denn, der Owner trug ihn selbst ein. Ohne
-   * diese Regeln genügt die Frage „bereitet einer von denen die Einheit vor".
+   * Was `reconcile` bekommt, ist nur die neue Liste: Die Frage ist allein
+   * „bereitet einer von denen die Einheit vor".
    */
   it('reicht die neue Zuteilung an reconcile durch', async () => {
     const { service, links } = setup({ assigned: ['p1'] });

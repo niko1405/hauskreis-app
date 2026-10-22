@@ -5,15 +5,14 @@
  * falsch steht: aus dem Archiv, beim Eintragen eines Termins, beim Anlegen
  * eines neuen.
  *
- * Bewusst nur **Orte ohne Gastgeber**, und das inzwischen auch beim Ändern. Ein
- * Zuhause entsteht nicht hier, sondern wenn jemand im Profil seine Adresse
+ * Bewusst nur **Orte ohne Gastgeber**, auch beim Ändern. Ein Zuhause entsteht
+ * nicht hier, sondern wenn jemand im Profil seine Adresse
  * einträgt; es heißt nach seinen Bewohner:innen und gehört ihnen. Ein Feld
  * „braucht einen Gastgeber" gäbe es hier also nur, um eine Wohnung ohne
- * Bewohner:innen zu erzeugen — genau den Zustand, den die App gerade loswerden
- * wollte.
+ * Bewohner:innen zu erzeugen — einen Zustand, den es nicht geben soll.
  *
- * Übrig bleiben zwei Felder: Name und Anschrift. Kapazität und Gewicht sind
- * hier weg — warum, steht bei `EditSheet`.
+ * Übrig bleiben zwei Felder: Name und Anschrift. Warum Kapazität und Gewicht
+ * nicht hier stehen, steht bei `EditSheet`.
  */
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -95,14 +94,12 @@ function CreateSheet({
 /**
  * Nur Treffpunkte, und nur Name und Anschrift.
  *
- * Eine **Wohnung** wird hier gar nicht mehr bearbeitet. Ihr Name folgt ohnehin
- * den Bewohner:innen, ihre Anschrift steht im Profil, und das Gewicht ist eine
- * Frage an die Gruppe — es lebt jetzt in der Verwaltung, wo Nicht-Admins es
- * nicht einmal sehen. Übrig bliebe ein Formular, in dem alle Felder gesperrt
- * sind.
+ * Eine **Wohnung** wird hier gar nicht bearbeitet. Ihr Name folgt den
+ * Bewohner:innen, ihre Anschrift steht im Profil, und das Gewicht ist eine
+ * Frage an die Gruppe — es lebt in der Verwaltung, wo Nicht-Admins es nicht
+ * einmal sehen. Übrig bliebe ein Formular, in dem alle Felder gesperrt sind.
  *
- * **Kapazität** steht nicht mehr hier, sondern dort, wo man sie beantworten
- * kann: „wie viele passen bei mir rein" ist eine Frage an die Gastgeber:innen,
+ * **Kapazität** steht dort, wo man sie beantworten kann: „wie viele passen bei mir rein" ist eine Frage an die Gastgeber:innen,
  * und deren eigene Wohnung liegt im Profil. Bei einem Treffpunkt gab es nie
  * eine sinnvolle Antwort — in einen Park passen alle.
  */

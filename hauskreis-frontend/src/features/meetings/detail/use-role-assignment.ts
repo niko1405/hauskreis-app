@@ -12,10 +12,8 @@
  * - **Musik** und **Thema** haben je eine eigene Route (`song-leaders`,
  *   `topic-responsibles`), beide ohne Vorbedingung.
  *
- * Das Thema war hier lange der Sonderfall: es hing an der Themen-Entität, und
- * eine Zuteilung musste erst ein leeres Thema anlegen, um es irgendwo hinhängen
- * zu können. Seit die Zuteilung am Termin steht, ist es ein `PUT` wie die Musik
- * — und **welches** Thema es wird, entscheidet danach, wer zugeteilt ist.
+ * Die Zuteilung zum Thema steht am Termin und ist ein `PUT` wie die Musik —
+ * **welches** Thema es wird, entscheidet danach, wer zugeteilt ist.
  */
 import { useCallback } from 'react';
 import { useToast } from '@/components/ui/toast';

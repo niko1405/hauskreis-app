@@ -1,9 +1,8 @@
 /**
  * Was passiert, wenn sich die Gruppe ändert.
  *
- * Bis hierher war die Teilnehmerliste eine Momentaufnahme: gelesen wurde sie
- * beim Bauen einer Runde und danach nie wieder. Wer ging, stand noch in fünf
- * geplanten Runden; wer kam, wartete zehn Wochen.
+ * Die Teilnehmerliste ist keine Momentaufnahme: Wer geht, steht sonst noch in
+ * fünf geplanten Runden; wer kommt, wartete zehn Wochen.
  *
  * Ein kleiner echter Speicher statt einzelner Mock-Rückgaben — Reparatur,
  * Verwerfen und Nachplanen greifen ineinander, und geprüft werden soll, was am

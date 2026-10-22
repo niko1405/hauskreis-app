@@ -79,9 +79,8 @@ export class HauskreisController {
   /**
    * Gründet einen Hauskreis; die gründende Person wird Admin.
    *
-   * Vorher entstand hier eine leere Gruppe, die niemand betreten konnte. Wer
-   * schon in einem Hauskreis ist, bekommt einen `409` — ein Wechsel ist ein
-   * Umzug und kein stilles Nebeneinander.
+   * Wer schon in einem Hauskreis ist, bekommt einen `409` — ein Wechsel ist
+   * ein Umzug und kein stilles Nebeneinander.
    */
   @Post()
   @ApiZodResponse(HauskreisResponseDto, {

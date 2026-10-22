@@ -95,9 +95,8 @@ export const meetingResponseSchema = z.object({
   host: personRefSchema.nullable(),
   testimonyPerson: personRefSchema.nullable(),
   /// Wer an diesem Abend das Thema vorbereitet — die **Zuteilung**, unabhängig
-  /// davon, ob schon etwas gewählt ist. Genau dieser Zwischenzustand fehlte
-  /// vorher: eine Zuteilung legte sofort ein leeres Thema an, und der Abend sah
-  /// aus, als stünde schon etwas fest.
+  /// davon, ob schon etwas gewählt ist. „Zugeteilt, aber noch nichts gewählt"
+  /// ist ein eigener Zustand: Eine Zuteilung legt kein leeres Thema an.
   topicResponsibles: z.array(z.object({ person: personRefSchema })),
   /// Die gewählte Einheit samt Nachbereitung. `null` heißt „noch nichts
   /// gewählt"; ihre Textfelder sind `null`, solange `contentVisible` falsch ist.
@@ -134,6 +133,8 @@ export const meetingResponseSchema = z.object({
       /// Freiwillig und für alle sichtbar: Der Satz ist an die Gruppe
       /// gerichtet, nicht an die App.
       note: z.string().nullable(),
+      /// Wie viel später jemand kommt, in Minuten; `null` heißt pünktlich.
+      lateMinutes: z.number().int().nullable(),
     }),
   ),
 });
@@ -169,6 +170,7 @@ export const attendanceResponseSchema = z.object({
   status: z.enum(AttendanceStatus),
   source: z.enum(AttendanceSource),
   note: z.string().nullable(),
+  lateMinutes: z.number().int().nullable(),
   updatedAt: isoDateTimeOut,
 });
 

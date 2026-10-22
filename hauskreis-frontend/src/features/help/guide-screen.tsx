@@ -22,20 +22,15 @@
 import { Printer } from 'lucide-react';
 import { BackButton } from '@/components/layout/back-button';
 import { Button } from '@/components/ui/button';
-import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { FAQ_ENTRIES } from './faq-content';
 import { FaqAnswer } from './faq-answer';
 
 export function GuideScreen() {
-  const { hauskreis } = useHauskreis();
-
   // Die Reihenfolge der Datei ist die gedachte Reihenfolge — erst „was ist
   // das", dann anmelden, installieren, Profil, zurechtfinden.
   const steps = FAQ_ENTRIES.filter(
     (entry) => entry.category === 'start' && !entry.adminOnly,
   );
-
-  const name = hauskreis?.name ?? 'euren Hauskreis';
 
   return (
     <div className="px-5 pt-safe-4 pb-10">
@@ -54,10 +49,10 @@ export function GuideScreen() {
             Acts2 — kurz erklärt
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-stone-500">
-            Diese Seite erklärt in fünf Schritten, wie {name} die App benutzt:
-            anmelden, auf den Startbildschirm legen, das eigene Profil füllen —
-            und was wo steht. Du kannst sie ausdrucken oder als PDF speichern
-            und weiterschicken.
+            Diese Seite erklärt in fünf Schritten, wie du die App benutzen
+            kannst: anmelden, auf den Startbildschirm legen, das eigene Profil
+            füllen — und was wo steht. Du kannst sie ausdrucken oder als PDF
+            speichern und weiterschicken.
           </p>
         </header>
 

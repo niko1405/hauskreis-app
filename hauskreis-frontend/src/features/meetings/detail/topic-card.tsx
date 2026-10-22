@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Das Thema des Abends — vier Zustände, einer davon neu.
+ * Das Thema des Abends — vier Zustände.
  *
  * 1. Baustein aus → die Sektion gibt es gar nicht (entschieden vom Aufrufer).
  * 2. **Niemand zugeteilt** → „Noch kein Zuständiger."
@@ -10,18 +10,16 @@
  * 4. **Gewählt** → das Thema als Überschrift, darunter *dieser* Abend.
  *
  * Die Hierarchie ist der Punkt der Sektion: oben steht, wozu der Abend gehört,
- * darunter, was an ihm dran ist. Vorher standen beide Titel gleichrangig und man
- * musste raten, welcher der größere war.
+ * darunter, was an ihm dran ist.
  *
  * **Hier wird nichts geändert, hier wird gelesen.** Thema und Einheit sind
- * beide nur Links auf ihre Seiten. Die Einheit hatte einmal keine eigene, und
- * solange das so war, mussten die Stifte hier stehen; seit sie eine hat, wären
- * es zwei Orte für dieselbe Sache — und einer davon kann weniger: kein Löschen,
- * kein Überthema, keine Beteiligten. Was der Abend *selbst* über sich sagt
+ * beide nur Links auf ihre Seiten — Stifte hier wären ein zweiter Ort für
+ * dieselbe Sache, und einer, der weniger kann: kein Löschen, kein Überthema,
+ * keine Beteiligten. Was der Abend *selbst* über sich sagt
  * (Titel, Uhrzeit, Infos, Rollen), ändert man weiterhin auf dieser Seite.
  *
  * **Wer was sieht.** Der Inhalt einer noch nicht gehaltenen Einheit gehört bis
- * 18 Uhr am Termintag denen, die ihn vorbereiten — der Actionstep der nächsten
+ * zur Treffpunktzeit des Abends denen, die ihn vorbereiten — der Actionstep der nächsten
  * Woche eine Woche zu früh für alle wäre das Gegenteil von dem, wozu er da ist.
  * Entschieden hat das der Server: er liefert die Felder dann als `null` und
  * setzt `contentVisible: false`. Hier steht nur, was man davon sieht.
@@ -70,10 +68,7 @@ export function TopicCard({
           <>
             {/* **Zwei Plätze für zwei Aussagen.** Links, wo man zu lesen
                 anfängt: wozu dieser Abend gehört. Rechts: das wievielte Stück
-                davon er ist. Beides stand vorher als *ein* überlappendes
-                Abzeichen oben links — bei einer Serie terracotta gefüllt, bei
-                einer Hülle blass —, und wer wissen wollte, zu welchem Thema der
-                Abend gehört, musste die Kopfzeile darüber lesen.
+                davon er ist.
 
                 Eine Einheit ohne Thema hat links nichts stehen: „Zugehöriges
                 Thema: —" behauptete eine Lücke, wo keine ist. */}
@@ -130,15 +125,13 @@ export function TopicCard({
               </div>
             </Link>
 
-            {/* **Der Actionstep steht außerhalb des Links.** Er trug den Haken
-                bisher unter sich, weil in einem Link kein Knopf sitzen darf —
-                und damit stand die Frage „hast du es geschafft" räumlich neben
-                dem Vorsatz statt darunter. Jetzt ist es ein Kasten: oben der
-                Satz, ein Trennstrich, darunter der Haken.
+            {/* **Der Actionstep steht außerhalb des Links**, weil in einem Link
+                kein Knopf sitzen darf. Ein Kasten: oben der Satz, ein
+                Trennstrich, darunter der Haken.
 
                 Die terracotta-Kante links ist dieselbe Farbe wie überall, wo
-                etwas zu tun ist. Sie ersetzt den vollen Rahmen — der machte aus
-                dem Actionstep eine zweite Karte in der Karte. */}
+                etwas zu tun ist — ein voller Rahmen machte aus dem Actionstep
+                eine zweite Karte in der Karte. */}
             <div className="rounded-lg border border-line-strong border-l-2 border-l-terracotta-500 bg-canvas p-3">
               <FieldLabel>Actionstep</FieldLabel>
               <InlineEdit

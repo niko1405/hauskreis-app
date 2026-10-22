@@ -244,9 +244,9 @@ function Loaded({ personId }: { personId: string }) {
               />
             </Field>
 
-            {/* Der Anmeldename stand einmal hier. Er gehört aber zur Anmeldung
-                und nicht zu den Angaben über einen selbst — jetzt liegt er in
-                der Konto-Karte, direkt über der E-Mail. */}
+            {/* Der Anmeldename gehört zur Anmeldung und nicht zu den Angaben
+                über einen selbst — er steht unter „Konto", direkt über der
+                E-Mail. */}
 
             <Field
               label="Geburtstag"
@@ -274,10 +274,8 @@ function Loaded({ personId }: { personId: string }) {
         </section>
 
         {/* Unter jedem Schalter steht, was er **gerade** bewirkt — nicht eine
-            Erklärung beider Fälle. Das waren einmal vier Absätze, dann vier
-            Info-Symbole, hinter denen man sie suchen musste. Ein Satz, der
-            mit dem Schalter wechselt, ist kürzer als beides und beantwortet
-            die Frage, mit der man herkommt: „Was passiert, wenn ich das
+            Erklärung beider Fälle. Ein Satz, der mit dem Schalter wechselt,
+            beantwortet die Frage, mit der man herkommt: „Was passiert, wenn ich das
             umlege?" */}
         <section>
           <SectionTitle>Was du übernimmst</SectionTitle>

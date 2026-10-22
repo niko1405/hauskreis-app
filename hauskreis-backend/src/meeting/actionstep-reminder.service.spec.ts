@@ -235,8 +235,8 @@ describe('ActionstepReminderService.sendDueReminders', () => {
   });
 
   /**
-   * Der Vorsatz eines Lobpreisabends ist derselbe Vorsatz. Er hing nur an keiner
-   * Einheit — und wurde deshalb bis eben gar nicht erinnert.
+   * Der Vorsatz eines Lobpreisabends ist derselbe Vorsatz, auch wenn er an
+   * keiner Einheit hängt.
    */
   /**
    * Die Regel, die `latestActionstep` trägt: Ein neuer Abend beendet den

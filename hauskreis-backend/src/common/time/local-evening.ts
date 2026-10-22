@@ -19,29 +19,24 @@
  * Zeitzonen-Versatz fragt. Wer eine Wanduhr in einen Zeitpunkt übersetzt, kommt
  * über diese Datei.
  *
- * Zwei Angaben kommen von außen und stehen nicht mehr im Code: die Uhrzeit vom
- * Termin (`meeting.startMinutes`) und die **Zone von der Gruppe**
- * (`MeetingScheduleConfig.timeZone`, aufgelöst über `GroupClockService`). Beide
- * standen einmal als Konstante hier, und beide waren eine Aussage zu viel für
- * eine App, die mehr als einen Hauskreis kennt.
+ * Zwei Angaben kommen von außen: die Uhrzeit vom Termin
+ * (`meeting.startMinutes`) und die **Zone von der Gruppe**
+ * (`MeetingScheduleConfig.timeZone`, aufgelöst über `GroupClockService`).
  */
 
 /**
  * Der Rückfall, wenn keine Zeit dabeisteht: 18 Uhr.
  *
- * War die feste Anfangszeit des Hauskreises, ist jetzt nur noch die Vorgabe von
- * `MeetingScheduleConfig` und die Antwort auf „und wenn doch mal nichts
- * dasteht".
+ * Die Vorgabe von `MeetingScheduleConfig` und die Antwort auf „und wenn doch
+ * mal nichts dasteht".
  */
 export const EVENING_HOUR = 18;
 
 /**
  * Die Vorgabe, wenn eine Gruppe nichts anderes eingestellt hat.
  *
- * Stand hier als `TIME_ZONE` fest verdrahtet, mit der Begründung „die Gruppe
- * trifft sich in Deutschland" — dieselbe Aussage zu viel, die vorher schon bei
- * Wochentag und Uhrzeit fiel. Die Zone steht jetzt in `MeetingScheduleConfig`
- * und wird von dort hereingereicht; das hier ist nur noch der Anfangswert.
+ * Die Zone steht in `MeetingScheduleConfig` und wird von dort hereingereicht;
+ * das hier ist nur der Anfangswert.
  */
 export const DEFAULT_TIME_ZONE = 'Europe/Berlin';
 
@@ -67,7 +62,7 @@ export const CRON_TIME_ZONE = DEFAULT_TIME_ZONE;
 /**
  * Ein Formatierer je Zone, einmal gebaut.
  *
- * `Intl.DateTimeFormat` ist nicht billig, und seit der Kalendertag über
+ * `Intl.DateTimeFormat` ist nicht billig, und weil auch der Kalendertag über
  * `currentDay` durch dieselbe Rechnung läuft, passiert das pro Anfrage mehrfach.
  */
 const formatters = new Map<string, Intl.DateTimeFormat>();

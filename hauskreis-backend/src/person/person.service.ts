@@ -127,8 +127,8 @@ export class PersonService {
    *
    * Zwei Wege führen hierher: Der Schalter „ich bin grundsätzlich dabei"
    * schreibt Zusagen auf kommende Abende, und wer ankommt, ändert die Zahl,
-   * gegen die Absagen gezählt werden. Beide Male stand ein Abend weiter als
-   * ausgefallen da, obwohl er es nicht mehr war.
+   * gegen die Absagen gezählt werden. Ohne diesen Aufruf stünde ein Abend
+   * weiter als ausgefallen da, obwohl er es nicht mehr ist.
    */
   private async reviveEmptyMeetings(hauskreisId: string): Promise<void> {
     const cancellations = this.moduleRef.get(MeetingCancellationService, {
@@ -180,11 +180,11 @@ export class PersonService {
    * `active: true` und sonst nichts, und beide Hälften dieser Entscheidung
    * haben einen Grund:
    *
-   * **Ausgetretene fallen raus.** Hier stand gar kein Filter, und das war ein
-   * stiller Fehler: Wer den Hauskreis verlassen hatte, stand danach unter der
-   * Rangliste in jedem Zuteilungs-Sheet und in der Verwaltung unter „Personen"
-   * — als „Ehemaliges Mitglied", wenn er auch sein Konto gelöscht hatte.
-   * `acceptedAt` half dagegen nicht: Das ist gesetzt, er war ja einmal da.
+   * **Ausgetretene fallen raus.** Sonst stünde, wer den Hauskreis verlassen
+   * hat, unter der Rangliste in jedem Zuteilungs-Sheet und in der Verwaltung
+   * unter „Personen" — als „Ehemaliges Mitglied", wenn er auch sein Konto
+   * gelöscht hat. `acceptedAt` hilft dagegen nicht: Das ist gesetzt, er war ja
+   * einmal da.
    * Seinen Namen tragen weiter die vergangenen Abende, und das ist der Ort,
    * an den er gehört.
    *
@@ -496,15 +496,12 @@ export class PersonService {
    * **Zwei Fälle, zwei Ausgänge.**
    *
    * Wer schon einmal da war, wird *hinausbegleitet*, nicht gelöscht: derselbe
-   * Weg wie beim eigenen Verlassen. Vorher stand hier ein `person.delete`, und
-   * das war der schwerere der beiden Fehler — an der Zeile hängen
-   * `MeetingAttendance`, `TopicSessionResponsible`, `MeetingSongLeader`,
-   * `MeetingActionstepDone` und `MeetingTopicResponsible` mit `onDelete:
-   * Cascade`. Ein Admin, der jemanden entfernte, löschte damit dessen ganze
-   * Anwesenheit im Archiv, und die gehosteten Abende verloren ihren Gastgeber.
-   * Genau das löchrige Archiv, vor dem CLAUDE.md §5 warnt. Nebenbei blieben
-   * offene Rollen in kommenden Terminen unbemerkt stehen, und niemand erfuhr
-   * davon.
+   * Weg wie beim eigenen Verlassen. An der Zeile hängen `MeetingAttendance`,
+   * `TopicSessionResponsible`, `MeetingSongLeader`, `MeetingActionstepDone` und
+   * `MeetingTopicResponsible` mit `onDelete: Cascade` — ein `person.delete`
+   * löschte die ganze Anwesenheit im Archiv, und die gehosteten Abende
+   * verlören ihren Gastgeber (CLAUDE.md §5). Und offene Rollen in kommenden
+   * Terminen würden frei, ohne dass es jemand erfährt.
    *
    * **Name und E-Mail bleiben dabei stehen** — anders als beim Konto-Löschen.
    * Entfernt zu werden ist nicht dasselbe wie vergessen werden zu wollen, und
@@ -512,8 +509,8 @@ export class PersonService {
    * Adresse weckt genau diese Zeile wieder auf (`invite`), samt allem, was im
    * Archiv an ihr hängt.
    *
-   * Wer noch nie da war, ist eine zurückgezogene Einladung und wird weiterhin
-   * hart gelöscht. Da hängt nichts dran, und die Adresse muss für eine neue
+   * Wer noch nie da war, ist eine zurückgezogene Einladung und wird hart
+   * gelöscht. Da hängt nichts dran, und die Adresse muss für eine neue
    * Einladung wieder frei werden.
    */
   async remove(hauskreisId: string, id: string, actor: HauskreisMembership) {
@@ -578,11 +575,10 @@ export class PersonService {
   /**
    * Konto löschen, wenn man zu **keinem** Hauskreis gehört.
    *
-   * Bis hierher gab es diesen Weg nicht: „Konto löschen" hing im Profil und
-   * damit an einer Mitgliedschaft. Wer sich registrierte und nie irgendwo
-   * ankam — oder seinen Hauskreis verließ und dann aufhören wollte —, saß auf
-   * einem Konto, das er selbst nicht mehr loswurde. Genau die Menschen, die
-   * am wenigsten von der App haben, hatten also keinen Ausgang.
+   * „Konto löschen" im Profil hängt an einer Mitgliedschaft. Wer sich
+   * registriert und nie irgendwo ankommt — oder seinen Hauskreis verlässt und
+   * dann aufhören will —, braucht diesen zweiten Ausgang, sonst säße er auf
+   * einem Konto, das er selbst nicht mehr loswird.
    *
    * Der andere Weg (`MembershipService.deleteAccount`) bleibt für alle, die
    * noch dabei sind: dort hängt die Nachfolge dran, und die kann hier nicht
@@ -926,14 +922,10 @@ export class PersonService {
       throw error;
     }
 
-    // Hier stand einmal ein Neuaufbau der Gebetsrotation, mit der Begründung
-    // „wer eingeladen ist, gehört dazu, er wartet sonst zehn Wochen auf seine
-    // ersten Buddys". Das Warten stimmte, der Schluss nicht: Ein Name in einer
-    // Gebetsgruppe, dem niemand schreiben kann, lässt sein Gegenüber zwei
-    // Wochen allein beten — schlechter als Warten. Die Rotation zieht jetzt
-    // nach, wenn die Einladung **angenommen** wird (`resolveForUser`,
-    // `MembershipService.acceptInvitation`), und das ist der Augenblick, in dem
-    // wirklich jemand dazukommt.
+    // Keine Gebetsrotation beim Einladen: Ein Name in einer Gebetsgruppe, dem
+    // niemand schreiben kann, ließe sein Gegenüber zwei Wochen allein beten.
+    // Die Rotation zieht nach, wenn die Einladung **angenommen** wird
+    // (`resolveForUser`, `MembershipService.acceptInvitation`).
 
     return { ...person, invitationEmailSent };
   }

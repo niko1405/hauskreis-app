@@ -102,8 +102,8 @@ export const sessionSelect = {
   updatedAt: true,
   version: true,
   meeting: { select: sessionMeetingSelect },
-  // `personId` neben der Person: Daran hängt seit der Trennung von Vorbereitung
-  // und Abend-Rolle das Bearbeitungsrecht dieser einen Einheit
+  // `personId` neben der Person: Daran hängt das Bearbeitungsrecht dieser einen
+  // Einheit
   // (`mayEditSession`) — die Anzeige braucht nur den Namen, die Rechtefrage nur
   // die Id.
   responsibles: {
@@ -356,7 +356,7 @@ export function shapeSession(
      * Das **Thema** darüber: eine weitere Einheit anlegen, diese hier löschen,
      * ein Überthema vergeben.
      *
-     * Steht neben `mayEdit`, seit die beiden auseinanderlaufen können: Wer nur
+     * Steht neben `mayEdit`, weil die beiden auseinanderlaufen können: Wer nur
      * an dieser Einheit mitarbeitet, schreibt sie — räumt sie aber nicht aus
      * einem Thema heraus, das ihm nicht gehört.
      */
@@ -414,8 +414,8 @@ export function shapeTopic(topic: FullTopicRow, viewer: Viewer) {
   );
 
   /**
-   * „Meins" — und das geht seit der Trennung von Vorbereitung und Abend-Rolle
-   * einen Schritt weiter als die Mitgliedschaft am Thema: Wer eine seiner
+   * „Meins" — und das geht einen Schritt weiter als die Mitgliedschaft am
+   * Thema: Wer eine seiner
    * Einheiten vorbereitet, arbeitet daran, auch wenn ihn niemand als
    * Mitarbeitenden eingetragen hat. Ohne diese Zeile stünde ein Thema, an dem
    * man einen Abend hält, nicht unter „Eigene".

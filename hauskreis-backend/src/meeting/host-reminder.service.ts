@@ -15,8 +15,8 @@ import { CRON_TIME_ZONE } from '../common/time/local-evening';
  *
  * The scan window, each person's lead time and the deduplication all live in
  * `MeetingReminderService`; what is left here is who the reminder concerns and
- * what it says. How many days ahead it goes out is no longer a constant — it
- * is a per-person setting, defaulting to the catalog's three days.
+ * what it says. How many days ahead it goes out is a per-person setting,
+ * defaulting to the catalog's three days.
  */
 @Injectable()
 export class HostReminderService {

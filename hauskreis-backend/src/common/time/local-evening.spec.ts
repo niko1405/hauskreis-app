@@ -81,7 +81,7 @@ describe('eveningReached', () => {
   });
 
   // Der eigentliche Grund für den Parameter: eine Gruppe, die sich um 20 Uhr
-  // trifft, gab ihren Actionstep vorher zwei Stunden zu früh frei.
+  // trifft, gäbe ihren Actionstep sonst zwei Stunden zu früh frei.
   it('wartet auf die spätere Anfangszeit', () => {
     const zwanzigUhr = 20 * 60;
 

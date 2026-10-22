@@ -104,7 +104,7 @@ export function pageSchema<T extends z.ZodType>(item: T) {
  * dann Feld für Feld, was nicht gepasst hat.
  *
  * `code` steht nur dort, wo die App auf **genau diesen** Fall reagieren muss und
- * der Statuscode dafür nicht reicht. Bisher gibt es einen einzigen:
+ * der Statuscode dafür nicht reicht. Es gibt einen einzigen:
  * `EMAIL_NOT_VERIFIED`. Die Meldung daneben ist für Menschen und darf sich
  * jederzeit ändern; auf sie zu vergleichen wäre eine Kopplung an einen Satz.
  */

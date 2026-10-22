@@ -8,11 +8,9 @@
  * Leute, die sie sich schicken, unlesbar. Sie kommt deshalb aus dem Kontext.
  *
  * **Es gibt nichts auszuwählen.** Ein Mensch gehört zu genau einem Hauskreis;
- * ein Wechsel ist ein Umzug. Vorher stand hier eine Auswahl aus
- * `GET /api/hauskreise` mit `available[0]` als Vorgabe — die Route gab damals
- * *alle* Gruppen heraus, und die Wahl merkte sich der `localStorage` bis in die
- * nächste Sitzung und damit ins nächste Konto. Beides ist weg: die Id steht in
- * `me.hauskreisId`, und mehr braucht es nicht.
+ * ein Wechsel ist ein Umzug. Die Id steht in `me.hauskreisId`, und mehr
+ * braucht es nicht — eine im `localStorage` gemerkte Wahl überlebte sonst die
+ * Sitzung und landete im nächsten Konto.
  */
 import { createContext, useContext, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';

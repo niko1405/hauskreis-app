@@ -74,7 +74,7 @@ export function BirthdayGiftAdmin() {
 
         <Checkbox
           label="Für Geschenke jemanden einteilen"
-          description="Aus heißt: Geburtstage stehen im Kalender, aber niemand bekommt eine Aufgabe."
+          description="Aus heißt: Geburtstage stehen im Kalender, aber es wird nichts zugeteilt."
           checked={value.enabled}
           onChange={(event) =>
             setDraft({ ...value, enabled: event.target.checked })

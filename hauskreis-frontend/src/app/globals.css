@@ -37,11 +37,10 @@
 
   /* Der Balken der Kopfleiste, sobald gescrollt wurde — zwei Töne für einen
      Verlauf von oben nach unten.
-     Tiefer als `terracotta-500`, weil er weiße Schrift trägt, und deutlich
-     ruhiger als das frühere flache `#d96b42`: Ein Verlauf mit ein bisschen
-     Durchsicht liest sich als Teil der Seite, eine grelle Fläche als Folie
-     darauf.
-     Für den Zustand ganz oben gibt es **kein** Token mehr. Der Schleier dort
+     Tiefer als `terracotta-500`, weil er weiße Schrift trägt, und ruhig: Ein
+     Verlauf mit ein bisschen Durchsicht liest sich als Teil der Seite, eine
+     grelle Fläche als Folie darauf.
+     Für den Zustand ganz oben gibt es **kein** Token. Der Schleier dort
      ist neutrales Schwarz — er liegt unter demselben `StatusBarScrim`, und
      zwei verschiedene Farben übereinander werden schmutzig statt dunkler. */
   --color-header-bar: #c2694c;

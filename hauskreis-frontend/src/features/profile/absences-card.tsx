@@ -85,15 +85,15 @@ export function AbsencesCard({ personId }: { personId: string }) {
 }
 
 /**
- * Einen Zeitraum eintragen — im Sheet und nicht mehr in der Karte.
+ * Einen Zeitraum eintragen — im Sheet und nicht in der Karte.
  *
- * Inline klappte das Formular unter der Liste auf, und auf dem Telefon lag es
- * damit hinter der Tastatur, sobald man den Grund tippte. Das Sheet steht
+ * Inline klappte das Formular unter der Liste auf, und auf dem Telefon läge
+ * es damit hinter der Tastatur, sobald man den Grund tippt. Das Sheet steht
  * unten fest und trägt seine Knöpfe außerhalb des Scrollbereichs.
  *
  * **Im Untertitel steht, was passiert.** Eine Abwesenheit ist mehr als ein
  * Kalendereintrag: Die App sagt die Abende für einen ab und gibt die Rollen
- * daran frei. Das stand bisher nirgends am Formular, nur im Kommentar darüber.
+ * daran frei.
  */
 function AbsenceSheet({
   open,

@@ -5,14 +5,11 @@ import { PersonRole } from '../../../generated/prisma/enums';
 /**
  * Eine E-Mail-Adresse, wie sie in die Datenbank gehört: **kleingeschrieben**.
  *
- * Genau dieselbe Begründung wie bei `usernameSchema` darunter, und derselbe
- * Fehler, den es dort nicht mehr gibt: Keycloak normalisiert Adressen auf
- * Kleinbuchstaben, `person.email` behielt dagegen, was jemand eingetippt hat.
- * Alle drei Abfragen, die eine offene Einladung suchen, vergleichen exakt —
- * eine Einladung an `Max.Muster@gmail.com` fand sich also nie wieder, wenn im
- * Token `max.muster@gmail.com` stand. Die Person meldete sich an, landete auf
- * dem Onboarding-Bildschirm und stand in der Verwaltung weiter als
- * „eingeladen". Beim nächsten Menschen ging es gut, weil er klein getippt war.
+ * Dieselbe Begründung wie bei `usernameSchema` darunter: Keycloak normalisiert
+ * Adressen auf Kleinbuchstaben, und alle drei Abfragen, die eine offene
+ * Einladung suchen, vergleichen exakt — eine Einladung an
+ * `Max.Muster@gmail.com` fände sich sonst nie wieder, wenn im Token
+ * `max.muster@gmail.com` steht.
  *
  * **Erst normalisieren, dann prüfen** — die Reihenfolge ist kein Zufall: In
  * Zod 4 laufen `.trim()` und `.toLowerCase()` hinter `z.email()` *nach* der
@@ -69,12 +66,11 @@ export const updatePersonSchema = createPersonSchema.partial().extend({
    * Die drei Haken noch einmal, und zwar **ohne** ihren Vorgabewert.
    *
    * `.partial()` macht ein Feld optional, nimmt ihm aber nicht seinen
-   * `.default()` — ein `PATCH`, der sie wegließ, kam als „spielt kein
-   * Instrument, kann hosten, ist nicht grundsätzlich dabei" an und überschrieb
-   * damit drei Einstellungen, die niemand angefasst hatte. Solange das ganze
-   * Profil in einem Formular stand, fiel es nicht auf: es schickte immer alle
-   * drei mit. Seit der Anmeldename in der Konto-Karte sitzt und für sich
-   * gespeichert wird, wäre es ein stiller Datenverlust bei jedem Klick.
+   * `.default()` — ein `PATCH`, der sie wegließe, käme als „spielt kein
+   * Instrument, kann hosten, ist nicht grundsätzlich dabei" an und
+   * überschriebe drei Einstellungen, die niemand angefasst hat. Die
+   * Profil-Karten speichern einzeln, das wäre ein stiller Datenverlust bei
+   * jedem Klick.
    *
    * Beim Anlegen bleiben die Vorgaben, wo sie sind — dort beschreiben sie eine
    * neue Person, hier eine Änderung, und weggelassen heißt „unverändert".
@@ -99,12 +95,10 @@ const personParamsSchema = z.object({
 /**
  * Eine Einladung ist eine Adresse und eine Rolle — mehr nicht.
  *
- * **Auch kein Name.** Bis eben tippte der Admin einen ein, und der stand
- * danach als Anzeigename in der App — auch dann, wenn die Person sich beim
- * Aktivieren ihres Kontos ganz anders genannt hat. Zwei Leute benannten
- * denselben Menschen, und der Betroffene gewann nicht. Der Anzeigename entsteht
- * jetzt beim ersten Anmelden aus dem selbst gewählten Nutzernamen; bis dahin
- * steht der lokale Teil der Adresse da, damit die Zeile überhaupt etwas anzeigt.
+ * **Auch kein Name.** Den Namen eines Menschen bestimmt er selbst, nicht der
+ * Admin. Der Anzeigename entsteht beim ersten Anmelden aus dem selbst
+ * gewählten Nutzernamen; bis dahin steht der lokale Teil der Adresse da, damit
+ * die Zeile überhaupt etwas anzeigt.
  *
  * Ob jemand ein Instrument spielt, ob er gerade hosten möchte und wo er wohnt,
  * weiß ohnehin nur er selbst; das steht im Profil und nicht im

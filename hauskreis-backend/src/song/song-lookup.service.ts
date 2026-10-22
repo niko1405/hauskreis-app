@@ -365,10 +365,9 @@ export class SongLookupService implements LyricsRetriever {
    * über zwei Minuten, ohne fertig zu werden. Suchen kann es, Nachsehen tun
    * wir gleich selbst — und zwar für alle Kandidaten parallel.
    *
-   * **`more` ist der zweite Druck auf denselben Knopf.** Ohne ihn kam bisher
-   * immer wieder derselbe Zwischenspeicher-Eintrag: wer einen schlechten
-   * Vorschlag bekommen hatte, bekam ihn beliebig oft wieder. Mit ihm bleibt das
-   * Bekannte stehen, und daneben wird **gezielt** weitergesucht — die bekannten
+   * **`more` ist der zweite Druck auf denselben Knopf.** Ohne ihn käme immer
+   * wieder derselbe Zwischenspeicher-Eintrag. Mit ihm bleibt das Bekannte
+   * stehen, und daneben wird **gezielt** weitergesucht — die bekannten
    * Adressen gehen als „kennen wir schon" mit in die Anfrage.
    */
   async search(

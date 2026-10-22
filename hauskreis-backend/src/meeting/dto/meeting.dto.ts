@@ -90,20 +90,34 @@ export const updateMeetingSchema = z.object({
   ...slotFields,
 });
 
-export const setAttendanceSchema = z.object({
-  personId: z.uuid(),
-  status: attendanceStatus,
-  /// Der eine Satz zur Antwort — freiwillig, und dieselbe Spalte für alle drei
-  /// Status: „komme 20 Min später", „muss schauen, wann Feierabend ist", „bin
-  /// im Urlaub". Nur die Beschriftung des Feldes wechselt, und das ist Sache
-  /// der Oberfläche.
-  ///
-  /// **Fehlt sie, bleibt die gespeicherte stehen — außer der Status wechselt.**
-  /// Die kompakten Umschalter (Startbildschirm, Terminkarte, Kalender)
-  /// schicken nur `status`, und eine Verspätung gehört nicht auf eine Absage.
-  /// Ausdrücklich `null` löscht sie.
-  note: z.string().trim().min(1).max(200).nullish(),
-});
+export const setAttendanceSchema = z
+  .object({
+    personId: z.uuid(),
+    status: attendanceStatus,
+    /// Der eine Satz zur Antwort — freiwillig, und dieselbe Spalte für alle
+    /// drei Status: „bringe noch jemanden mit", „muss schauen, wann Feierabend
+    /// ist", „bin im Urlaub". Nur die Beschriftung des Feldes wechselt, und das
+    /// ist Sache der Oberfläche.
+    ///
+    /// **Fehlt sie, bleibt die gespeicherte stehen — außer der Status
+    /// wechselt.** Die kompakten Umschalter (Terminkarte, Kalender) schicken
+    /// nur `status`. Ausdrücklich `null` löscht sie.
+    note: z.string().trim().min(1).max(200).nullish(),
+    /// Wie viel später jemand kommt, in Minuten — nur bei einer Zusage.
+    /// Dieselbe Regel wie bei `note`: fehlt sie, bleibt sie, solange der
+    /// Status bleibt; `null` heißt pünktlich.
+    lateMinutes: z.number().int().min(5).max(180).nullish(),
+  })
+  .refine(
+    (dto) =>
+      dto.lateMinutes === undefined ||
+      dto.lateMinutes === null ||
+      dto.status === AttendanceStatus.ATTENDING,
+    {
+      message: 'Eine Verspätung gibt es nur bei einer Zusage',
+      path: ['lateMinutes'],
+    },
+  );
 
 /**
  * Warum der Abend ausfällt.
@@ -140,7 +154,7 @@ export const updateMeetingScheduleSchema = z
     ///
     /// Steht **außerhalb** des Satzes darunter: Er beantwortet nicht, wann sich
     /// die Gruppe trifft, sondern ob die App den Kalender führt.
-    autoGenerate: z.coerce.boolean().optional(),
+    autoGenerate: z.boolean().optional(),
     /// 0 = Sonntag … 6 = Samstag, dieselbe Zählung wie `Date.getUTCDay()`.
     weekday: z.coerce.number().int().min(0).max(6).optional(),
     /// Wochen zwischen zwei Terminen. 1 = jede Woche.
@@ -167,19 +181,19 @@ export const updateMeetingScheduleSchema = z
     /// Aussage darüber, wann ihr euch trefft, sondern darüber, was danach
     /// stehen bleibt. Er steht nur deshalb in derselben Zeile, weil „die Woche"
     /// die zwischen zwei Terminen ist.
-    weeklyActionstep: z.coerce.boolean().optional(),
+    weeklyActionstep: z.boolean().optional(),
     /// Ob der letzte Termin eines Monats ein Lobpreisabend wird.
     ///
     /// Gehört wie `autoGenerate` nicht zum Satz „wir treffen uns dienstags um
     /// 18 Uhr": Es sagt etwas über die Art der Abende, nicht über ihre Lage.
-    praiseEvenings: z.coerce.boolean().optional(),
+    praiseEvenings: z.boolean().optional(),
     /// Ob erzeugte Termine den Baustein „Snacks" schon mitbringen.
     ///
     /// Aus derselben Familie wie `praiseEvenings`: eine Aussage über die Art
     /// der Abende, nicht über ihre Lage. Voreingestellt aus — die Rolle ist
     /// eine Einladung, und wer sie nicht will, soll sie nicht abschalten
     /// müssen.
-    snackSlot: z.coerce.boolean().optional(),
+    snackSlot: z.boolean().optional(),
   })
   .refine(
     (dto) =>
@@ -206,9 +220,8 @@ export const listMeetingsQuerySchema = paginationSchema.extend({
   /// Inclusive date bounds, for narrowing the archive to a year or a stretch.
   from: isoDay.optional(),
   to: isoDay.optional(),
-  /// Ob abgesagte Abende mitkommen. Vorgabe `true` — die Terminliste zeigt sie
-  /// seit jeher, und ein abgesagter Abend ist dort eine Auskunft und kein
-  /// Rauschen. Das Archiv-Register schaltet sie ab: wer nachliest, was war,
+  /// Ob abgesagte Abende mitkommen. Vorgabe `true` — in der Terminliste ist
+  /// ein abgesagter Abend eine Auskunft und kein Rauschen. Das Archiv-Register schaltet sie ab: wer nachliest, was war,
   /// sucht Abende, an denen etwas war.
   ///
   /// Als Text und nicht als `z.boolean()`, weil Query-Parameter Text sind —

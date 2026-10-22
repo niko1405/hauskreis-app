@@ -15,10 +15,9 @@ import { notFinishedBefore } from './meeting-schedule';
 /**
  * Der Abend, der als nächster ansteht — samt dem, der gerade läuft.
  *
- * Dieselbe Bedingung wie auf dem Startbildschirm (`notFinishedBefore`). Hier
- * stand einmal `date >= today`, und das ging an zwei Stellen daneben: Eine
- * Freizeit, die gestern anfing, war nicht mehr „der nächste Abend", obwohl sie
- * noch lief — und der Termin danach rückte an ihre Stelle.
+ * Dieselbe Bedingung wie auf dem Startbildschirm (`notFinishedBefore`) und
+ * nicht `date >= today`: Eine Freizeit, die gestern anfing, ist noch „der
+ * nächste Abend", solange sie läuft.
  */
 export async function findNextMeetingId(
   prisma: PrismaService,

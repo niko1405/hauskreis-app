@@ -23,11 +23,9 @@ export const ROLE_ICON: Record<AssignmentRole, LucideIcon> = {
 /**
  * **Rollen haben keine Farbe.**
  *
- * Hier standen einmal zwei `Record<AssignmentRole, string>` mit je sechs
- * Einträgen: Thema und Testimony amber, Musik grün, Gebetsbuddy blau, Geschenk
- * rot, Gastgeber terracotta. Auf einer Terminkarte standen davon drei
- * nebeneinander, auf „Heute" bis zu fünf — und weil jede Farbe für sich etwas
- * bedeutete, bedeutete am Ende keine mehr etwas.
+ * Auf einer Terminkarte stehen bis zu drei Rollen nebeneinander, auf „Heute"
+ * bis zu fünf — trüge jede eine eigene Farbe, bedeutete am Ende keine mehr
+ * etwas.
  *
  * Unterschieden werden die Rollen durch das, was sie ohnehin unterscheidet:
  * ihr Symbol und ihren Namen. Beides steht im Chip.

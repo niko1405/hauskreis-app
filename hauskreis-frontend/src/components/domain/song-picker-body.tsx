@@ -3,18 +3,15 @@
 /**
  * Lieder aus dem Archiv an einen Abend holen.
  *
- * Am Termin gab es bisher nur den Weg über das Eintragen: tippen, warten, aus
- * höchstens acht Treffern wählen. Wer wissen wollte, was die Gruppe eigentlich
- * singt, musste ins Archiv wechseln — und dort gab es keinen Weg zurück an den
- * Abend. Hier ist dieselbe Datenbank, aber mit dem Knopf daneben.
+ * Dieselbe Datenbank wie im Archiv, aber mit dem Knopf daneben, der ein Lied
+ * an den Abend holt.
  *
  * Dieselben drei Sortierungen wie im Archiv, weil es dieselbe Frage ist: was
  * singen wir oft, was zuletzt, wie hieß das nochmal.
  *
  * **Nur der Rumpf, ohne `Sheet` darum.** Er sitzt als Schritt in
  * `song-suggest-sheet.tsx`, und zwei gestapelte Sheets schließen einander und
- * fangen den Fokus im falschen Panel. Eine eigene Hülle hätte hier ohnehin
- * niemanden mehr gehabt: Diese Datei hatte genau einen Aufrufer.
+ * fangen den Fokus im falschen Panel.
  */
 import { useDeferredValue, useState } from 'react';
 import { Check, Music, Search } from 'lucide-react';

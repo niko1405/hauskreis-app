@@ -106,10 +106,8 @@ describe('MeetingService.create — mehrere Tage', () => {
   });
 
   /**
-   * Hier stand einmal „nur ein besonderer Termin kann über mehrere Tage
-   * gehen". Das war eine Regel über die Terminart und nicht über die Sache:
-   * Eine Freizeit ist mehrtägig, ganz gleich, wer sie angelegt hat. Mit der
-   * Terminart ist die Regel weg — geblieben ist die, die etwas prüft.
+   * Jeder Termin darf über mehrere Tage gehen: Eine Freizeit ist mehrtägig,
+   * ganz gleich, wer sie angelegt hat.
    */
   it('weist ein Ende vor dem Anfang ab', async () => {
     const { service } = setup();

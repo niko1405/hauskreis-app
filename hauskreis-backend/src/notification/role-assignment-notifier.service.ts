@@ -21,9 +21,9 @@ const TITLE: Record<AssignmentRole, string> = {
 /**
  * „Du wurdest eingeteilt."
  *
- * Bisher erfuhr man von einer Zuteilung erst durch die Erinnerung fünf Tage
- * vorher. Bis dahin stand sie nur in der App — und wer nicht hineinsieht,
- * erfährt sie nicht. Genau das ist das Problem, das die App lösen soll
+ * Ohne diese Nachricht erführe man von einer Zuteilung erst durch die
+ * Erinnerung Tage vorher — bis dahin stünde sie nur in der App, und wer nicht
+ * hineinsieht, erfährt sie nicht. Genau das ist das Problem, das die App lösen soll
  * (CLAUDE.md §2: „geht unter, niemand hat den Überblick").
  *
  * Drei Regeln, die alle drei Aufrufer teilen und deshalb hier stehen:
@@ -116,15 +116,10 @@ function assignmentBody(
 ): string {
   const when = formatMeetingDate(date);
 
-  // Ein `switch` und kein Ternär: der hatte zwei Zweige für vier Rollen, und
-  // `TESTIMONY` fiel in den Musik-Zweig — Titel „Du erzählst dein Testimony",
-  // Text „Am … machst du die Musik."
-  //
-  // Und **ohne `default`**, seit es eine fünfte Rolle gibt: Der Zweig fing
-  // alles ab, was nicht ausdrücklich dastand, und hätte „Am … machst du die
-  // Musik." an alle geschickt, die Snacks mitbringen. Genau der Fehler von
-  // vorher, nur eine Rolle weiter. Ohne `default` verlangt TypeScript für jede
-  // neue Rolle einen eigenen Zweig.
+  // Ein `switch` **ohne `default`**: Ein Sammelzweig schickte jeder neuen
+  // Rolle still den Text einer anderen („Am … machst du die Musik." an alle,
+  // die Snacks mitbringen). Ohne `default` verlangt TypeScript für jede neue
+  // Rolle einen eigenen Zweig.
   switch (role) {
     case AssignmentRole.HOST:
       return locationName

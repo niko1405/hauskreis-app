@@ -3,10 +3,9 @@
 /**
  * Was zu sehen ist, wenn beim Rendern einer Seite etwas wirft.
  *
- * Bis hierher gab es diese Datei nicht — ein Fehler landete damit in Next.js'
- * eingebauter Fehlerseite. In der Entwicklung ist das das Overlay mit
- * Stacktrace, in Produktion eine weiße Seite mit „Application error", und in
- * der installierten PWA steht dann kein Browser-Menü zum Neuladen daneben.
+ * Ohne diese Datei landete ein Fehler in Next.js' eingebauter Fehlerseite — in
+ * Produktion eine weiße Seite mit „Application error", und in der
+ * installierten PWA stünde kein Browser-Menü zum Neuladen daneben.
  *
  * Der häufigste Fall ist gar kein Programmfehler, sondern eine Datei, die
  * nicht ankam (siehe `chunk-error.ts`). Deshalb hat dieser Bildschirm zwei

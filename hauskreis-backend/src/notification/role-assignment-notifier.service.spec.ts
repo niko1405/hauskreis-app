@@ -77,13 +77,9 @@ describe('RoleAssignmentNotifier.announce', () => {
   });
 
   /**
-   * Der Text muss zur Rolle passen — und tat es beim Testimony nicht.
-   *
-   * Der Rumpf war ein Ternär mit zwei Zweigen für vier Rollen: alles, was nicht
-   * `HOST` und nicht `TOPIC` war, bekam „machst du die Musik", während der
-   * Titel darüber „Du erzählst dein Testimony" sagte. Erreichbar war das
-   * bisher nicht, weil eine Testimony-Zuteilung `announce` gar nicht anstößt —
-   * aber genau deshalb hätte es beim Nachrüsten niemand bemerkt.
+   * Der Text muss zur Rolle passen, auch beim Testimony — selbst wenn eine
+   * Testimony-Zuteilung `announce` heute gar nicht anstößt, fiele ein falscher
+   * Text sonst beim Nachrüsten niemandem auf.
    */
   it.each([
     [

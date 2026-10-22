@@ -94,7 +94,7 @@ describe('ReleaseAnnouncementService', () => {
    * Die Frage lautet „ist das je **rausgegangen**?" und nicht „steht dazu eine
    * Zeile?".
    *
-   * Seit die Box hinter der Glocke aus derselben Tabelle liest, entsteht ein
+   * Die Box hinter der Glocke liest aus derselben Tabelle, also entsteht ein
    * Eintrag immer — auch ohne VAPID-Schlüssel. Auf die bloße Existenz zu
    * schauen hieße: Wer die Schlüssel nachträgt und neu startet, bekäme die
    * Ankündigung nie, weil sie als erledigt gilt.

@@ -3,12 +3,10 @@
 /**
  * Eine Listenzeile, die nach links geht und rechts ihre Knöpfe freigibt.
  *
- * **Was sie ersetzt.** Stift und Papierkorb lagen an drei Listen hinter einem
- * langen Druck (einer halben Sekunde Halten). Der kam, weil zwei dauerhafte
- * Ziele am Rand jeder Zeile der Daumen zuverlässiger traf als die Zeile selbst
- * — aber er stand nirgends dran. Wer die Geste nicht kennt, hält die Liste für
- * schreibgeschützt, und es gibt nichts, was ihn eines Besseren belehrt. Ein
- * Wisch zeigt sich dagegen beim ersten versehentlichen Ansatz.
+ * **Warum ein Wisch.** Zwei dauerhafte Ziele am Rand jeder Zeile träfe der
+ * Daumen zuverlässiger als die Zeile selbst, und ein langer Druck steht
+ * nirgends dran — wer ihn nicht kennt, hält die Liste für schreibgeschützt.
+ * Ein Wisch zeigt sich beim ersten versehentlichen Ansatz.
  *
  * **Am Rechner fahren dieselben Knöpfe beim Überfahren ein.** Wischen gibt es
  * dort nicht, und eine Liste, die auf dem Telefon bearbeitbar ist und im
@@ -17,10 +15,8 @@
  * ein `pointerenter`, und die Zeile ginge schon beim Antippen auf.
  *
  * **Immer nur eine offen.** Ein winziger Speicher wie in `overlay-lock.ts` hält
- * fest, welche Zeile gerade offen ist; wer aufgeht, schließt die andere. Beim
- * langen Druck blieben zwei aufgeklappte Zeilen nebeneinander stehen, bis die
- * Liste neu lud — und genau deshalb brauchte jede Zeile einen „Fertig"-Knopf.
- * Den gibt es hier nicht mehr, und damit ist das dritte Ziel aus der Zeile weg.
+ * fest, welche Zeile gerade offen ist; wer aufgeht, schließt die andere. Ein
+ * „Fertig"-Knopf je Zeile braucht es deshalb nicht.
  *
  * **Die Breite wird gemessen, nicht gerechnet.** Sie hängt an der Zahl der
  * Knöpfe, und die ist je Zeile verschieden — bei den Ideen darf nicht jede:r

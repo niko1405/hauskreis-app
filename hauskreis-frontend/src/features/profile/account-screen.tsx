@@ -3,17 +3,14 @@
 /**
  * Das Konto: Anmeldename und E-Mail hier, Passwort dort.
  *
- * **Ein eigener Bildschirm, keine achte Karte.** Im Profil stand hier ein
- * Block mit vier Knöpfen und einem Löschen-Link darunter — auf einer Seite, die
- * sonst aus Einstellungen besteht, die man anhakt. Kontosachen fasst man
- * zweimal im Jahr an; sie gehören dahin, wo auch Datenschutz und Impressum
+ * **Ein eigener Bildschirm, keine Karte im Profil**, das aus Einstellungen
+ * besteht, die man umlegt. Kontosachen fasst man zweimal im Jahr an; sie gehören dahin, wo auch Datenschutz und Impressum
  * stehen, in die Liste unter „Rechtliches & Über die App".
  *
- * **Der Anmeldename stand einmal unter „Deine Angaben"**, zwischen Anzeigename
- * und Geburtstag — also zwischen zwei Dingen, die nur innerhalb der App etwas
- * bedeuten. Er ist aber das Gegenstück zur Adresse: mit beiden meldet man sich
- * an, beide leben bei Keycloak, und beide ändert man aus demselben Anlass.
- * Deshalb stehen sie jetzt untereinander, jeder mit seinem eigenen Knopf.
+ * **Der Anmeldename steht hier und nicht unter „Deine Angaben"**: Er ist das
+ * Gegenstück zur Adresse — mit beiden meldet man sich an, beide leben bei
+ * Keycloak, und beide ändert man aus demselben Anlass. Deshalb stehen sie
+ * untereinander, jeder mit seinem eigenen Knopf.
  *
  * Die Adresse ändern wir selbst, weil sie zwei Dinge gleichzeitig ist — die
  * Anmeldung bei Keycloak *und* das Feld, an dem eine Einladung hängt. Beides
@@ -24,8 +21,8 @@
  * schicken hieße, Passwortregeln, Wiederherstellung und Zweitfaktor
  * nachzubauen — für einen Bildschirm, den man zweimal im Jahr öffnet.
  *
- * Der Weg dorthin führt aber nicht mehr in die Keycloak-Account-Konsole,
- * sondern über `kc_action=UPDATE_PASSWORD`: dieselbe Seite, die man beim
+ * Der Weg dorthin führt nicht in die Keycloak-Account-Konsole, sondern über
+ * `kc_action=UPDATE_PASSWORD`: dieselbe Seite, die man beim
  * Einstieg schon gesehen hat, im Theme der App, und danach wieder hier.
  *
  * Ganz unten steht das Löschen. Es teilt sich das Sheet mit „Hauskreis
@@ -87,7 +84,7 @@ export function AccountScreen() {
 function Loaded({
   /**
    * Die ganze Person und nicht drei einzelne Angaben: der Bildschirm fragt
-   * inzwischen Adresse, Anmeldename und Id ab, und eine Prop-Liste, die mit
+   * Adresse, Anmeldename und Id ab, und eine Prop-Liste, die mit
    * jedem Feld wächst, ist der Anfang vom Ende.
    *
    * `email` darf darin `null` sein — das hieße „anonymisiert" und kann hier

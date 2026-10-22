@@ -1,5 +1,6 @@
 /**
- * Der Kopf, der bisher fehlte — und der Endpunkt, der seinen behalten darf.
+ * `no-store` für alle JSON-Antworten — und der Endpunkt, der seinen eigenen
+ * Kopf behalten darf.
  */
 import { NoStoreInterceptor } from './no-store.interceptor';
 import type { CallHandler, ExecutionContext } from '@nestjs/common';

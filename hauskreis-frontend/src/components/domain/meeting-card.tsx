@@ -20,6 +20,7 @@ import {
 import { useMe, usePeople } from '@/lib/api/hooks';
 import type { AttendanceStatus, MeetingListItem } from '@/lib/api/types';
 import { AnswerNoteSheet } from './answer-note-sheet';
+import { ownAnswerLine } from './attendance-answers';
 import { AnswerButtons, isAnswerable } from './answer-buttons';
 import { DateBox, TimeAndPlace } from './date-box';
 import { RoleChip } from './role-badge';
@@ -52,8 +53,8 @@ export function MeetingCard({
   const shown = past || cancelled ? counts.attending : counts.planned;
   const topicPeople = meeting.topicResponsibles.map((r) => r.person);
 
-  const myNote =
-    meeting.attendances.find((row) => row.personId === me?.id)?.note ?? null;
+  const myRow = meeting.attendances.find((row) => row.personId === me?.id);
+  const myLine = ownAnswerLine(myRow);
   const answerable = isAnswerable(meeting, me?.id);
 
   return (
@@ -66,10 +67,9 @@ export function MeetingCard({
           'block rounded-card border p-5 shadow-sm',
           PRESSABLE,
           'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
-          // Hier stand für den Lobpreisabend ein amberfarbener Verlauf. Er
-          // war die letzte Rollenfarbe auf dieser Karte: Was für ein Abend das
-          // ist, sagen die Überschrift und die Chips darunter — und eine
-          // getönte Karte in einer Liste sah aus, als sei sie hervorgehoben.
+          // Kein eigener Ton für den Lobpreisabend: Was für ein Abend das ist,
+          // sagen die Überschrift und die Chips darunter — und eine getönte
+          // Karte in einer Liste sähe aus, als sei sie hervorgehoben.
           'border-line bg-card',
           // Dieselbe Tönung wie „Aktueller Termin" auf „Heute": Grün ist die
           // Farbe von „gilt gerade". In einer Liste über Wochen ist der Abend,
@@ -79,14 +79,12 @@ export function MeetingCard({
         )}
       >
         <div className="flex items-start gap-3">
-          {/* **Das Datum als Kästchen.** Es stand vorher als Kleinschrift-Zeile
-              über dem Titel und war damit das Unauffälligste an einer Karte, die
-              man genau danach durchsucht: „wann ist der nächste". Jetzt ist es
-              der Anker links, an dem das Auge die Liste heruntergeht.
+          {/* **Das Datum als Kästchen** — der Anker links, an dem das Auge die
+              Liste heruntergeht: Nach dem Datum durchsucht man sie.
 
               Ein Zeitraum bekommt keins: „14.–16." passt nicht in ein Kästchen,
-              und eine Freizeit ist kein Tag. Dort steht die Spanne wie bisher
-              als Zeile über dem Titel. */}
+              und eine Freizeit ist kein Tag. Dort steht die Spanne als Zeile
+              über dem Titel. */}
           {meeting.endDate === null && <DateBox day={meeting.date} />}
 
           <div className="min-w-0 flex-1">
@@ -110,9 +108,7 @@ export function MeetingCard({
 
               {/* Die Zahl sagt **dasselbe wie die Detailseite**: Zusagen plus
                   Unentschiedene, also die Menge, mit der auch der Server
-                  rechnet. „3 dabei" zählte einmal nur die Zusagen, während
-                  darunter „Geplant für 8" stand — als Gastgeber plant man mit
-                  der größeren.
+                  rechnet — als Gastgeber plant man mit der größeren.
 
                   Anders als die Antwort-Knöpfe steht sie auch an vergangenen
                   und abgesagten Abenden — dort aber als „wer war da", denn
@@ -129,10 +125,9 @@ export function MeetingCard({
               {meetingHeadline(meeting)}
             </h3>
 
-            {/* Die Uhrzeit stand bisher nur auf „Heute". Hier gehört sie dazu,
-                seit das Kästchen den Tag trägt: Der Tag ist die Sortierung, die
-                Uhrzeit die Verabredung — und seit sie sich einstellen lässt,
-                ist „18 Uhr wie immer" keine sichere Annahme mehr.
+            {/* Der Tag ist die Sortierung, die Uhrzeit die Verabredung — und
+                weil sie sich einstellen lässt, ist „18 Uhr wie immer" keine
+                sichere Annahme.
 
                 Die Art des Abends steht nur dahinter, wenn er einen eigenen
                 Titel trägt: Sonst steht sie schon als Überschrift darüber, und
@@ -145,17 +140,13 @@ export function MeetingCard({
           </div>
         </div>
 
-        {/* **Untereinander, in jeder Breite.** Hier standen die Antworten ab
-            32 rem rechts neben den Rollen-Chips. Das war eng gedacht: Im
-            Fenster nebeneinander las sich die Antwort wie ein weiterer Chip.
-            Mit dem `@lg` fallen die einzigen Container-Queries des Projekts.
+        {/* **Untereinander, in jeder Breite**: Neben den Rollen-Chips läse sich
+            die Antwort wie ein weiterer Chip.
 
-            **Ohne Trennstriche.** Über den Chips lag einer und über den
-            Antworten ein zweiter — auf einer Karte, die selbst schon von einem
-            Rahmen eingefasst ist, waren das drei waagerechte Linien
-            übereinander. Was die Striche sagen sollten, sagen die Formen
-            längst: Chips sind Pillen mit Namen darin, die Antwort ein
-            umrandeter Schalter. Getrennt wird jetzt über den Abstand. */}
+            **Ohne Trennstriche**: Die Karte hat schon einen Rahmen, und was
+            Striche sagen sollten, sagen die Formen — Chips sind Pillen mit
+            Namen darin, die Antwort ein umrandeter Schalter. Getrennt wird über
+            den Abstand. */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {/* Braucht der Ort keinen Gastgeber — Schlosspark, Café —, steht
               hier **nichts**. Der Ort selbst steht schon in der Zeile über
@@ -203,8 +194,8 @@ export function MeetingCard({
         {/* Der eigene Satz, einzeilig — wie im eingeklappten Antwort-Balken. Er
             ist der Grund, aus dem man die Karte sonst öffnen müsste, um zu
             sehen, ob man überhaupt etwas dazugesagt hat. */}
-        {answerable && myNote && (
-          <p className="mt-2 truncate text-[11px] text-stone-400">„{myNote}"</p>
+        {answerable && myLine && (
+          <p className="mt-2 truncate text-[11px] text-stone-400">{myLine}</p>
         )}
       </Link>
 
@@ -217,7 +208,8 @@ export function MeetingCard({
           meetingId={meeting.id}
           personId={me.id}
           status={noteFor}
-          note={myNote}
+          note={myRow?.note ?? null}
+          lateMinutes={myRow?.lateMinutes ?? null}
           onClose={() => setNoteFor(null)}
         />
       )}

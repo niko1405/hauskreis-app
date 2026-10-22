@@ -2,7 +2,7 @@
  * Ort und Gastgeber sind eine Entscheidung.
  *
  * Geprüft wird über `update`, nicht über die private Methode: was zählt, ist
- * was am Ende in der Datenbank landet, und genau da ging es vorher auseinander.
+ * was am Ende in der Datenbank landet.
  */
 import { BadRequestException } from '@nestjs/common';
 import { MeetingService } from './meeting.service';

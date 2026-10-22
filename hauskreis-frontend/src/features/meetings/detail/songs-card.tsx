@@ -3,16 +3,13 @@
 /**
  * Lieder eines Termins — **die Setlist und die Vorschläge, als zwei Karten.**
  *
- * Es war einmal eine Liste, dann eine Karte mit zwei Abschnitten. Jetzt sind es
- * zwei Karten, weil es zwei Fragen mit zwei verschiedenen Ordnungen sind:
+ * Zwei Karten, weil es zwei Fragen mit zwei verschiedenen Ordnungen sind:
  * „in welcher Folge singen wir" entscheidet das Musik-Team, „was wollen die
- * anderen" sagen die Stimmen. Eine Reihenfolge, die jemand gemacht hat, und
- * eine, die sich aus Zahlen ergibt, nebeneinander in einer Karte, sahen aus wie
- * eine Liste mit einem Bruch in der Mitte.
+ * anderen" sagen die Stimmen. In einer Karte sähen sie aus wie eine Liste mit
+ * einem Bruch in der Mitte.
  *
  * **Die Setlist steht auch dann da, wenn sie leer ist** — sobald es überhaupt
- * Lieder gibt. Sie erschien zuerst erst mit dem ersten Haken, und damit fehlte
- * die Frage genau in dem Zustand, in dem sie offen ist. Was an ihrer Stelle
+ * Lieder gibt: Gerade dann ist die Frage offen. Was an ihrer Stelle
  * steht, hängt daran, wer liest: für das Musik-Team eine Aufforderung, für
  * alle anderen eine Auskunft.
  *
@@ -23,9 +20,8 @@
  *
  * **Ein Tipp auf ein Lied führt auf seine Seite** (`/lied`), mit dem Abend in
  * der Adresse. Dort stehen der Link, die eigene Version, unter „Bearbeiten"
- * die Angaben und unten „Entfernen" vom Abend. Eine Zeile hat dafür zu wenig
- * Platz, seit ein Lied mehr ist als Titel und Link — und ein Knopf „Text" an
- * jeder Zeile war ein zweiter Weg zu etwas, das die Seite ohnehin zeigt.
+ * die Angaben und unten „Entfernen" vom Abend — dafür hat eine Zeile zu wenig
+ * Platz.
  *
  * **Die Zeilen wischen trotzdem**, für die beiden Handgriffe, die man beim
  * Zusammenstellen zehnmal braucht — dafür jedes Mal eine Seite zu öffnen wäre
@@ -35,8 +31,8 @@
  *
  * **Warum die Setlist terracotta ist.** „Im Set" ist eine **Auswahl**, und
  * Auswahl ist überall terracotta: der aktive Tab, der gewählte Chip, der erste
- * Platz einer Rangliste. Ein Rand in dieser Farbe genügt dafür; einen Schein
- * um die Karte gab es einmal, und er ließ sie aussehen wie eine Werbefläche.
+ * Platz einer Rangliste. Ein Rand in dieser Farbe genügt dafür; ein Schein um
+ * die Karte ließe sie aussehen wie eine Werbefläche.
  */
 import {
   ChevronDown,
@@ -346,9 +342,8 @@ function SetlistCard({
   };
 
   return (
-    // Der Rand in Terracotta sagt „das ist die Auswahl". Ein Schein darum
-    // stand hier einmal und sollte die Karte aus der Seite treten lassen —
-    // sie trat vor allem aus dem Rest der App heraus.
+    // Der Rand in Terracotta sagt „das ist die Auswahl" — ohne Schein, der die
+    // Karte aus dem Rest der App heraustreten ließe.
     <div className="rounded-card border border-terracotta-500/40 bg-card p-4 sm:p-5">
       <CardHead
         icon={<Music size={18} />}

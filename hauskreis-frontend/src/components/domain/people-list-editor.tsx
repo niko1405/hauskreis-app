@@ -11,10 +11,9 @@ import type { PersonRef } from '@/lib/api/types';
  * hinzufügen", das die übrigen im selben Sheet aufklappt.
  *
  * Gebraucht, wo ein Entwurf von Leuten mit **einem** Speichern geschrieben
- * wird: die Vorbereiter einer Einheit, die Mitschreibenden einer Notiz. Es
- * war einmal eine Liste der ganzen Gruppe zum Anhaken; die beantwortete aber
- * „wer könnte", und „wer macht es" musste man sich aus den Haken
- * zusammensuchen.
+ * wird: die Vorbereiter einer Einheit, die Mitschreibenden einer Notiz. Eine
+ * Liste der ganzen Gruppe zum Anhaken beantwortete „wer könnte" — gefragt ist
+ * aber „wer macht es".
  *
  * Ein zweites Sheet für die Auswahl gibt es bewusst nicht: Es hätte ein
  * zweites Escape und einen zweiten Schleier, und der Entwurf darunter wäre

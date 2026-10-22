@@ -30,11 +30,9 @@ import type {
 /**
  * Themen anlegen, lesen, benennen und wegräumen.
  *
- * Lange entstanden sie **nur** beim Wählen an einem Abend, mit dem Argument, ein
- * Thema ohne Anlass wäre ein leerer Datensatz. Das stimmte, solange der Inhalt
- * ausschließlich an Terminen hing. Seit es Einheiten ohne Abend gibt, ist das
- * Vorarbeiten selbst der Anlass: wer im Zug eine Idee hat, legt das Thema an und
- * füllt es, und der Dienstag findet sich später.
+ * Sie entstehen beim Wählen an einem Abend oder im Archiv, ohne Termin: Das
+ * Vorarbeiten selbst ist der Anlass — wer im Zug eine Idee hat, legt das Thema
+ * an und füllt es, und der Dienstag findet sich später.
  *
  * Wer anlegt, wird Owner — dieselbe Regel wie beim Wählen, nur ein Schritt
  * früher.
@@ -152,9 +150,8 @@ export class TopicService {
    * Titel, Zusammenfassung, Status.
    *
    * Alle drei unterliegen derselben Regel: ändern darf, wer zum Thema gehört.
-   * Anders als früher gilt das auch für `status` — „wir sind damit durch" ist
-   * eine Aussage über die eigene Arbeit, und seit die nächtliche Übernahme weg
-   * ist, stößt sie auch nichts mehr an, das die ganze Gruppe betrifft.
+   * Das gilt auch für `status` — „wir sind damit durch" ist eine Aussage über
+   * die eigene Arbeit und stößt nichts an, das die ganze Gruppe betrifft.
    *
    * Die Termine, an denen Einheiten dieses Themas hängen, altern mit: der
    * Themen-Titel steht in ihrer Antwort („Zugehöriges Thema"), und ohne den
@@ -226,11 +223,9 @@ export class TopicService {
   /**
    * Holt jemanden ausdrücklich zum Thema dazu — nur der Owner darf das.
    *
-   * Bis eben gab es diesen Weg nicht, weil er nicht nötig war: Wer eine Einheit
-   * hielt, wurde automatisch Mitarbeiter:in. Genau das ist weggefallen — es gab
-   * jemandem, der einmal aushalf, Hoheit über ein Thema, das über Monate läuft.
-   * Ab jetzt ist das hier der **einzige** Weg zum themaweiten Schreibrecht, und
-   * er ist eine Entscheidung statt einer Nebenwirkung.
+   * Das ist der **einzige** Weg zum themaweiten Schreibrecht, und er ist eine
+   * Entscheidung statt einer Nebenwirkung: Wer einmal eine Einheit hält,
+   * bekommt keine Hoheit über ein Thema, das über Monate läuft.
    *
    * Was diese Ebene von der Crew einer Einheit unterscheidet: Wer hier steht,
    * darf **jede** Einheit des Themas ändern und neue anlegen.

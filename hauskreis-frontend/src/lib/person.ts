@@ -10,8 +10,8 @@ import type { PersonRef } from './api/types';
 /**
  * Die Paletten des Entwurfs, in derselben warmen Familie.
  *
- * Die Farbwerte stehen in `globals.css`, nicht mehr hier: Im Dunkelmodus
- * bräuchte jede von ihnen eine zweite Fassung, und die Zuordnung Person →
+ * Die Farbwerte stehen in `globals.css`, nicht hier: Im Dunkelmodus braucht
+ * jede von ihnen eine zweite Fassung, und die Zuordnung Person →
  * Palette hat damit nichts zu tun. Hier bleibt die Zuordnung, dort liegt die
  * Farbe.
  */

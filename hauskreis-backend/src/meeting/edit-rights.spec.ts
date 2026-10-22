@@ -4,9 +4,9 @@
  * Die Regel bricht am Abend: vorher ist das Abhaken eine Entscheidung und gehört
  * denen, die die Musik machen; nachher ist es ein Protokoll und gehört allen.
  *
- * Die beiden Ausnahmen der alten Hausregel sind weg, und genau das prüfen die
- * letzten zwei Fälle: ein Admin ohne Musik-Zuteilung darf vorher **nicht**, und
- * ein Abend ohne jede Zuteilung ist keiner, an dem alle dürfen.
+ * Ohne Ausnahmen, und genau das prüfen die letzten zwei Fälle: ein Admin ohne
+ * Musik-Zuteilung darf vorher **nicht**, und ein Abend ohne jede Zuteilung ist
+ * keiner, an dem alle dürfen.
  */
 import { ForbiddenException } from '@nestjs/common';
 import { EditRightsService } from './edit-rights.service';
@@ -104,10 +104,8 @@ describe('EditRightsService.assertMayPickSongs', () => {
   });
 
   /**
-   * Der Fall, der die alte Fassung von dieser unterscheidet: ohne Zuteilung
-   * durfte einmal jede:r. Ein Abend, an dem noch niemand für die Musik
-   * eingetragen ist, ist aber keiner, an dem alle bestimmen — er ist einer, an
-   * dem noch niemand eingetragen ist.
+   * Ein Abend, an dem noch niemand für die Musik eingetragen ist, ist keiner,
+   * an dem alle bestimmen — er ist einer, an dem noch niemand eingetragen ist.
    */
   it('lässt bei leerer Zuteilung vor dem Abend niemanden', async () => {
     const service = setup({

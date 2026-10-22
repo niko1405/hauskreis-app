@@ -163,11 +163,10 @@ describe('choices', () => {
     /**
      * Und umgekehrt: die zweite Liste fragt **nicht** mehr nach Hüllen.
      *
-     * Sie tat es einmal, und das ging nicht mehr auf, seit die Vorbereitung
-     * ihren eigenen Kreis zieht: Legt jemand die dritte Einheit seines Themas an
-     * und nimmt mich dazu, gehöre ich zum *Thema* nicht — die Einheit stünde
-     * damit in keiner der beiden Listen und wäre an meinem Abend nicht wählbar,
-     * obwohl ich sie mit vorbereite.
+     * Legt jemand die dritte Einheit seines Themas an und nimmt mich dazu,
+     * gehöre ich zum *Thema* nicht — die Einheit stünde sonst in keiner der
+     * beiden Listen und wäre an meinem Abend nicht wählbar, obwohl ich sie mit
+     * vorbereite.
      */
     it('fragt die Einheiten themaübergreifend ab', async () => {
       const { service, sessionFind } = setup([]);

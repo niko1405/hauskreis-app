@@ -14,19 +14,17 @@
  * dreißig; wer weiter zurück will, sucht am Ort selbst. Die Box ist kein
  * zweites Archiv.
  *
- * **Und wer nur wegräumen will, wischt nach links.** „Alle gelesen" war bisher
- * das einzige Werkzeug dafür, und es ist ein grobes: Wer sieben Nachrichten hat
- * und sechs davon erledigt, musste die siebte entweder stehen lassen oder alles
- * auf einmal wegräumen. Ein Wisch macht dasselbe für eine Zeile — dieselbe
+ * **Und wer nur wegräumen will, wischt nach links.** „Alle gelesen" ist ein
+ * grobes Werkzeug: Wer sieben Nachrichten hat und sechs davon erledigt, will
+ * die siebte stehen lassen. Ein Wisch macht dasselbe für eine Zeile — dieselbe
  * Geste, mit der in dieser App überall in Listen aufgeräumt wird, nur ohne den
  * Knopf dahinter: Es gibt hier nur eine Sache zu tun, und ein Knopf, der sie
  * erst noch anbietet, wäre ein Schritt zu viel.
  *
- * **Eine Sprechblase und kein Sheet.** Sie fuhr einmal von unten herein, und
- * das war die falsche Bauform: Ein Bottom-Sheet beantwortet „wähle etwas aus",
- * nicht „was ist neu" — und es kam aus der Ecke gegenüber dem Knopf, den man
- * gerade gedrückt hatte. Jetzt klappt sie unter der Glocke auf, mit einem Pfeil
- * darauf.
+ * **Eine Sprechblase und kein Sheet.** Ein Bottom-Sheet beantwortet „wähle
+ * etwas aus", nicht „was ist neu" — und es käme aus der Ecke gegenüber dem
+ * Knopf, den man gerade gedrückt hat. Die Blase klappt unter der Glocke auf,
+ * mit einem Pfeil darauf.
  *
  * **Ohne Positionierungs-Bibliothek, und ohne dass eine fehlt.** Die App kennt
  * weder Portale noch `getBoundingClientRect`. Sie braucht hier auch beides

@@ -3,9 +3,8 @@
 /**
  * Die Nachbereitung eines Abends **ohne** Thema.
  *
- * Zusammenfassung und Actionstep hingen lange ausschließlich an der Einheit
- * eines Themas. Ein Abend, an dem die Gruppe nur singt und betet, hatte damit
- * keinen Ort für den Vorsatz der Woche — obwohl der dort genauso entsteht.
+ * Ein Abend, an dem die Gruppe nur singt und betet, hat keine Einheit — der
+ * Vorsatz der Woche entsteht dort aber genauso.
  *
  * Bewusst im selben Aufbau wie der Einheiten-Kasten in `topic-card.tsx`: es ist
  * dieselbe Sache, nur ohne einen Stoff darüber, der sich über mehrere Abende
@@ -26,9 +25,9 @@
  * seine Uhrzeit: einen Vorsatz für heute Abend hakt man nicht heute früh ab.
  *
  * **Zusammenfassung und Actionstep sind zwei getrennte Stücke**, und jedes steht
- * nur da, wenn etwas drinsteht. Vorher standen beide immer, auch leer — eine
- * Karte, die man gerade erst angelegt hatte, sah damit aus wie ein Formular mit
- * zwei unerledigten Zeilen. Nicht jeder Abend braucht beides: manchmal gibt es
+ * nur da, wenn etwas drinsteht — sonst sähe eine gerade angelegte Karte aus
+ * wie ein Formular mit zwei unerledigten Zeilen. Nicht jeder Abend braucht
+ * beides: manchmal gibt es
  * nur einen Vorsatz und nichts zusammenzufassen. Ein Knopf legt das fehlende
  * Stück an; bleibt es leer, verschwindet es wieder.
  */

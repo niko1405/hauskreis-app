@@ -1,10 +1,9 @@
 /**
  * Der Weg zurück: aus dem Thema wird wieder eine einzelne Einheit.
  *
- * Er fehlte lange mit Absicht, und die Begründung stimmte: „Das Thema doch
- * wieder auflösen" ist nur dann eindeutig, wenn **genau eine** Einheit
- * daranhängt — wer die zweite schon angelegt hat, meint mit dem Knopf etwas
- * anderes als die App. Mit dieser Bedingung gibt es ihn jetzt.
+ * „Das Thema doch wieder auflösen" ist nur dann eindeutig, wenn **genau
+ * eine** Einheit daranhängt — wer die zweite schon angelegt hat, meint mit dem
+ * Knopf etwas anderes als die App.
  *
  * Zwei Dinge, die dabei ausdrücklich stehen bleiben: die **Bindung an den
  * Abend** und die Leute am Thema. Angefasst wird nur die eine Zeile.

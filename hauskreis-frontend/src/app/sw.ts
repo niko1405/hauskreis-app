@@ -63,8 +63,7 @@ const serwist = new Serwist({
      * App Routers, die sie nach und nach verdrängen.
      *
      * Ohne Netz und ohne Treffer im Cache liefert `offlineFallback` die
-     * eingebettete Meldung — der Fall, in dem die App bisher als leere Seite
-     * startete.
+     * eingebettete Meldung statt einer leeren Seite.
      */
     {
       matcher: ({ request }) => request.mode === 'navigate',

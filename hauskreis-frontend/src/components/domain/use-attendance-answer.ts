@@ -7,14 +7,12 @@
  * **Wer nicht mehr zusagt, verliert seine Rollen** — bei einer Absage wie bei
  * einem „weiß noch nicht". Eine Rolle ist die Aussage „ich bin da und mache
  * das" (CLAUDE.md §6.8, „Wer eingeteilt wird, ist dabei"), und beide Antworten
- * nehmen genau sie zurück. Am Dienstag stand sonst im Plan jemand, der selbst
- * nicht weiß, ob er kommt.
+ * nehmen genau sie zurück. Sonst stünde im Plan jemand, der selbst nicht
+ * weiß, ob er kommt.
  *
- * Der Server hält das seit jeher so (`dto.status !== ATTENDING`); die Rückfrage
- * hier kam lange nur beim „weiß noch nicht". Damit fehlte sie ausgerechnet im
- * häufigeren Fall: Wer eingeteilt war und absagte, stand hinterher ohne Rolle
- * da, ohne dass irgendetwas es gesagt hätte. Der Wortlaut wechselt mit der
- * Antwort (`ANSWER_WORDING`), die Regel nicht.
+ * Der Server hält das so (`dto.status !== ATTENDING`), und die Rückfrage kommt
+ * bei beiden Antworten. Der Wortlaut wechselt mit der Antwort
+ * (`ANSWER_WORDING`), die Regel nicht.
  *
  * **Die Rückfrage gilt dem ganzen Schritt.** Abbrechen lässt Status *und* Rolle
  * stehen; es gibt bewusst kein „ja, aber die Rolle behalten". Das wäre ein
@@ -28,9 +26,7 @@
  * (`answer-buttons.tsx`).
  *
  * Die Rückfrage ist eine Regel über die Daten („eine Rolle ist die Aussage: ich
- * bin da und mache das") und nicht über einen Bildschirm. In den Balken
- * geschrieben, hätte man sie beim zweiten Ort wieder herausholen müssen — was
- * genau eingetreten ist.
+ * bin da und mache das") und nicht über einen Bildschirm.
  *
  * Gefragt wird **nur, wenn wirklich etwas dranhängt**. Die Rollen stehen in
  * jeder Termin-Antwort, es braucht also keine zweite Abfrage — und bei
@@ -130,10 +126,7 @@ export function useAttendanceAnswer(meeting: { id: string } & RolesAtMeeting) {
 
       // **Beide Wege zurück, nicht nur einer.** Der Server gibt die Rollen frei,
       // sobald jemand nicht mehr zusagt — bei einer Absage wie bei einem „weiß
-      // noch nicht" (`dto.status !== ATTENDING`). Gefragt wurde bisher nur beim
-      // zweiten, und damit verlor genau der Fall, der öfter vorkommt, seine
-      // Warnung: Wer eingeteilt war und absagte, stand hinterher ohne Rolle da,
-      // ohne dass irgendetwas es gesagt hätte.
+      // noch nicht" (`dto.status !== ATTENDING`).
       if (status !== 'ATTENDING') {
         const roles = rolesOf(meeting, myId);
 

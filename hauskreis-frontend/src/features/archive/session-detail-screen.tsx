@@ -3,10 +3,8 @@
 /**
  * Eine Einheit für sich — der Abend, an dem etwas besprochen wurde.
  *
- * Sie hatte lange keinen eigenen Ort. Bearbeitet wurde sie in der Liste unter
- * ihrem Thema, was zwei Dinge zugleich kaputtmachte: Die Liste bestand aus
- * Karten voller Felder und war damit keine Übersicht mehr, und eine Einheit
- * **ohne** Thema hatte gar keinen Platz, an dem sie hätte stehen können.
+ * Ein eigener Ort: Die Liste unter dem Thema bleibt eine Übersicht, und eine
+ * Einheit **ohne** Thema hat einen Platz, an dem sie stehen kann.
  *
  * Zwei Sorten teilen sich diesen Bildschirm, und der Unterschied ist eine
  * Kopfzeile:
@@ -22,9 +20,8 @@
  * **Die Seite ist zum Lesen da.** Wer die Einheit vorbereitet, hat unten statt
  * der Tab-Leiste „Bearbeiten" (`EditBar`), und dahinter liegt **ein** Sheet mit
  * allem, was sich ändern lässt: Titel, Zusammenfassung, Actionstep und wer sie
- * vorbereitet — dazu, abgesetzt, Überthema entfernen und Löschen. Vorher stand
- * an jedem Feld ein Stift, im Bearbeitungsmodus, und die Seite war in diesem
- * Modus ein Formular aus vier Teilen mit vier Speichern.
+ * vorbereitet — dazu, abgesetzt, Überthema entfernen und Löschen. Ein
+ * Formular und ein Speichern, nicht vier Stifte.
  *
  * **Der Actionstep steht hervorgehoben**, wie „Actionstep der Woche" auf
  * „Heute": Er ist das, was man vom Abend mitnimmt, und der eigene Haken sitzt
@@ -317,8 +314,7 @@ function TopicLink({ session }: { session: TopicSession }) {
 /**
  * Der Actionstep — hervorgehoben, wie „Actionstep der Woche" auf „Heute".
  *
- * Er ist das, was man vom Abend mitnimmt, und stand bisher wie jedes andere
- * Feld in einer Karte mit Überschrift. Ab dem Abend sitzt der eigene Haken
+ * Er ist das, was man vom Abend mitnimmt. Ab dem Abend sitzt der eigene Haken
  * gleich vorn; abgehakt wird die Karte grün, wie auf „Heute". Davor steht dort
  * das Symbol: einen Vorsatz für heute Abend hakt man heute früh nicht ab.
  */
@@ -399,9 +395,8 @@ function ActionstepFeature({
  *
  * **Wer vorbereitet, steht als Liste da**, mit einem „×" zum Herausnehmen und
  * darunter „Person hinzufügen", das die übrigen aufklappt — im selben Sheet,
- * nicht in einem zweiten darüber. Es war eine Liste der ganzen Gruppe zum
- * Anhaken; die beantwortete aber „wer könnte", und „wer macht es" musste man
- * sich aus den Haken zusammensuchen. Zwei Regeln stehen als fehlendes „×" da
+ * nicht in einem zweiten darüber — gefragt ist „wer macht es", nicht „wer
+ * könnte". Zwei Regeln stehen als fehlendes „×" da
  * statt als Fehlermeldung danach: Der letzte Platz bleibt besetzt, und bei
  * einer einzelnen Einheit bleibt, wer sie angelegt hat — es gibt kein Thema
  * darüber, an dem er sonst noch stünde.
@@ -409,11 +404,11 @@ function ActionstepFeature({
  * Gespeichert wird in zwei Schritten, aber mit **einem** Knopf: erst der Text
  * (mit `If-Match`, ein fremder Stand zeigt den Konflikt), dann die Leute —
  * und beides nur, wenn sich etwas geändert hat. Löschen und das Überthema
- * entfernen stehen abgesetzt darunter; sie standen vorher lose auf der Seite.
+ * entfernen stehen abgesetzt darunter.
  *
  * **Bei einer einzelnen Einheit steht hier auch „Überthema hinzufügen"** —
- * vorher eine Karte „Soll mehr daraus werden?" auf der Seite, die jeden Besuch
- * dieselbe Frage stellte. `onName` schließt dieses Sheet und öffnet das des
+ * und nicht als Karte auf der Seite, die jeden Besuch dieselbe Frage stellte.
+ * `onName` schließt dieses Sheet und öffnet das des
  * Überthemas; wer vorher etwas geändert hat, wird gefragt, ob es verworfen
  * werden darf.
  */

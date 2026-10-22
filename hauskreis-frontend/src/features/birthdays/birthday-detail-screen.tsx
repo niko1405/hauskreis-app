@@ -318,8 +318,7 @@ function Others({
 /**
  * Wer besorgt — und was dabei herausgekommen ist.
  *
- * Das Ergebnis steht hier für **alle**. Vorher sahen nur die Entscheidenden den
- * Preis, obwohl der Server ihn jedem schickt außer dem Geburtstagskind — und
+ * Das Ergebnis steht hier für **alle** außer dem Geburtstagskind —
  * „worauf lasse ich mich ein" ist gerade die Frage derer, die mitzahlen.
  */
 function GiftStatusCard({ data }: { data: BirthdayDetail }) {
@@ -448,8 +447,8 @@ function PriceCard({
  * Ein Vorschlag — oben die Idee, unten das Gespräch darüber.
  *
  * **Wegnehmen per Wisch**, wie überall in den Listen dieser App, und nur bei
- * den eigenen (`canRemove`). Der Papierkorb stand vorher an jedem Vorschlag,
- * auch an fremden, und antwortete dort mit einer Fehlermeldung.
+ * den eigenen (`canRemove`) — ein Papierkorb an fremden antwortete nur mit
+ * einer Fehlermeldung.
  *
  * Der Wisch gilt nur dem **oberen Teil**. Die Kommentare darunter lassen sich
  * selbst wegwischen, und zwei Gesten ineinander bräuchten eine Regel, welche

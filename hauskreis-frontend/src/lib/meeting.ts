@@ -1,14 +1,10 @@
 /**
  * Wie ein Termin heißt und woraus er besteht.
  *
- * Was dazugehört, sagt seit den Bausteinen der Termin selbst und nicht mehr
- * seine Art: `hasTopicSlot`, `hasSongSlot`, `hasTestimonySlot` stehen als
- * Felder in der Antwort. Die Art ist nur noch die Voreinstellung beim
- * Anlegen — ein besonderer Termin startet leer und bekommt einzeln dazugebucht,
+ * Was dazugehört, sagt der Termin selbst über seine Bausteine:
+ * `hasTopicSlot`, `hasSongSlot`, `hasTestimonySlot` stehen als Felder in der
+ * Antwort. Ein besonderer Termin startet leer und bekommt einzeln dazugebucht,
  * was er braucht.
- *
- * Deshalb gibt es hier keine `hasTopicSlot(type)`-Funktion mehr: sie war eine
- * Ableitung aus etwas, das die Frage gar nicht beantwortet.
  *
  * Gastgeber ist kein Baustein: man trifft sich immer irgendwo. Dass an einem
  * Abend niemand gastgebend eingetragen ist, bleibt davon unberührt.
@@ -24,11 +20,9 @@ import { hasStarted, isPast, type CalendarDay } from './date';
 /**
  * In welchem Zustand ein Termin gerade ist.
  *
- * **Drei und nicht zwei.** Bis hierher gab es „kommend" und „vorbei", gelesen
- * aus `isPast(meeting.date)` — also aus dem **ersten** Tag. Zwei Dinge stimmten
- * damit nicht: Eine Freizeit von Freitag bis Sonntag stand ab Samstag als
- * „Vorbei" da, obwohl sie lief; und ein ganz normaler Dienstag sah um 20 Uhr
- * aus wie um 8 Uhr morgens.
+ * **Drei und nicht zwei.** „Kommend" und „vorbei", gelesen aus dem **ersten**
+ * Tag, reichen nicht: Eine Freizeit von Freitag bis Sonntag läuft am Samstag
+ * noch, und ein Dienstag um 20 Uhr ist etwas anderes als um 8 Uhr morgens.
  *
  * Die Grenzen sind dieselben, die der Server zieht: `spanIsPast` für „ganz
  * vorbei" (der letzte Tag, nicht der erste) und `eveningReached` für
@@ -71,8 +65,8 @@ export function isMeetingPast(meeting: MeetingWhen): boolean {
  * Musik-Zuteilung ist keiner, an dem alle bestimmen dürfen. Wer die Auswahl
  * treffen will, trägt sich als Musik ein. Der Server hält dieselbe Grenze.
  *
- * Steht hier und nicht an der Terminseite, weil seit der Liedseite zwei
- * Bildschirme danach fragen — dort steht „Aus der Setlist nehmen". Zwei
+ * Steht hier und nicht an der Terminseite, weil zwei Bildschirme danach
+ * fragen — dort steht „Aus der Setlist nehmen". Zwei
  * Fassungen derselben Regel liefen irgendwann auseinander.
  */
 export function mayPickSongs({
@@ -92,11 +86,8 @@ export function mayPickSongs({
 /**
  * Wie ein Abend heißt, wenn niemand ihm einen Namen gegeben hat.
  *
- * Abgeleitet und nicht gespeichert. Hier stand einmal `MEETING_TYPE_LABEL`, ein
- * Wörterbuch über die Terminart — und die war für „Standard" gegen „Lobpreis"
- * nichts als eine zweite, ungenauere Fassung dessen, was die Bausteine ohnehin
- * sagen. Zwei Aussagen über denselben Abend, von denen sich nur eine ändert,
- * wenn jemand am Bausteinkasten dreht.
+ * Abgeleitet aus den Bausteinen und nicht gespeichert: Der Name ändert sich
+ * mit, wenn jemand an den Bausteinen dreht.
  *
  * Die Reihenfolge ist die des Gewichts: Ein Abend mit Thema ist ein
  * Hauskreis-Abend, auch wenn Lieder dazugehören. Ohne Thema tragen Testimony
@@ -145,11 +136,9 @@ export const MEETING_SLOT_KEYS = Object.keys(SLOT_LABEL) as MeetingSlotKey[];
  * Die Bausteine, die man beim **Planen** eines Abends anhakt.
  *
  * Fünf, nicht sechs: die **Nachbereitung** steht bewusst nicht dabei. Sie gehört
- * nicht zur Planung, sondern zu dem, was danach übrig bleibt — hier stand sie
- * neben Thema und Liedern und fragte damit vor dem Abend nach der
- * Zusammenfassung von etwas, das noch nicht stattgefunden hatte. Sie kommt
- * jetzt über einen Hinweis am Abend selbst dazu, und der Server lehnt ein
- * früheres Anschalten ab.
+ * nicht zur Planung, sondern zu dem, was danach übrig bleibt, und kommt über
+ * einen Hinweis am Abend selbst dazu; der Server lehnt ein früheres Anschalten
+ * ab.
  */
 export const MEETING_SLOTS = [
   {
@@ -286,11 +275,9 @@ export interface MeetingRoleSlot {
  * Welche Rollen dieser Abend hat, wer sie trägt — und wo es sie gar nicht gibt.
  *
  * **Eine Aufstellung, drei Leser**: die Zuständigkeiten-Sektion am Termin, ihr
- * Zähler („2 von 4 besetzt") und die Planungstabelle. Sie stand vorher dreimal
- * da — als Kette von `&&` in `planningComplete`, als Liste von Zellen in der
- * Tabelle und als Folge von `{slot && <RoleRow …>}` auf der Detailseite. Drei
- * Antworten auf dieselbe Frage laufen irgendwann auseinander, und dann stünde
- * über einer Liste mit vier Zeilen „3 von 5 besetzt".
+ * Zähler („2 von 4 besetzt") und die Planungstabelle. Drei Antworten auf
+ * dieselbe Frage liefen irgendwann auseinander, und dann stünde über einer
+ * Liste mit vier Zeilen „3 von 5 besetzt".
  *
  * Der Kern ist der Unterschied zwischen *fehlt* und *gibt es hier nicht*: ein
  * Geburtstagsabend ohne Thema ist nicht offen, er hat keins.
@@ -392,20 +379,15 @@ export function planningComplete(
  * Die Überschrift einer Terminkarte: der eigene Titel, sonst der Name, der sich
  * aus den Bausteinen ergibt.
  *
- * **Der Termin heißt nach sich selbst.** Hier standen dazwischen zwei Zeilen,
- * die auf den Titel der Einheit zurückfielen und dann auf den des Themas. Ein
- * Abend hieß damit „Teil 2: Was Petrus tat" — das ist aber der Name der
- * Einheit, nicht der des Abends. Wer seinem Termin einen eigenen Namen geben
- * will, trägt ihn ein (`HeadlineEdit` schreibt `meeting.title`, und zwar seit
- * jeher nur das); wer nicht, bekommt `meetingKindLabel`.
+ * **Der Termin heißt nach sich selbst**, nicht nach dem Titel seiner Einheit
+ * („Teil 2: Was Petrus tat" ist der Name der Einheit, nicht der des Abends).
+ * Wer seinem Termin einen eigenen Namen geben will, trägt ihn ein
+ * (`meeting.title`); wer nicht, bekommt `meetingKindLabel`.
  *
  * Das Thema bleibt sichtbar, nur nicht als Überschrift: als Rollen-Chip auf der
- * Karte, als Themen-Kasten auf der Terminseite, im Archiv unter „Themen".
- *
- * Nebenbei sagen damit alle Bildschirme dasselbe. Der Startbildschirm reichte
- * `HomeNextMeeting` herein, und dieses DTO hatte gar kein `topicSession` — dort
- * stand also längst die Terminart, während Liste, Kalender und Detailseite den
- * Themen-Titel zeigten.
+ * Karte, als Themen-Kasten auf der Terminseite, im Archiv unter „Themen". So
+ * sagen alle Bildschirme dasselbe, auch der Startbildschirm, dessen DTO kein
+ * `topicSession` kennt.
  */
 export function meetingHeadline(meeting: {
   hasTopicSlot: boolean;

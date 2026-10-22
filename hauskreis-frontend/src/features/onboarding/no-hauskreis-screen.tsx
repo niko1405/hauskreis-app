@@ -3,9 +3,8 @@
 /**
  * Der Einstieg, wenn zu diesem Konto (noch) kein Hauskreis gehört.
  *
- * Vorher endete dieser Fall in einer roten Fehlermeldung — „Zu deinem Konto
- * gehört noch kein Hauskreis." Das stimmt und hilft niemandem: es ist kein
- * Fehler, sondern der normale Anfang, und es gibt zwei Wege heraus.
+ * Keine Fehlermeldung: Es ist kein Fehler, sondern der normale Anfang, und es
+ * gibt zwei Wege heraus.
  *
  * Erreicht wird der Bildschirm auf drei Wegen: beim allerersten Öffnen ohne
  * Einladung, nach dem Verlassen, und wenn mehrere Einladungen offen sind — dann
@@ -91,10 +90,9 @@ export function NoHauskreisScreen({ email }: { email?: string }) {
 /**
  * Der Ausgang für alle, die gar nicht erst ankommen wollen.
  *
- * „Konto löschen" hing bisher im Profil und damit an einer Mitgliedschaft —
- * wer sich registrierte und nirgends landete, saß auf einem Konto, das er
- * selbst nicht mehr loswurde. Ausgerechnet die, die am wenigsten von der App
- * haben, hatten also keine Tür.
+ * „Konto löschen" im Profil hängt an einer Mitgliedschaft — wer sich
+ * registriert und nirgends landet, braucht diesen Ausgang, sonst säße er auf
+ * einem Konto, das er selbst nicht mehr loswird.
  *
  * Steht unter dem Abmelden und in Grau: Es ist der seltenere und der
  * endgültige Weg, und keiner von beiden gehört nach oben.

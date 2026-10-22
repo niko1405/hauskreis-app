@@ -63,6 +63,7 @@ export function HomeScreen() {
     lastMeeting,
     nextMeeting,
     myRoles,
+    weeklyActionstep,
     openActionstep,
     prayerBuddies,
   } = home.data;
@@ -90,7 +91,8 @@ export function HomeScreen() {
             sieht hier nichts mehr. */}
         <ReleaseBanner />
 
-        <ActionstepCard step={openActionstep} />
+        {/* Abgeschaltet heißt: keine Karte, auch kein Platzhalter. */}
+        {weeklyActionstep && <ActionstepCard step={openActionstep} />}
 
         <PrayerBuddyCard buddies={prayerBuddies} myId={me.me?.id} />
 
@@ -194,14 +196,15 @@ export function HomeScreen() {
  *
  * Die Karte verschwindet beim Abhaken **nicht**. Erstens ließe sich der Haken
  * dann nicht zurücknehmen, zweitens ist „geschafft" auch eine Nachricht. Wie
- * es den anderen damit geht, steht hier nicht mehr — nur der eigene Haken
+ * es den anderen damit geht, steht hier nicht — nur der eigene Haken
  * (siehe `ActionstepCheck`). Still wird es bei der Erinnerung: der Reminder
  * überspringt, wer abgehakt hat.
  *
  * Und sie verschwindet auch nicht, wenn es gar keinen gibt. Ein Platz, der mal
  * da ist und mal nicht, verschiebt jedes Mal alles darunter — und die Frage
  * „habe ich diese Woche etwas vergessen?" bleibt unbeantwortet, statt ein Nein
- * zu bekommen.
+ * zu bekommen. Weg ist sie nur, wenn die Gruppe den Actionstep der Woche in
+ * der Verwaltung abgeschaltet hat.
  */
 function ActionstepCard({ step }: { step: HomeActionstep | null }) {
   if (!step) {
@@ -353,10 +356,8 @@ function NextMeetingCard({
   return (
     <Card className={cn('space-y-4', className)}>
       {/* Dieselbe Kopfzeile wie auf der Terminkarte: Datums-Kästchen links,
-          Titel, darunter Uhrzeit und Ort. Sie sahen vorher verschieden aus —
-          hier Datum und Countdown in einer Zeile, dort eine andere Anordnung —,
-          obwohl es dasselbe ist. Ein Zeitraum bekommt kein Kästchen; eine
-          Freizeit ist kein Tag. */}
+          Titel, darunter Uhrzeit und Ort — es ist dasselbe. Ein Zeitraum
+          bekommt kein Kästchen; eine Freizeit ist kein Tag. */}
       <div className="flex items-start gap-3">
         {meeting.endDate === null && <DateBox day={meeting.date} />}
 

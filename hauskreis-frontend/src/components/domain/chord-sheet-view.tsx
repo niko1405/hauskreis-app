@@ -7,9 +7,9 @@
  * **Der Akkord steht über dem Text und nimmt ihm keinen Platz.** Jedes Stück
  * Text trägt seine Akkorde selbst und bricht mit ihnen um
  * (`lib/chords/layout.ts`); die Akkorde darüber sind aber absolut gesetzt und
- * haben keine Breite. Sie hatten einmal eine, und dann schob ein Akkord, der
- * breiter war als seine Silbe, den Text dahinter nach rechts — „It's who
- * ␣␣␣ You are". Jetzt läuft der Text, wie er geschrieben ist, und stehen zwei
+ * haben keine Breite — sonst schöbe ein Akkord, der breiter ist als seine
+ * Silbe, den Text dahinter nach rechts („It's who ␣␣␣ You are"). So läuft der
+ * Text, wie er geschrieben ist, und stehen zwei
  * Akkorde so eng, dass sie sich berühren würden, rückt der zweite ein Stück
  * weiter (`useChordSpacing`). So machen es Akkordblätter auf Papier auch.
  *

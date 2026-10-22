@@ -2,22 +2,18 @@
  * Was in der Hilfe steht.
  *
  * **Im Frontend und nicht hinter einem Endpunkt.** Der Text beschreibt die
- * Oberfläche, nicht die Daten; er ändert sich mit dem Frontend-Deploy und mit
- * nichts sonst. Vor allem aber ist er als Teil des Bündels **ohne Netz da** —
- * und eine Hilfeseite, die man nur mit Internet lesen kann, hilft genau dann
- * nicht, wenn man sie braucht. Über die API käme sie nicht: Der Service Worker
- * holt alles von dort mit `NetworkOnly` (`app/sw.ts`).
+ * Oberfläche und ändert sich mit dem Frontend-Deploy. Als Teil des Bündels ist
+ * er **ohne Netz da** — eine Hilfe, die man nur mit Internet lesen kann, hilft
+ * genau dann nicht, wenn man sie braucht.
  *
  * **Fachlich, nicht technisch.** „Wenn niemand für die Musik eingetragen ist,
  * darf trotzdem niemand die Lieder abhaken" — nicht „die Rechteprüfung schlägt
- * fehl". Keine Tabellennamen, keine Endpunkte, keine Feldnamen. Wer hier liest,
- * will wissen, was passiert, nicht wo es steht.
+ * fehl". Keine Tabellennamen, keine Endpunkte, keine Feldnamen, keine
+ * Geschichte früherer Stände. Wer hier liest, will wissen, was passiert.
  *
- * **Nachgesehen, nicht erinnert.** Jede Aussage, die eine Regel behauptet („nur
- * wer zugeteilt ist", „ab der Treffpunktzeit", „alle zwei Wochen"), steht so im
- * Code, der sie durchsetzt — nicht bloß so in CLAUDE.md. Wer eine Regel ändert,
- * ändert den Eintrag mit; eine Hilfe, die einmal daneben lag, glaubt man auch
- * beim nächsten Mal nicht.
+ * **Nachgesehen, nicht erinnert.** Jede Aussage, die eine Regel behauptet,
+ * steht so im Code, der sie durchsetzt. Wer eine Regel ändert, ändert den
+ * Eintrag mit.
  */
 
 export const FAQ_CATEGORIES = [
@@ -80,7 +76,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'start',
     question: 'Wofür ist Acts2 da?',
     answer:
-      'Acts2 nimmt dem Hauskreis die Organisation ab, die vorher in WhatsApp verstreut war: wer wann hostet, wer das Thema vorbereitet, wer Musik macht, welche Lieder drankommen, wer mit wem betet, und was man sich für die Woche vorgenommen hat.\n\nAlles steht an einem Ort und bleibt dort. Nichts geht mehr im Chat unter, und das Archiv erinnert sich an Abende, die drei Monate zurückliegen.',
+      'Acts2 unterstützt den Hauskreis in der Organisation: wer wann hostet, wer das Thema vorbereitet, wer Musik macht, welche Lieder drankommen, wer mit wem betet, und was man sich für die Woche vorgenommen hat. Alles übersichtlich gelistet, um Wochen im Voraus planen zu können — und trotzdem flexibel, wenn sich etwas ändert.',
     keywords: ['app', 'zweck', 'wozu', 'überblick'],
   },
   {
@@ -112,7 +108,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'start',
     question: 'Was steht auf welchem Bildschirm?',
     answer:
-      '**Heute** — der nächste Abend, deine eigenen Aufgaben als Abzeichen, der offene Actionstep, deine aktuellen Gebetsbuddys und die Frage, ob du dabei bist.\n\n**Termine** — alle kommenden Abende, wahlweise als Liste, als Planungstabelle über mehrere Wochen oder als Kalender.\n\n**Gebet** — die laufende Gebetsrunde und wer mit wem betet.\n\n**Archiv** — Themen, die Lieder-Datenbank, die Orte und vergangene Abende. Hier legst du auch Neues an, ohne auf einen Dienstag zu warten.\n\n**Profil** — deine Angaben, Abwesenheiten, Benachrichtigungen, Darstellung, dein Zuhause und diese Hilfe.',
+      '**Heute** — der nächste Abend, deine eigenen Aufgaben als Abzeichen, der offene Actionstep, deine aktuellen Gebetsbuddys und der letzte vergangene Termin.\n\n**Termine** — alle kommenden Abende, wahlweise als Liste, als Planungstabelle über mehrere Wochen oder als Kalender.\n\n**Gebet** — die laufende Gebetsrunde und wer mit wem betet.\n\n**Archiv** — Themen, Lieder, Orte, Notizen und vergangene Abende. Hier legst du auch Neues an, ohne auf einen Dienstag zu warten.\n\n**Profil** — deine Angaben, Abwesenheiten, Benachrichtigungen, Darstellung, dein Zuhause und diese Hilfe.',
     keywords: ['menü', 'tabs', 'bildschirme', 'navigation', 'wo finde ich'],
   },
 
@@ -122,7 +118,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'suggestions',
     question: 'Wie kommt die App auf ihre Vorschläge?',
     answer:
-      'Sie sortiert alle in Frage kommenden Leute nach vier Dingen, in dieser Reihenfolge:\n\n1. **Wer gerade am wenigsten zu tun hat.** Gezählt wird über alle Aufgaben hinweg — Gastgeber, Thema, Musik, Testimony — und zwar für die nächsten acht Wochen. Was danach kommt, zählt nicht mit.\n2. **Wer am längsten nicht mehr diese eine Aufgabe hatte.** Wer sie noch nie hatte, steht ganz oben.\n3. **Wer sie insgesamt am seltensten hatte.**\n4. Der Name, damit die Liste beim Neuladen nicht durcheinandergerät.\n\nNeben jedem Namen stehen die Fakten, die zu dieser Reihenfolge geführt haben — in derselben Reihenfolge: was er sonst noch vor sich hat („hat noch Musik (18. Aug.) vor sich"), wann er zuletzt dran war und wie oft insgesamt. Steht jemand weit unten, sagt die erste Zeile meistens schon, warum.',
+      'Sie sortiert alle in Frage kommenden Leute nach vier Dingen, in dieser Reihenfolge:\n\n1. **Wer gerade am wenigsten zu tun hat.** Gezählt werden alle Aufgaben — Gastgeber, Thema, Musik, Testimony, Snacks — in den nächsten acht Wochen.\n2. **Wer am längsten nicht mehr diese eine Aufgabe hatte.** Wer sie noch nie hatte, steht ganz oben.\n3. **Wer sie insgesamt am seltensten hatte.**\n4. Der Name, damit die Liste beim Neuladen nicht durcheinandergerät.\n\nNeben jedem Namen stehen die Gründe in derselben Reihenfolge: was er sonst noch vor sich hat („hat noch Musik (18. Aug.) vor sich"), wann er zuletzt dran war und wie oft insgesamt. Steht jemand weit unten, sagt die erste Zeile meistens schon, warum.',
     keywords: ['smart', 'reihenfolge', 'sortierung', 'algorithmus', 'fair'],
   },
   {
@@ -130,7 +126,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'suggestions',
     question: 'Teilt die App irgendetwas von selbst zu?',
     answer:
-      'Nein. Das ist der wichtigste Satz über diese App: Sie **schlägt vor**, eintragen tut ein Mensch.\n\nJedes Feld bleibt leer, bis jemand es füllt — Gastgeber, Thema, Musik, Testimony. Die App rechnet nur aus, wer am besten passen würde, und legt die Gründe daneben. Was daraus wird, entscheidet ihr.\n\nDrei Dinge macht sie ohne Rückfrage, und alle drei nehmen niemandem etwas ab: Sie legt kommende Termine an, sie würfelt die Gebetsgruppen, und sie sagt einen Abend ab, wenn wirklich alle abgesagt haben.',
+      'Nein. Das ist der wichtigste Satz über diese App: Sie **schlägt vor**, eintragen tut ein Mensch.\n\nJedes Feld bleibt leer, bis jemand es füllt — Gastgeber, Thema, Musik, Testimony. Die App rechnet nur aus, wer am besten passen würde, und legt die Gründe daneben. Was daraus wird, entscheidet ihr.\n\nDrei Dinge macht sie ohne Rückfrage, und alle drei nehmen niemandem etwas ab: Sie legt kommende Termine an, sie stellt die Gebetsgruppen zusammen, und sie sagt einen Abend ab, wenn wirklich alle abgesagt haben.',
     keywords: ['automatisch', 'zwang', 'einteilen', 'zuteilung'],
   },
   {
@@ -146,7 +142,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'suggestions',
     question: 'Was heißt „Zurückgestellt"?',
     answer:
-      'Der Vorschlag wäre an sich dran, aber es geht an diesem Abend schlicht nicht. Er verschwindet nicht — er rutscht nur ans Ende, damit du ihn trotzdem wählen kannst, wenn du es besser weißt.\n\nEs gibt genau zwei Gründe, und beide sind echte Hindernisse:\n\n**„ist in dem Zeitraum weg"** — es ist eine Abwesenheit eingetragen.\n\n**„Wohnung zu klein für die erwartete Runde"** — für die Wohnung ist eine Kapazität hinterlegt, und es kommen an diesem Abend mehr Leute.\n\nDass jemand an dem Abend **schon eine andere Rolle** hat, ist keiner davon. Das stand einmal als „im Haushalt ist schon jemand anders dran" hier und war für alle, die allein wohnen, doppelt falsch. Gastgeber ist die eine Rolle, die man bei sich zu Hause macht — wer das Thema hält, kann trotzdem seine Tür aufmachen. Es steht jetzt einfach als Fakt beim Vorschlag („an diesem Abend schon Thema"), und die Wohnung rutscht dafür hinter die freien.',
+      'Der Vorschlag wäre an sich dran, aber es geht an diesem Abend nicht. Er verschwindet nicht — er rutscht nur ans Ende, damit du ihn trotzdem wählen kannst, wenn du es besser weißt.\n\nEs gibt genau zwei Gründe:\n\n**„ist in dem Zeitraum weg"** — es ist eine Abwesenheit eingetragen.\n\n**„Wohnung zu klein für die erwartete Runde"** — für die Wohnung ist eine Kapazität hinterlegt, und es kommen an diesem Abend mehr Leute.\n\nDass jemand an dem Abend **schon eine andere Rolle** hat, ist kein solcher Grund: Wer das Thema hält, kann trotzdem seine Tür aufmachen. Das steht als Hinweis beim Vorschlag („an diesem Abend schon Thema"), und die Wohnung rutscht dafür hinter die freien.',
     keywords: ['grau', 'unten', 'ausgeblendet', 'weg', 'zu klein'],
   },
   {
@@ -162,7 +158,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'suggestions',
     question: 'Warum taucht jemand gar nicht in den Vorschlägen auf?',
     answer:
-      'Wer für den Abend **abgesagt** hat oder in der Zeit **verreist** ist, steht gar nicht zur Auswahl — in keiner der vier Rollen. Wer nicht da ist, kann sie nicht übernehmen, und die App würde sonst etwas anbieten, das sie danach selbst ablehnt.\n\nBei der **Musik** werden nur Leute vorgeschlagen, die im Profil angegeben haben, dass sie ein Instrument spielen. Die anderen stehen weiter unten unter „Nicht im Ranking" mit dem Vermerk „spielt kein Instrument" — eintragen lässt sich jede:r, der Haken steuert nur den Vorschlag.\n\nBeim **Gastgeber** fällt zusätzlich heraus, wer keine Adresse hinterlegt oder den Haken „Ich kann gerade hosten" herausgenommen hat.\n\nBeim **vergangenen** Abend gilt nichts davon: Dort stehen alle, denn nachgetragen wird, was war.',
+      'Wer für den Abend **abgesagt** hat oder in der Zeit **verreist** ist, steht gar nicht zur Auswahl. Wer nicht da ist, kann die Aufgabe nicht übernehmen.\n\nBei der **Musik** stehen nur Leute zur Auswahl, die im Profil angegeben haben, dass sie ein Instrument spielen.\n\nBeim **Gastgeber** fällt zusätzlich heraus, wer keine Adresse hinterlegt oder den Schalter „Ich kann gerade hosten" ausgeschaltet hat.\n\nBeim **vergangenen** Abend gilt nichts davon: Dort stehen alle, denn nachgetragen wird, was war.',
     keywords: ['fehlt', 'nicht dabei', 'unsichtbar', 'instrument', 'abgesagt'],
   },
   {
@@ -189,7 +185,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Woher kommen die Termine?',
     answer:
-      'Die App legt sie nachts selbst an, so dass immer **sieben** im Voraus stehen — an dem Wochentag und zu der Uhrzeit, die für die Gruppe eingestellt sind (Vorgabe: Dienstag, 18 Uhr).\n\nDer **letzte reguläre Abend im Monat** bekommt dabei Lieder und ein Testimony statt eines Themas; alle anderen kommen mit Thema und Liedern. Beides lässt sich am Termin selbst umstellen.\n\nEin Datum, an dem schon etwas steht, lässt sie in Ruhe. Ein selbst angelegter Geburtstag wird also nicht überschrieben — und in eine mehrtägige Freizeit schiebt sie auch keinen Dienstagabend hinein.',
+      'Die App legt sie selbst an, sodass immer **sieben** im Voraus stehen — an dem Wochentag und zu der Uhrzeit, die für die Gruppe eingestellt sind (Vorgabe: Dienstag, 18 Uhr). Ein Admin kann das in der Verwaltung auch ganz abschalten; dann legt ihr eure Termine selbst an.\n\nDer **letzte reguläre Abend im Monat** bekommt Lieder und ein Testimony statt eines Themas, sofern die Gruppe Lobpreisabende eingeschaltet hat; alle anderen kommen mit Thema und Liedern. Beides lässt sich am Termin selbst umstellen.\n\nEin Datum, an dem schon etwas steht, lässt sie in Ruhe. Ein selbst angelegter Geburtstag wird also nicht überschrieben — und in eine mehrtägige Freizeit schiebt sie auch keinen Dienstagabend hinein.',
     keywords: ['generiert', 'automatisch', 'sieben', 'vorausplanen'],
   },
   {
@@ -197,7 +193,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Wie heißt ein Termin, dem ich keinen Titel gebe?',
     answer:
-      'Nach dem, woraus er besteht. Es gab dafür einmal eine feste „Terminart", die man extra einstellen musste — die ist weg, weil sie dasselbe zweimal sagte.\n\n**Hauskreis-Abend** — überall dort, wo der Baustein **Thema** an ist.\n\n**Lobpreis & Gebet** — kein Thema, dafür Testimony oder Lieder.\n\n**Termin** — wenn nichts davon angehakt ist. Ein Geburtstag hat ohnehin fast immer einen eigenen Titel.\n\nDer Name ändert sich also mit, sobald du am Bausteinkasten drehst. Und ein eigener Titel sticht ihn immer.',
+      'Nach dem, woraus er besteht:\n\n**Hauskreis-Abend** — überall dort, wo der Baustein **Thema** an ist.\n\n**Lobpreis & Gebet** — kein Thema, dafür Testimony oder Lieder.\n\n**Termin** — wenn nichts davon angehakt ist. Ein Geburtstag hat ohnehin fast immer einen eigenen Titel.\n\nDer Name ändert sich also mit, sobald du an den Bausteinen etwas änderst. Und ein eigener Titel sticht ihn immer.',
     keywords: [
       'titel',
       'überschrift',
@@ -212,7 +208,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Was sind die Bausteine, und was kann ich an- und ausschalten?',
     answer:
-      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Lieder**, **Testimony**, **Gebetsanliegen** und **Snacks**. Sie sind die ganze Aussage darüber, was der Abend ist — auch sein Name kommt daher.\n\nDu findest sie am Fuß der Terminseite unter **„Was gehört dazu"**. Der Kasten ist zugeklappt und sagt im Kopf, wie viele an sind; ein Klick auf ein Häkchen wirkt sofort.\n\nDie **Nachbereitung** ist der sechste Teil, steht aber bewusst nicht im Kasten — sie lässt sich erst ab dem Beginn des Abends dazuschalten. Vorher gäbe es ja nichts nachzubereiten.\n\nDie **Gebetsanliegen** sind überall voreingestellt an, die **Snacks** überall aus: Beten kann man an jedem Abend, und wer nie über Essen gesprochen hat, soll keine offene Zuständigkeit vorfinden.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
+      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Lieder**, **Testimony**, **Gebetsanliegen** und **Snacks**. Sie bestimmen, was der Abend ist — auch sein Name kommt daher.\n\nDu findest sie auf der Terminseite unter **„Bearbeiten"** oben rechts, im Abschnitt **„Was gehört dazu"**. Gespeichert wird mit „Speichern"; geht dabei etwas verloren, fragt die App vorher.\n\nDie **Nachbereitung** ist der sechste Teil, steht aber nicht dabei — sie lässt sich erst ab dem Beginn des Abends dazuschalten. Vorher gäbe es ja nichts nachzubereiten.\n\nDie **Gebetsanliegen** sind überall voreingestellt an, die **Snacks** überall aus: Beten kann man an jedem Abend, und wer nie über Essen gesprochen hat, soll keine offene Zuständigkeit vorfinden.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
     keywords: ['slots', 'schalter', 'baukasten', 'thema', 'lieder', 'snacks'],
   },
   {
@@ -242,6 +238,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
   {
     id: 'meetings-snacks-vorgabe',
     category: 'admin',
+    adminOnly: true,
     question: 'Wie stelle ich ein, dass jeder Abend Snacks hat?',
     answer:
       'In der **Verwaltung** unter „Termin-Rhythmus" gibt es den Schalter „Snacks vorbelegen". Ist er an, bringt jeder neu erzeugte Termin den Baustein gleich mit.\n\nEr ist voreingestellt **aus**, anders als die Lobpreisabende: Die Rolle ist eine Einladung. Eine Gruppe, die nie über Essen gesprochen hat, fände sonst an jedem Dienstag eine offene Zuständigkeit vor, nach der niemand gefragt hat.\n\nDer Schalter gilt nur für **neue** Termine. An einem einzelnen Abend lässt sich der Baustein immer anhaken, auch ohne diese Vorgabe.',
@@ -252,8 +249,16 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Wie sage ich zu oder ab?',
     answer:
-      'An vier Stellen, mit Absicht unterschiedlich weit:\n\n**Am Termin** — unten am Bildschirm, wo sonst die Tab-Leiste steht. Für diesen einen Abend.\n\n**In der Terminliste** — unter den Rollen jeder Karte. Dort liest man quer über Wochen, und genau dabei fällt einem ein, dass man am 15. nicht kann.\n\n**Im Kalender** — rechts an jeder Zeile der Monatsliste. Auf dem Telefon tragen die drei Knöpfe dort nur ihr Symbol, damit die Zeile eine bleibt.\n\n**Im Profil unter Abwesenheiten** — für einen ganzen Zeitraum auf einmal.\n\nEs gibt drei Antworten: zusagen, absagen, weiß noch nicht. „Weiß noch nicht" ist ein gültiger Zustand und keine Nachlässigkeit — er verhindert sogar, dass der Abend ausfällt, und du zählst in der Planung mit.\n\nZu jeder Antwort kannst du einen Satz dazuschreiben: „komme 20 Min später", „bin im Urlaub, euch viel Spaß".\n\nAuf **„Heute"** wird nicht mehr geantwortet — der Startbildschirm zeigt, was ansteht; entschieden wird auf der Karte.',
+      'An vier Stellen:\n\n**Am Termin** — unten am Bildschirm, wo sonst die Tab-Leiste steht.\n\n**In der Terminliste** — unter den Rollen jeder Karte. Dort liest man quer über Wochen, und genau dabei fällt einem ein, dass man am 15. nicht kann.\n\n**Im Kalender** — rechts an jeder Zeile der Monatsliste. Auf dem Telefon tragen die drei Knöpfe dort nur ihr Symbol.\n\n**Im Profil unter Abwesenheiten** — für einen ganzen Zeitraum auf einmal.\n\nEs gibt drei Antworten: zusagen, absagen, weiß noch nicht. „Weiß noch nicht" ist ein gültiger Zustand — du zählst in der Planung mit, und der Abend fällt deswegen nicht aus.\n\nZu jeder Antwort kannst du einen Satz dazuschreiben. **Bei einer Zusage** wählst du dabei, ob es eine **Info** ist („bringe noch jemanden mit") oder eine **Verspätung** — dann tippst du an, wie viel später du ungefähr kommst, und die anderen sehen es in der Anwesenheitsliste.\n\nAuf **„Heute"** siehst du, was ansteht; geantwortet wird am Termin, in der Liste oder im Kalender.',
     keywords: ['zusage', 'absage', 'teilnahme', 'anwesenheit'],
+  },
+  {
+    id: 'meetings-war-nicht-da',
+    category: 'meetings',
+    question: 'Wer steht an einem vergangenen Abend unter „War nicht da"?',
+    answer:
+      'Alle, die nicht zugesagt hatten: wer abgesagt hat, und wer unsicher war oder nie geantwortet hat. Ein Tipp klappt die Liste auf; dort steht bei jedem, was er geantwortet hatte, samt seinem Satz dazu.\n\nOben unter **„Wer war da"** stehen nur die Zusagen.',
+    keywords: ['vergangen', 'anwesend', 'gefehlt', 'nicht da', 'abwesend'],
   },
   {
     id: 'meetings-autoattend',
@@ -322,7 +327,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     question:
       'Jeder Termin hat eine Uhrzeit — wo sehe ich sie, wo ändere ich sie?',
     answer:
-      'Überall dort, wo ein Termin steht: auf „Heute", in der Terminliste und auf der Terminseite. Auf den Karten trägt ein Kästchen links den Tag — der ist die Sortierung —, und daneben steht die Uhrzeit, denn die ist die Verabredung.\n\n**Ändern** kannst du sie auf der Terminseite über „Bearbeiten" oben rechts. Dahinter steht ein Formular mit Titel, Uhrzeit und Infos zusammen — es sind drei Angaben derselben Sache.\n\nÄndert sich die Uhrzeit des **nächsten** Termins, bekommen alle eine Benachrichtigung.',
+      'Überall dort, wo ein Termin steht: auf „Heute", in der Terminliste und auf der Terminseite. Auf den Karten trägt ein Kästchen links den Tag, daneben steht die Uhrzeit.\n\n**Ändern** kannst du sie auf der Terminseite über „Bearbeiten" oben rechts. Dort stehen Titel, Uhrzeit, Infos und die Bausteine des Abends zusammen in einem Formular.\n\nÄndert sich die Uhrzeit des **nächsten** Termins, bekommen alle eine Benachrichtigung.',
     keywords: ['zeit', 'wann', 'treffpunktzeit', 'beginn', 'titel', 'infos'],
   },
 
@@ -362,7 +367,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Muss jede Einheit zu einem Thema gehören?',
     answer:
-      'Nein. Nicht jeder Abend spannt einen Bogen über mehrere — und wer nur einen vorbereiten will, sollte kein Thema erfinden müssen, das nie ein zweites Mal vorkommt.\n\nEine **einzelne Einheit** legst du im Archiv über „Neu anlegen" an, oder direkt an einem Abend unter „Thema wählen" → „Einzelne Einheit wählen" → **„Neue Einheit anlegen"**. Beide Wege führen in dasselbe Formular: Titel, Zusammenfassung, Actionstep. Der **Titel ist Pflicht**, die beiden anderen darfst du leer lassen und später nachtragen.\n\nAm Abend stand hier einmal nur ein Textfeld mit einem Knopf daneben — es passte in eine Zeile und fragte deshalb auch nur nach dem Titel.\n\nSie verhält sich sonst wie jede andere Einheit: eigener Titel, Zusammenfassung, Actionstep, eigene Seite. Im Archiv erkennst du sie am Symbol — ein Blatt für die einzelne Einheit, Ebenen für ein Thema über mehrere Abende.',
+      'Nein. Nicht jeder Abend spannt einen Bogen über mehrere — und wer nur einen vorbereiten will, sollte kein Thema erfinden müssen, das nie ein zweites Mal vorkommt.\n\nEine **einzelne Einheit** legst du im Archiv über das **„+" unten rechts** an, oder direkt an einem Abend unter „Thema wählen" → „Einzelne Einheit wählen" → **„Neue Einheit anlegen"**. Beide Wege führen in dasselbe Formular: Titel, Zusammenfassung, Actionstep. Der **Titel ist Pflicht**, die beiden anderen darfst du leer lassen und später nachtragen.\n\nSie verhält sich sonst wie jede andere Einheit: eigener Titel, Zusammenfassung, Actionstep, eigene Seite. Im Archiv erkennst du sie am Symbol — ein Blatt für die einzelne Einheit, Ebenen für ein Thema über mehrere Abende.',
     keywords: [
       'einzeln',
       'ohne thema',
@@ -408,7 +413,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     question:
       'Jemand ist zur Rolle dazugekommen — was passiert mit meinem Thema?',
     answer:
-      'Nichts. Es bleibt stehen.\n\nDas war einmal anders: Die Wahl sprang zurück auf „Thema wählen", sobald jemand Neues für den Abend zugeteilt wurde. Gedacht war es als Schutz — wer neu dran ist, sollte nicht still in eine fremde Vorbereitung hineinrutschen. In der Benutzung stand der Abend dann ohne Zutun leer da.\n\nDer Schutz ist überflüssig geworden, weil das Loch darunter zu ist: **Für den Abend zugeteilt zu sein gibt kein Schreibrecht an der Vorbereitung.** Wer dazukommt, steht an dem Abend mit dafür ein — mehr nicht. Wen du in *deine* Vorbereitung holst, entscheidest du auf der Seite der Einheit.\n\nPasst dir das Thema nicht, das schon dranhängt: „Anderes Thema wählen" steht da wie eh und je.\n\n**Weg ist die Einheit nur in einem Fall** — wenn am Ende niemand mehr zuständig ist, der sie vorbereitet. Dann hinge am Abend etwas, das keiner der Zuständigen anfassen darf, und das ist kein geplanter Abend. Sie löst sich und wartet als Entwurf; verloren ist nichts.',
+      'Nichts. Es bleibt stehen.\n\n**Für den Abend zugeteilt zu sein gibt kein Schreibrecht an der Vorbereitung.** Wer dazukommt, steht an dem Abend mit dafür ein — mehr nicht. Wen du in *deine* Vorbereitung holst, entscheidest du auf der Seite der Einheit.\n\nPasst dir das Thema nicht, das schon dranhängt, nimm „Anderes Thema wählen".\n\n**Weg ist die Einheit nur in einem Fall** — wenn am Ende niemand mehr zuständig ist, der sie vorbereitet. Dann löst sie sich und wartet als Entwurf; verloren ist nichts.',
     keywords: [
       'dazugekommen',
       'zurückgesetzt',
@@ -430,7 +435,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Wer darf an einem Thema schreiben, wer darf es löschen?',
     answer:
-      'Drei Ebenen, und sie sind verschieden weit.\n\n**Wem das Thema gehört**, darf alles: jede Einheit ändern, neue anlegen, Leute verwalten, löschen. Es gehört dem, der zuerst wählt — nicht dem, der zuerst zugeteilt wurde. Oder dem, der es im Archiv anlegt.\n\n**Mitwirkende am Thema** dürfen ebenfalls jede Einheit ändern und neue anlegen. Dort steht man nicht von selbst: Der Owner trägt einen auf der Themenseite unter „Wer daran arbeitet" ein. Vorher passierte das automatisch, sobald jemand eine Einheit hielt — und gab damit jemandem, der einmal aushalf, Hoheit über ein Thema, das über Monate läuft.\n\n**Wer eine Einheit vorbereitet**, darf genau **sie** ändern. Das steht auf der Seite der Einheit unter „Bearbeiten" → „Vorbereitet von".\n\nDie **Zuteilung am Abend** gibt keines von alledem. Sie sagt, wer an dem Abend dafür einsteht. Lesen darf man deshalb, was man vorträgt — ändern nicht.\n\n**Löschen** darf nur, wem das Thema gehört (und ein Admin). Eine einzelne Einheit löscht, wer am Thema mitarbeitet — aber nur, solange ihr Abend noch bevorsteht. Danach ist sie Protokoll; sie geht dann nur mit dem ganzen Thema, und bei einer Einheit, die für sich steht, ist das dieselbe Tat.\n\nWer ein Thema angelegt hat, **behält sein Schreibrecht auch dann**, wenn er einen einzelnen Abend abgibt. Das eine hängt am Thema, das andere an der Einheit.',
+      'Drei Ebenen, und sie sind verschieden weit.\n\n**Wem das Thema gehört**, darf alles: jede Einheit ändern, neue anlegen, Leute verwalten, löschen. Es gehört dem, der zuerst wählt — nicht dem, der zuerst zugeteilt wurde. Oder dem, der es im Archiv anlegt.\n\n**Mitwirkende am Thema** dürfen ebenfalls jede Einheit ändern und neue anlegen. Dort steht man nicht von selbst: Wem das Thema gehört, trägt einen auf der Themenseite unter „Bearbeiten" → „Wer daran arbeitet" ein. Wer einmal eine Einheit hält, wird dadurch nicht Mitwirkende:r.\n\n**Wer eine Einheit vorbereitet**, darf genau **sie** ändern. Das steht auf der Seite der Einheit unter „Bearbeiten" → „Vorbereitet von".\n\nDie **Zuteilung am Abend** gibt keines von alledem. Sie sagt, wer an dem Abend dafür einsteht. Lesen darf man deshalb, was man vorträgt — ändern nicht.\n\n**Löschen** darf nur, wem das Thema gehört — auch kein Admin. Eine einzelne Einheit löscht, wer am Thema mitarbeitet, aber nur, solange ihr Abend noch bevorsteht. Danach geht sie nur mit dem ganzen Thema.\n\nWer ein Thema angelegt hat, **behält sein Schreibrecht auch dann**, wenn er einen einzelnen Abend abgibt.',
     keywords: [
       'owner',
       'besitzer',
@@ -446,7 +451,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Wer darf meine einzelne Einheit ändern?',
     answer:
-      'Alle, die sie mit vorbereiten — und zwar gleichberechtigt. Bei einer einzelnen Einheit gibt es die mittlere Ebene nicht: Es steht kein Thema darüber, von dem jemand ausgeschlossen sein könnte. Wer unter „Vorbereitet von" steht, darf sie ändern, ihr ein Überthema geben und eine zweite Einheit anlegen.\n\n**Nur Löschen bleibt bei dem, der sie angefangen hat.** Und der bleibt auch in der Liste stehen: Sein Platz lässt sich nicht räumen, die anderen schon. Vorher ging das — man verschwand dann aus der einzigen Liste, die es dort gibt, und durfte trotzdem weiter alles ändern. Zwei Auskünfte über dieselbe Person, von denen die sichtbare falsch war.\n\nIm Archiv siehst du deshalb auch alle auf der Karte, nicht nur einen.\n\nBei einem **Thema über mehrere Abende** ist es anders herum: Dort darfst du als Mitvorbereitende:r genau diesen einen Abend ändern, und wer am ganzen Thema mitarbeiten soll, wird ausdrücklich eingetragen. Wer einmal aushilft, bekommt keine Hoheit über etwas, das über Monate läuft.',
+      'Alle, die sie mit vorbereiten — und zwar gleichberechtigt. Wer unter „Vorbereitet von" steht, darf sie ändern, ihr ein Überthema geben und eine zweite Einheit anlegen.\n\n**Nur Löschen bleibt bei dem, der sie angefangen hat.** Er bleibt auch in der Liste stehen: Sein Platz lässt sich nicht räumen, die anderen schon.\n\nIm Archiv siehst du deshalb auch alle auf der Karte, nicht nur einen.\n\nBei einem **Thema über mehrere Abende** ist es anders: Dort darfst du als Mitvorbereitende:r genau diesen einen Abend ändern, und wer am ganzen Thema mitarbeiten soll, wird ausdrücklich eingetragen.',
     keywords: [
       'einzelne einheit',
       'alleinstehend',
@@ -478,7 +483,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Wie ziehe ich ein Thema über mehrere Abende?',
     answer:
-      'Beim Wählen an einem Abend nimmst du „Eigenes fortsetzen" und suchst dein Thema heraus. Es bekommt damit eine weitere Einheit.\n\nJede Einheit hat ihren eigenen Titel, Actionstep und ihre eigene Zusammenfassung; das Thema selbst hat zusätzlich eine Zusammenfassung über alle Abende hinweg.\n\nFür die Vorschlagslogik zählt das Ganze als **eine** Aufgabe — sonst wäre man nach einer dreiteiligen Reihe für Monate ganz unten in jeder Liste.',
+      'Beim Wählen an einem Abend nimmst du „Eigenes Thema fortsetzen" und suchst dein Thema heraus. Es bekommt damit eine weitere Einheit. Auf der Themenseite geht es auch ohne Abend: unten „Bearbeiten", dann „Einheit hinzufügen".\n\nJede Einheit hat ihren eigenen Titel, Actionstep und ihre eigene Zusammenfassung; das Thema selbst hat zusätzlich eine Zusammenfassung über alle Abende hinweg.\n\nFür die Vorschläge zählt das Ganze als **eine** Aufgabe — sonst wäre man nach einer dreiteiligen Reihe für Monate ganz unten in jeder Liste.',
     keywords: ['reihe', 'fortsetzen', 'mehrteilig', 'serie'],
   },
   {
@@ -486,7 +491,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'topics',
     question: 'Kann sich ein vergangener Abend noch ändern?',
     answer:
-      'Gegen **beiläufige** Änderungen ist er eingefroren: Seine Einheit bleibt daran hängen, und wer sie gehalten hat, bleibt vermerkt. Eine Absage oder ein Rollenwechsel von heute schreibt nicht um, was war.\n\n**Ausdrücklich schon.** Stellt sich heraus, dass der Abend gar kein Thema hatte, leerst du in der Termin-Ansicht die Rolle „Thema" — dann wird gefragt, und ein Ja nimmt den Baustein weg. Die Einheit löst sich dabei vom Abend und wartet mit allem, was darin steht, unter „Angefangenes"; der Abend bekommt stattdessen seine Nachbereitung.\n\nTexte lassen sich ohnehin weiter bearbeiten — es geht um die Zuordnung, nicht um den Inhalt.\n\nEin vergangener Abend steht zuerst **zum Lesen** da: nur die Setlist, keine Stifte, kein Maps. Zum Nachtragen tippst du unten auf **„Bearbeiten"**, danach auf **„Fertig"** — das gilt auch für die Nachbereitung. Fehlt sie noch, steht oben der Hinweis „Nachbereitung hinzufügen?", und ein Tipp darauf schaltet gleich in „Bearbeiten". Deinen Actionstep-Haken erreichst du auch ohne.',
+      'Gegen **beiläufige** Änderungen ist er eingefroren: Seine Einheit bleibt daran hängen, und wer sie gehalten hat, bleibt vermerkt. Eine Absage oder ein Rollenwechsel von heute schreibt nicht um, was war.\n\n**Ausdrücklich schon.** Stellt sich heraus, dass der Abend gar kein Thema hatte, leerst du die Rolle „Thema" — dann wird gefragt, und ein Ja nimmt den Baustein weg. Die Einheit löst sich dabei vom Abend und wartet mit allem, was darin steht, unter „Angefangenes"; der Abend bekommt stattdessen seine Nachbereitung.\n\nEin vergangener Abend steht zuerst **zum Lesen** da. Zum Nachtragen tippst du unten auf **„Bearbeiten"**, danach auf **„Fertig"** — das gilt auch für die Nachbereitung. Fehlt sie noch, steht oben der Hinweis „Nachbereitung hinzufügen?", und ein Tipp darauf schaltet gleich in „Bearbeiten". Deinen Actionstep-Haken erreichst du auch ohne.\n\nWer da war, steht oben unter „Wer war da"; wer abgesagt hatte oder unsicher war, zugeklappt darunter unter **„War nicht da"**.',
     keywords: [
       'eingefroren',
       'vergangen',
@@ -527,7 +532,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'songs',
     question: 'Was machen die beiden Knöpfe beim Eintragen eines Lieds?',
     answer:
-      'Zwei Abkürzungen, beide **nur auf Knopfdruck** — nie beim Tippen, denn jeder Aufruf dauert Sekunden und kostet etwas.\n\n**„Aus Link ausfüllen"** — du fügst eine Adresse ein, und die App liest Titel und Interpret von der Seite.\n\n**„Link suchen"** — umgekehrt: aus Titel und Interpret werden bis zu drei Links vorgeschlagen. Bevorzugt Ultimate Guitar, dann Genius — bei vier Instrumenten ist ein Akkordblatt genauso richtig wie ein Liedtext.\n\nJeder vorgeschlagene Link wird vorher tatsächlich abgerufen, bevor er dir angeboten wird. Ein Sprachmodell schreibt sonst überzeugende Adressen auf, die es nie gab.\n\nUnter den Knöpfen steht nicht ohne Grund, dass die Vorschläge ungenau sein können: Schau kurz nach, bevor du sie übernimmst.',
+      'Zwei Abkürzungen, beide **nur auf Knopfdruck** — jeder Aufruf dauert ein paar Sekunden.\n\n**„Aus Link ausfüllen"** — du fügst eine Adresse ein, und die App liest Titel und Interpret von der Seite.\n\n**„Link suchen"** — umgekehrt: aus Titel und Interpret werden bis zu drei Links vorgeschlagen. Bevorzugt Ultimate Guitar, dann Genius — ein Akkordblatt ist genauso richtig wie ein Liedtext.\n\nJeder vorgeschlagene Link wird vorher geprüft, ob es die Seite wirklich gibt.\n\nDie Vorschläge können trotzdem ungenau sein: Schau kurz nach, bevor du sie übernimmst — der Knopf neben dem Link-Feld öffnet ihn.',
     keywords: ['ki', 'ai', 'gemini', 'link', 'automatisch', 'akkorde'],
   },
   {
@@ -543,7 +548,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'songs',
     question: 'Ich habe nochmal auf „Link suchen" gedrückt — kommt dasselbe?',
     answer:
-      'Nein, der zweite Druck sucht **daneben** weiter. Die bisherigen Vorschläge bleiben stehen, was neu dazukommt ist mit „neu" markiert, und die schon bekannten Adressen gehen als „kennen wir schon" mit in die Anfrage.\n\nFrüher kam beliebig oft derselbe Zwischenspeicher zurück — wer einen schlechten Vorschlag bekommen hatte, war damit fertig.\n\nZwei Links zur selben Seite nebeneinander sind dabei ausdrücklich erwünscht: Wenn das erste Akkordblatt nichts taugte, ist ein zweites von derselben Seite genau das, was man will. Insgesamt ist bei neun Vorschlägen Schluss.\n\nFindet sich nichts Weiteres, sagt die App das auch.',
+      'Nein, der zweite Druck sucht **daneben** weiter. Die bisherigen Vorschläge bleiben stehen, und was neu dazukommt, ist mit „neu" markiert.\n\nZwei Links zur selben Seite nebeneinander sind dabei erwünscht: Wenn das erste Akkordblatt nichts taugte, ist ein zweites von derselben Seite genau das, was man will. Insgesamt ist bei neun Vorschlägen Schluss.\n\nFindet sich nichts Weiteres, sagt die App das auch.',
     keywords: ['nochmal', 'wiederholen', 'neue vorschläge', 'mehr'],
   },
   {
@@ -552,7 +557,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     question:
       'Muss man ein Instrument spielen, um für die Musik eingetragen zu werden?',
     answer:
-      'Ja — zur Auswahl steht nur, wer im Profil eingeschaltet hat, dass er ein Instrument spielt. Wer singt und die Musik trotzdem macht, schaltet es dort ein. Ist schon jemand ohne Instrument eingetragen, steht er weiter da, damit du ihn austragen kannst.\n\nBeim **Nachtragen** eines vergangenen Abends stehen alle zur Wahl — da zählt, wer es war.\n\nWas sie prüft, ist die Anwesenheit: Wer für den Abend abgesagt hat, kann die Rolle nicht übernehmen — das gilt inzwischen für alle vier Rollen, auch fürs Testimony. Bei einem vergangenen Abend prüft sie auch das nicht mehr; Nachtragen ist Buchführung, keine Planung.',
+      'Ja — zur Auswahl steht nur, wer im Profil eingeschaltet hat, dass er ein Instrument spielt. Wer singt und die Musik trotzdem macht, schaltet es dort ein. Ist schon jemand ohne Instrument eingetragen, steht er weiter da, damit du ihn austragen kannst.\n\nWer für den Abend abgesagt hat, kann die Rolle nicht übernehmen — das gilt für alle Rollen.\n\nBeim **Nachtragen** eines vergangenen Abends stehen alle zur Wahl — da zählt, wer es war.',
     keywords: ['instrument', 'spielen', 'musik', 'zuteilen'],
   },
   {
@@ -597,7 +602,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'songs',
     question: 'Sehen die anderen meine Version?',
     answer:
-      'Nein. Text und Akkorde gehören denen, die sie geschrieben haben — deshalb hinterlegt jede:r sie nur für sich, und die App teilt sie nicht und füllt sie nicht vor.\n\nDeine Version liegt **nur auf diesem Gerät**, nicht auf dem Server. Das heißt auch: Auf einem anderen Gerät ist sie nicht da, und wenn du die App löschst oder das Telefon wechselst, ist sie weg. Eine Sicherung gibt es bewusst nicht — eine Datei zum Mitnehmen ließe sich genauso weitergeben.\n\nWas alle sehen, ist der Link zum Lied. Den kann jede:r unter „Bearbeiten" ändern.',
+      'Nein. Text und Akkorde gehören denen, die sie geschrieben haben — deshalb hinterlegt jede:r sie nur für sich, und die App teilt sie nicht und füllt sie nicht vor.\n\nDeine Version liegt **nur auf diesem Gerät**. Das heißt auch: Auf einem anderen Gerät ist sie nicht da, und wenn du die App löschst oder das Telefon wechselst, ist sie weg. Eine Sicherung gibt es bewusst nicht — eine Datei zum Mitnehmen ließe sich genauso weitergeben.\n\nWas alle sehen, ist der Link zum Lied. Den kann jede:r unter „Bearbeiten" ändern.',
     keywords: [
       'privat',
       'teilen',
@@ -678,7 +683,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'locations',
     question: 'Ich kann eine Weile nicht hosten — was mache ich?',
     answer:
-      'Im Profil den Haken bei „Ich kann gerade hosten" herausnehmen. Dann schlägt dich die App nicht mehr als Gastgeber:in vor. Im Profil und in der Mitgliederliste steht dann „hostet gerade nicht".\n\nWohnst du allein, fällt damit deine Wohnung ganz aus der Reihenfolge. Wohnt ihr zu zweit und dein Mitbewohner kann, bleibt die Wohnung drin.\n\nDer Haken ist eine Aussage über **dich**, nicht über die Wohnung — sie stillzulegen wäre der falsche Weg, weil sie dann auch aus dem Archiv verschwände.\n\nGeht es nur um bestimmte Wochen, ist eine Abwesenheit das passendere Mittel.',
+      'Im Profil den Schalter „Ich kann gerade hosten" ausschalten. Dann schlägt dich die App nicht mehr als Gastgeber:in vor. Im Profil und in der Mitgliederliste steht dann „hostet gerade nicht".\n\nWohnst du allein, fällt damit deine Wohnung ganz aus der Reihenfolge. Wohnt ihr zu zweit und dein Mitbewohner kann, bleibt die Wohnung drin.\n\nDer Schalter ist eine Aussage über **dich**, nicht über die Wohnung.\n\nGeht es nur um bestimmte Wochen, ist eine Abwesenheit das passendere Mittel.',
     keywords: ['nicht hosten', 'pause', 'kann nicht', 'gastgeber'],
   },
   {
@@ -713,7 +718,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'prayer',
     question: 'Warum sind es Zweier und eine Dreier?',
     answer:
-      'Weil sich eine ungerade Zahl nicht durch zwei teilen lässt. Zweiergruppen sind das Format, das ihr eigentlich wollt — die eine Dreiergruppe gibt es nur, weil die Zahl nicht aufgeht. Bei neun Leuten also 2/2/2/3 und nicht 3/3/3.\n\n**Größer als drei wird keine Gruppe.** Ab vier betet nicht mehr jede:r für jede:n, sondern jede:r für einen — dann ist es keine Gruppe mehr, sondern eine Kette, die niemand überblickt.\n\n**Wer in die Dreiergruppe kommt, entscheidet die App zuerst**, und zwar nach der Frage, wer bisher am seltensten darin war. Sonst landete immer derjenige darin, der zufällig übrig bleibt — und das könnte dieselbe Person mehrmals hintereinander sein.',
+      'Weil sich eine ungerade Zahl nicht durch zwei teilen lässt. Zweiergruppen sind das eigentliche Format — die eine Dreiergruppe gibt es nur, weil die Zahl nicht aufgeht. Bei neun Leuten also 2/2/2/3 und nicht 3/3/3.\n\n**Größer als drei wird keine Gruppe**, auch nicht, wenn mitten in einer Runde jemand dazukommt.\n\n**Wer in die Dreiergruppe kommt, entscheidet die App zuerst**, und zwar danach, wer bisher am seltensten darin war. Sonst landete immer derjenige darin, der zufällig übrig bleibt.',
     keywords: ['dreier', 'zweier', 'gruppengröße', 'ungerade', 'neun'],
   },
   {
@@ -721,7 +726,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'prayer',
     question: 'In meiner Dreiergruppe: für wen bete ich eigentlich?',
     answer:
-      'Zu dritt wird **reihum** gebetet — im Kreis. Du betest für eine bestimmte Person, und eine andere betet für dich. Beides steht oben auf dem Gebet-Bildschirm, jedes mit eigener Beschriftung; in der Übersicht siehst du den ganzen Kreis als Kette: „Anna → Ben → Carla → Anna".\n\nVorher stand dort nur eine Namensliste, und jede:r musste sich selbst zusammenreimen, wie es gemeint ist. Zu dritt füreinander zu beten heißt in der Praxis eben nicht „jede:r für alle" — reihum ist konkreter, und konkret ist beim Beten die halbe Miete.\n\n**Zu zweit gibt es diese Frage nicht:** Ihr betet füreinander, und da steht schlicht „Du betest mit Anna".\n\nFür die Zuteilung der nächsten Runden zählt das übrigens genauso wie eine Zweiergruppe: Wer im Kreis für jemanden gebetet hat — oder für wen jemand gebetet hat —, war mit ihm zusammen, und die App meidet die Wiederholung entsprechend.',
+      'Zu dritt wird **reihum** gebetet — im Kreis. Du betest für eine bestimmte Person, und eine andere betet für dich. Beides steht oben auf dem Gebet-Bildschirm und auf „Heute"; in der Übersicht siehst du den ganzen Kreis als Kette: „Anna → Ben → Carla → Anna".\n\n**Zu zweit gibt es diese Frage nicht:** Ihr betet füreinander, und da steht schlicht „Du betest mit Anna".\n\nFür die nächsten Runden zählt das wie eine Zweiergruppe: Wer im selben Kreis war, war zusammen, und die App meidet die Wiederholung entsprechend.',
     keywords: [
       'reihum',
       'für wen',
@@ -745,7 +750,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'prayer',
     question: 'Jemand kommt dazu oder geht — was passiert mit meiner Gruppe?',
     answer:
-      'Die **laufende** Runde wird repariert, nicht neu gewürfelt: Wer miteinander betet, soll das weiter tun. Wer geht, wird herausgenommen; wer dazukommt, kommt in die kleinste Gruppe. Bleibt jemand allein zurück, rutscht er zur kleinsten anderen Gruppe dazu.\n\nDie **geplanten** Runden danach werden verworfen und neu gebaut — sie waren für eine Gruppe gedacht, die es so nicht mehr gibt. Sie zählen dann auch nicht in die Wiederholungs-Vermeidung hinein; diese Paarungen haben ja nie stattgefunden.\n\n**„Dazukommen" heißt: die Einladung annehmen**, nicht sie bekommen. Wer eingeladen ist, sich aber noch nie angemeldet hat, steht in keiner Gruppe — sein Gegenüber bekäme sonst einen Namen genannt, dem es nicht schreiben kann. Sobald die Person das erste Mal da ist, wird sofort neu geplant.',
+      'Die **laufende** Runde wird angepasst, nicht neu gewürfelt: Wer miteinander betet, soll das weiter tun. Wer geht, wird herausgenommen; wer dazukommt, wird so eingeteilt, dass es bei Zweiergruppen und höchstens einer Dreiergruppe bleibt. Allein bleibt niemand.\n\nDie **geplanten** Runden danach werden neu gebaut — sie waren für eine Gruppe gedacht, die es so nicht mehr gibt.\n\n**„Dazukommen" heißt: die Einladung annehmen**, nicht sie bekommen. Wer eingeladen ist, sich aber noch nie angemeldet hat, steht in keiner Gruppe — sein Gegenüber bekäme sonst einen Namen genannt, dem es nicht schreiben kann. Sobald die Person das erste Mal da ist, wird neu geplant.',
     keywords: ['neu', 'verlassen', 'dazugekommen', 'ändert sich'],
   },
   {
@@ -788,7 +793,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'birthdays',
     question: 'Wie wird entschieden, wer das Geschenk besorgt?',
     answer:
-      'Der Reihe nach, und die Reihe sind die Geburtstage selbst: **Du besorgst das Geschenk für den, dessen Geburtstag als nächstes nach deinem kommt.**\n\nDaraus fällt einiges von selbst ab. In einem Jahr ist jede:r genau einmal dran. Niemand ist für sich selbst zuständig. Und wer gerade beschenkt wurde, ist als nächstes dran — man wird also genau dann erinnert, wenn man es zuletzt selbst erlebt hat.\n\nWer keinen Geburtstag eingetragen hat, steht nicht in der Reihe: weder als Beschenkter noch als Schenkender. Trägt er ihn nach, rückt er beim nächsten Lauf überall ein — und die Zuständigkeiten der anderen verschieben sich mit.',
+      'Der Reihe nach, und die Reihe sind die Geburtstage selbst: **Du besorgst das Geschenk für den, dessen Geburtstag als nächstes nach deinem kommt.**\n\nDaraus fällt einiges von selbst ab. In einem Jahr ist jede:r genau einmal dran. Niemand ist für sich selbst zuständig. Und wer gerade beschenkt wurde, ist als nächstes dran — man wird also genau dann erinnert, wenn man es zuletzt selbst erlebt hat.\n\nWer keinen Geburtstag eingetragen hat, steht nicht in der Reihe: weder als Beschenkter noch als Schenkender. Trägt er ihn nach, rückt er ein — und die Zuständigkeiten der anderen verschieben sich mit, soweit sie noch nicht feststehen.',
     keywords: ['geschenk', 'zuständig', 'rotation', 'reihenfolge', 'wer'],
   },
   {
@@ -819,7 +824,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'birthdays',
     question: 'Sehe ich, was ich selbst geschenkt bekomme?',
     answer:
-      'Nein — und zwar nicht „ausgeblendet", sondern gar nicht. Bei deinem eigenen Geburtstag schickt der Server dir die Vorschläge, die Auswahl und den Preis erst gar nicht; auf der Seite steht nur ein netter Satz.\n\nWer für dich zuständig ist, siehst du dagegen schon. Das ist keine Überraschung, die man verderben könnte.',
+      'Nein — und zwar nicht „ausgeblendet", sondern gar nicht. Bei deinem eigenen Geburtstag bekommt deine App die Vorschläge, die Auswahl und den Preis erst gar nicht zu sehen; auf der Seite steht nur ein netter Satz.\n\nWer für dich zuständig ist, siehst du dagegen schon. Das ist keine Überraschung, die man verderben könnte.',
     keywords: ['eigener', 'überraschung', 'geheim', 'sehen'],
   },
   {
@@ -895,7 +900,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'notes',
     question: 'Wo trage ich Zusammenfassung und Actionstep ein?',
     answer:
-      'Das kommt darauf an, ob der Abend ein Thema hatte.\n\n**Mit Thema:** an dessen Einheit. Dort gehören sie zum Thema und überleben einen Rollenwechsel.\n\n**Ohne Thema** — ein Lobpreisabend, ein Geburtstag: über den Baustein **Nachbereitung**, direkt am Abend.\n\nBeides zugleich geht nicht, damit es nie zwei Zusammenfassungen und zwei Actionsteps gibt.\n\nFrüher hatte ein Abend ohne Thema gar keinen Ort dafür — obwohl der Vorsatz für die Woche dort genauso entsteht.',
+      'Das kommt darauf an, ob der Abend ein Thema hatte.\n\n**Mit Thema:** an dessen Einheit. Dort gehören sie zum Thema und überleben einen Rollenwechsel.\n\n**Ohne Thema** — ein Lobpreisabend, ein Geburtstag: über den Baustein **Nachbereitung**, direkt am Abend.\n\nBeides zugleich geht nicht, damit es nie zwei Zusammenfassungen und zwei Actionsteps gibt.',
     keywords: ['zusammenfassung', 'actionstep', 'notizen', 'protokoll'],
   },
   {
@@ -903,7 +908,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'notes',
     question: 'Warum kann ich die Nachbereitung erst am Abend hinzufügen?',
     answer:
-      'Weil man sie nicht vorplant. Stünde sie im Baukasten, hätte man sie **vor** dem Abend angehakt — also als es noch nichts nachzubereiten gab.\n\nAb der Treffpunktzeit steht an einem Abend ohne Thema ganz oben der Hinweis „Nachbereitung hinzufügen?". Ein Klick legt die Karte an; am Fuß der Karte nimmst du sie auch wieder ganz weg, dann steht wieder der Hinweis da.\n\nNicht jeder Abend braucht eine. Eine leere Karte an jedem Termin wäre eine Aufforderung, der man meistens nicht nachkommt.\n\nHatte der Abend ein **Thema**, steht der Hinweis nicht da — dort tragen Zusammenfassung und Actionstep an der Einheit. War es nachträglich betrachtet doch keines, leer einfach die Rolle „Thema": Nach einer Rückfrage fällt der Baustein weg und der Hinweis erscheint.',
+      'Weil man sie nicht vorplant. Stünde sie bei den Bausteinen, hätte man sie **vor** dem Abend angehakt — also als es noch nichts nachzubereiten gab.\n\nAb der Treffpunktzeit steht an einem Abend ohne Thema ganz oben der Hinweis „Nachbereitung hinzufügen?". Ein Klick legt die Karte an; am Fuß der Karte nimmst du sie auch wieder ganz weg, dann steht wieder der Hinweis da.\n\nNicht jeder Abend braucht eine.\n\nHatte der Abend ein **Thema**, steht der Hinweis nicht da — dort stehen Zusammenfassung und Actionstep an der Einheit. War es nachträglich betrachtet doch keines, leer die Rolle „Thema": Nach einer Rückfrage fällt der Baustein weg und der Hinweis erscheint.',
     keywords: ['hinzufügen', 'später', 'hinweis', 'karte'],
   },
   {
@@ -929,7 +934,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'account',
     question: 'Wie lade ich jemanden ein?',
     answer:
-      'Das machen Admins, im Profil unter „Mitglieder" oder im Admin-Bereich. Es braucht nur eine E-Mail-Adresse.\n\nDie eingeladene Person bekommt eine Mail mit einem Link: Dort sucht sie sich einen Anmeldenamen aus, legt ein Passwort fest und ist drin.\n\nBis dahin steht sie in der Liste mit dem Abzeichen **„eingeladen"**. Solange lässt sich die Einladung samt Konto wieder zurücknehmen; danach nicht mehr — dann gehört das Konto einer Person und nicht mehr der Gruppe.\n\nKam die Mail nicht an, gibt es einen Knopf, sie erneut zu schicken.',
+      'Das machen Admins, in der **Verwaltung** unter „Mitglieder". Es braucht nur eine E-Mail-Adresse.\n\nDie eingeladene Person bekommt eine Mail mit einem Link: Dort sucht sie sich einen Anmeldenamen aus, legt ein Passwort fest und ist drin.\n\nBis dahin steht sie in der Liste mit dem Abzeichen **„eingeladen"**. Solange lässt sich die Einladung samt Konto wieder zurücknehmen; danach nicht mehr — dann gehört das Konto einer Person und nicht mehr der Gruppe.\n\nKam die Mail nicht an, gibt es einen Knopf, sie erneut zu schicken.',
     keywords: ['einladung', 'neu', 'mitglied', 'hinzufügen'],
   },
   {
@@ -937,7 +942,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'account',
     question: 'Wie ändere ich mein Passwort?',
     answer:
-      'Im Profil unter „Konto" gibt es dafür einen Link. Er führt dich zur Anmeldeseite, wo du dein Passwort setzt.\n\nDas ist nicht bloß ein Umweg: **Dein Passwort liegt nicht in dieser App.** Es liegt beim Anmeldedienst, der auch die Anmeldung selbst macht. Diese App bekommt es nie zu sehen — und muss deshalb auch keine Passwortregeln, keine Wiederherstellung und keinen zweiten Faktor nachbauen.\n\nHast du es vergessen, nimm auf der Anmeldeseite „Passwort vergessen".',
+      'Im Profil unter „Konto" gibt es dafür einen Link. Er führt dich zur Anmeldeseite, wo du dein Passwort setzt.\n\n**Dein Passwort liegt nicht in dieser App**, sondern beim Anmeldedienst, der auch die Anmeldung selbst macht. Die App bekommt es nie zu sehen.\n\nHast du es vergessen, nimm auf der Anmeldeseite „Passwort vergessen".',
     keywords: ['passwort', 'ändern', 'vergessen', 'keycloak'],
   },
   {
@@ -961,7 +966,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'account',
     question: 'Was passiert, wenn ich den Hauskreis verlasse?',
     answer:
-      'Du kommst aus allen **kommenden** Planungen heraus: Gastgeber, Musik, Testimony und Themen-Zuteilungen werden frei, deine Zusagen für kommende Abende verschwinden, dein Profilbild wird gelöscht, und die Gebetsgruppen werden neu geordnet. Die anderen bekommen eine Nachricht, die auch sagt, was jetzt offen ist.\n\nWas war, bleibt: Vergangene Abende zeigen weiter, wer gehostet und wer welches Thema gehalten hat — unter deinem Namen.\n\n**Eine neue Einladung an dieselbe Adresse holt alles zurück.** Dein Konto behältst du; verlassen ist etwas anderes als löschen.\n\nBist du der einzige Admin, musst du vorher jemanden bestimmen, der übernimmt.',
+      'Du kommst aus allen **kommenden** Planungen heraus: Gastgeber, Musik, Testimony, Snacks und Themen-Zuteilungen werden frei, deine Zusagen für kommende Abende verschwinden, dein Profilbild wird gelöscht, und die Gebetsgruppen werden neu geordnet. Die anderen bekommen eine Nachricht, die auch sagt, was jetzt offen ist.\n\nWas war, bleibt: Vergangene Abende zeigen weiter, wer gehostet und wer welches Thema gehalten hat — unter deinem Namen.\n\n**Eine neue Einladung an dieselbe Adresse holt alles zurück.** Dein Konto behältst du; verlassen ist etwas anderes als löschen.\n\nBist du der einzige Admin, musst du vorher jemanden bestimmen, der übernimmt.',
     keywords: ['verlassen', 'austreten', 'weg', 'raus'],
   },
   {
@@ -969,7 +974,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'account',
     question: 'Was passiert, wenn ich mein Konto lösche?',
     answer:
-      'Löschen heißt hier **anonymisieren**. Deine Zeile bleibt, aber Name, E-Mail-Adresse und Geburtstag fallen weg — im Archiv steht dann „Ehemaliges Mitglied". Dein Anmeldekonto wird gelöscht, ebenso deine Benachrichtigungs-Einstellungen, deine angemeldeten Geräte und deine Abwesenheiten.\n\nWarum nicht wirklich löschen? Weil daran zwei verschiedene Dinge hängen: die **Zuschreibung** (wer hat gehostet, wem gehört das Thema) und die **Zugehörigkeit** (wer hat welche Einheit gehalten, wer war da). Ein hartes Löschen nähme beides mit — das Archiv wäre danach nicht anonym, sondern löchrig.\n\nWarst du die letzte Person im Hauskreis, verschwindet der ganze Hauskreis mit. Davor warnt die App zweimal.',
+      'Löschen heißt hier **anonymisieren**. Deine Zeile bleibt, aber Name, E-Mail-Adresse und Geburtstag fallen weg — im Archiv steht dann „Ehemaliges Mitglied". Dein Anmeldekonto wird gelöscht, ebenso deine Benachrichtigungs-Einstellungen, deine angemeldeten Geräte und deine Abwesenheiten. Notizen, die nur du sehen konntest, werden gelöscht; geteilte bleiben für die anderen stehen.\n\nWarum nicht spurlos? Weil im Archiv sonst nicht nur dein Name fehlte, sondern auch, wer an einem Abend gehostet oder ein Thema gehalten hat — die Abende wären für alle anderen löchrig.\n\nWarst du die letzte Person im Hauskreis, verschwindet der ganze Hauskreis mit. Davor warnt die App zweimal.',
     keywords: ['löschen', 'konto', 'anonym', 'ehemaliges mitglied', 'dsgvo'],
   },
   {
@@ -1011,7 +1016,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'app',
     question: 'Wie schalte ich Benachrichtigungen ein, und welche gibt es?',
     answer:
-      'Im Profil unter „Benachrichtigungen". Du musst sie einmal je Gerät erlauben — auf dem iPhone geht das nur, wenn die App vom Home-Bildschirm gestartet wurde, nicht im Safari-Tab.\n\nJede Art lässt sich einzeln schalten. Bei den Erinnerungen stellst du außerdem ein, **wie viele Tage vorher** sie kommen sollen; beim Actionstep und bei „am nächsten Abend ist noch etwas frei", an welchen Wochentagen (auch mehrere).\n\nEs gibt Erinnerungen an deine eigenen Aufgaben (hosten, Thema, Musik, Testimony, Actionstep) und Nachrichten über die Gruppe (eingeteilt worden, neue Gebetsbuddys und die Halbzeit der Runde, Abend fällt aus oder findet doch statt, geänderte Uhrzeit, am nächsten Abend kommt etwas dazu oder fällt weg, am nächsten Abend ist noch eine Rolle frei, die Zusammenfassung oder der Actionstep vom letzten Abend ist da, jemand sagt ab, bei euch wäre jetzt Platz, jemand verlässt den Hauskreis, ein besonderer Termin, Neues in der App).',
+      'Im Profil unter „Benachrichtigungen". Du musst sie einmal je Gerät erlauben — auf dem iPhone geht das nur, wenn die App vom Home-Bildschirm gestartet wurde, nicht im Safari-Tab.\n\nJede Art lässt sich einzeln schalten; die Liste ist nach Bereichen sortiert und durchsuchbar. Bei den Erinnerungen stellst du außerdem ein, **wie viele Tage vorher** sie kommen sollen; beim Actionstep und bei „am nächsten Abend ist noch etwas frei", an welchen Wochentagen.\n\nEs gibt Erinnerungen an deine eigenen Aufgaben (hosten, Thema, Musik, Testimony, Snacks, Actionstep) und Nachrichten über die Gruppe — etwa wenn ein Abend ausfällt, sich die Uhrzeit ändert, eine Rolle noch frei ist, jemand absagt, du bei einer Notiz dazugenommen wirst oder es Neues in der App gibt.',
     keywords: ['push', 'erinnerung', 'benachrichtigung', 'einstellen'],
   },
   {
@@ -1027,7 +1032,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'app',
     question: 'Funktioniert die App ohne Internet?',
     answer:
-      'Teilweise. Die App selbst startet und diese Hilfe ist vollständig da — sie ist Teil der App.\n\nWas vom Server kommt, kommt ohne Netz nicht: Termine, Themen, Lieder, wer zugesagt hat. Dafür siehst du einen Hinweis, dass gerade keine Verbindung besteht.\n\nEin Hinweis fürs iPhone: Eine App vom Home-Bildschirm hat dort ihren eigenen Speicher, getrennt von Safari. Nach dem Installieren muss sie **einmal mit Internet** geöffnet werden — vorher hat sie nichts, was sie im Flugmodus zeigen könnte.',
+      'Teilweise. Die App selbst startet, diese Hilfe ist vollständig da, und deine eigenen Lied-Versionen auch.\n\nAlles, was die Gruppe teilt, braucht Netz: Termine, Themen, Lieder, wer zugesagt hat. Dafür siehst du einen Hinweis, dass gerade keine Verbindung besteht.\n\nEin Hinweis fürs iPhone: Eine App vom Home-Bildschirm hat dort ihren eigenen Speicher, getrennt von Safari. Nach dem Installieren muss sie **einmal mit Internet** geöffnet werden — vorher hat sie nichts, was sie im Flugmodus zeigen könnte.',
     keywords: ['offline', 'flugmodus', 'kein internet', 'unterwegs'],
   },
   {
@@ -1076,7 +1081,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'privacy',
     question: 'Warum gibt es keinen Cookie-Banner?',
     answer:
-      'Weil es nichts zu fragen gäbe. Acts2 setzt **keine eigenen Cookies**, benutzt keine Analyse-, Statistik- oder Werbedienste und lädt keine Schriften von fremden Servern nach — die kommen fertig mit der App.\n\nEin Banner ist nur für das nötig, was **über** den Betrieb des Dienstes hinausgeht. Genau das gibt es hier nicht, und einer, der nach einer Erlaubnis fragt, die er nicht braucht, ist eine Gewohnheit und keine Auskunft.\n\nWas die App im Browser ablegt, dient allein dem Betrieb: dass du angemeldet bleibst, welches Design du gewählt hast, und ob du die Neuigkeiten schon gesehen hast.',
+      'Weil es nichts zu fragen gäbe. Acts2 setzt **keine eigenen Cookies**, benutzt keine Analyse-, Statistik- oder Werbedienste und lädt keine Schriften von fremden Servern nach.\n\nEin Banner ist nur für das nötig, was **über** den Betrieb des Dienstes hinausgeht — und das gibt es hier nicht.\n\nWas die App im Browser ablegt, dient allein dem Betrieb: dass du angemeldet bleibst, welches Design du gewählt hast, ob du die Neuigkeiten schon gesehen hast — und deine eigenen Lied-Versionen.',
     keywords: ['cookie', 'banner', 'consent', 'tracking', 'analytics'],
   },
   {
@@ -1092,7 +1097,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'privacy',
     question: 'Welche Daten speichert die App über mich?',
     answer:
-      'Nur, was sie zum Organisieren braucht: Anzeigename, Anmeldename, E-Mail-Adresse, optional dein Geburtstag (für die Geschenke-Planung), ob du ein Instrument spielst, ob du gerade hosten kannst, deine Wohnung, ob du Admin bist.\n\nDazu, was sich beim Benutzen ergibt: deine Zu- und Absagen, deine Abwesenheiten, welche Themen und Einheiten du gehalten hast, welche Lieder du eingetragen hast, deine gesetzten Actionstep-Haken, deine Benachrichtigungs-Einstellungen und die Geräte, auf denen du Benachrichtigungen erlaubt hast. Dein Profilbild liegt als Datei daneben.\n\nKein Standort, keine Kontakte, kein Kalenderzugriff, kein Nutzungsprofil, keine Werbung, keine Auswertung.',
+      'Nur, was sie zum Organisieren braucht: Anzeigename, Anmeldename, E-Mail-Adresse, optional dein Geburtstag (für die Geschenke-Planung), ob du ein Instrument spielst, ob du gerade hosten kannst, deine Wohnung, ob du Admin bist.\n\nDazu, was sich beim Benutzen ergibt: deine Zu- und Absagen samt dem Satz dazu, deine Abwesenheiten, welche Themen und Einheiten du gehalten hast, welche Lieder du eingetragen hast, deine Gebetsanliegen, Notizen, an denen du mitschreibst, deine Actionstep-Haken, deine Benachrichtigungs-Einstellungen und die Geräte, auf denen du Benachrichtigungen erlaubt hast. Dein Profilbild liegt als Datei daneben.\n\nDeine eigenen Lied-Versionen liegen nur auf deinem Gerät, nicht bei uns.\n\nKein Standort, keine Kontakte, kein Kalenderzugriff, kein Nutzungsprofil, keine Werbung, keine Auswertung.',
     keywords: ['daten', 'gespeichert', 'welche', 'dsgvo', 'privatsphäre'],
   },
   {
@@ -1108,7 +1113,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'privacy',
     question: 'Wer sieht meine Daten?',
     answer:
-      'Nur dein eigener Hauskreis. Alles ist an die Gruppe gebunden; ein anderer Hauskreis sieht von euch nichts.\n\nInnerhalb der Gruppe sehen sich alle gegenseitig: Namen, Zusagen, Rollen. Die E-Mail-Adresse steht in der Mitgliederliste, weil man beim Einladen und Verwalten damit arbeitet.\n\nEin paar Dinge sind auch innerhalb der Gruppe geschützt: Der Inhalt einer noch nicht gehaltenen Themen-Einheit ist bis zum Beginn des Abends nur für die Zuständigen sichtbar, und Entwürfe ohne Abend sehen nur die, die am Thema mitarbeiten.',
+      'Nur dein eigener Hauskreis. Alles ist an die Gruppe gebunden; ein anderer Hauskreis sieht von euch nichts.\n\nInnerhalb der Gruppe sehen sich alle gegenseitig: Namen, Zusagen, Rollen. Die E-Mail-Adresse steht in der Mitgliederliste, weil man beim Einladen und Verwalten damit arbeitet.\n\nEin paar Dinge sind auch innerhalb der Gruppe geschützt: Der Inhalt einer noch nicht gehaltenen Themen-Einheit ist bis zum Beginn des Abends nur für die Zuständigen sichtbar, Entwürfe ohne Abend sehen nur die, die daran arbeiten, und eine Notiz sieht nur, wer dabei ist.',
     keywords: ['wer sieht', 'sichtbar', 'andere', 'privat'],
   },
   {
@@ -1116,7 +1121,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'privacy',
     question: 'Was passiert mit meinen Daten, wenn ich gehe?',
     answer:
-      'Beim **Verlassen** bleibt alles stehen, damit das Archiv stimmt — dein Profilbild wird gelöscht, deine kommenden Zusagen verschwinden.\n\nBeim **Konto löschen** fallen Name, E-Mail-Adresse und Geburtstag weg, dazu deine Benachrichtigungs-Einstellungen, die angemeldeten Geräte und deine Abwesenheiten. Dein Anmeldekonto wird gelöscht. Was bleibt, ist die anonyme Spur im Archiv: dass an jenem Abend jemand gehostet und ein Thema gehalten hat.\n\nWarum nicht spurlos? Weil sonst nicht nur dein Name verschwände, sondern auch die Abende selbst löchrig würden — für alle anderen.',
+      'Beim **Verlassen** bleibt alles stehen, damit das Archiv stimmt — dein Profilbild wird gelöscht, deine kommenden Zusagen verschwinden.\n\nBeim **Konto löschen** fallen Name, E-Mail-Adresse und Geburtstag weg, dazu deine Benachrichtigungs-Einstellungen, die angemeldeten Geräte, deine Abwesenheiten und Notizen, die nur du sehen konntest. Dein Anmeldekonto wird gelöscht. Was bleibt, ist die anonyme Spur im Archiv: dass an jenem Abend jemand gehostet und ein Thema gehalten hat.\n\nWarum nicht spurlos? Weil sonst nicht nur dein Name verschwände, sondern auch die Abende selbst löchrig würden — für alle anderen.',
     keywords: ['löschen', 'gehen', 'daten weg', 'spuren'],
   },
 
@@ -1127,8 +1132,17 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     adminOnly: true,
     question: 'Wie funktioniert das Vorausplanen der Termine?',
     answer:
-      'Ein Lauf jede Nacht um drei sorgt dafür, dass immer sieben Termine im Voraus stehen — am eingestellten Wochentag, zur eingestellten Uhrzeit. Der letzte reguläre Abend im Monat wird als „Lobpreis & Gebet" angelegt.\n\nDerselbe Lauf schließt vergangene Termine ab. Abgesagte behalten ihren Status: „fiel aus" ist etwas anderes als „hat stattgefunden".\n\nIm Admin-Bereich gibt es den Knopf **„Termine vorausplanen"**, falls du nicht warten willst. Er sagt dir, wie viele angelegt und wie viele übersprungen wurden — übersprungen heißt, dass an dem Datum schon etwas stand.',
+      'Jede Nacht sorgt die App dafür, dass immer sieben Termine im Voraus stehen — am eingestellten Wochentag, zur eingestellten Uhrzeit. Der letzte reguläre Abend im Monat wird als „Lobpreis & Gebet" angelegt, sofern Lobpreisabende eingeschaltet sind.\n\nIn der Verwaltung unter „Termin-Rhythmus" lässt sich das Anlegen ganz abschalten; dann legt ihr eure Termine selbst an, und was schon im Kalender steht, bleibt.\n\nUnter „Läufe" gibt es den Knopf **„Termine vorausplanen"**, falls du nicht bis morgen warten willst. Er sagt dir, wie viele angelegt und wie viele übersprungen wurden — übersprungen heißt, dass an dem Datum schon etwas stand.',
     keywords: ['generator', 'nachts', 'cron', 'anlegen'],
+  },
+  {
+    id: 'admin-actionstep',
+    category: 'admin',
+    adminOnly: true,
+    question: 'Was macht der Schalter „Actionstep der Woche"?',
+    answer:
+      'Er entscheidet, ob der Vorsatz vom letzten Abend die Woche über auf **„Heute"** steht und ob die wöchentliche Erinnerung daran kommt.\n\n**Aus** heißt: keine Karte auf „Heute", keine Erinnerung, und die Benachrichtigungsart verschwindet aus den Einstellungen. Zusammenfassung und Actionstep am Abend bzw. an der Einheit bleiben, und wenn dort einer eingetragen wird, bekommen die anderen weiterhin Bescheid.',
+    keywords: ['actionstep', 'woche', 'heute', 'ausschalten', 'vorsatz'],
   },
   {
     id: 'admin-rhythmus',
@@ -1136,7 +1150,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     adminOnly: true,
     question: 'Wochentag, Uhrzeit, Zeitzone ändern — was gilt ab wann?',
     answer:
-      'Im Admin-Bereich unter „Termin-Rhythmus", ein Formular für den einen Satz: „Wir treffen uns dienstags um 18 Uhr."\n\n**Wochentag und Uhrzeit gelten nur für neu erzeugte Termine.** Was schon im Kalender steht, behält seinen Tag und seine Zeit — dafür haben Leute zugesagt, ein Thema vorbereitet, das Wohnzimmer eingeplant. Der Generator füllt ab jetzt den neuen Tag auf, die alten laufen aus.\n\n**Die Zeitzone gilt sofort und für alles.** Sie sagt nicht nur, was „18 Uhr" bedeutet, sondern auch, welchen Tag ihr gerade habt — und daran hängt, was als „vorbei" gilt und wann der Inhalt eines Themas für alle sichtbar wird.\n\nÄndert sich die Uhrzeit des **nächsten** Termins, bekommen alle eine Benachrichtigung.',
+      'In der Verwaltung unter „Termin-Rhythmus", ein Formular für den einen Satz: „Wir treffen uns dienstags um 18 Uhr."\n\n**Wochentag, Abstand und Uhrzeit gelten nur für neu angelegte Termine.** Was schon im Kalender steht, behält seinen Tag und seine Zeit — dafür haben Leute zugesagt, ein Thema vorbereitet, das Wohnzimmer eingeplant.\n\n**Die Zeitzone gilt sofort und für alles.** Sie sagt nicht nur, was „18 Uhr" bedeutet, sondern auch, welchen Tag ihr gerade habt — und daran hängt, was als „vorbei" gilt und wann der Inhalt eines Themas für alle sichtbar wird.\n\nÄndert sich die Uhrzeit des **nächsten** Termins, bekommen alle eine Benachrichtigung.',
     keywords: ['wochentag', 'uhrzeit', 'zeitzone', 'rhythmus', 'dienstag'],
   },
   {
@@ -1145,7 +1159,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     adminOnly: true,
     question: 'Wie greife ich in die Gebetsrunden ein?',
     answer:
-      'Unter „Gebets-Rhythmus" stellst du die Länge einer Runde ein (eine bis zwölf Wochen, Vorgabe zwei).\n\n**„Jetzt weiterschalten"** beendet die laufende Runde und zieht die nächste geplante auf heute vor — alles Weitere rutscht mit. Die nächste Runde wird dabei **nicht** neu gewürfelt, sie kommt nur früher.\n\nHat die laufende Runde erst heute angefangen, gilt sie als verworfen und taucht nicht im Archiv auf; sie zählt aber weiter in die Wiederholungs-Vermeidung hinein. Lief sie schon länger, wird sie gestern abgeschlossen — diese Tage gab es ja.\n\n**„Gebetsrunden vorausplanen"** füllt den Vorlauf auf fünf Runden auf. Es meldet dabei niemandem etwas; das passiert erst, wenn eine Runde beginnt.',
+      'Unter „Gebets-Rhythmus" stellst du die Länge einer Runde ein (eine bis zwölf Wochen, Vorgabe zwei). Dort lassen sich die Gebetsbuddys auch ganz abschalten; dann fällt der Gebet-Tab weg, und bestehende Runden kommen beim Wiedereinschalten zurück.\n\n**„Jetzt weiterschalten"** beendet die laufende Runde und zieht die nächste geplante auf heute vor — alles Weitere rutscht mit. Die nächste Runde wird dabei **nicht** neu zusammengestellt, sie kommt nur früher.\n\n**„Gebetsrunden vorausplanen"** unter „Läufe" füllt den Vorlauf auf fünf Runden auf. Es meldet dabei niemandem etwas; das passiert erst, wenn eine Runde beginnt.',
     keywords: ['rotation', 'weiterschalten', 'gebet', 'runde'],
   },
   {
@@ -1154,7 +1168,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     adminOnly: true,
     question: 'Was machen die Knöpfe unter „Läufe"?',
     answer:
-      'Sie stoßen von Hand an, was sonst nachts von selbst läuft. Nützlich zum Nachschauen, ob etwas hängt — und wenn du nicht bis morgen warten willst.\n\n**Termine vorausplanen** und **Gebetsrunden vorausplanen** füllen den Vorlauf auf.\n\n**Abwesenheiten abgleichen** sagt Termine ab, für die jemand als abwesend eingetragen ist. Das passiert normalerweise sofort beim Eintragen; der Lauf fängt die Fälle ab, in denen ein Termin erst später angelegt wurde.\n\n**Verwaiste Orte wegräumen** löscht stillgelegte Orte, an denen kein Termin und niemand mehr hängt.\n\nDie **Erinnerungen** (Host, Thema, Musik, Actionstep, besondere Termine) verschicken, was heute fällig wäre. Doppelt kommt nichts an — die App merkt sich, was sie schon verschickt hat.',
+      'Normalerweise nichts, was du tun musst: Termine vorausplanen, Gebetsrunden planen und prüfen und Abwesenheiten abgleichen erledigt die App jede Nacht von selbst. Die Knöpfe sind für den Fall, dass du nicht bis morgen warten willst.\n\n**Termine vorausplanen** — legt Abende an, bis sieben im Voraus stehen. Sinnvoll direkt nach einer Änderung am Rhythmus.\n\n**Gebetsrunden vorausplanen** — füllt den Vorlauf auf fünf Runden auf.\n\n**Gebetsrunde prüfen** — zieht die laufende Runde nach, wenn jemand dazugekommen oder gegangen ist: niemand steht draußen, niemand bleibt allein, keine Gruppe größer als drei.\n\n**Abwesenheiten abgleichen** — sagt Termine ab, für die jemand als abwesend eingetragen ist. Das passiert sonst schon beim Eintragen; der Knopf fängt Abende ab, die erst danach angelegt wurden.\n\n**Verwaiste Orte wegräumen** — löscht stillgelegte Orte, an denen kein Termin und niemand mehr hängt. Das läuft nie von selbst.\n\nJeder Lauf erledigt nur, was noch fehlt — zweimal drücken schadet nicht.',
     keywords: ['jobs', 'läufe', 'manuell', 'wartung', 'knöpfe'],
   },
   {
@@ -1163,7 +1177,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     adminOnly: true,
     question: 'Wie verwalte ich Mitglieder?',
     answer:
-      'Unter „Personen" im Admin-Bereich, oder im Profil unter „Mitglieder".\n\n**Einladen** — nur eine E-Mail-Adresse nötig. Bis zur ersten Anmeldung steht dort „eingeladen", und die Einladung lässt sich samt Konto zurücknehmen.\n\n**Entfernen** — geht denselben Weg wie ein selbst gewähltes Verlassen: Die Person kommt aus allen kommenden Planungen heraus, das Archiv behält ihren Namen, und eine neue Einladung an dieselbe Adresse holt alles zurück.\n\n**Admin-Rechte** lassen sich geben und nehmen. Der letzte Admin kann sich selbst nicht degradieren.\n\n**Dich selbst** kannst du hier nicht entfernen — dafür gibt es „Hauskreis verlassen" im Profil, wo auch die Frage nach der Nachfolge gestellt wird.',
+      'In der Verwaltung unter „Mitglieder".\n\n**Einladen** — nur eine E-Mail-Adresse nötig. Bis zur ersten Anmeldung steht dort „eingeladen", und die Einladung lässt sich samt Konto zurücknehmen.\n\n**Entfernen** — geht denselben Weg wie ein selbst gewähltes Verlassen: Die Person kommt aus allen kommenden Planungen heraus, das Archiv behält ihren Namen, und eine neue Einladung an dieselbe Adresse holt alles zurück.\n\n**Admin-Rechte** lassen sich geben und nehmen. Der letzte Admin kann sich selbst nicht degradieren.\n\n**Dich selbst** kannst du hier nicht entfernen — dafür gibt es „Hauskreis verlassen" im Profil, wo auch die Frage nach der Nachfolge gestellt wird.',
     keywords: ['personen', 'mitglieder', 'entfernen', 'rechte', 'admin'],
   },
   {
@@ -1181,7 +1195,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     adminOnly: true,
     question: 'Wann sage ich einen Abend ab, wann lösche ich ihn?',
     answer:
-      '**Absagen** ist der Normalfall: Der Abend bleibt im Archiv als „fiel aus". Du kannst freiwillig einen Grund angeben — das ist der ganze Sinn des zusätzlichen Schritts, denn ein „fällt aus" ohne Erklärung erzeugt genau die Rückfragen, die man sich sparen wollte. Alle bekommen eine Nachricht. Bei einem vergangenen Abend heißt der Knopf „Als abgesagt markieren", und dann geht keine Nachricht raus — das ist nur eine Notiz fürs Archiv.\n\nEine Absage lässt sich zurücknehmen.\n\n**Löschen** geht nur bei besonderen Terminen, und niemand wird benachrichtigt. Ein Dienstag, der ausfällt, gehört in eure Geschichte (und der Generator legte ihn ohnehin wieder an); ein versehentlich eingetragener Geburtstag war nie da.',
+      '**Absagen** ist der Normalfall: Der Abend bleibt im Archiv als „fiel aus". Du kannst einen Grund angeben — ein „fällt aus" ohne Erklärung erzeugt genau die Rückfragen, die man sich sparen will. Alle bekommen eine Nachricht. Bei einem vergangenen Abend heißt der Knopf „Als abgesagt markieren", und dann geht keine Nachricht raus.\n\nEine Absage lässt sich zurücknehmen.\n\n**Löschen** geht nur bei selbst angelegten Terminen, und niemand wird benachrichtigt. Ein Dienstag, der ausfällt, gehört in eure Geschichte (und die App legte ihn ohnehin wieder an); ein versehentlich eingetragener Geburtstag war nie da.',
     keywords: ['absagen', 'löschen', 'ausfallen', 'grund'],
   },
 ];

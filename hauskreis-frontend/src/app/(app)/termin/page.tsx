@@ -10,9 +10,8 @@
  * gibt es hier nicht: Termin-Ids sind UUIDs, entstehen im Betrieb und liegen
  * hinter einem Token, das der Bauprozess nicht hat.
  *
- * Der Rest bleibt, wie er war. Die Seite hat nie serverseitig geladen — das
- * Token lebt im Browser —, sie war schon vorher nur eine Hülle um
- * `MeetingDetailScreen`.
+ * Die Seite lädt nicht serverseitig — das Token lebt im Browser —, sie ist nur
+ * eine Hülle um `MeetingDetailScreen`.
  *
  * **`useSearchParams`, nicht `window.location.search`.** Von einem Termin führt
  * ein Link auf einen anderen (die Themen-Karte zeigt auf den vorigen Abend

@@ -14,8 +14,8 @@
  * die Frage von selbst auf, springt hin und ruft danach `mark()`.
  *
  * Der Punkt gilt für **jedes Gerät einzeln** und trifft deshalb auch die, die
- * die App längst benutzen — einmal. Das ist kein Versehen: Die Frage ist seit
- * kurzem da, und wer sie noch nie gesehen hat, hat sie noch nie gesehen.
+ * die App längst benutzen — einmal. Wer die Frage noch nie gesehen hat, hat
+ * sie noch nie gesehen.
  */
 import { useLocalFlag } from '@/lib/local-flag';
 

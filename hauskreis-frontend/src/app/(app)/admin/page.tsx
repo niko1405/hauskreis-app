@@ -19,10 +19,6 @@ export default function AdminPage() {
       <div className="space-y-6 px-5">
         <GuideCard />
         <PeopleAdmin />
-        {/* Orte stehen im Archiv: sie brauchen keine Admin-Rechte mehr, und
-            dort liegt schon alles andere, was die Gruppe gesammelt hat. Nur
-            die Gewichtung ist hier geblieben — sie ist eine Aussage über
-            Menschen und gehört nicht in eine Liste, die alle sehen. */}
         <HostWeightsAdmin />
         <BirthdayGiftAdmin />
         <MaintenanceAdmin />

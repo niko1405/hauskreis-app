@@ -221,8 +221,8 @@ describe('MeetingCancellationService.reconcile — wieder aufleben', () => {
 /**
  * Zwei Wege ändern das Ergebnis, ohne dass jemand seine Anwesenheit anfasst:
  * der Schalter „ich bin grundsätzlich dabei" und ein Mensch, der neu
- * dazukommt. Beide Male blieb der Abend ausgefallen, obwohl er es nicht mehr
- * war — `reconcile` hängt an einem Termin und wurde von dort nie gerufen.
+ * dazukommt. Beide müssen `reconcile` rufen, sonst bliebe der Abend
+ * ausgefallen, obwohl er es nicht mehr ist.
  */
 describe('MeetingCancellationService.reviveUpcoming', () => {
   it('sieht sich jeden von selbst ausgefallenen Abend noch einmal an', async () => {

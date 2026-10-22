@@ -4,9 +4,9 @@
  * Vorgreifen, statt zu warten.
  *
  * Ein Ja/Nein am Termin ist ein Schalter, kein Formular: er soll umspringen,
- * wenn man ihn antippt, nicht wenn der Server antwortet. Bisher wartete jede
- * Änderung auf die Runde zum Server und zurück — auf einem Handy im Zug sind
- * das mehrere Sekunden, in denen der Knopf sich anfühlt wie kaputt.
+ * wenn man ihn antippt, nicht wenn der Server antwortet — auf einem Handy im
+ * Zug dauert die Runde zum Server mehrere Sekunden, in denen der Knopf sich
+ * anfühlt wie kaputt.
  *
  * Deshalb hier ein Baustein und kein Rahmenwerk: `patch` setzt einen
  * Cache-Eintrag vorläufig und merkt sich, was vorher darin stand. Geht der
@@ -14,9 +14,8 @@
  * kommt aus `useApiMutation`, denn ein Rückfall ohne Erklärung sieht aus wie
  * ein Geist.
  *
- * **Wer vorgreift, sperrt nicht.** Die Schalter hingen bisher an
- * `disabled={…isPending}`; zusammen mit einem vorgreifenden Cache wäre das
- * genau verkehrt herum — die Anzeige stimmt schon, aber der Knopf ist noch
+ * **Wer vorgreift, sperrt nicht.** `disabled={…isPending}` zusammen mit einem
+ * vorgreifenden Cache wäre genau verkehrt herum — die Anzeige stimmt schon, aber der Knopf ist noch
  * eine Sekunde lang tot, und ein Fehlgriff lässt sich nicht sofort
  * zurücknehmen.
  */

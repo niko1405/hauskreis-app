@@ -14,10 +14,9 @@ const READ_LIMIT = 30;
  * Die Box hinter der Glocke.
  *
  * Sie liest dieselbe Tabelle, aus der die Erinnerungen kommen
- * (`notification_log`) — und das ist der ganze Trick: Es gab nie ein zweites
- * System, das man hätte bauen müssen, nur eine Tabelle, die nicht wusste, was
- * drinstand. Zeilen ohne `title` stammen von davor und tauchen deshalb nicht
- * auf; sie waren immer nur Entdopplung.
+ * (`notification_log`) — es gibt kein zweites System. Zeilen ohne `title`
+ * stammen aus der Zeit vor der Box und tauchen nicht auf; sie dienen nur der
+ * Entdopplung.
  *
  * Alles hier ist personengebunden und filtert **immer** auf `personId`, auch
  * beim Schreiben. Eine Id aus einer fremden Benachrichtigung darf nicht reichen,

@@ -56,22 +56,21 @@ export class MeetingGeneratorService {
   /**
    * Moves evenings that have been and gone from PLANNED to COMPLETED.
    *
-   * `COMPLETED` has been in the enum since the meetings were built and nothing
-   * ever set it, so the archive listed evenings from months ago as still
-   * planned. Nobody is going to tick them off by hand every week.
+   * Without this the archive would list evenings from months ago as still
+   * planned, and nobody is going to tick them off by hand every week.
    *
    * Cancelled ones keep their status: "fiel aus" is a different fact from "hat
    * stattgefunden", and the archive should be able to tell them apart.
    *
-   * Gruppe für Gruppe und nicht in einem Rutsch, seit jede ihre eigene Zeitzone
+   * Gruppe für Gruppe und nicht in einem Rutsch, weil jede ihre eigene Zeitzone
    * hat: „gestern" fängt in Auckland zwölf Stunden früher an als in Berlin, und
    * ein gemeinsames `updateMany` müsste sich für eine der beiden entscheiden.
    *
    * **`finishedBefore` und nicht `date < heute`.** Vorbei heißt ganz vorbei:
-   * Eine Freizeit von Freitag bis Sonntag wurde sonst am Samstag um drei Uhr
-   * geschlossen, während sie lief — und weil der Startbildschirm für seine
-   * kommenden Abende auf `PLANNED` filtert, fiel sie ab diesem Moment ganz aus
-   * ihm heraus. Dieselbe Unterscheidung, die die Listen längst treffen.
+   * Eine Freizeit von Freitag bis Sonntag würde sonst am Samstag um drei Uhr
+   * geschlossen, während sie läuft — und weil der Startbildschirm für seine
+   * kommenden Abende auf `PLANNED` filtert, fiele sie ab diesem Moment ganz
+   * aus ihm heraus. Dieselbe Unterscheidung, die die Listen treffen.
    */
   async closePastMeetings(now = new Date()): Promise<number> {
     const hauskreise = await this.prisma.hauskreis.findMany({
@@ -118,9 +117,8 @@ export class MeetingGeneratorService {
   /**
    * Makes sure the next `MEETINGS_AHEAD` evenings exist as meetings.
    *
-   * Wochentag und Uhrzeit kommen aus `MeetingScheduleConfig` — hier stand
-   * beides einmal als Konstante, und eine App, die nur Dienstage kennt, ist
-   * keine App für Hauskreise. Ein Wechsel des Wochentags verschiebt nichts,
+   * Wochentag und Uhrzeit kommen aus `MeetingScheduleConfig`. Ein Wechsel des
+   * Wochentags verschiebt nichts,
    * was schon steht: der Lauf legt nur an, was fehlt, und die alten Termine
    * laufen aus.
    *
@@ -129,9 +127,9 @@ export class MeetingGeneratorService {
    * group created themselves (a birthday, say) from being replaced by a
    * generated standard one.
    *
-   * Seit ein besonderer Termin mehrere Tage dauern kann, reicht der Vergleich
-   * auf das Startdatum nicht mehr: liegt der Abend **mitten** in einer
-   * Freizeit, stünde sonst ein Hauskreis-Abend im Zeltlager.
+   * Ein Termin kann mehrere Tage dauern, deshalb reicht der Vergleich auf das
+   * Startdatum nicht: liegt der Abend **mitten** in einer Freizeit, stünde
+   * sonst ein Hauskreis-Abend im Zeltlager.
    */
   async generateFor(
     hauskreisId: string,
@@ -218,8 +216,8 @@ export class MeetingGeneratorService {
   /**
    * Der späteste selbst erzeugte Abend — der Taktschlag der Reihe.
    *
-   * Gebraucht, seit der Abstand einstellbar ist: Bei vierzehn Tagen entscheidet
-   * er, *welche* Woche trifft. Ohne ihn hinge das daran, an welchem Tag der
+   * Bei einem Abstand von vierzehn Tagen entscheidet er, *welche* Woche
+   * trifft. Ohne ihn hinge das daran, an welchem Tag der
    * Lauf gerade startet, und zwei Nächte hintereinander legten zwei um eine
    * Woche versetzte Reihen an (siehe `upcomingMeetingDates`).
    *

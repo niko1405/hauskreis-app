@@ -10,7 +10,7 @@ import { z } from 'zod';
  *
  * Diese Form beschreibt sich im Dokument als `string` mit `format: date` und ist
  * zugleich die ehrlichere Zusage: gemeint sind überall Kalendertage, nie
- * Zeitpunkte. Ein `2026-08-11T19:30:00Z` wurde vorher stillschweigend auf den
- * Tag gerundet — jetzt wird es abgelehnt.
+ * Zeitpunkte. Ein `2026-08-11T19:30:00Z` wird abgelehnt statt stillschweigend
+ * auf den Tag gerundet.
  */
 export const isoDay = z.iso.date().transform((value) => new Date(value));

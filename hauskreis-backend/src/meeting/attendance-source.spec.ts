@@ -9,6 +9,7 @@ import {
   AttendanceStatus,
 } from '../../generated/prisma/enums';
 import { withClock } from './group-clock.testing';
+import { setAttendanceSchema } from './dto/meeting.dto';
 
 /**
  * Guards the boundary between "ich habe geantwortet" and "das kam aus einem
@@ -142,6 +143,70 @@ describe('MeetingService.setAttendance', () => {
     });
 
     expect(upsert.mock.calls[0][0].update.note).toBeNull();
+  });
+
+  it('writes the delay that came with a yes', async () => {
+    const { service, upsert } = setup(AttendanceStatus.UNKNOWN);
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.ATTENDING,
+      lateMinutes: 30,
+    });
+
+    expect(upsert.mock.calls[0][0].update.lateMinutes).toBe(30);
+    expect(upsert.mock.calls[0][0].create.lateMinutes).toBe(30);
+  });
+
+  it('keeps the delay when the yes is sent again without one', async () => {
+    const { service, upsert } = setup(AttendanceStatus.ATTENDING);
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.ATTENDING,
+      note: 'Bringe Kuchen mit',
+    });
+
+    expect(upsert.mock.calls[0][0].update.lateMinutes).toBeUndefined();
+  });
+
+  it('drops the delay with any answer other than a yes', async () => {
+    const { service, upsert } = setup(AttendanceStatus.ATTENDING);
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.UNKNOWN,
+    });
+
+    expect(upsert.mock.calls[0][0].update.lateMinutes).toBeNull();
+  });
+});
+
+describe('setAttendanceSchema', () => {
+  it('only accepts a delay together with a yes', () => {
+    const base = { personId: '7f1c4a52-1d2e-4c3b-9a8f-0e6d5c4b3a21' };
+
+    expect(
+      setAttendanceSchema.safeParse({
+        ...base,
+        status: AttendanceStatus.ATTENDING,
+        lateMinutes: 15,
+      }).success,
+    ).toBe(true);
+    expect(
+      setAttendanceSchema.safeParse({
+        ...base,
+        status: AttendanceStatus.ABSENT,
+        lateMinutes: 15,
+      }).success,
+    ).toBe(false);
+    expect(
+      setAttendanceSchema.safeParse({
+        ...base,
+        status: AttendanceStatus.ABSENT,
+        lateMinutes: null,
+      }).success,
+    ).toBe(true);
   });
 });
 

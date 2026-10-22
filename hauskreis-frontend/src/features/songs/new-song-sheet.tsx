@@ -10,7 +10,7 @@
  * **Darunter, wahlweise, die eigene Version** (`useOwnVersionDraft`), sobald
  * ein Link eingetragen ist.
  *
- * Geändert wird ein Lied nicht mehr hier, sondern auf seiner eigenen Seite im
+ * Geändert wird ein Lied nicht hier, sondern auf seiner eigenen Seite im
  * Bearbeitungsmodus. Dorthin führt das Anlegen auch gleich.
  */
 import { useRouter } from 'next/navigation';

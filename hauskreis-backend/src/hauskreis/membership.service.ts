@@ -52,10 +52,8 @@ export class MembershipService {
   ) {}
 
   /**
-   * Gründet einen Hauskreis und macht die gründende Person zum Admin.
-   *
-   * Vorher legte `POST /api/hauskreise` eine leere Gruppe an, die niemand
-   * betreten konnte — kein Mensch drin, also auch niemand, der einladen durfte.
+   * Gründet einen Hauskreis und macht die gründende Person zum Admin — eine
+   * leere Gruppe könnte niemand betreten, also auch niemand einladen.
    */
   async create(user: AuthenticatedUser, dto: CreateHauskreisDto) {
     const existing = await this.prisma.person.findUnique({
@@ -331,10 +329,9 @@ export class MembershipService {
   /**
    * Sagt den Verbleibenden Bescheid.
    *
-   * Bis hierher passierte ein Austritt lautlos: `active` fiel auf `false`, und
-   * die anderen acht merkten es daran, dass jemand nicht mehr auftauchte. In
-   * einer Gruppe von neun Leuten ist das genau die Nachricht, die man nicht aus
-   * einer Tabelle ablesen will.
+   * Ohne diese Nachricht passierte ein Austritt lautlos, und die anderen merkten
+   * es daran, dass jemand nicht mehr auftaucht. In einer Gruppe von neun Leuten
+   * ist das genau die Nachricht, die man nicht aus einer Tabelle ablesen will.
    *
    * Was dadurch **offen** bleibt, steht mit drin. Ein Abend ohne Gastgeber ist
    * die eigentliche Folge des Austritts, und wer sie erst beim Durchblättern des
@@ -494,12 +491,10 @@ export class MembershipService {
    * eine Einladung die bestehende Mitgliedschaft beendet, ist genau die
    * Überraschung, vor der man gefragt werden will.
    *
-   * **Die Gebetsbuddys werden hier neu geplant**, und das war einmal anders.
-   * Der Satz dazu lautete: „die Zeile ist seit der Einladung `active`, in der
-   * Rotation steht die Person also längst." Das stimmt nicht mehr — eine offene
-   * Einladung bleibt jetzt draußen (`ANGEKOMMEN`), weil ein Name, dem niemand
-   * schreiben kann, sein Gegenüber zwei Wochen allein beten ließ. Wer annimmt,
-   * kommt genau hier dazu.
+   * **Die Gebetsbuddys werden hier neu geplant.** Eine offene Einladung steht
+   * in keiner Gruppe (`ANGEKOMMEN`) — ein Name, dem niemand schreiben kann,
+   * ließe sein Gegenüber zwei Wochen allein beten. Wer annimmt, kommt genau
+   * hier dazu.
    *
    * Für den *alten* Hauskreis erledigt das weiterhin `leave`.
    */

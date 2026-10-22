@@ -2,9 +2,7 @@
  * Rollen.
  *
  * „Admin" gilt **pro Hauskreis** und steht als `role` an der eigenen Person
- * (`GET /api/me`). Vorher war es eine Realm-Rolle im Token und galt überall —
- * was spätestens dann falsch ist, wenn sich jemand einen eigenen Hauskreis
- * anlegt und im alten Mitglied bleibt.
+ * (`GET /api/me`) — nicht als Realm-Rolle im Token, die überall gälte.
  */
 import type { Me } from '../api/types';
 
@@ -27,9 +25,8 @@ export const ADMIN_ONLY_ROUTES = [
   // trägt ihn gar nicht erst ein. Geschützt ist stattdessen die Wohnung eines
   // Menschen — die lässt sich nur über das eigene Profil auflösen.
   'DELETE /hauskreise/{id}/meetings/{meetingId}',
-  // Den ganzen Abend absagen ist etwas anderes, als selbst nicht zu kommen.
-  // Vorher stand der rote Knopf für jedes Mitglied da, und daneben nichts, was
-  // den Unterschied erklärt hätte.
+  // Den ganzen Abend absagen ist etwas anderes, als selbst nicht zu kommen —
+  // und deshalb Sache der Admins.
   'POST   /hauskreise/{id}/meetings/{meetingId}/cancel',
   'POST   /hauskreise/{id}/meetings/{meetingId}/uncancel',
   'POST   /hauskreise/{id}/meetings/generate',

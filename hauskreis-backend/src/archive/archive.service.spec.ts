@@ -13,9 +13,8 @@ function setup(
     .fn()
     .mockResolvedValue(dates.map((date) => ({ date: utc(date) })));
 
-  // Je Tabelle ein eigener Zähler. Vorher teilten sich Themen und Lieder einen
-  // mit `mockResolvedValueOnce`, und die Reihenfolge im `Promise.all` war damit
-  // Teil des Tests — eine vierte Zahl verschob alle anderen.
+  // Je Tabelle ein eigener Zähler, damit die Reihenfolge im `Promise.all` nicht
+  // Teil des Tests wird.
   const topicCount = jest
     .fn()
     .mockResolvedValueOnce(counts.topics)
@@ -89,8 +88,8 @@ describe('ArchiveService.summarise', () => {
   });
 
   it('zählt für die Kachel die Vereinigung, nicht die Summe', async () => {
-    // Ein eigenes, schon gehaltenes Thema steht in beiden Registern. Vorher
-    // zeigte die Kachel `topics` — über „Eigene (1)" stand dann „Themen (0)".
+    // Ein eigenes, schon gehaltenes Thema steht in beiden Registern und zählt
+    // trotzdem einmal.
     const { service, topicCount } = setup([]);
 
     await service.summarise('hk-1', 'niko');
@@ -108,8 +107,6 @@ describe('ArchiveService.summarise', () => {
     //
     // „Vorbei" heißt dabei den **ganzen** Zeitraum — dieselbe Bedingung, nach
     // der `…/meetings?scope=past` die Liste füllt, die diese Zahl überschreibt.
-    // Vorher stand hier `date < heute`, also der Anfangstag: Über einer Liste
-    // ohne die laufende Freizeit stand eine Zahl mit ihr.
     const where = findMany.mock.calls[0][0].where;
     expect(where.status).toEqual({ not: 'CANCELLED' });
     expect(where.OR).toEqual([

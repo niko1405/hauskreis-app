@@ -84,9 +84,8 @@ export const songLeadersResponseSchema = z.array(personRefSchema);
 export class SongPageResponseDto extends createZodDto(
   pageSchema(songWithFactsSchema),
 ) {}
-/// `GET`, `POST` und `PATCH` liefern das Lied mit seinen Zahlen. Sie fehlten
-/// hier einmal, weil sie nur die Liste brauchte; seit es eine Liedseite gibt,
-/// ist das einzelne Lied der Ort, an dem man nach ihnen sucht.
+/// `GET`, `POST` und `PATCH` liefern das Lied mit seinen Zahlen: Die Liedseite
+/// ist der Ort, an dem man nach ihnen sucht.
 export class SongResponseDto extends createZodDto(songDetailSchema) {}
 export class MeetingSongListResponseDto extends createZodDto(
   z.array(meetingSongResponseSchema),

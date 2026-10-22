@@ -17,11 +17,9 @@ import { GroupClockService } from '../meeting/group-clock.service';
  * (`assertArrived`). Deshalb hängt der zweite auch nicht am Datum: Nachtragen
  * ändert nichts daran, dass da niemand war.
  *
- * Bis hierher prüfte **keine** der drei Zuteilungen, ob die Person überhaupt
- * kommt: `resolveVenue`, `setLeaders` und `TopicService.update` sahen nur nach,
- * ob sie zum Hauskreis gehört. Man konnte also jemanden als Gastgeber
- * eintragen, der für genau diesen Dienstag abgesagt hatte — und niemand merkte
- * es bis zum Abend.
+ * Dass die Person zum Hauskreis gehört, reicht nicht: Sonst ließe sich jemand
+ * als Gastgeber eintragen, der für genau diesen Dienstag abgesagt hat — und
+ * niemand merkte es bis zum Abend.
  *
  * Zwei Quellen sagen „nicht da", und beide zählen:
  *

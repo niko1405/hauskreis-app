@@ -3,12 +3,11 @@
 /**
  * Wie oft die Gruppe bei wem sein möchte.
  *
- * Die Zahl stand vorher im Archiv, sichtbar für alle und dort auch änderbar.
- * Beides war falsch: sie ist keine Eigenschaft der Wohnung, sondern eine
- * Aussage der Gruppe über ihre Gastgeber:innen — „bei dir sind wir gern öfter"
- * liest sich neben dem eigenen Namen anders als in einer Verwaltungsliste. Und
- * eine 0,5 zu sehen, die man nicht ändern kann und deren Herkunft man nicht
- * kennt, wirft nur Fragen auf.
+ * Die Zahl ist keine Eigenschaft der Wohnung, sondern eine Aussage der Gruppe
+ * über ihre Gastgeber:innen — „bei dir sind wir gern öfter" liest sich neben
+ * dem eigenen Namen anders als in einer Verwaltungsliste. Und eine 0,5 zu
+ * sehen, die man nicht ändern kann und deren Herkunft man nicht kennt, wirft
+ * nur Fragen auf.
  *
  * Deshalb hier, hinter `RequireAdmin`. Der Server erzwingt das nicht —
  * `PATCH …/locations/:id` steht jedem Mitglied offen, weil Orte anzulegen und
@@ -40,9 +39,12 @@ export function HostWeightsAdmin() {
       <SectionTitle>Gewichtung</SectionTitle>
       <Card className="space-y-3">
         <p className="text-[11px] leading-relaxed text-stone-400">
-          Wie oft die Gruppe bei wem sein möchte, im Verhältnis zueinander.
+          Für das Vorschlagen von Hosts nach Ranking in der App wird die hier
+          angegebene Gewichtung verwendet. Dabei geben Zahlen an, wie oft die
+          Gruppe bei wem sein möchte, im Verhältnis zueinander.
           <strong className="font-semibold text-stone-500"> 1</strong> heißt so
-          oft wie alle anderen,
+          oft wie alle anderen, kleiner als 1 heißt seltener, größer als 1 heißt
+          öfter.
           <strong className="font-semibold text-stone-500"> 0</strong> heißt:
           nie vorschlagen. Wer sich zusammen eine Wohnung teilt, teilt sich auch
           die Zahl.

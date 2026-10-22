@@ -22,7 +22,7 @@ import { CRON_TIME_ZONE } from '../common/time/local-evening';
  * und wer eine Rolle hat, bekommt seine eigene Erinnerung. Ein Geburtstag oder
  * eine Freizeit sind das Gegenteil — sie fallen aus dem Rhythmus, betreffen
  * alle gleichermaßen und gehen deshalb genau dann unter, wenn niemand
- * ausdrücklich Bescheid sagt. Das war bisher WhatsApp.
+ * ausdrücklich Bescheid sagt.
  *
  * Zwei Nachrichten und nicht eine, weil es zwei Fragen sind: „gibt es etwas
  * Neues" beantwortet man einmal beim Eintragen, „ich muss daran denken"

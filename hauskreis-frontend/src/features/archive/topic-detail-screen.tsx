@@ -3,14 +3,12 @@
 /**
  * Ein Thema und seine Einheiten.
  *
- * Die Seite, die es vorher nicht geben konnte: ein Thema war ein Titel und ein
- * Status, alles Inhaltliche hing an den Terminen. Jetzt trägt es einen Bogen
- * über alle Abende (`summaryText`) und darunter, was an jedem einzelnen war.
+ * Ein Thema trägt einen Bogen über alle Abende (`summaryText`) und darunter,
+ * was an jedem einzelnen war.
  *
  * Sie ist außerdem der Ort, an dem man **vorarbeitet**: eine Einheit anlegen,
- * ohne dass ein Dienstag feststeht. Vorher ging nur der umgekehrte Weg — erst
- * einen Termin belegen, dann dort schreiben —, und wer im Zug eine Idee hatte,
- * hatte keinen Platz dafür.
+ * ohne dass ein Dienstag feststeht — wer im Zug eine Idee hat, hat dafür einen
+ * Platz.
  *
  * **Was hier fehlt, fehlt absichtlich.** Unfertige Einheiten liefert der Server
  * nur an Owner und Mitarbeitende aus. Für alle anderen gibt es sie nicht, und
@@ -20,8 +18,8 @@
  * Thema gehört, hat unten statt der Tab-Leiste „Bearbeiten" (`EditBar`). Im
  * Bearbeitungsmodus stehen die Leute, das Anlegen und Holen von Einheiten und
  * das Löschen; Titel, Zusammenfassung und Status stehen hinter einem
- * „Bearbeiten" oben rechts in **einem** Sheet. Sie hatten einmal je einen
- * Stift, und drei Felder derselben Sache waren drei Orte zum Speichern.
+ * „Bearbeiten" oben rechts in **einem** Sheet — drei Felder derselben Sache,
+ * ein Ort zum Speichern.
  *
  * **Ein Thema ohne Einheit fragt nach der ersten**, auch ohne
  * Bearbeitungsmodus: Dort ist sie das Einzige, was zu tun ist. Ab der ersten
@@ -402,10 +400,9 @@ function TopicEditSheet({
  * stehen unten an ihrem Abend und dürfen genau ihn schreiben. Wer hier steht,
  * darf **jedes** dieser Felder ändern und neue Einheiten anlegen.
  *
- * Der Unterschied ist neu und der Grund für den Knopf. Vorher rutschte jede:r,
- * der einmal einen Abend hielt, automatisch hier herein — Hoheit über ein Thema,
- * das über Monate läuft, als Nebenwirkung einer Zuteilung. Ab jetzt ist es eine
- * Entscheidung, und die trifft der Owner (`mayDelete` trägt dieselbe
+ * Wer einmal einen Abend hält, kommt nicht automatisch hier herein — Hoheit
+ * über ein Thema, das über Monate läuft, ist keine Nebenwirkung einer
+ * Zuteilung, sondern eine Entscheidung, und die trifft der Owner (`mayDelete` trägt dieselbe
  * Bedingung).
  *
  * Wer entfernt wird, verliert das Bearbeitungsrecht am Thema — bleibt aber
@@ -512,12 +509,7 @@ function People({ topic, editing }: { topic: Topic; editing: boolean }) {
 /**
  * Die Einheiten als Zeitstrahl.
  *
- * Vorher war jede eine Karte mit drei Feldern darin. Das war bequem — man
- * konnte alles an einem Ort ändern — und machte die Liste als Liste unbrauchbar:
- * Bei vier Abenden musste man scrollen, um zu sehen, dass es vier sind, und die
- * Reihenfolge, die ein Thema ja ausmacht, ging zwischen den Feldern unter.
- *
- * Jetzt trägt jede Zeile nur, was man beim Überfliegen braucht, und der Inhalt
+ * Jede Zeile trägt nur, was man beim Überfliegen braucht — und der Inhalt
  * steht auf ihrer eigenen Seite. Die Nummern an der Linie sind der Punkt: Sie
  * sagen, dass hier etwas aufeinander folgt.
  */

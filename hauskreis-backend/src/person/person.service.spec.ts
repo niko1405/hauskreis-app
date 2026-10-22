@@ -78,7 +78,7 @@ function setup() {
   });
   // Wer entfernt wird, geht denselben Weg wie jemand, der selbst geht. Was
   // dabei passiert, prüft `membership.service.spec.ts`; hier zählt, dass es
-  // aufgerufen wird — und dass die Zeile nicht mehr hart gelöscht wird.
+  // aufgerufen wird — und dass die Zeile nicht hart gelöscht wird.
   const leave = jest
     .fn()
     .mockResolvedValue({ hauskreisDeleted: false, successorPersonId: null });
@@ -210,8 +210,8 @@ describe('PersonService.resolveForUser', () => {
 
   /**
    * Der Augenblick, in dem wirklich jemand dazukommt — und damit der, in dem
-   * die Gebetsrotation nachzieht. Vorher passierte das beim Einladen, also für
-   * jemanden, der die App vielleicht nie öffnet.
+   * die Gebetsrotation nachzieht. Nicht beim Einladen: Wer eingeladen ist,
+   * öffnet die App vielleicht nie.
    */
   it('holt die Person bei der ersten Anmeldung in die Gebetsrotation', async () => {
     const { service, person, replanAfterMembershipChange } = setup();
@@ -304,11 +304,9 @@ describe('PersonService.invite', () => {
   /**
    * Eine Einladung ist eine offene Frage, keine Zusage.
    *
-   * Hier stand das Gegenteil: Wer eingeladen war, kam sofort in die Rotation,
-   * damit er nicht bis zu zehn Wochen auf seine ersten Buddys wartet. Das
-   * Warten war ein echtes Problem, der Schluss trotzdem falsch — ein Name, dem
-   * niemand schreiben kann, ließ sein Gegenüber zwei Wochen allein beten.
-   * Nachgezogen wird jetzt beim **Annehmen** (`resolveForUser`,
+   * Wer eingeladen ist, kommt nicht sofort in die Rotation: Ein Name, dem
+   * niemand schreiben kann, ließe sein Gegenüber zwei Wochen allein beten.
+   * Nachgezogen wird beim **Annehmen** (`resolveForUser`,
    * `MembershipService.acceptInvitation`).
    */
   it('lässt die Gebetsrotation beim Einladen in Ruhe', async () => {
@@ -521,8 +519,8 @@ describe('PersonService und der Nutzername', () => {
       roles: [],
     });
 
-    // Anzeigename mit vorbelegt: bis hierher stand dort, was jemand anders beim
-    // Einladen eingetippt hat.
+    // Anzeigename mit vorbelegt — aus dem selbst gewählten Nutzernamen, nicht
+    // aus dem, was jemand anders beim Einladen eingetippt hätte.
     expect(person.update).toHaveBeenCalledWith({
       where: { id: 'p3' },
       data: {
@@ -649,11 +647,10 @@ describe('PersonService.remove', () => {
   /**
    * Der wichtigste Test dieser Datei.
    *
-   * Hier stand einmal ein `person.delete`, und daran hängen fünf Tabellen mit
-   * `onDelete: Cascade` — Anwesenheiten, Musik- und Themen-Zuständigkeiten,
-   * gehaltene Einheiten, Actionstep-Haken. Ein Admin, der jemanden entfernte,
-   * löschte damit dessen ganze Spur im Archiv. Genau das verhindert
-   * `deleteAccount` an seiner Stelle seit jeher; hier fehlte es.
+   * Kein `person.delete`: Daran hängen fünf Tabellen mit `onDelete: Cascade`
+   * — Anwesenheiten, Musik- und Themen-Zuständigkeiten, gehaltene Einheiten,
+   * Actionstep-Haken. Ein Admin, der jemanden entfernt, löschte damit dessen
+   * ganze Spur im Archiv.
    */
   it('begleitet hinaus, statt die Zeile zu löschen', async () => {
     const { service, person, keycloakAdmin, leave } = setup();
@@ -843,11 +840,10 @@ describe('PersonService.deleteOrphanedAccount', () => {
 /**
  * Wer nicht mehr dabei ist, gehört in keine Liste, aus der jemand auswählt.
  *
- * Hier stand gar kein Filter, und das fiel an zwei Stellen auf: Ein
- * ausgetretenes Mitglied stand unter der Rangliste in jedem Zuteilungs-Sheet
- * und in der Verwaltung unter „Personen" — nach einer Konto-Löschung als
- * „Ehemaliges Mitglied". `acceptedAt` half dagegen nicht, das ist gesetzt: Die
- * Person war ja einmal da.
+ * Ohne Filter stünde ein ausgetretenes Mitglied unter der Rangliste in jedem
+ * Zuteilungs-Sheet und in der Verwaltung unter „Personen" — nach einer
+ * Konto-Löschung als „Ehemaliges Mitglied". `acceptedAt` hilft dagegen nicht,
+ * das ist gesetzt: Die Person war ja einmal da.
  */
 describe('PersonService.findAll', () => {
   it('fragt nur nach denen, die dabei sind', async () => {

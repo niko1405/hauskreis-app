@@ -4,26 +4,20 @@
  * Die App über sich selbst: was neu ist, wie sie funktioniert, und wer sie
  * gebaut hat.
  *
- * Vier Zeilen, die nirgends sonst hingehören — dazu das **Konto**, das hier
- * ganz oben steht, seit es einen eigenen Bildschirm hat. „Was ist neu" trägt denselben
- * Punkt wie das Profil-Symbol in der Leiste, damit der Weg dorthin nicht in der
- * Karte endet, ohne zu sagen, warum man hier ist. „Hilfe" ist der eigentliche
- * Zuwachs: Das Baukasten-System, die Vorschlagslogik und das Themen-System
- * sind ohne Erklärung nicht zu erraten, und bisher stand sie nirgends.
+ * Vier Zeilen, die nirgends sonst hingehören — dazu das **Konto** ganz oben.
+ * „Was ist neu" trägt denselben Punkt wie das Profil-Symbol in der Leiste,
+ * damit der Weg dorthin nicht in der Karte endet, ohne zu sagen, warum man
+ * hier ist.
  *
  * **„Hilfe" trägt beim allerersten Start einen eigenen Punkt** — nicht weil
  * dort etwas neu wäre, sondern weil dort steht, was jetzt zu tun ist
  * ([[use-unread-help]]). Deshalb sagt in dem Fall auch der Untertitel etwas
  * anderes: Ein Punkt ohne Grund ist eine Frage, keine Antwort.
  *
- * Hier stand einmal auch, ob die App offline bereit ist. Der Hinweis war ein
- * Werkzeug für einen bestimmten Fehler — er hat ihn gezeigt, der Fehler ist
- * weg, und eine Zeile, die immer dasselbe sagt, liest bald niemand mehr.
- *
  * **Ganz unten steht „Unterstützen"**, unter „Gebaut von Niko" und nicht davor:
  * Das ist die Reihenfolge, in der man es liest — erst wer, dann warum. Dass
  * hinter der App ein Server, eine Datenbank und ein Keycloak laufen, die
- * monatlich etwas kosten, stand bisher nirgends.
+ * monatlich etwas kosten, steht dort.
  */
 import {
   ChevronRight,
@@ -88,9 +82,7 @@ export function AppCard() {
       <Card className="space-y-4">
         {/* Das Konto steht als **erste** Zeile: Von allem hier ist es die
             einzige, hinter der etwas zu tun ist — Datenschutz, Impressum und
-            „Was ist neu" liest man. Es stand einmal als eigene Karte im Profil,
-            zwischen lauter Einstellungen zum Anhaken; Kontosachen fasst man
-            aber zweimal im Jahr an. */}
+            „Was ist neu" liest man. */}
         <LinkRow
           href="/konto"
           icon={<UserCog size={16} />}

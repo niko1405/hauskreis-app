@@ -22,7 +22,7 @@ type CreateManyArgs = {
   skipDuplicates?: boolean;
 };
 
-/** Dienstag, 18 Uhr, jede Woche — die Vorgabe, mit der die Gruppe bisher lebt. */
+/** Dienstag, 18 Uhr, jede Woche — die Vorgabe. */
 const TUESDAY_AT_SIX = {
   autoGenerate: true,
   weekday: 2,
@@ -101,8 +101,8 @@ describe('MeetingGeneratorService.generateFor', () => {
   });
 
   /**
-   * Woraus ein Abend besteht, sagen seit dem Wegfall der Terminart nur noch
-   * die Bausteine — der letzte im Monat bekommt Testimony statt Thema.
+   * Woraus ein Abend besteht, sagen die Bausteine — der letzte im Monat
+   * bekommt Testimony statt Thema.
    */
   it('gibt dem letzten Dienstag im Monat ein Testimony statt eines Themas', async () => {
     const { service, createMany } = setup();
@@ -295,8 +295,8 @@ describe('MeetingGeneratorService.generateFor', () => {
   });
 
   it('folgt dem eingestellten Wochentag', async () => {
-    // Donnerstags statt dienstags — der Wochentag stand einmal als Konstante
-    // im Terminplaner und war damit eine Aussage über *eine* Gruppe.
+    // Donnerstags statt dienstags — der Wochentag kommt aus der Einstellung
+    // der Gruppe.
     const { service, createMany } = setup([], {
       weekday: 4,
       startMinutes: 1080,
@@ -342,7 +342,7 @@ describe('MeetingGeneratorService.closePastMeetings', () => {
       new MeetingGeneratorService(
         {
           meeting: { updateMany },
-          // Der Lauf geht Gruppe für Gruppe, seit jede ihre eigene Zeitzone
+          // Der Lauf geht Gruppe für Gruppe, weil jede ihre eigene Zeitzone
           // hat — „gestern" fängt anderswo früher an.
           hauskreis: {
             findMany: jest.fn().mockResolvedValue([{ id: 'hk-1' }]),

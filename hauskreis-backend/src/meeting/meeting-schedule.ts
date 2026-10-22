@@ -4,9 +4,8 @@
  * Everything works on UTC midnight so a calendar date never drifts across a
  * timezone boundary — Prisma stores these as `@db.Date`, which has no time part.
  *
- * **Ein gespeicherter Tag und der heutige Tag sind zwei verschiedene Fragen**,
- * und lange beantwortete `toUtcDate` beide. Die erste beantwortet sie richtig;
- * für die zweite gibt es jetzt `currentDay`.
+ * **Ein gespeicherter Tag und der heutige Tag sind zwei verschiedene Fragen**:
+ * die erste beantwortet `toUtcDate`, die zweite `currentDay`.
  */
 import { zoneOffsetMinutes } from '../common/time/local-evening';
 
@@ -22,15 +21,12 @@ export function toUtcDate(date: Date): Date {
 /**
  * Welchen Tag haben wir — in der Zone der Gruppe, als UTC-Mitternacht.
  *
- * `toUtcDate(new Date())` beantwortete das bisher, und zwar falsch: es las die
- * UTC-Felder eines *Zeitpunkts*. Um halb eins nachts ist in UTC noch gestern,
- * also galt der Termin von gestern noch als kommend, während die App ihn schon
- * als „Vorbei" auswies. Dasselbe Fenster verbot jede Nacht zwischen null und
- * zwei das Abhaken der Lieder vom Vorabend.
+ * Nicht `toUtcDate(new Date())`: das liest die UTC-Felder eines *Zeitpunkts*.
+ * Um halb eins nachts ist in UTC noch gestern, und der Termin von gestern
+ * gälte noch als kommend, während die App ihn schon als „Vorbei" zeigt.
  *
- * Die Zone ist ein **Pflichtargument**. Ein Vorgabewert wäre genau die Falle,
- * die hier zugeht: eine vergessene Stelle rechnete still in Berlin weiter, und
- * niemand merkte es.
+ * Die Zone ist ein **Pflichtargument**. Mit einem Vorgabewert rechnete eine
+ * vergessene Stelle still in Berlin weiter, und niemand merkte es.
  */
 export function currentDay(zone: string, now: Date = new Date()): Date {
   return toUtcDate(
@@ -48,10 +44,8 @@ export function addDays(date: Date, days: number): Date {
  * Der erste `weekday` **echt nach** `from`. Fällt `from` selbst darauf, kommt
  * die Folgewoche — so entsteht nie ein Termin für einen Tag, der schon läuft.
  *
- * `weekday` zählt wie `Date.getUTCDay()`: 0 = Sonntag … 6 = Samstag. Er stand
- * hier als `const TUESDAY = 2` und im Namen der Funktion, was für die eine
- * Gruppe stimmte, für die das geschrieben wurde. Jetzt kommt er aus
- * `MeetingScheduleConfig`.
+ * `weekday` zählt wie `Date.getUTCDay()`: 0 = Sonntag … 6 = Samstag, und kommt
+ * aus `MeetingScheduleConfig`.
  */
 export function nextWeekdayAfter(from: Date, weekday: number): Date {
   const base = toUtcDate(from);
@@ -81,12 +75,11 @@ export interface MeetingDateOptions {
 /**
  * Die nächsten `count` Termine des Rhythmus, alle nach `from`.
  *
- * **Warum es einen Anker braucht.** Solange jede Woche ein Termin war, genügte
- * „der nächste Dienstag, dann immer sieben Tage weiter" — jeder Lauf kam auf
- * dieselbe Reihe. Bei vierzehn Tagen nicht mehr: Der Lauf am Mittwoch nimmt
- * den Dienstag darauf, der Lauf eine Woche später den Dienstag danach, und
- * beide Reihen liegen um sieben Tage versetzt. Nach zwei Nächten stünde wieder
- * jede Woche ein Termin — mit einer Einstellung, die „alle zwei Wochen" sagt.
+ * **Warum es einen Anker braucht.** Bei jeder Woche genügte „der nächste
+ * Dienstag, dann immer sieben Tage weiter". Bei vierzehn Tagen nicht: Der Lauf
+ * am Mittwoch nähme den Dienstag darauf, der Lauf eine Woche später den
+ * Dienstag danach, und beide Reihen lägen um sieben Tage versetzt — nach zwei
+ * Nächten stünde wieder jede Woche ein Termin.
  *
  * Der Takt muss also aus dem Kalender kommen und nicht aus dem Zufall, an
  * welchem Tag der Lauf startet. Passt der Anker nicht zum eingestellten
@@ -122,12 +115,10 @@ export function upcomingMeetingDates(options: MeetingDateOptions): Date[] {
  * Der erste Termin der Reihe, der echt hinter `after` liegt — in **beide**
  * Richtungen gesucht.
  *
- * Der Anker gibt nur die Phase vor, nicht den Anfang. Hier lief einmal eine
- * Schleife, die nur vorwärts zählen konnte, und das ging am Normalfall vorbei:
- * Der späteste erzeugte Abend liegt im laufenden Betrieb **vorne**, sieben
- * Termine weit. Die Reihe begann dann dort statt bei heute, jeder Lauf legte
- * sechs Termine dahinter an, und nach einem Monat standen zweihundert im
- * Kalender.
+ * Der Anker gibt nur die Phase vor, nicht den Anfang. Der späteste erzeugte
+ * Abend liegt im laufenden Betrieb **vorne**, sieben Termine weit; nur vorwärts
+ * gezählt begänne die Reihe dort statt bei heute, und jeder Lauf legte sechs
+ * Termine dahinter an.
  */
 function weiterBis(anchor: Date, after: Date, step: number): Date {
   const days = Math.round((after.getTime() - anchor.getTime()) / DAY_MS);
@@ -138,13 +129,8 @@ function weiterBis(anchor: Date, after: Date, step: number): Date {
  * True when no further meeting falls in the same month — i.e. this is the last
  * regular evening before the month ends, which is the Lobpreis/Gebet slot.
  *
- * War schon immer wochentagsunabhängig gerechnet („+7 Tage, anderer Monat?"),
- * nur der Name behauptete etwas anderes.
- *
- * Der Abstand gehört seit dem einstellbaren Rhythmus dazu: „danach kommt keiner
- * mehr in diesem Monat" ist bei vierzehn Tagen ein anderer Abend als bei
- * sieben. Mit der festen Sieben hätte die Regel bei jedem anderen Abstand
- * schlicht den falschen Termin markiert.
+ * Wochentagsunabhängig, aber mit dem Abstand: „danach kommt keiner mehr in
+ * diesem Monat" ist bei vierzehn Tagen ein anderer Abend als bei sieben.
  */
 export function isLastOfMonth(date: Date, everyWeeks = 1): boolean {
   const base = toUtcDate(date);
@@ -195,13 +181,12 @@ export function lastDay(span: MeetingSpan): Date {
  * Liegt dieser Termin hinter uns — **ganz**, nicht nur angefangen?
  *
  * Die Fassung von `isPast` für einen Termin statt für einen Tag, und der
- * Unterschied ist eine Freizeit von Freitag bis Sonntag: Am Samstag war ihr
- * `date` vorbei, sie selbst aber nicht. Die Listen-Abfragen wussten das seit
- * jeher (`finishedBefore` unten prüft dieselbe Bedingung); die punktuellen
- * Vergleiche lasen dagegen nur `meeting.date` und erklärten den zweiten Tag
- * einer laufenden Freizeit zur Vergangenheit — Lieder waren plötzlich für alle
- * abhakbar, Rollen ließen sich nicht mehr freigeben, der Inhalt eines Themas
- * stand offen.
+ * Unterschied ist eine Freizeit von Freitag bis Sonntag: Am Samstag ist ihr
+ * `date` vorbei, sie selbst aber nicht (`finishedBefore` unten prüft dieselbe
+ * Bedingung für Listen). Wer nur `meeting.date` liest, erklärt den zweiten Tag
+ * einer laufenden Freizeit zur Vergangenheit — Lieder wären für alle abhakbar,
+ * Rollen ließen sich nicht mehr freigeben, der Inhalt eines Themas stünde
+ * offen.
  *
  * Zwei Funktionen und nicht eine mit optionalem Feld: `isPast` beantwortet eine
  * Frage über einen **Kalendertag** (den es auch ohne Termin gibt, etwa in

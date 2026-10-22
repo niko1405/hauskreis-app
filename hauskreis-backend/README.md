@@ -80,10 +80,10 @@ zwei Logzeilen sagen, dass es passiert ist. Exit-Code 0, weil das Beenden
 beabsichtigt war.
 
 Bewusst eigene Handler statt `app.enableShutdownHooks()`: das registriert
-dieselben Signale, nur ohne Ausgabe und ohne Zeitlimit. Man sah nicht, ob die
-Verbindungen wirklich zu waren — und hing `close()` an einer offenen
-Keep-Alive-Verbindung, blieb der Prozess still stehen. Jetzt greift nach
-10 Sekunden ein Zeitlimit, und ein zweites Strg+C beendet sofort.
+dieselben Signale, nur ohne Ausgabe und ohne Zeitlimit — man sähe nicht, ob die
+Verbindungen wirklich zu sind, und hinge `close()` an einer offenen
+Keep-Alive-Verbindung, bliebe der Prozess still stehen. Nach 10 Sekunden greift
+ein Zeitlimit, und ein zweites Strg+C beendet sofort.
 
 #### `[ELIFECYCLE] Command failed.` nach Strg+C
 
@@ -131,7 +131,7 @@ curl -s -X POST http://localhost:8080/realms/hauskreis/protocol/openid-connect/t
 ## Die API beschrieben: OpenAPI
 
 ```bash
-pnpm openapi        # -> openapi.json, 73 Operationen auf 47 Pfaden
+pnpm openapi        # -> openapi.json
 pnpm start:dev      # -> http://localhost:3000/api/docs zum Durchklicken
 ```
 
@@ -321,8 +321,16 @@ hängen dort, weil sie genau da gebraucht werden, wo ohnehin schon der Name steh
 — in der Navigation des Frontends und auf dem Startbildschirm. Ein eigener
 Endpunkt wäre ein zweiter Ladezustand für ein Ja/Nein.
 
-Weil `hauskreis.version` bei einer Config-Änderung nicht springt, entwerten die
-beiden Admin-Mutationen im Frontend `qk.hauskreise` mit.
+Kippt einer der beiden Schalter, springt `hauskreis.version` in derselben
+Anfrage mit (`touchHauskreis` in
+[`hauskreis-version.ts`](src/hauskreis/hauskreis-version.ts)) — sonst bekäme
+`GET /hauskreise/:id` ein `304` und behielte die alten `features`. Die
+Admin-Mutationen im Frontend entwerten außerdem die Hauskreis-Liste, „Heute" und
+die Benachrichtigungsarten.
+
+Die **Home-Antwort** trägt `weeklyActionstep` selbst: `openActionstep: null`
+hieße sonst zweierlei — „diese Woche keiner" (dafür steht auf „Heute" ein
+Platzhalter) und „abgeschaltet" (dann gibt es die Karte gar nicht).
 
 ### Ein Wechsel ist ein Umzug
 
@@ -362,11 +370,10 @@ den man verlassen will. Stattdessen nimmt `leave` ein optionales
 
 ### Was ein Austritt aufräumt
 
-Bis hierher setzte `leave` nur drei Spalten. **Alles andere blieb stehen**: die
-Person hostete weiter am 26. August, stand in der Planungstabelle, war für ein
-laufendes Thema eingetragen und hatte für kommende Abende zugesagt.
-
-Geräumt wird jetzt, für alle Termine ab heute:
+Drei Spalten zu setzen reicht nicht — sonst hostete die Person weiter am
+kommenden Dienstag, stünde in der Planungstabelle, wäre für ein laufendes Thema
+eingetragen und hätte für kommende Abende zugesagt. Geräumt wird deshalb, für
+alle Termine ab heute:
 
 | Was                        | Warum                                                                       |
 | -------------------------- | --------------------------------------------------------------------------- |
@@ -499,7 +506,7 @@ Antwort stehen aber Dinge, die in eigenen Tabellen liegen: die Zuteilungen, die
 gewählte Einheit, die Anwesenheit, die Actionstep-Haken. Wer eine davon ändert,
 ohne die Version anzuheben, hinterlässt einen ETag, der den Körper nicht mehr
 beschreibt — der Server antwortet `304`, und der Bildschirm zeigt weiter den
-alten Stand. Genau so sah es aus: „aktualisiert sich erst nach einem Reload".
+alten Stand.
 
 Dafür gibt es [`touchMeeting`](src/meeting/meeting-version.ts) und
 [`touchTopic`](src/topic/topic-version.ts) — zwei Zeilen, aufgerufen im selben
@@ -522,18 +529,14 @@ Mal übrig blieb. Nicht nur „Thema ändert sich → Termin altern lassen":
 | Thema gelöscht          | seine bisherigen Termine                | Die stehen danach ohne Thema da            |
 | Anwesenheit geschrieben | jeder betroffene Termin                 | Sie steht in seiner Antwort                |
 
-**Auch die Läufe, die niemand angestoßen hat.** Zwei schrieben Anwesenheit ohne
-den Griff: das Auffüllen der Auto-Zusagen (`AutoAttendanceService`) und der
-Abwesenheits-Abgleich (`AbsenceSyncService`). Beide fassen viele Abende auf
-einmal an — dafür gibt es
-[`touchMeetings`](src/meeting/meeting-version.ts) in der Mehrzahl. Zu bemerken
-war es als „mal ist die Person dabei, mal nicht": Die **Terminliste** zeigte die
-frische Zusage, weil ihr ETag ein Inhalts-Hash von Express ist, die
-**Detailseite** antwortete `304` und blieb beim alten Stand — und welcher der
-beiden Bildschirme recht zu haben schien, hing daran, welcher gerade neu geladen
-hatte. Damit `touchMeetings` weiß, _welche_ Abende, sucht `apply` die fehlenden
-Zeilen jetzt selbst heraus, statt sie von `skipDuplicates` verschlucken zu
-lassen.
+**Auch die Läufe, die niemand angestoßen hat**: das Auffüllen der Auto-Zusagen
+(`AutoAttendanceService`) und der Abwesenheits-Abgleich (`AbsenceSyncService`).
+Beide fassen viele Abende auf einmal an — dafür gibt es
+[`touchMeetings`](src/meeting/meeting-version.ts) in der Mehrzahl. Sonst zeigte
+die **Terminliste** die frische Zusage (ihr ETag ist ein Inhalts-Hash von
+Express), während die **Detailseite** `304` bekäme und beim alten Stand bliebe.
+Damit `touchMeetings` weiß, _welche_ Abende, sucht `apply` die fehlenden Zeilen
+selbst heraus, statt sie von `skipDuplicates` verschlucken zu lassen.
 
 Der Weg dahin ist immer derselbe: **wer ein Feld ändert, das in der Antwort
 einer anderen Ressource steht, hebt deren Version mit an.** Ein Wächter je Pfad
@@ -639,10 +642,9 @@ Log-Eintrag pro (Person, Typ, Termin) und überspringt alles, was dort schon
 steht. Der Eintrag entsteht **vor** dem Versand: stürzt der Prozess mitten drin
 ab, kostet das eine ausgefallene Erinnerung statt einer täglichen Wiederholung.
 
-Dieselbe Zeile trägt inzwischen auch die Box hinter der Glocke — sie wusste
-lange nur, _dass_ etwas rausging, nicht _was_. Mit `title`, `body` und `url` ist
-sie der Eintrag selbst; eine zweite Tabelle dafür wäre eine zweite Wahrheit über
-dasselbe Ereignis gewesen.
+Dieselbe Zeile trägt auch die Box hinter der Glocke: Mit `title`, `body` und
+`url` ist sie der Eintrag selbst; eine zweite Tabelle dafür wäre eine zweite
+Wahrheit über dasselbe Ereignis.
 
 Damit mussten **Eintrag und Zustellung auseinander**, und das ist die eine
 Stelle, an der man beim Lesen aufpassen muss:
@@ -677,12 +679,10 @@ Push-Payload mit.
 Die Ziel-Pfade stehen an **einer** Stelle:
 [`app-paths.ts`](src/notification/app-paths.ts).
 
-Vorher waren es Zeichenketten in sechs Erinnerungsdiensten, und alle sechs
-zeigten auf `/meetings/:id`. Diese Route gibt es im Frontend nicht — sie heißt
-`/termine/:id`. Jede Push-Benachrichtigung dieser App führte also auf eine
-404-Seite, und die Gebetsbuddy-Nachricht mit `/prayer-buddies` (statt `/gebet`)
-genauso. So etwas fällt niemandem auf, der Benachrichtigungen nur verschickt
-und nie eine antippt.
+Zeichenketten in jedem Erinnerungsdienst liefen auseinander, sobald sich eine
+Route im Frontend ändert — und eine Push-Benachrichtigung, die auf eine 404-Seite
+führt, fällt niemandem auf, der Benachrichtigungen nur verschickt und nie eine
+antippt.
 
 Es sind Pfade der **PWA**, nicht der API. Wer im Frontend eine Route umbenennt,
 findet mit einer Suche nach dieser Datei alles, was mitzieht.
@@ -766,9 +766,9 @@ die Woche schon vorbei ist.
 
 ### `ROLE_ASSIGNED`: ein Schalter für vier Rollen
 
-Man erfuhr von einer Zuteilung bisher erst durch die Erinnerung drei bis fünf
-Tage vorher. Bis dahin stand sie nur in der App — und wer nicht hineinsieht,
-erfährt sie nicht. Genau das ist das Problem aus CLAUDE.md §2 („geht unter,
+Ohne diese Nachricht erführe man von einer Zuteilung erst durch die Erinnerung
+drei bis fünf Tage vorher. Bis dahin stünde sie nur in der App — und wer nicht
+hineinsieht, erfährt sie nicht. Genau das ist das Problem aus CLAUDE.md §2 („geht unter,
 niemand hat den Überblick").
 
 Ein Eintrag für Gastgeber, Thema, Musik und Testimony zusammen, nicht vier. Die
@@ -789,10 +789,8 @@ bekäme nur eine Nachricht. Der Termin allein ist nicht unterscheidbar genug,
 dasselbe Muster wie schon bei `related_person_id` (zwei Absagen für denselben
 Abend).
 
-Der Enum dazu, `AssignmentRole`, ist bei der Gelegenheit aus
-`role-assignment.types.ts` in die Datenbank gewandert. Er stand dort als
-TypeScript-Objekt — zwei Aufschriebe derselben drei Werte, die auseinanderlaufen
-können; die Vorschlagslogik leitet ihre Fassung jetzt davon ab.
+Der Enum dazu, `AssignmentRole`, steht in der Datenbank; die Vorschlagslogik
+leitet ihre Fassung davon ab, statt sie ein zweites Mal aufzuschreiben.
 
 Drei Regeln teilen sich alle Aufrufer, deshalb liegen sie in
 [`role-assignment-notifier.service.ts`](src/notification/role-assignment-notifier.service.ts)
@@ -1192,18 +1190,15 @@ Verifiziert mit einem korrekt signierten Token eines fremden Realm-Clients —
 | `hauskreis-backend` | confidential, Service Account | Admin-API (Einladungen) |
 
 `directAccessGrantsEnabled` bleibt am Backend-Client für lokale Skripte und die
-Bruno-Collection — **in der Produktion ist es aus**. Das stand hier lange als
-Vorsatz und war im Skript nicht umgesetzt: `--production` legte den Client
-trotzdem mit `true` an. Jetzt richtet sich der Wert nach dem Modus, und zwar auch
-an einem **bestehenden** Client — wer lokal entwickelt und später `--production`
-auf denselben Realm laufen lässt, hätte den Flow sonst weiter offen, und niemand
-sähe es, weil das Skript „already exists" meldet.
+Bruno-Collection — **in der Produktion ist es aus**. Der Wert richtet sich nach
+dem Modus, und zwar auch an einem **bestehenden** Client — wer lokal entwickelt
+und später `--production` auf denselben Realm laufen lässt, hätte den Flow sonst
+weiter offen, und niemand sähe es, weil das Skript „already exists" meldet.
 
 Aus demselben Grund zieht `--production` auch `redirectUris` und `webOrigins` am
 bestehenden Frontend-Client nach. Beim Umzug von `localhost:3001` auf die echte
-Domain lief das Skript vorher durch, meldete Erfolg und änderte nichts — der
-Fehler kam erst beim ersten Anmeldeversuch als `invalid_redirect_uri`, und zwar
-bei allen neun gleichzeitig.
+Domain liefe das Skript sonst durch, meldete Erfolg und änderte nichts — der
+Fehler käme erst beim ersten Anmeldeversuch als `invalid_redirect_uri`.
 
 **Brute-Force-Erkennung** ist am Realm eingeschaltet (10 Versuche, danach
 wachsende Wartezeit bis 15 Minuten, kein dauerhaftes Aussperren — sonst genügt
@@ -1245,10 +1240,7 @@ Lieder.
 
 **Der ganze Rhythmus kommt aus `MeetingScheduleConfig`**
 (`GET`/`PUT …/meetings/config`), Vorgabe: Termine anlegen, Dienstag, jede Woche,
-18 Uhr, `Europe/Berlin`, Lobpreisabende an. Wochentag, Uhrzeit und Zone standen
-vorher als Konstante im Code — `TUESDAY = 2`, `EVENING_HOUR = 18`,
-`TIME_ZONE = 'Europe/Berlin'` —, was für die eine Gruppe stimmte, für die es
-geschrieben wurde.
+18 Uhr, `Europe/Berlin`, Lobpreisabende an.
 
 Drei davon sind Schalter:
 
@@ -1264,8 +1256,8 @@ Drei davon sind Schalter:
 nächste passende Wochentag, dann immer sieben Tage weiter. Solange jede Woche
 ein Termin war, kam jeder Lauf auf dieselbe Reihe.
 
-Bei vierzehn Tagen nicht mehr. Der Lauf am Mittwoch nimmt den Dienstag darauf,
-der Lauf eine Woche später den Dienstag danach — zwei um sieben Tage versetzte
+Bei vierzehn Tagen nicht: Der Lauf am Mittwoch nähme den Dienstag darauf, der
+Lauf eine Woche später den Dienstag danach — zwei um sieben Tage versetzte
 Reihen, und nach zwei Nächten stünde wieder jede Woche ein Termin, unter einer
 Einstellung, die „alle zwei Wochen" sagt.
 
@@ -1346,13 +1338,11 @@ einen Vergleich braucht, nimmt `clock.isPast(hauskreisId, meeting)`.
 
 **„Vorbei" heißt den ganzen Zeitraum.** `clock.isPast` nimmt einen
 `MeetingSpan` (`{ date, endDate }`) und nicht ein einzelnes Datum: Eine Freizeit
-von Freitag bis Sonntag galt am Samstag als vergangen, obwohl sie lief — Lieder
-waren für alle abhakbar, Rollen ließen sich nicht mehr freigeben, der Inhalt
-eines Themas stand offen. Neu ist die Regel nicht: `finishedBefore` und
-`notFinishedBefore` in [`meeting-schedule.ts`](src/meeting/meeting-schedule.ts)
-rechnen seit jeher so, und die Archiv-Spec schreibt sie hin. Es waren die
-**punktuellen** Vergleiche, die den Anfangstag lasen — zwei Wahrheiten über
-dasselbe Wort. Wer einen Termin lädt, nimmt deshalb `endDate` mit ins `select`.
+von Freitag bis Sonntag läuft am Samstag noch — sonst wären Lieder für alle
+abhakbar, Rollen ließen sich nicht mehr freigeben, der Inhalt eines Themas stünde
+offen. `finishedBefore` und `notFinishedBefore` in
+[`meeting-schedule.ts`](src/meeting/meeting-schedule.ts) rechnen für Listen
+genauso. Wer einen Termin lädt, nimmt deshalb `endDate` mit ins `select`.
 
 Nächtliche Läufe, die **alle** Gruppen abdecken, gehen Gruppe für Gruppe
 (`closePastMeetings`) oder ziehen ihr Vorauswahl-Fenster einen Tag weiter als
@@ -1388,12 +1378,9 @@ Belegung aus `meeting_schedule_config.snack_slot` (Vorgabe aus): Snacks hängen
 nicht daran, ob der Abend ein Thema oder ein Testimony hat — gegessen wird an
 beiden.
 
-**Hier stand einmal eine `MeetingType`** mit den Werten `STANDARD`,
-`LOBPREIS_GEBET` und `CUSTOM`, und die ersten beiden waren eine zweite,
-ungenauere Fassung dieser Tabelle: eine **Behauptung**, die in der Antwort
-stand und nie geprüft wurde. Man konnte einem Lobpreisabend ein Thema geben.
-Übrig ist `generated` — ob der nächtliche Lauf den Abend angelegt hat —, und
-daran hängen vier Regeln: der Taktschlag oben, die zwei Benachrichtigungsarten
+**Eine Terminart gibt es nicht**; woraus ein Abend besteht, sagt diese Tabelle.
+Es gibt `generated` — ob der nächtliche Lauf den Abend angelegt hat —, und daran
+hängen vier Regeln: der Taktschlag oben, die zwei Benachrichtigungsarten
 für selbst angelegte Termine, die Actionstep-Ausnahme und „löschen statt
 absagen".
 
@@ -1418,8 +1405,8 @@ Sie ist außerdem der einzige, den man **nicht vorausplant**. Anschalten geht er
 **ab der Treffpunktzeit** (`assertNotesSlotNotAhead`, dieselbe
 `eveningReached`-Grenze wie beim Abhaken); vorher wäre es die Frage nach der
 Zusammenfassung von etwas, das noch nicht stattgefunden hat. Deshalb steht sie im
-Frontend auch nicht im Bausteinkasten, sondern hinter einem Hinweis am Abend
-selbst. Abschalten geht dagegen jederzeit — wer sich vertut, wäre sonst damit
+Frontend auch nicht bei den Bausteinen im Bearbeiten-Dialog, sondern hinter
+einem Hinweis am Abend selbst. Abschalten geht dagegen jederzeit — wer sich vertut, wäre sonst damit
 eingesperrt.
 
 **Die Gebetsanliegen** sind der jüngste Baustein und in mehr als einer Hinsicht
@@ -1433,9 +1420,8 @@ Feldliste, weil die Anliegen in einer eigenen Tabelle liegen; weggeräumt werden
 sie beim Abschalten in `MeetingService.update`, wie die Lieder.
 
 **Umschalten geht auch an einem vergangenen Termin**, nur an einem abgesagten
-nicht. Die einzige Sperre gilt der Richtung nach vorn (`assertNotesSlotNotAhead`).
-Das Frontend hielt das lange enger als der Server; wem hinterher auffällt, dass
-am Dienstag doch Lieder waren, kam damit nicht mehr heran.
+nicht. Die einzige Sperre gilt der Richtung nach vorn (`assertNotesSlotNotAhead`)
+— wem hinterher auffällt, dass am Dienstag doch Lieder waren, trägt es nach.
 
 **Zwei Paare schließen einander aus, ein drittes nicht.** Thema und Testimony,
 weil beides der Beitrag ist, um den sich der Abend dreht. Thema und
@@ -1483,9 +1469,8 @@ Geburtstagsabend soll in der Fairness des Themas nicht mitzählen.
 ### Testimony ist eine Rolle
 
 `Meeting.testimonyPersonId`, nicht ein Textfeld. Ein Testimony ist nichts, was
-man vorher aufschreibt, sondern jemand, der davon erzählt; als
-`testimonyText` stand es leer da, und niemand wusste, wer es füllen sollte,
-weil daran keine Zuständigkeit hing.
+man vorher aufschreibt, sondern jemand, der davon erzählt — und daran hängt eine
+Zuständigkeit.
 
 Damit ist es eine Rolle wie die anderen drei: mit Vorschlägen
 (`GET …/meetings/:id/testimony-suggestions`, dieselbe Rangfolge wie beim Thema,
@@ -1494,19 +1479,14 @@ Tage vorher (`TESTIMONY_REMINDER`), und in der Fairness als **ein Dienst je
 Abend**. Anders als das Thema, das sich über drei Dienstage ziehen kann und
 trotzdem als ein Dienst zählt: eine Geschichte ist ein Abend.
 
-Wer für den Abend absagt, gibt sie frei — wie Gastgeber, Musik und Thema. Beim
-Thema war das lange anders, weil die Zuständigkeit am _Thema_ hing und nicht am
-Abend; sie fallen zu lassen hätte geheißen, jemanden von seiner Vorbereitung für
-alle kommenden Abende zu entbinden. Seit sie am Abend steht, gilt für alle vier
-dasselbe: wer nicht da ist, ist nicht eingeteilt.
+Wer für den Abend absagt, gibt sie frei — wie Gastgeber, Musik und Thema: Wer
+nicht da ist, ist nicht eingeteilt.
 
 ### Wer eintragen darf
 
-Bis hierher durfte jedes Mitglied alles: Zusammenfassung, Actionstep, welche
-Lieder gesungen wurden. Nicht falsch gedacht — die Gruppe ist neun Leute,
-niemand sabotiert da etwas —, aber es half auch niemandem. Ein Feld, das alle
-bearbeiten können, bearbeitet am Ende keiner, und wer für den Abend zuständig
-ist, findet seine eigene Vorbereitung unter fremden Händen.
+Nicht jedes Mitglied darf alles: Ein Feld, das alle bearbeiten können,
+bearbeitet am Ende keiner, und wer für den Abend zuständig ist, fände seine
+eigene Vorbereitung unter fremden Händen.
 
 | Was                           | Zuständigkeit                     | Ausnahme                   |
 | ----------------------------- | --------------------------------- | -------------------------- |
@@ -1524,12 +1504,11 @@ steht in [`edit-rights.service.ts`](src/meeting/edit-rights.service.ts).
 „Nach dem Abend" heißt: **am nächsten Tag der Gruppe** — nicht ab der
 Treffpunktzeit. Ein Termin gilt seinen ganzen Tag über als kommend, und das
 „Vorbei"-Abzeichen in der App rechnet genauso. Welcher Tag „heute" ist,
-entscheidet der `GroupClockService`; vorher war es der UTC-Tag, und genau daher
-kam der `403` um halb eins nachts (siehe „`toUtcDate` und `currentDay`").
+entscheidet der `GroupClockService` in der Zone der Gruppe und nicht in UTC
+(siehe „`toUtcDate` und `currentDay`").
 
-**Streng, ohne die zwei Ausnahmen, die es einmal gab.** Eine mildere Fassung
-ließ Admins immer und alle, solange niemand zugeteilt war. Beides passt zu
-diesen beiden Zeilen nicht: Musik machen und ein Thema vorbereiten sind keine
+**Streng, ohne Ausnahmen** — weder für Admins noch für „niemand ist
+zugeteilt, also alle". Beides passt zu diesen beiden Zeilen nicht: Musik machen und ein Thema vorbereiten sind keine
 Verwaltungsaufgaben, die ein Admin für andere erledigt, und ein Abend ohne
 Zuteilung ist keiner, an dem jede:r bestimmen darf — er ist einer, an dem noch
 niemand zugeteilt ist. Wer die Auswahl treffen will, trägt sich als zuständig
@@ -1575,11 +1554,10 @@ die anderen eine Kante dorthin — und der Modulgraph hat schon einmal genau so
 einen Zyklus bekommen, der weder in `pnpm check` noch in den Tests auffällt,
 sondern erst beim Hochfahren. Möglich ist das, weil `PrismaModule` `@Global` ist.
 
-> **Was dabei weggefallen ist:** die Datumsprüfung, die Zusammenfassung und
-> Actionstep vor dem Termintag ganz verbot. Sie stimmte für alle außer für die
-> Zuständigen — und die haben den Actionstep oft vorher im Kopf und wollen ihn
-> hinlegen, wo er am Abend gebraucht wird. Die Zuständigkeit trifft dasselbe
-> Ziel besser: am falschen Termin in der Liste ist man in aller Regel nicht
+> **Keine Datumsprüfung**, die Zusammenfassung und Actionstep vor dem
+> Termintag verböte: Die Zuständigen haben den Actionstep oft vorher im Kopf und
+> wollen ihn hinlegen, wo er am Abend gebraucht wird. Die Zuständigkeit trifft
+> das Ziel besser: am falschen Termin in der Liste ist man in aller Regel nicht
 > zuständig.
 
 ### Ein Termin, mehrere Tage
@@ -1591,8 +1569,8 @@ sondern erst beim Hochfahren. Möglich ist das, weil `PrismaModule` `@Global` is
 Dass kein zweiter Termin in den Zeitraum fällt, prüft `assertNoOverlap` im
 Service und nicht die Datenbank — ein Ausschluss über Bereiche bräuchte eine
 Exclusion Constraint, die Prisma nicht ausdrücken kann. Der Generator prüft
-seit dem ebenfalls den Zeitraum und nicht mehr nur das Datum; sonst stünde ein
-Hauskreis-Abend mitten im Zeltlager.
+ebenfalls den Zeitraum und nicht nur das Datum; sonst stünde ein Hauskreis-Abend
+mitten im Zeltlager.
 
 Ein `endDate` gleich dem `date` wird zu `null`: derselbe Sachverhalt in zwei
 Schreibweisen ist die Sorte Unterschied, an der später Vergleiche scheitern.
@@ -1679,17 +1657,12 @@ räumt `announceStatusChange` die `NotificationLog`-Zeilen zu
 `(MEETING_CANCELLED, meetingId)` vor jedem Wechsel weg — einmal je
 Richtungswechsel, nicht einmal je Termin.
 
-**Der Weg zurück war lange eine Sackgasse.** Die Regel oben verlangt eine
-Zusage, aber alle vier Stellen im Frontend blendeten den Zusage-Schalter aus,
-sobald der Abend abgesagt war — übrig blieb der Admin-Knopf „Absage
-zurücknehmen", und `uncancel` fasste `MeetingAttendance` nicht an. Der Abend
-stand danach wieder, die eigene Antwort weiterhin auf „nicht dabei". Zwei
-Änderungen:
+**Der Weg zurück.** Die Regel oben verlangt eine Zusage, und an einem
+abgesagten Abend blendet das Frontend den Zusage-Schalter aus. Deshalb:
 
 - In der „Fällt aus"-Karte steht bei `ALL_DECLINED` ein Knopf **für alle**:
   „Ich bin doch dabei" schreibt die eigene Zusage, `reconcile` holt den Abend
-  von selbst zurück. Das ist der Weg, den der Text darunter seit jeher
-  verspricht.
+  von selbst zurück — der Weg, den der Text darunter verspricht.
 - `uncancel` setzt bei `ALL_DECLINED` die `ABSENT`-Zeilen mit `source = SELF`
   auf `UNKNOWN` zurück. Sonst stünde ein „findet statt" mit null von neun
   Zusagen da — ein Zustand, den der nächste `reconcile`-Auslöser (ein Austritt,
@@ -1699,11 +1672,11 @@ stand danach wieder, die eigene Antwort weiterhin auf „nicht dabei". Zwei
   herzuleiten. Bei `MANUAL` bleibt alles stehen — dort wurden die Antworten
   unabhängig von der Absage gegeben.
 
-Ein Nebeneffekt, der leicht zu übersehen ist: `AbsenceSyncService` filtert nicht
-mehr auf `status: PLANNED`. Seit die Absage eine **Folge** dieser Zeilen ist und
-keine Vorbedingung mehr, muss ein gelöschter Urlaub auch aus einem abgesagten
-Abend wieder herauskommen — sonst bliebe er abgesagt mit einer Absage, die es
-nicht mehr gibt.
+Leicht zu übersehen: `AbsenceSyncService` filtert nicht auf `status: PLANNED`.
+Die Absage des Abends ist eine **Folge** dieser Zeilen und keine Vorbedingung,
+also muss ein gelöschter Urlaub auch aus einem abgesagten Abend wieder
+herauskommen — sonst bliebe er abgesagt mit einer Absage, die es nicht mehr
+gibt.
 
 ### Ein vergangener Abend sagt niemandem mehr ab
 
@@ -1764,12 +1737,8 @@ oben steht (CLAUDE.md §4: keine Blackbox):
 }
 ```
 
-Die Oberfläche druckt aus alldem **keine Zahl**. Dort stand einmal „0 statt
-25 % der Abende" — zwei gerundete Anteile nebeneinander, aus denen niemand
-ablas, ob das gut ist —, dann dieselbe Aussage in Abenden („3 von 14, üblich
-wären 5"). Auch das war eine Zeile zu viel: Unter einem Namen in einer Liste
-rechnet niemand nach, und wer es täte, käme zu keinem anderen Schluss als dem,
-der ohnehin danebenstand. Übrig bleibt der Schluss — „seltener als üblich",
+Die Oberfläche druckt aus alldem **keine Zahl**: Unter einem Namen in einer
+Liste rechnet niemand nach. Es steht der Schluss da — „seltener als üblich",
 sonst nichts:
 
 - Das **Urteil** kommt aus `credit` und nicht aus den Anteilen: Danach wird
@@ -1840,8 +1809,8 @@ stünde dieselbe Person an zwei kommenden Abenden für etwas, das sie einmal
 erzählt — und der zweite Abend sähe geplant aus, bis jemand von Hand aufräumt.
 Nur kommende Abende, `updateMany` mit dem Versionssprung in einem Zug (der
 geleerte Abend zeigt die Rolle in seiner Antwort), und ohne Benachrichtigung:
-Es ist dieselbe Person, die gerade selbst umzieht, und im Vorschlag stand
-vorher, an welchem Abend sie schon dran war.
+Es ist dieselbe Person, die gerade selbst umzieht, und der Vorschlag zeigt, an
+welchem Abend sie schon dran ist.
 
 **Die ausdrückliche Zusage sticht den Zeitraum.** „Doch, ich komme" ist eine
 Aussage über genau diesen Abend, der Urlaub eine über viele — überall sonst
@@ -1862,11 +1831,9 @@ Abend an genau diesen Leuten stumm; die Menge kommt aus
   für jeden vergangenen Abend, wer damals weg war; eine Zusage von heute sagt
   darüber nichts.
 
-Der Unterschied trägt die Liste „Nicht im Ranking" in der Oberfläche. Sie stand
-einmal für **alles**, was aus der Rangfolge fiel, mit dem Hinweis, eintragen
-ginge trotzdem — bei einem Abgesagten war das schlicht falsch. Jetzt steht dort
-nur, wen der Server auch annähme; bei Thema und Testimony bleibt danach niemand
-übrig und der Abschnitt verschwindet.
+Unter der Rangliste steht in der Oberfläche nur, wen der Server auch annähme —
+ein Abgesagter nicht. Bei Thema und Testimony bleibt danach meist niemand übrig
+und der Abschnitt verschwindet.
 
 Das **Testimony** war dabei das Loch: Gastgeber (`MeetingService.update`), Musik
 (`MeetingSongService.setLeaders`) und Thema (`TopicSessionService.setResponsibles`)
@@ -1892,15 +1859,11 @@ Jeder von ihnen hostet dadurch etwa halb so oft wie jemand, der allein wohnt.
 
 ### Alle vier Rollen zählen als Last, in jeder Liste
 
-Regel 1 lautet „wer hat am wenigsten zu tun, **über alle Rollen**" — und stimmte
-in keiner der vier Ranglisten ganz. Jede bekam ihre eigene Rolle, Gastgeber und
-Thema, und je nachdem fehlten Musik oder Testimony. Beim **Gastgeber** war es am
-schlimmsten: Er sah ausschließlich Gastgeber-Dienste. Damit stand, wer an dem
-Abend ohnehin das Thema vorbereitet, trotzdem ganz oben — und `findBusyHomes`
-suchte in derselben Liste nach fremden Diensten am Zieltag und fand nie welche.
-Die Regel war seit jeher toter Code; ihr erster scharfer Lauf hat gleich
-gezeigt, dass sie als _Ablehnungsgrund_ falsch aufgehängt war (siehe
-„Zurückstellen").
+Regel 1 lautet „wer hat am wenigsten zu tun, **über alle Rollen**" — und gilt in
+jeder Rangliste: Jede bekommt die Dienste aller Rollen. Sähe der **Gastgeber**
+nur Gastgeber-Dienste, stünde, wer an dem Abend ohnehin das Thema vorbereitet,
+ganz oben. Eine andere Rolle am selben Abend ist dabei kein _Ablehnungsgrund_
+(siehe „Zurückstellen").
 
 `collectLoad(hauskreisId, role, …)` gibt seither jeder Liste dieselben vier.
 Auf die **Fairness** wirkt das nicht: `rankForRole` zählt für „zuletzt dran" und
@@ -2032,15 +1995,15 @@ Pause sind es **drei Abende Aufholen**, dann läuft die normale Rotation weiter.
 Nebeneffekt derselben Mechanik: ein **neu angelegtes** Zuhause startet bei null
 statt mit dem Anspruch, erst einmal den All-Time-Stand aller anderen einzuholen.
 
-Und genau hier docken die Abwesenheiten aus Phase 9 an: ein Zuhause, dessen
-Bewohner weg sind, verdient in der Zeit einfach nichts — dann entsteht der
+Und genau hier docken die Abwesenheiten an: ein Zuhause, dessen Bewohner weg
+sind, verdient in der Zeit einfach nichts — dann entsteht der
 Rückstand gar nicht erst und der Deckel bleibt das Sicherheitsnetz, das er sein
 soll.
 
 ### Was ausgeschlossen wird und was nur nach hinten rutscht
 
 **Harter Ausschluss** nur bei Dauerzuständen: inaktive Personen, `canHost = false`,
-ab Phase 9 Abwesenheit. Ein Zuhause fällt raus, wenn **kein** Bewohner mehr
+Abwesenheit. Ein Zuhause fällt raus, wenn **kein** Bewohner mehr
 übrig ist. Abgesagte Termine zählen nicht als Historie — ein Abend, der nie
 stattgefunden hat, ist kein „du warst doch gerade erst dran". Der Termin selbst
 fließt nicht in seine eigene Historie ein.
@@ -2056,13 +2019,10 @@ Verschiebung übersteht den Fall „keine bessere Option da", ein Filter nicht.
 
 Beides sind **Unmöglichkeiten**, und das ist die ganze Regel für diese Spalte.
 
-**`HOUSEHOLD_BUSY` gab es einmal daneben und war keine.** Es sagte: jede:r, der
-hier wohnt, hat an dem Abend schon eine andere Rolle. Nur ist Gastgeber die eine
-Rolle, die man **bei sich zu Hause** macht — wer das Thema hält, kann trotzdem
-seine Tür aufmachen, und oft ist es sogar bequemer, sich bei ihm zu treffen. Als
-Ablehnungsgrund gelesen ergab es zudem einen Satz, den niemand parsen konnte:
-„im Haushalt ist schon jemand anders dran" war für Alleinwohnende weder jemand
-anders noch, in aller Regel, das Hosten.
+**Eine andere Rolle am selben Abend ist keine Unmöglichkeit.** Gastgeber ist
+die eine Rolle, die man **bei sich zu Hause** macht — wer das Thema hält, kann
+trotzdem seine Tür aufmachen, und oft ist es sogar bequemer, sich bei ihm zu
+treffen.
 
 Geblieben ist die Sortierung, ohne Etikett: `HomeRanking.busy` reiht ein solches
 Zuhause **hinter** die freien und **vor** die zurückgestellten. Warum es dort
@@ -2093,7 +2053,7 @@ taucht das Zuhause im Ranking auf.
 
 **Und jetzt der Punkt, an dem die Gewichtung kippen könnte:** ein
 zurückgestelltes Zuhause **verdient weiter** sein Guthaben. Das ist der
-entscheidende Unterschied zur Abwesenheit (Phase 9), wo es nichts verdient:
+entscheidende Unterschied zur Abwesenheit, wo es nichts verdient:
 
 - **Abwesend** — der Haushalt _konnte_ nicht. Kein Anspruch entsteht, sonst
   staut sich ein Rückstand für Zeit auf, in der er gar nicht zur Verfügung stand.
@@ -2119,9 +2079,9 @@ genommener Rest, kein Aufbau von Rückstand.
 
 **Praktische Einschränkung:** heute senken nur explizite Absagen am Termin die
 Zahl. Weit entfernte Abende sehen deshalb immer voll aus, und die engen Zuhause
-tauchen erst kurzfristig auf. Die Abwesenheitszeiträume aus Phase 9 haben Start-
-und Enddatum und fließen dann hier mit ein — ein früh eingetragener Urlaub zählt
-also schon bei der Planung.
+tauchen erst kurzfristig auf. Abwesenheitszeiträume haben Start- und Enddatum
+und fließen hier mit ein — ein früh eingetragener Urlaub zählt also schon bei
+der Planung.
 
 ### Die Personen-Sortierung: `rankForRole`
 
@@ -2180,7 +2140,7 @@ Ein Thema ist **nicht** an einen Termin gebunden: es zieht sich über beliebig
 viele Abende, und jeder davon ist eine `TopicSession` — hier „Einheit". Der Titel
 ist optional, auf beiden Ebenen: nicht jeder legt ihn vorab fest.
 
-Drei Dinge, die früher in einer Tabelle steckten, sind auseinandergezogen:
+Drei Dinge sind getrennt:
 
 | Was               | Wo                                                  |
 | ----------------- | --------------------------------------------------- |
@@ -2188,9 +2148,9 @@ Drei Dinge, die früher in einer Tabelle steckten, sind auseinandergezogen:
 | **Auswahl**       | `topic_session.meeting_id` — nullable und `@unique` |
 | **Inhalt**        | an der Einheit, nicht am Termin                     |
 
-Dazwischen liegt ein Zustand, den es vorher nicht gab und der der Punkt der
-Sache ist: **zugeteilt, aber noch nichts gewählt**. Vorher legte eine Zuteilung
-sofort ein leeres Thema an, und der Abend sah aus, als stünde schon etwas fest.
+Dazwischen liegt der Punkt der Sache: **zugeteilt, aber noch nichts gewählt**.
+Eine Zuteilung legt kein leeres Thema an, und der Abend sieht nicht aus, als
+stünde schon etwas fest.
 
 `meeting_id = NULL` heißt **unfertig**: vorbereitet, aber an keinem Abend. Der
 eindeutige Index darauf trägt zwei Lasten — fachlich hängt an einem Abend
@@ -2256,10 +2216,8 @@ verschwinden also von allein.
   _kommenden_ Abend, zieht sie um.
 
 **Zwei Ebenen, zwei Titel.** `topicTitle` spannt den Bogen, `title` gehört dem
-Abend. Bei `mode: "new"` war `title` einmal der Titel des _Themas_ — für die
-Einheit blieb dann nichts übrig, und `actionstepText`/`summaryText` fielen
-stillschweigend unter den Tisch: Ein frisch gewähltes Thema begann immer mit
-einem leeren Abend, obwohl das Formular danach gefragt hatte.
+Abend, samt `actionstepText`/`summaryText` — ein frisch gewähltes Thema beginnt
+nicht mit einem leeren Abend, wenn das Formular danach gefragt hat.
 
 **`title` ist Pflicht, außer bei `resume`** — dort zieht eine bestehende Einheit
 um, und die hat ihren Titel schon. Die beiden anderen Anlege-Wege
@@ -2317,20 +2275,18 @@ Abend zu **leeren** heißt fast immer „der hatte gar kein Thema", also wird
 gefragt, und ein Ja schaltet den Baustein ab. Ein Nein lässt alles stehen, auch
 die Namen.
 
-Wer aus der Zuteilung **herausfällt**, verliert dagegen etwas — aber nur im
-Zweig, in dem die Einheit hängen bleibt. `TopicLinkService.leave` nimmt ihm die
-Zeile an _dieser_ Einheit (sie wäre ab jetzt eine falsche Behauptung und keine
-Geschichte) und das Schreibrecht am **Thema** nur dann, wenn er sonst nirgends
-mehr daran hängt — gehalten oder geplant. Der Owner verliert nie etwas.
+Wer aus der Zuteilung **herausfällt**, verliert nichts: Er bleibt an der
+Einheit stehen und behält sein Schreibrecht daran — krank zu werden nimmt
+niemandem, was er vorbereitet hat. Die Crew pflegt man auf der Seite der
+Einheit, nicht über den Umweg einer Rollenänderung.
 
-Im Entkoppel-Zweig wird ausdrücklich **nicht** aufgeräumt: der Entwurf wartet ab
-sofort auf genau die Leute, die eben herausgefallen sind. Nähme man ihnen die
-Zeile, verschwände er aus ihrem „Angefangenes" — und ein Entwurf, den niemand
-mehr sehen kann, ist gelöscht, nur langsamer.
+Im Entkoppel-Zweig wartet der Entwurf deshalb auf genau die Leute, die eben
+herausgefallen sind. Nähme man ihnen die Zeile, verschwände er aus ihrem
+„Angefangenes" — und ein Entwurf, den niemand mehr sehen kann, ist gelöscht,
+nur langsamer.
 
 **Die Zuteilung selbst** fällt beim Abschalten des Bausteins dagegen weg, wie
-bei der Musik. Sie blieb einmal aus Vorsicht stehen, aber an einem Abend ohne
-Thema ist sie keine geduldige Notiz, sondern eine falsche Aussage:
+bei der Musik: An einem Abend ohne Thema wäre sie eine falsche Aussage —
 `TopicReminderService` fragt nicht nach `hasTopicSlot` und schickte „Du bist dran
 mit dem Thema" für einen Abend, an dem keins ist.
 
@@ -2380,20 +2336,16 @@ jemand neu wählen müsste.
 | `DELETE` | `…/topic-sessions/:id`                          | Owner/Mitarbeit, nicht gehalten |
 
 Ein Thema entsteht auf **zwei** Wegen: beim Wählen an einem Abend, oder über
-`POST …/topics` im Voraus. Lange gab es nur den ersten, mit dem Argument, ein
-Thema ohne Anlass wäre ein leerer Datensatz — genau der, von dem das alte Modell
-nicht loskam. Das stimmte, solange der Inhalt ausschließlich an Terminen hing.
-Seit es Einheiten ohne Abend gibt, ist das Vorarbeiten selbst der Anlass: wer im
-Zug eine Idee hat, legt das Thema an und füllt es, und der Dienstag findet sich
-später. Der Titel ist dabei **Pflicht** (beim Wählen ist er es nicht — dort
-steht das Thema unter seinem Termin und ist auch namenlos auffindbar).
+`POST …/topics` im Voraus: Das Vorarbeiten selbst ist der Anlass — wer im Zug
+eine Idee hat, legt das Thema an und füllt es, und der Dienstag findet sich
+später. Der Titel des Themas ist dabei **Pflicht** (beim Wählen ist er es nicht
+— dort steht das Thema unter seinem Termin und ist auch namenlos auffindbar).
 
 Damit bekommt „wer zuerst **wählt**, wird Owner" einen Zusatz: **oder wer es
 anlegt.** Dieselbe Regel einen Schritt früher.
 
 Eine **Einheit** entsteht ebenfalls ohne Abend: `POST …/topics/:id/sessions`
-ist der Ort zum Vorarbeiten. Vorher ging nur der umgekehrte Weg — erst einen
-Termin belegen, dann dort schreiben. Der Titel ist dort **Pflicht**: ein Entwurf
+ist der Ort zum Vorarbeiten. Der Titel ist dort **Pflicht**: ein Entwurf
 ohne Abend hat nichts als seinen Titel. Wer anlegt, wird seine Verantwortliche,
 sonst griffe die Rettung aus Spec 8.5 für handgemachte Entwürfe nicht.
 
@@ -2444,13 +2396,11 @@ eingeteilt ist, hat schon etwas zu tun, obwohl es dort noch gar keine Einheit
 gibt. Der `slotKey` ist die Id des **Themas**; das ist es, was ein Thema über
 drei Dienstage zu einem einzigen Dienst zusammenfasst (CLAUDE.md §5).
 
-### Was es nicht mehr gibt
+### Der Status sortiert die Auswahl
 
-Die nächtliche Übernahme (`TopicCarryOverService`, 3:15 Uhr) belegte den
-nächsten Abend im Voraus mit dem laufenden Thema. Sie ist weg: sie stand der
-Regel im Weg, dass Owner wird, wer zuerst wählt. Stattdessen steht ein laufendes
-eigenes Thema in `…/topic-choices` ganz oben — `status` sortiert jetzt diese
-Liste, statt einen Job zu steuern.
+Kein nächtlicher Lauf belegt den nächsten Abend im Voraus mit dem laufenden
+Thema — das stünde der Regel im Weg, dass Owner wird, wer zuerst wählt.
+Stattdessen steht ein laufendes eigenes Thema in `…/topic-choices` ganz oben.
 
 ## Songs
 
@@ -2545,7 +2495,8 @@ nämlich nicht als echte Adressen aus, sondern als Weiterleitungen über
 Gespeichert würde daraus ein Link, der beim Anlegen funktioniert und im Herbst
 ins Leere zeigt. Der Abruf folgt der Weiterleitung deshalb bis zum Ende und
 behält `response.url`. Erst an dieser aufgelösten Adresse wird geprüft, ob es
-überhaupt eine Songseite ist — vorher weiß niemand, wohin ein Vorschlag zeigt.
+überhaupt eine Songseite ist — vor dem Abruf weiß niemand, wohin ein Vorschlag
+zeigt.
 Deshalb steht das Nachsehen **vor** dem Sortieren und Entdoppeln, nicht danach.
 
 Dass ein Sprachmodell auch frei erfundene Adressen aufschreibt, fängt derselbe
@@ -2593,9 +2544,8 @@ und die Knöpfe brauchten 5–22 Sekunden. Drei Änderungen, jede vermessen:
 selbst (`GET` mit `Range: bytes=0-32768`), ziehen `<title>`, die `og:`-Angaben
 und die erste Überschrift heraus und geben dem Modell nur das. Der Grund steht
 in einer Zahl: Eine Ultimate-Guitar-Seite wiegt **145 KB ≈ 36.000 Tokens**, und
-`url_context` schob sie vollständig ins Modell, um eine Zeile daraus abzulesen.
-Gemessen sind es jetzt **210–262 Tokens** — rund das Hundertfünfzigfache
-gespart. `url_context` bleibt als **Rückfall** für Seiten, an denen unser Abruf
+`url_context` schöbe sie vollständig ins Modell, um eine Zeile daraus abzulesen.
+Gemessen sind es **210–262 Tokens** — rund das Hundertfünfzigfache gespart. `url_context` bleibt als **Rückfall** für Seiten, an denen unser Abruf
 scheitert (Cloudflare, oder ein Kopf ohne brauchbare Angaben): Was für uns ein
 `403` ist, ist für Googles Index eine gewöhnliche Seite.
 
@@ -2613,11 +2563,11 @@ weil der Server ohnehin als genau eine Instanz läuft.
 
 Ergebnis, gemessen an denselben Liedern:
 
-|                    | vorher                   | nachher                |
-| ------------------ | ------------------------ | ---------------------- |
-| Aus Link ausfüllen | 5–8 s, bis 36.000 Tokens | **3–4 s, ~250 Tokens** |
-| Link suchen        | 12–22 s                  | **3–5 s**              |
-| Zweiter Druck      | wie oben                 | **0 ms**               |
+|                    | Dauer und Umfang       |
+| ------------------ | ---------------------- |
+| Aus Link ausfüllen | **3–4 s, ~250 Tokens** |
+| Link suchen        | **3–5 s**              |
+| Zweiter Druck      | **0 ms**               |
 
 Jeder Aufruf schreibt eine Zeile ins Log mit Dauer, Tokens, Denk-Tokens und der
 Zahl der **abgerechneten Suchanfragen** — Letztere steht nirgends sonst und ist
@@ -2673,14 +2623,11 @@ Dingen — wer gemeint ist und was drinsteht:
 | `TopicReminderService` | Themen-Verantwortliche |
 | `SongReminderService`  | Musik-Verantwortliche  |
 
-> **Von Hand auslösen geht nicht mehr.** Jeder dieser Läufe hatte einen
-> `POST`-Endpunkt und einen Knopf in der Verwaltung — sieben insgesamt, die alle
-> dasselbe taten: eine Nachricht anstoßen, die der Cron um neun ohnehin
-> schickt. Sie waren zum Ausprobieren da; was blieb, waren sieben Gelegenheiten,
-> der Gruppe versehentlich etwas zu schicken. Die Endpunkte sind mit den Knöpfen
-> weg, die Cron-Jobs unverändert da. Übrig in der Verwaltung sind die fünf
-> Läufe, die etwas **anlegen oder aufräumen** — Termine, Gebetsrunden,
-> Gebetsrunde prüfen, Abwesenheiten, verwaiste Orte.
+> **Von Hand auslösen geht nicht.** Diese Läufe haben keinen `POST`-Endpunkt:
+> Ein Knopf, der eine Nachricht anstößt, die der Cron um neun ohnehin schickt,
+> wäre nur eine Gelegenheit, der Gruppe versehentlich etwas zu schicken. In der
+> Verwaltung stehen nur die fünf Läufe, die etwas **anlegen oder aufräumen** —
+> Termine, Gebetsrunden, Gebetsrunde prüfen, Abwesenheiten, verwaiste Orte.
 
 Alles andere — Fenster, Vorlauf pro Person, Deduplizierung, Zählung — liegt einmal
 in `MeetingReminderService`. Antwort jeweils `{ "notified": 1, "skipped": 0 }`;
@@ -2722,7 +2669,7 @@ Themas oder — beim Baustein „Nachbereitung" — am Abend selbst. Welche gilt
 entscheidet [`actionstep-source.ts`](src/meeting/actionstep-source.ts) am
 Baustein und nicht am ersten Feld, das gefüllt ist: ein vergangener Abend behält
 seine Einheit auch dann, wenn `hasTopicSlot` danach abgeschaltet wurde, und ein
-`??` spielte dort den Text eines Themas aus, das nicht mehr dazugehört. Dieselbe
+`??` spielte dort den Text eines Themas aus, das nicht dazugehört. Dieselbe
 Datei benutzt der Startbildschirm — zwei Stellen, die dieselbe Frage verschieden
 beantworten, wären ein Fehler, den niemand meldet, weil beide Seiten für sich
 plausibel aussehen.
@@ -2731,8 +2678,9 @@ plausibel aussehen.
 Aus heißt: keine Karte auf „Heute" _und_ keine Erinnerung — beides an einem
 Schalter, sonst hätte man den Vorsatz vom Startbildschirm geräumt und bekäme
 mittwochs trotzdem eine Nachricht dazu. Der Actionstep an der Einheit und über
-die Nachbereitung bleibt davon unberührt: Er wird weiter geschrieben, nur nicht
-mehr die Woche über vor sich hergetragen. Geprüft wird am Anfang von
+die Nachbereitung bleibt davon unberührt, und dass dort einer eingetragen wurde,
+meldet `RECAP_ADDED` weiterhin: Er wird weiter geschrieben, nur nicht die Woche
+über vor sich hergetragen. Geprüft wird am Anfang von
 `sendDueReminders`, also bevor überhaupt gesucht wird.
 
 ### Zwei Läufe rund um den Abend selbst
@@ -2748,10 +2696,9 @@ einzustellen außer an und aus.
 **`MEETING_TODAY` stellt die Frage gleich mit.** „Heute um 19:30 bei Lena" wüsste
 man auch so; was am Termintag wirklich passiert, ist, dass sich Zusagen ändern.
 Deshalb hängt der zweite Satz an der eigenen Antwort — „Bis später!", „Bist du
-dabei?", „Du hast abgesagt — stimmt das noch?". Das war der eine Tag, an dem die
-App bisher schwieg: Die Erinnerungen davor gehen an die, die etwas vorbereiten
-müssen; am Tag selbst hat niemand mehr etwas vorzubereiten, aber alle müssen sich
-entscheiden. Entdoppelt über `relatedMeetingId`, ein mehrtägiger Termin meldet
+dabei?", „Du hast abgesagt — stimmt das noch?". Die Erinnerungen davor gehen an
+die, die etwas vorbereiten müssen; am Tag selbst hat niemand mehr etwas
+vorzubereiten, aber alle müssen sich entscheiden. Entdoppelt über `relatedMeetingId`, ein mehrtägiger Termin meldet
 sich also einmal.
 
 **`NOTES_REMINDER` gilt nur Abenden ohne Thema.** Hat der Abend eines, gehören
@@ -2786,9 +2733,8 @@ deshalb in der `UNCONDITIONAL`-Liste des Frontend-Clients.
 **Kein `personId` im Body**, anders als bei der Teilnahme: einen Vorsatz hakt
 man für sich ab, nicht füreinander. Wer gemeint ist, steht im Token.
 
-**Erst ab Abendbeginn**, sonst `400`. Die Grenze war einmal der Kalendertag, und
-damit ließ sich der Vorsatz für die kommende Woche am Termintag um acht Uhr
-morgens abhaken — zehn Stunden bevor die Gruppe ihn ausgesprochen hatte.
+**Erst ab Abendbeginn**, sonst `400` — nicht ab dem Kalendertag: Einen Vorsatz,
+den die Gruppe erst am Abend ausspricht, hakt man nicht morgens um acht ab.
 Maßgeblich ist die Treffpunktzeit **dieses** Abends
 (`eveningReached(date, now, startMinutes)`), derselbe Helfer, der auch
 entscheidet, wann der Inhalt einer Einheit allen gehört. Zwei Rechnungen für
@@ -2932,8 +2878,8 @@ deshalb auch dann, wenn ein Zeitraum sie angelegt hat.
 ### Der eine Satz zur Antwort
 
 `meeting_attendance.note` — freiwillig, höchstens 200 Zeichen, ohne Bedeutung
-für die Logik. „Komme 20 Min später", „muss schauen, wann Feierabend ist", „bin
-im Urlaub, euch viel Spaß": genau das, was vorher in WhatsApp stand.
+für die Logik. „Bringe noch jemanden mit", „muss schauen, wann Feierabend ist",
+„bin im Urlaub, euch viel Spaß": genau das, was sonst in WhatsApp stünde.
 
 **Eine Spalte für alle drei Status und nicht drei.** Es ist immer dieselbe
 Sache — was jemand den anderen zu diesem Abend noch sagen will; nur die
@@ -2947,9 +2893,17 @@ Beschriftung des Feldes wechselt, und das ist Sache der Oberfläche.
 | weggelassen, Status gleich | bleibt stehen        |
 | weggelassen, Status anders | wird geleert         |
 
-Die letzte Zeile ist der Normalfall: Die kompakten Umschalter in Terminliste,
-Kalender und auf dem Startbildschirm schicken nur `status`, und eine Verspätung
-hat auf einer Absage nichts verloren.
+Die letzte Zeile ist der Normalfall: Die kompakten Umschalter in Terminliste und
+Kalender schicken nur `status`, und ein Satz zur Zusage hat auf einer Absage
+nichts verloren.
+
+**Verspätung** steht daneben als Zahl: `meeting_attendance.late_minutes`
+(5–180, im Frontend die Chips 15/30/45/60). Sie gibt es nur bei einer Zusage —
+das DTO lehnt sie bei den anderen Antworten mit `400` ab — und sie folgt
+derselben Tabelle wie `note`: mitgeschickt gilt, weggelassen bleibt sie bei
+gleichem Status, bei einem Statuswechsel wird sie geleert. Eine eigene Spalte
+und nicht Teil des Satzes, damit die Anwesenheitsliste eine Verspätung von einer
+bloßen Info unterscheiden kann.
 
 Die drei Läufe fassen sie von selbst richtig an, ohne eigene Regel:
 
@@ -2994,9 +2948,9 @@ zurückkäme.
 
 ### „Ich bin grundsätzlich dabei"
 
-Wer jeden Dienstag kommt, tippte bisher jeden Dienstag dasselbe — und wer es
-vergaß, stand als „weiß noch nicht" da, was für den Gastgeber beim Einkaufen
-dasselbe ist wie ein Nein. `Person.autoAttend` sagt kommende Abende im Voraus zu.
+Wer jeden Dienstag kommt, soll nicht jeden Dienstag dasselbe tippen — und wer
+es vergäße, stünde als „weiß noch nicht" da, was für den Gastgeber beim
+Einkaufen dasselbe ist wie ein Nein. `Person.autoAttend` sagt kommende Abende im Voraus zu.
 
 **`AUTO` ist eine eigene Quelle, und darin steckt der ganze Punkt.** Als `SELF`
 gespeichert wäre die Zusage unantastbar — und ein eingetragener Urlaub bliebe
@@ -3088,12 +3042,12 @@ zusammen kostet nichts. Gesucht wird die Aufteilung mit der kleinsten Summe —
 **exakt**, über eine Suche über Teilmengen. Bei neun Personen sind das höchstens
 256 Zustände, da gibt es keinen Grund zu schätzen.
 
-Das erste, naheliegende Verfahren — immer das beste Paar zuerst nehmen — sieht
+Das naheliegende Verfahren — immer das beste Paar zuerst nehmen — sieht
 gleichwertig aus und ist es nicht: es lässt die Übriggebliebenen am Ende
-zwangsweise miteinander übrig, egal wie kurz das her ist. Im Probelauf standen
+zwangsweise miteinander übrig, egal wie kurz das her ist; im Probelauf standen
 dieselben zwei Personen dadurch **drei Perioden hintereinander** zusammen. Mit
 der exakten Suche liegt der kleinste Abstand einer Wiederholung über 20 Perioden
-bei **zwei** — direkt hintereinander passiert nicht mehr.
+bei **zwei** — direkt hintereinander passiert es nicht.
 
 Die Kostenfunktion fällt bewusst steil (1/x) statt linear ab. Sonst würde die
 Suche eine „letzte Periode zusammen"-Paarung einkaufen, um drei andere ein wenig
@@ -3109,9 +3063,8 @@ Historie ergibt also immer dieselbe Aufteilung.
 ### Fünf Runden im Voraus
 
 `PrayerBuddyGeneratorService` hält immer **fünf Runden** vor, die laufende
-mitgezählt — dasselbe Muster wie `MEETINGS_AHEAD` bei den Terminen. Vorher
-entstand eine Runde erst an dem Morgen, an dem die vorige auslief; „mit wem
-bete ich ab übernächster Woche" war schlicht nicht beantwortbar.
+mitgezählt — dasselbe Muster wie `MEETINGS_AHEAD` bei den Terminen. So ist „mit
+wem bete ich ab übernächster Woche" beantwortbar.
 
 Der Lauf ist **täglich** um 4 Uhr, nicht alle zwei Wochen: ein 14-tägiger Cron
 würde eine Rotation still überspringen, wenn der Server an dem Morgen gerade
@@ -3235,12 +3188,12 @@ Zahl nicht erzwingt, ist keiner.
 
 Durchgerechnet, jeweils aus dem Bestand plus einem Zugang:
 
-| vorher | vorher ergab | ergibt jetzt                       |
-| ------ | ------------ | ---------------------------------- |
-| 3+2    | 3+3          | 2+2+2                              |
-| 2+2    | 3+2          | 3+2 (fünf Menschen brauchen eines) |
-| 3+3    | 3+2+2        | 3+2+2                              |
-| 3+2+2  | 3+3+2        | 2+2+2+2                            |
+| vorher | ein Neuzugang ergibt               |
+| ------ | ---------------------------------- |
+| 3+2    | 2+2+2                              |
+| 2+2    | 3+2 (fünf Menschen brauchen eines) |
+| 3+3    | 3+2+2                              |
+| 3+2+2  | 2+2+2+2                            |
 
 **Regel 0 kam nach den anderen dreien**, und der Grund gehört dazu: Die
 Obergrenze galt zuerst nur fürs Hinzufügen. Eine Gruppe, die schon zu groß
@@ -3280,10 +3233,11 @@ sonst verschluckt `hasBeenSent` die zweite Nachricht als Dublette der ersten —
 dasselbe Muster wie bei `announceStatusChange`.
 
 Aufgerufen wird das überall, wo sich die Menge der aktiven Menschen ändert:
-`MembershipService.leave` sowie `PersonService.create`, `invite`, `remove` und
-`update`, wenn `active` umspringt. Beim Annehmen einer Einladung ausdrücklich
-**nicht**: die Zeile ist seit dem Einladen `active`, in der Rotation steht die
-Person also längst.
+`MembershipService.leave` (auch beim Entfernen) und `acceptInvitation`, `PersonService.create` und
+`update`, wenn `active` umspringt, und die erste Anmeldung (`resolveForUser`).
+Beim **Einladen** ausdrücklich nicht: Wer eingeladen ist, steht in keiner Gruppe
+(`ANGEKOMMEN`) — ein Name, dem niemand schreiben kann, ließe sein Gegenüber zwei
+Wochen allein beten.
 
 > `PersonService` schlägt den Generator über `ModuleRef` nach, statt ihn sich
 > hineinreichen zu lassen. `NotificationModule` braucht `PersonModule`,
@@ -3418,8 +3372,8 @@ Drei Nachrichten fragen nach „dem nächsten Abend" und „wer ist dabei" — d
 Antworten stehen einmal in [`src/meeting/next-meeting.ts`](src/meeting/next-meeting.ts):
 
 - `findNextMeetingId` — der erste geplante Abend, der nicht ganz vorbei ist,
-  mit `notFinishedBefore` wie auf dem Startbildschirm. Die Uhrzeit-Nachricht
-  rechnete vorher mit `date >= today` und verlor damit eine laufende Freizeit.
+  mit `notFinishedBefore` wie auf dem Startbildschirm — `date >= today` verlöre
+  eine laufende Freizeit.
 - `plannedAttendees` — alle Angekommenen außer den Abgesagten. Wer nie
   geantwortet hat, zählt als „weiß noch nicht" und wird gefragt.
 - `openRoles` — was fehlt, im Unterschied zu dem, was es hier nicht gibt (ein
@@ -3468,10 +3422,10 @@ Handy sind die Round Trips der Preis. Neue Logik entsteht dabei nicht — der
 Actionstep folgt derselben Regel wie der Reminder.
 
 `prayerBuddies` liefert die **ganze Gruppe in Kreis-Reihenfolge**, den
-Betrachter eingeschlossen (`{ until, members }`). Vorher standen dort nur die
-Namen der anderen, und damit ließ sich die Richtung — „du betest für X, für dich
-betet Y" — auf dem Startbildschirm gar nicht anzeigen: Ohne die eigene Position
-im Kreis gibt es kein Vorher und kein Nachher. Gerechnet wird sie im Frontend
+Betrachter eingeschlossen (`{ until, members }`): Nur damit lässt sich die
+Richtung — „du betest für X, für dich betet Y" — auf dem Startbildschirm
+anzeigen; ohne die eigene Position im Kreis gibt es kein Vorher und kein
+Nachher. Gerechnet wird sie im Frontend
 mit derselben Funktion wie auf dem Gebet-Bildschirm (`circleOf`); zwei Kopien
 derselben Rechnung sagen irgendwann zwei verschiedene Dinge.
 
@@ -3625,9 +3579,8 @@ erst diese Seite ranken — Seite 2 könnte dann Seite 1 überholen.
 
 ### Abende werden abgeschlossen
 
-`MeetingStatus.COMPLETED` stand seit dem Termin-Kern im Enum und wurde nie
-gesetzt; das Archiv führte Abende von vor Monaten als „geplant". Der nächtliche
-Generator setzt vergangene `PLANNED`-Abende jetzt auf `COMPLETED`. Abgesagte
+Der nächtliche Generator setzt vergangene `PLANNED`-Abende auf `COMPLETED` —
+sonst führte das Archiv Abende von vor Monaten als „geplant". Abgesagte
 behalten ihren Status: „fiel aus" ist eine andere Tatsache als „hat
 stattgefunden", und das Archiv soll beides unterscheiden können.
 
@@ -3652,9 +3605,8 @@ tut.
 Stelle. Sie ist getrennt von `.env.example`: die dort beschreibt die
 Entwicklung und nur das, was der Nest-Prozess selbst liest. Produktiv kommen die
 Werte für Compose (Datenbank-Passwörter, Keycloaks Bootstrap-Konto) und für
-`setup-keycloak.sh` (`FRONTEND_URL`, `SMTP_*`) dazu — sie lagen vorher an drei
-Stellen verstreut, und welche zusammen ein lauffähiges System ergeben, stand
-nirgends.
+`setup-keycloak.sh` (`FRONTEND_URL`, `SMTP_*`) dazu — an einer Stelle, damit
+man sieht, welche zusammen ein lauffähiges System ergeben.
 
 Das [Dockerfile](Dockerfile) ist mehrstufig. `prisma generate` muss **vor**
 `nest build` laufen, sonst fehlen die Typen aus `generated/prisma`. Der Container
@@ -3670,8 +3622,8 @@ einen sha-Tag, ein Rollback ist deshalb `IMAGE_TAG=<sha> … up -d`.
 ### Das Verzeichnis für Bilder gehört ins Image
 
 `UPLOAD_DIR` zeigt im Container auf `/data/uploads`, und dort hängt ein Volume.
-Den Pfad legt seit Kurzem das Dockerfile an — vorher tat es Docker beim
-Einhängen, und zwar als `root:root`. Der Prozess läuft als `node`, und
+Den Pfad legt das Dockerfile an — sonst täte es Docker beim Einhängen, und zwar
+als `root:root`. Der Prozess läuft als `node`, und
 `PhotoService.store()` beginnt mit einem `mkdir`:
 
 ```
@@ -3697,7 +3649,7 @@ ohnehin als leeren String weiter, wenn `FOO` nicht gesetzt ist — beides scheit
 an `.min(1)`, und der Server kam gar nicht erst hoch. Statt einer abgeschalteten
 Funktion gab es einen Bootfehler.
 
-`optionalValue` in [`env.schema.ts`](src/config/env.schema.ts) behandelt jetzt
+`optionalValue` in [`env.schema.ts`](src/config/env.schema.ts) behandelt
 beides gleich, wie es `KEYCLOAK_INTERNAL_URL` und `APP_URL` schon taten.
 
 ### Was im Container anders ist
@@ -3730,13 +3682,10 @@ Prod-Compose), nicht etwas, das die App beim Start tut: das macht die Reihenfolg
 sichtbar, scheitert für sich statt mitten im Boot-Log, und falls je mehr als eine
 Instanz läuft gibt es kein Rennen.
 
-Er benutzt **dasselbe Image** wie die API, nur mit anderem `command`. Das ging
-lange nicht: `prisma` und `dotenv` standen unter `devDependencies`, `--prod` ließ
-sie weg, und der Service lief deshalb aus der `build`-Stufe. Solange auf dem
-Server gebaut wurde, kostete das nichts — sobald das Image aus der CI kommt,
-hieße es zwei Images bauen, pushen und ziehen, für einen Aufruf, der einmal pro
-Deploy läuft. Beide stehen jetzt unter `dependencies`, und die Laufzeitstufe
-bringt `prisma/` und `prisma.config.ts` mit.
+Er benutzt **dasselbe Image** wie die API, nur mit anderem `command`: `prisma`
+und `dotenv` stehen unter `dependencies`, und die Laufzeitstufe bringt `prisma/`
+und `prisma.config.ts` mit. Sonst hieße es zwei Images bauen, pushen und ziehen,
+für einen Aufruf, der einmal pro Deploy läuft.
 
 Aufgerufen wird `node_modules/.bin/prisma`, nicht `pnpm exec prisma`: Im Image
 ist corepack zwar eingeschaltet, pnpm selbst aber nicht entpackt — der erste
@@ -3750,28 +3699,25 @@ Zwei Dinge, die man wissen sollte:
   Instanz richtig — aber es muss dastehen. Ein Reverse Proxy davor verteilt
   deshalb keine Last, er terminiert nur TLS.
 - **1,38 GB**, das meiste Prismas Engines. Davon gehen rund 130 MB auf den
-  Prisma-CLI, der seit dem Umzug nach `dependencies` bewusst mit im Image liegt
-  — der Preis dafür, dass es nur noch ein Image gibt statt zwei.
+  Prisma-CLI, der unter `dependencies` bewusst mit im Image liegt — der Preis
+  dafür, dass es nur ein Image gibt statt zwei.
 
-  Es waren einmal 1,78 GB, wegen eines abschließenden `RUN chown -R node:node
-/app`. Ebenen sind unveränderlich: ein rekursives `chown` schreibt jede Datei
-  neu und legt damit eine vollständige Kopie des `node_modules`-Baums als
-  eigene Ebene an — 423 MB obendrauf, während das Original darunter liegen
-  bleibt. Der `chown` ist ersatzlos gestrichen. Nötig war er nie: die Dateien
-  gehören root und sind mit `755`/`644` für alle lesbar, und alles, was die
-  Anwendung schreibt, geht nach stdout oder ins Uploads-Volume — nie in den
-  Anwendungsbaum. Der Prozess läuft weiterhin als `uid=1000(node)`.
+  Kein abschließendes `RUN chown -R node:node /app`: Ebenen sind unveränderlich,
+  ein rekursives `chown` schriebe jede Datei neu und legte eine vollständige
+  Kopie des `node_modules`-Baums als eigene Ebene an — 423 MB obendrauf. Nötig
+  ist es nicht: die Dateien gehören root und sind mit `755`/`644` für alle
+  lesbar, und alles, was die Anwendung schreibt, geht nach stdout oder ins
+  Uploads-Volume — nie in den Anwendungsbaum. Der Prozess läuft als
+  `uid=1000(node)`.
 
 Im Prod-Compose läuft Keycloak in `start` statt `start-dev`, Ports hängen an
 `127.0.0.1` statt an allen Interfaces, und keine Zugangsdaten stehen in der
 Datei.
 
-**`start`, aber ohne `--optimized`** — der Flag stand hier und ließ den ersten
-Start scheitern: er verspricht Keycloak, dass `kc.sh build` schon gelaufen ist,
-und beim allerersten Mal ist er das nicht („The '--optimized' flag was used for
-first ever server start"). Der Container lief dann in einer Neustartschleife,
-und zwar genau einmal — beim Aufsetzen, wo man es am wenigsten gebrauchen kann.
-Ihn richtig zu nutzen hieße, ein eigenes Keycloak-Image zu bauen und zu pflegen;
+**`start`, aber ohne `--optimized`**: Der Flag verspricht Keycloak, dass
+`kc.sh build` schon gelaufen ist, und beim allerersten Mal ist er das nicht
+(„The '--optimized' flag was used for first ever server start") — eine
+Neustartschleife beim Aufsetzen. Ihn richtig zu nutzen hieße, ein eigenes Keycloak-Image zu bauen und zu pflegen;
 für ein paar Sekunden Startzeit bei einem Dienst, der monatelang durchläuft, ist
 das nicht der Mühe wert. Am Theme-Caching ändert es nichts.
 
@@ -3809,14 +3755,14 @@ funktionieren muss.
 Entwicklungs-Vorgabe steht: `SMTP_HOST`, `SMTP_FROM`, `KEYCLOAK_URL`,
 `FRONTEND_URL`, `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_ADMIN_PASSWORD`.
 
-**Das Theme wird in der Produktion zwischengespeichert** (`start --optimized`,
-anders als im Entwicklungsmodus). Eine Änderung an Farben oder Texten kostet
-dort einen `docker compose restart keycloak`. `docker compose up -d` reicht
-**nicht**: Compose legt einen Container nur neu an, wenn sich seine
-Konfiguration ändert, und eine eingehängte Datei zählt nicht dazu.
-[`deploy/deploy.sh`](../deploy/deploy.sh) erledigt den Neustart inzwischen von
-selbst — aber nur, wenn der ausgerollte Commit `keycloak/themes` wirklich
-angefasst hat.
+**Das Theme wird in der Produktion zwischengespeichert** (`start`, anders als
+`start-dev`). Eine Änderung an Farben oder Texten kostet dort einen
+`docker compose restart keycloak`. `docker compose up -d` reicht **nicht**:
+Compose legt einen Container nur neu an, wenn sich seine Konfiguration ändert,
+und eine eingehängte Datei zählt nicht dazu.
+[`deploy/deploy.sh`](../deploy/deploy.sh) erledigt den Neustart von selbst — über
+eine Prüfsumme des Theme-Verzeichnisses, nur wenn sich dort wirklich etwas
+geändert hat.
 
 #### Warum es von jedem Bündel zwei Fassungen gibt
 
@@ -3902,7 +3848,7 @@ Damit das aufgeht, muss `KC_HOSTNAME` bei Keycloak auf dieselbe öffentliche
 Adresse gesetzt sein wie `KEYCLOAK_URL` beim Backend. Das Prod-Compose leitet
 beide aus derselben Variable ab.
 
-## API (Stand: Phase 10)
+## API
 
 | Methode                 | Pfad                                         | Rechte                                       |
 | ----------------------- | -------------------------------------------- | -------------------------------------------- |
@@ -3996,8 +3942,8 @@ selbst und den Gruppen-Ideen, `PUT …/prayer-buddies/config` sowie
 `If-Match` (`428` ohne, `412` bei veralteter Version) — Details siehe
 [Conditional Requests](#conditional-requests-etag-304-412).
 
-> Der Invite-Endpunkt legt den Keycloak-Account an, weist die Realm-Rolle zu und
-> verschickt die Einladung. Lokal landet die Mail in Mailpit (<http://localhost:8025>).
+> Der Invite-Endpunkt legt den Keycloak-Account an (oder benutzt ein bestehendes
+> Konto) und verschickt die Einladung; die Rolle steht an der Person. Lokal landet die Mail in Mailpit (<http://localhost:8025>).
 > Mit gesetzter `APP_URL` endet der Ablauf nicht bei Keycloak, sondern mit einem
 > Knopf zurück in die App — siehe [Der Weg zurück](#der-weg-zurück).
 > Schlägt nur der Mailversand fehl, antwortet er mit `invitationEmailSent: false` —
@@ -4012,11 +3958,8 @@ spielt, wo er wohnt und ob er gerade hosten möchte, weiß nur er selbst; das
 steht im Profil. Wer es im Einladungsformular ausfüllte, träfe Annahmen über
 einen Menschen, der noch gar nicht da ist.
 
-**Auch keinen Namen.** Bis Phase H tippte der Admin einen ein, und der stand
-danach als Anzeigename in der App — auch dann, wenn die Person sich beim
-Aktivieren ihres Kontos ganz anders genannt hat. Zwei Leute benannten denselben
-Menschen, und der Betroffene gewann nicht. Bis zur ersten Anmeldung steht jetzt
-der lokale Teil der Adresse da, damit die Zeile überhaupt etwas anzeigt; danach
+**Auch keinen Namen.** Den Namen eines Menschen bestimmt er selbst, nicht der
+Admin. Bis zur ersten Anmeldung steht der lokale Teil der Adresse da, damit die Zeile überhaupt etwas anzeigt; danach
 übernimmt `resolveForUser` den selbst gewählten Namen.
 
 `person.acceptedAt` unterscheidet beides. `null` heißt „eingeladen, aber noch
@@ -4047,13 +3990,12 @@ Die Migration `20260821160000_auto_attendance_only_for_arrived` räumt die
 bereits geschriebenen weg — eng gefasst auf `source = 'AUTO'`, denn `SELF` hat
 ein Mensch getippt und `ABSENCE` leitet sich aus einem Urlaub ab.
 
-**Und an den Anwesenheitszeilen** eines Termins: `meetingInclude.attendances` lieferte
-jede Zeile aus, also zählte die Terminkarte Eingeladene mit, die nie angenommen
-haben, und an vergangenen Abenden auch Ausgetretene — deren Zeilen bleiben dort
-stehen, `RoleReleaseService` räumt nur die kommenden. Die Detailseite sortierte
-beide längst aus, und so nannten zwei Bildschirme über denselben Abend zwei
-verschiedene Zahlen. Der Filter sitzt jetzt im `include`, damit die fremden
-Zeilen gar nicht erst über die Leitung gehen.
+**Und an den Anwesenheitszeilen** eines Termins: `meetingInclude.attendances`
+filtert auf `ANGEKOMMEN`, sonst zählte die Terminkarte Eingeladene mit, die nie
+angenommen haben, und an vergangenen Abenden auch Ausgetretene — deren Zeilen
+bleiben dort stehen, `RoleReleaseService` räumt nur die kommenden. Der Filter
+sitzt im `include`, damit die fremden Zeilen gar nicht erst über die Leitung
+gehen und Karte und Detailseite dieselbe Zahl nennen.
 
 ### Wenn die Mail nicht rausgeht
 
@@ -4064,14 +4006,11 @@ Mailserver klemmte.
 
 Sichtbar machen und **erneut senden** können ist die Antwort darauf:
 `POST …/people/:id/resend-invitation` schickt dieselben drei Schritte noch
-einmal. Sie sind wiederholbar; wer sein Passwort inzwischen gesetzt hat, wird
-nur ein zweites Mal danach gefragt, und das ist harmlos gegenüber „kommt gar
-nicht herein".
+einmal. Sie sind wiederholbar, und was schon erledigt ist (`setupActions`),
+wird nicht noch einmal verlangt.
 
-> Das Frontend zeigte hier bis Phase H einen **grünen Haken für etwas, das nicht
-> passiert war**: `invitationEmailSent` wurde gelesen, aber beide Fälle liefen
-> durch `toast.success`. Das Backend war richtig, gelesen hat es nur niemand
-> richtig.
+> Das Frontend unterscheidet beide Fälle: `invitationEmailSent: false` ist kein
+> grüner Haken, sondern ein Hinweis mit dem Weg zum erneuten Senden.
 
 ### Profilbilder
 
@@ -4200,10 +4139,10 @@ die Datenbank (`KeycloakAdminService.changeUsername`). Andersherum hießen die
 beiden verschieden, sobald Keycloak ablehnt — genau der Zustand, den das Feld
 beendet. Erlaubt sind `^[a-z0-9._-]{3,30}$`.
 
-> Dafür musste `request()` den **Statuscode durchreichen**, statt alles auf 500
-> abzubilden. Vorher sah ein belegter Nutzername (409) genauso aus wie ein
-> Serverfehler, und der echte Grund eines Mailfehlers — etwa eine ungültige
-> `redirect_uri` (400) — verschwand in der SMTP-Warnung.
+> Dafür reicht `request()` den **Statuscode durch**, statt alles auf 500
+> abzubilden: Ein belegter Nutzername (409) ist kein Serverfehler, und der echte
+> Grund eines Mailfehlers — etwa eine ungültige `redirect_uri` (400) — soll nicht
+> in der SMTP-Warnung verschwinden.
 
 Damit das Feld in Keycloak überhaupt beschreibbar ist, setzt
 `setup-keycloak.sh` am Realm `editUsernameAllowed`. Daraus folgt eine Regel für
@@ -4252,7 +4191,7 @@ zu schicken.
 > älter, gilt weiterhin der Keycloak-Standard — bei `registrationAllowed`
 > äußert sich das als **400 „Registrierung nicht erlaubt"** auf der
 > Registrierungsseite, ohne eine Spur im Backend. Das Skript ist deshalb dazu
-> gedacht, wiederholt zu laufen, und fasst bestehende Konten nicht mehr an:
+> gedacht, wiederholt zu laufen, und fasst bestehende Konten nicht an:
 > Nutzername, Passwort und Profil gehören ab dem Anlegen den Menschen davor.
 > Wer ein verkonfiguriertes Testkonto zurücksetzen will, ruft
 > `./scripts/setup-keycloak.sh --reset-users` auf.

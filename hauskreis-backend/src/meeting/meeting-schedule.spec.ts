@@ -45,8 +45,7 @@ describe('nextWeekdayAfter', () => {
   });
 
   it('findet jeden anderen Wochentag genauso', () => {
-    // Der Wochentag stand als Konstante im Modul; hier zeigt sich, dass er es
-    // nicht mehr tut.
+    // Der Wochentag ist ein Argument und keine Konstante.
     expect(iso(nextWeekdayAfter(utc('2026-07-27'), THURSDAY))).toBe(
       '2026-07-30',
     );

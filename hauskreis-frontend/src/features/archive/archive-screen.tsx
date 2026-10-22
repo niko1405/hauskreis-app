@@ -67,9 +67,9 @@ const TABS: readonly Tab[] = ['themen', 'lieder', 'orte', 'notizen', 'termine'];
 /**
  * Wo man im Archiv steht, als Adresse.
  *
- * Seit ein Lied eine eigene Seite hat, führt aus „Lieder" ein Weg hinaus — und
- * zurück landete man auf „Themen", weil das Register nur im Zustand stand.
- * Jetzt steht es in der Adresse, wie die Register auf „Termine"
+ * Aus „Lieder" führt ein Weg hinaus auf die Seite eines Lieds — und zurück
+ * soll man im selben Register landen. Es steht deshalb in der Adresse, wie die
+ * Register auf „Termine"
  * (`meetings-screen.tsx`), geschrieben mit `replaceState`: Das Register ist
  * eine Ansicht und kein Ort, und wer viermal umschaltet, soll mit „zurück"
  * nicht viermal hier landen.
@@ -212,8 +212,8 @@ export function ArchiveScreen() {
    * Das Netz unter dem Hilfsfeld (`enterSearchByTouch`).
    *
    * Schiebt iOS den sichtbaren Ausschnitt trotzdem gegen das Layout, stünde
-   * das Feld halb unter der Uhr, bis die Tastatur wieder zugeht — genau das
-   * war der Fehler. Dann wird zurückgescrollt. Mit dem Hilfsfeld sollte das
+   * das Feld halb unter der Uhr, bis die Tastatur wieder zugeht. Dann wird
+   * zurückgescrollt. Mit dem Hilfsfeld sollte das
    * nie greifen; es steht hier, weil iOS seine Regeln dafür nicht
    * veröffentlicht. Gegen ein Ziehen in der Liste kämpft es nicht: Das nimmt
    * dem Feld vorher schon den Fokus.
@@ -242,13 +242,9 @@ export function ArchiveScreen() {
   /**
    * In den Suchmodus — mit **einer** Bewegung.
    *
-   * Hier liefen einmal zwei gegeneinander: Der Kopf klappte mit einer Feder
-   * ein, und gleichzeitig wuchs der sichere Rand der Leiste per Transition von
-   * null auf seine volle Höhe. Die Feder war schneller, das Feld schoss über
-   * seinen Platz hinaus und kam zurück — am deutlichsten, wenn schon gescrollt
-   * war, weil der Kopf dann von einer kleinen Resthöhe startete und fast
-   * sofort weg war. Jetzt trägt die Leiste ihren Rand immer
-   * (`pt-safe-4 -mt-safe-4`), und es bewegt sich allein die Höhe des Kopfs.
+   * Die Leiste trägt ihren sicheren Rand immer (`pt-safe-4 -mt-safe-4`), und
+   * es bewegt sich allein die Höhe des Kopfs — zwei Bewegungen gegeneinander
+   * ließen das Feld über seinen Platz hinausschießen und zurückkommen.
    *
    * Alles synchron im Handler, also im selben Bild gemalt: erst messen, dann
    * nach ganz oben scrollen und dem Kopf genau die Höhe geben, bei der das
@@ -388,16 +384,13 @@ export function ArchiveScreen() {
     window.history.replaceState(null, '', addressOf(tab, songScope, place));
   };
 
-  // „Termine" gab es einmal nicht, und der Grund war gut: nebeneinander
-  // gestellt sahen Termine und Themen aus wie zwei Sichten auf dasselbe. Seit
-  // es die **Nachbereitung** gibt, stimmt das nicht mehr — ein Abend ohne Thema
-  // trägt eigenen Inhalt, den keine Themenseite zeigt. Es steht trotzdem
-  // hinten: was man hier sucht, ist meistens ein Thema oder ein Lied.
+  // „Termine" steht hinten: Was man hier sucht, ist meistens ein Thema oder
+  // ein Lied. Gebraucht wird es trotzdem — ein Abend ohne Thema trägt mit der
+  // **Nachbereitung** eigenen Inhalt, den keine Themenseite zeigt.
   const tabs: { key: Tab; label: string; count?: number }[] = [
     // `topicsTotal` und nicht `topics`: die Kachel steht über **beiden**
-    // Registern, und hier stand vorher die Zahl des einen. Über „Eigene (1)"
-    // prangte dann „Themen (0)" — die Kachel zählte nur, was schon gehalten
-    // wurde, und ein eigener Entwurf ist genau das nicht.
+    // Registern — sonst stünde über „Eigene (1)" ein „Themen (0)", weil ein
+    // eigener Entwurf noch nicht gehalten ist.
     { key: 'themen', label: 'Themen', count: summary.data?.totals.topicsTotal },
     { key: 'lieder', label: 'Lieder', count: summary.data?.totals.songs },
     // Orte gehören hierher und nicht in die Verwaltung: sie sind Teil dessen,
@@ -441,7 +434,7 @@ export function ArchiveScreen() {
       <div ref={head} aria-hidden={searching} className="overflow-hidden">
         <PageHeader
           title="Archiv"
-          subtitle="Durchsuche vergangene Termine, Themen, Locations und Lieder."
+          subtitle="Durchsuche Themen, Lieder, Locations, Notizen und Termine."
         />
       </div>
 
@@ -643,8 +636,8 @@ export function ArchiveScreen() {
  * noch dazukommt. Der Schalter „Nur meine" nimmt zusätzlich die eigenen dazu,
  * die noch vor sich haben, gehalten zu werden.
  *
- * Die Abende eines Themas stehen nicht mehr hier, sondern auf seiner eigenen
- * Seite. Ein Thema mit fünf Einheiten machte diese Liste sonst zu einer Wand.
+ * Die Abende eines Themas stehen nicht hier, sondern auf seiner eigenen Seite.
+ * Ein Thema mit fünf Einheiten machte diese Liste sonst zu einer Wand.
  */
 function TopicArchive({ search }: { search: string }) {
   const [nurEigene, setNurEigene] = useState(false);
@@ -716,7 +709,7 @@ function TopicArchive({ search }: { search: string }) {
  *
  * Ein **Thema** zieht sich über mehrere Abende und hat einen Bogen darüber. Eine
  * **einzelne Einheit** ist ein Abend, mehr nicht. Wer nur einen vorbereiten
- * will, musste vorher ein Thema erfinden, das nie ein zweites Mal vorkommt.
+ * will, soll kein Thema erfinden müssen, das nie ein zweites Mal vorkommt.
  *
  * Warum die Frage und nicht zwei Knöpfe nebeneinander: Zwei Knöpfe verlangen,
  * dass man den Unterschied schon kennt, bevor man einen drückt. Der Schritt
@@ -1001,9 +994,8 @@ function TopicEntry({ topic }: { topic: TopicListItem }) {
    * Wer daran arbeitet — und bei einer Hülle ist das die Crew der Einheit.
    *
    * `collaborators` ist dort immer leer: Die Mitwirkenden-Ebene einer Hülle ist
-   * abgeleitet, nicht eingetragen (siehe `membershipOf` im Backend). Vorher
-   * stand deshalb auf jeder einzelnen Einheit genau ein Gesicht — das des
-   * Erstellers —, ganz gleich, mit wie vielen er sie vorbereitet.
+   * abgeleitet, nicht eingetragen (siehe `membershipOf` im Backend). Ohne die
+   * Crew stünde auf jeder einzelnen Einheit nur das Gesicht des Erstellers.
    *
    * Der Owner steht in der Crew, das hält der Server; die Reihenfolge kommt
    * darum aus der Crew selbst und nicht aus einer Sonderbehandlung hier.
@@ -1087,7 +1079,7 @@ function TopicEntry({ topic }: { topic: TopicListItem }) {
  * **„Meine Lieder" sind die mit eigener Version**, also Text und Akkorde, die
  * jemand für sich hinterlegt hat. Sie kommen nicht vom Server, sondern aus dem
  * Gerät (`lib/own-songs`), und stehen deshalb auch ohne Netz da. „Alle Lieder"
- * ist die Liederliste der Gruppe, wie bisher.
+ * ist die Liederliste der Gruppe.
  */
 function SongLibrary({
   search,
@@ -1264,11 +1256,8 @@ function AllSongs({ search }: { search: string }) {
 /**
  * Eine Liedzeile — und sie führt auf die Seite des Lieds.
  *
- * Stift und Papierkorb lagen hier erst dauerhaft, dann hinter einem langen
- * Druck, zuletzt hinter einem Wisch nach links. Seit ein Lied eine eigene
- * Seite hat, steht dort beides unter „Bearbeiten", und die Zeile hat nur noch
- * eine Aufgabe: dorthin zu führen. Der Knopf „Text" ist aus demselben Grund
- * weg — der Link steht auf der Seite ganz oben.
+ * Ändern und Löschen stehen auf der Seite des Lieds unter „Bearbeiten", der
+ * Link ganz oben — die Zeile hat nur eine Aufgabe: dorthin zu führen.
  */
 function SongRow({
   song,

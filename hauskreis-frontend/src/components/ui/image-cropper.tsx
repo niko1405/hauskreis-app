@@ -3,17 +3,13 @@
 /**
  * Welchen Ausschnitt eines Bildes man behält — und wie er hinterher aussieht.
  *
- * **Warum es das gibt.** Bisher schnitt der Server aus der Mitte
- * (`sharp`, `fit: 'cover'`, `position: 'centre'`), und in der Auswahl stand als
- * Hinweis „der Ausschnitt kommt aus der Mitte". Für ein Gruppenfoto ist die
- * Mitte fast nie die richtige Stelle: Köpfe sitzen oben, ein Querformat wird
- * zum Quadrat beschnitten, und wer es anders wollte, musste das Bild vorher in
- * einer anderen App zuschneiden. Hier sieht man vor dem Hochladen, was ankommt.
+ * **Warum es das gibt.** Für ein Gruppenfoto ist die Mitte fast nie die
+ * richtige Stelle: Köpfe sitzen oben, und ein Querformat wird zum Quadrat
+ * beschnitten. Hier sieht man vor dem Hochladen, was ankommt.
  *
  * **Zugeschnitten wird im Gerät, nicht am Server.** Was hochgeht, ist das
- * fertige Bild — und damit bleibt der Server unverändert: `fit: 'cover'` auf
- * ein Bild, das schon das richtige Seitenverhältnis hat, schneidet nichts mehr
- * weg und skaliert nur noch. Der Preis ist, dass sich der Ausschnitt später
+ * fertige Bild: `fit: 'cover'` am Server auf ein Bild, das schon das richtige
+ * Seitenverhältnis hat, schneidet nichts mehr weg und skaliert nur noch. Der Preis ist, dass sich der Ausschnitt später
  * nicht nachjustieren lässt, ohne die Datei erneut zu wählen. Die Alternative
  * wäre, Original **und** Ausschnittsrahmen zu speichern und bei jeder Auslieferung
  * zu rechnen — für vier Bilder, die man selten wechselt, ein eigenes Projekt.
@@ -44,8 +40,7 @@ export interface CropTarget {
    * zufällig, und ein einziger Ausschnitt kann 1,5:1 und 5:1 nicht gleichzeitig
    * bedienen — irgendetwas fällt weg.
    *
-   * Statt so zu tun, als wäre der Rahmen die ganze Wahrheit, steht es jetzt
-   * drin.
+   * Statt so zu tun, als wäre der Rahmen die ganze Wahrheit, steht es drin.
    */
   trim?: {
     /** Je Seite, auf dem schmalsten Telefon (Kopfzeile 1,50:1 gegen 2:1). */

@@ -6,8 +6,7 @@
  * wäre auf 390 px nicht mehr lesbar.
  *
  * **Ein Termin kann mehrere Tage füllen.** Eine Freizeit von Freitag bis
- * Sonntag stand bisher nur am Freitag, und wer am Samstag nachsah, fand einen
- * leeren Tag. Deshalb belegt ein Termin jeden Tag seines Zeitraums, und aus
+ * Sonntag steht auch am Samstag: Ein Termin belegt jeden Tag seines Zeitraums, und aus
  * den Punkten wird ein durchgehender Balken — drei einzelne Punkte sähen aus
  * wie drei Termine.
  *
@@ -42,6 +41,7 @@ import {
   isAnswerable,
 } from '@/components/domain/answer-buttons';
 import { AnswerNoteSheet } from '@/components/domain/answer-note-sheet';
+import { ownAnswerLine } from '@/components/domain/attendance-answers';
 import type {
   AttendanceStatus,
   BirthdayOccasion,
@@ -254,13 +254,10 @@ export function MeetingCalendar() {
 /**
  * Eine Zeile der Monatsliste — links der Termin, rechts die eigene Antwort.
  *
- * **Die Antwort ist zurück.** Sie war hier einmal als runder Umschalter, fiel
- * mit ihm weg und sollte nicht wiederkommen: „hier sucht man einen Tag im
- * Monat, nicht ob man kann". Das stimmt für die Frage, mit der man den Kalender
- * aufmacht, aber nicht für das, was einem dabei auffällt — man sieht den 15.
- * neben dem Urlaub stehen und will genau dann absagen. Zwei Bildschirme, auf
- * denen dieselbe Karte einmal fragt und einmal nicht, sind schwerer zu erklären
- * als einer mehr, der fragt.
+ * **Auch hier wird geantwortet.** Den Kalender macht man auf, um einen Tag zu
+ * suchen — aber dabei fällt einem auf, dass man am 15. nicht kann. Zwei
+ * Bildschirme, auf denen dieselbe Karte einmal fragt und einmal nicht, wären
+ * schwerer zu erklären als einer mehr, der fragt.
  *
  * **Sie steht neben dem Termin, nicht darunter** (`compact`). Diese Kachel ist
  * schon drei Zeilen hoch; eine vierte für die Knöpfe hätte den Monat auf zwei
@@ -282,17 +279,16 @@ function MonthRow({ meeting }: { meeting: MeetingListItem }) {
   const [noteFor, setNoteFor] = useState<AttendanceStatus | null>(null);
 
   const cancelled = meeting.status === 'CANCELLED';
-  const myNote =
-    meeting.attendances.find((row) => row.personId === me?.id)?.note ?? null;
+  const myRow = meeting.attendances.find((row) => row.personId === me?.id);
+  const myLine = ownAnswerLine(myRow);
 
   return (
     <li>
       <div
         className={cn(
           'flex items-center gap-3 rounded-md border border-line bg-card p-3 transition-colors focus-within:border-line-strong hover:border-line-strong',
-          // Wie auf der Terminkarte: der Punkt im Raster oben war schon
-          // grau, hier stand ein abgesagter Abend bisher wie jeder
-          // andere.
+          // Wie auf der Terminkarte und am Punkt im Raster oben: ein abgesagter
+          // Abend steht gedämpft da.
           cancelled && 'opacity-60',
         )}
       >
@@ -313,9 +309,9 @@ function MonthRow({ meeting }: { meeting: MeetingListItem }) {
           {/* Der eigene Satz, einzeilig — wie auf der Terminkarte. Er ist der
               Grund, aus dem man die Zeile sonst öffnen müsste, um zu sehen, ob
               man überhaupt etwas dazugesagt hat. */}
-          {myNote && (
+          {myLine && (
             <span className="mt-0.5 block truncate text-[11px] text-stone-400">
-              „{myNote}"
+              {myLine}
             </span>
           )}
         </Link>
@@ -330,7 +326,8 @@ function MonthRow({ meeting }: { meeting: MeetingListItem }) {
           meetingId={meeting.id}
           personId={me.id}
           status={noteFor}
-          note={myNote}
+          note={myRow?.note ?? null}
+          lateMinutes={myRow?.lateMinutes ?? null}
           onClose={() => setNoteFor(null)}
         />
       )}

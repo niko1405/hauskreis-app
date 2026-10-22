@@ -98,20 +98,15 @@ export class NotificationService implements OnModuleInit {
    * Legt den Eintrag in der Box an und schickt ihn, wenn er geschickt werden
    * darf — höchstens einmal je Gegenstand.
    *
-   * **Zwei Dinge, die einmal eines waren.** Bis hierher entschied die bloße
-   * Existenz einer Log-Zeile beides: ob die Nachricht schon rausging *und* ob
-   * es sie überhaupt gab. Seit hinter der Glocke eine Box hängt, sind das
-   * verschiedene Fragen. Der **Eintrag** entsteht immer — auch bei
-   * abgeschalteter Art, auch ohne VAPID-Schlüssel: In der Box zu stehen stört
-   * niemanden, und wer die Erinnerung ans Hosten stummgeschaltet hat, will
-   * trotzdem nachlesen können, dass er dran ist. Der **Push** hängt ab jetzt
-   * an `pushedAt`.
+   * **Eintrag und Zustellung sind zwei Fragen.** Der **Eintrag** entsteht
+   * immer — auch bei abgeschalteter Art, auch ohne VAPID-Schlüssel: In der Box
+   * zu stehen stört niemanden, und wer die Erinnerung ans Hosten
+   * stummgeschaltet hat, will trotzdem nachlesen können, dass er dran ist. Der
+   * **Push** hängt an `pushedAt`.
    *
-   * Ohne diese Trennung ginge die Eigenschaft verloren, auf die die täglichen
-   * Läufe gebaut sind: Eine abgeschaltete Art schrieb bewusst *nichts*, damit
-   * ein späteres Wiedereinschalten noch zustellt. Schriebe sie jetzt eine
-   * Zeile und hänge die Entdopplung weiter daran, wäre die Nachricht für immer
-   * verschluckt.
+   * Darauf sind die täglichen Läufe gebaut: Hinge die Entdopplung an der
+   * bloßen Zeile, wäre eine Nachricht bei abgeschalteter Art für immer
+   * verschluckt — so stellt ein späteres Wiedereinschalten noch zu.
    *
    * Geschrieben wird *vor* dem Zustellen: Ein Absturz mitten im Senden kostet
    * so eine ausgefallene Erinnerung statt einer täglichen Wiederholung.

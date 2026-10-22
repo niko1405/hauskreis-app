@@ -39,9 +39,8 @@ export function AuthBridge({ children }: { children: React.ReactNode }) {
   }
 
   // Eine Bremse für den Fall, dass die Erneuerung zwar gelingt, das
-  // Ergebnis aber nichts ändert. Genau so entstand einmal eine Schleife ohne
-  // Ende: der Server wies das Token wegen einer unbestätigten Adresse ab, die
-  // Erneuerung lieferte brav ein neues, und das trug denselben Mangel. Ein
+  // Ergebnis aber nichts ändert — etwa wenn der Server das Token wegen einer
+  // unbestätigten Adresse abweist und jedes neue denselben Mangel trägt. Ein
   // neues Token kann nur helfen, wenn das alte zu alt war — hilft es dreimal
   // hintereinander nicht, liegt es an etwas anderem, und dann gehört der Fehler
   // sichtbar gemacht statt in Anfragen übersetzt.

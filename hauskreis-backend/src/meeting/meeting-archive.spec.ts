@@ -38,11 +38,11 @@ const query = { take: 20, skip: 0, scope: 'past' as const };
 /**
  * Die Zeitfenster aus dem `where`, jedes für sich.
  *
- * Seit ein Termin ein Zeitraum sein kann, ist jede Bedingung ein `OR` über
+ * Ein Termin kann ein Zeitraum sein, also ist jede Bedingung ein `OR` über
  * zwei Zweige — „endet nicht vor X" trifft einen eintägigen Termin über sein
  * Startdatum und einen mehrtägigen über sein Ende. Zwei davon nebeneinander in
- * einem `date`-Objekt überschrieben sich, deshalb stehen sie jetzt als Liste
- * unter `AND`.
+ * einem `date`-Objekt überschrieben sich, deshalb stehen sie als Liste unter
+ * `AND`.
  */
 const windows = (findMany: jest.Mock): unknown[] =>
   (findMany.mock.calls[0][0].where.AND as unknown[]) ?? [];
@@ -171,8 +171,6 @@ describe('MeetingService.findAll for the archive', () => {
 
     // Beide Bedingungen stehen da und gelten mit UND — ein `from` in der
     // Vergangenheit zieht eine Liste kommender Termine damit nicht zurück.
-    // Vorher wurde hier gerechnet („nimm das spätere"); das ging nur, solange
-    // eine Untergrenze eine einzelne Zahl war.
     expect(windows(findMany)).toEqual([
       endetNichtVor(TODAY),
       endetNichtVor(utc('2026-01-01')),

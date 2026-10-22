@@ -5,9 +5,8 @@
  *
  * An drei Stellen dieselben Felder: beim Anlegen im Archiv
  * (`new-song-sheet.tsx`), beim Vorschlagen eines neuen Lieds am Termin
- * (`song-suggest-sheet.tsx`) und im Bearbeitungsmodus der Liedseite. Am Termin
- * stand einmal eine eigene Fassung ohne Beschriftungen — zwei Fassungen wären
- * zwei Meinungen darüber, was ein Lied ausmacht.
+ * (`song-suggest-sheet.tsx`) und im Bearbeitungsmodus der Liedseite. Zwei
+ * Fassungen wären zwei Meinungen darüber, was ein Lied ausmacht.
  *
  * Der Link zeigt auf Text **oder** Akkorde — bei vier Instrumentalist:innen ist
  * ein Akkordblatt genauso der richtige —, deshalb heißt das Feld nicht

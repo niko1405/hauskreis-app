@@ -7,10 +7,10 @@
  * zweites Bedienelement für dieselbe Sache; dass man auf sein Gesicht tippt, um
  * es zu ändern, muss man niemandem erklären.
  *
- * **Den Ausschnitt wählt man selbst** ([[image-cropper]]). Vorher schnitt der
- * Server aus der Mitte, und bei einem Hochformat war das oft der Hals. Der
- * Server verkleinert weiterhin (`sharp`, 512 Pixel, WebP) — er bekommt nur
- * jetzt schon ein quadratisches Bild und hat deshalb nichts mehr wegzunehmen.
+ * **Den Ausschnitt wählt man selbst** ([[image-cropper]]): Aus der Mitte
+ * geschnitten wäre es bei einem Hochformat oft der Hals. Der Server verkleinert
+ * (`sharp`, 512 Pixel, WebP) — er bekommt schon ein quadratisches Bild und hat
+ * deshalb nichts wegzunehmen.
  */
 import { Camera, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';

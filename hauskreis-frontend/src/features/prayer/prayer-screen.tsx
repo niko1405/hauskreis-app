@@ -224,9 +224,9 @@ function RoundCard({ round }: { round: PrayerBuddyRound }) {
  * keine Information, und sie auszuschreiben wäre eine Unterscheidung ohne
  * Unterschied — man liest sie dann beim Trio auch nicht mehr.
  *
- * Zu **dritt** wird reihum gebetet, und das stand vorher nirgends: Aus „Anna
- * und Ben" musste sich jede:r selbst zusammenreimen, für wen er betet. Jetzt
- * stehen beide Rollen mit eigener Beschriftung da, denn beide sind gleich
+ * Zu **dritt** wird reihum gebetet: Aus „Anna und Ben" müsste sich jede:r
+ * selbst zusammenreimen, für wen er betet. Deshalb stehen beide Rollen mit
+ * eigener Beschriftung da, denn beide sind gleich
  * wichtig — die eine ist ein Auftrag, die andere ein Zuspruch.
  */
 function MyGroup({

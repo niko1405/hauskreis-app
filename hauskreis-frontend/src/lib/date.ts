@@ -151,14 +151,14 @@ export function isToday(day: CalendarDay): boolean {
  *
  * Der einzige Helfer hier, der einen Tag mit einer Uhrzeit verrechnet — und
  * deshalb bewusst nicht `isPast`/`isFuture` heißt: die beiden sind tagesgenau
- * und antworten am Termintag „weder noch". Für den Actionstep reicht das nicht.
- * Er ließ sich sonst am Termintag um acht Uhr morgens abhaken, also zehn Stunden
- * bevor die Gruppe ihn ausgesprochen hatte.
+ * und antworten am Termintag „weder noch". Für den Actionstep reicht das nicht:
+ * Ihn hakt man nicht morgens um acht ab, bevor die Gruppe ihn ausgesprochen
+ * hat.
  *
  * `startTime` ist `"19:30"`, wie es aus der API kommt. Gerechnet wird in der
- * **Zone der Gruppe**, genau wie im Backend — vorher war es die des Geräts, und
- * damit sah jemand im Urlaub einen Abend als begonnen, den der Server noch
- * nicht freigegeben hatte.
+ * **Zone der Gruppe**, genau wie im Backend — nicht in der des Geräts, sonst
+ * sähe jemand im Urlaub einen Abend als begonnen, den der Server noch nicht
+ * freigegeben hat.
  */
 export function hasStarted(day: CalendarDay, startTime: string): boolean {
   const [hours, minutes] = startTime.split(':').map(Number);
@@ -296,12 +296,11 @@ export function formatRelativeDay(day: CalendarDay): string {
 /**
  * Ein **Abstand** ohne Bezugspunkt: „5 Tage", „3 Wochen", „2 Monate".
  *
- * Für Aussagen, die sich nicht auf heute beziehen. Der Anlass war eine Zeile in
- * den Vorschlägen: „zuletzt in 4 Tagen" stand unter einem Namen, weil dort
- * `formatRelativeDay` lief — das misst gegen **heute**, gemeint war aber der
- * Abstand zu dem Abend, für den gerade eingeteilt wird. Wer in vier Tagen die
- * Musik macht, war für einen Abend in vier Wochen zuletzt dreieinhalb Wochen
- * vorher dran, nicht „in vier Tagen".
+ * Für Aussagen, die sich nicht auf heute beziehen — etwa in den Vorschlägen:
+ * `formatRelativeDay` misst gegen **heute**, gemeint ist dort aber der Abstand
+ * zu dem Abend, für den gerade eingeteilt wird. Wer in vier Tagen die Musik
+ * macht, war für einen Abend in vier Wochen zuletzt dreieinhalb Wochen vorher
+ * dran, nicht „in vier Tagen".
  *
  * Eigene Funktion und keine Wiederverwendung von `formatRelativeDay`, weil das
  * Deutsche die Fälle unterscheidet: dort „vor **einer** Woche" (Dativ), hier

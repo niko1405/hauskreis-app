@@ -148,9 +148,9 @@ export function useResourceUpdate<T, TInput>({
  * Für Schreibvorgänge ohne Vorbedingung (Anwesenheit, Song-Leiter, Lieder
  * eines Termins, Benachrichtigungs-Einstellungen) sowie für `POST`/`DELETE`.
  *
- * Fehler melden sich hier von selbst. Vorher hing das an jeder Aufrufstelle
- * einzeln, und zwei davon hatten es schlicht vergessen — ein fehlgeschlagener
- * Tipper blieb dort stumm. `silent` ist für die Fälle da, in denen der
+ * Fehler melden sich hier von selbst, statt an jeder Aufrufstelle einzeln —
+ * dort vergäße man es, und ein fehlgeschlagener Tipper bliebe stumm. `silent`
+ * ist für die Fälle da, in denen der
  * Aufrufer etwas Besseres anzuzeigen hat als einen Toast.
  */
 export function useApiMutation<TData, TInput>(

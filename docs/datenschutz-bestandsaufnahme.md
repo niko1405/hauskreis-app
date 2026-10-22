@@ -5,7 +5,7 @@ welche Daten Acts2 verarbeitet, wo sie liegen und wohin sie gehen. Alles darin
 stammt aus dem Quelltext dieses Projekts; hinter jeder Angabe steht die
 Fundstelle, damit man sie nachprüfen kann, statt sie glauben zu müssen.
 
-**Stand:** 19.08.2026. Wer am Datenmodell, an den Benachrichtigungen oder an der
+**Stand:** 22.10.2026. Wer am Datenmodell, an den Benachrichtigungen oder an der
 Lied-Suche etwas ändert, ändert auch dieses Dokument.
 
 > Am Ende steht unter **„Was hier fehlt"** eine kurze Liste mit Dingen, die im
@@ -38,17 +38,17 @@ ausdrückliche Einwilligung nach Art. 9 (2) (a) DSGVO; siehe Abschnitt 6.
 
 ## 2. Wohin Daten das Haus verlassen
 
-| Empfänger | Was ankommt | Wann | Fundstelle |
-| --- | --- | --- | --- |
-| **Cloudflare Pages** (Hosting von `acts2.de`) | IP-Adresse, User-Agent, aufgerufene Adresse, Zeitpunkt | bei jedem Aufruf der App | `deploy/README.md` |
-| **Eigener VPS, nginx** (`api.acts2.de`, `auth.acts2.de`) | IP-Adresse in den Zugriffsprotokollen (`X-Real-IP`, `X-Forwarded-For`) | bei jedem API- und Anmeldevorgang | `deploy/nginx/api.conf`, `auth.conf` |
-| **SMTP-Anbieter** | Empfängeradresse und Mailinhalt | Einladung, Adressbestätigung, Passwort-Reset | `hauskreis-backend/scripts/setup-keycloak.sh` |
-| **Push-Dienst des Browsers** (Google FCM bei Chrome/Android, Apple bei Safari/iOS, Mozilla bei Firefox) | Endpunkt-Adresse, Zeitpunkt, Größe — **nicht der Inhalt** | bei jeder Benachrichtigung | `src/notification/notification.service.ts` |
-| **Google Gemini API** | Liedtitel, Interpret, schon bekannte Adressen; oder der `<title>`/`og:`-Kopf einer eingefügten Seite | **nur** auf Knopfdruck im Lied-Formular | `src/song/gemini.client.ts` |
-| **Google Suche** (Werkzeug `google_search` innerhalb derselben Anfrage) | dieselbe Suchanfrage nach dem Lied | dito | `src/song/song-lookup.service.ts` |
-| **Die vorgeschlagene Liedseite** (z. B. Ultimate Guitar, Genius) | die **Server**-IP, nicht die des Nutzers — der Server ruft den Link ab, um Weiterleitungen aufzulösen | dito | `src/song/song-lookup.service.ts:405` |
-| **Google Maps** | erst wenn jemand auf eine Adresse tippt und die Karte öffnet | selten, immer nutzerausgelöst | `src/lib/meeting.ts` |
-| **GitHub** (Actions, Container Registry) | Quelltext und Images — **keine** Nutzerdaten | bei jedem Deploy | `.github/workflows/` |
+| Empfänger                                                                                               | Was ankommt                                                                                           | Wann                                         | Fundstelle                                    |
+| ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------- | --------------------------------------------- |
+| **Cloudflare Pages** (Hosting von `acts2.de`)                                                           | IP-Adresse, User-Agent, aufgerufene Adresse, Zeitpunkt                                                | bei jedem Aufruf der App                     | `deploy/README.md`                            |
+| **Eigener VPS, nginx** (`api.acts2.de`, `auth.acts2.de`)                                                | IP-Adresse in den Zugriffsprotokollen (`X-Real-IP`, `X-Forwarded-For`)                                | bei jedem API- und Anmeldevorgang            | `deploy/nginx/api.conf`, `auth.conf`          |
+| **SMTP-Anbieter**                                                                                       | Empfängeradresse und Mailinhalt                                                                       | Einladung, Adressbestätigung, Passwort-Reset | `hauskreis-backend/scripts/setup-keycloak.sh` |
+| **Push-Dienst des Browsers** (Google FCM bei Chrome/Android, Apple bei Safari/iOS, Mozilla bei Firefox) | Endpunkt-Adresse, Zeitpunkt, Größe — **nicht der Inhalt**                                             | bei jeder Benachrichtigung                   | `src/notification/notification.service.ts`    |
+| **Google Gemini API**                                                                                   | Liedtitel, Interpret, schon bekannte Adressen; oder der `<title>`/`og:`-Kopf einer eingefügten Seite  | **nur** auf Knopfdruck im Lied-Formular      | `src/song/gemini.client.ts`                   |
+| **Google Suche** (Werkzeug `google_search` innerhalb derselben Anfrage)                                 | dieselbe Suchanfrage nach dem Lied                                                                    | dito                                         | `src/song/song-lookup.service.ts`             |
+| **Die vorgeschlagene Liedseite** (z. B. Ultimate Guitar, Genius)                                        | die **Server**-IP, nicht die des Nutzers — der Server ruft den Link ab, um Weiterleitungen aufzulösen | dito                                         | `src/song/song-lookup.service.ts:405`         |
+| **Google Maps**                                                                                         | erst wenn jemand auf eine Adresse tippt und die Karte öffnet                                          | selten, immer nutzerausgelöst                | `src/lib/meeting.ts`                          |
+| **GitHub** (Actions, Container Registry)                                                                | Quelltext und Images — **keine** Nutzerdaten                                                          | bei jedem Deploy                             | `.github/workflows/`                          |
 
 ### Drei Punkte, die eine Standard-Erklärung falsch darstellen würde
 
@@ -84,16 +84,25 @@ Beitrittszeitpunkt.
 liegen die **Privatadressen** der Mitglieder in der Datenbank.
 
 **Zum Gruppenleben** — Termine samt Uhrzeit und Ort; wer wann zugesagt, abgesagt
-oder nichts gesagt hat; eingetragene Abwesenheitszeiträume; wer Gastgeber,
-Thema, Musik oder Testimony übernimmt; **Gebetsanliegen** als freier Text;
-Themen mit Zusammenfassungen und Actionsteps; Lieder samt Links; wer mit wem
-betet; Geburtstage, Geschenk-Ideen, Zustimmungen dazu und Preise; das
-Hintergrundbild der Gruppe.
+oder nichts gesagt hat, mit einem optionalen Satz dazu und bei einer Zusage
+einer angekündigten Verspätung in Minuten; eingetragene Abwesenheitszeiträume;
+wer Gastgeber, Thema, Musik, Testimony oder Snacks übernimmt;
+**Gebetsanliegen** als freier Text; Themen mit Zusammenfassungen und
+Actionsteps; Lieder samt Links, Setlist und Stimmen für Vorschläge; wer mit wem
+betet; Geburtstage, Geschenk-Ideen, Zustimmungen, **Kommentare** dazu und
+Preise; Ideen der Gruppe; Name, Beschreibung, Gruppenbild und Hintergrundbilder
+der Gruppe.
+
+**Notizen** — Titel und freier Text, wer sie angelegt und zuletzt geändert hat,
+und wer sie sehen darf (einzelne Mitglieder oder die ganze Gruppe;
+`model Note`, `model NoteMember`). Lesen kann eine Notiz nur, wer dabei ist —
+auch kein Admin.
 
 **Technisches** — Push-Abonnements (Endpunkt und Schlüssel je Gerät),
-Benachrichtigungs-Einstellungen, und ein Protokoll darüber, **dass** eine
-Benachrichtigung verschickt wurde: Empfänger, Art, Bezug und Zeitpunkt. **Der
-Text der Nachricht wird nicht gespeichert** (`model NotificationLog`).
+Benachrichtigungs-Einstellungen, und je Benachrichtigung ein Eintrag mit
+Empfänger, Art, Bezug, Zeitpunkt, **Titel, Text und Ziel-Adresse** sowie wann
+sie zugestellt und gelesen wurde (`model NotificationLog`). Der Text wird
+gespeichert, weil dieselbe Nachricht in der Box hinter der Glocke steht.
 
 **Dateien** — Profilbilder und Hintergrundbilder liegen als Dateien in einem
 Docker-Volume auf dem VPS (`UPLOAD_DIR`, Unterordner `people/` und `headers/`),
@@ -111,12 +120,21 @@ und Anmeldeereignisse.
 
 **`localStorage`**
 
-| Schlüssel | Inhalt | Zweck |
-| --- | --- | --- |
-| `oidc.*` | Zugangs- und Erneuerungs-Token | Angemeldet bleiben, auch nach dem Schließen (`src/lib/auth/oidc-config.ts`) |
-| Design-Wahl | `light` / `dark` / `system` | `src/lib/theme.ts` |
-| „Neuigkeiten gesehen" | zuletzt gesehene Version | `src/lib/release-storage.ts` |
-| zuletzt gewählter Hauskreis | Id | `src/lib/hauskreis/hauskreis-context.tsx` |
+| Schlüssel             | Inhalt                                                                                                                  | Zweck                                                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `oidc.*`              | Zugangs- und Erneuerungs-Token                                                                                          | Angemeldet bleiben, auch nach dem Schließen (`src/lib/auth/oidc-config.ts`)                                  |
+| Design-Wahl           | `light` / `dark` / `system`                                                                                             | `src/lib/theme.ts`                                                                                           |
+| Kopfleiste an/aus     | `on` / `off`                                                                                                            | `src/lib/header-preference.ts`                                                                               |
+| „Neuigkeiten gesehen" | zuletzt gesehene bzw. weggeklickte Version                                                                              | `src/lib/release-storage.ts`                                                                                 |
+| Hinweis-Punkte        | ob „Erste Schritte" und die Verwaltung schon geöffnet wurden, ob der Willkommens-Hinweis nach dem Gründen noch aussteht | `src/features/help/use-unread-help.ts`, `src/features/admin/use-unread-admin.ts`, `src/lib/owner-welcome.ts` |
+| Liedansicht           | Instrument (Gitarre/Klavier) und Schriftgröße im Vollbild                                                               | `src/features/songs/chord-panels.tsx`, `src/features/songs/sheet-fullscreen.tsx`                             |
+
+**IndexedDB** — die **eigenen Versionen** von Liedern: Text und Akkorde, die
+jemand selbst von einer Seite kopiert hat, dazu Transposition, Scroll-Tempo und
+gewählte Griffe (`src/lib/own-songs/store.ts`, Datenbank
+`hauskreis-eigene-lieder`). Sie liegen **nur im Gerät**, je Person getrennt; es
+gibt keinen Endpunkt dafür, sie gehen nie an den Server und werden nicht
+gesichert. Wer die App löscht oder das Gerät wechselt, verliert sie.
 
 **`sessionStorage`** — ein Zeitstempel, der verhindert, dass die App nach einem
 Ladefehler in eine Neulade-Schleife gerät (`src/lib/chunk-error.ts`).
@@ -174,6 +192,10 @@ weg, das Anmeldekonto bei Keycloak ebenfalls. Stehen bleibt die Zuschreibung im
 Archiv — wer welchen Abend gehalten hat, wer da war — unter „Ehemaliges
 Mitglied".
 
+**Notizen** folgen derselben Regel mit einer Ausnahme: Eine Notiz, die nur diese
+Person sehen konnte, wird gelöscht — sie gehörte danach niemandem. Geteilte
+bleiben stehen, mit „Ehemaliges Mitglied" als Ersteller.
+
 Der Grund ist die Alternative: Ein hartes Löschen nähme dem Archiv nicht die
 Person, sondern die **Zusammenhänge**; Termine hätten dann keinen Gastgeber
 mehr, Themen keinen Verfasser. Das Archiv wäre danach nicht anonym, sondern
@@ -184,13 +206,13 @@ Ihrer Daten"; hier muss das ausdrücklich anders formuliert werden.
 
 ## 8. Auftragsverarbeiter — wer wofür
 
-| Rolle | Wer | Wofür ein AV-Vertrag nötig ist |
-| --- | --- | --- |
-| Hosting Frontend | Cloudflare | ja |
-| Hosting Backend, Keycloak, Datenbank | VPS-Anbieter | ja |
-| Mailversand | SMTP-Anbieter | ja |
-| KI-Funktion Lied-Suche | Google (Gemini) | ja, sofern man den Aufruf als Verarbeitung wertet |
-| Push-Zustellung | Google / Apple / Mozilla | umstritten; Inhalte sind verschlüsselt |
+| Rolle                                | Wer                      | Wofür ein AV-Vertrag nötig ist                    |
+| ------------------------------------ | ------------------------ | ------------------------------------------------- |
+| Hosting Frontend                     | Cloudflare               | ja                                                |
+| Hosting Backend, Keycloak, Datenbank | VPS-Anbieter             | ja                                                |
+| Mailversand                          | SMTP-Anbieter            | ja                                                |
+| KI-Funktion Lied-Suche               | Google (Gemini)          | ja, sofern man den Aufruf als Verarbeitung wertet |
+| Push-Zustellung                      | Google / Apple / Mozilla | umstritten; Inhalte sind verschlüsselt            |
 
 Cloudflare und Google sitzen in den USA — die Erklärung muss die Übermittlung
 in ein Drittland benennen (Angemessenheitsbeschluss EU-US Data Privacy

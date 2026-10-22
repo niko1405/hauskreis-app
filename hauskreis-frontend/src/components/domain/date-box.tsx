@@ -4,12 +4,10 @@
  * Die Kopfzeile eines Termins — das Datums-Kästchen und die Zeile „wann und
  * wo" darunter.
  *
- * **Warum die beiden hier stehen und nicht in einer der Karten.** Sie standen
- * zweimal da, wortgleich: in `meeting-card.tsx` und in der `NextMeetingCard`
- * auf „Heute". Solange beide nur ein Datum untereinandersetzten, war das
- * verschmerzbar; seit das Kästchen einen eigenen Rahmen, eine eigene Tönung und
- * eine zweistellige Zahl hat, wären es zwei Meinungen darüber, wie ein Termin
- * aussieht — und die eine hätte man beim nächsten Griff vergessen.
+ * **Warum die beiden hier stehen und nicht in einer der Karten.** Zwei
+ * brauchen sie: `meeting-card.tsx` und die `NextMeetingCard` auf „Heute". Zwei
+ * Kopien wären zwei Meinungen darüber, wie ein Termin aussieht — und die eine
+ * vergäße man beim nächsten Griff.
  */
 import { Clock, MapPin } from 'lucide-react';
 import { dayParts } from '@/lib/date';

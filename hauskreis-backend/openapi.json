@@ -16765,12 +16765,19 @@
                       "note": {
                         "type": "string",
                         "nullable": true
+                      },
+                      "lateMinutes": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "nullable": true
                       }
                     },
                     "required": [
                       "personId",
                       "status",
-                      "note"
+                      "note",
+                      "lateMinutes"
                     ],
                     "additionalProperties": false
                   }
@@ -17630,12 +17637,19 @@
                 "note": {
                   "type": "string",
                   "nullable": true
+                },
+                "lateMinutes": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "nullable": true
                 }
               },
               "required": [
                 "personId",
                 "status",
-                "note"
+                "note",
+                "lateMinutes"
               ],
               "additionalProperties": false
             }
@@ -18148,6 +18162,12 @@
             "minLength": 1,
             "maxLength": 200,
             "nullable": true
+          },
+          "lateMinutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 180,
+            "nullable": true
           }
         },
         "required": [
@@ -18189,6 +18209,12 @@
             "type": "string",
             "nullable": true
           },
+          "lateMinutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "nullable": true
+          },
           "updatedAt": {
             "type": "string",
             "format": "date-time",
@@ -18201,6 +18227,7 @@
           "status",
           "source",
           "note",
+          "lateMinutes",
           "updatedAt"
         ],
         "additionalProperties": false
@@ -21901,6 +21928,9 @@
               "additionalProperties": false
             }
           },
+          "weeklyActionstep": {
+            "type": "boolean"
+          },
           "openActionstep": {
             "type": "object",
             "properties": {
@@ -21992,6 +22022,7 @@
           "lastMeeting",
           "nextMeeting",
           "myRoles",
+          "weeklyActionstep",
           "openActionstep",
           "prayerBuddies"
         ],

@@ -8,9 +8,8 @@ import { isoDateOut, isoDateTimeOut } from '../../common/dto/response';
  *
  * `keycloakUserId` fehlt mit Absicht: das ist die interne Verknüpfung zum
  * Identity-Provider, für keinen Client von Nutzen und nichts, was man
- * herumreicht. Weil dieses Schema die Antwort *beschneidet*, gilt das ab jetzt
- * für jede Route, die es benutzt — auch für die, die vorher am `personSelect`
- * vorbei die ganze Zeile zurückgaben.
+ * herumreicht. Weil dieses Schema die Antwort *beschneidet*, gilt das für jede
+ * Route, die es benutzt — auch für die, die die ganze Zeile laden.
  *
  * `email` bleibt drin: wer Mitglieder verwaltet, braucht sie, und in einer
  * Gruppe von neun kennt sie ohnehin jeder.
@@ -37,9 +36,8 @@ export const personResponseSchema = z.object({
   /// es an einem Abend erzählt hat, den die App kennt, ist ohnehin aus den
   /// Vorschlägen; das Häkchen ist für alles davor.
   testimonyToldBefore: z.boolean(),
-  /// Was diese Person **in diesem Hauskreis** darf. Vorher war „Admin" eine
-  /// Realm-Rolle und galt überall; wer sich einen eigenen Hauskreis anlegt,
-  /// ist dort Admin und im alten Mitglied.
+  /// Was diese Person **in diesem Hauskreis** darf. „Admin" gilt pro
+  /// Hauskreis und nicht überall.
   role: z.enum(PersonRole),
   /// Das Zuhause, das diese Person in die Host-Rotation einbringt. `null` heißt
   /// „bringt keines ein" — alle anderen Rollen bleiben davon unberührt.
@@ -75,8 +73,8 @@ export const invitedPersonResponseSchema = personResponseSchema.extend({
  * ob es Admin-Bedienelemente zeigen darf.
  */
 /**
- * `GET /api/me`. Ohne die Realm-Rollen aus dem Token: „Admin" steht jetzt als
- * `role` an der Person und gilt nur für ihren Hauskreis.
+ * `GET /api/me`. Ohne die Realm-Rollen aus dem Token: „Admin" steht als `role`
+ * an der Person und gilt nur für ihren Hauskreis.
  */
 export const meResponseSchema = personResponseSchema;
 
@@ -84,13 +82,12 @@ export const meResponseSchema = personResponseSchema;
  * `PATCH /api/me/email` — die geänderte Person plus die Frage, ob Keycloak
  * die Bestätigungsmail losgeworden ist.
  *
- * **Bis die neue Adresse bestätigt ist, kommt niemand herein.** Hier stand
- * einmal das Gegenteil („die Anmeldung funktioniert weiter"), und es stimmte
- * für Keycloak auch: angemeldet wird man weiterhin. Nur weist `AuthGuard`
- * jedes Token mit unbestätigter Adresse ab, und ein Adresswechsel setzt genau
- * die Bestätigung zurück. Die App zeigt deshalb ab da einen eigenen
- * Bildschirm — deswegen ist `verificationEmailSent` keine Nebensache: ist es
- * `false`, sitzt jemand fest, bis die Mail nachkommt.
+ * **Bis die neue Adresse bestätigt ist, kommt niemand herein.** Bei Keycloak
+ * angemeldet wird man weiterhin, aber `AuthGuard` weist jedes Token mit
+ * unbestätigter Adresse ab, und ein Adresswechsel setzt genau die Bestätigung
+ * zurück. Die App zeigt deshalb ab da einen eigenen Bildschirm — deswegen ist
+ * `verificationEmailSent` keine Nebensache: ist es `false`, sitzt jemand
+ * fest, bis die Mail nachkommt.
  */
 export const changedEmailResponseSchema = personResponseSchema.extend({
   verificationEmailSent: z.boolean(),

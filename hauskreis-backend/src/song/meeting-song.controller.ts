@@ -155,9 +155,8 @@ export class MeetingSongController {
     @Body() dto: UpdateMeetingSongDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    // Wer abhakt, entscheidet mit — vor dem Abend jedenfalls. Bis hierher war
-    // diese Route die einzige Schreibroute an einem Termin, die gar nicht
-    // wissen wollte, wer sie aufruft.
+    // Wer abhakt, entscheidet mit — vor dem Abend jedenfalls. Deshalb muss die
+    // Route wissen, wer sie aufruft.
     const person = await this.people.resolveForUser(user);
 
     return this.meetingSongs.setSelected(

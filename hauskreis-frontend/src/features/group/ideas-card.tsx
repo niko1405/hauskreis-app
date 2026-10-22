@@ -5,7 +5,7 @@
  *
  * Eine Liste mit Haken und sonst nichts. Kein Zustimmen, keine Kommentare: Ein
  * Kommentarfaden wäre ein zweiter Chat neben WhatsApp, und gegen den ist diese
- * App gebaut (CLAUDE.md §7). Was zu besprechen ist, wird am Abend besprochen —
+ * App gebaut (CLAUDE.md §6.12). Was zu besprechen ist, wird am Abend besprochen —
  * hier steht nur, dass es ansteht.
  *
  * Anlegen, abhaken und **ändern** darf jede:r. Löschen nur, wer sie
@@ -14,9 +14,8 @@
  * „so war es gemeint"), Löschen etwas über die Liste („das wollten wir nie").
  *
  * **Die Knöpfe liegen hinter einem Wisch nach links** (`SwipeActions`), wie an
- * der Liederliste im Archiv. Der Papierkorb stand vorher dauerhaft neben jedem
- * Eintrag: ein Ziel am Rand einer Liste, durch die man scrollt, und der Daumen
- * fand es zuverlässiger als den Text.
+ * den anderen Listen. Ein dauerhafter Papierkorb am Rand einer Liste, durch
+ * die man scrollt, träfe der Daumen zuverlässiger als den Text.
  */
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -104,9 +103,8 @@ export function IdeasCard() {
 /**
  * Titel und Notiz — anlegen und ändern im selben Sheet.
  *
- * Beides stand einmal inline in der Karte: das Anlegen oben, das Ändern an
- * Stelle der Zeile. Das schob beim Öffnen die Liste darunter weg, und auf dem
- * Telefon lag das Feld dann hinter der Tastatur. Ein Sheet steht unten fest,
+ * Inline in der Karte schöbe das Formular die Liste weg, und auf dem Telefon
+ * läge das Feld hinter der Tastatur. Ein Sheet steht unten fest,
  * trägt seine Knöpfe außerhalb des Scrollbereichs und sieht aus wie jedes
  * andere Formular der App.
  *

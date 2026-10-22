@@ -43,11 +43,8 @@ export function CreateMeetingSheet({
   const [startTime, setStartTime] = useState('');
   const [title, setTitle] = useState('');
   const [locationId, setLocationId] = useState('');
-  // Leer bis auf die Gebetsanliegen. Hier stand einmal ein Feld „Art", das drei
-  // Voreinstellungen anbot — es war die Terminart, und die sagte über den Abend
-  // nichts, was die Schalter darunter nicht genauer sagen. Von Hand angelegte
-  // Termine sind ohnehin fast immer besondere; wer einen gewöhnlichen Abend
-  // will, hakt zwei Schalter an.
+  // Leer bis auf die Gebetsanliegen. Von Hand angelegte Termine sind fast immer
+  // besondere; wer einen gewöhnlichen Abend will, hakt zwei Schalter an.
   const [slots, setSlots] = useState<MeetingSlots>(EMPTY_SLOTS);
 
   const locations = useLocations();
@@ -110,9 +107,8 @@ export function CreateMeetingSheet({
           />
         </Field>
 
-        {/* Steht jetzt immer da. „Nur bei einem besonderen Termin" war eine
-            Regel über die Terminart und nicht über die Sache: Eine Freizeit ist
-            mehrtägig, ganz gleich, als was sie einmal angelegt wurde. */}
+        {/* Steht immer da: Eine Freizeit ist mehrtägig, ganz gleich, wie sie
+            angelegt wurde. */}
         <Field
           label="Bis"
           hint="Optional — für eine Freizeit oder ein Wochenende."

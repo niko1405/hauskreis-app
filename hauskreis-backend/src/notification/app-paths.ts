@@ -10,11 +10,10 @@
  * mit einer Suche nach dieser Datei alles, was mitzieht.
  */
 export const appPath = {
-  // Die Id steht in der Query, seit das Frontend als statischer Export
+  // Die Id steht in der Query, weil das Frontend als statischer Export
   // ausgeliefert wird: ein Pfadsegment `[id]` bräuchte dort eine zur Bauzeit
-  // bekannte Liste aller Termine. Genau der Fall, für den diese Datei angelegt
-  // wurde — die Route hat sich geändert, und hier ist die einzige Stelle, an
-  // der das Backend sie kennt.
+  // bekannte Liste aller Termine. Hier ist die einzige Stelle, an der das
+  // Backend die Routen kennt.
   meeting: (meetingId: string) => `/termin?id=${meetingId}`,
   meetings: () => '/termine',
   prayerBuddies: () => '/gebet',

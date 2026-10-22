@@ -1,11 +1,9 @@
 /**
  * Ab wann sich der Actionstep eines Abends abhaken lässt.
  *
- * Die Grenze war einmal der Kalendertag, und damit ließ sich der Vorsatz für die
- * kommende Woche am Termintag um acht Uhr morgens abhaken — zehn Stunden bevor
- * die Gruppe ihn ausgesprochen hatte. Jetzt zählt die Treffpunktzeit dieses
- * Abends, und eine Gruppe, die sich um 20 Uhr trifft, gibt zwei Stunden später
- * frei als eine, die um 18 Uhr anfängt.
+ * Es zählt die Treffpunktzeit dieses Abends, nicht der Kalendertag: Eine
+ * Gruppe, die sich um 20 Uhr trifft, gibt zwei Stunden später frei als eine,
+ * die um 18 Uhr anfängt.
  */
 import { BadRequestException } from '@nestjs/common';
 import { MeetingService } from './meeting.service';
