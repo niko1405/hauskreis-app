@@ -8,12 +8,8 @@
  * eine Zusammenfassung rückwirkend aus dem Archiv, weil jemand eine Rolle
  * korrigiert.
  *
- * Hier stand einmal ein zweiter, viel größerer Teil: Wer dazukam, setzte die
- * Wahl zurück, es sei denn, der Owner trug ihn selbst ein, und fiel der Owner
- * heraus, ging die Einheit mit. Drei Regeln, die alle dasselbe Loch stopften —
- * dass die Abend-Rolle zugleich das Schreibrecht vergab. Seit beides getrennt
- * ist, braucht es keine davon mehr, und das Dazukommen tut wieder genau das,
- * wonach es aussieht: nichts.
+ * Die Abend-Rolle vergibt kein Schreibrecht, deshalb tut das Dazukommen genau
+ * das, wonach es aussieht: nichts.
  */
 import { TopicLinkService } from './topic-link.service';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -141,12 +137,9 @@ describe('TopicLinkService.reconcile', () => {
   });
 
   /**
-   * Der Fall, der diese ganze Runde ausgelöst hat.
-   *
-   * Vorher sprang die Wahl weg, sobald jemand zur Rolle dazukam — gedacht als
-   * Schutz einer fremden Vorbereitung, in der Benutzung ein Abend, der ohne
-   * Zutun leer dastand. Er braucht den Schutz nicht mehr: Zugeteilt zu sein gibt
-   * kein Schreibrecht, also gibt es auch nichts, wovor zu schützen wäre.
+   * Wer zur Rolle dazukommt, setzt die Wahl nicht zurück: Zugeteilt zu sein
+   * gibt kein Schreibrecht, also gibt es nichts, wovor die Vorbereitung zu
+   * schützen wäre.
    */
   it('lässt sie hängen, wenn jemand Fremdes dazukommt', async () => {
     const { service, tx, sessionUpdate } = setup({
@@ -354,7 +347,7 @@ describe('TopicLinkService.detach', () => {
 
     // Gelöst, nicht geleert: geschrieben wird ausschließlich `meetingId`.
     // Titel, Zusammenfassung, Actionstep und die Crew bleiben, wo sie sind —
-    // die Einheit wartet ab jetzt als Entwurf bei denen, die sie gemacht haben.
+    // die Einheit wartet als Entwurf bei denen, die sie gemacht haben.
     expect(sessionUpdate).toHaveBeenCalledWith({
       where: { id: 's1' },
       data: { meetingId: null, version: { increment: 1 } },

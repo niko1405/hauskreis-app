@@ -157,9 +157,9 @@ function chordsOfLine(line: string): ChordAt[] | null {
  * Ein Abschnitt in eckigen Klammern am Zeilenanfang, wie bei Ultimate Guitar.
  *
  * Er kommt nicht immer allein: „[Chorus]:", „[Chorus] x2", „[Intro] G D".
- * Vorher galt nur die Zeile, die genau `[…]` ist, als Abschnitt — der Rest
- * blieb Text, wurde als ChordPro gespeichert und beim nächsten Lesen zu einem
- * Akkord namens „Chorus".
+ * Gälte nur die Zeile, die genau `[…]` ist, als Abschnitt, bliebe der Rest
+ * Text, würde als ChordPro gespeichert und beim nächsten Lesen zu einem Akkord
+ * namens „Chorus".
  */
 function bracketOf(line: string): { label: string; rest: string } | null {
   const [, inner, rest] = BRACKET_PREFIX.exec(line.trim()) ?? [];

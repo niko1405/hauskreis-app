@@ -13,15 +13,12 @@ import { CRON_TIME_ZONE } from '../common/time/local-evening';
 /**
  * Reminds whoever prepares the topic, a few days before the evening.
  *
- * The role with the most preparation was the only one nobody was told about:
- * `TOPIC_REMINDER` sat in the enum from Phase 3 onwards without a sender.
- *
  * A topic can run over several meetings, and the reminder follows it — being
  * reminded again for part two is the point, not a repeat. Deduplication is per
  * meeting, so that works without any special case.
  *
  * Empfänger sind die **Zuteilung** am Abend, nicht die Leute am Thema. Das ist
- * seit dem Einheiten-Modell zweierlei, und die Erinnerung meint das erste: sie
+ * zweierlei, und die Erinnerung meint das erste: sie
  * geht auch an jemanden, der noch gar nichts gewählt hat — für den ist sie am
  * nötigsten.
  */

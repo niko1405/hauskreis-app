@@ -50,18 +50,16 @@ export class TopicLinkService {
    * Zuständigen anfassen darf.
    *
    * - Aus zwei Zugeteilten wird einer, und der gehört dazu: die Einheit bleibt.
-   * - **Es kommt jemand dazu: die Einheit bleibt.** Das ist der Unterschied zu
-   *   vorher, und der Grund für diese ganze Runde. Wer neu zugeteilt wird, ist
+   * - **Es kommt jemand dazu: die Einheit bleibt.** Wer neu zugeteilt wird, ist
    *   an dem Abend dabei — er entscheidet damit nicht über eine Vorbereitung,
    *   die er nicht angefangen hat. Passt sie ihm nicht, steht „Anderes Thema
-   *   wählen" da wie eh und je.
+   *   wählen" da.
    * - Statt A ist jetzt C dran, C gehört nicht dazu: die Einheit wird
    *   entkoppelt und wartet als Entwurf auf A.
    * - Niemand mehr zugeteilt: dasselbe.
    *
-   * Gemessen wird mit `preparesSession` und nicht mit `mayEditSession`: Admin
-   * und verwaistes Thema dürfen zwar hinein, gehören aber nicht dazu — ein
-   * zugeteilter Admin hielte sonst jede Einheit an jedem Abend fest.
+   * Gemessen wird mit `preparesSession` und nicht mit `mayEditSession`: Ein
+   * verwaistes Thema darf zwar jede:r anfassen, gehört aber niemandem dazu.
    *
    * Aufgeräumt wird dabei **nichts**. Wer aus der Zuteilung fällt, bleibt an der
    * Einheit stehen: Er hat sie vorbereitet, und krank zu werden nimmt ihm das
@@ -148,11 +146,10 @@ export class TopicLinkService {
   /**
    * Trägt Personen als Verantwortliche **dieser Einheit** ein.
    *
-   * Und nur dort. Bis eben schrieb dieselbe Methode sie zusätzlich als
-   * Mitarbeitende ins **Thema** — der automatische Rechte-Aufstieg, der weg
-   * sollte: Wer einmal an einem Abend aushilft, bekommt damit keine Hoheit über
-   * ein Thema, das über Monate läuft. Das themaweite Recht vergibt ab jetzt
-   * ausschließlich der Owner, von Hand (`TopicService.addCollaborator`).
+   * Und nur dort, nicht als Mitarbeitende ins **Thema**: Wer einmal an einem
+   * Abend aushilft, bekommt damit keine Hoheit über ein Thema, das über Monate
+   * läuft. Das themaweite Recht vergibt ausschließlich der Owner, von Hand
+   * (`TopicService.addCollaborator`).
    */
   async join(
     tx: Prisma.TransactionClient,
@@ -173,12 +170,10 @@ export class TopicLinkService {
   /**
    * Die Gegenbewegung: jemand bereitet diese Einheit nicht mehr vor.
    *
-   * Ein `deleteMany` und sonst nichts. Die Nachfrage „hängt die Person noch an
-   * einer anderen Einheit des Themas" stand hier, solange `join` das
-   * Schreibrecht am Thema mitvergab und `leave` es wieder einsammeln musste.
-   * Ohne diesen Aufstieg gibt es nichts einzusammeln.
+   * Ein `deleteMany` und sonst nichts: `join` vergibt kein Schreibrecht am
+   * Thema, also gibt es hier nichts einzusammeln.
    *
-   * Auch der Owner ist nicht mehr ausgenommen. Ihm gehört das Thema, nicht jeder
+   * Auch der Owner ist nicht ausgenommen. Ihm gehört das Thema, nicht jeder
    * seiner Abende — dass er den dritten jemand anderem überlässt, ist ein
    * gültiger Zustand, und sein Zugang hängt ohnehin an `topic.ownerPersonId`.
    */

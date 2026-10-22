@@ -115,9 +115,9 @@ export class SongService {
    * Die einzige Song-Abfrage im Backend ohne `hauskreisId` im `where`, und das
    * ist Absicht. „Wie heißt das Lied hinter diesem Link" ist keine Frage, deren
    * Antwort von der Gruppe abhängt: Sie kostet sonst einen Modellaufruf für
-   * etwas, das eine Gruppe weiter schon dasteht. Derselbe Gedanke steht seit
-   * jeher am Zwischenspeicher in `SongLookupService` — er trennt seine
-   * Schlüssel ebenfalls nicht nach Hauskreis.
+   * etwas, das eine Gruppe weiter schon dasteht. Derselbe Gedanke steht am
+   * Zwischenspeicher in `SongLookupService` — er trennt seine Schlüssel
+   * ebenfalls nicht nach Hauskreis.
    *
    * Zurück gehen **nur** `title`, `artist` und `lyricsUrl`: drei Felder, die
    * über niemanden etwas aussagen. Wer den Song angelegt hat, wann, in welcher
@@ -132,14 +132,10 @@ export class SongService {
    * hundert Zeilen je Gruppe wäre er Pflege ohne Gegenwert), und die
    * Normalisierung aus `song-key.ts` lässt sich in SQL ohnehin nicht ausdrücken.
    *
-   * **Die Titel-Richtung grenzt deshalb gar nicht ein.** Hier stand einmal ein
-   * `title: { equals }` — und damit wurde zweimal buchstabengenau verglichen,
-   * denn `songTitleKey` kam erst danach. Die Normalisierung konnte nur noch
-   * verengen, was SQL schon exakt getroffen hatte, war also faktisch tot: „Goodness
-   * of God" fand „Goodness of God (Live)" nicht und fragte das Modell. Zu laden
-   * kostet nichts Zusätzliches — ohne Index scannt Postgres die Tabelle so oder
-   * so, das `equals` sparte keine Arbeit, sondern warf nur die Zeilen weg, um
-   * die es ging.
+   * **Die Titel-Richtung grenzt deshalb gar nicht ein.** Ein `title: { equals }`
+   * in SQL verglich buchstabengenau, bevor `songTitleKey` normalisieren könnte —
+   * „Goodness of God" fände „Goodness of God (Live)" nicht. Zu laden kostet
+   * nichts Zusätzliches: Ohne Index scannt Postgres die Tabelle so oder so.
    */
   async lookupAcrossGroups(
     where: { urlHost?: string } = {},
@@ -185,8 +181,8 @@ export class SongService {
    *
    * `lte` auf den **Kalendertag** der Gruppe, nicht auf den Zeitpunkt: die
    * Spalte ist ein Datum, und ein Lied, das für heute Abend auf der Liste
-   * steht, zählt zum Repertoire. Vorher stand hier `new Date()`, was in der
-   * Nacht nach dem Abend noch den Vortag meinte.
+   * steht, zählt zum Repertoire. `new Date()` meinte in der Nacht nach dem
+   * Abend noch den Vortag.
    *
    * Eine Stelle für Liste und Liedseite: Zwei Fassungen derselben Bedingung
    * zählten irgendwann verschieden, und dann stünde auf der Liedseite eine

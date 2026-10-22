@@ -2,7 +2,7 @@
  * Was beim Umstellen der Bausteine verlorengeht — und die Rückfrage dazu.
  *
  * Steht für sich, weil zwei Stellen sie brauchen: der Bearbeiten-Dialog, in dem
- * die Bausteine jetzt umgestellt werden, und das Entfernen der Nachbereitung
+ * die Bausteine umgestellt werden, und das Entfernen der Nachbereitung
  * am Abend selbst. Zwei Abschriften derselben Sätze liefen irgendwann
  * auseinander, und dann kostete dieselbe Änderung je nach Weg etwas anderes.
  */

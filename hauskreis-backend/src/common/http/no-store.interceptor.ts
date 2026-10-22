@@ -10,18 +10,13 @@ import { Observable } from 'rxjs';
 /**
  * Keine zweite, unsichtbare Zwischenablage unter der App.
  *
- * Die JSON-Antworten trugen bisher **gar keinen** `Cache-Control` — nur die
- * beiden Bild-Endpunkte setzen einen. Eine Antwort ohne diesen Kopf, aber mit
- * `ETag`, darf der Browser trotzdem behalten: Er legt sie in seinen eigenen
- * Zwischenspeicher, fragt beim nächsten Mal mit seinem eigenen
- * `If-None-Match` nach, und wenn der Server `304` sagt, reicht er den **selbst
- * gespeicherten** Körper heraus. Der liegt auf der Platte und überlebt damit
- * auch das Schließen der App.
- *
- * Genau so sah es aus: Beim Öffnen stand ein alter Stand da, ein Zug zum
- * Aktualisieren brachte den richtigen, und nach dem nächsten Start war der
- * alte wieder zurück. Zwei Zwischenspeicher übereinander, von denen nur der
- * obere (`@tanstack/react-query`) weiß, wann er zu leeren ist.
+ * Eine Antwort ohne `Cache-Control`, aber mit `ETag`, darf der Browser
+ * behalten: Er legt sie in seinen eigenen Zwischenspeicher, fragt beim
+ * nächsten Mal mit seinem eigenen `If-None-Match` nach, und wenn der Server
+ * `304` sagt, reicht er den **selbst gespeicherten** Körper heraus — von der
+ * Platte, also auch nach dem Schließen der App. Das wären zwei
+ * Zwischenspeicher übereinander, von denen nur der obere
+ * (`@tanstack/react-query`) weiß, wann er zu leeren ist.
  *
  * `no-store` nimmt den unteren weg. Die Ersparnis durch `304` bleibt
  * vollständig erhalten — sie hing nie am Browser: Der Client legt den ETag

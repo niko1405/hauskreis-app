@@ -4,10 +4,7 @@
  * Die drei Antworten auf „bist du dabei" — wie sie heißen, aussehen und wonach
  * sie fragen.
  *
- * **Warum das eine eigene Datei ist.** Die Tabellen standen in
- * `attendance-card.tsx`, solange die eigene Antwort dort wohnte. Seit sie unten
- * am Bildschirm steht (`answer-bar.tsx`) und seit die Terminkarte sie wieder
- * anbietet, brauchen sie drei Stellen: Die Karte am Termin malt die Zeilen der
+ * **Warum das eine eigene Datei ist.** Drei Stellen brauchen die Tabellen: Die Karte am Termin malt die Zeilen der
  * anderen (Farbe, Kurzform, Symbol des Satzes), Balken und Terminkarte die
  * eigene Antwort (Beschriftung, Symbol, Beispiel). Eine Komponente, die eine
  * andere importiert, um an eine Konstante zu kommen, ist eine Abhängigkeit, die
@@ -26,8 +23,8 @@ import type { AttendanceStatus } from '@/lib/api/types';
  * **`label` ist ein Verb, `short` ein Zustand** — und das ist kein Versehen,
  * sondern die ganze Unterscheidung: `label` steht auf einem Knopf, den man
  * drückt („Zusagen"), `short` in einer Zeile über jemand anderen, die etwas
- * feststellt („Dabei"). Vorher stand auf dem Knopf ebenfalls der Zustand, und
- * „Dabei" als Aufforderung zu lesen musste man erst lernen.
+ * feststellt („Dabei"). „Dabei" als Aufforderung zu lesen müsste man erst
+ * lernen.
  *
  * Der aktive Knopf färbt sich **nach seiner Bedeutung** und nicht einheitlich
  * terracotta: zusagen ist die gute Nachricht, absagen die, die dem Gastgeber

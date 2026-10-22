@@ -86,15 +86,9 @@ export function ErrorState({
  * hat, ist der einzige Zweck der ganzen ETag-Mechanik — hier darf nichts
  * stillschweigend verschwinden.
  *
- * **Was hier stand, war die Mechanik und nicht die Auskunft.** „Jemand anders
- * war schneller … lade neu und schau, was jetzt drinsteht" erklärt einen
- * Wettlauf, an dem niemand teilnehmen wollte, und lässt offen, was jetzt zu
- * tun ist. Dazu kam, dass „Neu laden" nur nachlud: Das Kennzeichen blieb
- * gesetzt, die Meldung stand danach weiter da, und dass der ETag inzwischen
- * frisch war, sah man ihr nicht an.
- *
- * Jetzt ein Satz, der sagt, was los ist, und **ein** Knopf, der beides
- * erledigt (`resolveConflict`). Danach genügt ein zweiter Druck auf Speichern —
+ * Ein Satz, der sagt, was los ist — keine Erklärung der Mechanik —, und
+ * **ein** Knopf, der nachlädt und den Hinweis zurücksetzt
+ * (`resolveConflict`). Danach genügt ein zweiter Druck auf Speichern —
  * und der ist die Stelle, an der ein Mensch bestätigt, dass er den fremden
  * Stand überschreibt.
  */
@@ -123,8 +117,7 @@ export function ConflictBanner({
 /**
  * „Mehr laden" unter einer Liste, die seitenweise nachlädt.
  *
- * Lag als lokale Hilfsfunktion im Archiv und wird seit dem Song-Auswahl-Sheet
- * an zwei Stellen gebraucht. Kein Endlos-Scrollen: auf einem Telefon mit
+ * Kein Endlos-Scrollen: auf einem Telefon mit
  * schlechter Verbindung ist ein Knopf ehrlicher als eine Liste, die von selbst
  * weiterlädt und dabei hängt.
  */

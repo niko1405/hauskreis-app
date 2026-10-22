@@ -1,12 +1,8 @@
 /**
  * Woraus ein Abend besteht.
  *
- * Sechs Schalter am Termin, und sie sagen es als Einzige. Hier stand einmal
- * eine Terminart daneben („Standard", „Lobpreis/Gebet", „Custom") — eine
- * Behauptung, die in der Antwort stand, aber nie geprüft wurde: Man konnte
- * einem Lobpreisabend ein Thema geben und einem Geburtstag ein Testimony. Sie
- * ist weg; woraus ein Abend besteht, sagen die Schalter, und wie er heißt,
- * ergibt sich daraus.
+ * Sechs Schalter am Termin, und sie sagen es als Einzige. Eine Terminart
+ * daneben gibt es nicht; wie ein Abend heißt, ergibt sich aus den Schaltern.
  *
  * **Fünf davon plant man, den sechsten nicht.** Thema, Lieder, Testimony,
  * Gebetsanliegen und Snacks hakt man vor dem Abend an; die Nachbereitung steht
@@ -33,10 +29,8 @@ export interface MeetingSlots {
   /**
    * Zusammenfassung und Actionstep **ohne** Thema.
    *
-   * Der Nachzügler unter den Bausteinen, und er füllt eine Lücke: die
-   * Nachbereitung hing bis eben ausschließlich an der Einheit eines Themas. Ein
-   * Lobpreisabend, an dem die Gruppe sich etwas für die Woche vornimmt, hatte
-   * dafür keinen Ort — obwohl der Vorsatz dort genauso entsteht.
+   * Ein Lobpreisabend, an dem die Gruppe sich etwas für die Woche vornimmt,
+   * hat keine Einheit — der Vorsatz entsteht dort aber genauso.
    *
    * Der einzige Baustein, der **nicht zur Planung** gehört: er lässt sich erst
    * ab Terminbeginn anschalten (`assertNotesSlotNotAhead`) und steht im Frontend
@@ -73,10 +67,6 @@ export interface MeetingSlots {
 
 /**
  * Die drei Belegungen, mit denen ein Abend anfängt.
- *
- * Sie waren einmal `slotDefaults(type)` — eine Ableitung aus der Terminart, die
- * es damit doppelt gab: einmal als Enum in der Datenbank, einmal als Schalter
- * daneben. Übrig sind die Belegungen selbst, benannt nach dem, was sie sind.
  *
  * Die **Nachbereitung** steht überall auf `false`, auch beim Lobpreisabend, wo
  * sie am naheliegendsten wäre. Sie ist der einzige Baustein, der nichts
@@ -141,19 +131,18 @@ const SLOT_LABEL: Record<keyof MeetingSlots, string> = {
  * ist die Sorte Fehler, die man erst Wochen später bemerkt: ein Feld, das
  * niemand mehr setzen kann, aber noch einen alten Wert trägt.
  *
- * Beim Thema steht hier nichts mehr, und das ist kein Versehen: Zusammenfassung
- * und Actionstep sind an die Einheit gewandert, und die wird beim Abschalten
+ * Beim Thema steht hier nichts, und das ist kein Versehen: Zusammenfassung und
+ * Actionstep stehen an der Einheit, und die wird beim Abschalten
  * **nicht geleert, sondern gelöst** — `MeetingService` ruft dafür
  * `TopicLinkService.detach`, und zwar mit `evenIfPast`: Den Baustein
  * wegzunehmen ist die ausdrückliche Aussage „der Abend hatte kein Thema", auch
  * rückwirkend. Die Vorbereitung bleibt erhalten, nur die Sektion verschwindet.
  *
- * Die **Zuteilung** dagegen fällt, wie bei der Musik. Sie blieb einmal aus
- * Vorsicht stehen, aber an einem Abend ohne Thema ist sie keine geduldige Notiz,
- * sondern eine falsche Aussage: `TopicReminderService` fragt nicht nach
- * `hasTopicSlot` und schickte „Du bist dran mit dem Thema" für einen Abend, an
- * dem keins ist; `AssignmentService` malte denselben Rollen-Chip auf den
- * Startbildschirm. Weggeräumt wird sie — wie die Lieder und die Musik-Zuteilung —
+ * Die **Zuteilung** dagegen fällt, wie bei der Musik: An einem Abend ohne
+ * Thema wäre sie eine falsche Aussage — `TopicReminderService` fragt nicht
+ * nach `hasTopicSlot` und schickte „Du bist dran mit dem Thema", und
+ * `AssignmentService` malte denselben Rollen-Chip auf den Startbildschirm.
+ * Weggeräumt wird sie — wie die Lieder und die Musik-Zuteilung —
  * in `MeetingService`, weil eine Verknüpfungstabelle kein `data`-Feld hat, das
  * sich leeren ließe. Deshalb bleibt es hier bei einer leeren Liste.
  *
@@ -232,11 +221,7 @@ export function clearedByTurningOff(
  * Die neue Belegung aus dem, was war, und dem, was geschickt wurde.
  *
  * Mitgeschickte Schalter gewinnen, weggelassene bleiben stehen — mehr ist es
- * nicht. Hier stand einmal ein zweiter Zweig: Ein Wechsel der Terminart setzte
- * alle Schalter auf deren Voreinstellung zurück. Er war schon vor dem Wegfall
- * des Typs toter Code, denn eine Oberfläche, die den Typ ändert, gab es nie —
- * und was er tat, wäre heute ohnehin unerklärlich: Warum sollte das Anhaken von
- * „Testimony" das Thema mitnehmen, das jemand vorbereitet hat?
+ * nicht.
  */
 export function resolveSlots(
   before: MeetingSlots,
@@ -291,9 +276,8 @@ export function assertSlotsExclusive(slots: MeetingSlots): void {
  * Die Nachbereitung lässt sich erst ab Terminbeginn dazunehmen.
  *
  * Sie ist der einzige Baustein, der nicht zur **Planung** eines Abends gehört,
- * sondern zu dem, was danach übrig bleibt. Vorher anzubieten hieße, nach einer
- * Zusammenfassung von etwas zu fragen, das noch nicht stattgefunden hat — und im
- * Bausteinkasten neben Thema, Lieder und Testimony stand sie genau dort.
+ * sondern zu dem, was danach übrig bleibt. Sie vorher anzubieten hieße, nach
+ * einer Zusammenfassung von etwas zu fragen, das noch nicht stattgefunden hat.
  *
  * Nur der Übergang **aus → an** wird geprüft. Ein PATCH, der den Schalter gar
  * nicht anfasst, darf nicht daran scheitern, und wegnehmen darf man immer:

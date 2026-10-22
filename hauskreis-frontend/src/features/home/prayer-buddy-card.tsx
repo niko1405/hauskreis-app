@@ -40,9 +40,8 @@ export function PrayerBuddyCard({
 
   return (
     <section>
-      {/* Die Überschrift stand einmal **in** der Karte. Beim Trio gibt es jetzt
-          zwei davon, und in welche von beiden sie dann gehörte, ist keine
-          Frage mit einer guten Antwort. */}
+      {/* Die Überschrift steht über den Karten und nicht darin: Beim Trio gibt
+          es zwei davon. */}
       <SectionTitle
         action={
           <span className="text-[11px] font-medium text-stone-400">

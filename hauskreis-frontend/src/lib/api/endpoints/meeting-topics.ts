@@ -1,8 +1,8 @@
 /**
  * Die Rolle „Thema" an einem einzelnen Abend.
  *
- * Zwei Schritte, die bis vor Kurzem einer waren: **zuteilen** („an diesem Abend
- * bist du dran") und **wählen** („und zwar mit diesem Stoff"). Dazwischen liegt
+ * Zwei Schritte: **zuteilen** („an diesem Abend bist du dran") und **wählen**
+ * („und zwar mit diesem Stoff"). Dazwischen liegt
  * der Zustand, um den es geht — zugeteilt, aber noch nichts entschieden.
  */
 import { apiDelete, apiGet, apiPost, apiPut, UNCONDITIONAL } from '../client';

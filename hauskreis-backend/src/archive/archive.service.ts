@@ -29,9 +29,9 @@ export interface ArchiveSummary {
      * Die Vereinigung der beiden Register — was die Kachel „Themen" zeigt.
      *
      * Nicht `topics + topicsMine`: ein eigenes, schon gehaltenes Thema steht in
-     * beiden und wäre doppelt gezählt. Und nicht `topics` allein, was vorher
-     * dort stand — darüber konnte „Themen (0)" stehen, während das Register
-     * darunter „Eigene (1)" meldete.
+     * beiden und wäre doppelt gezählt. Und nicht `topics` allein — darüber
+     * könnte „Themen (0)" stehen, während das Register darunter „Eigene (1)"
+     * meldet.
      */
     topicsTotal: number;
     songs: number;
@@ -74,10 +74,8 @@ export class ArchiveService {
     const today = await this.clock.today(hauskreisId);
     /**
      * „Vorbei" heißt den **ganzen** Zeitraum — dieselbe Bedingung, nach der
-     * `…/meetings?scope=past` die Liste füllt, die diese Zahl überschreibt.
-     *
-     * Vorher stand hier `date: { lt: today }`, also der Anfangstag: Über einer
-     * Liste ohne die laufende Freizeit stand eine Zahl mit ihr.
+     * `…/meetings?scope=past` die Liste füllt, die diese Zahl überschreibt —
+     * also nicht der Anfangstag, sonst zählte eine laufende Freizeit mit.
      */
     const past = {
       hauskreisId,

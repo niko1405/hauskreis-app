@@ -38,10 +38,8 @@ const configInclude = {
 /**
  * Wann sich die Gruppe trifft.
  *
- * Bis eben war das keine Frage, sondern eine Konstante: dienstags, 18 Uhr, im
- * Code. Für die eine Gruppe, für die das geschrieben wurde, stimmte es — für
- * jede zweite nicht, und eine App, die vier Wochentage nicht kennt, ist keine
- * App für Hauskreise.
+ * Eine Einstellung der Gruppe und keine Konstante: Nicht jeder Hauskreis
+ * trifft sich dienstags um 18 Uhr.
  *
  * Angelegt beim ersten Lesen, nicht beim Anlegen des Hauskreises: so steht die
  * Vorgabe an einer Stelle, und eine Gruppe, die nie etwas einstellt, trägt
@@ -114,8 +112,8 @@ export class MeetingScheduleConfigService {
    *
    * Wer den Wochentag umstellt, verschiebt nichts, was schon im Kalender steht:
    * für die stehenden Termine haben Leute zugesagt, ein Thema vorbereitet, das
-   * Wohnzimmer eingeplant. Der Generator füllt ab jetzt den neuen Tag auf, die
-   * alten laufen aus.
+   * Wohnzimmer eingeplant. Der Generator füllt den neuen Tag auf, die alten
+   * laufen aus.
    */
   async updateConfig(
     hauskreisId: string,

@@ -18,23 +18,21 @@ import { GroupClockService } from './group-clock.service';
  * erinnert sich jede:r gleich gut. Wer am nächsten Tag nachträgt, was tatsächlich
  * dran war, tut der Liederdatenbank einen Gefallen und niemandem etwas zuleide.
  *
- * **Zwei Ausnahmen sind bewusst weg.** Eine mildere Fassung ließ Admins immer
- * und alle, solange niemand zugeteilt war. Beides passt hier nicht: Musik machen
+ * **Keine Ausnahmen** — weder für Admins noch für „niemand ist zugeteilt, also
+ * alle". Beides passt hier nicht: Musik machen
  * ist keine Verwaltungsaufgabe, die ein Admin für andere erledigt, und ein Abend
  * ohne Musik-Zuteilung ist kein Abend, an dem jede:r bestimmen darf, sondern
  * einer, an dem noch niemand zugeteilt ist. Wer die Auswahl treffen will, trägt
  * sich als zuständig ein — das ist eine Zeile und kein Hindernis. Dieselbe
  * strenge Fassung gilt beim Wählen eines Themas (`TopicSessionService.choose`).
  *
- * **„Nach dem Abend" heißt: am nächsten Tag der Gruppe.** Der Vergleich lief
- * einmal über den UTC-Kalendertag, und damit galt zwischen Mitternacht und zwei
- * Uhr morgens der gestrige Abend noch als kommend — während die App ihn schon
- * mit „Vorbei" auswies und die Kästchen freigab. Der 403 kam dann aus dieser
- * Zeile. Maßgeblich ist jetzt der Tag in der Zone der Gruppe.
+ * **„Nach dem Abend" heißt: am nächsten Tag der Gruppe**, gezählt in ihrer
+ * Zone und nicht in UTC — sonst gälte der gestrige Abend zwischen Mitternacht
+ * und zwei Uhr noch als kommend, während die App ihn schon als „Vorbei" zeigt.
  *
  * Eigener Dienst in einem Modul ohne Importe. `PrismaModule` und `ClockModule`
- * sind `@Global`, dieses Modul importiert deshalb nichts — so ist der Zyklus
- * ausgeschlossen, den der Modulgraph hier schon einmal hatte.
+ * sind `@Global`, dieses Modul importiert deshalb nichts — so kann kein
+ * Modul-Zyklus entstehen.
  */
 @Injectable()
 export class EditRightsService {

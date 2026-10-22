@@ -121,9 +121,7 @@ export const homeScreenSchema = z.object({
   /// sein letzter Tag um ist. `null` ist der Normalfall.
   ///
   /// Getrennt vom nächsten, weil es zwei Fragen sind: „wo bin ich jetzt" und
-  /// „was kommt". Vorher gab es nur eine Karte, und die zeigte den laufenden
-  /// Abend unter der Überschrift „Nächstes Treffen" — keine Auskunft mehr,
-  /// wenn man schon dort sitzt.
+  /// „was kommt".
   currentMeeting: homeMeetingSchema.nullable(),
   /// Der Abend, der zuletzt **ganz** vorbei ist — und zwar nur, wenn gerade
   /// keiner läuft.
@@ -167,9 +165,8 @@ export const homeScreenSchema = z.object({
       until: isoDateOut,
       /// Die ganze Gruppe, **du eingeschlossen**, und die Reihenfolge **ist der
       /// Kreis**: Wer hier steht, betet für den Nächsten, der Letzte für den
-      /// Ersten. Dieselbe Zusage wie in `prayerBuddyAssignmentSchema` — hier
-      /// standen vorher nur die Namen der anderen, und damit ließ sich die
-      /// Richtung auf „Heute" nicht anzeigen.
+      /// Ersten. Dieselbe Zusage wie in `prayerBuddyAssignmentSchema`, damit
+      /// „Heute" die Richtung zeigen kann.
       members: z.array(personRefSchema),
     })
     .nullable(),

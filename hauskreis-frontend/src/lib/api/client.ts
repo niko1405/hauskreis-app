@@ -99,9 +99,7 @@ export function setAccessTokenGetter(getter: TokenGetter): void {
  * Wird bei einem `401` gerufen und **erneuert die Anmeldung**.
  *
  * Gibt zurück, ob danach ein neues Token bereitliegt — nur dann lohnt es sich,
- * die Anfrage zu wiederholen. Vorher war das ein `void`: Der Handler stieß die
- * Erneuerung an, die Anfrage flog trotzdem, und bei einem Schreibvorgang stand
- * der Mensch dann vor „Invalid or expired token".
+ * die Anfrage zu wiederholen.
  */
 export function setUnauthorizedHandler(handler: () => Promise<boolean>): void {
   handleUnauthorized = handler;
@@ -159,11 +157,10 @@ interface RawResponse<T> {
  * Reiter im Hintergrund, feuert sie nicht: Die erste Anfrage nach dem
  * Aufwachen geht mit einem abgelaufenen Token raus.
  *
- * Für **Abfragen** war das längst geheilt — nach der Erneuerung stößt
- * `AuthBridge` alles noch einmal an. Ein **Schreibvorgang** wurde dagegen nie
- * wiederholt: Er scheiterte, und im Toast stand der Satz des Servers,
- * „Invalid or expired token". Wer das liest, weiß weder was ein Token ist noch
- * was er jetzt tun soll — und er hat gerade nur auf Speichern gedrückt.
+ * **Abfragen** stößt `AuthBridge` nach der Erneuerung ohnehin noch einmal an.
+ * Ein **Schreibvorgang** scheiterte dagegen, und im Toast stünde der Satz des
+ * Servers, „Invalid or expired token" — für jemanden, der gerade nur auf
+ * Speichern gedrückt hat.
  *
  * Wiederholt wird **einmal** und nur nach einem `401`. Alles andere hieße, auf
  * Verdacht doppelt zu schreiben.

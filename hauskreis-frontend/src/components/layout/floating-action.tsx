@@ -3,9 +3,8 @@
 /**
  * Der runde „+"-Knopf unten rechts — „Neues Thema", „Neues Lied".
  *
- * Er ersetzt einen Knopf über der Liste, der mit ihr wegscrollte: Wer weit
- * unten angekommen war, musste zurück nach oben, um etwas anzulegen. Jetzt
- * bleibt er stehen, wo der Daumen ist.
+ * Er bleibt stehen, wo der Daumen ist — ein Knopf über der Liste scrollte mit
+ * ihr weg, und wer weit unten ist, müsste zurück nach oben.
  *
  * **Warum ein Anker im Gerüst.** Er soll über der Leiste unten schweben,
  * welche es auch gerade ist — Tab-Leiste, Antwort-Balken oder, am Rechner,
@@ -14,10 +13,8 @@
  * Fuß des Gerüsts (`app-shell.tsx`) sitzt deshalb ein Anker direkt über der
  * Leiste, und der Knopf wird dorthin portiert, wie `BottomSlot` es tut.
  *
- * **Rechts.** Er stand zuerst links, damit er nicht dort liegt, wo der Daumen
- * den letzten Tab sucht. Aber er schwebt über der Leiste und nicht auf ihr,
- * und rechts unten ist die Stelle, an der man einen solchen Knopf erwartet —
- * links musste man ihn suchen.
+ * **Rechts.** Er schwebt über der Leiste und nicht auf ihr, und rechts unten
+ * ist die Stelle, an der man einen solchen Knopf erwartet.
  *
  * Bei offener Tastatur geht er weg, wie die Tab-Leiste — er schwebte sonst über
  * den Treffern der Suche.

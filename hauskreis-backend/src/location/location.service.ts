@@ -16,9 +16,8 @@ import { homeName, normalizeAddress } from './address';
  * Frage, ob ein Ort überhaupt eins ist.
  *
  * Exportiert, weil `locationResponseSchema` `residents` **verlangt** und jede
- * Stelle, die einen ganzen Ort ausliefert, ihn deshalb mitladen muss. Genau
- * das ging einmal auseinander: der Termin lieferte seinen Ort mit `location:
- * true`, das Feld fehlte, und jede Terminliste kam als 500 zurück. Ein
+ * Stelle, die einen ganzen Ort ausliefert, ihn deshalb mitladen muss — mit
+ * `location: true` allein fehlte das Feld, und die Antwort wäre ein 500. Ein
  * gemeinsames Include statt zweier Kopien macht daraus einen Fehler, den man
  * gar nicht erst machen kann.
  */

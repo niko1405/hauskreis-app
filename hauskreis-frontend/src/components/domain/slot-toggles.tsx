@@ -3,10 +3,8 @@
 /**
  * „Was gehört dazu" — die fünf Bausteine eines Termins.
  *
- * Ein selbst angelegter Termin verlangte bisher dieselben Rollen wie ein
- * gewöhnlicher Dienstag: der Geburtstag von Mira stand mit leerem Thema und
- * leerer Musik-Zeile da, als fehlte etwas. Es fehlte aber nichts — es war nie
- * vorgesehen.
+ * Ein Geburtstag braucht nicht dieselben Rollen wie ein gewöhnlicher Dienstag:
+ * Ohne Thema und Musik fehlt ihm nichts — es war nie vorgesehen.
  *
  * Dieselbe Liste beim Anlegen und beim Bearbeiten, damit „was so ein Abend
  * mitbringt" an beiden Stellen gleich aussieht und gleich heißt.

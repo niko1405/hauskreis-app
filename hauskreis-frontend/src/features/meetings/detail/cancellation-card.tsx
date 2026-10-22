@@ -1,14 +1,9 @@
 'use client';
 
 /**
- * Ein abgesagter Abend soll wie einer aussehen.
+ * Ein abgesagter Abend soll wie einer aussehen — und sagen, warum er ausfällt.
  *
- * Vorher blieb davon ein kleines Abzeichen oben in der Ecke übrig, während
- * darunter alles weiter bedienbar war — man konnte einem Termin, den es nicht
- * mehr gibt, noch Lieder und Rollen zuweisen. Und es stand nirgends, warum er
- * ausfällt.
- *
- * Deshalb hier drei Stücke: der Hinweis, der ganz oben steht und die Fragen
+ * Drei Stücke: der Hinweis, der ganz oben steht und die Fragen
  * beantwortet (seit wann, von wem, warum), der Absage-Knopf ganz unten —
  * **nur für Admins** —, und daneben das Löschen für einen besonderen Termin.
  * Den ganzen Abend abzusagen ist etwas anderes, als selbst nicht zu kommen;
@@ -46,11 +41,9 @@ export function CancelledNotice({ meeting }: { meeting: Meeting }) {
   const automatic = meeting.cancelSource === 'ALL_DECLINED';
 
   /**
-   * „Sagt jemand doch zu, findet er wieder statt" — der Satz darunter stand hier
-   * schon, aber es gab keinen Weg, ihn einzulösen: „Wer kommt" ist an einem
-   * abgesagten Abend schreibgeschützt, und die Karten in Liste und Kalender
-   * blenden ihren Schalter aus. Übrig blieb der Admin-Knopf daneben, der nur den
-   * Status dreht und die eigene Antwort auf „nicht dabei" stehen ließ.
+   * „Sagt jemand doch zu, findet er wieder statt" — und hier lässt sich das
+   * einlösen: „Wer kommt" ist an einem abgesagten Abend schreibgeschützt, und
+   * die Karten in Liste und Kalender blenden ihren Schalter aus.
    *
    * Deshalb hier, für alle und nicht nur für Admins: eine Zusage genügt. Der
    * Server erkennt beim Abgleich, dass nicht mehr alle abgesagt haben, und holt

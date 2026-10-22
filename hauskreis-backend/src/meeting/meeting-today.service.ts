@@ -39,11 +39,10 @@ function body(status: AttendanceStatus, wann: string, wo: string): string {
 /**
  * „Heute ist Hauskreis" — am Morgen des Termintags, an alle.
  *
- * **Der eine Tag, an dem die App bisher schwieg.** Die Erinnerungen davor
- * gehen an die, die etwas vorbereiten müssen: Gastgeber, Thema, Musik,
- * Testimony. Am Tag selbst hat niemand mehr etwas vorzubereiten — aber alle
- * müssen sich entscheiden, und genau dort entstand das WhatsApp-Hin-und-Her,
- * gegen das diese App gebaut ist.
+ * Die Erinnerungen davor gehen an die, die etwas vorbereiten müssen:
+ * Gastgeber, Thema, Musik, Testimony. Am Tag selbst hat niemand mehr etwas
+ * vorzubereiten — aber alle müssen sich entscheiden, und genau dort entsteht
+ * sonst das Hin und Her im Gruppenchat.
  *
  * **Ein Ereignis und keine Vorlaufzeit** (`schedule: EVENT` im Katalog): „am
  * Tag selbst" ist die ganze Aussage, es gibt nichts einzustellen außer an und

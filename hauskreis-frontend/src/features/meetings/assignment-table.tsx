@@ -3,12 +3,11 @@
 /**
  * Die Mehrwochen-Planung (CLAUDE.md §9).
  *
- * Vorher war das auf dem Telefon keine Tabelle, sondern eine Liste mit Chips,
- * weil drei Spalten auf 390 px nicht lesbar sind. Der Grund, es trotzdem zur
- * Tabelle zu machen: hier plant man **quer** — „wer hostet in den nächsten
- * sechs Wochen" ist eine Spalte, keine sechs Zeilen. Deshalb bleibt das Raster
- * jetzt auf jeder Breite, scrollt waagerecht in seinem eigenen Kasten, und
- * zwei Knöpfe verkleinern es, wenn man mehr auf einmal sehen will.
+ * Auch auf dem Telefon eine Tabelle, obwohl drei Spalten auf 390 px eng sind:
+ * hier plant man **quer** — „wer hostet in den nächsten sechs Wochen" ist eine
+ * Spalte, keine sechs Zeilen. Das Raster scrollt deshalb waagerecht in seinem
+ * eigenen Kasten, und zwei Knöpfe verkleinern es, wenn man mehr auf einmal
+ * sehen will.
  *
  * Kein Pinch-Zoom: der kollidiert auf Mobilgeräten mit dem Seiten-Zoom des
  * Browsers und lässt sich nicht zuverlässig davon trennen.
@@ -20,8 +19,8 @@
  * **Die Zeilen kommen aus den Terminen, nicht aus `…/assignments`.** Diese
  * Route beantwortet „wer ist wofür dran", und das tut sie richtig: eine Zeile
  * je zugeteilter Person. Ein Abend, an dem noch niemand steht, erzeugt dort
- * also nichts — und fehlte hier. Genau der Abend ist aber der, den man in einer
- * Planungstabelle sucht. Die Terminliste liefert ohnehin schon Gastgeber,
+ * also nichts — und genau der Abend ist der, den man in einer Planungstabelle
+ * sucht. Die Terminliste liefert ohnehin schon Gastgeber,
  * Thema, Musik, Testimony und Snacks mit, es kostet also keine zweite Abfrage.
  */
 import { CheckCircle2, Minus, Plus } from 'lucide-react';
@@ -231,15 +230,14 @@ function Row({
   /**
    * Jede Rolle vergeben, die es an diesem Abend gibt.
    *
-   * Genau die Frage, für die man diese Tabelle aufmacht — und sie war bisher
-   * nur zu beantworten, indem man die Zellen einzeln absuchte.
+   * Genau die Frage, für die man diese Tabelle aufmacht — ohne die Markierung
+   * müsste man die Zellen einzeln absuchen.
    */
   const fertig = planningComplete(meeting);
 
   // Dieselbe Aufstellung, die auch die Zuständigkeiten am Termin zeichnen und
-  // `planningComplete` prüft. Sie stand hier einmal ein zweites Mal, Zelle für
-  // Zelle abgeschrieben — und zwei Antworten auf „welche Rollen hat dieser
-  // Abend" laufen irgendwann auseinander.
+  // `planningComplete` prüft — zwei Antworten auf „welche Rollen hat dieser
+  // Abend" liefen irgendwann auseinander.
   const cells: Cell[] = meetingRoles(meeting);
 
   return (
@@ -438,9 +436,8 @@ function LoadedCellSheet({
   const songLeaders = useSongLeaders(meeting.id);
   const setSnacks = useSetSnackResponsibles(meeting.id);
 
-  // Der Gastgeber führt aufs Ort-Sheet: er *ist* der Ort. Bisher war der von
-  // hier aus gar nicht erreichbar — man konnte in der Tabelle jemanden
-  // eintragen, aber nicht sagen „wir sind draußen".
+  // Der Gastgeber führt aufs Ort-Sheet: er *ist* der Ort. So lässt sich auch
+  // in der Tabelle sagen „wir sind draußen".
   if (role === 'HOST') {
     return (
       <VenueSheet

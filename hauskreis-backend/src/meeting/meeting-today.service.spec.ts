@@ -74,8 +74,7 @@ describe('MeetingTodayService.sendDueReminders', () => {
 
     expect(texte.get('anna')).toBe('Heute um 18:00 bei Chris. Bis später!');
     // Der eigentliche Punkt: Wer abgesagt hat, wird noch einmal gefragt — am
-    // Termintag ändern sich die Zusagen, und genau dort entstand bisher das
-    // Hin und Her im Gruppenchat.
+    // Termintag ändern sich die Zusagen.
     expect(texte.get('chris')).toBe(
       'Heute um 18:00 bei Chris. Du hast abgesagt — stimmt das noch?',
     );

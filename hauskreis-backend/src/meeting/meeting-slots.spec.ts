@@ -46,8 +46,8 @@ describe('Die drei Belegungen', () => {
   });
 
   /**
-   * Der Kern der ganzen Sache: ein Geburtstagsabend stand bisher als
-   * unvollständig da, weil ihm ein Thema fehlte, das er nie brauchte.
+   * Der Kern der ganzen Sache: ein Geburtstagsabend ist nicht unvollständig,
+   * nur weil ihm ein Thema fehlt, das er nie brauchte.
    */
   it('lässt einen selbst angelegten Termin leer', () => {
     // Bis auf die Gebetsanliegen — siehe darunter.
@@ -248,12 +248,6 @@ describe('resolveSlots', () => {
     ]);
   });
 
-  /**
-   * Hier stand einmal ein zweiter Zweig: Ein Wechsel der Terminart setzte alle
-   * Schalter auf deren Voreinstellung zurück. Mit der Terminart ist er weg —
-   * und war schon davor toter Code, denn eine Oberfläche, die den Typ ändert,
-   * gab es nie.
-   */
   it('nimmt nichts weg, was nicht ausdrücklich weggenommen wird', () => {
     const gebucht = { ...EMPTY_SLOTS, hasTopicSlot: true, hasSongSlot: true };
 
@@ -267,8 +261,8 @@ describe('resolveSlots', () => {
 describe('assertSlotsExclusive', () => {
   /**
    * Beides ist der Beitrag, um den sich der Abend dreht, und zwei davon gibt
-   * es nicht. Bisher ließ sich beides zugleich anschalten — der Abend stand
-   * dann mit zwei Rollen da, von denen eine nie stattfinden würde.
+   * es nicht — sonst stünde der Abend mit zwei Rollen da, von denen eine nie
+   * stattfinden würde.
    */
   it('weist Thema und Testimony am selben Abend ab', () => {
     expect(() =>

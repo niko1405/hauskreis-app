@@ -167,11 +167,8 @@ function FullScreenHint({
    * Offline ist kein „dauert länger" — es dauert nicht länger, es kommt nichts.
    * Deshalb sofort und nicht erst nach den zwölf Sekunden von `useSlow`.
    *
-   * Dass dieser Bildschirm überhaupt erscheint, ist neu: Vorher installierte
-   * sich der Service Worker nie (ein `404` in der Precache-Liste), also lag
-   * ohne Netz nicht einmal das HTML vor und man sah eine leere Seite. Jetzt
-   * kommt die App aus dem Zwischenspeicher hoch, findet den Server nicht — und
-   * kann das endlich sagen.
+   * Die App kommt ohne Netz aus dem Zwischenspeicher des Service Workers hoch,
+   * findet den Server nicht — und sagt das hier.
    *
    * Kein Knopf: Serwist lädt die Seite von selbst neu, sobald das Netz
    * zurückkommt (`reloadOnOnline`).

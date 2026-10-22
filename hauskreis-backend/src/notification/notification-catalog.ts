@@ -224,9 +224,9 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     type: NotificationType.MEETING_TODAY,
     category: 'Termine',
     label: 'Heute ist Hauskreis',
-    // Der eine Tag, an dem die App bisher schwieg — obwohl an ihm alles
-    // entschieden wird. Die Nachricht sagt Uhrzeit und Ort und stellt gleich
-    // die Frage nach: Wer abgesagt hat, wird gefragt, ob das noch stimmt.
+    // Am Termintag wird alles entschieden. Die Nachricht sagt Uhrzeit und Ort
+    // und stellt gleich die Frage nach: Wer abgesagt hat, wird gefragt, ob das
+    // noch stimmt.
     description:
       'Am Morgen des Termintags — mit Uhrzeit, Ort und der Nachfrage, ob deine Antwort noch gilt.',
     schedule: { kind: 'EVENT' },
@@ -350,8 +350,8 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     defaultEnabled: true,
     // Diese Nachricht kann nur jemanden erreichen, dessen Wohnung für die volle
     // Gruppe **zu klein** ist — sonst gibt es nichts freizuschalten. Bei allen
-    // anderen stand bisher ein Schalter, der nie etwas tat: eine Einstellung
-    // ohne Wirkung ist schlimmer als keine, weil man ihr glaubt.
+    // anderen wäre der Schalter einer, der nie etwas tut: eine Einstellung ohne
+    // Wirkung ist schlimmer als keine, weil man ihr glaubt.
     appliesTo: (context) =>
       context.homeCapacity !== null &&
       context.homeCapacity < context.activeMembers,

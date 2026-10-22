@@ -220,9 +220,8 @@ export const listMeetingsQuerySchema = paginationSchema.extend({
   /// Inclusive date bounds, for narrowing the archive to a year or a stretch.
   from: isoDay.optional(),
   to: isoDay.optional(),
-  /// Ob abgesagte Abende mitkommen. Vorgabe `true` — die Terminliste zeigt sie
-  /// seit jeher, und ein abgesagter Abend ist dort eine Auskunft und kein
-  /// Rauschen. Das Archiv-Register schaltet sie ab: wer nachliest, was war,
+  /// Ob abgesagte Abende mitkommen. Vorgabe `true` — in der Terminliste ist
+  /// ein abgesagter Abend eine Auskunft und kein Rauschen. Das Archiv-Register schaltet sie ab: wer nachliest, was war,
   /// sucht Abende, an denen etwas war.
   ///
   /// Als Text und nicht als `z.boolean()`, weil Query-Parameter Text sind —

@@ -12,18 +12,16 @@ import { HAUSKREIS_ADMIN_KEY } from './hauskreis-admin.decorator';
 import { PersonRole } from '../../generated/prisma/enums';
 
 /**
- * Die Tür, die es bis eben gar nicht gab.
+ * Die Tür zum Hauskreis.
  *
- * `hauskreisId` war ein reiner Pfadparameter — geprüft wurde nur, dass es eine
- * UUID ist. Nichts fragte, ob die anfragende Person zu diesem Hauskreis gehört.
- * Wer eine fremde Id kannte (und `GET /api/hauskreise` gab sie alle heraus),
- * konnte dort alles lesen und schreiben. Solange es einen Hauskreis gibt, fällt
- * das nicht auf; ab dem zweiten ist es der eigentliche Fehler.
+ * `hauskreisId` ist ein Pfadparameter, und die Validierung prüft nur, dass es
+ * eine UUID ist. Ohne diesen Guard könnte, wer eine fremde Id kennt, dort alles
+ * lesen und schreiben.
  *
  * Der Guard löst die Mitgliedschaft **einmal** je Anfrage auf und legt sie an
  * `request.membership` ab. Davon lebt `@HauskreisAdmin()`: die Frage „darf die
  * Person das hier" ist damit eine Eigenschaft der Mitgliedschaft und keine
- * realmweite Rolle mehr — wer sich einen eigenen Hauskreis anlegt, ist dort
+ * realmweite Rolle — wer sich einen eigenen Hauskreis anlegt, ist dort
  * Admin, ohne es überall zu werden.
  */
 @Injectable()

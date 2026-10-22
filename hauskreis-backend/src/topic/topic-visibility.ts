@@ -111,20 +111,15 @@ function isOrphaned(topic: TopicMembership): boolean {
  * die, bei der man selbst nicht dabei war (Spec 8.1). Ein Thema ist eine
  * gemeinsame Arbeit; ein Recht je Abend wäre Buchhaltung.
  *
- * **Der Admin steht hier nicht mehr.** Er stand es, und damit konnte er die
- * Einheit eines anderen umschreiben, ihr ein Überthema geben und es wieder
- * wegnehmen — an einem Thema, an dem er nicht mitarbeitet. Ein Thema
- * vorzubereiten ist keine Verwaltungsaufgabe, die ein Admin für andere
- * erledigt; dieselbe Ausnahme ist bei der Liedauswahl
- * (`EditRightsService`) und beim Wählen eines Themas
- * (`TopicSessionService.choose`) längst aus demselben Grund gestrichen. Wer
- * mitschreiben will, lässt sich als Mitwirkende:r eintragen — das ist eine
- * Zeile und kein Hindernis.
+ * **Ohne Admin-Ausnahme.** Ein Thema vorzubereiten ist keine
+ * Verwaltungsaufgabe, die ein Admin für andere erledigt — dieselbe Regel wie
+ * bei der Liedauswahl (`EditRightsService`) und beim Wählen eines Themas
+ * (`TopicSessionService.choose`). Wer mitschreiben will, lässt sich als
+ * Mitwirkende:r eintragen — das ist eine Zeile und kein Hindernis.
  *
- * **`isOrphaned` bleibt und trägt jetzt allein.** Ein Thema, dessen Owner den
- * Hauskreis verlassen hat und das keine Mitwirkenden hat, darf weiterhin
- * jede:r bearbeiten. Ohne den Admin-Weg ist das der einzige Weg hinein — ohne
- * ihn gäbe es Themen, an die niemand mehr herankommt.
+ * **`isOrphaned` ist der Notausgang.** Ein Thema, dessen Owner den Hauskreis
+ * verlassen hat und das keine Mitwirkenden hat, darf jede:r bearbeiten — sonst
+ * gäbe es Themen, an die niemand mehr herankommt.
  */
 export function mayEditTopic(options: {
   personId: string;
@@ -138,21 +133,14 @@ export function mayEditTopic(options: {
  * Die zweite Ebene: **diese eine Einheit**.
  *
  * Wer einen Abend vorbereitet, muss ihn schreiben können — aber deshalb noch
- * lange nicht das ganze Thema. Das war bis eben dasselbe: Wer eine Einheit
- * hielt, wurde automatisch Mitarbeiter:in am Thema und durfte überall hinein.
- * Für jemanden, der einmalig aushilft, ist das eine Zuschreibung, die niemand
- * getroffen hat.
- *
- * Die Funktion ist trotzdem nicht neu, sie hatte nur keinen Namen:
- * `resumeSession`, `promote` und `nameTopic` schrieben genau diesen Ausdruck
- * schon je einmal aus („der eigene Entwurf bleibt der eigene, auch wenn der
- * Owner einen als Mitarbeitenden entfernt hat"). Aus der Rettung für den
- * Grenzfall ist die Regel geworden.
+ * lange nicht das ganze Thema. Für jemanden, der einmalig aushilft, wäre das
+ * eine Zuschreibung, die niemand getroffen hat. Der eigene Entwurf bleibt
+ * dabei der eigene, auch wenn der Owner einen als Mitarbeitenden entfernt hat.
  *
  * Die **Abend-Rolle steht hier ausdrücklich nicht**: Wer an einem Abend fürs
  * Thema zugeteilt ist, steht dort vorne. Lesen darf er deshalb
  * (`isContentVisible`), schreiben nicht — sonst käme das Recht über eine
- * Anwesenheit herein, und genau diese Vermischung soll weg.
+ * Anwesenheit herein.
  */
 export function mayEditSession(options: {
   personId: string;
@@ -170,9 +158,7 @@ export function mayEditSession(options: {
  *
  * Der Unterschied zu `mayEditSession` ist das verwaiste Thema: Es sagt „darf
  * notfalls hinein", nicht „arbeitet daran mit" — und für
- * `TopicLinkService.reconcile` ist genau das die Frage. Die Admin-Rolle stand
- * hier ebenfalls einmal daneben; seit sie auch aus `mayEditTopic` heraus ist,
- * unterscheiden sich die beiden nur noch in diesem einen Punkt.
+ * `TopicLinkService.reconcile` ist genau das die Frage.
  */
 export function preparesSession(options: {
   personId: string;
@@ -229,14 +215,13 @@ export function mayDeleteSession(options: {
 /**
  * Darf diese Person Titel, Actionstep und Zusammenfassung dieser Einheit *sehen*?
  *
- * Die alte Abendregel, nur genauer: bis der Abend anfängt, gehört der Inhalt
- * denen, die ihn vorbereiten. Danach — und für jeden vergangenen Abend — allen.
+ * Bis der Abend anfängt, gehört der Inhalt denen, die ihn vorbereiten. Danach — und für jeden vergangenen Abend — allen.
  * Einen Actionstep eine Woche zu früh zu verteilen wäre das Gegenteil von dem,
  * wozu er da ist.
  *
- * „Wenn der Abend anfängt" heißt die Uhrzeit **dieses** Termins und nicht mehr
- * pauschal 18 Uhr: eine Gruppe, die sich um 20 Uhr trifft, gab ihren Actionstep
- * sonst zwei Stunden vorher frei.
+ * „Wenn der Abend anfängt" heißt die Uhrzeit **dieses** Termins und nicht
+ * pauschal 18 Uhr: eine Gruppe, die sich um 20 Uhr trifft, gäbe ihren
+ * Actionstep sonst zwei Stunden vorher frei.
  *
  * Das Backend liefert die Felder dann gar nicht erst aus. Es im Frontend
  * auszublenden hieße, sie trotzdem übers Netz zu schicken.
@@ -251,8 +236,8 @@ export function isContentVisible(options: {
   /**
    * Wer **diese Einheit** vorbereitet.
    *
-   * Seit die Vorbereitung nicht mehr am Thema hängt, ist das der Normalfall und
-   * nicht der Randfall: Wer eine fremde Einheit mit vorbereitet, gehört zum
+   * Das ist der Normalfall und nicht der Randfall: Wer eine fremde Einheit mit
+   * vorbereitet, gehört zum
    * Thema nicht und ist vielleicht auch am Abend nicht zugeteilt. Ohne diese
    * Zeile bekäme er seinen eigenen Text als `null` zurück.
    */

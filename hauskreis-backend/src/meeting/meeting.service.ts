@@ -135,11 +135,10 @@ export class MeetingService {
   ) {
     const today = await this.clock.today(hauskreisId);
 
-    // Jede Bedingung für sich, alle mit UND verknüpft. Vorher war es **ein**
-    // `date`-Objekt, in das Bereich und Zeitfenster hineingerechnet wurden —
-    // das ging, solange ein Termin ein Tag war. Seit er ein Zeitraum sein
-    // kann, ist jede Bedingung ein eigenes `OR` über zwei Zweige, und zwei
-    // davon nebeneinander im selben Objekt überschrieben sich.
+    // Jede Bedingung für sich, alle mit UND verknüpft: Ein Termin kann ein
+    // Zeitraum sein, also ist jede Bedingung ein eigenes `OR` über zwei
+    // Zweige — und zwei davon nebeneinander im selben Objekt überschrieben
+    // sich.
     //
     // `from`/`to` engen den Bereich weiter ein, statt ihn zu ersetzen:
     // `scope=past` mit einem `to` im nächsten Jahr muss trotzdem heute
@@ -288,8 +287,8 @@ export class MeetingService {
     );
 
     // Der Dienstagabend steht jede Woche und braucht keine Ankündigung. Ein
-    // Geburtstag oder eine Freizeit fallen aus dem Rhythmus — genau die gingen
-    // bisher unter, wenn niemand ausdrücklich Bescheid sagte.
+    // Geburtstag oder eine Freizeit fallen aus dem Rhythmus — die gingen ohne
+    // Nachricht unter, wenn niemand ausdrücklich Bescheid sagte.
     await this.customMeetingNotifications.announceCreation(
       meeting.id,
       viewer.personId,
@@ -342,12 +341,9 @@ export class MeetingService {
       ]);
     }
 
-    // Dasselbe fürs **Testimony**, wo es bisher fehlte: Gastgeber, Musik und
-    // Thema prüften längst, ob die Person an dem Abend überhaupt da ist, hier
-    // kam nur `assertArrived` vorbei. Ausgerechnet dort ist die Frage am
-    // eindeutigsten — seine Geschichte erzählt niemand in Abwesenheit. Für
-    // einen vergangenen Abend geht die Prüfung von selbst durch, Nachtragen
-    // bleibt also möglich.
+    // Dasselbe fürs **Testimony** wie für Gastgeber, Musik und Thema: Seine
+    // Geschichte erzählt niemand in Abwesenheit. Für einen vergangenen Abend
+    // geht die Prüfung von selbst durch, Nachtragen bleibt also möglich.
     if (
       dto.testimonyPersonId &&
       dto.testimonyPersonId !== before.testimonyPersonId
@@ -393,12 +389,11 @@ export class MeetingService {
     // **auch an einem vergangenen Abend** — den Baustein wegzunehmen ist die
     // ausdrückliche Aussage „der hatte kein Thema", und sie kommt nur mit
     // Rückfrage; bliebe die Einheit hängen, hätte der Abend danach weder Thema
-    // noch Platz für eine Nachbereitung. Die **Zuteilung**
-    // dagegen fällt, wie bei der Musik: sie blieb einmal aus Vorsicht stehen,
-    // aber an einem Abend ohne Thema ist sie keine geduldige Notiz, sondern eine
-    // falsche Aussage. `TopicReminderService` fragt nicht nach `hasTopicSlot`
-    // und schrieb „Du bist dran mit dem Thema" für einen Abend, an dem keins
-    // ist; auf dem Startbildschirm stand derselbe Rollen-Chip.
+    // noch Platz für eine Nachbereitung. Die **Zuteilung** dagegen fällt, wie
+    // bei der Musik: An einem Abend ohne Thema wäre sie eine falsche Aussage —
+    // `TopicReminderService` fragt nicht nach `hasTopicSlot` und schriebe „Du
+    // bist dran mit dem Thema", und auf dem Startbildschirm stünde derselbe
+    // Rollen-Chip.
     if (before.hasTopicSlot && !slots.hasTopicSlot) {
       await this.topicLinks.detach(id, { evenIfPast: true });
 
@@ -436,8 +431,7 @@ export class MeetingService {
 
     // Und die Snack-Zuteilung, wie die Musik-Zuteilung darüber. Bliebe sie
     // stehen, schickte `SnackReminderService` „Du bringst was zu essen mit" für
-    // einen Abend, an dem der Baustein aus ist — genau der Fehler, wegen dem
-    // die Themen-Zuteilung nicht mehr aus Vorsicht stehen bleibt.
+    // einen Abend, an dem der Baustein aus ist.
     if (before.hasSnackSlot && !slots.hasSnackSlot) {
       await this.prisma.$transaction(async (tx) => {
         await tx.meetingSnackResponsible.deleteMany({
@@ -578,7 +572,7 @@ export class MeetingService {
    * `updateMany` mit dem Versionssprung in einem Zug: Der geleerte Abend zeigt
    * die Rolle in seiner Antwort, sein ETag muss also mitaltern. Eine Nachricht
    * geht dafür nicht raus — es ist dieselbe Person, die gerade selbst umzieht,
-   * und im Vorschlag stand vorher, an welchem Abend sie schon dran war.
+   * und der Vorschlag zeigt, an welchem Abend sie schon dran ist.
    */
   private async moveTestimonyHere(
     hauskreisId: string,
@@ -623,9 +617,8 @@ export class MeetingService {
 
     const endDate = new Date(raw);
 
-    // Hier stand einmal „nur ein besonderer Termin kann über mehrere Tage
-    // gehen". Das war eine Regel über die Terminart und nicht über die Sache:
-    // Eine Freizeit ist mehrtägig, ganz gleich, wer sie angelegt hat.
+    // Jeder Termin darf über mehrere Tage gehen: Eine Freizeit ist mehrtägig,
+    // ganz gleich, wer sie angelegt hat.
     if (endDate.getTime() === date.getTime()) return null;
 
     if (endDate < date) {
@@ -981,11 +974,10 @@ export class MeetingService {
      * **Wer nicht mehr zusagt, gibt seine Rollen frei** — bei einer Absage wie
      * bei einem „weiß noch nicht".
      *
-     * Lange galt das nur für die Absage. Aber eine Rolle ist die Aussage „ich
-     * bin an dem Abend da und mache das" (CLAUDE.md §6.8: „Wer eingeteilt wird,
-     * ist dabei"), und wer auf unentschieden zurückgeht, nimmt genau diese
-     * Aussage zurück. Am Dienstag stand sonst im Plan jemand, der selbst nicht
-     * weiß, ob er kommt.
+     * Eine Rolle ist die Aussage „ich bin an dem Abend da und mache das"
+     * (CLAUDE.md §6.8: „Wer eingeteilt wird, ist dabei"), und wer auf
+     * unentschieden zurückgeht, nimmt genau diese Aussage zurück. Sonst stünde
+     * im Plan jemand, der selbst nicht weiß, ob er kommt.
      *
      * Nur beim **Übergang**: dieselbe Antwort ein zweites Mal zu speichern —
      * etwa nur um eine Notiz zu ändern — gibt nichts frei.
@@ -1043,13 +1035,11 @@ export class MeetingService {
    * Zeitpunkt (`doneAt` ist „seit wann", nicht „zuletzt angetippt"), und ein
    * Haken, den es nicht gibt, lässt sich folgenlos entfernen.
    *
-   * **Erst ab Abendbeginn.** Die Grenze war einmal der Kalendertag, und damit
-   * ließ sich der Vorsatz für die kommende Woche am Termintag um acht Uhr
-   * morgens abhaken — zehn Stunden bevor die Gruppe ihn überhaupt ausgesprochen
-   * hatte. Maßgeblich ist deshalb die Treffpunktzeit dieses Abends, geprüft mit
-   * demselben `eveningReached`, das auch entscheidet, wann der Inhalt einer
-   * Einheit allen gehört. Zwei Rechnungen für „hat der Abend angefangen" wären
-   * eine zu viel.
+   * **Erst ab Abendbeginn**, nicht ab dem Kalendertag: Einen Vorsatz, den die
+   * Gruppe erst am Abend ausspricht, hakt man nicht morgens um acht ab.
+   * Maßgeblich ist die Treffpunktzeit dieses Abends, geprüft mit demselben
+   * `eveningReached`, das auch entscheidet, wann der Inhalt einer Einheit allen
+   * gehört. Zwei Rechnungen für „hat der Abend angefangen" wären eine zu viel.
    */
   async setActionstepDone(
     hauskreisId: string,
@@ -1103,9 +1093,9 @@ export class MeetingService {
   /**
    * Ort und Gastgeber sind **eine** Entscheidung, nicht zwei.
    *
-   * Vorher waren es zwei unabhängige Felder, und damit ließ sich „Abend bei
-   * Chris" mit „Ort: Bei Niko" kombinieren — zwei Angaben, die sich
-   * widersprechen, und niemand weiß, welche gilt. Wer hostet, hostet bei sich;
+   * Als zwei unabhängige Felder ließe sich „Abend bei Chris" mit „Ort: Bei
+   * Niko" kombinieren — zwei Angaben, die sich widersprechen, und niemand
+   * weiß, welche gilt. Wer hostet, hostet bei sich;
    * ein Ort ohne Gastgeber (Schlosspark) ist die Ausnahme, für die es
    * `requiresHost = false` gibt.
    *

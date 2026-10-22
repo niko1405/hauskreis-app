@@ -86,8 +86,8 @@ export function deleteTopic(
 
 /**
  * Holt jemanden ausdrücklich ans Thema — der einzige Weg zum themaweiten
- * Schreibrecht, seit eine gehaltene Einheit keines mehr mitbringt. Nur der
- * Owner darf das.
+ * Schreibrecht; eine gehaltene Einheit bringt keines mit. Nur der Owner darf
+ * das.
  */
 export function addCollaborator(
   hauskreisId: string,

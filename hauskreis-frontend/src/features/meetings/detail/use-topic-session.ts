@@ -5,9 +5,7 @@
  *
  * Das **Lösen** gehört dem Abend und geht über `…/meetings/:id/topic-session` —
  * anders als der **Inhalt**, der der Einheit gehört und auf ihrer eigenen Seite
- * geschrieben wird (`useUpdateTopicSession`). Hier stand einmal beides
- * nebeneinander, weil die Terminkarte auch die Felder trug; seit die Einheit
- * eine eigene Seite hat, ist der Inhalt dort und nur noch das Lösen hier.
+ * geschrieben wird (`useUpdateTopicSession`).
  */
 import { useCallback } from 'react';
 import { useToast } from '@/components/ui/toast';

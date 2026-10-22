@@ -3,9 +3,8 @@
 /**
  * Wofür die Gruppe an diesem Abend beten will — ein Anliegen je Person.
  *
- * **Bis hierher gab es dafür keinen Ort.** Anliegen standen im Gruppenchat,
- * gingen unter, und am Abend fragte jemand „hatte nicht jemand was?". Genau das
- * Muster, gegen das diese App gebaut ist.
+ * **Ein Ort für Anliegen**, damit sie nicht im Gruppenchat untergehen und am
+ * Abend jemand fragt „hatte nicht jemand was?".
  *
  * **Genau eines je Person**, und das ist keine technische Beschränkung: „Wofür
  * sollen wir beten" ist eine Frage, auf die man eine Antwort gibt. Eine Liste
@@ -16,13 +15,9 @@
  * beten, ist gerade dann der Punkt. Hier steht deshalb bewusst keine
  * Anwesenheitsprüfung, anders als bei den Rollen.
  *
- * **Anlegen, ändern und löschen stehen offen.** Alle drei hingen einmal am
- * Bearbeitungsmodus der Seite — genauer: das Anlegen schaltete ihn selbst ein,
- * Ändern und Löschen verlangten ihn. Das war eine Unterscheidung, die niemand
- * erklären konnte: Es geht in allen drei Fällen um den einen Satz, der einem
- * selbst gehört, und den kann ohnehin niemand sonst anfassen — es gibt gar
- * keine Adresse dafür (`…/prayer-requests/mine`). Der Papierkorb steht deshalb
- * auch nicht am Rand einer Liste, sondern im eigenen Kasten.
+ * **Anlegen, ändern und löschen stehen offen**, ohne Bearbeitungsmodus: Es
+ * geht um den einen Satz, der einem selbst gehört. Der Papierkorb steht
+ * deshalb nicht am Rand einer Liste, sondern im eigenen Kasten.
  *
  * Fremde Anliegen sind nur zu lesen. Das ist keine Rechteprüfung im Frontend,
  * sondern die Form der Sache: Es gibt gar keine Adresse, unter der man an einer
@@ -63,8 +58,8 @@ export function PrayerRequestsCard({
 
   /**
    * Ob gerade ein noch leeres eigenes Anliegen offensteht. Nur hier und nicht
-   * am Server: Ein leeres Feld ist nichts, was man speichert — es ist ein Feld,
-   * das noch nichts ist. Dieselbe Überlegung wie in `notes-card.tsx`.
+   * am Server: Ein leeres Feld ist nichts, was man speichert. Dieselbe
+   * Überlegung wie in `notes-card.tsx`.
    */
   const [writing, setWriting] = useState(false);
 
@@ -176,8 +171,8 @@ export function PrayerRequestsCard({
  *
  * Mit Avatar und Namen, weil man für jemanden betet und nicht für einen Text.
  * Und als Blase, weil genau das hier steht: ein Satz, den jemand der Gruppe
- * sagt. Vorher war es ein Kasten wie jeder andere auf der Seite, und ein Kasten
- * sieht aus wie ein Datenfeld. Die Blase selbst steht in `speech-bubble.tsx`
+ * sagt — ein Kasten sähe aus wie ein Datenfeld. Die Blase selbst steht in
+ * `speech-bubble.tsx`
  * — Thema und Einheit zeigen damit, wer daran arbeitet.
  */
 function PrayerRequestRow({ entry }: { entry: PrayerRequest }) {

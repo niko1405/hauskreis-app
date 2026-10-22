@@ -1,12 +1,10 @@
 /**
  * Die Begrüßung auf dem Startbildschirm.
  *
- * „Hallo Niko! Schön, dass du da bist." stand dort jeden Tag, und ein Satz, den
- * man jeden Tag liest, liest man irgendwann nicht mehr. Also mehrere.
+ * Ein Satz, den man jeden Tag liest, liest man irgendwann nicht mehr. Also
+ * mehrere.
  *
- * **Fünf Grüße und keine Mundart.** Hier standen einmal Schwäbisch, Fränkisch
- * und Österreichisch daneben, ausbuchstabiert bis zum Apostroph. Übrig sind
- * die Grüße, die tatsächlich fallen: „Hallo" und „Servus" zu jeder Zeit, dazu
+ * **Fünf Grüße und keine Mundart** — die Grüße, die tatsächlich fallen: „Hallo" und „Servus" zu jeder Zeit, dazu
  * je einer, der zur Tageszeit gehört — „Guten Morgen", „Mahlzeit", „Guten
  * Abend". Wer mittags „Guten Morgen" liest, fühlt sich ertappt; wer abends
  * „Mahlzeit" liest, wundert sich. Deshalb hängt der eigene Gruß an der Uhr,

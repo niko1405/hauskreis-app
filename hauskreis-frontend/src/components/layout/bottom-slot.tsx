@@ -15,10 +15,6 @@
  * gerade vertritt. Der Balken muss also im DOM dorthin, wo die Leiste steht,
  * und im React-Baum bleiben, wo seine Daten sind.
  *
- * (Ein zweiter Grund ist weggefallen: `main` trug `overflow-x-hidden` und war
- * damit ein Scroll-Container, an dem jedes `sticky` darin festhing. Seit es
- * `overflow-x-clip` ist, klebt dort, was kleben soll — siehe `app-shell.tsx`.)
- *
  * **Ein Zähler und kein Schalter**, aus demselben Grund wie in
  * `overlay-lock.ts`: React montiert Effekte im Strict Mode doppelt, und ein
  * Boolean, das einmal zu früh zurückfällt, blendet die Navigation mitten im
@@ -95,13 +91,9 @@ export function BottomSlotOutlet({ fallback }: { fallback: React.ReactNode }) {
   return (
     <>
       {/* `contents`: Der Kasten hier erzeugt selbst keine Box, seine Kinder
-          hängen direkt im Fuß des Gerüsts. Das war einmal tragend —
-          `position: sticky` wirkt nur innerhalb seines Elternkastens, und ein
-          Balken in einem Kasten seiner eigenen Höhe hätte keinen Weg zu
-          kleben. Inzwischen klebt der Fuß selbst (`app-shell.tsx`, er trägt
-          auch den Anker der „+"-Fläche), und die Leisten darin kleben nur
-          noch, wo sie ohne ihn stünden. Ohne eigene Box bleibt es trotzdem:
-          Ein Kasten mehr wäre eine Höhe mehr, die niemand meint. */}
+          hängen direkt im Fuß des Gerüsts, der selbst klebt (`app-shell.tsx`,
+          er trägt auch den Anker der „+"-Fläche). Ein Kasten mehr wäre eine
+          Höhe mehr, die niemand meint. */}
       <div ref={setTarget} className="contents" />
       {!taken && fallback}
     </>

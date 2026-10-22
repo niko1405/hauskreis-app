@@ -26,11 +26,8 @@
  *    Schreibrecht an der Vorbereitung gibt sie nicht — das steht auf der Seite
  *    der Einheit unter „Vorbereitet von".
  *
- * Hier stand einmal je ein Textfeld mit einem Knopf daneben, zweimal, für zwei
- * verschiedene Dinge. Es passte in eine Zeile und fragte deshalb nur nach dem
- * Titel — während dasselbe Anlegen im Archiv nach Zusammenfassung und
- * Actionstep fragte. Zwei Formulare für dieselbe Sache, und das kürzere war
- * das, das man öfter benutzt.
+ * Dasselbe Formular wie im Archiv: Ein Textfeld mit Knopf daneben fragte nur
+ * nach dem Titel, und zwei Formulare für dieselbe Sache liefen auseinander.
  *
  * **Themen-gebundene Entwürfe stehen nicht im `root`.** Sie hängen unter ihrem
  * Thema und stehen in Schritt 2, wo man es öffnet; eine eigene Liste daneben
@@ -135,8 +132,8 @@ export function TopicChoiceSheet({
 
   // Ziel und Entwurf liegen **hier** und nicht in den Schritten: die Schritte
   // lösen einander an derselben Stelle im Baum ab, ein Wechsel ist also ein
-  // Unmount. Wer zu den Mitwirkenden abbog und zurückkam, fand sein Formular
-  // vorher leer vor. Ein `key` hilft dagegen nicht — es gibt keine gemeinsame
+  // Unmount. Wer zu den Mitwirkenden abbiegt und zurückkommt, fände sein
+  // Formular sonst leer vor. Ein `key` hilft dagegen nicht — es gibt keine gemeinsame
   // Position, an der die Felder gemountet bleiben könnten.
   const [ziel, setZiel] = useState<Ziel | null>(null);
   const [entwurf, setEntwurf] = useState(LEERER_ENTWURF);
@@ -188,13 +185,9 @@ export function TopicChoiceSheet({
   };
 
   /**
-   * Hier stand einmal eine zweite Rückfrage: „Bereitet ihr das zusammen vor?"
-   *
-   * Sie war nötig, solange die Wahl **alle** Zugeteilten in die Einheit zog,
-   * samt Schreibrecht am ganzen Thema — eine Entscheidung über andere Leute,
-   * die man nicht im Vorbeigehen trifft. Genau das tut sie nicht mehr: An die
-   * Einheit kommt nur, wer wählt. Wen man dazunimmt, entscheidet man auf ihrer
-   * eigenen Seite, wo man dabei auch sieht, wen man vor sich hat.
+   * Keine Rückfrage „Bereitet ihr das zusammen vor?": An die Einheit kommt nur,
+   * wer wählt. Wen man dazunimmt, entscheidet man auf ihrer eigenen Seite, wo
+   * man dabei auch sieht, wen man vor sich hat.
    */
   const waehlen = async (
     input: ChooseTopicSessionInput,
@@ -682,12 +675,12 @@ function SessionRow({
  * Das gemeinsame Formular für alle vier Wege, an denen eine Einheit entsteht.
  *
  * Der Titel ist Pflicht — ohne ihn kein Wiedererkennen, und der Server verlangt
- * ihn inzwischen ebenso. Beim Überthema kommt der Titel des Themas dazu, und
+ * ihn ebenso. Beim Überthema kommt der Titel des Themas dazu, und
  * auch der ist Pflicht: Ohne ihn wäre es kein Thema, sondern zwei Abende.
  *
- * Feldreihenfolge Titel → Zusammenfassung → Actionstep, wie im Archiv. Sie
- * stand hier einmal andersherum, und zwei Anlege-Formulare mit vertauschten
- * Feldern sind eine Stolperfalle für die, die beide benutzen.
+ * Feldreihenfolge Titel → Zusammenfassung → Actionstep, wie im Archiv: Zwei
+ * Anlege-Formulare mit vertauschten Feldern wären eine Stolperfalle für die,
+ * die beide benutzen.
  */
 function CreateStep({
   ziel,
@@ -892,11 +885,8 @@ function PeopleStep({
 // ── Kleinteile ───────────────────────────────────────────────────────────────
 
 /**
- * Der Knopf unter einer Liste, der ins Formular führt.
- *
- * Hier stand ein Textfeld mit „Anlegen" daneben. Es passte in eine Zeile und
- * fragte deshalb nur nach dem Titel — Zusammenfassung und Actionstep gab es auf
- * diesem Weg gar nicht, obwohl dasselbe Anlegen im Archiv danach fragt.
+ * Der Knopf unter einer Liste, der ins Formular führt — und nicht ein
+ * Textfeld, das nur nach dem Titel fragen könnte.
  */
 function NeuKnopf({ label, onClick }: { label: string; onClick: () => void }) {
   return (
@@ -965,8 +955,7 @@ function topicHint(topic: TopicChoiceTopic): string {
 /**
  * Die Herkunft einer offenen Einheit — Abend, Thema, oder beides.
  *
- * Die Liste trägt seit der Trennung von Vorbereitung und Abend-Rolle auch
- * Einheiten unter einem **fremden** Thema: nämlich jede, die ich mit
+ * Die Liste trägt auch Einheiten unter einem **fremden** Thema: nämlich jede, die ich mit
  * vorbereite. „Teil 3" ohne das Thema davor sähe aus wie ein einzelner Abend,
  * und das ist es nicht.
  */

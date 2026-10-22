@@ -304,11 +304,7 @@ export function useSetSessionResponsibles(sessionId: string) {
 }
 
 /*
- * Hier stand `useEditTopicSession` — der Weg vom Termin aus, der sich den ETag
- * beim Schreiben holte, weil die Einheit dort im Termin-DTO steckt und nicht
- * als eigene Ressource im Cache liegt. Seit die Einheit auf ihrer eigenen Seite
- * bearbeitet wird, gibt es diesen Weg nicht mehr: Wer schreibt, hat sie geladen
- * und damit ihren ETag. Ein zweiter Weg wäre eine zweite Meinung darüber, was
- * bei einem Konflikt passiert — `useResourceUpdate` zeigt ihn an, die
- * Kurzfassung verschluckte ihn.
+ * Eine Einheit wird nur auf ihrer eigenen Seite bearbeitet: Wer schreibt, hat
+ * sie geladen und damit ihren ETag. Ein zweiter Weg vom Termin aus wäre eine
+ * zweite Meinung darüber, was bei einem Konflikt passiert.
  */

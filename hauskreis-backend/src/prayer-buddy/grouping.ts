@@ -164,24 +164,18 @@ export interface StandingGroup {
  *    Gibt es keine — alle anderen sind Dreier —, kommt umgekehrt **der zuletzt
  *    Dazugekommene aus der größten Gruppe zu ihm**: aus 3+1 wird 2+2.
  *
- * Die Obergrenze in Regel 2 fehlte, und daran lag der Fall aus der Praxis: In
- * einer laufenden Zweierrunde kamen nacheinander zwei Leute dazu, und beide
- * landeten in derselben Gruppe. Vier Menschen, von denen keiner mehr für jeden
- * betet — und die nächste Runde stand längst als 2-2 daneben, weil
- * `buildGroups` die Grenze immer schon kannte.
+ * Ohne die Obergrenze in Regel 2 landeten zwei Leute, die nacheinander in
+ * eine laufende Zweierrunde kommen, in derselben Gruppe — vier Menschen, von
+ * denen keiner mehr für jeden betet.
  *
- * **„Höchstens ein Trio" kam aus demselben Vergleich.** Drei zu erlauben hieß
- * noch lange nicht, drei zu *bevorzugen*: Aus 3+2 wurde beim nächsten Zugang
- * 3+3, obwohl 2+2+2 danebenstand — die kleinste Gruppe mit Platz war eben die
- * Zweiergruppe. `buildGroups` hätte dieselben sechs Menschen in drei Paare
- * gelegt, denn dort steht der Satz, mit dem diese Datei anfängt: Zwei ist das
- * Format, drei der Rest. Ein Trio, das die Zahl nicht erzwingt, ist keiner.
+ * **„Höchstens ein Trio"**: Drei zu erlauben heißt nicht, drei zu
+ * *bevorzugen*. Aus 3+2 würde beim nächsten Zugang sonst 3+3, obwohl 2+2+2
+ * danebensteht — `buildGroups` legte dieselben sechs Menschen in drei Paare.
+ * Ein Trio, das die Zahl nicht erzwingt, ist keiner.
  *
- * **Regel 0 kam danach**, weil die Grenze allein nicht reichte: Sie galt fürs
- * Hinzufügen, und eine Gruppe, die schon zu groß *war*, wurde dadurch gerade
- * festgeschrieben — beim Nachrücken passte niemand mehr hinein, also rührte sie
- * niemand mehr an. Eine Regel, die nur für die Zukunft gilt, macht aus einem
- * Fehler einen Bestand.
+ * **Regel 0**, weil die Grenze fürs Hinzufügen allein nicht reicht: Eine
+ * Gruppe, die schon zu groß *ist*, würde dadurch festgeschrieben — beim
+ * Nachrücken passt niemand mehr hinein, also rührte sie niemand mehr an.
  *
  * Regel 3 ist die einzige Stelle, an der eine bestehende Paarung aufgeht, und
  * sie ist bewusst so herum: Das ursprüngliche Paar bleibt zusammen, verschoben

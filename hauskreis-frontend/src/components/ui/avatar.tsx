@@ -32,11 +32,9 @@ export function Avatar({
   /**
    * Antippen zeigt das Bild groß — **überall, voreingestellt**.
    *
-   * Es war einmal nur an zwei Stellen erlaubt, in der Mitgliederliste und auf
-   * dem Gebets-Bildschirm. Wer ein Gesicht sah, konnte aber nicht wissen, an
-   * welchen beiden es ging; ein Bild, das sich an einer Stelle öffnen lässt
-   * und an der nächsten nicht, liest sich als Fehler. Jetzt geht es überall,
-   * und `false` setzt nur, wer selbst schon eine Aktion hat: ein Link, eine
+   * Ein Bild, das sich an einer Stelle öffnen lässt und an der nächsten nicht,
+   * liest sich als Fehler. `false` setzt nur, wer selbst schon eine Aktion
+   * hat: ein Link, eine
    * Zeile zum Auswählen, ein Knopf. Dort wäre der Avatar ein Knopf im Knopf,
    * und der Tipp gehört der Aktion, die die Fläche verspricht.
    *
@@ -138,8 +136,7 @@ function WithPerson({
           {img}
         </button>
         {/* An `document.body` und nicht hier: `Sheet` rendert ohne Portal, und
-            seit das Bild überall aufgeht, sitzt es irgendwann in einem
-            Vorfahren mit `transform` — einer gedrückten Karte, einer
+            der Avatar sitzt mitunter in einem Vorfahren mit `transform` — einer gedrückten Karte, einer
             wischbaren Zeile. Der wäre dann der Bezugsrahmen für das
             `position: fixed` des Sheets, und es säße in der Zeile statt über
             der Seite. */}

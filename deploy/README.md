@@ -647,9 +647,8 @@ mehr.
 
 Warum so und nicht ein Tresor in der Cloud: Die Secrets stehen im selben Commit
 wie Compose-Datei und Image, ein Rollback nimmt ihren Stand also mit. Es gibt
-keine zweite Kopie, die auseinanderläuft — vorher lag dieselbe Datei auf dem
-Server und auf dem Rechner, und keine war gesichert. Und der Deploy hängt an
-keinem Dienst, der an dem Abend nicht erreichbar ist.
+keine zweite, ungesicherte Kopie auf Server und Rechner, die auseinanderläuft.
+Und der Deploy hängt an keinem Dienst, der an dem Abend nicht erreichbar ist.
 
 **Was es nicht leistet:** Zur Laufzeit stehen die Werte auf dem Server im
 Klartext, in `.env.prod` und in Dockers eigener Container-Konfiguration. Gegen
@@ -802,8 +801,8 @@ genügt trotzdem nicht, der Neustart gehört dazu.
 
 Nach einer Änderung an den Texten lohnt ein Blick auf **doppelte Schlüssel**.
 Java liest die Datei von oben nach unten, und bei zwei Zeilen mit demselben
-Namen gewinnt wortlos die untere — genau so stand einmal ein anderer Name über
-der Anmeldekarte, als dort „Acts2" stehen sollte:
+Namen gewinnt wortlos die untere — und über der Anmeldekarte stünde ein anderer
+Name als „Acts2":
 
 ```bash
 grep -v '^\s*#' hauskreis-backend/keycloak/themes/hauskreis/login/messages/messages_de.properties \

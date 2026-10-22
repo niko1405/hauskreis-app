@@ -81,12 +81,11 @@ export const nichtAnDiesemAbend = (
 });
 
 /**
- * Zuteilung und Auswahl beim Thema — die beiden Schritte, die bis eben einer
- * waren.
+ * Zuteilung und Auswahl beim Thema — zwei Schritte.
  *
  * **Zuteilen** heißt: an diesem Abend bist du dran. **Wählen** heißt: und zwar
- * mit *diesem* Stoff. Dazwischen liegt ein Zustand, den es vorher nicht gab und
- * der der eigentliche Punkt ist — zugeteilt, aber noch nichts entschieden. Wer
+ * mit *diesem* Stoff. Dazwischen liegt der eigentliche Punkt — zugeteilt,
+ * aber noch nichts entschieden. Wer
  * beides zusammenwirft, muss beim Zuteilen schon ein leeres Thema anlegen, und
  * genau das ist der Datensatz, der hinterher niemandem gehört.
  *
@@ -208,13 +207,12 @@ export class TopicSessionService {
    * - `singleSessions` sind **meine offenen Einheiten**: jede, an der ich als
    *   Verantwortliche:r stehe, ob alleinstehend oder unter einem Thema.
    *
-   * Der zweite Teil war einmal auf Hüllen beschränkt, und das ging nicht mehr
-   * auf, seit die Vorbereitung ihren eigenen Kreis zieht: Legt jemand die dritte
-   * Einheit seines Themas an und nimmt mich dazu, gehöre ich zum *Thema* nicht —
-   * die Einheit stünde damit in keiner der beiden Listen, und ich könnte sie an
-   * meinem Abend nicht wählen, obwohl ich sie mit vorbereitet habe.
+   * Nicht nur Hüllen: Legt jemand die dritte Einheit seines Themas an und nimmt
+   * mich dazu, gehöre ich zum *Thema* nicht — die Einheit stünde sonst in
+   * keiner der beiden Listen, und ich könnte sie an meinem Abend nicht wählen,
+   * obwohl ich sie mit vorbereitet habe.
    *
-   * Der Grenzfall aus 8.5 fällt seitdem von selbst mit ab: Der eigene Entwurf
+   * Der Grenzfall aus 8.5 fällt damit von selbst mit ab: Der eigene Entwurf
    * bleibt greifbar, auch wenn der Owner einen als Mitarbeitenden entfernt hat.
    * Unter `topics` taucht das Thema für so jemanden dagegen nicht auf — eine
    * *weitere* Einheit anlegen darf er dort nicht.
@@ -372,10 +370,9 @@ export class TopicSessionService {
 
     const bisher = meeting.topicSession;
 
-    // Hier stand einmal eine Sperre für vergangene Abende. Sie stimmte für den
-    // Normalfall und war für den einen falsch, um den es hier geht: Man hält
-    // einen Abend, kommt vor lauter Abend nicht zum Eintragen, und will es
-    // hinterher nachholen. Ein Protokoll entsteht nun einmal danach.
+    // Keine Sperre für vergangene Abende: Man hält einen Abend, kommt vor
+    // lauter Abend nicht zum Eintragen, und will es hinterher nachholen. Ein
+    // Protokoll entsteht nun einmal danach.
     //
     // Was weiter gesperrt bleibt, sind Aussagen über *fremde* Abende:
     // `resumeSession` holt keine Einheit von einem vergangenen Abend weg, und
@@ -575,11 +572,8 @@ export class TopicSessionService {
    * A) Ein neues Thema samt seiner ersten Einheit. Wer wählt, wird Owner.
    *
    * **Zwei Ebenen, zwei Titel.** `topicTitle` spannt den Bogen, `title` gehört
-   * diesem Abend. Bis eben stand hier nur `dto.title`, und zwar als Titel des
-   * *Themas* — für die Einheit blieb dann nichts übrig, und Actionstep und
-   * Zusammenfassung fielen stillschweigend unter den Tisch. Ein frisch
-   * gewähltes Thema begann damit immer mit einem leeren Abend, obwohl das
-   * Formular danach gefragt hatte.
+   * diesem Abend — samt Actionstep und Zusammenfassung, nach denen das
+   * Formular gefragt hat.
    */
   private async createNew(
     tx: Prisma.TransactionClient,
@@ -621,9 +615,8 @@ export class TopicSessionService {
    * weil daran Owner und Mitarbeitende hängen (siehe `Topic.standalone`); zu
    * sehen bekommt es niemand, es hat nicht einmal einen Titel.
    *
-   * Der Titel ist Pflicht — wie auf den beiden anderen Anlege-Wegen. Er war
-   * hier einmal optional („sie steht ja unter ihrem Termin"), und das Ergebnis
-   * war „Einheit ohne Titel" in jeder Liste, in der sie später auftauchte.
+   * Der Titel ist Pflicht — wie auf den beiden anderen Anlege-Wegen. Sonst
+   * stünde „Einheit ohne Titel" in jeder Liste, in der sie später auftaucht.
    */
   private async createStandalone(
     tx: Prisma.TransactionClient,
@@ -910,12 +903,10 @@ export class TopicSessionService {
    * Eine Einheit anlegen, ohne dass ein Abend dafür feststeht.
    *
    * Der Ort, an dem man in Ruhe vorarbeitet: Titel und Gedanken schreibt man
-   * auf, wenn man sie hat, und sucht sich den Dienstag später. Vorher ging das
-   * nur andersherum — erst einen Termin belegen, dann dort schreiben.
+   * auf, wenn man sie hat, und sucht sich den Dienstag später.
    *
-   * Der Titel ist hier **Pflicht**, anders als beim Wählen an einem Abend. Dort
-   * steht die Einheit unter ihrem Termin und ist auch ohne Titel auffindbar; ein
-   * Entwurf ohne Abend hat nichts als seinen Titel.
+   * Der Titel ist **Pflicht**: Ein Entwurf ohne Abend hat nichts als seinen
+   * Titel.
    *
    * Wer sie anlegt, wird über `join` ihre Verantwortliche — sonst griffe die
    * Rettung aus Spec 8.5 (der eigene Entwurf bleibt greifbar, auch wenn der
@@ -1240,10 +1231,9 @@ export class TopicSessionService {
   /**
    * Und der Weg zurück: aus dem Thema wird wieder eine einzelne Einheit.
    *
-   * Er fehlte lange mit Absicht, und die Begründung war richtig: „Das Thema doch
-   * wieder auflösen" ist nur dann eindeutig, wenn **genau eine** Einheit
-   * daranhängt — wer die zweite schon angelegt hat, meint mit dem Knopf etwas
-   * anderes als die App. Genau mit dieser Bedingung kommt er jetzt.
+   * „Das Thema doch wieder auflösen" ist nur dann eindeutig, wenn **genau
+   * eine** Einheit daranhängt — wer die zweite schon angelegt hat, meint mit dem
+   * Knopf etwas anderes als die App.
    *
    * Gezählt werden alle Einheiten, Entwürfe eingeschlossen: Ein Entwurf ist
    * Arbeit, die jemand angefangen hat, und sie hinge danach an einer Hülle, die
@@ -1417,8 +1407,8 @@ export class TopicSessionService {
   /**
    * Setzt, wer **diese Einheit** vorbereitet.
    *
-   * Der Ort, an dem die Vorbereitung ihren Kreis zieht — und der Grund, warum
-   * die Zuteilung am Termin es nicht mehr tut. Wer hier steht, darf die Einheit
+   * Der Ort, an dem die Vorbereitung ihren Kreis zieht — nicht die Zuteilung am
+   * Termin. Wer hier steht, darf die Einheit
    * schreiben (`mayEditSession`), aber nichts am Thema darüber; dafür trägt der
    * Owner ihn ausdrücklich als Mitarbeitenden ein.
    *
@@ -1433,9 +1423,8 @@ export class TopicSessionService {
    * der beiden Möglichkeiten.
    *
    * **Bei einer Hülle bleibt der Owner stehen.** Dort ist diese Liste alles,
-   * was man sieht — und wer sich herausnahm, verschwand daraus, behielt aber
-   * über `topic.owner_person_id` weiter jedes Recht. Zwei Aussagen über
-   * dieselbe Person, von denen die sichtbare falsch war. Bei einem richtigen
+   * was man sieht — wer sich herausnähme, verschwände daraus, behielte aber
+   * über `topic.owner_person_id` weiter jedes Recht. Bei einem richtigen
    * Thema bleibt das Ausscheiden erlaubt: Da gibt man einen Abend ab und behält
    * das Thema.
    */
@@ -1536,9 +1525,8 @@ export class TopicSessionService {
   /**
    * Eine Einheit für sich, mit ihrer Stelle im Thema.
    *
-   * `sessionIndex`/`sessionCount` stehen hier, weil die Einheit seit ihrem
-   * eigenen Bildschirm für sich allein angezeigt wird — vorher stand sie immer
-   * unter einer Liste, die die Zählung selbst kannte. Die Geschwister liegen
+   * `sessionIndex`/`sessionCount` stehen hier, weil die Einheit auf ihrem
+   * eigenen Bildschirm für sich allein angezeigt wird. Die Geschwister liegen
    * ohnehin schon im `select`.
    */
   async findSession(hauskreisId: string, sessionId: string, viewer: Viewer) {

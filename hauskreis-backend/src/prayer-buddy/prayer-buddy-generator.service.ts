@@ -78,11 +78,10 @@ export class PrayerBuddyGeneratorService {
    * to be down that morning. Asking "are five rounds planned" every day is
    * self-healing and costs one query when the answer is yes.
    *
-   * Aus demselben Grund steht seit der Obergrenze auch `repairRunningRound`
-   * hier: Sie lief bis dahin nur beim Beitreten und Gehen, und eine Gruppe, die
-   * schon zu groß war, sah damit nie wieder jemand an. Fragen kostet nichts,
-   * solange die Antwort „passt" ist — dann wird keine Gruppe berührt und
-   * niemand benachrichtigt.
+   * Aus demselben Grund steht auch `repairRunningRound` hier und nicht nur beim
+   * Beitreten und Gehen: Eine Gruppe, die schon zu groß ist, sähe sonst nie
+   * wieder jemand an. Fragen kostet nichts, solange die Antwort „passt" ist —
+   * dann wird keine Gruppe berührt und niemand benachrichtigt.
    */
   @Cron(CronExpression.EVERY_DAY_AT_4AM, {
     name: 'rotate-prayer-buddies',
@@ -195,10 +194,10 @@ export class PrayerBuddyGeneratorService {
   /**
    * Zieht die Rotation nach, wenn sich die Gruppe geändert hat.
    *
-   * Bis hierher war die Teilnehmerliste eine Momentaufnahme: gelesen wurde sie
-   * nur beim Bauen einer Runde, und der tägliche Lauf füllt bloß auf. Wer ging,
-   * stand danach in bis zu fünf geplanten Runden; wer kam, wartete auf seine
-   * ersten Buddys, bis alle fünf abgelaufen waren.
+   * Gelesen wird die Teilnehmerliste sonst nur beim Bauen einer Runde, und der
+   * tägliche Lauf füllt bloß auf. Ohne das stünde, wer geht, in bis zu fünf
+   * geplanten Runden; wer kommt, wartete auf seine ersten Buddys, bis alle fünf
+   * abgelaufen sind.
    *
    * Zwei Zeiträume, zwei Antworten:
    *
@@ -278,9 +277,8 @@ export class PrayerBuddyGeneratorService {
    * Bringt die Runde, die heute läuft, auf die aktuelle Besetzung.
    *
    * Still, wenn nichts zu tun ist: Berührt wird nur, wo `repairGroups` etwas
-   * ändert, und angekündigt nur, was berührt wurde. Genau darum steht sie
-   * inzwischen auch im nächtlichen Lauf — eine Gruppe zu viert aus der Zeit vor
-   * der Obergrenze verschwand sonst nie, weil nichts sie je wieder ansah.
+   * ändert, und angekündigt nur, was berührt wurde. Genau darum steht sie auch
+   * im nächtlichen Lauf.
    */
   private async repairRunningRound(
     hauskreisId: string,

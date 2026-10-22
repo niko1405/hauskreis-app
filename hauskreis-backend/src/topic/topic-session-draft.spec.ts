@@ -1,9 +1,7 @@
 /**
  * Einheiten ohne Abend — anlegen und löschen.
  *
- * Der Ort, an dem man in Ruhe vorarbeitet. Vorher gab es ihn nicht: eine Einheit
- * entstand nur, wenn jemand an einem Termin wählte, und ein Entwurf konnte
- * ausschließlich rückwirkend entstehen, indem eine Zuteilung wechselte.
+ * Der Ort, an dem man in Ruhe vorarbeitet, ohne dass ein Termin feststeht.
  *
  * Zwei Regeln stehen hier auf dem Prüfstand. Wer eine Einheit anlegt, wird ihre
  * Verantwortliche — sonst griffe die Rettung aus Spec 8.5 für handgemachte

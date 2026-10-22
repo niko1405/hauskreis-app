@@ -37,7 +37,7 @@ export interface OwnSong {
   scrollSpeed: number;
   /**
    * Die gewählten Griffe im Vollbild, je `instrument:Akkord` die Nummer der
-   * Variante. Fehlt bei Versionen von vorher — dann gilt überall die erste.
+   * Variante. Fehlt sie, gilt überall die erste.
    */
   voicings?: Record<string, number>;
   createdAt: string;

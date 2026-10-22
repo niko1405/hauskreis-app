@@ -42,14 +42,13 @@ const isProduction = process.env.NODE_ENV === 'production';
 /**
  * Die Dateien aus `public/`, die vorgeladen werden sollen.
  *
- * Hier stand einmal `globPublicPatterns: ['**' + '/!(_*)']`, und Serwist hat
- * die Liste selbst gebildet. Das geht nicht mehr, sobald
+ * Serwist bildet die Liste nicht selbst (`globPublicPatterns`), sobald
  * `additionalPrecacheEntries` gesetzt ist: Die beiden Optionen schließen
  * einander aus (`@serwist/next/dist/index.mjs`, „if (!resolvedManifestEntries)"
  * — der Glob läuft nur, wenn das Feld fehlt). Wer eines setzt, muss das andere
  * mitliefern; sonst fallen Icons und Manifest lautlos aus dem Precache.
  *
- * Die beiden Ausnahmen sind dieselben wie vorher:
+ * Zwei Ausnahmen:
  *
  * 1. **Namen mit `_` am Anfang.** Gemeint ist `_headers`. Für Cloudflare Pages
  *    ist das keine Datei, sondern eine Anweisung — Pages liest sie beim Deploy
@@ -88,8 +87,7 @@ function publicFiles(dir = 'public', prefix = '') {
  *
  * Für `/` lässt sich keine Prüfsumme über den Inhalt bilden: Das HTML gibt es
  * zu diesem Zeitpunkt noch nicht — Next schreibt es erst nach dem Webpack-Lauf,
- * in dem Serwist sein Manifest einspeist. Genau das ist auch der Grund, warum
- * bis hierher überhaupt kein Dokument im Precache lag.
+ * in dem Serwist sein Manifest einspeist.
  *
  * Cloudflare Pages setzt `CF_PAGES_COMMIT_SHA` von selbst; lokal tut es die
  * Uhrzeit. Ein paar Kilobyte HTML je Deploy neu zu laden kostet nichts.

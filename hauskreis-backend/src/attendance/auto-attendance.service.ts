@@ -11,9 +11,9 @@ import { ANGEKOMMEN } from '../person/angekommen';
 /**
  * „Ich bin grundsätzlich dabei."
  *
- * Wer jeden Dienstag kommt, tippte bisher jeden Dienstag dasselbe — und wer es
- * vergaß, stand als „weiß noch nicht" da, was für den Gastgeber beim Einkaufen
- * dasselbe ist wie ein Nein.
+ * Wer jeden Dienstag kommt, soll nicht jeden Dienstag dasselbe tippen — und
+ * wer es vergäße, stünde als „weiß noch nicht" da, was für den Gastgeber beim
+ * Einkaufen dasselbe ist wie ein Nein.
  *
  * **Ein Auffüllen, kein Ereignis.** Statt an jeder Stelle, an der ein Termin
  * entsteht, an die Zusagen zu denken, gibt es einen Lauf, der die Lücken
@@ -26,21 +26,14 @@ import { ANGEKOMMEN } from '../person/angekommen';
  * wird nie überschrieben, egal woher sie kam. Der Schalter füllt Lücken, er
  * überschreibt keine Antworten.
  *
- * **Und nur für Leute, die auch da sind** (`ANGEKOMMEN`). Hier stand `active:
- * true` allein, und das ist genau der stille Fehler, den `angekommen.ts`
- * aufzählt: Eine eingeladene Person ist von der ersten Sekunde an `active` —
- * ihre Zeile entsteht beim Einladen, `autoAttend` kann aus einer Voreinstellung
- * kommen (der Seed setzt es), und wer sich nie angemeldet hat, sagte auf diesem
- * Weg trotzdem jeden Dienstag zu. Auf der Terminkarte stand dann eine Zusage
- * mehr, als die Anwesenheitsliste kannte — die rechnet längst mit `ANGEKOMMEN`,
- * und die beiden Zahlen widersprachen sich.
+ * **Und nur für Leute, die auch da sind** (`ANGEKOMMEN`), nicht `active: true`
+ * allein — siehe `angekommen.ts`: Eine eingeladene Person ist von der ersten
+ * Sekunde an `active`, und wer sich nie angemeldet hat, sagte sonst trotzdem
+ * jeden Dienstag zu.
  *
  * **Wer die Anwesenheit schreibt, schreibt am Termin.** Sie steht mit in seiner
- * Antwort, und ihr ETag hängt allein an `meeting.version`. Ohne den Griff blieb
- * er stehen: Die Terminliste zeigte die frische Zusage (dort ist der ETag ein
- * Inhalts-Hash), die Detailseite antwortete `304` und ließ die Person unter
- * „weiß noch nicht" stehen — mal so, mal so, je nachdem, welcher Bildschirm
- * gerade neu geladen hatte.
+ * Antwort, und ihr ETag hängt allein an `meeting.version` — ohne den Griff
+ * antwortete die Detailseite `304` und zeigte den alten Stand.
  *
  * **Der Status des Abends spielt keine Rolle.** Auch ein abgesagter bekommt
  * seine Zeile: lebt er wieder auf, gilt „ich bin grundsätzlich dabei" auch für

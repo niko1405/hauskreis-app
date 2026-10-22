@@ -450,8 +450,7 @@ ensure_audience_mapper() {
 # **Direct Access Grants nur außerhalb der Produktion.** Der Flow tauscht
 # Nutzername und Passwort direkt gegen ein Token — genau das, was die lokalen
 # Skripte und die Bruno-Collection brauchen, und genau das, was an einem Client
-# mit Realm-Admin-Rechten produktiv nichts zu suchen hat. Er stand hier bisher
-# fest auf `true`, auch mit `--production`, obwohl das README das Gegenteil sagt.
+# mit Realm-Admin-Rechten produktiv nichts zu suchen hat.
 if [ "${PRODUCTION}" = "1" ]; then
   DIRECT_GRANTS="false"
 else
@@ -508,10 +507,10 @@ if [ -z "${FRONTEND_UUID}" ]; then
   echo "    created"
   FRONTEND_UUID=$(client_uuid "${FRONTEND_CLIENT_ID}")
 else
-  # Redirect-URI und Web-Origin standen bisher nur im Anlege-Zweig. Beim Umzug
-  # von `localhost:3001` auf die echte Domain lief das Skript deshalb durch,
-  # meldete Erfolg und änderte nichts — der Fehler kam erst beim ersten
-  # Anmeldeversuch als `invalid_redirect_uri` zurück, und zwar bei allen neun.
+  # Redirect-URI und Web-Origin auch hier und nicht nur im Anlege-Zweig: Beim
+  # Umzug von `localhost:3001` auf die echte Domain liefe das Skript sonst
+  # durch, meldete Erfolg und änderte nichts — der Fehler käme erst beim ersten
+  # Anmeldeversuch als `invalid_redirect_uri` zurück.
   kc_curl -X PUT "${KC_URL}/admin/realms/${REALM}/clients/${FRONTEND_UUID}" -d "{
       \"clientId\": \"${FRONTEND_CLIENT_ID}\",
       \"redirectUris\": [\"${FRONTEND_URL}/*\"],
@@ -526,17 +525,16 @@ echo "    Redirect-URI: ${FRONTEND_URL}/*"
 # `info.ftl` zeigt „Zurück zu Acts2" genau dann, wenn der Client eine kennt —
 # ohne sie endet jede Bestätigung („Adresse bestätigt", „Passwort steht") auf
 # einer Seite ohne Ausgang, und wer dort steht, muss die Adresse von Hand
-# eintippen. Der Text dazu steht seit jeher im Theme (`backToApplication`); es
-# fehlte nur die Bedingung, unter der Keycloak ihn überhaupt anzeigt.
+# eintippen. Der Text dazu steht im Theme (`backToApplication`); hier steht die
+# Bedingung, unter der Keycloak ihn überhaupt anzeigt.
 
 ensure_audience_mapper "${FRONTEND_UUID}"
 
 # Grant the service account permission to manage users (needed for the invite flow).
 echo "==> Granting realm-management roles to service account"
-# Die Kennung des Clients steht schon in `EXISTING` — hier stand einmal eine
-# zweite Abfrage, durch `xargs` in den nächsten Aufruf gereicht. Das ging nur,
-# solange `curl` ein Programm war: `xargs` startet einen Prozess und kennt
-# deshalb keine Shell-Funktionen.
+# Die Kennung des Clients steht schon in `EXISTING`. Kein `xargs` hier: Es
+# startet einen Prozess und kennt deshalb keine Shell-Funktionen wie
+# `kc_curl`.
 SA_USER_ID=$(kc_curl \
   "${KC_URL}/admin/realms/${REALM}/clients/${EXISTING}/service-account-user" \
   | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).id')

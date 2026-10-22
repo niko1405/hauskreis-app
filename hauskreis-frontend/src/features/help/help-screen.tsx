@@ -3,8 +3,8 @@
 /**
  * „Hilfe" — was die App tut und warum sie es so tut.
  *
- * Die größte Lücke bisher: Das Baukasten-System, die Vorschlagslogik und das
- * Themen-System sind ohne Erklärung nicht zu erraten. Neun Leute sehen nur die
+ * Das Baukasten-System, die Vorschlagslogik und das Themen-System sind ohne
+ * Erklärung nicht zu erraten. Neun Leute sehen nur die
  * Oberfläche, und wer nicht versteht, warum ein Feld grau ist, hält es für
  * kaputt.
  *

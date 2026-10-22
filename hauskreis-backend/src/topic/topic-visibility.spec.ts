@@ -21,7 +21,7 @@ const FREMD = 'fremd-id';
 /**
  * Jemand mit Admin-Rechten, der an diesem Thema nicht mitarbeitet.
  *
- * Steht als eigener Name da, obwohl er sich für diese Funktionen nicht mehr von
+ * Steht als eigener Name da, obwohl er sich für diese Funktionen nicht von
  * `FREMD` unterscheidet — genau das ist die Aussage der Tests weiter unten.
  */
 const ADMIN_FREMD = 'admin-fremd-id';
@@ -127,9 +127,8 @@ describe('mayEditTopic', () => {
   });
 
   it('auch der Admin nicht — mitarbeiten ist keine Verwaltungsaufgabe', () => {
-    // Er stand hier einmal ganz oben und konnte damit die Einheit eines
-    // anderen umschreiben. Dieselbe Ausnahme ist bei der Liedauswahl und beim
-    // Wählen eines Themas längst aus demselben Grund gestrichen.
+    // Ein Admin schreibt keine fremde Einheit um — dieselbe Regel wie bei der
+    // Liedauswahl und beim Wählen eines Themas.
     expect(mayEditTopic({ personId: ADMIN_FREMD, topic: thema })).toBe(false);
   });
 
@@ -349,8 +348,8 @@ describe('isContentVisible', () => {
   /**
    * Und wer die Einheit vorbereitet, erst recht — auch wenn er zum Thema nicht
    * gehört und am Abend selbst gar nicht kann. Ohne diese Zeile bekäme er
-   * seinen eigenen Text als `null` zurück; seit die Vorbereitung ihren eigenen
-   * Kreis zieht, ist das kein Randfall mehr, sondern der Normalfall.
+   * seinen eigenen Text als `null` zurück — und das ist kein Randfall, sondern
+   * der Normalfall.
    */
   it('wer die Einheit vorbereitet, sieht sie jederzeit', () => {
     expect(

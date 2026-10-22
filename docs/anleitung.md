@@ -77,6 +77,7 @@ Das alles passiert im Tab **Profil**, von oben nach unten:
      App. Man erzählt es einmal; ist der Schalter an, schlägt dich die App
      dafür nicht mehr vor. Abende, an denen du es hier erzählt hast, kennt sie
      selbst.
+
 3. **Wo du wohnst.** Adresse eintragen, dann **Adresse speichern**. Die
    **Kapazität** darüber ist optional: Ohne Angabe heißt es „alle passen rein",
    nur enge Wohnungen brauchen eine Zahl. Kommen an einem Abend mehr Leute als
@@ -122,13 +123,16 @@ Das alles passiert im Tab **Profil**, von oben nach unten:
 
 ### 5.1 Heute
 
-- Der aktuelle **Actionstep** aus dem letzten Termin, mit deinem eigenen Haken.
+- Der laufende Abend als **„Aktueller Termin"**, sonst der letzte als **„Letzter
+  Termin"** — hat er eine Zusammenfassung, steht sie dort.
+- Der aktuelle **Actionstep** aus dem letzten Termin, mit deinem eigenen Haken
+  (sofern eure Gruppe den „Actionstep der Woche" nutzt).
 - Deine aktuellen **Gebetsbuddys** — zu dritt mit der Richtung: „Du betest für
   …" und „Für dich betet …", genau wie auf dem Gebet-Bildschirm.
 - **Deine Rollen**: oben, wofür du am nächsten Termin eingeteilt bist,
   darunter aufklappbar **„Weitere"** für alles danach.
-- **Nächstes Treffen** mit Uhrzeit, Ort (die Adresse ist verlinkt) und den
-  Knöpfen zum Zu- oder Absagen.
+- **Nächster Termin** mit Uhrzeit und Ort (die Adresse ist verlinkt). Ein Tipp
+  darauf öffnet den Termin — dort sagst du zu oder ab.
 
 ### 5.2 Termine
 
@@ -166,11 +170,10 @@ in die kleinste Gruppe nach, die noch Platz hat. Sind alle voll, macht er eine
 neue auf, und aus einer Dreiergruppe zieht der zuletzt Dazugekommene zu ihm —
 aus 3+1 wird so 2+2, statt dass jemand zwei Wochen ohne Buddy dasteht.
 
-Steht doch einmal eine Gruppe zu viert da — aus der Zeit, bevor es diese Grenze
-gab —, wird sie von selbst geteilt: Die App sieht jede Nacht nach, und ein Admin
-kann es unter **Verwaltung → Jobs → „Gebetsrunde prüfen"** sofort anstoßen. Neu
-gewürfelt wird dabei nichts; wer schon miteinander betet, betet weiter
-miteinander.
+Steht doch einmal eine Gruppe zu viert da, wird sie von selbst geteilt: Die App
+sieht jede Nacht nach, und ein Admin kann es unter **Verwaltung → Läufe →
+„Gebetsrunde prüfen"** sofort anstoßen. Neu gewürfelt wird dabei nichts; wer
+schon miteinander betet, betet weiter miteinander.
 
 ### 5.4 Archiv
 
@@ -330,12 +333,19 @@ nachgetragen wird, was war.
 
 Ein vergangener Abend steht zuerst **zum Lesen** da — nur die Setlist, kein
 Maps, keine Stifte an den Rollen. Zum Nachtragen tippst du unten auf
-**„Bearbeiten"**, danach auf **„Fertig"**. Die Nachbereitung und deinen
-Actionstep-Haken erreichst du auch ohne.
+**„Bearbeiten"**, danach auf **„Fertig"**. Deinen Actionstep-Haken erreichst du
+auch ohne; fehlt die Nachbereitung noch, führt ein Tipp auf den Hinweis oben
+gleich hinein. Unter „Wer war da" stehen die Zusagen, und zugeklappt unter
+**„War nicht da"** alle anderen — wer abgesagt hatte und wer unsicher war.
 
 ### 6.6 Absagen und Abwesenheiten
 
-Zu- und absagen kannst du auf „Heute" oder in der Termin-Ansicht. Sagen **alle**
+Zu- und absagen kannst du in der Termin-Ansicht (unten am Bildschirm), in der
+Liste und im Kalender — mit drei Antworten: **Zusagen**, **Weiß nicht**,
+**Absagen**. Zu jeder Antwort kannst du einen Satz dazuschreiben („muss schauen,
+wann Feierabend ist"). Bei einer Zusage wählst du dafür **Info** oder
+**Verspätung**; bei einer Verspätung tippst du ca. 15, 30, 45 oder 60 Minuten an,
+und die anderen sehen „ca. 30 Min später" neben deinem Namen. Sagen **alle**
 ab, fällt der Abend von selbst aus — und **jede:r** holt ihn mit einer einzigen
 Zusage wieder zurück, dafür braucht es keinen Admin. Längere Abwesenheiten
 trägst du einmal im Profil ein (Kapitel 3, Schritt 4).
@@ -368,6 +378,7 @@ kannst nur du sie selbst.
   **Achtung: Auch die KI macht Fehler — prüf den Link, bevor du ihn
   übernimmst.** Dafür steht ein Knopf daneben, der ihn direkt öffnet. Was du
   schon eingetragen hast, wird nie überschrieben, sondern nur angeboten.
+
 - **Abhaken:** Vor dem Abend darf die Lieder nur abhaken, wer an dem Abend die
   Musik macht — das ist die Entscheidung „das singen wir". **Ist der Abend
   vorbei, darf es jede:r**. Zurück zu den Vorschlägen schickt man ein Lied,
@@ -481,7 +492,7 @@ kannst nur du sie selbst.
 - Wählst du an einem Abend etwas anderes, ist deine Vorbereitung **nicht weg** —
   die alte Einheit löst sich vom Termin und wartet wieder als Entwurf.
 - Themen kann man **zu mehreren vorbereiten**, und das auf zwei Ebenen. Wer nur
-  bei *einer* Einheit hilft, darf genau sie ändern. Wer **am ganzen Thema**
+  bei _einer_ Einheit hilft, darf genau sie ändern. Wer **am ganzen Thema**
   mitarbeiten soll — jede Einheit ändern, neue anlegen —, wird auf der
   Themenseite unter „Wer daran arbeitet" ausdrücklich als Mitwirkende:r
   eingetragen; das darf nur, wer das Thema angelegt hat. **Löschen** darf
@@ -493,7 +504,7 @@ kannst nur du sie selbst.
   Zeitstrahl untereinander, ein Klick führt genauso hinein.
 - **Löschen** kannst du eine Einheit, solange ihr Abend noch bevorsteht. Danach
   ist sie Protokoll und geht nur mit dem ganzen Thema — außer sie steht für
-  sich: Dann *ist* sie das ganze Thema, und wer sie angelegt hat, darf sie
+  sich: Dann _ist_ sie das ganze Thema, und wer sie angelegt hat, darf sie
   wegnehmen.
 - Titel, Actionstep und Zusammenfassung einer noch nicht gehaltenen Einheit
   sehen nur die Zuständigen — bis der Abend anfängt.
@@ -555,7 +566,7 @@ Archiv unter „Termine".
   geschrieben hat — dafür die Zeile nach links wischen.
 - Wer das Geschenk besorgt, findet unten den Knopf **„Alle an die Vorschläge
   erinnern"** — einmal am Tag, an alle außer dem Geburtstagskind.
-- **Das Geburtstagskind sieht diese Seite nicht.** 
+- **Das Geburtstagskind sieht diese Seite nicht.**
 
 **Wichtig für den Anfang:** Die Geschenke-Zuteilung ist **standardmäßig
 ausgeschaltet**. Dann stehen die Geburtstage zwar im Kalender, aber niemand

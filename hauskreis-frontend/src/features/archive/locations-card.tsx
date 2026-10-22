@@ -30,13 +30,13 @@ export type PlaceScope = 'zuhause' | 'treffpunkte';
 
 /**
  * Zwei Register statt zwei Karten untereinander: Wer nach einem Treffpunkt
- * sucht, scrollte an allen Wohnungen vorbei. Angelegt wird ein Treffpunkt über
+ * sucht, soll nicht an allen Wohnungen vorbeiscrollen. Angelegt wird ein Treffpunkt über
  * das „+" unten rechts, das auf diesem Register erscheint (`archive-screen`).
  *
- * **Stillgelegte stehen hier gar nicht mehr.** Sie gab es einmal hinter einem
- * Haken, und genau das, was man beim Nachsehen nicht meint, wuchs mit den
- * Jahren zu — ein ehemaliges Zuhause pro Umzug. An den Abenden, an denen die
- * Gruppe dort war, stehen sie weiterhin.
+ * **Stillgelegte stehen hier nicht**, auch nicht hinter einem Haken: Ein
+ * ehemaliges Zuhause pro Umzug wüchse mit den Jahren zu, und genau das meint
+ * man beim Nachsehen nicht. An den Abenden, an denen die Gruppe dort war,
+ * stehen sie weiterhin.
  */
 export function LocationsCard({
   scope,
@@ -149,12 +149,9 @@ function HomeRow({ location }: { location: Location }) {
  * Ein Treffpunkt: gehört niemandem, also frei bearbeitbar und entfernbar.
  *
  * Stift und Papierkorb liegen hinter einem Wisch nach links (am Rechner hinter
- * dem Zeiger über der Zeile). Vorher war es ein langer Druck — und dazu eine
- * Sonderregel: Ohne Anschrift standen die Knöpfe dauerhaft da, weil in der
- * Zeile Platz war. Zwei Bedienweisen in derselben Liste, je nachdem, ob jemand
- * eine Adresse eingetragen hatte. Jetzt wischt man überall gleich, und der
- * Maps-Pfeil bleibt sichtbar, statt beim Aufklappen zu verschwinden: Die Knöpfe
- * liegen neben der Zeile und nicht mehr darin.
+ * dem Zeiger über der Zeile), überall gleich, ob mit Anschrift oder ohne. Der
+ * Maps-Pfeil bleibt sichtbar: Die Knöpfe liegen neben der Zeile und nicht
+ * darin.
  */
 function SpotRow({ location }: { location: Location }) {
   const [editing, setEditing] = useState(false);

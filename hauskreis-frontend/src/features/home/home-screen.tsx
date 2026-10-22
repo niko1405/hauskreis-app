@@ -196,7 +196,7 @@ export function HomeScreen() {
  *
  * Die Karte verschwindet beim Abhaken **nicht**. Erstens ließe sich der Haken
  * dann nicht zurücknehmen, zweitens ist „geschafft" auch eine Nachricht. Wie
- * es den anderen damit geht, steht hier nicht mehr — nur der eigene Haken
+ * es den anderen damit geht, steht hier nicht — nur der eigene Haken
  * (siehe `ActionstepCheck`). Still wird es bei der Erinnerung: der Reminder
  * überspringt, wer abgehakt hat.
  *
@@ -356,10 +356,8 @@ function NextMeetingCard({
   return (
     <Card className={cn('space-y-4', className)}>
       {/* Dieselbe Kopfzeile wie auf der Terminkarte: Datums-Kästchen links,
-          Titel, darunter Uhrzeit und Ort. Sie sahen vorher verschieden aus —
-          hier Datum und Countdown in einer Zeile, dort eine andere Anordnung —,
-          obwohl es dasselbe ist. Ein Zeitraum bekommt kein Kästchen; eine
-          Freizeit ist kein Tag. */}
+          Titel, darunter Uhrzeit und Ort — es ist dasselbe. Ein Zeitraum
+          bekommt kein Kästchen; eine Freizeit ist kein Tag. */}
       <div className="flex items-start gap-3">
         {meeting.endDate === null && <DateBox day={meeting.date} />}
 

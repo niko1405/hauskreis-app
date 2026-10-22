@@ -10,11 +10,10 @@
  * **Das Bild gilt für die ganze Gruppe.** Das steht auch dabei — wer eins
  * hochlädt, tut das für alle neun, und das soll niemanden hinterher überraschen.
  *
- * **Den Ausschnitt wählt man selbst** ([[image-cropper]]). Vorher stand hier
- * „der Ausschnitt kommt aus der Mitte", und bei einem Gruppenfoto ist die Mitte
- * fast nie die Stelle, an der die Köpfe sind. Der Server verkleinert weiterhin
- * (`sharp`, 1280×640, WebP) — er bekommt nur jetzt schon das richtige
- * Seitenverhältnis und hat deshalb nichts mehr wegzunehmen.
+ * **Den Ausschnitt wählt man selbst** ([[image-cropper]]): Bei einem
+ * Gruppenfoto ist die Mitte fast nie die Stelle, an der die Köpfe sind. Der
+ * Server verkleinert (`sharp`, 1280×640, WebP) — er bekommt schon das richtige
+ * Seitenverhältnis und hat deshalb nichts wegzunehmen.
  */
 import { ImagePlus, RotateCcw } from 'lucide-react';
 import { useRef, useState } from 'react';

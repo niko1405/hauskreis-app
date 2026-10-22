@@ -45,20 +45,16 @@ export class KeycloakAdminService {
   /**
    * Legt das Konto an — oder benutzt das, das schon da ist.
    *
-   * Vorher warf diese Stelle einen `409`, sobald es ein Konto mit dieser
-   * Adresse gab. Damit war jede Einladung an jemanden, der die App bereits
-   * benutzt, eine Sackgasse: genau der Fall „wechsel doch in unseren
-   * Hauskreis". Ein bestehendes Konto wird deshalb wiederverwendet.
+   * Ein bestehendes Konto wird wiederverwendet: Eine Einladung an jemanden,
+   * der die App bereits benutzt, ist genau der Fall „wechsel doch in unseren
+   * Hauskreis".
    *
-   * **Es bekommt trotzdem eine Mail.** Hier stand einmal, das sei unnötig,
-   * „Passwort und Adresse stehen schon" — nur erfuhr die eingeladene Person
-   * damit gar nichts. Sie wartete auf eine Einladung, die nie kam, während in
-   * der Verwaltung „eingeladen" stand. Was ihr fehlt, ist nicht ein Passwort,
-   * sondern der Hinweis und ein Weg hinein; den Rest erledigt das Anmelden,
-   * weil `resolveForUser` die offene Zeile über die Adresse findet.
+   * **Es bekommt trotzdem eine Mail.** Was der Person fehlt, ist nicht ein
+   * Passwort, sondern der Hinweis und ein Weg hinein; den Rest erledigt das
+   * Anmelden, weil `resolveForUser` die offene Zeile über die Adresse findet.
    *
-   * Eine Rolle wird hier nicht mehr vergeben. „Admin" gilt pro Hauskreis und
-   * steht an der `Person`, nicht am Konto.
+   * Eine Rolle wird hier nicht vergeben. „Admin" gilt pro Hauskreis und steht
+   * an der `Person`, nicht am Konto.
    */
   async inviteUser(params: { email: string }): Promise<InviteResult> {
     const existing = await this.findUserByEmail(params.email);
@@ -73,9 +69,8 @@ export class KeycloakAdminService {
     // wir hier kennen, ist die Adresse. Bleiben muss er nicht: die Einladung
     // schickt `UPDATE_PROFILE` mit, und dort trägt sich jede:r selbst ein.
     //
-    // Vor- und Nachname werden nicht mehr geraten. Sie wurden aus dem
-    // eingetippten Namen zerlegt („Anna Maria" → Vorname „Anna", Nachname
-    // „Maria"), gebraucht wurden sie nie, und falsch waren sie oft.
+    // Vor- und Nachname werden nicht aus dem eingetippten Namen geraten:
+    // Gebraucht werden sie nie, und falsch wären sie oft („Anna Maria").
     await this.request('/users', {
       method: 'POST',
       body: JSON.stringify({
@@ -113,10 +108,8 @@ export class KeycloakAdminService {
    * Schickt die Einrichtungsmail noch einmal — an ein Konto, das schon steht.
    *
    * Genau derselbe Weg wie beim Einladen, und deshalb auch dieselbe Frage, was
-   * überhaupt zu erledigen ist (`setupActions`). Hier stand einmal, ein zweites
-   * Mal nach dem Passwort zu fragen sei „harmlos gegenüber der Alternative, gar
-   * nicht hereinzukommen". Das war eine falsche Alternative: Wer sein Passwort
-   * hat, kommt herein — er weiß nur nicht, dass er eingeladen ist.
+   * überhaupt zu erledigen ist (`setupActions`): Wer sein Passwort hat, wird
+   * nicht ein zweites Mal danach gefragt.
    */
   async resendInvitation(email: string): Promise<boolean> {
     const user = await this.findUserByEmail(email);
@@ -217,15 +210,13 @@ export class KeycloakAdminService {
   /**
    * Die Bestätigungsmail — über den eigenen Weg, nicht über `execute-actions`.
    *
-   * Vorher stand hier `execute-actions-email` mit `['VERIFY_EMAIL']`. Das
-   * funktionierte, verschickte aber den falschen Text: Keycloak wählt die
+   * Nicht `execute-actions-email` mit `['VERIFY_EMAIL']`: Keycloak wählt die
    * Vorlage nach dem **Endpunkt**, nicht nach der Liste der Aktionen, und für
    * `execute-actions-email` ist das immer `executeActions` — bei uns die
-   * Einladung („Du bist im Hauskreis dabei"). Wer seine Adresse änderte, wurde
-   * also in einen Hauskreis eingeladen, in dem er längst war.
+   * Einladung („Du bist im Hauskreis dabei").
    *
-   * `send-verify-email` rendert `emailVerification`, und dieser Text steht seit
-   * jeher richtig im Theme (`email/messages/messages_de.properties`). Die
+   * `send-verify-email` rendert `emailVerification`, und dieser Text steht im
+   * Theme (`email/messages/messages_de.properties`). Die
    * Query-Parameter sind dieselben, deshalb bleibt `actionsEmailQuery` geteilt.
    */
   private async sendVerificationEmail(
@@ -442,11 +433,10 @@ export class KeycloakAdminService {
 
     if (!response.ok) {
       const detail = await response.text();
-      // Den Status **durchreichen** statt alles auf 500 abzubilden. Vorher sah
-      // ein belegter Nutzername (409) genauso aus wie ein Serverfehler, und der
-      // echte Grund eines Mailfehlers — etwa eine ungültige `redirect_uri`
-      // (400) — verschwand in der SMTP-Warnung. Wer den Aufruf macht, kann so
-      // unterscheiden, ob es an ihm lag.
+      // Den Status **durchreichen** statt alles auf 500 abzubilden: Ein
+      // belegter Nutzername (409) ist kein Serverfehler, und der echte Grund
+      // eines Mailfehlers — etwa eine ungültige `redirect_uri` (400) — soll
+      // nicht in der SMTP-Warnung verschwinden.
       throw new HttpException(
         `Keycloak admin request failed (HTTP ${response.status}): ${detail}`,
         response.status,

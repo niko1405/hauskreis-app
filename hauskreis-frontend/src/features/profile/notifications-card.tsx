@@ -8,12 +8,8 @@
  * Frage an das Telefon in der Hand und nicht an den Hauskreis — und beides
  * beantwortet man einmal und danach nie wieder.
  *
- * **Was man nachschlägt, steht auf einem eigenen Bildschirm.** Die zwanzig
- * Arten standen hier als eine ungegliederte Liste, mitten zwischen
- * Abwesenheiten und Konto. Zwanzig Schalter untereinander sind keine Liste
- * mehr, sondern eine Wand: Man findet den einen nicht, den man sucht, und
- * scrollt an allem anderen vorbei. Sie liegen jetzt unter
- * `/benachrichtigungen`, nach Bereichen sortiert und durchsuchbar.
+ * **Was man nachschlägt, steht auf einem eigenen Bildschirm**: die zwanzig
+ * Arten unter `/benachrichtigungen`, nach Bereichen sortiert und durchsuchbar.
  */
 import { Bell, BellOff, BellRing, ChevronRight, Send } from 'lucide-react';
 import Link from '@/components/ui/link';

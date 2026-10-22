@@ -42,9 +42,9 @@ export interface HomeMeeting {
    * Minuten seit Mitternacht — das Antwort-Schema macht `"19:30"` daraus,
    * genau wie bei `meeting.startTime`.
    *
-   * „Wann treffen wir uns" ist die zweite Frage nach „wann", und sie stand auf
-   * dem Startbildschirm bisher gar nicht: man musste den Termin öffnen, um
-   * eine Uhrzeit zu sehen, die sich inzwischen einstellen lässt.
+   * „Um wie viel Uhr" ist die zweite Frage nach „an welchem Tag", und die
+   * Uhrzeit lässt sich einstellen — sie gehört deshalb auf den
+   * Startbildschirm.
    */
   startTime: number;
   endDate: string | null;
@@ -96,9 +96,8 @@ export interface HomeScreen {
    * letzter Tag vorbei ist.
    *
    * Getrennt vom nächsten, weil es zwei verschiedene Fragen sind: „wo bin ich
-   * jetzt" und „was kommt". Vorher gab es nur eine Karte, und die zeigte den
-   * laufenden Abend — „Nächstes Treffen: heute" ist aber keine Auskunft mehr,
-   * wenn man schon dort sitzt.
+   * jetzt" und „was kommt". „Nächstes Treffen: heute" ist keine Auskunft, wenn
+   * man schon dort sitzt.
    */
   currentMeeting: HomeMeeting | null;
   /**
@@ -143,9 +142,7 @@ export interface HomeScreen {
    * Deine Gebetsgruppe, so wie sie auch der Gebet-Bildschirm bekommt.
    *
    * Die ganze Besetzung **einschließlich dir selbst**, in Kreis-Reihenfolge:
-   * Erst daraus lässt sich ablesen, für wen du betest und wer für dich. Vorher
-   * standen hier nur die Namen der anderen, und die Karte auf „Heute" konnte
-   * die Richtung deshalb gar nicht zeigen.
+   * Erst daraus lässt sich ablesen, für wen du betest und wer für dich.
    */
   prayerBuddies: {
     until: string;

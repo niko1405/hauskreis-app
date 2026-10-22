@@ -13,9 +13,8 @@
  * **Akkorde werden gewählt, dann gesetzt.** Ein Tipp auf einen Akkord unten
  * schaltet den Setzen-Modus ein — der Chip ist gefüllt, die Vorschau trägt
  * einen Rahmen, und darüber steht, was passiert. Jeder Tipp auf den Text setzt
- * ihn dann, bis man den Modus beendet. Vorher entstand bei jedem Tipp auf den
- * Text ein Akkord, geraten aus dem davor, und wer nur scrollen wollte, hatte
- * danach einen mehr.
+ * ihn dann, bis man den Modus beendet. Ein Tipp ohne gewählten Akkord setzt
+ * nichts — wer nur scrollen wollte, hat danach keinen Akkord zu viel.
  */
 import {
   Check,

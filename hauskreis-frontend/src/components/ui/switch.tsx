@@ -9,10 +9,6 @@
  * Das **Häkchen** bleibt deshalb überall dort, wo eine Angabe Teil eines
  * Formulars ist (Bausteine eines Abends, der Entwurf in der Geschenk-
  * Verwaltung) oder wo man etwas abhakt oder auswählt (erledigte Ideen, Filter).
- *
- * Vorher waren es überall Häkchen — auch an Einstellungen, die längst sofort
- * schrieben. Im Profil standen sie zudem neben einem Speichern-Knopf, und ob
- * ein Haken schon galt, sah man ihm nicht an.
  */
 import { cn } from '@/lib/cn';
 

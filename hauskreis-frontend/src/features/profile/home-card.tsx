@@ -3,10 +3,9 @@
 /**
  * „Wo du wohnst" — die Adresse statt einer Auswahlliste.
  *
- * Vorher stand hier ein Dropdown mit allen Orten, also auch „Bei Chris". Das
- * ergab nie einen Sinn: man kann nicht in der Wohnung von jemand anderem
- * gastgeben. Jetzt trägt man seine eigene Anschrift ein, und die App macht
- * daraus die Wohnung — mit dem eigenen Namen dran.
+ * Man trägt seine eigene Anschrift ein, und die App macht daraus die Wohnung —
+ * mit dem eigenen Namen dran. Eine Auswahl aus allen Orten ergäbe keinen Sinn:
+ * man kann nicht in der Wohnung von jemand anderem gastgeben.
  *
  * Die Rückfrage vor dem Zusammenziehen ist der Kern: gleiche Anschrift ist ein
  * starkes Indiz für eine Wohngemeinschaft, aber ein Tippfehler sieht genauso

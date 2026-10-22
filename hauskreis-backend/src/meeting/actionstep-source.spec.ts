@@ -1,7 +1,7 @@
 /**
  * Welcher der beiden Actionsteps eines Abends gilt.
  *
- * Seit es die Nachbereitung gibt, kann der Text an zwei Stellen stehen. Der
+ * Der Text kann an zwei Stellen stehen (Einheit oder Nachbereitung). Der
  * interessante Fall ist der letzte: **beide** gefüllt. Er ist kein Widerspruch,
  * sondern ein Rest — ein vergangener Abend behält seine Einheit auch dann, wenn
  * der Baustein danach abgeschaltet wurde.
@@ -104,10 +104,9 @@ describe('latestActionstep', () => {
   });
 
   /**
-   * Der eigentliche Grund für diese Funktion: Vorher wurde „der jüngste
-   * vergangene Abend, *der einen hat*" gesucht — ein leerer Dienstag wurde
-   * übersprungen, und der Vorsatz von vorletzter Woche stand eine Woche zu lang
-   * da, als wäre er frisch.
+   * Der eigentliche Grund für diese Funktion: Ein leerer Dienstag beendet den
+   * Vorsatz von davor, statt übersprungen zu werden — sonst stünde der Vorsatz
+   * von vorletzter Woche eine Woche zu lang da, als wäre er frisch.
    */
   it('endet, wenn der letzte Abend keinen hatte', async () => {
     const result = await latestActionstep(

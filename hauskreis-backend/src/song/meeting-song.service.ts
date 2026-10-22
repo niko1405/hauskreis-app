@@ -70,8 +70,7 @@ function shape(row: MeetingSongRow, viewerId: string) {
  *
  * Zwei Ordnungen in einer Liste, weil es zwei Fragen sind: „in welcher Folge
  * singen wir" entscheidet das Musik-Team, „was wollen die anderen" sagen die
- * Stimmen. Bei Gleichstand gilt, wer zuerst vorgeschlagen hat — dieselbe
- * Regel wie bisher für die ganze Liste.
+ * Stimmen. Bei Gleichstand gilt, wer zuerst vorgeschlagen hat.
  */
 function bySetlistThenVotes(a: MeetingSongRow, b: MeetingSongRow): number {
   if (a.isSelected !== b.isSelected) return a.isSelected ? -1 : 1;
@@ -316,8 +315,7 @@ export class MeetingSongService {
    * Einen **Vorschlag** darf jede:r löschen — er ist ein Wunsch, und wer sich
    * vertan hat, soll ihn wieder loswerden. Ein Lied in der **Setlist** dagegen
    * hat das Musik-Team dorthin gestellt; herausnehmen darf es nur, wer es
-   * auch hineinstellen darf (`assertMayPickSongs`). Bis hierher prüfte diese
-   * Route gar nichts.
+   * auch hineinstellen darf (`assertMayPickSongs`).
    */
   async remove(
     hauskreisId: string,

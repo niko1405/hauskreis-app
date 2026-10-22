@@ -70,11 +70,10 @@ export function rotate(people: readonly GiftablePerson[]): Duties {
  * ist es jetzt niemand mehr (nicht egal). Genauso beim Zugang: Ein neues
  * Mitglied hat keinen Zuständigen und ist für niemanden zuständig.
  *
- * **Es sind zwei Löcher, nicht eins — und daran ist die alte Fassung
- * gescheitert.** Sie suchte für jeden Geburtstag ohne Zuständigen jemanden mit
- * wenig Last und war dann fertig. Dass ein Neuzugang auch selbst noch niemanden
- * beschenkt, kam darin nicht vor, und für seinen eigenen Geburtstag scheidet er
- * als Kandidat aus. Also bekam er jemanden aus dem Bestand, und der hatte
+ * **Es sind zwei Löcher, nicht eins.** Wer nur für jeden Geburtstag ohne
+ * Zuständigen jemanden mit wenig Last sucht, übersieht, dass ein Neuzugang auch
+ * selbst noch niemanden beschenkt — für seinen eigenen Geburtstag scheidet er
+ * als Kandidat aus. Also bekäme er jemanden aus dem Bestand, und der hätte
  * hinterher zwei:
  *
  * ```
@@ -83,9 +82,8 @@ export function rotate(people: readonly GiftablePerson[]): Duties {
  *   a schenkt zweimal, d gar nicht
  * ```
  *
- * Genau das war in der Verwaltung zu sehen: einer ohne Zuteilung, einer mit
- * zwei. In der Rotation kann es nicht passieren, weil `rotate` den Kreis jedes
- * Mal ganz neu legt.
+ * In der Rotation kann es nicht passieren, weil `rotate` den Kreis jedes Mal
+ * ganz neu legt.
  *
  * **Die Regel, die gilt** (CLAUDE.md §6.10): Jede:r beschenkt genau einen und
  * wird von genau einem beschenkt — eine fixpunktfreie Permutation. Sie ist
@@ -138,9 +136,8 @@ export function repairPairings(
       // Ein anderes frisch gefülltes Loch — der Normalfall.
       holes.find((other) => other !== forWhom) ??
       // Oder, wenn es keins gibt, eine übernommene Kante. **Das ist der Fall
-      // mit genau einem Neuzugang**, und der kam in der alten Fassung gar
-      // nicht vor: `d` ist gleichzeitig das einzige Loch und der einzige
-      // Untätige. Er wird in den bestehenden Kreis eingehängt — aus `x→y`
+      // mit genau einem Neuzugang**: `d` ist gleichzeitig das einzige Loch und
+      // der einzige Untätige. Er wird in den bestehenden Kreis eingehängt — aus `x→y`
       // werden `x→d` und `d→y`, drei von vier alten Kanten bleiben stehen.
       [...duties.keys()].find((other) => other !== forWhom);
 

@@ -3,11 +3,10 @@
 /**
  * „Euer Hauskreis" — Bild, Beschreibung, Ideen, Mitglieder.
  *
- * **Warum es diesen Bildschirm gibt.** Die Gruppe hatte keinen Ort. Ihr Name
- * stand als Untertitel im Profil, die Mitgliederliste als achte Karte darunter
- * — auf einem Bildschirm, der von *dir* handelt. Ein sechstes Ziel in der
- * Leiste unten machte sie eng, also führt der Weg über die Pille in der
- * Kopfleiste (`smart-header.tsx`).
+ * **Warum es diesen Bildschirm gibt.** Die Gruppe braucht einen eigenen Ort
+ * und gehört nicht ins Profil, das von *dir* handelt. Ein sechstes Ziel in der
+ * Leiste unten machte sie eng, also führt der Weg über den Knopf in der
+ * Kopfleiste (`smart-header.tsx`) und im Profil.
  *
  * **Kein Kopfbild und keine Kopfleiste**, sondern ein Zurück-Pfeil wie auf den
  * Detailseiten: Hier ist man *in* etwas drin. Die Leiste darüber wäre die
@@ -19,10 +18,8 @@
  * **Ein Knopf für beides, oben rechts.** Name und Beschreibung sind zwei
  * Felder derselben Sache — wer ihr seid —, also ein Knopf, ein Sheet und
  * **ein** Schreibvorgang; zwei getrennte Schreiber auf dieselbe Zeile wären
- * zwei Gelegenheiten für einen Versionskonflikt. Er stand einmal als Wort am
- * Fuß der Beschreibung und machte die Karte dort zum Formular; jetzt steht er
- * dort, wo auf den anderen Unterseiten das Bearbeiten steht, und die Seite
- * bleibt zum Lesen.
+ * zwei Gelegenheiten für einen Versionskonflikt. Er steht dort, wo auf den
+ * anderen Unterseiten das Bearbeiten steht, und die Seite bleibt zum Lesen.
  */
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';

@@ -10,11 +10,10 @@ import type { DeferralReason, HomeFacts } from './host-ranking';
  */
 
 /**
- * Kommt aus der Datenbank, seit sich die Benachrichtigungs-Historie merken
- * muss, *welche* Rolle jemand bekommen hat. Vorher stand die Liste hier als
- * eigenes Objekt — zwei Aufschriebe derselben drei Werte, die auseinanderlaufen
- * können. Eine Rolle zu ergänzen heißt weiterhin: einen Adapter schreiben, das
- * Ranking bleibt unberührt.
+ * Kommt aus der Datenbank, weil sich auch die Benachrichtigungs-Historie
+ * merken muss, *welche* Rolle jemand bekommen hat — ein zweiter Aufschrieb
+ * derselben Werte könnte auseinanderlaufen. Eine Rolle zu ergänzen heißt:
+ * einen Adapter schreiben, das Ranking bleibt unberührt.
  */
 import { AssignmentRole } from '../../generated/prisma/enums';
 

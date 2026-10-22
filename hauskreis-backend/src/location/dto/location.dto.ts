@@ -36,8 +36,8 @@ const coordinateFields = {
 
 /**
  * Die Felder ohne Prüfregel. Getrennt gehalten, weil sich an ein verfeinertes
- * Schema in Zod 4 kein `.partial()` mehr anhängen lässt — `innerType()` gibt es
- * nicht mehr. Die Regel kommt deshalb unten an beide Varianten einzeln.
+ * Schema in Zod 4 kein `.partial()` anhängen lässt. Die Regel kommt deshalb
+ * unten an beide Varianten einzeln.
  */
 const locationFields = z.object({
   name: z.string().trim().min(1).max(100),

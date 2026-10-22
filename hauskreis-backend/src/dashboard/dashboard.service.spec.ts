@@ -388,9 +388,8 @@ describe('DashboardService.build', () => {
     await service.build('hk-1', NIKO, { now: NOW });
 
     // Dieselbe Abfrage wie in `latestActionstep`: die letzten vergangenen
-    // Abende, jüngster zuerst — und dann entscheidet die Schleife. Vorher stand
-    // hier „der jüngste, **der einen hat**", und damit blieb der Vorsatz von
-    // vorletzter Woche über einen leeren Dienstag hinweg stehen.
+    // Abende, jüngster zuerst — und dann entscheidet die Schleife, damit ein
+    // leerer Dienstag den Vorsatz von davor beendet.
     const where = findMany.mock.calls[1][0].where;
     expect(where.OR).toEqual([
       { endDate: null, date: { lt: utc('2026-07-29') } },
@@ -401,8 +400,7 @@ describe('DashboardService.build', () => {
 
   /**
    * Der laufende Abend steht oben, der nächste darunter. Zwei Fragen — „wo bin
-   * ich jetzt" und „was kommt" —, und vorher gab es eine Karte, die den
-   * laufenden Abend unter „Nächstes Treffen" führte.
+   * ich jetzt" und „was kommt".
    */
   it('trennt den laufenden Abend vom nächsten', async () => {
     const laufend = {
@@ -424,8 +422,7 @@ describe('DashboardService.build', () => {
 
   /**
    * Am Mittwochmorgen ist die interessanteste Karte der Abend von gestern —
-   * seine Nachbereitung fehlt noch. Vorher stand dort nur der Dienstag in einer
-   * Woche.
+   * seine Nachbereitung fehlt noch.
    */
   it('zeigt den letzten Abend, solange keiner läuft', async () => {
     const { service } = setup();
@@ -528,9 +525,8 @@ describe('DashboardService.build', () => {
       { endDate: { lt: utc('2026-07-29') } },
     ]);
     // Ein ausgefallener Abend ist keiner, den man nachliest — aber ein
-    // abgeschlossener sehr wohl. `PLANNED` stand hier einmal und war der Grund,
-    // warum die Karte in Produktion um drei Uhr nachts verschwand: Genau dann
-    // setzt `closePastMeetings` den Abend von gestern auf `COMPLETED`.
+    // abgeschlossener sehr wohl: Um drei Uhr nachts setzt `closePastMeetings`
+    // den Abend von gestern auf `COMPLETED`, und die Karte muss bleiben.
     expect(args.where.status).toEqual({ not: 'CANCELLED' });
     expect(args.orderBy).toEqual({ date: 'desc' });
   });
@@ -542,8 +538,7 @@ describe('DashboardService.build', () => {
 
     const home = await service.build('hk-1', NIKO, { now: NOW });
 
-    // Der Normalfall nach dem nächtlichen Lauf — und der Fall, den die Abfrage
-    // vorher ausgeschlossen hat.
+    // Der Normalfall nach dem nächtlichen Lauf.
     expect(home.lastMeeting?.id).toBe('m-vorbei');
   });
 

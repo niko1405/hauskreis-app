@@ -572,8 +572,7 @@ export class RoleSuggestionService {
    * Themen-Dienste, ein Ereignis je (Person, Abend).
    *
    * Gelesen wird die **Zuteilung am Termin**, nicht wer an einer Einheit steht.
-   * Das ist seit dem Einheiten-Modell zweierlei, und die Fairness meint das
-   * erste: „wer war dran" heißt „wer war eingeteilt". Wer eingeteilt war und
+   * Das ist zweierlei, und die Fairness meint das erste: „wer war dran" heißt „wer war eingeteilt". Wer eingeteilt war und
    * hinterher nichts eingetragen hat, war trotzdem dran — und wer für einen
    * kommenden Abend eingeteilt ist, hat schon etwas zu tun, obwohl es dort noch
    * gar keine Einheit gibt. Über die Einheiten zu gehen hieße, die Hälfte der
@@ -588,11 +587,10 @@ export class RoleSuggestionService {
    * Fairness-Rechnung des Themas nicht mitzählen.
    *
    * `excludeMeetingId` ist dieselbe Vorsichtsmaßnahme wie bei Gastgeber, Musik
-   * und Testimony, die sie längst hatten: **Was gerade eingeteilt wird, zählt
-   * nicht als Last.** Hier fehlte sie, solange noch keine Einheit gewählt war —
-   * `excludeTopicId` greift dann ins Leere, und wer für diesen Abend schon
-   * zuständig war, bekam durch genau diese Zuteilung eine Aufgabe angerechnet
-   * und rutschte in seiner eigenen Liste nach unten.
+   * und Testimony: **Was gerade eingeteilt wird, zählt nicht als Last.** Solange
+   * noch keine Einheit gewählt ist, greift `excludeTopicId` ins Leere — ohne
+   * diese Id bekäme, wer für diesen Abend schon zuständig ist, durch genau
+   * diese Zuteilung eine Aufgabe angerechnet.
    */
   private async collectTopicEvents(
     hauskreisId: string,

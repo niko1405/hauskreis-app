@@ -85,12 +85,11 @@ describe('AutoAttendanceService.apply', () => {
    * Der Fehler, den man als „die Terminkarte zählt eine Zusage zu viel"
    * bemerkt.
    *
-   * Hier stand `active: true` allein. Eine eingeladene Person ist aber von der
+   * `active: true` allein reicht nicht: Eine eingeladene Person ist von der
    * ersten Sekunde an aktiv — ihre Zeile entsteht beim Einladen —, und
    * `autoAttend` kann aus einer Voreinstellung kommen (der Seed setzt es). Sie
-   * sagte damit jeden Dienstag zu, ohne die App je geöffnet zu haben, während
-   * die Anwesenheitsliste sie über `ANGEKOMMEN` weglässt. Zwei Zahlen über
-   * denselben Abend, und die kleinere war die richtige.
+   * sagte sonst jeden Dienstag zu, ohne die App je geöffnet zu haben, während
+   * die Anwesenheitsliste sie über `ANGEKOMMEN` weglässt.
    */
   it('fragt nur nach denen, die den Schalter anhaben — und da sind', async () => {
     const { service, personFindMany } = setup();

@@ -14,10 +14,9 @@
  * dreimal lesen — die zweite und dritte Zeile ändern nichts an dem, was man
  * heute tun kann. Der ganze Vorlauf steht in der Planungstabelle.
  *
- * **Warum Register und kein Aufklapper.** Vorher lag das Spätere unter einem
- * „Weitere (2)"-Balken am Fuß der Karte. Das stellte die beiden Hälften
- * untereinander, als wäre die zweite ein Anhang der ersten — es sind aber zwei
- * gleichrangige Fragen: „Was ist am Dienstag?" und „Was kommt danach?". Als
+ * **Warum Register und kein Aufklapper.** Ein „Weitere (2)"-Balken stellte die
+ * beiden Hälften untereinander, als wäre die zweite ein Anhang der ersten — es
+ * sind aber zwei gleichrangige Fragen: „Was ist am Dienstag?" und „Was kommt danach?". Als
  * Register stehen sie nebeneinander, und die Zahl daneben beantwortet die
  * zweite schon halb, ohne dass man umschaltet.
  */
@@ -249,8 +248,8 @@ function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
     </span>
   );
 
-  // Die Zeile trägt ihren eigenen Rand nicht mehr — sie liegt jetzt *in* einer
-  // Karte, und ein Rahmen im Rahmen war genau das Unruhige daran.
+  // Die Zeile trägt keinen eigenen Rand — sie liegt *in* einer Karte, und ein
+  // Rahmen im Rahmen wäre unruhig.
   // Zwei Sorten Ziel: Termin-Rollen führen zum Abend, der Geschenk-Termin zu
   // seinem Geburtstag. Ohne Ziel bleibt es eine Zeile — ein Link ins Nichts
   // wäre schlechter als keiner.

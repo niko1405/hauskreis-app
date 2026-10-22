@@ -16,19 +16,16 @@
  * **Warum der Schleier aus zwei Lagen besteht** (`.header-veil` in
  * `globals.css`), steht dort ausführlich: Schwarz obenauf für die Lesbarkeit
  * und weil `StatusBarScrim` darüber ebenfalls schwarz ist, ein angedeuteter
- * Terracotta-Anteil darunter. Rein schwarz war er auch schon einmal, und dann
- * wirkten Bild, Name und Knöpfe, als gehörten sie zur Seite statt zu einer
- * Leiste. Die Farbe ist das, was sie zusammenhält.
+ * Terracotta-Anteil darunter. Rein schwarz wirkten Bild, Name und Knöpfe, als
+ * gehörten sie zur Seite statt zu einer Leiste — die Farbe hält sie zusammen.
  *
  * **Links steht kein Knopf.** Bild und Name sind Identität, der Weg zur Gruppe
- * ist der hervorgehobene Knopf rechts. Vorher trug beides eine Pille mit
- * eigenem Hintergrund — eine zweite Fläche über dem Foto, und damit der zweite
- * Grund für den Overlay-Eindruck.
+ * ist der hervorgehobene Knopf rechts — ohne eigene Pille, die eine zweite
+ * Fläche über dem Foto wäre.
  *
- * **Und ganz oben steht auch links nichts.** Über dem Kopfbild trugen Bild,
- * Name, Gruppe-Knopf und Glocke gemeinsam auf — vier Dinge über einem Foto, das
- * selbst schon sagt, wo man ist. Die Identität blendet deshalb mit dem Balken
- * ein: Dort liegt kein Bild darunter, das sie verdecken könnte, und dort ist sie
+ * **Und ganz oben steht auch links nichts.** Vier Dinge über einem Foto, das
+ * selbst schon sagt, wo man ist, wären zu viel. Die Identität blendet deshalb
+ * mit dem Balken ein: Dort liegt kein Bild darunter, das sie verdecken könnte, und dort ist sie
  * das Einzige, was den Balken einer Seite zuordnet.
  *
  * Ausgeblendet und nicht entfernt — der Block trägt `flex-1` und hält die

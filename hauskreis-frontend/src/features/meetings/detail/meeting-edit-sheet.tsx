@@ -1,31 +1,22 @@
 'use client';
 
 /**
- * Titel, Uhrzeit und Infos eines Termins — in einem Sheet, mit einem Knopf.
+ * Titel, Uhrzeit, Infos und Bausteine eines Termins — in einem Sheet, mit
+ * einem Knopf.
  *
- * **Warum das drei Felder in einem Formular sind und nicht drei Stellen in der
- * Seite.** Sie hingen vorher an einem Bearbeitungsmodus, den ein Schalter ganz
- * unten ein- und ausschaltete: Der Titel bekam dann einen Stift daneben, die
- * Uhrzeit einen weiteren, die Infos einen dritten — jeder mit eigenem
- * „Übernehmen", jeder mit eigenem Schreibvorgang. Wer die Uhrzeit ändern
- * wollte, musste erst ans Seitenende scrollen, einen Schalter finden, wieder
- * hochscrollen und dann den richtigen Stift treffen.
- *
- * Es sind aber drei Angaben derselben Sache: **was dieser Abend ist**. Also ein
- * Knopf im Kopf der Seite, ein Formular, ein Speichern.
+ * Es sind Angaben derselben Sache: **was dieser Abend ist**. Also ein Knopf im
+ * Kopf der Seite, ein Formular, ein Speichern — statt drei Stiften mit je
+ * eigenem „Übernehmen" und Schreibvorgang.
  *
  * **Geschrieben wird nur, was sich geändert hat.** Nicht aus Sparsamkeit: An
  * der Uhrzeit des nächsten Termins hängt eine Benachrichtigung an die ganze
  * Gruppe. Wer den Titel korrigiert und dabei dieselbe Zeit mitschickte, löste
  * sie mit aus.
  *
- * **„Was gehört dazu" steht jetzt auch hier** — und wird mit demselben
- * „Speichern" geschrieben. Es war eine eigene, zugeklappte Karte am Ende der
- * Seite, in der jeder Haken sofort schrieb: Wer zwei Bausteine tauschen wollte,
- * bekam zwei Schreibvorgänge, zwei Rückfragen und dazwischen einen Abend, den
- * es so nie geben sollte. Und die Karte stand zwischen Inhalten, die man liest,
- * obwohl man sie einmal beim Planen anfasst. Hier ist sie, was sie ist: eine
- * Angabe darüber, was dieser Abend ist, neben Titel und Uhrzeit.
+ * **„Was gehört dazu" steht auch hier** — und wird mit demselben „Speichern"
+ * geschrieben. Schriebe jeder Haken sofort, bekäme, wer zwei Bausteine
+ * tauschen will, zwei Schreibvorgänge, zwei Rückfragen und dazwischen einen
+ * Abend, den es so nie geben sollte.
  *
  * Die Ausschlüsse (Thema gegen Testimony) wirken beim Anhaken sofort sichtbar,
  * geschrieben wird erst beim Speichern. Geht dabei etwas verloren, fragt das
@@ -184,8 +175,7 @@ export function MeetingEditSheet({
         </Field>
 
         {/* Was man **vor** dem Abend wissen muss — „bringt Kuchen mit", „wir
-            fangen später an". Das stand einmal unten zwischen Zusammenfassung
-            und Actionstep und wurde dort nie rechtzeitig gelesen. */}
+            fangen später an". */}
         <Field label="Zusätzliche Infos (optional)">
           <TextArea
             value={infoText}

@@ -36,7 +36,7 @@ function takesText(element: Element | null): boolean {
  *
  * **Wozu.** Die Tab-Leiste klebt am unteren Rand des Layouts. Liegt ein Feld
  * weiter unten, schiebt iOS beim Tippen den sichtbaren Ausschnitt bis an den
- * Seitenfuß, und dann stand die Leiste direkt über der Tastatur: fünf Ziele,
+ * Seitenfuß, und dann stünde die Leiste direkt über der Tastatur: fünf Ziele,
  * die man beim Schreiben nicht meint, auf dem knappsten Platz des Bildschirms.
  *
  * **Woran es erkannt wird.** Eine Frage „ist die Tastatur offen" kennt das Web

@@ -81,9 +81,6 @@ const ZONES: string[] = Intl.supportedValuesOf?.('timeZone') ?? [
  * Beides in einem Formular und mit einem Speichern-Knopf, weil es ein Satz ist:
  * „wir treffen uns dienstags um 18 Uhr". Getrennt wären es zwei Entscheidungen,
  * von denen man die zweite vergisst.
- *
- * Wochentag und Uhrzeit standen bis eben als Konstanten im Backend — für die
- * eine Gruppe, für die das geschrieben wurde, stimmten sie.
  */
 function MeetingScheduleCard() {
   const schedule = useMeetingSchedule();
@@ -201,9 +198,7 @@ function MeetingScheduleCard() {
             </Field>
 
             {/* Die dritte Angabe desselben Satzes: „dienstags um 18 Uhr" ist ohne
-            sie nicht zu deuten — und „welchen Tag haben wir" ebenso wenig. Ein
-            Server in UTC hielt den Termin von gestern bis zwei Uhr nachts für
-            kommend. */}
+            sie nicht zu deuten — und „welchen Tag haben wir" ebenso wenig. */}
             <Field
               label="Zeitzone"
               hint="In dieser Zone gilt die Uhrzeit — und in ihr zählt die App die Tage."
@@ -451,8 +446,8 @@ function PrayerBuddyConfigCard() {
               </Button>
             </div>
 
-            {/* Nicht mehr „neu würfeln": seit fünf Runden im Voraus stehen, wird
-            nicht neu ausgelost, sondern die nächste geplante vorgezogen. */}
+            {/* Nicht „neu würfeln": Fünf Runden stehen im Voraus, also wird die
+            nächste geplante vorgezogen. */}
             <p className="text-[11px] leading-relaxed text-stone-400">
               Beendet die laufende Runde und zieht die nächste geplante auf
               heute vor. Danach steht der Vorlauf wieder voll.

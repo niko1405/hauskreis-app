@@ -310,8 +310,8 @@ describe('MembershipService.leave', () => {
   });
 
   /**
-   * Bis hierher blieb alles stehen: die Person hostete weiter am 26. August
-   * und stand in der Planungstabelle.
+   * Sonst bliebe alles stehen: die Person hostete weiter am 26. August und
+   * stünde in der Planungstabelle.
    */
   it('räumt die künftigen Rollen weg und bewertet die Abende neu', async () => {
     const { service, releaseEverythingUpcoming, reconcile } = setup({
@@ -425,8 +425,8 @@ describe('MembershipService.leave', () => {
   });
 
   /**
-   * Eine offene Einladung ist kein Mitglied. Vorher zählte sie mit, und die
-   * Verwaltung fiel an jemanden, der sich nie angemeldet hatte.
+   * Eine offene Einladung ist kein Mitglied — sonst fiele die Verwaltung an
+   * jemanden, der sich nie angemeldet hat.
    */
   it('nimmt den Hauskreis auch mit, wenn nur Einladungen übrig sind', async () => {
     const { service, hauskreisDelete, discardInvitationAccount } = setup({

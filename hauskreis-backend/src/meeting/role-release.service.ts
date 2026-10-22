@@ -20,11 +20,8 @@ import { clearSongSelectionIfUnled, touchMeeting } from './meeting-version';
  * - **Musik** — gilt für genau diesen Abend.
  * - **Testimony** — ebenso. Wer nicht kommt, erzählt an dem Abend nichts, und
  *   der Platz gehört jemandem, der da ist.
- * - **Thema** — seit Neuestem auch. Es blieb einmal stehen, weil die
- *   Zuständigkeit am *Thema* hing und nicht am Abend: sie fallen zu lassen hätte
- *   geheißen, jemanden von seiner Vorbereitung für alle kommenden Abende zu
- *   entbinden. Jetzt ist es eine Zuteilung wie die anderen drei, und ein Abend,
- *   an dem der Zuständige nachweislich fehlt, soll nicht zugeteilt aussehen. Die
+ * - **Thema** — eine Zuteilung wie die anderen, und ein Abend, an dem der
+ *   Zuständige nachweislich fehlt, soll nicht zugeteilt aussehen. Die
  *   Vorbereitung geht dabei nicht verloren — die Einheit wird nur vom Termin
  *   gelöst und wartet als Entwurf.
  * - **Snacks** — wie die Musik: eine Zuteilung für genau diesen Abend, und wer

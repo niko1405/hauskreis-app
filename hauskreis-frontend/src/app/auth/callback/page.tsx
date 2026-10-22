@@ -37,7 +37,7 @@ export default function AuthCallbackPage() {
       router.replace(returnPathOf(auth.user?.state));
       return;
     }
-    // Seit die Parameter nach dem Tausch aus der Adresszeile fliegen, ist
+    // Die Parameter fliegen nach dem Tausch aus der Adresszeile, also ist
     // diese Seite auch ohne sie erreichbar — Neuladen, Lesezeichen, Zurück.
     // Dann gibt es hier nichts abzuschließen, und das Wartefenster wäre eine
     // Sackgasse. `isLoading` bleibt bis zum Abschluss des Tauschs gesetzt,

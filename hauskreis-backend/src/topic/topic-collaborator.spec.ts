@@ -1,12 +1,11 @@
 /**
- * Das themaweite Schreibrecht — ab jetzt eine Entscheidung, keine Nebenwirkung.
+ * Das themaweite Schreibrecht — eine Entscheidung, keine Nebenwirkung.
  *
- * Bis eben gab es diesen Weg nicht, weil er nicht nötig schien: Wer eine Einheit
- * hielt, wurde automatisch Mitarbeiter:in. Genau das ist weggefallen — es gab
- * jemandem, der einmal an einem Abend aushalf, Hoheit über ein Thema, das über
- * Monate läuft. Wer hier steht, darf **jede** Einheit des Themas ändern und neue
- * anlegen; das ist mehr, als man im Vorbeigehen vergibt, und deshalb darf es nur
- * der Owner.
+ * Eine Einheit zu halten macht niemanden zum Mitarbeitenden: Wer einmal an
+ * einem Abend aushilft, bekommt keine Hoheit über ein Thema, das über Monate
+ * läuft. Wer hier steht, darf **jede** Einheit des Themas ändern und neue
+ * anlegen; das ist mehr, als man im Vorbeigehen vergibt, und deshalb darf es
+ * nur der Owner.
  */
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { TopicService } from './topic.service';

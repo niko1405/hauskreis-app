@@ -25,13 +25,10 @@ const TOP_THRESHOLD = 8;
  * nachgibt, erzeugt ein Pixel Gegenrichtung, und sie führe herein und wieder
  * hinaus.
  *
- * **Kleiner als `TOP_THRESHOLD`, und das ist der Punkt.** Hier stand einmal
- * zusätzlich ein `HIDE_AFTER = 96`: „erst ab zwei Leistenhöhen wegfahren",
- * gedacht als Ruhe. In Wahrheit war es ein Fenster von 88 Pixeln, in dem die
- * Leiste sichtbar *und* schon im Balken-Zustand war — beim Runterscrollen
- * blitzte also genau das auf, was man erst beim Zurückwischen sehen soll.
- * Jetzt ist sie weg, **bevor** `atTop` überhaupt umschlägt, und den Balken
- * bekommt man nur auf dem Weg nach oben zu Gesicht.
+ * **Kleiner als `TOP_THRESHOLD`, und das ist der Punkt.** Die Leiste ist weg,
+ * **bevor** `atTop` überhaupt umschlägt — sonst gäbe es ein Fenster, in dem
+ * sie sichtbar *und* schon im Balken-Zustand ist. Den Balken bekommt man nur
+ * auf dem Weg nach oben zu Gesicht.
  */
 const DIRECTION_THRESHOLD = 6;
 

@@ -5,9 +5,8 @@
  *
  * **Termine und Archiv haben bewusst keine.** Dort liest man Listen über Wochen
  * hinweg und sucht eine Zeile; ein Foto darüber wäre nur Weg bis zur ersten
- * davon. Das Archiv hatte einmal eins und hat es aus genau diesem Grund wieder
- * verloren: Es ist der Bildschirm, auf dem man etwas *nachschlägt*, und die
- * Suchzeile gehört dabei nach oben, nicht unter ein Bild.
+ * davon. Im Archiv schlägt man etwas *nach*, und die Suchzeile gehört dabei
+ * nach oben, nicht unter ein Bild.
  *
  * Aufbau von unten nach oben: das Bild füllt die ganze Fläche, darüber liegt
  * ein Schleier, der nach unten in die Leinwand ausläuft, und darauf steht der
@@ -35,9 +34,9 @@ import { HeaderImageSheet } from './header-image-sheet';
  * woran man im Kopfbereich erkennt, auf welchem Bildschirm man gelandet ist,
  * solange dort noch kein Foto steht.
  *
- * `archive` steht hier ohne Abnehmer. Der Bildschirm trägt kein Kopfbild mehr,
+ * `archive` steht hier ohne Abnehmer: Der Bildschirm trägt kein Kopfbild,
  * aber `HeaderScreen` kommt aus dem Server-Schema, und `Record` verlangt jeden
- * Fall. Die Zeile fällt weg, sobald der Server die Auswahl kennt — nicht vorher.
+ * Fall.
  *
  * Die Verläufe selbst stehen in `globals.css`, damit der Dunkelmodus sie
  * mitnimmt, ohne dass hier jemand den Modus abfragen müsste.
@@ -108,10 +107,9 @@ export function ScreenHeader({
       {/* Unten rechts und zurückhaltend: das Bild zu tauschen ist etwas, das
           man einmal tut und dann lange nicht wieder.
 
-          Er stand einmal oben rechts. Dort liegt jetzt die Glocke der
-          Kopfleiste — zwei runde Knöpfe übereinander wären eine Verwechslung
-          mit Ansage. Auf gleicher Höhe mit dem Titel steht er außerdem dort,
-          wo das Bild aufhört, also bei dem, worauf er sich bezieht. */}
+          Nicht oben rechts: Dort liegt die Glocke der Kopfleiste. Auf
+          gleicher Höhe mit dem Titel steht er dort, wo das Bild aufhört, also
+          bei dem, worauf er sich bezieht. */}
       <IconButton
         label="Hintergrundbild ändern"
         className="absolute right-4 bottom-4 bg-card/70 backdrop-blur-sm"

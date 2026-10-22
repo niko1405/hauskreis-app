@@ -1,12 +1,12 @@
 # Die API aus Sicht des Frontends
 
 Begleitdokument zu [`hauskreis-backend/openapi.json`](../hauskreis-backend/openapi.json).
-Dort stehen alle 73 Endpunkte mit ihren genauen Formen; hier stehen die Regeln,
+Dort stehen alle Endpunkte mit ihren genauen Formen; hier stehen die Regeln,
 die _für jeden_ Aufruf gelten und sich in OpenAPI schlecht ausdrücken lassen.
 
 Wer ein Modell mit dieser API arbeiten lässt, gibt ihm am besten beide Dateien.
-Das `README.md` des Backends ist dafür **nicht** gedacht: es erklärt auf 1600
-Zeilen, _warum_ die Dinge so sind, und das ist beim Bauen von Ansichten eher
+Das `README.md` des Backends ist dafür **nicht** gedacht: es erklärt ausführlich,
+_warum_ die Dinge so sind, und das ist beim Bauen von Ansichten eher
 Ablenkung.
 
 ```
@@ -160,11 +160,11 @@ abgesagte Abende, das Archiv-Register blendet sie aus) und
 
 Zwei Sorten, sauber getrennt — man erkennt sie am Namen:
 
-| Sorte              | Form                       | Felder                                                                                                                                                            |
-| ------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tag**, ohne Zeit | `2026-08-11`               | `meeting.date`, `absence.startDate`/`endDate`, `person.birthdate`, Gebetsbuddy-Zeiträume, `/home`, `/assignments`, `song.lastPlayedAt`, die Fakten der Vorschläge |
-| **Zeitpunkt**, mit | `2026-07-31T21:46:43.444Z` | ausschließlich `createdAt`, `updatedAt`, `sentAt`                                                                                                                 |
-| **Uhrzeit**, ohne Tag | `19:30` | `meeting.startTime`, `…/meetings/config`.`startTime` |
+| Sorte                 | Form                       | Felder                                                                                                                                                            |
+| --------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tag**, ohne Zeit    | `2026-08-11`               | `meeting.date`, `absence.startDate`/`endDate`, `person.birthdate`, Gebetsbuddy-Zeiträume, `/home`, `/assignments`, `song.lastPlayedAt`, die Fakten der Vorschläge |
+| **Zeitpunkt**, mit    | `2026-07-31T21:46:43.444Z` | ausschließlich `createdAt`, `updatedAt`, `sentAt`                                                                                                                 |
+| **Uhrzeit**, ohne Tag | `19:30`                    | `meeting.startTime`, `…/meetings/config`.`startTime`                                                                                                              |
 
 In OpenAPI stehen die ersten beiden als `format: date` und `format: date-time` —
 daran kann ein erzeugter Client sie unterscheiden. Die Uhrzeit ist ein `string`

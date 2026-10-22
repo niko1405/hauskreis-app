@@ -733,7 +733,7 @@ function fieldsOf(song: Song): SongFieldValues {
 }
 
 /**
- * Titel, Interpret und Link — für alle, wie bisher. Er gehört dem Lied und
+ * Titel, Interpret und Link — für alle. Er gehört dem Lied und
  * nicht dem Abend; wer einen kaputten Link repariert, repariert ihn überall.
  */
 function EditFields({

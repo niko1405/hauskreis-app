@@ -146,27 +146,19 @@ IMAGE_TAG="${TAG}" compose up -d --remove-orphans
 # Theme-Deploy geräuschlos ins Leere: die Dateien liegen richtig auf der
 # Platte, der Dienst benutzt weiter die alten.
 #
-# **Warum eine Prüfsumme und kein `git diff`.** Hier stand vorher ein Vergleich
-# der beiden Commits dieses Deploys. Der hat den Fehler, gegen den er gebaut
-# war, nicht behoben — und die Gründe sind lehrreich genug, um sie
-# aufzuschreiben:
+# **Warum eine Prüfsumme und kein `git diff`.** Ein Vergleich der beiden
+# Commits eines Deploys verpasst Änderungen: wenn er im selben Commit kommt wie
+# die Theme-Datei (dann läuft noch die alte Fassung dieses Skripts), und bei
+# einem Deploy desselben Commits von Hand (`before == after`).
 #
-#   1. Der Vergleich wurde im **selben** Commit eingeführt wie die Theme-Datei,
-#      die er hätte ausrollen sollen. Beim Deploy dieses Commits lief noch die
-#      alte Fassung dieses Skripts — die den Block nicht kannte.
-#   2. Danach hat kein Commit mehr das Theme angefasst. Also nie wieder ein
-#      Neustart, und der Zwischenspeicher blieb auf dem Stand von davor.
-#   3. Ein Deploy desselben Commits von Hand (`workflow_dispatch`) hat
-#      `before == after` und hätte ebenfalls nichts gemerkt.
-#
-# Eine Prüfsumme über das Verzeichnis hat keinen dieser drei Fehler: Sie
-# vergleicht, was **auf der Platte liegt**, mit dem, was der laufende Dienst
+# Eine Prüfsumme über das Verzeichnis vergleicht dagegen, was **auf der Platte
+# liegt**, mit dem, was der laufende Dienst
 # zuletzt gelesen hat — unabhängig von Commits, Reihenfolge und davon, welche
-# Fassung dieses Skripts gerade läuft. Fehlt die Marke (erster Lauf nach dieser
-# Änderung), wird einmal neu gestartet. Das ist genau richtig: dann *weiß*
+# Fassung dieses Skripts gerade läuft. Fehlt die Marke (erster Lauf), wird
+# einmal neu gestartet. Das ist genau richtig: dann *weiß*
 # niemand, was der Dienst gelesen hat.
 #
-# Neu gestartet wird weiterhin nur bei echter Änderung. Ein Neustart wirft alle
+# Neu gestartet wird nur bei echter Änderung. Ein Neustart wirft alle
 # laufenden Anmeldevorgänge weg, und das ist ein zu hoher Preis für ein Deploy,
 # das mit Keycloak nichts zu tun hatte.
 # ---------------------------------------------------------------------------

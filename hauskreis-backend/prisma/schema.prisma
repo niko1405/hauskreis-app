@@ -21,10 +21,9 @@ enum MeetingStatus {
 
 /// Was jemand **in diesem Hauskreis** darf.
 ///
-/// Bis eben war „Admin" eine Realm-Rolle in Keycloak und galt damit überall.
-/// Sobald sich jemand einen eigenen Hauskreis anlegt, stimmt das nicht mehr:
-/// er ist dort Admin und im alten Mitglied. Die Rolle gehört deshalb an die
-/// Mitgliedschaft, nicht an den Menschen.
+/// Keine Realm-Rolle in Keycloak, die überall gälte: Wer sich einen eigenen
+/// Hauskreis anlegt, ist dort Admin und im alten Mitglied. Die Rolle gehört
+/// deshalb an die Mitgliedschaft, nicht an den Menschen.
 enum PersonRole {
   MEMBER
   ADMIN
@@ -32,15 +31,14 @@ enum PersonRole {
   @@map("person_role")
 }
 
-/// Die drei Aufgaben, die an einem Abend vergeben werden.
+/// Die Aufgaben, die an einem Abend vergeben werden.
 ///
-/// Bis eben nur ein TypeScript-Objekt in `role-assignment.types.ts`. Seit die
-/// Benachrichtigungs-Historie sich merken muss, *welche* Rolle jemand bekommen
-/// hat, steht sie in der Datenbank — und die Vorschlagslogik leitet ihre
+/// In der Datenbank, weil sich die Benachrichtigungs-Historie merken muss,
+/// *welche* Rolle jemand bekommen hat — und die Vorschlagslogik leitet ihre
 /// Fassung davon ab, statt sie ein zweites Mal aufzuschreiben.
 ///
 /// Gebetsbuddys fehlen hier bewusst: sie hängen an keinem Termin und werden
-/// nicht zugeteilt, sondern gewürfelt.
+/// nicht zugeteilt, sondern von der Rotation gebildet.
 enum AssignmentRole {
   HOST
   TOPIC
@@ -152,9 +150,8 @@ enum NotificationType {
 
 /// Ob die Gruppe mit einem Thema durch ist.
 ///
-/// Belegt keinen Abend mehr von selbst vor — das tat einmal ein nächtlicher Lauf
-/// und stand damit dem „wer zuerst wählt, wird Owner" im Weg. Der Status sortiert
-/// jetzt die Auswahl: ein laufendes eigenes Thema steht ganz oben, wenn jemand
+/// Belegt keinen Abend von selbst vor — das stünde dem „wer zuerst wählt, wird
+/// Owner" im Weg. Der Status sortiert die Auswahl: ein laufendes eigenes Thema steht ganz oben, wenn jemand
 /// für einen Abend zugeteilt ist und sich entscheidet.
 enum TopicStatus {
   RUNNING
@@ -294,9 +291,9 @@ model Person {
   ///
   /// Sein Testimony erzählt man einmal. Wer dran war, gehört deshalb nicht mehr
   /// in die Vorschläge, und wer schon dran war, weiß die App aus den Abenden,
-  /// die sie kennt (`testimonies`). Die kennt sie aber erst, seit es sie gibt —
-  /// in einem Hauskreis, der Jahre älter ist als die App, hätte sonst die halbe
-  /// Gruppe ihr Testimony ein zweites Mal vor sich.
+  /// die sie kennt (`testimonies`). Ein Hauskreis ist aber älter als die App —
+  /// ohne dieses Feld hätte die halbe Gruppe ihr Testimony ein zweites Mal vor
+  /// sich.
   ///
   /// Deshalb nur dieses eine Häkchen und keine gespeicherte Gesamtantwort: Was
   /// die App selbst weiß, rechnet sie aus — zwei Aufschriebe derselben Tatsache
@@ -466,11 +463,9 @@ model Meeting {
   startMinutes        Int                  @default(1080) @map("start_minutes")
   /// Ob der nächtliche Lauf diesen Abend angelegt hat — oder ein Mensch.
   ///
-  /// Das ist alles, was von der früheren `MeetingType` übrig ist. `STANDARD`
-  /// gegen `LOBPREIS_GEBET` war reine Doppelung: Woraus ein Abend besteht,
-  /// sagen die Bausteine darunter genauer, und der Typ behauptete es nur.
-  /// `CUSTOM` sagte dagegen etwas, das kein Baustein weiß — und vier Regeln
-  /// hängen daran:
+  /// Eine Terminart gibt es nicht — woraus ein Abend besteht, sagen die
+  /// Bausteine darunter. Ob er erzeugt oder von Hand angelegt wurde, weiß aber
+  /// kein Baustein, und vier Regeln hängen daran:
   ///
   /// 1. **Der Taktschlag.** Die Reihe der erzeugten Abende gibt den Rhythmus
   ///    vor; ein Geburtstag am Samstag verschöbe sonst den Takt der Dienstage.
@@ -487,11 +482,9 @@ model Meeting {
   /// ausdrücklich schreibt, statt sich auf Vorgaben zu verlassen.
   generated           Boolean              @default(false)
   status              MeetingStatus        @default(PLANNED)
-  /// Woraus der Abend besteht — und zwar als Einziges. Das war einmal die
-  /// **Terminart**, die es nur behauptete: geprüft wurde nie etwas, man konnte
-  /// einem Lobpreisabend ein Thema geben und einem Geburtstag ein Testimony.
+  /// Woraus der Abend besteht — und zwar als Einziges.
   ///
-  /// Die Schalter sind jetzt die ganze Aussage. Beim Erzeugen wählt der
+  /// Die Schalter sind die ganze Aussage. Beim Erzeugen wählt der
   /// Generator zwischen zwei Belegungen (`EVENING_SLOTS`, `PRAISE_SLOTS`), von
   /// Hand angelegte Abende starten leer (`EMPTY_SLOTS`) und bekommen einzeln
   /// dazugebucht, was sie brauchen. Ein Geburtstagsabend braucht keine
@@ -558,10 +551,9 @@ model Meeting {
   infoText            String?              @map("info_text")
   /// Was **nach** dem Abend dasteht — nur bei `hasNotesSlot`.
   ///
-  /// Beide Spalten gab es hier schon einmal und sie sind mit den Einheiten
-  /// weggezogen. Sie kommen zurück, aber mit anderer Bedeutung: an der
-  /// `TopicSession` gehören sie zum **Thema** und überleben einen
-  /// Rollenwechsel, hier gehören sie zum **Abend** und gehen mit ihm. Ein
+  /// Dieselben Spalten stehen an der `TopicSession`, mit anderer Bedeutung:
+  /// dort gehören sie zum **Thema** und überleben einen Rollenwechsel, hier
+  /// gehören sie zum **Abend** und gehen mit ihm. Ein
   /// Abend hat entweder das eine oder das andere, nie beides.
   ///
   /// Der Haken darunter steht weiterhin in `MeetingActionstepDone` — der hing
@@ -725,8 +717,8 @@ model TopicSessionResponsible {
 /// und für dieses Minus bräuchte es ohnehin eine Tabelle. Dann lieber die Menge
 /// selbst.
 ///
-/// Eingetragen und entfernt wird **nur vom Owner**, von Hand. Automatisch beim
-/// Wählen einer Einheit war es einmal, und das gab jemandem, der einmal aushalf,
+/// Eingetragen und entfernt wird **nur vom Owner**, von Hand — nicht
+/// automatisch beim Wählen einer Einheit: Wer einmal aushilft, bekommt keine
 /// Hoheit über ein Thema, das über Monate läuft.
 ///
 /// Eine Ausnahme, und sie steht im Code (`membershipOf`), nicht hier: Bei einer
@@ -749,10 +741,10 @@ model TopicCollaborator {
 /// Wer an **diesem Abend** für das Thema zuständig ist — der Zwilling von
 /// `MeetingSongLeader`.
 ///
-/// Bis eben gab es diese Tabelle nicht: Zuständigkeit hing am Thema, und damit
-/// wechselte ein Rollenwechsel rückwirkend die Zuständigen jedes Abends, an dem
-/// das Thema je dran war. Jetzt ist Thema die vierte Rolle mit derselben Mechanik
-/// wie die anderen drei, und die Zuteilung ist von der Auswahl getrennt.
+/// Hinge die Zuständigkeit am Thema, wechselte ein Rollenwechsel rückwirkend die
+/// Zuständigen jedes Abends, an dem das Thema je dran war. So ist Thema eine
+/// Rolle mit derselben Mechanik wie die anderen, und die Zuteilung ist von der
+/// Auswahl getrennt.
 model MeetingTopicResponsible {
   meetingId String @map("meeting_id") @db.Uuid
   personId  String @map("person_id") @db.Uuid
@@ -985,13 +977,12 @@ model MeetingScheduleConfig {
   ///
   /// Aus heißt: keine Karte auf „Heute" und keine wöchentliche Erinnerung. Der
   /// Actionstep an der Einheit und über die Nachbereitung bleibt — er wird
-  /// weiter geschrieben, nur nicht mehr die Woche über vor sich hergetragen.
+  /// weiter geschrieben, nur nicht die Woche über vor sich hergetragen.
   weeklyActionstep  Boolean  @default(true) @map("weekly_actionstep")
   /// Ob der letzte Termin eines Monats ein Lobpreis- und Gebetsabend wird.
   ///
   /// Aus heißt: Jeder erzeugte Abend ist ein Standardtermin mit Thema. Nicht
-  /// jede Gruppe hat diesen Abend, und wer ihn nicht hat, bekam ihn bisher
-  /// trotzdem — mit Testimony-Baustein und ohne Thema.
+  /// jede Gruppe hat diesen Abend.
   ///
   /// Nur für **neu** erzeugte Termine. Ein Lobpreisabend, der schon im Kalender
   /// steht, bleibt einer; seine Bausteine ändert man an ihm selbst.
@@ -1189,25 +1180,25 @@ model NotificationLog {
 
   /// Was drinstand — der Grund, warum diese Tabelle mehr ist als Buchführung.
   ///
-  /// Bisher wusste sie, *dass* etwas rausging, nicht *was*. Eine Push-Nachricht
-  /// ist damit weg, sobald jemand sie wegwischt. Mit diesen drei Spalten wird
-  /// aus derselben Zeile der Eintrag in der Box hinter der Glocke.
+  /// Eine Push-Nachricht ist weg, sobald jemand sie wegwischt. Mit diesen drei
+  /// Spalten wird aus derselben Zeile der Eintrag in der Box hinter der Glocke.
   ///
-  /// Nullable, weil die Zeilen von vorher keinen Text haben. Sie tauchen in der
-  /// Box deshalb nicht auf — sie waren immer nur Entdopplung, und einen Titel
-  /// nachzuerfinden hieße, Nachrichten zu behaupten, die so nie dastanden.
+  /// Nullable, weil Zeilen aus der Zeit vor der Box keinen Text haben. Sie
+  /// tauchen in der Box nicht auf — sie dienen nur der Entdopplung, und einen
+  /// Titel nachzuerfinden hieße, Nachrichten zu behaupten, die so nie
+  /// dastanden.
   title    String?
   body     String?
   /// Wohin die App springt, wenn man den Eintrag antippt (`app-paths.ts`).
   url      String?
   /// Wann die Nachricht gelesen wurde. `null` heißt: steht noch in der Box.
   readAt   DateTime? @map("read_at")
-  /// Wann tatsächlich **zugestellt** wurde — und ab jetzt die Entdopplung des
-  /// Pushs, während die Zeile selbst den Box-Eintrag trägt.
+  /// Wann tatsächlich **zugestellt** wurde — die Entdopplung des Pushs, während
+  /// die Zeile selbst den Box-Eintrag trägt.
   ///
-  /// Die beiden mussten auseinander: Der Eintrag entsteht immer, auch wenn die
-  /// Art abgeschaltet ist (das stört ja niemanden). Der Push nicht. Hinge das
-  /// Weiterschicken weiter an der bloßen Existenz der Zeile, verlöre man die
+  /// Der Eintrag entsteht immer, auch wenn die Art abgeschaltet ist (das stört
+  /// ja niemanden). Der Push nicht. Hinge das Weiterschicken an der bloßen
+  /// Existenz der Zeile, verlöre man die
   /// Eigenschaft, auf die `NotificationService` ausdrücklich gebaut ist:
   /// wieder eingeschaltet heißt, der nächste Lauf stellt noch zu.
   pushedAt DateTime? @map("pushed_at")

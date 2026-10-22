@@ -1,8 +1,8 @@
 /**
  * Wer eine Einheit vorbereitet — und was das für den Abend bedeutet.
  *
- * Der Ort, an dem die Vorbereitung ihren Kreis zieht, seit die Zuteilung am
- * Termin es nicht mehr tut. Zwei Regeln tragen ihn, und sie sind ausdrücklich
+ * Der Ort, an dem die Vorbereitung ihren Kreis zieht — nicht die Zuteilung am
+ * Termin. Zwei Regeln tragen ihn, und sie sind ausdrücklich
  * **nicht symmetrisch**:
  *
  * - Wer hier dazukommt, wird für den zugeordneten Abend auch als zuständig

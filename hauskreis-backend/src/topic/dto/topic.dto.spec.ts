@@ -15,8 +15,8 @@ const geht = (input: Record<string, unknown>) =>
 describe('chooseTopicSessionSchema', () => {
   describe('der Titel der Einheit', () => {
     /**
-     * Er war einmal überall optional, und in jeder Liste stand danach „Einheit
-     * ohne Titel". Die beiden anderen Anlege-Wege verlangen ihn längst.
+     * Ohne Titel stünde in jeder Liste „Einheit ohne Titel" — und die beiden
+     * anderen Anlege-Wege verlangen ihn ebenfalls.
      */
     it('fehlt bei einer einzelnen Einheit nicht', () => {
       expect(geht({ mode: 'single' })).toBe(false);

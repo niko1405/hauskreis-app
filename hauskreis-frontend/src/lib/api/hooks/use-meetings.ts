@@ -230,11 +230,10 @@ export function useSetAttendance(meetingId: string) {
           }),
         );
 
-        // Den Startbildschirm greift hier **nichts** vor. Er zeigte die
-        // Antwort einmal selbst („Bist du dabei?") und musste deshalb sofort
-        // umspringen; seit die Frage am Termin und auf der Terminkarte steht,
-        // liest `myAttendance` niemand mehr. Ein Feld optimistisch zu pflegen,
-        // das keiner anzeigt, ist Arbeit, die stillschweigend veraltet.
+        // Den Startbildschirm greift hier **nichts** vor: Dort wird nicht
+        // geantwortet, und `myAttendance` liest niemand. Ein Feld optimistisch
+        // zu pflegen, das keiner anzeigt, ist Arbeit, die stillschweigend
+        // veraltet.
         //
         // Die Entwertung von `keys.home` bleibt (sie steckt in `derived`): Wer
         // auf „weiß noch nicht" geht, gibt seine Rollen frei, und „Deine

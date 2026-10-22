@@ -3,11 +3,9 @@
 /**
  * „Präferenzen" — welche Nachrichten du bekommst, nach Bereichen sortiert.
  *
- * **Warum ein eigener Bildschirm.** Die zwanzig Arten standen als eine
- * ungegliederte Liste mitten im Profil, zwischen Abwesenheiten und Konto. Zwanzig
- * Schalter untereinander sind keine Liste mehr, sondern eine Wand: Man findet
- * den einen nicht, den man sucht, und scrollt an allem anderen vorbei. Im Profil
- * bleibt jetzt das, was man **einmal** einstellt (Gerät an, Test schicken) —
+ * **Warum ein eigener Bildschirm.** Zwanzig Schalter untereinander mitten im
+ * Profil sind keine Liste mehr, sondern eine Wand: Man findet den einen nicht,
+ * den man sucht. Im Profil bleibt das, was man **einmal** einstellt (Gerät an, Test schicken) —
  * hier steht, was man **nachschlägt**.
  *
  * **Die Kategorie kommt vom Server** (`NOTIFICATION_CATALOG`). Eine zweite

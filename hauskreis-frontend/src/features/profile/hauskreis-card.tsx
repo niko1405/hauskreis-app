@@ -232,9 +232,8 @@ export function LeaveSheet({
    *
    * „Verlassen?" heißt sonst: du bist raus, die anderen machen weiter. Ist man
    * der letzte Mensch hier, heißt derselbe Knopf etwas ganz anderes — dann
-   * verschwinden Termine, Themen, Lieder und das Archiv mit. Das erfuhr man
-   * bisher erst danach, aus dem Toast („… ist damit aufgelöst"), also zu einem
-   * Zeitpunkt, an dem nichts mehr zu entscheiden war.
+   * verschwinden Termine, Themen, Lieder und das Archiv mit — und das soll man
+   * erfahren, solange es noch etwas zu entscheiden gibt.
    *
    * Sie steht **zusätzlich** zum Hinweis im Sheet, nicht an seiner Stelle: der
    * Hinweis sagt es, bevor man drückt, die Rückfrage lässt es einen bestätigen.

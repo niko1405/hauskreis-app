@@ -28,14 +28,11 @@ function isHostSuggestion(s: AnySuggestion): s is HostSuggestion {
 }
 
 /**
- * Nur noch die zwei, die wirklich nicht gehen.
+ * Nur die zwei, die wirklich nicht gehen.
  *
- * Hier stand einmal `HOUSEHOLD_BUSY: 'im Haushalt ist schon jemand anders
- * dran'` — für alle, die allein wohnen, zweimal falsch: Es war niemand anders,
- * sondern die Person selbst, und die andere Rolle war selten das Hosten. Dass
- * jemand an dem Abend schon etwas hat, sagen die Fakten inzwischen in denselben
- * Worten wie überall („an diesem Abend schon Thema"); im Ranking rutscht er
- * dafür nach unten, aber zurückgestellt wird er nicht.
+ * Dass jemand an dem Abend schon etwas hat, ist kein solcher Grund: Das sagen
+ * die Fakten in denselben Worten wie überall („an diesem Abend schon Thema");
+ * im Ranking rutscht er dafür nach unten, aber zurückgestellt wird er nicht.
  */
 const DEFERRED_REASON: Record<string, string> = {
   AWAY: 'ist in dem Zeitraum weg',
@@ -45,13 +42,10 @@ const DEFERRED_REASON: Record<string, string> = {
 /**
  * Die Fakten als kurze Sätze — **in der Reihenfolge, in der sortiert wird.**
  *
- * Hier stand die Auslastung einmal zuletzt: erst „zuletzt vor drei Wochen",
- * dann „2× insgesamt", dann was noch ansteht. In der knappen Fassung sind nur
- * zwei Zeilen zu sehen, und damit fehlte ausgerechnet das **erste**
- * Sortierkriterium genau dort, wo es den Platz erklärt: Wer beim Thema ganz
- * unten stand, weil er in zwei Wochen die Musik macht, las sich wie jemand, der
- * einfach öfter dran war. Jetzt folgen die Zeilen `compare` in `ranking.ts` —
- * an diesem Abend, sonstige Auslastung, zuletzt, wie oft.
+ * In der knappen Fassung sind nur zwei Zeilen zu sehen, und dort muss das
+ * **erste** Sortierkriterium stehen, das den Platz erklärt. Die Zeilen folgen
+ * deshalb `compare` in `ranking.ts` — an diesem Abend, sonstige Auslastung,
+ * zuletzt, wie oft.
  */
 export function suggestionFacts(suggestion: AnySuggestion): string[] {
   const facts = suggestion.facts;
@@ -73,12 +67,11 @@ export function suggestionFacts(suggestion: AnySuggestion): string[] {
   const load = loadLine(spaeter);
   if (load) lines.push(load);
 
-  // **Gemessen am Abend, nicht an heute.** Hier stand `formatRelativeDay`, und
-  // das rechnet gegen den heutigen Tag: Wer in vier Tagen die Musik macht, las
-  // sich beim Einteilen für einen Abend in vier Wochen als „zuletzt in vier
-  // Tagen" — ein Dienst, der aus Sicht dieses Abends dreieinhalb Wochen zurück
-  // liegt. Der Server rechnet den Abstand längst richtig aus, er stand nur
-  // ungenutzt daneben.
+  // **Gemessen am Abend, nicht an heute.** `formatRelativeDay` rechnet gegen
+  // den heutigen Tag: Wer in vier Tagen die Musik macht, läse sich beim
+  // Einteilen für einen Abend in vier Wochen als „zuletzt in vier Tagen" — ein
+  // Dienst, der aus Sicht dieses Abends dreieinhalb Wochen zurückliegt. Den
+  // Abstand rechnet der Server.
   if (facts.lastAssignedAt && facts.daysSinceLastAssignment !== null) {
     lines.push(
       `zuletzt ${formatDayGap(facts.daysSinceLastAssignment)} vor diesem Termin`,
@@ -97,9 +90,8 @@ export function suggestionFacts(suggestion: AnySuggestion): string[] {
     const share = shareLine(home);
     if (share) lines.push(share);
 
-    // Nur wenn die Größe überhaupt eine Frage aufwirft. Bisher stand die Zeile
-    // an jedem Zuhause mit gesetzter Kapazität — auch bei „Platz für 12,
-    // erwartet werden 7", wo sie zwei Zahlen nennt und nichts sagt.
+    // Nur wenn die Größe überhaupt eine Frage aufwirft — „Platz für 12,
+    // erwartet werden 7" nennt zwei Zahlen und sagt nichts.
     if (
       home.capacity !== null &&
       home.capacity < home.groupSize &&
@@ -135,11 +127,9 @@ function loadLine(commitments: UpcomingCommitment[]): string | null {
 /**
  * Wie dieses Zuhause zu seinem Anteil steht — **als Urteil, ohne Zahlen**.
  *
- * Zuerst standen hier zwei gerundete Prozentwerte nebeneinander („0 statt 25 %
- * der Abende"), dann dieselbe Aussage in Abenden („3 von 14, üblich wären 5").
- * Auch das war eine Zeile zu viel: Unter einem Namen in einer Liste rechnet
- * niemand nach, und wer es täte, käme zu keinem anderen Schluss als dem, der
- * ohnehin danebensteht. Übrig bleibt der Schluss.
+ * Unter einem Namen in einer Liste rechnet niemand nach — Prozentwerte oder
+ * „3 von 14, üblich wären 5" wären eine Zeile zu viel. Es steht der Schluss
+ * da.
  *
  * Er kommt aus `credit`, weil die Rangfolge daraus entsteht: Zwei Größen für
  * dieselbe Aussage liefen früher oder später auseinander, und dann stünde

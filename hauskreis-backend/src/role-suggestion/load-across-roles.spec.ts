@@ -2,14 +2,11 @@
  * Regel 1 gilt in **allen** vier Ranglisten: „wer hat am wenigsten zu tun,
  * über alle Rollen".
  *
- * Sie stand seit jeher so im Kopf von `ranking.ts` und stimmte in keiner
- * einzigen Liste ganz — jede bekam ihre eigene Rolle, Gastgeber und Thema, und
- * je nachdem fehlten Musik oder Testimony. Am schlimmsten beim Gastgeber, der
- * ausschließlich Gastgeber-Dienste sah: Wer an dem Abend das Thema vorbereitet,
- * stand trotzdem ganz oben.
+ * Jede Liste muss alle Rollen als Last sehen — sonst stünde beim Gastgeber
+ * ganz oben, wer an dem Abend das Thema vorbereitet.
  *
- * Geprüft wird deshalb über den Dienst und nicht über `rankForRole` — die reine
- * Funktion war nie das Problem, das Füttern war es.
+ * Geprüft wird über den Dienst und nicht über `rankForRole`: Es geht darum,
+ * womit die reine Funktion gefüttert wird.
  */
 import { RoleSuggestionService } from './role-suggestion.service';
 import type { PrismaService } from '../prisma/prisma.service';

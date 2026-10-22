@@ -322,9 +322,8 @@ describe('SongLookupService — Zwischenspeicher', () => {
 /**
  * Der zweite Druck auf „Link suchen".
  *
- * Vorher kam beliebig oft derselbe Zwischenspeicher-Eintrag zurück — wer einen
- * schlechten Vorschlag bekommen hatte, war damit fertig. Jetzt bleibt das
- * Bekannte stehen, und daneben wird gezielt weitergesucht.
+ * Das Bekannte bleibt stehen, und daneben wird gezielt weitergesucht — statt
+ * beliebig oft denselben Zwischenspeicher-Eintrag zurückzugeben.
  */
 describe('SongLookupService.search — noch einmal suchen', () => {
   const UG_ZWEI =

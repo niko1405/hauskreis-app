@@ -5,8 +5,8 @@ import { DEFAULT_TIME_ZONE } from '../common/time/local-evening';
 /**
  * Eine feste Uhr für Tests — immer dieselbe Zone, ohne Datenbank.
  *
- * Die Dienste bekommen die Zone seit dem Zeitzonen-Umbau über
- * `GroupClockService`, und fast jeder Test hat sie als Attrappe gebraucht.
+ * Die Dienste bekommen die Zone über `GroupClockService`, und fast jeder Test
+ * braucht ihn als Attrappe.
  * Vierzig Kopien desselben `{ zoneOf: () => … }` wären vierzig Gelegenheiten,
  * sie leicht verschieden zu bauen.
  *

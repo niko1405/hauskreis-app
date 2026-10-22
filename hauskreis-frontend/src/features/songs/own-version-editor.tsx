@@ -18,9 +18,9 @@
  *
  * **Das Format ist ein Zustand und keine Vermutung.** Was aus der Vorschau
  * kommt, ist ChordPro und wird als solches gelesen; nur Eingefügtes wird
- * erkannt. Vorher wurde jedes Mal geraten, und ein Blatt ganz ohne Akkorde las
- * sich nach der ersten Änderung als „Akkorde über Text" — eine Textzeile wie
- * „A E" wäre dabei zu Akkorden geworden.
+ * erkannt. Würde jedes Mal geraten, läse sich ein Blatt ganz ohne Akkorde nach
+ * der ersten Änderung als „Akkorde über Text" — eine Textzeile wie „A E" würde
+ * dabei zu Akkorden.
  *
  * **Unten steht dauerhaft eine Leiste**, sobald Text da ist, und sie hängt an
  * der Ansicht: unter „Akkorde" die Akkorde des Lieds zum Setzen, Suchen und
@@ -874,7 +874,7 @@ function EditablePreview({
   };
 
   // Ein Tipp auf den Text setzt den gewählten Akkord. Ohne gewählten nimmt er
-  // nur die Auswahl zurück — ein Akkord entsteht nicht mehr aus Versehen.
+  // nur die Auswahl zurück — ein Akkord entsteht nicht aus Versehen.
   const onTextClick = (event: React.MouseEvent) => {
     if (!armed) {
       onSelect(null);

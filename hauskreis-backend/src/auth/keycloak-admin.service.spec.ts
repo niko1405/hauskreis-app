@@ -224,9 +224,9 @@ describe('KeycloakAdminService — was die Einladung verlangt', () => {
   });
 
   /**
-   * **Ein bestehendes Konto bekommt trotzdem eine Mail.** Vorher stieg
-   * `inviteUser` wortlos aus — die eingeladene Person erfuhr nichts und
-   * wartete, während in der Verwaltung „eingeladen" stand.
+   * **Ein bestehendes Konto bekommt trotzdem eine Mail** — sonst erführe die
+   * eingeladene Person nichts und wartete, während in der Verwaltung
+   * „eingeladen" steht.
    */
   it('meldet sich auch bei einem Konto, das es schon gibt', async () => {
     const { service, calls } = setup({ credentials: [{ type: 'password' }] });

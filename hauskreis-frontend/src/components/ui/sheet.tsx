@@ -5,11 +5,9 @@
  * fehlte: Escape schließt, der Hintergrund scrollt nicht mit, der Fokus
  * landet im Sheet und nicht dahinter, und der Griff oben tut etwas.
  *
- * **Der Griff war lange nur ein Strich.** Er steht seit dem ersten Entwurf da
- * und heißt in jeder App „zieh mich weg" — hier hing kein einziger Handler
- * daran. Wer zog, bei dem passierte nichts; schließen ging nur über das X in
- * der Ecke. Ein Zeichen, das ein Versprechen gibt und es nicht einlöst, ist
- * schlimmer als keins.
+ * **Der Griff tut etwas.** Er heißt in jeder App „zieh mich weg", und ein
+ * Zeichen, das ein Versprechen gibt und es nicht einlöst, ist schlimmer als
+ * keins.
  *
  * **Gezogen wird am Kopf, nicht am Körper.** Der Körper ist ein Scroller, und
  * in einem Fall (`image-cropper.tsx`) steckt darin `react-easy-crop` mit
@@ -65,12 +63,11 @@ export function Sheet({
   const drag = useDragControls();
 
   // `onClose` über eine Ref und **nicht** über die Abhängigkeiten: der Effekt
-  // zieht den Fokus ins Panel, und er lief bisher jedes Mal neu, wenn der
-  // Aufrufer einen frischen Pfeil übergab. Die meisten tun das — ein `close`,
-  // das erst Felder leert und dann schließt, entsteht bei jedem Render neu.
-  // Also sprang der Fokus bei **jedem getippten Buchstaben** vom Eingabefeld
-  // weg. Nicht bei den Aufrufern reparieren: das wären zwölf `useCallback` für
-  // einen Fehler, und der dreizehnte vergisst es.
+  // zieht den Fokus ins Panel und liefe sonst jedes Mal neu, wenn der Aufrufer
+  // einen frischen Pfeil übergibt — die meisten tun das. Der Fokus spränge bei
+  // **jedem getippten Buchstaben** vom Eingabefeld weg. Nicht bei den
+  // Aufrufern lösen: das wären zwölf `useCallback`, und der dreizehnte
+  // vergisst es.
   const latestClose = useRef(onClose);
 
   // Vor dem Effekt darunter, weil Effekte in der Reihenfolge ihrer Deklaration

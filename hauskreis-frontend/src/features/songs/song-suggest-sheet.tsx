@@ -3,11 +3,8 @@
 /**
  * Ein Lied an den Abend bringen — beide Wege hinter einem Knopf.
  *
- * Am Termin standen dafür zwei Knöpfe untereinander: „Aus dem Archiv" öffnete
- * ein Sheet, „Lied vorschlagen" klappte ein Formular in der Karte auf. Zwei
- * Knöpfe für **eine** Absicht, in zwei verschiedenen Bauformen, und wer das
- * Lied nicht auswendig kannte, musste raten, welcher der richtige ist. Jetzt
- * fragt ein Sheet zuerst, worum es geht.
+ * Ein Knopf für **eine** Absicht: Das Sheet fragt zuerst, worum es geht —
+ * ein Lied aus dem Archiv oder ein neues.
  *
  * **Ein Sheet mit Schritten, keine gestapelten Sheets.** `Sheet` rendert ohne
  * Portal auf derselben Ebene und meldet seinen eigenen Escape-Handler an; zwei
@@ -27,7 +24,6 @@
  *
  * **„Neues Lied" ist dasselbe Formular wie im Archiv** (`SongFields`), mit den
  * Treffern der Liederliste unter dem Titel und der eigenen Version darunter.
- * Hier stand einmal eine eigene Fassung mit drei Feldern ohne Beschriftung.
  * Die eigene Version ist eine Ebene über dem Sheet; solange sie offen ist,
  * ist das Sheet zu (`open && !editing`), wie im Archiv.
  */

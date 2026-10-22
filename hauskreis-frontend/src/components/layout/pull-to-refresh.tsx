@@ -6,9 +6,8 @@
  * Die App holt ihre Daten beim Öffnen und danach nur noch, wenn etwas
  * geschrieben wurde — `refetchOnWindowFocus` steht bewusst auf `false`
  * (`query-client.ts`). Wer wissen will, ob inzwischen jemand einen Termin
- * eingetragen hat, hatte deshalb bisher nur das Neuladen der Seite. Auf einer
- * Web-Seite ist das ein Knopf in der Leiste; in einer App vom Home-Bildschirm
- * gibt es keine Leiste, und die Geste dafür ist überall dieselbe.
+ * eingetragen hat, lädt neu — und in einer App vom Home-Bildschirm gibt es
+ * dafür keine Leiste, aber eine Geste, die überall dieselbe ist.
  *
  * **Warum von Hand und nicht als Bibliothek.** Die Geste ist zwanzig Zeilen,
  * die Fallunterscheidungen sind der eigentliche Inhalt — und die kennt nur,
@@ -16,15 +15,13 @@
  * liegen als eigene Ebene darüber, und ohne Netz soll gar nichts erst
  * anlaufen.
  *
- * **Warum ein offenes Sheet die Geste abschaltet.** Hier stand einmal, eine
- * Berührung im Sheet erreiche diese Behandlung gar nicht, und das erspare die
- * Frage, ob gerade eines offen ist. Das war falsch: Die Sheets dieser App
+ * **Warum ein offenes Sheet die Geste abschaltet.** Die Sheets dieser App
  * liegen im Seiteninhalt und **nicht in einem Portal** — `position: fixed`
  * ändert, wo gemalt wird, nicht, woran ein Element hängt. Jeder Wisch darin
- * lief also bis hierher, und weil man ein Sheet fast immer von ganz oben
- * öffnet, griff auch `window.scrollY > 0` nicht: Das Sheet ließ sich nicht
- * mehr scrollen, und beim Loslassen lud die Seite dahinter nach. Gefragt wird
- * jetzt wirklich — `useOverlayOpen` aus `overlay-lock.ts`.
+ * käme also hier an, und weil man ein Sheet fast immer von ganz oben öffnet,
+ * griffe auch `window.scrollY > 0` nicht: Das Sheet ließe sich nicht scrollen,
+ * und beim Loslassen lüde die Seite dahinter nach. Gefragt wird deshalb
+ * ausdrücklich — `useOverlayOpen` aus `overlay-lock.ts`.
  *
  * **Warum sich nur der Kringel bewegt und nicht der Inhalt.** Dieselbe
  * Eigenheit, andere Folge: Ein `transform` am Inhalt — und sei es
@@ -217,9 +214,9 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
       {/* Der Kringel sitzt über der Inhaltskante und schiebt sich mit ihr ins
           Bild. `pointer-events-none`, damit er nie im Weg steht.
 
-          `top-[env(…)]` statt `top-0`: Seit die App bis unter die Notch reicht,
-          ist die Oberkante dieses Wirts die Oberkante des Bildschirms — der
-          Kringel drehte sich sonst hinter der Uhr. */}
+          `top-[env(…)]` statt `top-0`: Die App reicht bis unter die Notch,
+          die Oberkante dieses Wirts ist also die Oberkante des Bildschirms —
+          der Kringel drehte sich sonst hinter der Uhr. */}
       <div
         role="status"
         // Solange gezogen wird, ist der Kringel reine Rückmeldung an das Auge

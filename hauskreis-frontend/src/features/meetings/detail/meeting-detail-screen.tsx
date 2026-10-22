@@ -13,10 +13,7 @@
  * **Ort und Gastgeber sind eine Entscheidung.** Wer hostet, hostet bei sich.
  * Deshalb gibt es dafür auch nur **ein** Bedienelement: `VenueSheet` mit zwei
  * Registern, „Zuhause" und „Treffpunkte". Die Ort-Zeile hier ist reine Anzeige.
- * Vorher waren es zwei Stellen — ein Auswahlfeld für den Treffpunkt und
- * daneben das Personen-Sheet —, und die Kopplung konnte sich nur als
- * Fehlermeldung äußern („nimm erst den Gastgeber heraus"). Durchgesetzt wird
- * sie weiterhin im Backend (`MeetingService.resolveVenue`).
+ * Durchgesetzt wird die Kopplung im Backend (`MeetingService.resolveVenue`).
  *
  * **Ein vergangener Abend ist ein eigener Zustand**, nicht ein ausgegrauter
  * kommender. Er steht zuerst **zum Lesen** da — ohne Stifte, ohne Maps, ohne
@@ -174,20 +171,11 @@ function Loaded({
   const [choosingTopic, setChoosingTopic] = useState(false);
 
   /**
-   * Ob das Formular für Titel, Uhrzeit und Infos offensteht.
+   * Ob das Formular für Titel, Uhrzeit, Infos und Bausteine offensteht.
    *
-   * **Hier stand einmal ein Modus für die ganze Seite.** Ein Schalter ganz
-   * unten schaltete überall Stifte an: am Titel, an der Uhrzeit, an den Infos,
-   * an den Gebetsanliegen, an den Papierkörben der Lieder. Das kostete zwei
-   * Dinge. Erstens war jede dieser Möglichkeiten hinter einem Ort versteckt,
-   * den man erst kennen musste — die Bausteine sah gar nicht, wer nicht bis
-   * zum Seitenende scrollte. Zweitens hieß derselbe Schalter an fünf Stellen
-   * fünf verschiedene Dinge, von „dieses Feld ist beschreibbar" bis „hier darf
-   * gelöscht werden".
-   *
-   * Übrig bleibt ein gewöhnliches Formular hinter einem gewöhnlichen Knopf,
-   * und darin stehen inzwischen auch die Bausteine. Alles andere steht für
-   * sich: das Löschen eines Liedes liegt hinter dem Wisch, mit dem man
+   * Am kommenden Abend gibt es keinen Modus für die ganze Seite: Jede
+   * Möglichkeit steht dort, wo man sie braucht. Ein gewöhnliches Formular
+   * hinter einem gewöhnlichen Knopf, und alles andere steht für sich: das Löschen eines Liedes liegt hinter dem Wisch, mit dem man
    * überall in dieser App löscht, und die Textfelder haben ihren Stift ohnehin
    * selbst (`InlineEdit`).
    *
@@ -212,9 +200,7 @@ function Loaded({
    *
    * Der Hinweis „Nachbereitung hinzufügen" legt den Baustein an und öffnet die
    * Karte; bleibt sie leer, soll beim nächsten Aufmachen wieder der Hinweis
-   * dastehen und keine leere Karte. Das hing vorher am Seitenmodus — wer ihn
-   * verließ, bekam den Hinweis zurück. Ein eigener Merker sagt dasselbe, ohne
-   * dafür einen Modus zu brauchen.
+   * dastehen und keine leere Karte.
    */
   const [notesOpen, setNotesOpen] = useState(false);
 
@@ -227,13 +213,9 @@ function Loaded({
 
   const cancelled = meeting.status === 'CANCELLED';
   /**
-   * Drei Zustände und nicht zwei — siehe `meetingPhase`.
-   *
-   * `past` hieß bisher `isPast(meeting.date)`, also „der **erste** Tag ist
-   * vorbei". Eine Freizeit von Freitag bis Sonntag stand damit ab Samstag als
-   * „Vorbei" da, obwohl sie lief: Lieder waren plötzlich für alle abhakbar,
-   * Rollen ließen sich nicht mehr freigeben, der Inhalt eines Themas stand
-   * offen. Der Server rechnete längst mit dem ganzen Zeitraum.
+   * Drei Zustände und nicht zwei — siehe `meetingPhase`. Vorbei heißt ganz
+   * vorbei: Eine Freizeit von Freitag bis Sonntag läuft am Samstag noch, auch
+   * wenn ihr erster Tag vorbei ist.
    */
   const phase = meetingPhase(meeting);
   const past = phase === 'past';
@@ -248,9 +230,8 @@ function Loaded({
   const started = hasStarted(meeting.date, meeting.startTime);
 
   /**
-   * Ein abgesagter Abend ist kein Entwurf mehr. Vorher hing der Schreibschutz
-   * allein an `past` — man konnte einem Termin, den es nicht mehr gibt, noch
-   * Lieder und Rollen zuweisen.
+   * Ein abgesagter Abend ist kein Entwurf mehr: einem Termin, den es nicht
+   * mehr gibt, weist man keine Lieder und Rollen zu.
    */
   const locked = past || cancelled;
 
@@ -260,10 +241,8 @@ function Loaded({
    * Weg ist, was nur zum Umbauen da ist: der Formular-Knopf oben, die Stifte an
    * den Rollen, Maps, Liedvorschläge, ein Thema-Kasten ohne Thema, Absagen und
    * Löschen — **und auch die Stifte der Nachbereitung** samt „Nachbereitung
-   * entfernen". Sie stand hier einmal offen, weil sie das ist, was man am
-   * Morgen danach tut. Aber eine Leseansicht, in der genau ein Block
-   * beschreibbar ist, ist keine: Man las die Zusammenfassung und hatte einen
-   * Stift und einen Löschknopf im Blick.
+   * entfernen": Eine Leseansicht, in der genau ein Block beschreibbar ist, ist
+   * keine.
    *
    * Der **Weg hinein** bleibt dafür kurz. Fehlt die Nachbereitung noch, steht
    * oben weiter der Hinweis, und ein Tipp darauf schaltet gleich in
@@ -300,10 +279,9 @@ function Loaded({
     return roles.assignSongLeaders;
   };
 
-  // Hier stand einmal eine Rückfrage vor jedem Nachtragen („Dieser Abend ist
-  // vorbei — wirklich nachtragen?"), gegen den Fehlgriff aus dem Archiv. Den
-  // fängt jetzt die Leseansicht ab: Wer einen Stift sieht, hat „Bearbeiten"
-  // gedrückt. Zwei Schranken hintereinander wären eine zu viel.
+  // Keine Rückfrage vor dem Nachtragen: Den Fehlgriff aus dem Archiv fängt die
+  // Leseansicht ab — wer einen Stift sieht, hat „Bearbeiten" gedrückt. Zwei
+  // Schranken hintereinander wären eine zu viel.
 
   /**
    * Ein Eingang für fünf Zeilen — jede führt woandershin.
@@ -368,15 +346,11 @@ function Loaded({
     roles.topicPeople.some((person) => person.id === me.me?.id);
 
   /**
-   * Der einzige Automatismus, der von dieser Zuteilung noch ausgeht.
+   * Der einzige Automatismus, der von dieser Zuteilung ausgeht.
    *
-   * Hier standen einmal zwei ganz andere Sätze: Wer dazukam, setzte die
-   * Themenwahl zurück — es sei denn, der Owner trug ihn selbst ein. Das ist
-   * weggefallen, und mit ihm die Erklärungsnot. Zugeteilt zu sein heißt, an dem
-   * Abend dafür einzustehen; es gibt kein Schreibrecht mehr, vor dem eine
-   * fremde Vorbereitung geschützt werden müsste.
-   *
-   * Übrig bleibt die Kehrseite: Hängt am Abend etwas, das keiner der
+   * Zugeteilt zu sein heißt, an dem Abend dafür einzustehen; es gibt kein
+   * Schreibrecht, vor dem eine fremde Vorbereitung geschützt werden müsste.
+   * Die Kehrseite: Hängt am Abend etwas, das keiner der
    * Zuständigen anfassen darf, ist er in Wahrheit ungeplant — dann löst sich
    * die Einheit und wartet als Entwurf. Das steht als Hinweis **vor** der
    * Entscheidung, weil es beim Übernehmen ohne Nachfrage geschieht.
@@ -522,9 +496,9 @@ function Loaded({
           {phase === 'running' && <Badge variant="success">Läuft</Badge>}
           {cancelled && <Badge variant="alert">Abgesagt</Badge>}
 
-          {/* **Oben, wo man ankommt** — und nicht mehr als Schalter am
-              Seitenende. Er meint Titel, Uhrzeit und Infos zusammen: drei
-              Angaben derselben Sache, hinter einem Knopf und einem Formular. */}
+          {/* **Oben, wo man ankommt.** Er meint Titel, Uhrzeit, Infos und
+              Bausteine zusammen: Angaben derselben Sache, hinter einem Knopf
+              und einem Formular. */}
           {/* In der Leseansicht nicht: Dort öffnet „Bearbeiten" unten erst
               den Modus, und ein zweiter Knopf gleichen Namens oben wäre eine
               Abkürzung daran vorbei. */}
@@ -561,11 +535,9 @@ function Loaded({
           {meetingHeadline(meeting)}
         </h1>
 
-        {/* **Datum und Uhrzeit als zwei Kästchen, direkt unter dem Titel.** Die
-            Uhrzeit hatte vorher eine eigene Sektion mitten in der Seite, mit
-            Überschrift, Karte und Stift — für eine Angabe aus fünf Zeichen, die
-            zur ersten Frage an einen Termin gehört: „wann". Sie steht jetzt
-            dort, wo man sie sucht, und geändert wird sie im Formular oben. */}
+        {/* **Datum und Uhrzeit als zwei Kästchen, direkt unter dem Titel**:
+            Sie beantworten die erste Frage an einen Termin, „wann". Geändert
+            wird die Uhrzeit im Formular oben. */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="flex items-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-[13px] font-semibold text-stone-700">
             <CalendarDays size={15} className="shrink-0 text-terracotta-500" />
@@ -603,12 +575,12 @@ function Loaded({
       {/* Gedämpft, aber nicht versteckt: was an dem Abend geplant war, bleibt
           lesbar — es ist bloß nichts mehr, worauf man hinarbeitet. */}
       <div className={cn('space-y-6', cancelled && 'opacity-55')}>
-        {/* **Ganz oben**, und nicht mehr am Ende der Seite. Ab Terminbeginn ist
-            das die Hauptsache dieses Bildschirms: Wer gerade vom Abend
+        {/* **Ganz oben.** Ab Terminbeginn ist das die Hauptsache dieses
+            Bildschirms: Wer gerade vom Abend
             heimkommt, soll die Frage sehen, ohne an Uhrzeit, Ort, Rollen,
             Liedern und Anwesenheit vorbeizuscrollen.
 
-            Die **Karte** bleibt unten, wo sie war. Sobald etwas drinsteht, ist
+            Die **Karte** steht unten. Sobald etwas drinsteht, ist
             es Inhalt und gehört zum Nachklang des Abends — hier steht nur die
             Frage. Beides zugleich gibt es nie: `showNotes` und `mayAddNotes`
             schließen einander aus.
@@ -620,11 +592,9 @@ function Loaded({
           <NotesPrompt saving={update.isPending} onAdd={addNotes} />
         )}
 
-        {/* **Zwei Sektionen, nicht eine.** Der Ort stand bisher als namenloser
-            Block über den Rollen, in derselben Karte — dabei beantwortet er eine
-            andere Frage: „wo treffen wir uns" gegen „wer macht was". Und die
-            Adresse, die in der Antwort längst mitkommt, stand auf dieser Seite
-            überhaupt nirgends. */}
+        {/* **Zwei Sektionen, nicht eine.** Der Ort beantwortet eine andere
+            Frage als die Rollen: „wo treffen wir uns" gegen „wer macht was" —
+            samt Adresse. */}
         <section>
           <SectionTitle>Ort & Anreise</SectionTitle>
           <Card className="flex items-center gap-4">
@@ -636,10 +606,8 @@ function Loaded({
               <p className="truncate font-serif text-lg font-bold text-stone-800">
                 {meeting.location?.name ?? 'Noch offen'}
               </p>
-              {/* Der Satz darunter ist die Adresse, wenn es eine gibt. Vorher
-                  stand hier „Ergibt sich aus dem Gastgeber." — eine Erklärung
-                  der Mechanik statt einer Auskunft — und „Öffentlicher
-                  Treffpunkt" auch dann, wenn schlicht noch kein Ort feststand. */}
+              {/* Der Satz darunter ist die Adresse, wenn es eine gibt — eine
+                  Auskunft und keine Erklärung der Mechanik. */}
               <p className="mt-0.5 truncate text-sm text-stone-500">
                 {meeting.location?.address ??
                   (meeting.location
@@ -648,10 +616,8 @@ function Loaded({
               </p>
             </div>
 
-            {/* Ohne Ort steht hier **kein** Knopf. Er war vorher ein
-                deaktivierter Anker in `bg-gray-300` — den einzigen
-                Nicht-Token-Farben dieser Seite, die im Dunkelmodus falsch
-                aussehen. Ein toter Knopf ist kein Hinweis. */}
+            {/* Ohne Ort steht hier **kein** Knopf: Ein toter Knopf ist kein
+                Hinweis. */}
             {/* Und beim Nachlesen auch nicht: „Wie komme ich hin" fragt an
                 einem Abend, der vorbei ist, niemand. */}
             {meeting.location && !reading && (
@@ -861,17 +827,13 @@ function Loaded({
  * Eine Rolle als eigene Fläche: oben Symbol, Name und der Knopf zum Eintragen,
  * darunter die Menschen.
  *
- * **Zwei Zeilen und nicht eine.** Vorher stand alles nebeneinander: Symbol,
- * eine 4,5rem breite Spalte für die Bezeichnung, die Namen, der Knopf. Auf dem
- * Telefon blieben für die Namen rund 130 Pixel — ein einziger passte hinein,
- * der zweite rutschte darunter, der dritte machte die Zeile dreistöckig. Dabei
- * sind gerade die Rollen mit mehreren die häufigen: Musik, Thema, Snacks.
- * Unten über die volle Breite stehen zwei bequem, meistens drei.
+ * **Zwei Zeilen und nicht eine.** Alles nebeneinander ließe auf dem Telefon
+ * für die Namen rund 130 Pixel — schon der zweite rutschte darunter. Dabei sind
+ * gerade die Rollen mit mehreren die häufigen: Musik, Thema, Snacks. Unten über
+ * die volle Breite stehen zwei bequem, meistens drei.
  *
- * Davor standen die Rollen einmal als Chips nebeneinander. Die sahen nach
- * Anzeige aus, nicht nach „hier trägst du ein"; deshalb ist der Knopf oben
- * rechts geblieben und nicht die ganze Fläche antippbar geworden — er sagt, wo
- * man drückt.
+ * Der Knopf oben rechts sagt, wo man drückt; die ganze Fläche antippbar zu
+ * machen sähe nach Anzeige aus, nicht nach „hier trägst du ein".
  */
 function RoleRow({
   role,
