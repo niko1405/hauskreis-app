@@ -1191,9 +1191,8 @@ jemand anderen, die etwas feststellt („Dabei"). Die zustimmende Antwort steht
 `components/domain/meeting-card.tsx`.
 
 **Links ein Datums-Kästchen** — Wochentag, Tag, Monat (`dayParts` in
-`lib/date.ts`). Das Datum stand als Kleinschrift-Zeile über dem Titel und war
-damit das Unauffälligste an einer Karte, die man genau danach durchsucht. Ein
-**Zeitraum** bekommt keins: „14.–16." passt nicht hinein, und eine Freizeit ist
+`lib/date.ts`): Nach dem Datum durchsucht man die Liste, also ist es der Anker
+der Karte und keine Kleinschrift-Zeile über dem Titel. Ein **Zeitraum** bekommt keins: „14.–16." passt nicht hinein, und eine Freizeit ist
 kein Tag; dort steht die Spanne als Zeile. Der Tag steht **zweistellig**: Im
 Kästchen stehen die Zahlen untereinander wie in einer Spalte, und eine
 einstellige säße dort schmal in der Mitte.
@@ -1210,16 +1209,25 @@ Meinungen darüber, wie ein Termin aussieht. Der einzige Unterschied ist ein Sch
 der Ort nach Maps, in der Liste nicht, denn dort ist die ganze Karte schon ein
 Link auf den Termin.
 
-**Rollen-Chips sind neutral** (`RoleChip`). Sie trugen je eine eigene Farbe, und
-auf einer Karte standen davon drei nebeneinander — weil jede für sich etwas
-bedeutete, bedeutete am Ende keine mehr etwas. Unterschieden werden sie durch
-Symbol und Name. Der gestrichelte terracotta Rand des **leeren** Chips bleibt:
+**Rollen-Chips sind neutral** (`RoleChip`). Auf einer Karte stehen bis zu drei
+nebeneinander — trüge jede eine eigene Farbe, bedeutete am Ende keine mehr
+etwas. Unterschieden werden sie durch Symbol und Name. Der gestrichelte terracotta Rand des **leeren** Chips bleibt:
 Er ist die Einladung, jemanden zu wählen, und Auswahl ist überall terracotta.
 
 Braucht der Ort keinen Gastgeber, steht **kein** Host-Chip da. Der Ort selbst
-steht schon in der Zeile darüber; als Chip stand er ein zweites Mal und
+steht schon in der Zeile darüber; als Chip stünde er ein zweites Mal und
 behauptete eine Rolle, die es an dem Abend nicht gibt — dieselbe Regel wie
 `meetingRoles` am Termin.
+
+**Ein besonderer Termin** (`special`: Geburtstag, Freizeit) trägt in der oberen
+Zeile „✦ Besonders", in derselben kleinen Schrift wie ein Zeitraum. Auffallen
+soll er beim Überfliegen, aber leise — die Karte bleibt ungetönt: Grün heißt
+„läuft", und eine getönte Karte sähe aus wie eine Auswahl. Gesetzt wird das
+Häkchen beim Anlegen (`create-meeting-sheet.tsx`) und im Bearbeiten-Dialog;
+beide benutzen `CheckRow` aus `slot-toggles.tsx`, damit es aussieht wie die
+Bausteine darunter. Beim Anlegen schickt das Formular nichts, solange niemand
+das Häkchen anfasst — die Vorgabe (`autoGenerate` der Gruppe) wendet dann der
+Server an, und angezeigt wird dieselbe aus `useMeetingSchedule`.
 
 ### Die Antwort in Liste und Kalender
 

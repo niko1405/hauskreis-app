@@ -80,7 +80,7 @@ const LOOKBACK = 10;
 const stepSelect = {
   id: true,
   date: true,
-  generated: true,
+  special: true,
   ...actionstepSelect,
   // Nur die Ids: Der Startbildschirm zeigt eine Zahl und den eigenen Haken, die
   // Erinnerung überspringt damit, wer schon abgehakt hat. Die Namen stehen auf
@@ -138,9 +138,9 @@ export async function latestActionstep(
     const text = actionstepOf(meeting);
 
     if (text) return { ...meeting, text };
-    // Nur der selbst angelegte Termin wird übersprungen. Jeder andere leere
-    // Abend beendet den Vorsatz von davor.
-    if (meeting.generated) return null;
+    // Nur der besondere Termin wird übersprungen. Jeder andere leere Abend
+    // beendet den Vorsatz von davor — auch ein von Hand angelegter Dienstag.
+    if (!meeting.special) return null;
   }
 
   return null;

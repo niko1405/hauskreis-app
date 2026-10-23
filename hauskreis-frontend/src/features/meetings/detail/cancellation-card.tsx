@@ -5,12 +5,12 @@
  *
  * Drei Stücke: der Hinweis, der ganz oben steht und die Fragen
  * beantwortet (seit wann, von wem, warum), der Absage-Knopf ganz unten —
- * **nur für Admins** —, und daneben das Löschen für einen besonderen Termin.
+ * **nur für Admins** —, und daneben das Löschen für einen selbst angelegten Termin.
  * Den ganzen Abend abzusagen ist etwas anderes, als selbst nicht zu kommen;
  * letzteres steht in „Wer kommt".
  *
  * Absagen und Löschen sind ebenfalls nicht dasselbe: ein Dienstag, der
- * ausfällt, gehört in die Geschichte der Gruppe. Ein Geburtstag, den jemand
+ * ausfällt, gehört in die Geschichte der Gruppe. Ein Termin, den jemand
  * versehentlich angelegt hat, war nie da.
  */
 import { useRouter } from 'next/navigation';
@@ -201,16 +201,16 @@ export function CancelMeetingBlock({
 }
 
 /**
- * „Termin löschen" — nur bei einem besonderen, nur für Admins.
+ * „Termin löschen" — nur bei einem selbst angelegten, nur für Admins.
  *
  * Der Unterschied zum Absagen ist kein technischer: ein Hauskreis-Abend, der
- * ausfällt, bleibt Teil der Geschichte und der Vorschlagslogik, und der
- * Terminplaner legte ihn ohnehin wieder an. Ein versehentlich angelegter
- * Geburtstag dagegen war nie da — deshalb geht dafür auch keine Nachricht
+ * ausfällt, bleibt Teil der Geschichte und der Vorschlagslogik, und einen
+ * erzeugten legte der Terminplaner ohnehin wieder an. Ein versehentlich
+ * angelegter Termin dagegen war nie da — deshalb geht dafür auch keine Nachricht
  * raus, während eine Absage alle erreicht.
  *
- * Auch an einem abgesagten Termin sichtbar: ein abgesagter besonderer Termin
- * ist genau der, den man loswerden will.
+ * Auch an einem abgesagten Termin sichtbar: ein abgesagter selbst angelegter
+ * Termin ist genau der, den man loswerden will.
  */
 export function DeleteMeetingBlock({ meeting }: { meeting: Meeting }) {
   const router = useRouter();

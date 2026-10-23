@@ -16,7 +16,7 @@ const FREIZEIT = {
   hauskreisId: 'hk-1',
   date: new Date('2027-05-14'),
   endDate: new Date('2027-05-16'),
-  generated: false,
+  special: true,
   title: 'Hauskreis-Freizeit',
 };
 
@@ -101,7 +101,23 @@ describe('CustomMeetingNotificationService.announceCreation', () => {
   it('schweigt über einen Hauskreis-Abend', async () => {
     const { service, notify } = setup({
       ...FREIZEIT,
-      generated: true,
+      special: false,
+    });
+
+    await expect(service.announceCreation('m-1')).resolves.toBe(0);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Auch von Hand angelegt ist ein Dienstag ein Dienstag: Eine Gruppe, die
+   * ihren Kalender selbst führt, trägt jede Woche einen ein. Es zählt
+   * `special`, nicht woher der Termin kommt.
+   */
+  it('schweigt auch über einen selbst angelegten gewöhnlichen Abend', async () => {
+    const { service, notify } = setup({
+      ...FREIZEIT,
+      generated: false,
+      special: false,
     });
 
     await expect(service.announceCreation('m-1')).resolves.toBe(0);
@@ -139,14 +155,14 @@ describe('CustomMeetingNotificationService.sendDueReminders', () => {
   });
 
   /**
-   * Der Läufer scannt **alle** Termine im Fenster; das Aussieben nach Herkunft
-   * passiert erst in der `recipients`-Funktion. Ohne das bekäme jeder Dienstag
+   * Der Läufer scannt **alle** Termine im Fenster; das Aussieben passiert
+   * erst in der `recipients`-Funktion. Ohne das bekäme jeder Dienstag
    * eine zweite Erinnerung obendrauf.
    */
   it('lässt gewöhnliche Abende aus', async () => {
     const { service } = setup(FREIZEIT, {
       ...FREIZEIT,
-      generated: true,
+      special: false,
     });
 
     const result = (await service.sendDueReminders()) as unknown as {

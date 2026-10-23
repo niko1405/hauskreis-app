@@ -23,10 +23,10 @@ docs {
 
   Die einzige Erinnerung, deren Empfänger **nicht** am Termin stehen. Bei Host,
   Thema und Musik liest die `recipients`-Funktion sie vom Termin ab; hier sind
-  es alle aktiven Mitglieder, und dafür darf sie seit dieser Änderung
-  nachschlagen (`recipients` gibt wahlweise ein Promise zurück).
+  es alle aktiven Mitglieder, und dafür darf sie nachschlagen (`recipients`
+  gibt wahlweise ein Promise zurück).
 
-  Gefiltert wird auf `generated: false`. Der Läufer scannt alle Termine im Fenster —
+  Gefiltert wird auf `special: true`. Der Läufer scannt alle Termine im Fenster —
   ohne den Filter bekäme jeder Dienstagabend eine zweite Erinnerung obendrauf,
   zusätzlich zu den Rollen-Erinnerungen.
 

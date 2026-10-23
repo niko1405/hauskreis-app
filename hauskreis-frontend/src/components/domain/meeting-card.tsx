@@ -4,7 +4,7 @@
  * Eine Terminkarte in der Liste. Zeigt, was man beim Überfliegen braucht:
  * wann, was, wo, wer — und was noch offen ist.
  */
-import { Users } from 'lucide-react';
+import { Sparkles, Users } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -95,6 +95,17 @@ export function MeetingCard({
                 {meeting.endDate && (
                   <span className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
                     {formatDayRange(meeting.date, meeting.endDate)}
+                  </span>
+                )}
+                {/* Ein besonderer Termin — Geburtstag, Freizeit — fällt aus
+                    dem Rhythmus und soll beim Überfliegen auffallen, aber
+                    leise: eine Zeile wie der Zeitraum daneben, keine Tönung.
+                    Eine getönte Karte hieße „gilt gerade" (grün) oder sähe
+                    aus wie eine Auswahl. */}
+                {meeting.special && (
+                  <span className="flex items-center gap-1 text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
+                    <Sparkles size={11} aria-hidden />
+                    Besonders
                   </span>
                 )}
                 {!past && (

@@ -225,10 +225,13 @@ export class MeetingService {
     assertSlotsAllow(slots, dto);
     assertSlotsExclusive(slots);
 
-    // Ohne Angabe die Zeit der Gruppe — dieselbe, die gleich geschrieben wird.
-    const startMinutes =
-      dto.startTime ??
-      (await this.schedule.getRhythm(hauskreisId)).startMinutes;
+    // Ohne Angabe gilt, was die Gruppe eingestellt hat: ihre Uhrzeit, und
+    // „besonders" genau dann, wenn die App die gewöhnlichen Abende selbst
+    // anlegt — dann ist ein von Hand angelegter fast immer ein Geburtstag
+    // oder eine Freizeit.
+    const rhythm = await this.schedule.getRhythm(hauskreisId);
+    const startMinutes = dto.startTime ?? rhythm.startMinutes;
+    const special = dto.special ?? rhythm.autoGenerate;
 
     // Auch beim Anlegen: die API ist aus Bruno und aus jedem Skript erreichbar,
     // und ein rückdatierter Termin passiert die Regel korrekt.
@@ -251,6 +254,7 @@ export class MeetingService {
         // Wer über die API anlegt, ist ein Mensch — der Generator schreibt
         // seine Abende selbst und setzt das Feld dort ausdrücklich.
         generated: false,
+        special,
         startMinutes,
         ...slots,
         locationId: venue.locationId ?? null,
@@ -287,8 +291,8 @@ export class MeetingService {
     );
 
     // Der Dienstagabend steht jede Woche und braucht keine Ankündigung. Ein
-    // Geburtstag oder eine Freizeit fallen aus dem Rhythmus — die gingen ohne
-    // Nachricht unter, wenn niemand ausdrücklich Bescheid sagte.
+    // besonderer Termin fällt aus dem Rhythmus — der ginge ohne Nachricht
+    // unter, wenn niemand ausdrücklich Bescheid sagte.
     await this.customMeetingNotifications.announceCreation(
       meeting.id,
       viewer.personId,
@@ -371,6 +375,7 @@ export class MeetingService {
             infoText: dto.infoText,
             summaryText: dto.summaryText,
             actionstepText: dto.actionstepText,
+            special: dto.special,
             // Zuletzt, damit es gewinnt: ein abgeschalteter Baustein räumt
             // seine Felder weg, auch wenn oben noch alte Werte stünden.
             ...cleared,
@@ -884,17 +889,17 @@ export class MeetingService {
   }
 
   /**
-   * Löscht einen Termin vollständig — nur einen besonderen.
+   * Löscht einen Termin vollständig — nur einen selbst angelegten.
    *
-   * Ein Hauskreis-Abend fällt aus, er verschwindet nicht: dass am Dienstag
+   * Ein erzeugter Abend fällt aus, er verschwindet nicht: dass am Dienstag
    * nichts war, gehört in die Geschichte der Gruppe und in die
    * Vorschlagslogik. Dafür gibt es `POST …/cancel`. Ihn zu löschen brächte
    * außerdem nichts, weil der Generator ihn beim nächsten Lauf wieder anlegt.
    *
-   * Ein Geburtstag, den jemand versehentlich angelegt hat, ist der andere
-   * Fall: da war nie etwas, das man absagen könnte. Deshalb geht auch keine
-   * Nachricht raus — eine Absage für einen Termin, den es nie gab, wäre die
-   * erste Nachricht, die viele davon überhaupt sehen.
+   * Ein Termin, den jemand versehentlich angelegt hat, ist der andere Fall: da
+   * war nie etwas, das man absagen könnte. Deshalb geht auch keine Nachricht
+   * raus — eine Absage für einen Termin, den es nie gab, wäre die erste
+   * Nachricht, die viele davon überhaupt sehen.
    */
   async remove(hauskreisId: string, id: string) {
     const meeting = await this.loadPlain(hauskreisId, id);

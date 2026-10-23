@@ -465,22 +465,33 @@ model Meeting {
   ///
   /// Eine Terminart gibt es nicht — woraus ein Abend besteht, sagen die
   /// Bausteine darunter. Ob er erzeugt oder von Hand angelegt wurde, weiß aber
-  /// kein Baustein, und vier Regeln hängen daran:
+  /// kein Baustein, und zwei Regeln hängen daran:
   ///
   /// 1. **Der Taktschlag.** Die Reihe der erzeugten Abende gibt den Rhythmus
   ///    vor; ein Geburtstag am Samstag verschöbe sonst den Takt der Dienstage.
-  /// 2. **„Es gibt einen neuen Termin".** Die sieben Dienstage vom Generator
-  ///    sind keine Neuigkeit, ein von Hand angelegter Abend schon — samt seiner
-  ///    Vorlauf-Erinnerung.
-  /// 3. **Der Actionstep.** Ein leerer Abend beendet den Vorsatz von davor;
-  ///    ein selbst angelegter (ein Geburtstag zwischen zwei Dienstagen) nicht.
-  /// 4. **Löschen statt Absagen.** Einen erzeugten Abend legt der Terminplaner
+  /// 2. **Löschen statt Absagen.** Einen erzeugten Abend legt der Terminplaner
   ///    sofort wieder an — deshalb sagt man ihn ab.
   ///
   /// `@default(false)`: Angelegt wird von Hand, erzeugt wird vom Generator, und
   /// der schreibt die Spalte ausdrücklich — wie er schon die Bausteine
   /// ausdrücklich schreibt, statt sich auf Vorgaben zu verlassen.
   generated           Boolean              @default(false)
+  /// Ob der Termin aus dem Rhythmus fällt — ein Geburtstag, eine Freizeit.
+  ///
+  /// Eine eigene Spalte und nicht `!generated`: Eine Gruppe, die ihren Kalender
+  /// selbst führt, legt auch ihre gewöhnlichen Dienstage von Hand an. Beim
+  /// Anlegen wählbar; ohne Angabe gilt `MeetingScheduleConfig.autoGenerate` —
+  /// wo die App die Dienstage erzeugt, ist ein von Hand angelegter Abend fast
+  /// immer etwas Besonderes. Drei Dinge hängen daran:
+  ///
+  /// 1. **„Es gibt einen neuen Termin"** samt Vorlauf-Erinnerung. Einen
+  ///    gewöhnlichen Abend hat man im Kopf, einen besonderen nicht.
+  /// 2. **Der Actionstep.** Ein leerer Abend beendet den Vorsatz von davor;
+  ///    ein besonderer (ein Geburtstag zwischen zwei Dienstagen) nicht.
+  /// 3. **Die Terminliste** hebt ihn dezent hervor.
+  ///
+  /// Der Generator schreibt `false` ausdrücklich.
+  special             Boolean              @default(false)
   status              MeetingStatus        @default(PLANNED)
   /// Woraus der Abend besteht — und zwar als Einziges.
   ///

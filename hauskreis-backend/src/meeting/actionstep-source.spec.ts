@@ -85,7 +85,7 @@ describe('latestActionstep', () => {
   const abend = (over: Record<string, unknown>) => ({
     id: 'm',
     date: utc('2026-08-11'),
-    generated: true,
+    special: false,
     hasTopicSlot: false,
     actionstepText: null,
     topicSession: null,
@@ -122,14 +122,14 @@ describe('latestActionstep', () => {
   });
 
   /**
-   * Der selbst angelegte Termin ist die Ausnahme: Zwischen zwei Dienstagen
-   * einen Geburtstag zu feiern beendet nicht, was man sich am Dienstag
-   * vorgenommen hat.
+   * Der besondere Termin ist die Ausnahme: Zwischen zwei Dienstagen einen
+   * Geburtstag zu feiern beendet nicht, was man sich am Dienstag vorgenommen
+   * hat.
    */
-  it('überspringt einen selbst angelegten Termin ohne Actionstep', async () => {
+  it('überspringt einen besonderen Termin ohne Actionstep', async () => {
     const result = await latestActionstep(
       prisma([
-        abend({ id: 'geburtstag', generated: false }),
+        abend({ id: 'geburtstag', special: true }),
         abend({ id: 'dienstag', actionstepText: 'Jeden Tag lesen' }),
       ]),
       'hk-1',
@@ -139,13 +139,31 @@ describe('latestActionstep', () => {
     expect(result).toMatchObject({ id: 'dienstag' });
   });
 
+  /**
+   * Von Hand angelegt heißt nicht besonders: Eine Gruppe, die ihren Kalender
+   * selbst führt, trägt auch ihre Dienstage selbst ein — und ein leerer davon
+   * beendet den Vorsatz wie jeder andere.
+   */
+  it('endet auch an einem selbst angelegten gewöhnlichen Abend', async () => {
+    const result = await latestActionstep(
+      prisma([
+        abend({ id: 'dienstag-von-hand', generated: false, special: false }),
+        abend({ id: 'alt', actionstepText: 'Alter Vorsatz' }),
+      ]),
+      'hk-1',
+      HEUTE,
+    );
+
+    expect(result).toBeNull();
+  });
+
   /** Bringt er selbst einen mit, gilt er wie jeder andere Abend. */
-  it('nimmt den eines selbst angelegten Termins, wenn er einen hat', async () => {
+  it('nimmt den eines besonderen Termins, wenn er einen hat', async () => {
     const result = await latestActionstep(
       prisma([
         abend({
           id: 'freizeit',
-          generated: false,
+          special: true,
           actionstepText: 'Still sein',
         }),
         abend({ id: 'dienstag', actionstepText: 'Jeden Tag lesen' }),

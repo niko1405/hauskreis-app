@@ -39,9 +39,10 @@ export class CustomMeetingNotificationService {
   /**
    * „Es gibt einen neuen Termin."
    *
-   * Nur bei von Hand angelegten: die sieben Dienstage, die der Generator jede
-   * Nacht auffüllt, sind keine Neuigkeit, und eine Benachrichtigung darüber
-   * wäre die schnellste Art, Benachrichtigungen abzuschalten.
+   * Nur bei besonderen (`special`): Gewöhnliche Abende stehen jede Woche, ob
+   * der Generator sie auffüllt oder die Gruppe sie selbst einträgt, und eine
+   * Benachrichtigung über jeden wäre die schnellste Art, Benachrichtigungen
+   * abzuschalten.
    *
    * Die anlegende Person bleibt außen vor — sie weiß es.
    */
@@ -56,12 +57,12 @@ export class CustomMeetingNotificationService {
         hauskreisId: true,
         date: true,
         endDate: true,
-        generated: true,
+        special: true,
         title: true,
       },
     });
 
-    if (meeting.generated) return 0;
+    if (!meeting.special) return 0;
 
     const recipients = await this.activeMembers(
       meeting.hauskreisId,
@@ -107,7 +108,7 @@ export class CustomMeetingNotificationService {
     return this.reminders.run(
       NotificationType.CUSTOM_MEETING_REMINDER,
       async (meeting) => {
-        if (meeting.generated) return [];
+        if (!meeting.special) return [];
 
         const members = await this.activeMembers(meeting.hauskreisId);
 

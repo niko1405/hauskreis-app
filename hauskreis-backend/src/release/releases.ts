@@ -44,7 +44,7 @@ export const RELEASES: readonly Release[] = [
       'Die Setlist hat eine Reihenfolge, Vorschläge bekommen Stimmen.',
       'Neue Rolle „Snacks": Wer etwas mitbringt, trägt sich am Abend ein und wird zwei Tage vorher erinnert.',
       'Zu- und absagen geht auch in der Terminliste und im Kalender, mit einem Satz dazu — bei einer Zusage auch als Verspätung.',
-      'Vergangene Termine öffnen sich zum Nachlesen; wer nicht da war, steht gesammelt unter „War nicht da".',
+      'Selbst angelegte Termine lassen sich als „besonders" markieren — sie stehen in der Liste hervorgehoben, und alle werden vorher erinnert.',
       'Neue Nachrichten: am Morgen des Termins, solange am nächsten Abend eine Rolle frei ist, und zur Halbzeit der Gebetsrunde.',
       'Geschenk-Vorschläge lassen sich kommentieren.',
       'Aufgeräumteres Design: Datum als Kästchen auf den Karten, Ändern und Löschen per Wisch nach links, Fenster lassen sich nach unten wegwischen.',

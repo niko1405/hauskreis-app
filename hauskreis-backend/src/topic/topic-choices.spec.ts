@@ -12,6 +12,7 @@
  * aber immer noch zu einem Thema machen.
  */
 import { TopicSessionService } from './topic-session.service';
+import { topicChoicesResponseSchema } from './dto/topic-response.dto';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { TopicLinkService } from './topic-link.service';
 import type { RoleAssignmentNotifier } from '../notification/role-assignment-notifier.service';
@@ -80,7 +81,43 @@ const abend = (tag: string, status = 'PLANNED') => ({
   title: null,
 });
 
+/** Eine echte UUID — das Antwort-Schema prüft das Format. */
+const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
+
 describe('choices', () => {
+  /**
+   * Durch das Schema, wie es der `ResponseSerializerInterceptor` tut. Fehlt
+   * ein Feld, das es verlangt, wird aus der Antwort ein 500 — und das fällt
+   * erst auf, wenn jemand ein eigenes Thema hat.
+   */
+  it('passt zu ihrem Antwort-Schema', async () => {
+    const { service } = setup(
+      [
+        einheit(
+          id(1),
+          { ...abend('18'), id: id(3) },
+          { id: id(2), title: 'Apostelgeschichte', standalone: false },
+        ),
+      ],
+      [
+        {
+          id: id(4),
+          title: 'Apostelgeschichte',
+          status: 'RUNNING',
+          ownerPersonId: id(5),
+          sessions: [{ meeting: { date: utc('01') } }],
+        },
+      ],
+    );
+
+    const result = await service.choices('hk', 'm1', 'p1');
+
+    expect(
+      topicChoicesResponseSchema.safeParse(JSON.parse(JSON.stringify(result)))
+        .success,
+    ).toBe(true);
+  });
+
   it('reicht die einzelnen Einheiten als flache Liste durch', async () => {
     const { service } = setup([einheit('a'), einheit('b')]);
 

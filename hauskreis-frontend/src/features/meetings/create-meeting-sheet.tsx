@@ -1,9 +1,10 @@
 'use client';
 
 /**
- * Einen Termin von Hand anlegen — in der Regel einen besonderen („Geburtstag
- * von …"). Die wöchentlichen Abende legt das Backend selbst an, damit immer
- * mindestens sieben im Voraus zuteilbar sind.
+ * Einen Termin von Hand anlegen. Legt die App die wöchentlichen Abende selbst
+ * an, ist das meistens ein besonderer („Geburtstag von …"); führt die Gruppe
+ * ihren Kalender selbst, meistens ein gewöhnlicher Dienstag. Danach richtet
+ * sich die Vorgabe für „Besonderer Termin".
  *
  * Zwei Dinge unterscheiden ihn von einem erzeugten Abend: Er startet **leer**
  * und setzt sich einzeln zusammen, und er ist der übliche Weg zu einem Termin
@@ -15,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Field, Select, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast';
-import { SlotToggles } from '@/components/domain/slot-toggles';
+import { CheckRow, SlotToggles } from '@/components/domain/slot-toggles';
 import {
   useCreateMeeting,
   useLocations,
@@ -43,9 +44,15 @@ export function CreateMeetingSheet({
   const [startTime, setStartTime] = useState('');
   const [title, setTitle] = useState('');
   const [locationId, setLocationId] = useState('');
-  // Leer bis auf die Gebetsanliegen. Von Hand angelegte Termine sind fast immer
-  // besondere; wer einen gewöhnlichen Abend will, hakt zwei Schalter an.
+  // Leer bis auf die Gebetsanliegen: Ein Termin von Hand muss nichts
+  // erfüllen. Wer Thema und Lieder will, hakt zwei Bausteine an.
   const [slots, setSlots] = useState<MeetingSlots>(EMPTY_SLOTS);
+  /**
+   * `null` heißt „wie die Gruppe es eingestellt hat" — dann schickt das
+   * Formular nichts, und der Server wendet dieselbe Regel an. So steht sie
+   * einmal, und eine noch ladende Einstellung kann nichts Falsches mitschicken.
+   */
+  const [special, setSpecial] = useState<boolean | null>(null);
 
   const locations = useLocations();
   const schedule = useMeetingSchedule();
@@ -54,6 +61,7 @@ export function CreateMeetingSheet({
 
   const gruppenzeit = schedule.data?.data.startTime ?? '18:00';
   const zeit = startTime || gruppenzeit;
+  const besonders = special ?? schedule.data?.data.autoGenerate ?? true;
 
   // Über `applySlotToggle`, nicht mit einem einfachen Spread: Thema und
   // Testimony schließen einander aus, und das Formular soll gar nicht erst in
@@ -69,6 +77,7 @@ export function CreateMeetingSheet({
         startTime: zeit,
         title: title.trim() === '' ? null : title.trim(),
         locationId: locationId === '' ? null : locationId,
+        ...(special === null ? {} : { special }),
         ...slots,
       },
       {
@@ -77,6 +86,7 @@ export function CreateMeetingSheet({
           setTitle('');
           setEndDate('');
           setStartTime('');
+          setSpecial(null);
           onClose();
         },
       },
@@ -131,6 +141,13 @@ export function CreateMeetingSheet({
             onChange={(event) => setTitle(event.target.value)}
           />
         </Field>
+
+        <CheckRow
+          label="Besonderer Termin"
+          hint="Ein Geburtstag, eine Freizeit — alle bekommen Bescheid und kurz vorher eine Erinnerung, und er steht in der Liste hervorgehoben."
+          checked={besonders}
+          onChange={setSpecial}
+        />
 
         <Field
           label="Was gehört dazu"
