@@ -244,6 +244,7 @@ export class TopicSessionService {
           id: true,
           title: true,
           status: true,
+          ownerPersonId: true,
           sessions: {
             select: { meeting: { select: { date: true } } },
           },
@@ -302,6 +303,7 @@ export class TopicSessionService {
         title: topic.title,
         status: topic.status,
         standalone: false,
+        ownerPersonId: topic.ownerPersonId,
         sessionCount: topic.sessions.length,
         lastHeldAt: lastHeldDate(topic.sessions, zone),
       })),
