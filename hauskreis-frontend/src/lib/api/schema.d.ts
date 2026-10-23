@@ -2707,6 +2707,7 @@ export interface components {
         /** Format: date */
         endDate: string | null;
         generated: boolean;
+        special: boolean;
         /** @enum {string} */
         status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
         hasTopicSlot: boolean;
@@ -2920,6 +2921,7 @@ export interface components {
       /** Format: date */
       endDate: string | null;
       generated: boolean;
+      special: boolean;
       /** @enum {string} */
       status: 'PLANNED' | 'CANCELLED' | 'COMPLETED';
       hasTopicSlot: boolean;
@@ -3158,6 +3160,7 @@ export interface components {
       testimonyPersonId?: string | null;
       title?: string | null;
       infoText?: string | null;
+      special?: boolean;
       hasTopicSlot?: boolean;
       hasSongSlot?: boolean;
       hasTestimonySlot?: boolean;
@@ -3179,6 +3182,7 @@ export interface components {
       infoText?: string | null;
       summaryText?: string | null;
       actionstepText?: string | null;
+      special?: boolean;
       hasTopicSlot?: boolean;
       hasSongSlot?: boolean;
       hasTestimonySlot?: boolean;

@@ -19,7 +19,7 @@ export interface ReminderMeeting {
   hauskreisId: string;
   date: Date;
   endDate: Date | null;
-  generated: boolean;
+  special: boolean;
   title: string | null;
   hostPersonId: string | null;
   testimonyPersonId: string | null;
@@ -121,12 +121,11 @@ export class MeetingReminderService {
         hauskreisId: true,
         date: true,
         endDate: true,
-        // Woher der Abend kommt und wie er heißt, braucht die Erinnerung an
-        // selbst angelegte Termine: sie filtert danach und sagt im Text, worum
-        // es geht. Die drei Rollen-Erinnerungen lesen beides nicht — ein Feld
-        // mehr im `select` kostet weniger als eine zweite Abfrage für einen
-        // Sonderfall.
-        generated: true,
+        // Ob der Abend besonders ist und wie er heißt, braucht die Erinnerung
+        // an besondere Termine: sie filtert danach und sagt im Text, worum es
+        // geht. Die Rollen-Erinnerungen lesen beides nicht — ein Feld mehr im
+        // `select` kostet weniger als eine zweite Abfrage für einen Sonderfall.
+        special: true,
         title: true,
         hostPersonId: true,
         testimonyPersonId: true,

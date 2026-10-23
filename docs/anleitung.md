@@ -221,6 +221,12 @@ stehen — an dem Wochentag und zu der Uhrzeit, die für die Gruppe eingestellt
 sind. Da musst du nichts tun. Besondere Termine (Hauskreis-Wochenende,
 Geburtstagsfeier, Grillabend) legst du selbst an.
 
+Beim Anlegen gibt es das Häkchen **„Besonderer Termin"**. Ist es gesetzt,
+bekommen alle Bescheid und kurz vorher eine Erinnerung, der Termin steht in der
+Liste mit „Besonders" markiert, und der Actionstep vom letzten Abend bleibt
+stehen. Vorbelegt ist es, wenn die App eure Termine selbst anlegt; schaltet ein
+Admin das ab und ihr tragt eure Abende selbst ein, ist es leer.
+
 ### 6.2 Wie ein Termin heißt
 
 Eine feste „Terminart" gibt es nicht. Ein Abend heißt nach dem, woraus er

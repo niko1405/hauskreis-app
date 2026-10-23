@@ -43,6 +43,10 @@ export const meetingResponseSchema = z.object({
   /// legt der Terminplaner den Abend gleich wieder an. **Woraus** der Abend
   /// besteht, sagen die Bausteine darunter.
   generated: z.boolean(),
+  /// Ob der Termin aus dem Rhythmus fällt — ein Geburtstag, eine Freizeit. Die
+  /// Liste hebt ihn hervor; Ankündigung, Erinnerung und die Actionstep-Regel
+  /// hängen am Server daran.
+  special: z.boolean(),
   status: z.enum(MeetingStatus),
   /// Woraus der Abend besteht. Ein abgeschalteter Baustein heißt: das Feld
   /// dazu lässt sich nicht schreiben, die Rolle wird nicht vorgeschlagen, es

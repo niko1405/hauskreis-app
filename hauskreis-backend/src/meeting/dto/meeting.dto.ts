@@ -57,6 +57,10 @@ export const createMeetingSchema = z.object({
   testimonyPersonId: z.uuid().nullish(),
   title: z.string().trim().min(1).max(200).nullish(),
   infoText: z.string().trim().max(2000).nullish(),
+  /// Ob der Termin aus dem Rhythmus fällt (Geburtstag, Freizeit). Weggelassen
+  /// heißt: wie `autoGenerate` der Gruppe — wo die App die Dienstage selbst
+  /// anlegt, ist ein von Hand angelegter Abend fast immer ein besonderer.
+  special: z.boolean().optional(),
   ...slotFields,
 });
 
@@ -87,6 +91,7 @@ export const updateMeetingSchema = z.object({
   /// Träger.
   summaryText: z.string().trim().min(1).max(5000).nullish(),
   actionstepText: z.string().trim().min(1).max(2000).nullish(),
+  special: z.boolean().optional(),
   ...slotFields,
 });
 

@@ -16,8 +16,8 @@ interface Abend {
   actionstepText: string | null;
   /** Vom Thema (Vorgabe) oder aus der Nachbereitung des Abends selbst. */
   quelle?: 'thema' | 'nachbereitung';
-  /** Ob der nächtliche Lauf ihn angelegt hat — Vorgabe: ja. */
-  generated?: boolean;
+  /** Ob er aus dem Rhythmus fällt (Geburtstag, Freizeit) — Vorgabe: nein. */
+  special?: boolean;
   /** Wer den Actionstep schon abgehakt hat. */
   done?: string[];
 }
@@ -28,7 +28,7 @@ function row(abend: Abend) {
   return {
     id: abend.id,
     date: utc('2026-07-28'),
-    generated: abend.generated ?? true,
+    special: abend.special ?? false,
     hasTopicSlot: !ausNachbereitung,
     actionstepText: ausNachbereitung ? abend.actionstepText : null,
     topicSession: ausNachbereitung
@@ -262,10 +262,10 @@ describe('ActionstepReminderService.sendDueReminders', () => {
    * Die eine Ausnahme: Zwischen zwei Dienstagen einen Geburtstag zu feiern
    * beendet nicht, was man sich am Dienstag vorgenommen hat.
    */
-  it('überspringt einen selbst angelegten Termin ohne Actionstep', async () => {
+  it('überspringt einen besonderen Termin ohne Actionstep', async () => {
     const { service, notify } = setup({
       lastMeetings: [
-        { id: 'geburtstag', actionstepText: null, generated: false },
+        { id: 'geburtstag', actionstepText: null, special: true },
         { id: 'dienstag', actionstepText: 'Jeden Tag 10 Minuten lesen' },
       ],
     });
@@ -277,14 +277,14 @@ describe('ActionstepReminderService.sendDueReminders', () => {
   });
 
   /** Bringt er selbst einen mit, gilt er wie jeder andere Abend. */
-  it('nimmt den Actionstep eines selbst angelegten Termins', async () => {
+  it('nimmt den Actionstep eines besonderen Termins', async () => {
     const { service, notify } = setup({
       lastMeetings: [
         {
           id: 'geburtstag',
           actionstepText: 'Ruf jemanden an, den du lange nicht gesprochen hast',
           quelle: 'nachbereitung',
-          generated: false,
+          special: true,
         },
         { id: 'dienstag', actionstepText: 'Jeden Tag 10 Minuten lesen' },
       ],

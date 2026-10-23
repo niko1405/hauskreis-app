@@ -3,8 +3,8 @@
  *
  * Was dazugehört, sagt der Termin selbst über seine Bausteine:
  * `hasTopicSlot`, `hasSongSlot`, `hasTestimonySlot` stehen als Felder in der
- * Antwort. Ein besonderer Termin startet leer und bekommt einzeln dazugebucht,
- * was er braucht.
+ * Antwort. Ein von Hand angelegter Termin startet leer und bekommt einzeln
+ * dazugebucht, was er braucht.
  *
  * Gastgeber ist kein Baustein: man trifft sich immer irgendwo. Dass an einem
  * Abend niemand gastgebend eingetragen ist, bleibt davon unberührt.

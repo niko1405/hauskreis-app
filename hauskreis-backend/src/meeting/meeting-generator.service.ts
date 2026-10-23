@@ -192,6 +192,7 @@ export class MeetingGeneratorService {
           hauskreisId,
           date,
           generated: true,
+          special: false,
           startMinutes: rhythm.startMinutes,
           ...(praise ? PRAISE_SLOTS : EVENING_SLOTS),
           // Nach der Belegung und nicht in ihr: Snacks hängen nicht daran, ob

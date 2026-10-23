@@ -16149,6 +16149,9 @@
                 "generated": {
                   "type": "boolean"
                 },
+                "special": {
+                  "type": "boolean"
+                },
                 "status": {
                   "type": "string",
                   "enum": [
@@ -16790,6 +16793,7 @@
                 "startTime",
                 "endDate",
                 "generated",
+                "special",
                 "status",
                 "hasTopicSlot",
                 "hasSongSlot",
@@ -17019,6 +17023,9 @@
             "nullable": true
           },
           "generated": {
+            "type": "boolean"
+          },
+          "special": {
             "type": "boolean"
           },
           "status": {
@@ -17662,6 +17669,7 @@
           "startTime",
           "endDate",
           "generated",
+          "special",
           "status",
           "hasTopicSlot",
           "hasSongSlot",
@@ -18033,6 +18041,9 @@
             "maxLength": 2000,
             "nullable": true
           },
+          "special": {
+            "type": "boolean"
+          },
           "hasTopicSlot": {
             "type": "boolean"
           },
@@ -18109,6 +18120,9 @@
             "minLength": 1,
             "maxLength": 2000,
             "nullable": true
+          },
+          "special": {
+            "type": "boolean"
           },
           "hasTopicSlot": {
             "type": "boolean"

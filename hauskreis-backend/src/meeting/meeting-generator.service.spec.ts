@@ -14,6 +14,7 @@ type CreateManyArgs = {
     hauskreisId: string;
     date: Date;
     generated: boolean;
+    special: boolean;
     startMinutes: number;
     hasTopicSlot: boolean;
     hasTestimonySlot: boolean;
@@ -123,14 +124,25 @@ describe('MeetingGeneratorService.generateFor', () => {
   });
 
   it('schreibt an jeden erzeugten Abend, dass er erzeugt ist', async () => {
-    // Daran hängen der Taktschlag, die Benachrichtigung über neue Termine, die
-    // Actionstep-Ausnahme und „löschen statt absagen".
+    // Daran hängen der Taktschlag und „löschen statt absagen".
     const { service, createMany } = setup();
 
     await service.generateFor('hk-1', MONDAY);
 
     expect(
       createMany.mock.calls[0][0].data.every((m) => m.generated === true),
+    ).toBe(true);
+  });
+
+  it('schreibt an jeden erzeugten Abend, dass er nicht besonders ist', async () => {
+    // Ausdrücklich, wie die Bausteine: Ankündigung, Vorlauf-Erinnerung und
+    // die Actionstep-Ausnahme hängen daran.
+    const { service, createMany } = setup();
+
+    await service.generateFor('hk-1', MONDAY);
+
+    expect(
+      createMany.mock.calls[0][0].data.every((m) => m.special === false),
     ).toBe(true);
   });
 

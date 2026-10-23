@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Titel, Uhrzeit, Infos und Bausteine eines Termins — in einem Sheet, mit
- * einem Knopf.
+ * Titel, Uhrzeit, Infos, „besonders" und Bausteine eines Termins — in einem
+ * Sheet, mit einem Knopf.
  *
  * Es sind Angaben derselben Sache: **was dieser Abend ist**. Also ein Knopf im
  * Kopf der Seite, ein Formular, ein Speichern — statt drei Stiften mit je
@@ -27,7 +27,7 @@ import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/components/ui/confirm';
 import { Field, FieldLabel, TextArea, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
-import { SlotToggles } from '@/components/domain/slot-toggles';
+import { CheckRow, SlotToggles } from '@/components/domain/slot-toggles';
 import { MEETING_SLOT_KEYS, applySlotToggle } from '@/lib/meeting';
 import type { MeetingSlots } from '@/lib/meeting';
 import type { Meeting, UpdateMeetingInput } from '@/lib/api/types';
@@ -68,6 +68,7 @@ export function MeetingEditSheet({
   const [startTime, setStartTime] = useState(meeting.startTime);
   const [infoText, setInfoText] = useState(meeting.infoText ?? '');
   const [slots, setSlots] = useState<MeetingSlots>(() => slotsOf(meeting));
+  const [special, setSpecial] = useState(meeting.special);
   const confirm = useConfirm();
 
   /**
@@ -84,6 +85,7 @@ export function MeetingEditSheet({
     setStartTime(meeting.startTime);
     setInfoText(meeting.infoText ?? '');
     setSlots(slotsOf(meeting));
+    setSpecial(meeting.special);
     // Die einzelnen Felder und nicht `meeting` als Ganzes: Ein Termin, der
     // im Hintergrund neu geladen wird, ist ein neues Objekt mit denselben
     // Werten — und setzte zurück, was man gerade tippt.
@@ -93,6 +95,7 @@ export function MeetingEditSheet({
     meeting.title,
     meeting.startTime,
     meeting.infoText,
+    meeting.special,
     meeting.hasTopicSlot,
     meeting.hasSongSlot,
     meeting.hasTestimonySlot,
@@ -108,6 +111,7 @@ export function MeetingEditSheet({
     if (startTime !== meeting.startTime) input.startTime = startTime;
     if (geleert(infoText) !== meeting.infoText)
       input.infoText = geleert(infoText);
+    if (special !== meeting.special) input.special = special;
 
     const slotsChanged = MEETING_SLOT_KEYS.filter(
       (key) => slots[key] !== meeting[key],
@@ -183,6 +187,15 @@ export function MeetingEditSheet({
             onChange={(event) => setInfoText(event.target.value)}
           />
         </Field>
+
+        {!cancelled && (
+          <CheckRow
+            label="Besonderer Termin"
+            hint="Ein Geburtstag, eine Freizeit — alle werden kurz vorher erinnert, und er steht in der Liste hervorgehoben."
+            checked={special}
+            onChange={setSpecial}
+          />
+        )}
 
         {!cancelled && (
           <div>

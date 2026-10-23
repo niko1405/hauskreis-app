@@ -1,9 +1,11 @@
 /**
- * Die Uhrzeit eines Abends.
+ * Was ein Abend von der Gruppe übernimmt, wenn beim Anlegen nichts dabeisteht:
+ * die Uhrzeit und ob er ein besonderer Termin ist.
  *
- * Ein Pflichtfeld ohne Pflicht zur Angabe: wer nichts schickt, bekommt die Zeit
- * der Gruppe. Sie in jeden Aufrufer zu kopieren wäre eine zweite Stelle, an der
- * sie veralten kann.
+ * Die Uhrzeit ist ein Pflichtfeld ohne Pflicht zur Angabe: wer nichts schickt,
+ * bekommt die Zeit der Gruppe. Sie in jeden Aufrufer zu kopieren wäre eine
+ * zweite Stelle, an der sie veralten kann — und dasselbe gilt für die Vorgabe
+ * von „besonders".
  */
 import { MeetingService } from './meeting.service';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -48,7 +50,10 @@ function meeting(startMinutes = 1080) {
   };
 }
 
-function setup(groupStart = 1080, { anlegen = false } = {}) {
+function setup(
+  groupStart = 1080,
+  { anlegen = false, autoGenerate = true } = {},
+) {
   const state = { current: meeting() as Record<string, unknown> };
 
   const create = jest.fn((args: { data: Record<string, unknown> }) =>
@@ -86,7 +91,7 @@ function setup(groupStart = 1080, { anlegen = false } = {}) {
   const announceTimeChange = jest.fn().mockResolvedValue(0);
   const getRhythm = jest
     .fn()
-    .mockResolvedValue({ weekday: 2, startMinutes: groupStart });
+    .mockResolvedValue({ weekday: 2, startMinutes: groupStart, autoGenerate });
 
   const service = withClock(
     new MeetingService(
@@ -140,7 +145,56 @@ describe('MeetingService.create', () => {
   });
 });
 
+/**
+ * Wo die App die Dienstage selbst anlegt, ist ein von Hand angelegter Abend
+ * fast immer ein Geburtstag oder eine Freizeit. Wo die Gruppe ihren Kalender
+ * selbst führt, ist er meistens ein gewöhnlicher Dienstag.
+ */
+describe('MeetingService.create — besonderer Termin', () => {
+  it('ist besonders, wenn die Gruppe Termine erzeugen lässt', async () => {
+    const { service, create } = setup(1080, { anlegen: true });
+
+    await service.create('hk1', { date: '2026-08-11' } as never, ICH);
+
+    expect(create.mock.calls[0][0].data.special).toBe(true);
+  });
+
+  it('ist gewöhnlich, wenn die Gruppe ihren Kalender selbst führt', async () => {
+    const { service, create } = setup(1080, {
+      anlegen: true,
+      autoGenerate: false,
+    });
+
+    await service.create('hk1', { date: '2026-08-11' } as never, ICH);
+
+    expect(create.mock.calls[0][0].data.special).toBe(false);
+  });
+
+  it('nimmt die mitgeschickte Angabe statt der Vorgabe', async () => {
+    const { service, create } = setup(1080, {
+      anlegen: true,
+      autoGenerate: false,
+    });
+
+    await service.create(
+      'hk1',
+      { date: '2026-08-11', special: true } as never,
+      ICH,
+    );
+
+    expect(create.mock.calls[0][0].data.special).toBe(true);
+  });
+});
+
 describe('MeetingService.update', () => {
+  it('schreibt, ob der Termin besonders ist', async () => {
+    const { service, state } = setup();
+
+    await service.update('hk1', 'm1', { special: true } as never, ICH, EGAL);
+
+    expect(state.current.special).toBe(true);
+  });
+
   it('schreibt die neue Zeit und sagt der Gruppe Bescheid', async () => {
     const { service, announceTimeChange, state } = setup();
 

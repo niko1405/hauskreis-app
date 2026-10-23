@@ -121,9 +121,9 @@ export function useUncancelMeeting(meetingId: string) {
 }
 
 /**
- * Löscht einen Termin vollständig. Nur Admin, und nur bei einem **besonderen**
- * Termin — einen Hauskreis-Abend sagt man ab, sonst legt ihn der Terminplaner
- * gleich wieder an. Der Server lehnt alles andere mit `400` ab.
+ * Löscht einen Termin vollständig. Nur Admin, und nur bei einem **selbst
+ * angelegten** Termin — einen erzeugten sagt man ab, sonst legt ihn der
+ * Terminplaner gleich wieder an. Der Server lehnt alles andere mit `400` ab.
  */
 export function useDeleteMeeting() {
   const { hauskreisId, keys, derived } = useHk();

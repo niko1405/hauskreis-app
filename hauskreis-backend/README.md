@@ -871,13 +871,19 @@ Zwei und nicht eine, weil es zwei Fragen sind: „gibt es etwas Neues"
 beantwortet man einmal, „ich muss daran denken" braucht eine Vorlaufzeit. Wer
 das eine will und das andere nicht, kann das einstellen.
 
-Beide gelten **nur für selbst angelegte Termine** (`generated: false`). Der
-Dienstagabend steht jede Woche, alle
-wissen es, und wer eine Rolle hat, bekommt seine eigene Erinnerung. Sieben
-generierte Termine pro Nacht, jeder mit einer Ankündigung an alle neun, wäre
-die schnellste Art, Benachrichtigungen abzuschalten — der Filter steht deshalb
-in beiden Wegen und ist in `custom-meeting-notification.service.spec.ts`
-festgehalten.
+Beide gelten **nur für besondere Termine** (`special: true`). Der
+Dienstagabend steht jede Woche, alle wissen es, und wer eine Rolle hat, bekommt
+seine eigene Erinnerung — ob ihn der Generator angelegt hat oder die Gruppe,
+die ihren Kalender selbst führt. Sieben Termine pro Nacht, jeder mit einer
+Ankündigung an alle neun, wäre die schnellste Art, Benachrichtigungen
+abzuschalten — der Filter steht deshalb in beiden Wegen und ist in
+`custom-meeting-notification.service.spec.ts` festgehalten.
+
+Ob ein Termin besonders ist, wählt beim Anlegen, wer anlegt (`special` im
+`POST …/meetings`). Fehlt die Angabe, gilt `autoGenerate` der Gruppe: Wo die
+App die Dienstage erzeugt, ist ein von Hand angelegter Abend fast immer ein
+Geburtstag oder eine Freizeit; wo die Gruppe selbst einträgt, meistens ein
+gewöhnlicher Abend. Erzeugte Abende sind nie besonders.
 
 ### Für kommende Reminder
 
@@ -1379,15 +1385,19 @@ nicht daran, ob der Abend ein Thema oder ein Testimony hat — gegessen wird an
 beiden.
 
 **Eine Terminart gibt es nicht**; woraus ein Abend besteht, sagt diese Tabelle.
-Es gibt `generated` — ob der nächtliche Lauf den Abend angelegt hat —, und daran
-hängen vier Regeln: der Taktschlag oben, die zwei Benachrichtigungsarten
-für selbst angelegte Termine, die Actionstep-Ausnahme und „löschen statt
-absagen".
+Übrig sind zwei Spalten, die kein Baustein beantwortet:
 
-Nebenbei: „Geburtstag von Mira" zählte in der Fairness einmal wie ein ganz
-normaler Dienstag — obwohl dort niemand im Sinne der Rotation dran war. Das
-löst heute `hasTopicSlot`.
-Außerhalb der DTOs gab es genau drei Stellen mit Typ-Logik.
+- `generated` — ob der nächtliche Lauf den Abend angelegt hat. Daran hängen der
+  Taktschlag oben und „löschen statt absagen".
+- `special` — ob er aus dem Rhythmus fällt (Geburtstag, Freizeit). Daran hängen
+  die zwei Benachrichtigungsarten für besondere Termine, die Actionstep-Ausnahme
+  und die Markierung in der Terminliste.
+
+Zwei und nicht eine, weil eine Gruppe, die ihren Kalender selbst führt, auch
+ihre gewöhnlichen Dienstage von Hand anlegt.
+
+Ob ein Geburtstag in der Fairness der Rollen mitzählt, sagen dagegen die
+Bausteine: Ohne `hasTopicSlot` war dort niemand im Sinne der Rotation dran.
 
 **Einen Gastgeber-Schalter gibt es nicht.** Man trifft sich immer irgendwo; ein
 Schalter, der nie aus darf, ist keiner. Dass an einem Abend _niemand_
@@ -2653,13 +2663,13 @@ sich von hinten nach vorn: Gehe die vergangenen Abende rückwärts durch,
 ersten stehen, der übrig bleibt. Hat der einen, gilt er; hat er keinen, gilt
 keiner.
 
-Gesucht wurde einmal „der jüngste vergangene Abend, _der einen hat_" — ein leerer
-Dienstag wurde also übersprungen, und der Vorsatz von vorletzter Woche stand eine
-Woche zu lang da, als wäre er frisch. Ein neuer Abend beendet den alten Vorsatz,
-auch wenn er selbst keinen hinterlässt: Was besprochen wurde, ist besprochen. Die
-Ausnahme ist der besondere Termin — zwischen zwei Dienstagen einen Kuchen zu
-essen beendet nicht, was man sich am Dienstag vorgenommen hat; bringt er selbst
-einen Actionstep mit, gilt er wie jeder andere Abend.
+Ein neuer Abend beendet den alten Vorsatz, auch wenn er selbst keinen
+hinterlässt: Was besprochen wurde, ist besprochen. Würde ein leerer Dienstag
+übersprungen, stünde der Vorsatz von vorletzter Woche eine Woche zu lang da, als
+wäre er frisch. Die Ausnahme ist der besondere Termin (`special`) — zwischen
+zwei Dienstagen einen Kuchen zu essen beendet nicht, was man sich am Dienstag
+vorgenommen hat; bringt er selbst einen Actionstep mit, gilt er wie jeder andere
+Abend. Ein von Hand angelegter **gewöhnlicher** Abend zählt wie ein erzeugter.
 
 Ein leerer String zählt als „keiner": das Feld ist Freitext, und Leerzeichen sind
 nichts, wofür man neun Leute unterbricht.

@@ -318,8 +318,15 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Kann ich einen eigenen Termin anlegen?',
     answer:
-      'Ja, jede:r kann das — auf „Termine" über den Knopf zum Anlegen. Ein Geburtstag, ein Grillabend, eine Freizeit über mehrere Tage.\n\nEr kommt ohne Bausteine und ohne Bedingungen: kein Thema nötig, kein Gastgeber nötig. Was du davon brauchst, schaltest du dazu.\n\nAlle anderen bekommen eine Benachrichtigung, dass etwas dazugekommen ist, und später eine Erinnerung — anders als beim Dienstagabend hat man so einen Termin nicht von selbst im Kopf.',
-    keywords: ['custom', 'geburtstag', 'freizeit', 'anlegen', 'mehrtägig'],
+      'Ja, jede:r kann das — auf „Termine" über den Knopf zum Anlegen. Ein Geburtstag, ein Grillabend, eine Freizeit über mehrere Tage — oder, wenn eure Gruppe ihre Termine selbst einträgt, der nächste Dienstag.\n\nEr kommt ohne Bausteine und ohne Bedingungen: kein Thema nötig, kein Gastgeber nötig. Was du davon brauchst, schaltest du dazu.\n\nMit dem Häkchen **„Besonderer Termin"** sagst du, dass er aus dem gewohnten Rhythmus fällt. Dann bekommen alle anderen Bescheid, dass etwas dazugekommen ist, und kurz vorher eine Erinnerung — so einen Termin hat man nicht von selbst im Kopf. In der Liste steht er mit „Besonders" markiert, und der Actionstep vom letzten Abend bleibt stehen, solange er selbst keinen hat.\n\nVorbelegt ist das Häkchen, wenn die App eure Termine selbst anlegt, sonst ist es leer. Ändern kannst du es später unter „Bearbeiten".',
+    keywords: [
+      'custom',
+      'geburtstag',
+      'freizeit',
+      'anlegen',
+      'mehrtägig',
+      'besonders',
+    ],
   },
   {
     id: 'meetings-uhrzeit',
