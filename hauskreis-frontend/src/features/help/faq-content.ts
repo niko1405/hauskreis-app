@@ -895,7 +895,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'notizen',
     question: 'Wie mache ich Überschriften, Listen und Checklisten?',
     answer:
-      'Unten auf **„Bearbeiten"** — über dem Textfeld stehen Knöpfe für **Überschrift**, **Liste**, **Checkliste** und **Fett**. Sie wirken auf die Zeile, in der du stehst, oder auf alle markierten. Ein zweiter Druck nimmt es wieder weg.\n\nIn einer Liste setzt Enter sie fort; Enter auf einem leeren Punkt beendet sie.\n\n**Checklisten hakst du direkt in der Notiz ab**, ohne „Bearbeiten". Hakt jemand anders gleichzeitig einen anderen Punkt ab, bleiben beide Haken stehen.\n\nWer lieber tippt: `# ` und `## ` für Überschriften, `- ` für Listen, `- [ ] ` für Checklisten, `**fett**`.',
+      'Unten auf **„Bearbeiten"** — über dem Textfeld stehen Knöpfe für **Überschrift**, **Liste**, **Checkliste** und **Fett**. Sie wirken auf die Zeile, in der du stehst, oder auf alle markierten. Ein zweiter Druck nimmt es wieder weg.\n\nIn einer Liste setzt Enter sie fort; Enter auf einem leeren Punkt beendet sie.\n\n**Wie es aussehen wird**, siehst du am Rechner gleich rechts daneben. Auf dem Telefon schaltest du oben rechts in der Leiste auf die **Vorschau** und wieder zurück.\n\n**Checklisten hakst du direkt in der Notiz ab**, ohne „Bearbeiten". Hakt jemand anders gleichzeitig einen anderen Punkt ab, bleiben beide Haken stehen.\n\nWer lieber tippt: `# ` und `## ` für Überschriften, `- ` für Listen, `- [ ] ` für Checklisten, `**fett**`.',
     keywords: [
       'formatieren',
       'überschrift',
@@ -904,6 +904,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
       'abhaken',
       'fett',
       'markdown',
+      'vorschau',
     ],
   },
   {

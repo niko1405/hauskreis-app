@@ -272,7 +272,7 @@ function OtherSessionRow({ session }: { session: TopicSessionInTopic }) {
       className="block rounded-md p-2 transition-colors hover:bg-canvas"
     >
       <div className="flex items-baseline justify-between gap-3">
-        <span className="truncate font-roboto-slab text-sm font-bold text-stone-800">
+        <span className="truncate text-sm font-bold text-stone-800">
           {session.title ?? 'Ohne eigenen Titel'}
         </span>
         <span className="shrink-0 text-[10px] font-bold tracking-widest text-stone-400 uppercase">

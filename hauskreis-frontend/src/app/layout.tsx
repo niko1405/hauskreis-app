@@ -31,14 +31,6 @@ const instrument = localFont({
   adjustFontFallback: 'Times New Roman',
 });
 
-const robotoSlab = localFont({
-  src: './fonts/roboto-slab-latin.woff2',
-  weight: '100 900',
-  variable: '--font-roboto-slab',
-  display: 'swap',
-  adjustFontFallback: 'Times New Roman',
-});
-
 export const metadata: Metadata = {
   title: 'Acts2',
   description:
@@ -117,10 +109,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="de"
-      className={`${jakarta.variable} ${instrument.variable} ${robotoSlab.variable}`}
-    >
+    <html lang="de" className={`${jakarta.variable} ${instrument.variable}`}>
       <body className="bg-shell font-sans text-stone-800 antialiased selection:bg-terracotta-500 selection:text-white">
         {/* Muss ganz oben stehen und vor allem anderen laufen — sonst blitzt
             die helle Fassung auf, bevor die dunkle greift. */}
