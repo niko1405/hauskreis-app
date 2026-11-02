@@ -2434,6 +2434,14 @@ den Fokus nicht (`preventDefault` beim Herunterdrücken), sonst ginge auf dem
 Telefon die Tastatur zu. `NoteBody` zeichnet die Blöcke; ein Checklistenpunkt
 ist ein `div role="checkbox"`, weil darin ein Link stehen darf.
 
+**Vorschau beim Schreiben:** Der `NoteEditor` zeichnet `NoteBody` mit dem
+Entwurf daneben — ab `lg` als zweite Spalte (`lg:grid-cols-2`), darunter hinter
+einem `Segmented` „Schreiben | Vorschau" (`view`, gilt nur unter `lg`). Das
+Textfeld wird in der Vorschau per `hidden` versteckt und nicht entfernt, damit
+Auswahl und Höhe bleiben; die Höhe wird beim Zurückschalten neu gemessen. Ein
+Haken in der Vorschau geht über `toggleCheck` in den Entwurf, nicht an den
+Server.
+
 **Abhaken** (`useCheckNote`) greift im Einzelstand vor und schreibt danach die
 Antwort samt ETag in den Cache (`apiPostWithPrecondition` mit `UNCONDITIONAL`).
 **Schreiben** (`useUpdateNote`) merkt sich den Stand beim Öffnen (`base`) und
