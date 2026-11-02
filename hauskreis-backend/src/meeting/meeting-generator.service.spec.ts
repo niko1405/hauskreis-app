@@ -38,6 +38,8 @@ function setup(
   rhythm: Partial<typeof TUESDAY_AT_SIX> = {},
   /** Der späteste selbst erzeugte Abend — der Taktschlag. */
   anchor: Date | null = null,
+  /** Daten, an denen ein Admin den erzeugten Abend gelöscht hat. */
+  skippedDates: Date[] = [],
 ) {
   const createMany = jest.fn(
     (args: CreateManyArgs): Promise<{ count: number }> =>
@@ -55,6 +57,12 @@ function setup(
   const hauskreis = {
     findMany: jest.fn().mockResolvedValue([{ id: 'hk-1' }]),
   };
+  const skippedMeetingDate = {
+    findMany: jest
+      .fn()
+      .mockResolvedValue(skippedDates.map((date) => ({ date }))),
+    deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+  };
   const autoAttendance = { apply: jest.fn().mockResolvedValue(0) };
 
   const schedule = {
@@ -63,7 +71,7 @@ function setup(
 
   const service = withClock(
     new MeetingGeneratorService(
-      { meeting, hauskreis } as unknown as PrismaService,
+      { meeting, hauskreis, skippedMeetingDate } as unknown as PrismaService,
       // Füllt sonst die Zusagen derer nach, die grundsätzlich dabei sind. Was
       // dabei herauskommt, prüft `auto-attendance.service.spec.ts`.
       autoAttendance as unknown as AutoAttendanceService,
@@ -71,7 +79,14 @@ function setup(
     ),
   );
 
-  return { service, meeting, hauskreis, createMany, schedule };
+  return {
+    service,
+    meeting,
+    hauskreis,
+    createMany,
+    schedule,
+    skippedMeetingDate,
+  };
 }
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
@@ -124,7 +139,7 @@ describe('MeetingGeneratorService.generateFor', () => {
   });
 
   it('schreibt an jeden erzeugten Abend, dass er erzeugt ist', async () => {
-    // Daran hängen der Taktschlag und „löschen statt absagen".
+    // Daran hängen der Taktschlag und der Grabstein beim Löschen.
     const { service, createMany } = setup();
 
     await service.generateFor('hk-1', MONDAY);
@@ -195,6 +210,30 @@ describe('MeetingGeneratorService.generateFor', () => {
     const dates = createMany.mock.calls[0][0].data.map((m) => isoOf(m.date));
     expect(dates).not.toContain('2026-08-04');
     expect(dates).toHaveLength(MEETINGS_AHEAD - 1);
+  });
+
+  /**
+   * Ein Admin hat den Dienstag gelöscht. Fehlt er jetzt, ist das gewollt —
+   * ohne den Grabstein stünde er nach dem nächsten Lauf wieder da.
+   */
+  it('lässt ein Datum mit Grabstein leer', async () => {
+    const { service, createMany } = setup([], {}, null, [utc('2026-08-11')]);
+
+    const result = await service.generateFor('hk-1', MONDAY);
+
+    expect(result.created).toBe(MEETINGS_AHEAD - 1);
+    const dates = createMany.mock.calls[0][0].data.map((m) => isoOf(m.date));
+    expect(dates).not.toContain('2026-08-11');
+  });
+
+  it('räumt vergangene Grabsteine weg', async () => {
+    const { service, skippedMeetingDate } = setup();
+
+    await service.generateFor('hk-1', MONDAY);
+
+    expect(skippedMeetingDate.deleteMany).toHaveBeenCalledWith({
+      where: { hauskreisId: 'hk-1', date: { lt: MONDAY } },
+    });
   });
 
   it('gibt jedem Abend die Uhrzeit der Gruppe mit', async () => {

@@ -4,6 +4,7 @@ import { AssignmentService } from './assignment.service';
 import { DashboardService } from './dashboard.service';
 import { PrayerBuddyModule } from '../prayer-buddy/prayer-buddy.module';
 import { NotificationModule } from '../notification/notification.module';
+import { BirthdayModule } from '../birthday/birthday.module';
 
 /**
  * What one person, or the whole group, is down for.
@@ -21,7 +22,7 @@ import { NotificationModule } from '../notification/notification.module';
  * erst nächste Woche kommt.
  */
 @Module({
-  imports: [PrayerBuddyModule, NotificationModule],
+  imports: [PrayerBuddyModule, NotificationModule, BirthdayModule],
   controllers: [DashboardController],
   providers: [AssignmentService, DashboardService],
   exports: [AssignmentService],

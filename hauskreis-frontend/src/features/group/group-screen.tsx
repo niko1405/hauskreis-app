@@ -5,12 +5,13 @@
  *
  * **Warum es diesen Bildschirm gibt.** Die Gruppe braucht einen eigenen Ort
  * und gehört nicht ins Profil, das von *dir* handelt. Ein sechstes Ziel in der
- * Leiste unten machte sie eng, also führt der Weg über den Knopf in der
- * Kopfleiste (`smart-header.tsx`) und im Profil.
+ * Leiste unten machte sie eng, also führt der Weg mobil über den Knopf in der
+ * Kopfleiste (`smart-header.tsx`) und im Profil — am Rechner ist sie ein Ziel
+ * der Seitenspalte (`nav.tsx`).
  *
- * **Kein Kopfbild und keine Kopfleiste**, sondern ein Zurück-Pfeil wie auf den
- * Detailseiten: Hier ist man *in* etwas drin. Die Leiste darüber wäre die
- * zweite Navigationsebene an derselben Stelle.
+ * **Kein Kopfbild und keine Kopfleiste**, sondern mobil ein Zurück-Pfeil wie
+ * auf den Detailseiten: Hier ist man *in* etwas drin. Am Rechner fällt er weg —
+ * dort führt die Spalte hinein und wieder hinaus.
  *
  * **Ändern darf jede:r** — Bild, Name, Beschreibung. Wie beim Kopfbild: Bei
  * neun Leuten ist die Selbstbeschreibung keine Verwaltungsangelegenheit.
@@ -57,11 +58,12 @@ export function GroupScreen() {
           allen fünf Tabs: Ein festes `/profil` schickte jemanden, der von
           „Heute" kam, woanders hin als dorthin, wo er war. */}
       <div className="flex items-center justify-between gap-2">
-        <BackButton fallback="/" />
+        <BackButton fallback="/" className="md:hidden" />
         {hauskreis && (
           <Button
             variant="secondary"
             size="sm"
+            className="ml-auto"
             disabled={update.isPending}
             onClick={() => setEditing(true)}
           >

@@ -620,20 +620,24 @@ function Loaded({
                 Hinweis. */}
             {/* Und beim Nachlesen auch nicht: „Wie komme ich hin" fragt an
                 einem Abend, der vorbei ist, niemand. */}
+            {/* Mobil nur das Symbol: Mit Wort nahm der Knopf Name und
+                Adresse daneben so viel Platz, dass beide abgeschnitten waren.
+                Was er tut, sagt `aria-label`. */}
             {meeting.location && !reading && (
               <a
                 href={mapsUrl(meeting.location)}
                 target="_blank"
                 rel="noreferrer"
+                aria-label="In Maps öffnen"
                 className={cn(
-                  'flex shrink-0 items-center gap-1.5 rounded-full bg-terracotta-600 px-4 py-2 text-sm font-semibold text-white transition-colors',
+                  'flex size-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-terracotta-600 text-sm font-semibold text-white transition-colors sm:size-auto sm:px-4 sm:py-2',
                   'hover:bg-terracotta-700 focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
                   PRESSABLE,
                 )}
               >
-                <Navigation size={15} />
-                Maps
-                <ExternalLink size={13} />
+                <Navigation size={15} className="hidden sm:block" />
+                <span className="hidden sm:inline">Maps</span>
+                <ExternalLink size={15} className="sm:size-[13px]" />
               </a>
             )}
           </Card>
@@ -721,7 +725,11 @@ function Loaded({
           <PrayerRequestsCard meetingId={meetingId} locked={locked} />
         )}
 
-        <AttendanceCard meeting={meeting} readOnly={locked} />
+        <AttendanceCard
+          meeting={meeting}
+          readOnly={locked}
+          editSelf={past && editMode && !cancelled}
+        />
 
         {/* Unten am Bildschirm statt hier in der Seite — und nur, solange es
             etwas zu antworten gibt. An einem vergangenen oder abgesagten Abend

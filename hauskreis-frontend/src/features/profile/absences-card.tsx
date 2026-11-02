@@ -179,7 +179,10 @@ function AbsenceSheet({
             />
           </Field>
         </div>
-        <Field label="Grund" hint="Optional">
+        <Field
+          label="Grund (optional)"
+          hint="Steht bei den abgesagten Abenden dabei."
+        >
           <TextInput
             value={reason}
             placeholder="z. B. Urlaub"

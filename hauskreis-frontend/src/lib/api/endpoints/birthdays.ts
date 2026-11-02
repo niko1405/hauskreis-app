@@ -81,6 +81,24 @@ export function removeGiftIdea(
 }
 
 /**
+ * Den eigenen Anteil abhaken — oder den Haken zurücknehmen. Ohne `If-Match`:
+ * ein Haken je Person, kein Wettlauf.
+ */
+export function setGiftPaid(
+  hauskreisId: string,
+  occasionId: string,
+  paid: boolean,
+): Promise<BirthdayDetail> {
+  const path = `${base(hauskreisId)}/${occasionId}/payment`;
+
+  return paid
+    ? apiPut<BirthdayDetail>(path, {}, UNCONDITIONAL).then(
+        (response) => response.data,
+      )
+    : apiDelete<BirthdayDetail>(path);
+}
+
+/**
  * Alle anderen an die Vorschläge erinnern — nur, wer das Geschenk besorgt, und
  * höchstens einmal am Tag.
  */

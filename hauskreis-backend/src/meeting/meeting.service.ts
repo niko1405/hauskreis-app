@@ -889,28 +889,37 @@ export class MeetingService {
   }
 
   /**
-   * Löscht einen Termin vollständig — nur einen selbst angelegten.
+   * Löscht einen Termin vollständig — still, und nur für Admins (Controller).
    *
-   * Ein erzeugter Abend fällt aus, er verschwindet nicht: dass am Dienstag
-   * nichts war, gehört in die Geschichte der Gruppe und in die
-   * Vorschlagslogik. Dafür gibt es `POST …/cancel`. Ihn zu löschen brächte
-   * außerdem nichts, weil der Generator ihn beim nächsten Lauf wieder anlegt.
+   * **Absagen ist der Normalfall**: Dass am Dienstag nichts war, gehört in die
+   * Geschichte der Gruppe, und alle erfahren es. Löschen ist für den Termin,
+   * den es nie hätte geben sollen — versehentlich angelegt, oder ein Dienstag
+   * in den Ferien, über den niemand eine Absage lesen will. Deshalb geht keine
+   * Nachricht raus: Eine Absage für einen Termin, den es nie gab, wäre die
+   * erste Nachricht, die viele davon überhaupt sehen.
    *
-   * Ein Termin, den jemand versehentlich angelegt hat, ist der andere Fall: da
-   * war nie etwas, das man absagen könnte. Deshalb geht auch keine Nachricht
-   * raus — eine Absage für einen Termin, den es nie gab, wäre die erste
-   * Nachricht, die viele davon überhaupt sehen.
+   * **Ein erzeugter Abend hinterlässt einen Grabstein** (`SkippedMeetingDate`).
+   * Der Terminplaner legt jeden Tag nach, an dem im Rhythmus ein Termin
+   * fehlt — ohne den Grabstein stünde der Abend in der nächsten Nacht wieder
+   * da. Beides in einer Transaktion: Ein Grabstein ohne Löschen sperrte ein
+   * Datum, an dem noch ein Termin steht, und ein Löschen ohne Grabstein wäre
+   * nur bis drei Uhr nachts eins.
    */
   async remove(hauskreisId: string, id: string) {
     const meeting = await this.loadPlain(hauskreisId, id);
 
-    if (meeting.generated) {
-      throw new BadRequestException(
-        'Einen Hauskreis-Abend sagt man ab, statt ihn zu löschen — sonst legt der Terminplaner ihn gleich wieder an',
-      );
+    if (!meeting.generated) {
+      await this.prisma.meeting.delete({ where: { id } });
+      return;
     }
 
-    await this.prisma.meeting.delete({ where: { id } });
+    await this.prisma.$transaction([
+      this.prisma.meeting.delete({ where: { id } }),
+      this.prisma.skippedMeetingDate.createMany({
+        data: [{ hauskreisId, date: meeting.date }],
+        skipDuplicates: true,
+      }),
+    ]);
   }
 
   async setAttendance(hauskreisId: string, id: string, dto: SetAttendanceDto) {

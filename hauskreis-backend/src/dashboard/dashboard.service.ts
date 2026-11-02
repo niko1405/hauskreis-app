@@ -19,6 +19,7 @@ import { NotificationPreferenceService } from '../notification/notification-pref
 import { GroupClockService } from '../meeting/group-clock.service';
 import { latestActionstep } from '../meeting/actionstep-source';
 import { GroupFeaturesService } from '../hauskreis/group-features.service';
+import { BirthdayService } from '../birthday/birthday.service';
 import {
   sessionSelectWithTopic,
   shapeSessionForMeeting,
@@ -148,6 +149,11 @@ export interface HomeScreen {
     until: string;
     members: BuddyRef[];
   } | null;
+  /**
+   * Geschenk-Anteile, die du noch nicht abgehakt hast — auch für Geburtstage,
+   * die schon vorbei sind. Dort stünde der Preis sonst nirgends mehr.
+   */
+  giftPayments: Awaited<ReturnType<BirthdayService['openPayments']>>;
 }
 
 /**
@@ -171,6 +177,7 @@ export class DashboardService {
     private readonly clock: GroupClockService,
     private readonly preferences: NotificationPreferenceService,
     private readonly features: GroupFeaturesService,
+    private readonly birthdays: BirthdayService,
   ) {}
 
   async build(
@@ -235,6 +242,7 @@ export class DashboardService {
       myRoles,
       buddies,
       peopleCount,
+      giftPayments,
     ] = await Promise.all([
       this.features.of(hauskreisId),
       // **Zwei** Zeilen und nicht eine: Läuft gerade ein Abend, ist er die
@@ -298,6 +306,7 @@ export class DashboardService {
       // Dieselbe Menge wie in der Anwesenheitsliste am Termin: „3 von 8"
       // muss auf beiden Bildschirmen dieselben acht meinen.
       this.prisma.person.count({ where: { hauskreisId, ...ANGEKOMMEN } }),
+      this.birthdays.openPayments(hauskreisId, personId),
     ]);
 
     const myGroup = buddies?.groups.find((group) =>
@@ -416,6 +425,7 @@ export class DashboardService {
         features.prayerBuddies && buddies && myGroup
           ? { until: buddies.periodEnd, members: myGroup.members }
           : null,
+      giftPayments,
     };
   }
 }

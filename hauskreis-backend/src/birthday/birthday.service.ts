@@ -11,7 +11,7 @@ import { NotificationType } from '../../generated/prisma/enums';
 import { personRefSelect } from '../common/dto/response';
 import { ANGEKOMMEN } from '../person/angekommen';
 import { GroupClockService } from '../meeting/group-clock.service';
-import { currentDay } from '../meeting/meeting-schedule';
+import { addDays, currentDay } from '../meeting/meeting-schedule';
 import { ageAt, daysUntil } from './birthday-dates';
 import { frozen } from './birthday-planner.service';
 import { BirthdayConfigService } from './birthday-config.service';
@@ -39,6 +39,37 @@ export const SETTLE_DAYS = 14;
  * auch keine.
  */
 const PAST_DUTIES = 12;
+
+/**
+ * Wie lange ein nicht abgehakter Anteil unter „Noch offen" steht.
+ *
+ * Der Haken ist neu; Preise aus der Zeit davor hat niemand abhaken können, und
+ * sie stünden sonst alle auf einmal als offen da. Drei Monate decken den
+ * eigentlichen Fall — der Geburtstag ist vorbei, und man hat das Überweisen
+ * verpasst — und lassen die Geschichte in Ruhe.
+ */
+export const OPEN_PAYMENT_DAYS = 90;
+
+/** Ein Mitglied, wie es in Anteil und Zahlungsliste gebraucht wird. */
+type MemberRef = { id: string; name: string; photoUpdatedAt: Date | null };
+
+/**
+ * Der Anteil je Person am Gesamtpreis, gerundet auf ganze Cent.
+ *
+ * **Geteilt durch alle außer dem Geburtstagskind** — wer besorgt hat, zahlt
+ * seinen Teil auch, nur eben vorab. Gezählt wird, wer **jetzt** dabei ist:
+ * Kommt jemand nach dem Geburtstag dazu, rechnet die Antwort mit ihm. Das ist
+ * eine bewusste Vereinfachung — eine gespeicherte Zahl wäre eine zweite
+ * Wahrheit neben der Mitgliederliste, und bei neun Leuten ist der Fall selten.
+ */
+function shareOf(
+  priceCents: number,
+  memberIds: readonly string[],
+  birthdayPersonId: string,
+): number | null {
+  const split = memberIds.filter((id) => id !== birthdayPersonId).length;
+  return split > 0 ? Math.round(priceCents / split) : null;
+}
 
 const occasionSelect = {
   id: true,
@@ -131,10 +162,17 @@ export class BirthdayService {
       }),
     ]);
 
+    const memberIds = members.map((person) => person.id);
     const shape = (row: OccasionRow) =>
-      this.shapeOccasion(row, viewerId, today, config.freezeDays);
+      this.shapeOccasion(row, viewerId, today, config.freezeDays, memberIds);
 
     return {
+      openPayments: await this.openPaymentsFor(
+        hauskreisId,
+        viewerId,
+        today,
+        memberIds,
+      ),
       members: members.map((person) => ({
         person: {
           id: person.id,
@@ -161,14 +199,18 @@ export class BirthdayService {
     const zone = await this.clock.zoneOf(hauskreisId);
     const today = currentDay(zone);
 
-    const rows = await this.prisma.birthdayOccasion.findMany({
-      where: { hauskreisId, occursOn: { gte: from, lte: to } },
-      select: occasionSelect,
-      orderBy: { occursOn: 'asc' },
-    });
+    const [rows, members] = await Promise.all([
+      this.prisma.birthdayOccasion.findMany({
+        where: { hauskreisId, occursOn: { gte: from, lte: to } },
+        select: occasionSelect,
+        orderBy: { occursOn: 'asc' },
+      }),
+      this.members(hauskreisId),
+    ]);
+    const memberIds = members.map((person) => person.id);
 
     return rows.map((row) =>
-      this.shapeOccasion(row, viewerId, today, config.freezeDays),
+      this.shapeOccasion(row, viewerId, today, config.freezeDays, memberIds),
     );
   }
 
@@ -176,14 +218,18 @@ export class BirthdayService {
   async detail(hauskreisId: string, id: string, viewerId: string) {
     const zone = await this.clock.zoneOf(hauskreisId);
     const today = currentDay(zone);
-    const config = await this.config.get(hauskreisId);
-    const occasion = await this.load(hauskreisId, id);
+    const [config, occasion, members] = await Promise.all([
+      this.config.get(hauskreisId),
+      this.load(hauskreisId, id),
+      this.members(hauskreisId),
+    ]);
 
     const shaped = this.shapeOccasion(
       occasion,
       viewerId,
       today,
       config.freezeDays,
+      members.map((person) => person.id),
     );
 
     if (shaped.isOwn) {
@@ -196,20 +242,164 @@ export class BirthdayService {
         canDecide: false,
         canNudge: false,
         nudgedToday: false,
+        mustPay: false,
+        paidByMe: false,
+        payments: null,
       };
     }
 
     const settling = daysUntil(occasion.occursOn, today) >= -SETTLE_DAYS;
     const mayNudge = this.mayNudge(occasion, viewerId, today);
+    const isResponsible = occasion.responsible?.id === viewerId;
+
+    // Zahlen müssen alle außer Geburtstagskind und Besorgender — die hat
+    // schon, nur eben vorab. Ohne Preis oder ohne jemanden, der besorgt, gibt
+    // es nichts zu bezahlen.
+    const priced =
+      occasion.priceCents !== null && occasion.responsible !== null;
+    const payers = members.filter(
+      (person) =>
+        person.id !== occasion.person.id &&
+        person.id !== occasion.responsible?.id,
+    );
+    const paid = priced
+      ? await this.prisma.birthdayPayment.findMany({
+          where: { occasionId: id },
+          select: { personId: true, paidAt: true },
+        })
+      : [];
+    const paidAt = new Map(paid.map((row) => [row.personId, row.paidAt]));
 
     return {
       ...shaped,
       ideas: await this.ideasFor(hauskreisId, occasion.person.id, viewerId),
       canPropose: settling,
-      canDecide: settling && occasion.responsible?.id === viewerId,
+      canDecide: settling && isResponsible,
       canNudge: mayNudge,
       nudgedToday: mayNudge && (await this.nudgedOn(id, today)),
+      mustPay: priced && payers.some((person) => person.id === viewerId),
+      paidByMe: paidAt.has(viewerId),
+      // Wer schon gezahlt hat, sieht nur, wer besorgt — sonst stünde unter
+      // jedem Geburtstag für alle, wer noch schuldet.
+      payments:
+        priced && isResponsible
+          ? payers.map((person) => ({
+              person,
+              paidAt: paidAt.get(person.id) ?? null,
+            }))
+          : null,
     };
+  }
+
+  /**
+   * Den eigenen Anteil abhaken — oder den Haken zurücknehmen.
+   *
+   * Ohne `If-Match`: ein Haken je Person, kein Wettlauf, wie beim Actionstep.
+   * Abhaken darf nur, wer zahlt: nicht das Geburtstagskind, nicht wer besorgt
+   * hat, und nur, wenn ein Preis dasteht. Ohne Frist — gerade wer es verpasst
+   * hat, soll es nachholen können.
+   */
+  async setPaid(
+    hauskreisId: string,
+    id: string,
+    viewerId: string,
+    paid: boolean,
+  ) {
+    const occasion = await this.load(hauskreisId, id);
+    this.assertNotOwn(occasion, viewerId);
+
+    if (occasion.responsible?.id === viewerId) {
+      throw new ForbiddenException(
+        'Wer das Geschenk besorgt hat, hat schon bezahlt',
+      );
+    }
+
+    if (occasion.priceCents === null || occasion.responsible === null) {
+      throw new BadRequestException('Hier gibt es (noch) nichts zu bezahlen');
+    }
+
+    if (paid) {
+      await this.prisma.birthdayPayment.upsert({
+        where: { occasionId_personId: { occasionId: id, personId: viewerId } },
+        // Ein zweiter Haken lässt den ersten Zeitpunkt stehen.
+        update: {},
+        create: { occasionId: id, personId: viewerId },
+      });
+    } else {
+      await this.prisma.birthdayPayment.deleteMany({
+        where: { occasionId: id, personId: viewerId },
+      });
+    }
+
+    return this.detail(hauskreisId, id, viewerId);
+  }
+
+  /**
+   * Was ich noch bezahlen muss — für „Heute" und das Register.
+   *
+   * Ein Geburtstag mit Preis, den ich nicht selbst besorgt habe, der nicht
+   * meiner ist und an dem mein Haken fehlt. Auch ein vergangener: Genau der
+   * ist der Fall, um den es geht — das Register zeigt dann schon den nächsten,
+   * und der Preis stünde sonst nirgends mehr.
+   */
+  async openPayments(hauskreisId: string, viewerId: string) {
+    const today = currentDay(await this.clock.zoneOf(hauskreisId));
+    const members = await this.members(hauskreisId);
+
+    return this.openPaymentsFor(
+      hauskreisId,
+      viewerId,
+      today,
+      members.map((person) => person.id),
+    );
+  }
+
+  private async openPaymentsFor(
+    hauskreisId: string,
+    viewerId: string,
+    today: Date,
+    memberIds: readonly string[],
+  ) {
+    // Wer nicht (mehr) dabei ist, zahlt nichts — und wer neu ist, schuldet
+    // nichts für einen Geburtstag, an dem er nicht dabei war.
+    if (!memberIds.includes(viewerId)) return [];
+
+    const rows = await this.prisma.birthdayOccasion.findMany({
+      where: {
+        hauskreisId,
+        priceCents: { not: null },
+        occursOn: { gte: addDays(today, -OPEN_PAYMENT_DAYS) },
+        personId: { not: viewerId },
+        AND: [
+          { responsiblePersonId: { not: null } },
+          { responsiblePersonId: { not: viewerId } },
+        ],
+        payments: { none: { personId: viewerId } },
+      },
+      select: occasionSelect,
+      orderBy: { occursOn: 'asc' },
+    });
+
+    return rows.map((row) => ({
+      occasionId: row.id,
+      person: {
+        id: row.person.id,
+        name: row.person.name,
+        photoUpdatedAt: row.person.photoUpdatedAt,
+      },
+      occursOn: row.occursOn,
+      gift: row.selectedIdea,
+      shareCents: shareOf(row.priceCents!, memberIds, row.person.id),
+    }));
+  }
+
+  /** Wer gerade dabei ist — für Anteil und Zahlungsliste. */
+  private members(hauskreisId: string): Promise<MemberRef[]> {
+    return this.prisma.person.findMany({
+      where: { hauskreisId, ...ANGEKOMMEN },
+      select: personRefSelect,
+      orderBy: { name: 'asc' },
+    });
   }
 
   /** Einen Vorschlag machen. Darf jede:r außer dem Geburtstagskind. */
@@ -284,10 +474,13 @@ export class BirthdayService {
    * Einen Satz zu einem Vorschlag schreiben.
    *
    * Dieselben Grenzen wie beim Vorschlagen: nicht am eigenen Geburtstag, und
-   * nur solange sich überhaupt noch etwas eintragen lässt. Danach erfahren es
-   * die, die schon beteiligt sind — wer den Vorschlag gemacht und wer dort
-   * schon etwas geschrieben hat. Alle anderen lesen es, wenn sie vorbeischauen;
-   * sonst wäre jeder Satz eine Nachricht an die ganze Gruppe.
+   * nur solange sich überhaupt noch etwas eintragen lässt.
+   *
+   * **Danach erfahren es alle — außer dem Geburtstagskind.** Früher nur die
+   * Beteiligten (wer den Vorschlag gemacht und wer dort schon geschrieben
+   * hatte); dann ging ein „hat sie schon" an dem vorbei, der das Geschenk
+   * gerade besorgen wollte, und ein Satz, den niemand liest, ist keiner. Wer
+   * das zu viel findet, schaltet die Art ab.
    */
   async commentIdea(
     hauskreisId: string,
@@ -302,12 +495,7 @@ export class BirthdayService {
 
     const idea = await this.prisma.giftIdea.findFirst({
       where: { id: ideaId, hauskreisId, forPersonId: occasion.person.id },
-      select: {
-        id: true,
-        text: true,
-        proposedByPersonId: true,
-        comments: { select: { authorPersonId: true } },
-      },
+      select: { id: true, text: true },
     });
 
     if (!idea) throw new NotFoundException('Diesen Vorschlag gibt es nicht');
@@ -317,24 +505,17 @@ export class BirthdayService {
       select: { id: true, author: { select: { name: true } } },
     });
 
-    const involved = new Set(
-      [
-        idea.proposedByPersonId,
-        ...idea.comments.map((row) => row.authorPersonId),
-      ].filter((personId): personId is string => personId !== null),
-    );
-    // Wer schreibt, muss es nicht hören; das Geburtstagskind darf es nie. Es
-    // kann hier zwar nichts geschrieben haben, aber die Regel steht besser
-    // ausdrücklich da als auf einer Annahme.
-    involved.delete(viewerId);
-    involved.delete(occasion.person.id);
+    // Wer schreibt, muss es nicht hören; das Geburtstagskind darf es nie.
+    const audience = await this.prisma.person.findMany({
+      where: {
+        hauskreisId,
+        ...ANGEKOMMEN,
+        id: { notIn: [viewerId, occasion.person.id] },
+      },
+      select: { id: true },
+    });
 
-    if (involved.size > 0) {
-      const audience = await this.prisma.person.findMany({
-        where: { hauskreisId, ...ANGEKOMMEN, id: { in: [...involved] } },
-        select: { id: true },
-      });
-
+    if (audience.length > 0) {
       await Promise.all(
         audience.map((person) =>
           this.notifications.notify({
@@ -634,6 +815,8 @@ export class BirthdayService {
     viewerId: string,
     today: Date,
     freezeDays: number,
+    /** Wer gerade dabei ist — daraus der Anteil je Person. */
+    memberIds: readonly string[],
   ) {
     const isOwn = row.person.id === viewerId;
 
@@ -655,6 +838,10 @@ export class BirthdayService {
       giftDecided: isOwn ? false : row.selectedGiftIdeaId !== null,
       gift: isOwn ? null : row.selectedIdea,
       priceCents: isOwn ? null : row.priceCents,
+      shareCents:
+        isOwn || row.priceCents === null
+          ? null
+          : shareOf(row.priceCents, memberIds, row.person.id),
     };
   }
 

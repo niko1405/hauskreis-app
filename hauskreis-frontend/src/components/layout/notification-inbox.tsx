@@ -37,6 +37,14 @@
  * beim Wegfahren ein `transform`, und ein transformiertes Element wird zum
  * Bezugsrahmen für jedes `position: fixed` darin. Die Blase säße sonst in einem
  * 56 Pixel hohen Kasten.
+ *
+ * **Am Rechner geht sie unten links auf** (`placement="sidebar"`): Dort sitzt
+ * die Glocke im Fuß der Seitenspalte, und die Blase wächst von ihr aus nach
+ * oben in den Inhalt hinein, den Zipfel auf die Glocke gerichtet. Sie hängt
+ * dort `absolute` an der Karte der Glocke — die Spalte klebt, verschiebt aber
+ * nichts, und so muss auch hier niemand messen. Eine eigene Seite ist es
+ * nicht und wird es nicht: Was neu ist, liest man über dem, wobei man gerade
+ * ist.
  */
 import {
   Bell,
@@ -117,13 +125,38 @@ const ICONS: Record<NotificationEntry['type'], typeof Bell> = {
   RELEASE_NOTES: Megaphone,
 };
 
+/** Wo die Blase aufgeht — unter der Glocke der Kopfleiste oder neben der der Spalte. */
+const PLACEMENTS = {
+  header: {
+    panel: 'top-header fixed right-3',
+    origin: 'top right',
+    from: { y: -6 },
+    // 1,375 rem vom rechten Rand des Panels — das sind die 2,125 rem der
+    // Glocke minus die 0,75 rem, um die das Panel selbst eingerückt ist.
+    tail: '-top-1.5 right-[1.375rem] rounded-tl-[3px] border-t border-l',
+  },
+  sidebar: {
+    // `left-full` steht an der rechten Kante der Glocken-Karte; die Spalte
+    // reicht noch eine Polsterung weiter, und die Blase soll daneben stehen,
+    // nicht darauf.
+    panel: 'absolute bottom-0 left-full ml-7',
+    origin: 'bottom left',
+    from: { x: -6 },
+    // Auf halber Höhe der Glocke: Die Karte ist rund 2,9 rem hoch.
+    tail: '-left-1.5 bottom-[1.125rem] rounded-bl-[3px] border-b border-l',
+  },
+} as const;
+
 export function NotificationInbox({
   open,
   onClose,
+  placement = 'header',
 }: {
   open: boolean;
   onClose: () => void;
+  placement?: keyof typeof PLACEMENTS;
 }) {
+  const place = PLACEMENTS[placement];
   const inbox = useInbox();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
@@ -191,20 +224,24 @@ export function NotificationInbox({
             aria-modal="true"
             aria-label="Benachrichtigungen"
             tabIndex={-1}
-            initial={{ opacity: 0, scale: 0.96, y: -6 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: -6 }}
+            initial={{ opacity: 0, scale: 0.96, ...place.from }}
+            animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, ...place.from }}
             transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-            style={{ transformOrigin: 'top right' }}
-            className="top-header fixed right-3 z-50 flex max-h-[70vh] w-[min(22rem,calc(100vw-1.5rem))] flex-col rounded-lg border border-line bg-card shadow-xl shadow-black/20 outline-none"
+            style={{ transformOrigin: place.origin }}
+            className={cn(
+              place.panel,
+              'z-50 flex max-h-[70vh] w-[min(22rem,calc(100vw-1.5rem))] flex-col rounded-lg border border-line bg-card shadow-xl shadow-black/20 outline-none',
+            )}
           >
-            {/* Der Zipfel: ein gedrehtes Quadrat, das nur seine beiden oberen
-                Kanten zeigt. 1,375 rem vom rechten Rand des Panels — das sind
-                die 2,125 rem der Glocke minus die 0,75 rem, um die das Panel
-                selbst eingerückt ist. */}
+            {/* Der Zipfel: ein gedrehtes Quadrat, das nur zwei seiner Kanten
+                zeigt — die zur Glocke hin. */}
             <span
               aria-hidden
-              className="absolute -top-1.5 right-[1.375rem] size-3 rotate-45 rounded-tl-[3px] border-t border-l border-line bg-card"
+              className={cn(
+                'absolute size-3 rotate-45 border-line bg-card',
+                place.tail,
+              )}
             />
 
             <div className="flex items-center gap-3 px-4 pt-3.5 pb-2">

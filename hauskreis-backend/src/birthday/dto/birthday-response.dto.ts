@@ -73,7 +73,25 @@ export const birthdayOccasionResponseSchema = z.object({
   isOwn: z.boolean(),
   giftDecided: z.boolean(),
   gift: z.object({ id: z.uuid(), text: z.string() }).nullable(),
+  /// Was es **insgesamt** gekostet hat.
   priceCents: z.int().nullable(),
+  /// Der Anteil je Person: geteilt durch alle außer dem Geburtstagskind, wer
+  /// besorgt hat eingeschlossen. `null` ohne Preis — und für das
+  /// Geburtstagskind, wie der Preis selbst.
+  shareCents: z.int().nullable(),
+});
+
+/**
+ * Ein Anteil, den ich noch nicht abgehakt habe — unter „Noch offen" im
+ * Register und auf „Heute".
+ */
+export const openGiftPaymentResponseSchema = z.object({
+  occasionId: z.uuid(),
+  /// Wer Geburtstag hatte.
+  person: personRefSchema,
+  occursOn: isoDateOut,
+  gift: z.object({ id: z.uuid(), text: z.string() }).nullable(),
+  shareCents: z.int().nullable(),
 });
 
 /** Ein Mitglied in der Liste „alle Geburtstage" — auch ohne eingetragenen. */
@@ -112,6 +130,8 @@ export const birthdayGiftConfigResponseSchema = z.object({
  * ankommen, sonst baut sich die Seite in Etappen auf.
  */
 export const birthdayOverviewResponseSchema = z.object({
+  /// Was ich noch bezahlen muss, der älteste zuerst.
+  openPayments: z.array(openGiftPaymentResponseSchema),
   members: z.array(birthdayMemberResponseSchema),
   /// Nach Datum, der nächste zuerst. Je Person höchstens einer.
   upcoming: z.array(birthdayOccasionResponseSchema),
@@ -136,15 +156,47 @@ export const birthdayDetailResponseSchema =
     /// Ob heute schon erinnert wurde. Einmal am Tag ist eine Bitte, öfter
     /// wäre es Lärm.
     nudgedToday: z.boolean(),
+    /// Ob der Betrachter seinen Anteil zahlt: Es gibt einen Preis, und er ist
+    /// weder Geburtstagskind noch der, der besorgt hat.
+    mustPay: z.boolean(),
+    /// Ob er ihn abgehakt hat.
+    paidByMe: z.boolean(),
+    /// Wer zahlt und wer schon hat — **nur für den, der besorgt hat**, sonst
+    /// `null`. Unter jedem Geburtstag für alle zu sehen, wer noch schuldet,
+    /// wäre eine Liste, die niemand braucht.
+    payments: z
+      .array(
+        z.object({
+          person: personRefSchema,
+          paidAt: isoDateTimeOut.nullable(),
+        }),
+      )
+      .nullable(),
   });
 
 export const giftPairingResponseSchema = z.object({
   birthdayPerson: personRefSchema,
+  /// Monat und Tag, `MM-DD` — ohne Jahr. Die Verwaltung schreibt „12. Mai"
+  /// neben den Namen; das Alter hat dort nichts zu suchen.
+  birthday: z.string().regex(/^\d{2}-\d{2}$/),
   responsible: personRefSchema.nullable(),
 });
 
+/**
+ * Die Zuteilung, wie sie in der Verwaltung steht — **zweimal**.
+ *
+ * `pairings` ist die gespeicherte feste Zuteilung (im Modus „Benutzerdefiniert"
+ * die geltende), `rotation` die ausgerechnete „Der Reihe nach". Beide kommen
+ * immer mit: Die Verwaltung zeigt im Modus „Der Reihe nach", wer wen bekommt,
+ * und wer auf „Benutzerdefiniert" umstellt, fängt mit genau dieser Zuteilung
+ * an — so wie der Planer beim Wechsel.
+ *
+ * Beide nach Geburtstag im Jahr sortiert, damit sich die Kette von oben nach
+ * unten liest.
+ */
 export const giftPairingListResponseSchema = z.object({
   pairings: z.array(giftPairingResponseSchema),
+  rotation: z.array(giftPairingResponseSchema),
   config: birthdayGiftConfigResponseSchema,
 });
 

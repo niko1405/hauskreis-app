@@ -14,10 +14,14 @@ import { withClock } from '../meeting/group-clock.testing';
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const NOW = utc('2026-08-01');
 
-type Attendance = { status: AttendanceStatus; source: AttendanceSource };
+type Attendance = {
+  status: AttendanceStatus;
+  source: AttendanceSource;
+  note?: string | null;
+};
 
 function setup(options: {
-  periods?: Array<{ startDate: Date; endDate: Date }>;
+  periods?: Array<{ startDate: Date; endDate: Date; reason?: string | null }>;
   meetings?: Array<{ id: string; date: Date; attendance?: Attendance }>;
 }) {
   const absenceFindMany = jest.fn().mockResolvedValue(
@@ -37,6 +41,7 @@ function setup(options: {
 
   const createMany = jest.fn().mockResolvedValue({ count: 0 });
   const deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+  const attendanceUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
   const meetingUpdateMany = jest.fn().mockResolvedValue({ count: 0 });
   const handleDecline = jest.fn().mockResolvedValue(undefined);
   const reconcile = jest.fn().mockResolvedValue(undefined);
@@ -48,7 +53,11 @@ function setup(options: {
       {
         absencePeriod: { findMany: absenceFindMany },
         meeting: { findMany: meetingFindMany, updateMany: meetingUpdateMany },
-        meetingAttendance: { createMany, deleteMany },
+        meetingAttendance: {
+          createMany,
+          deleteMany,
+          updateMany: attendanceUpdateMany,
+        },
       } as unknown as PrismaService,
       { handleDecline } as unknown as MeetingNotificationService,
       { reconcile } as unknown as MeetingCancellationService,
@@ -66,6 +75,7 @@ function setup(options: {
     reconcile,
     meetingFindMany,
     meetingUpdateMany,
+    attendanceUpdateMany,
     autoAttendanceApply,
   };
 }
@@ -95,6 +105,72 @@ describe('AbsenceSyncService.syncPerson', () => {
       status: AttendanceStatus.ABSENT,
       source: AttendanceSource.ABSENCE,
     });
+  });
+
+  /** „Warum fehlt er?" ist dieselbe Frage, ob die Absage getippt ist oder nicht. */
+  it('schreibt den Grund des Zeitraums an die Absage', async () => {
+    const { service, createMany } = setup({
+      periods: [{ ...holiday, reason: 'Urlaub in Italien' }],
+      meetings: [{ id: 'inside', date: utc('2026-08-11') }],
+    });
+
+    await service.syncPerson('hk-1', 'niko', { now: NOW, notify: false });
+
+    expect(createMany.mock.calls[0][0].data[0]).toMatchObject({
+      meetingId: 'inside',
+      note: 'Urlaub in Italien',
+    });
+  });
+
+  it('zieht einen geänderten Grund an der Absage nach', async () => {
+    const { service, attendanceUpdateMany, createMany } = setup({
+      periods: [{ ...holiday, reason: 'doch Spanien' }],
+      meetings: [
+        {
+          id: 'inside',
+          date: utc('2026-08-11'),
+          attendance: {
+            status: AttendanceStatus.ABSENT,
+            source: AttendanceSource.ABSENCE,
+            note: 'Italien',
+          },
+        },
+      ],
+    });
+
+    await service.syncPerson('hk-1', 'niko', { now: NOW, notify: false });
+
+    expect(createMany).not.toHaveBeenCalled();
+    expect(attendanceUpdateMany).toHaveBeenCalledWith({
+      where: {
+        meetingId: 'inside',
+        personId: 'niko',
+        source: AttendanceSource.ABSENCE,
+      },
+      data: { note: 'doch Spanien' },
+    });
+  });
+
+  it('lässt eine getippte Notiz stehen, auch im Urlaub', async () => {
+    const { service, attendanceUpdateMany, createMany } = setup({
+      periods: [{ ...holiday, reason: 'Urlaub' }],
+      meetings: [
+        {
+          id: 'inside',
+          date: utc('2026-08-11'),
+          attendance: {
+            status: AttendanceStatus.ATTENDING,
+            source: AttendanceSource.SELF,
+            note: 'komme trotzdem kurz vorbei',
+          },
+        },
+      ],
+    });
+
+    await service.syncPerson('hk-1', 'niko', { now: NOW, notify: false });
+
+    expect(createMany).not.toHaveBeenCalled();
+    expect(attendanceUpdateMany).not.toHaveBeenCalled();
   });
 
   /**
@@ -297,6 +373,8 @@ describe('AbsenceSyncService und die automatische Zusage', () => {
         personId: 'niko',
         status: AttendanceStatus.ABSENT,
         source: AttendanceSource.ABSENCE,
+        // Ohne Grund am Zeitraum steht nichts dabei.
+        note: null,
       },
     ]);
   });

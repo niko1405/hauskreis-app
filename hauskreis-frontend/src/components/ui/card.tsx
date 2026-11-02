@@ -1,4 +1,5 @@
 import { PRESSABLE } from './button';
+import { InfoTip } from './info-tip';
 import { cn } from '@/lib/cn';
 
 export function Card({
@@ -45,15 +46,25 @@ export function CardButton({
 export function SectionTitle({
   children,
   action,
+  info,
 }: {
   children: React.ReactNode;
   action?: React.ReactNode;
+  /** Was man über die ganze Karte wissen kann — hinter einem (i) (`InfoTip`). */
+  info?: React.ReactNode;
 }) {
   return (
     <div className="mb-3 flex items-baseline justify-between px-1">
-      <h2 className="text-xs font-bold tracking-wider text-stone-400 uppercase">
-        {children}
-      </h2>
+      <div className="flex items-center gap-1.5">
+        <h2 className="text-xs font-bold tracking-wider text-stone-400 uppercase">
+          {children}
+        </h2>
+        {info && (
+          <InfoTip label={typeof children === 'string' ? children : undefined}>
+            {info}
+          </InfoTip>
+        )}
+      </div>
       {action}
     </div>
   );

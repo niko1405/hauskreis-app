@@ -9,6 +9,7 @@ import type {
   UpdateBirthdayGiftConfigDto,
   UpdateGiftPairingsDto,
 } from './dto/birthday.dto';
+import { giftable, inYearOrder, rotate } from './rotation';
 
 /**
  * Ob und wie sich die Gruppe zu Geburtstagen beschenkt.
@@ -75,7 +76,8 @@ export class BirthdayConfigService {
   }
 
   /**
-   * Die feste Zuteilung, wie sie in der Verwaltung steht.
+   * Die Zuteilung, wie sie in der Verwaltung steht — gespeichert und
+   * ausgerechnet (`giftPairingListResponseSchema`).
    *
    * Aufgelistet werden **alle** Mitglieder mit Geburtstag, auch die ohne
    * Zuständigen — ein Loch ist genau das, was der Admin hier sehen soll. Wer
@@ -87,8 +89,7 @@ export class BirthdayConfigService {
     const [people, pairings, config] = await Promise.all([
       this.prisma.person.findMany({
         where: { hauskreisId, ...ANGEKOMMEN, birthdate: { not: null } },
-        select: personRefSelect,
-        orderBy: { name: 'asc' },
+        select: { ...personRefSelect, birthdate: true },
       }),
       this.prisma.birthdayGiftPairing.findMany({
         where: { hauskreisId },
@@ -100,15 +101,32 @@ export class BirthdayConfigService {
       this.get(hauskreisId),
     ]);
 
-    const byPerson = new Map(
+    const stored = new Map(
       pairings.map((row) => [row.birthdayPersonId, row.responsible]),
     );
+    const refs = new Map(
+      people.map((person) => [
+        person.id,
+        {
+          id: person.id,
+          name: person.name,
+          photoUpdatedAt: person.photoUpdatedAt,
+        },
+      ]),
+    );
+    const ordered = inYearOrder(giftable(people));
+    const rotation = rotate(ordered);
+
+    const rows = (responsibleOf: (personId: string) => string | undefined) =>
+      ordered.map((person) => ({
+        birthdayPerson: refs.get(person.id)!,
+        birthday: monthDay(person.birthdate),
+        responsible: refs.get(responsibleOf(person.id) ?? '') ?? null,
+      }));
 
     return {
-      pairings: people.map((person) => ({
-        birthdayPerson: person,
-        responsible: byPerson.get(person.id) ?? null,
-      })),
+      pairings: rows((personId) => stored.get(personId)?.id),
+      rotation: rows((personId) => rotation.get(personId)),
       config,
     };
   }
@@ -120,6 +138,12 @@ export class BirthdayConfigService {
    * sagen, was aus A wird. Zwei Aufrufe hintereinander hätten dazwischen einen
    * Zustand, den niemand wollte — und den der Planer in der Zwischenzeit
    * ausrollen würde.
+   *
+   * **Und vollständig heißt: für jeden Geburtstag jemand.** Eine Lücke füllte
+   * früher der Planer beim Speichern selbst — der Admin hätte also etwas
+   * gespeichert, das er nie gesehen hat. Die Reparatur bleibt nur für den Fall,
+   * dass sich hinterher die Gruppe ändert (`repairPairings`), und dort sagt es
+   * ein Hinweis in der Verwaltung.
    *
    * Mit dem Speichern verschwindet auch der Hinweis „das System musste hier
    * etwas schließen": Der Admin hat jetzt hingesehen.
@@ -178,6 +202,14 @@ export class BirthdayConfigService {
       giving.add(pairing.responsiblePersonId);
     }
 
+    // Bei einer einzigen Person mit Geburtstag gibt es niemanden, der sie
+    // beschenken könnte — dann ist die leere Zuteilung die vollständige.
+    if (known.size >= 2 && seen.size !== known.size) {
+      throw new BadRequestException(
+        'Für jeden Geburtstag muss jemand eingetragen sein',
+      );
+    }
+
     await this.prisma.$transaction([
       this.prisma.birthdayGiftPairing.deleteMany({ where: { hauskreisId } }),
       this.prisma.birthdayGiftPairing.createMany({
@@ -199,6 +231,13 @@ export class BirthdayConfigService {
 
     return this.listPairings(hauskreisId);
   }
+}
+
+/** `MM-DD` — der Tag im Jahr, ohne das Alter. */
+function monthDay(birthdate: Date): string {
+  const month = String(birthdate.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(birthdate.getUTCDate()).padStart(2, '0');
+  return `${month}-${day}`;
 }
 
 const configSelect = {

@@ -15,6 +15,11 @@
  * gemacht hat (`canRemove`); **auswählen**, den **Preis** eintragen und die
  * anderen **erinnern** nur, wer das Geschenk besorgt. Ideen sammeln ist offen,
  * die Entscheidung gehört dem, der sie ausbaden muss.
+ *
+ * **Der Preis ist immer der Gesamtpreis**, und daneben steht der Anteil je
+ * Person (`shareCents`, gerechnet vom Server). Wer mitzahlt, hakt seinen Anteil
+ * selbst ab; wer besorgt hat, sieht, wer schon hat. Bis zum Haken steht der
+ * Geburtstag bei jedem unter „Noch offen" — auch wenn er vorbei ist.
  */
 import {
   BellRing,
@@ -36,6 +41,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
+import { CheckRow } from '@/components/ui/check-row';
 import { useConfirm } from '@/components/ui/confirm';
 import { Field, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
@@ -48,14 +54,17 @@ import {
   useCommentGiftIdea,
   useDecideGift,
   useNudgeBirthday,
+  usePeople,
   useProposeGiftIdea,
   useRemoveGiftIdea,
   useRemoveGiftIdeaComment,
+  useSetGiftPaid,
   useVoteGiftIdea,
 } from '@/lib/api/hooks';
 import { errorMessage } from '@/lib/api/errors';
 import { formatDayFull, formatTimestamp } from '@/lib/date';
 import { cn } from '@/lib/cn';
+import { formatCents } from '@/lib/money';
 import type {
   BirthdayDetail,
   GiftIdea,
@@ -73,11 +82,6 @@ import { countdown } from './birthday-card';
  * Ort, an dem dieser Geburtstag sonst steht.
  */
 const BIRTHDAYS = '/termine?tab=geburtstage';
-
-const euros = new Intl.NumberFormat('de-DE', {
-  style: 'currency',
-  currency: 'EUR',
-});
 
 export function BirthdayDetailScreen({ occasionId }: { occasionId: string }) {
   const birthday = useBirthday(occasionId);
@@ -243,7 +247,7 @@ function Others({
 
   return (
     <>
-      <GiftStatusCard data={data} />
+      <GiftStatusCard occasionId={occasionId} data={data} />
 
       {data.canDecide && <PriceCard occasionId={occasionId} data={data} />}
 
@@ -295,11 +299,12 @@ function Others({
       {gifted.length > 0 && (
         <section>
           <SectionTitle>Schon einmal geschenkt</SectionTitle>
-          {/* Sie stehen hier, damit niemand dasselbe zweimal aussucht — und
-              nicht, weil sie noch zur Wahl stünden. Auswählen kann man sie
-              trotzdem: Ein Buch war vor drei Jahren richtig und ist es
-              vielleicht wieder. */}
-          <div className="space-y-3">{gifted.map(card)}</div>
+          <GiftedList
+            occasionId={occasionId}
+            ideas={gifted}
+            selectedId={data.gift?.id ?? null}
+            canDecide={data.canDecide}
+          />
         </section>
       )}
 
@@ -316,12 +321,95 @@ function Others({
 }
 
 /**
+ * Was schon einmal geschenkt wurde — zum Nachsehen, nicht zum Abstimmen.
+ *
+ * Sie stehen hier, damit niemand dasselbe zweimal aussucht. Stimmen und
+ * Kommentare gehören zu einer offenen Frage, und die ist hier beantwortet;
+ * deshalb eine Zeile je Geschenk statt einer Karte. Auswählen kann, wer
+ * besorgt, trotzdem: Ein Buch war vor drei Jahren richtig und ist es
+ * vielleicht wieder.
+ */
+function GiftedList({
+  occasionId,
+  ideas,
+  selectedId,
+  canDecide,
+}: {
+  occasionId: string;
+  ideas: GiftIdea[];
+  selectedId: string | null;
+  canDecide: boolean;
+}) {
+  const decide = useDecideGift(occasionId);
+  const toast = useToast();
+
+  return (
+    <Card className="p-0">
+      <ul className="divide-y divide-line">
+        {ideas.map((idea) => (
+          <li key={idea.id} className="flex items-center gap-3 px-4 py-3">
+            <Gift size={15} className="shrink-0 text-stone-300" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-stone-700">
+                {idea.text}
+              </p>
+              {idea.giftedOn && (
+                <p className="text-[11px] text-stone-400">
+                  geschenkt {idea.giftedOn.slice(0, 4)}
+                </p>
+              )}
+            </div>
+            <ShopLink url={idea.url} />
+            {selectedId === idea.id ? (
+              <Badge variant="terracotta">
+                <Check size={11} />
+                ausgesucht
+              </Badge>
+            ) : (
+              canDecide && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={decide.isPending}
+                  onClick={() =>
+                    decide.mutate(
+                      { giftIdeaId: idea.id },
+                      {
+                        onSuccess: () =>
+                          toast.success(
+                            'Ausgesucht — die anderen wissen Bescheid.',
+                          ),
+                        onError: (error) => toast.error(errorMessage(error)),
+                      },
+                    )
+                  }
+                >
+                  Wieder nehmen
+                </Button>
+              )
+            )}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+/**
  * Wer besorgt — und was dabei herausgekommen ist.
  *
  * Das Ergebnis steht hier für **alle** außer dem Geburtstagskind —
  * „worauf lasse ich mich ein" ist gerade die Frage derer, die mitzahlen.
+ * Darunter, was daraus für einen selbst folgt: der eigene Anteil zum
+ * Abhaken, oder für den, der besorgt hat, wer schon gezahlt hat.
  */
-function GiftStatusCard({ data }: { data: BirthdayDetail }) {
+function GiftStatusCard({
+  occasionId,
+  data,
+}: {
+  occasionId: string;
+  data: BirthdayDetail;
+}) {
   return (
     <Card className="space-y-3">
       {data.responsible ? (
@@ -372,13 +460,108 @@ function GiftStatusCard({ data }: { data: BirthdayDetail }) {
             <p className="text-[12px] text-stone-400">Noch nichts ausgesucht</p>
           )}
         </div>
-        {data.priceCents !== null && (
-          <span className="shrink-0 text-sm font-bold text-stone-700">
-            {euros.format(data.priceCents / 100)}
-          </span>
-        )}
       </div>
+
+      {/* Immer der Gesamtpreis, und der Anteil gleich dahinter: Allein die
+          Zahl ließ offen, ob sie für einen selbst gilt oder für alle. */}
+      {data.priceCents !== null && (
+        <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-stone-600">
+          <span>
+            <span className="font-bold text-stone-900">
+              {formatCents(data.priceCents)}
+            </span>{' '}
+            insgesamt
+          </span>
+          {data.shareCents !== null && (
+            <span className="text-stone-400">
+              ·{' '}
+              <span className="font-bold text-stone-700">
+                {formatCents(data.shareCents)}
+              </span>{' '}
+              pro Person
+            </span>
+          )}
+        </p>
+      )}
+
+      {data.mustPay && data.responsible && (
+        <PaidCheck occasionId={occasionId} data={data} />
+      )}
+
+      {data.payments && data.payments.length > 0 && (
+        <PaymentList payments={data.payments} />
+      )}
     </Card>
+  );
+}
+
+/**
+ * Der eigene Anteil, zum Abhaken — gilt sofort.
+ *
+ * Bis zum Haken steht der Geburtstag unter „Noch offen", im Register und auf
+ * „Heute". Danach ist er dort weg, und hier kann man ihn wieder lösen, falls
+ * man sich verklickt hat.
+ */
+function PaidCheck({
+  occasionId,
+  data,
+}: {
+  occasionId: string;
+  data: BirthdayDetail;
+}) {
+  const setPaid = useSetGiftPaid(occasionId);
+  const share =
+    data.shareCents !== null ? ` (${formatCents(data.shareCents)})` : '';
+
+  return (
+    <div className="rounded-lg border border-line">
+      <CheckRow
+        label={`Ich habe meinen Anteil bezahlt${share}`}
+        hint={
+          data.paidByMe
+            ? `${data.responsible?.name ?? 'Wer besorgt hat'} sieht das.`
+            : `An ${data.responsible?.name ?? 'den, der besorgt hat'}.`
+        }
+        checked={data.paidByMe}
+        disabled={setPaid.isPending}
+        onChange={(paid) => setPaid.mutate(paid)}
+      />
+    </div>
+  );
+}
+
+/** Für den, der besorgt hat: wer schon gezahlt hat und wer noch nicht. */
+function PaymentList({
+  payments,
+}: {
+  payments: NonNullable<BirthdayDetail['payments']>;
+}) {
+  const paid = payments.filter((row) => row.paidAt !== null).length;
+
+  return (
+    <div className="space-y-2 border-t border-line pt-3">
+      <p className="text-xs font-semibold text-stone-500">
+        Bezahlt: {paid} von {payments.length}
+      </p>
+      <ul className="space-y-1.5">
+        {payments.map((row) => (
+          <li key={row.person.id} className="flex items-center gap-2.5">
+            <Avatar person={row.person} size="xs" />
+            <span className="min-w-0 flex-1 truncate text-[12px] text-stone-700">
+              {row.person.name}
+            </span>
+            {row.paidAt ? (
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-success">
+                <Check size={12} />
+                bezahlt
+              </span>
+            ) : (
+              <span className="text-[11px] text-stone-400">offen</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -391,6 +574,7 @@ function PriceCard({
   data: BirthdayDetail;
 }) {
   const decide = useDecideGift(occasionId);
+  const people = usePeople();
   const toast = useToast();
   const [draft, setDraft] = useState<string | null>(null);
 
@@ -399,12 +583,20 @@ function PriceCard({
   const value = draft ?? current;
   const unchanged = value === current;
 
+  // Dieselbe Rechnung wie am Server: geteilt durch alle, die dabei sind, außer
+  // dem Geburtstagskind — wer besorgt, zahlt seinen Teil mit.
+  const split = (people.data ?? []).filter(
+    (person) => person.acceptedAt !== null && person.id !== data.person.id,
+  ).length;
+  const total = Number(value);
+  const preview =
+    value !== '' && Number.isFinite(total) && total > 0 && split > 0
+      ? `≈ ${formatCents(Math.round((total * 100) / split))} pro Person, geteilt durch ${split}.`
+      : 'Was das Geschenk insgesamt gekostet hat — den Anteil je Person rechnet die App aus.';
+
   return (
     <Card className="space-y-3">
-      <Field
-        label="Preis"
-        hint="Damit die anderen wissen, worauf sie sich einlassen. Leer lassen geht auch."
-      >
+      <Field label="Gesamtpreis" hint={preview}>
         <TextInput
           type="number"
           inputMode="decimal"

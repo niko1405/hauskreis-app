@@ -8,6 +8,7 @@ import { Check, Pencil, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { IconButton, PRESSABLE } from './button';
+import { InfoTip } from './info-tip';
 
 // `min-w-0` neben `w-full`: In einer Flex-Zeile ist die Mindestbreite eines
 // Eingabefelds seine eingebaute Feldbreite (rund 20 Zeichen), und `w-full`
@@ -35,18 +36,22 @@ export function FieldLabel({ children }: { children: React.ReactNode }) {
 export function Field({
   label,
   hint,
+  info,
   error,
   children,
 }: {
   label: string;
   hint?: string;
+  /** Die Einzelheiten — hinter einem (i) neben dem Label (`InfoTip`). */
+  info?: React.ReactNode;
   error?: string;
   children: React.ReactNode;
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold text-stone-500">
+      <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-500">
         {label}
+        {info && <InfoTip label={label}>{info}</InfoTip>}
       </span>
       {children}
       {error ? (

@@ -16,7 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Field, Select, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast';
-import { CheckRow, SlotToggles } from '@/components/domain/slot-toggles';
+import { CheckRow } from '@/components/ui/check-row';
+import { SlotToggles } from '@/components/domain/slot-toggles';
 import {
   useCreateMeeting,
   useLocations,

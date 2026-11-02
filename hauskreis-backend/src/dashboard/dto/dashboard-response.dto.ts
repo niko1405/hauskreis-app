@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AttendanceStatus } from '../../../generated/prisma/enums';
 import { isoDateOut, personRefSchema } from '../../common/dto/response';
 import { wallClockOut } from '../../common/dto/wall-clock';
+import { openGiftPaymentResponseSchema } from '../../birthday/dto/birthday-response.dto';
 
 /**
  * Eine Zuteilung — für alle vier Rollenarten dieselbe Form.
@@ -170,6 +171,9 @@ export const homeScreenSchema = z.object({
       members: z.array(personRefSchema),
     })
     .nullable(),
+  /// Geschenk-Anteile, die du noch nicht abgehakt hast — dieselbe Liste wie
+  /// „Noch offen" im Register Geburtstage.
+  giftPayments: z.array(openGiftPaymentResponseSchema),
 });
 
 /**

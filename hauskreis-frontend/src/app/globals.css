@@ -104,6 +104,22 @@
   --color-avatar-7-bg: #f3e5f5;
   --color-avatar-7-fg: #7b1fa2;
 
+  /* Diagramm-Farben, in fester Reihenfolge (Gewichtung in der Verwaltung).
+     Nicht die Avatar-Paletten: Die sind für Initialen auf heller Fläche
+     gestuft, und nebeneinander als Balken fallen dort zwei Paare unter jede
+     Unterscheidbarkeit (Violett↔Indigo, auch bei voller Farbsicht). Diese acht
+     sind gegen `card` hell wie dunkel geprüft — benachbart auch für Rot-Grün-
+     und Blau-Gelb-Schwäche. Drei helle liegen unter 3:1 zur Fläche; deshalb
+     steht neben jedem Segment seine Zahl im Text. */
+  --color-chart-1: #2a78d6;
+  --color-chart-2: #eb6834;
+  --color-chart-3: #1baf7a;
+  --color-chart-4: #eda100;
+  --color-chart-5: #e87ba4;
+  --color-chart-6: #008300;
+  --color-chart-7: #6250d6;
+  --color-chart-8: #e34948;
+
   /* Radien: der Entwurf arbeitet mit auffällig weichen Ecken */
   --radius-sheet: 36px;
   --radius-card: 28px;
@@ -244,6 +260,16 @@
   --color-avatar-6-fg: #9aa6e8;
   --color-avatar-7-bg: #32203a;
   --color-avatar-7-fg: #cf94dd;
+
+  /* Diagramm: dieselben acht Farbtöne, für die dunkle Fläche gestuft. */
+  --color-chart-1: #3987e5;
+  --color-chart-2: #d95926;
+  --color-chart-3: #199e70;
+  --color-chart-4: #c98500;
+  --color-chart-5: #d55181;
+  --color-chart-6: #008300;
+  --color-chart-7: #9085e9;
+  --color-chart-8: #e66767;
 
   /* Kopfverläufe: gleiche Farbfamilie, aber von dunkel nach satt statt von
      pastell nach satt — sonst wäre der Kopf die hellste Fläche der App. */
@@ -444,6 +470,13 @@ input[type='time']::-webkit-date-and-time-value {
    Leiste darüber. Ohne das stünde der Titel dahinter. */
 .pt-header-6 {
   padding-top: calc(env(safe-area-inset-top, 0px) + 3.5rem + 1.5rem);
+}
+/* Am Rechner gibt es die Leiste nicht (`md:hidden` an ihr) — dann ist das
+   wieder `pt-safe-6`. */
+@media (min-width: 48rem) {
+  .pt-header-6 {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 1.5rem);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

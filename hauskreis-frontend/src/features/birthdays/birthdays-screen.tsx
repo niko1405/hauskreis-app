@@ -8,6 +8,10 @@
  * **wer als nächstes dran ist**, zuletzt die **Liste aller** — die ist ein
  * Nachschlagewerk und keine Nachricht.
  *
+ * Darüber, nur wenn es etwas gibt: **„Noch offen"** — Anteile an Geschenken,
+ * die man noch nicht abgehakt hat (`open-payments.tsx`). Auch für vergangene
+ * Geburtstage; dort stünde der Preis sonst nirgends mehr.
+ *
  * **Vergangene Geburtstage gibt es nicht.** Wer gestern gefeiert hat, steht
  * ganz unten in „Kommende", nämlich mit seinem Geburtstag in einem Jahr. Das
  * ist keine Vereinfachung, sondern die Bauart des Datenmodells: Je Person gibt
@@ -22,6 +26,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { useBirthdays } from '@/lib/api/hooks';
 import { formatDayMonth } from '@/lib/date';
 import { BirthdayCard, MyDutyCard } from './birthday-card';
+import { OpenPayments } from './open-payments';
 
 export function BirthdaysScreen() {
   const birthdays = useBirthdays();
@@ -52,6 +57,13 @@ export function BirthdaysScreen() {
 
   return (
     <div className="space-y-6 pb-4">
+      {data.openPayments.length > 0 && (
+        <section>
+          <SectionTitle>Noch offen</SectionTitle>
+          <OpenPayments items={data.openPayments} />
+        </section>
+      )}
+
       {data.config.enabled && (data.myNext || data.myPast.length > 0) && (
         <section>
           <SectionTitle>Deine Aufgabe</SectionTitle>

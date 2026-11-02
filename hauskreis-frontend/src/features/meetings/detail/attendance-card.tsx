@@ -11,7 +11,13 @@
  *
  * **Am vergangenen Abend** steht oben, wer da war, und zugeklappt darunter
  * „War nicht da" — wer abgesagt hatte und wer unsicher war oder nie
- * geantwortet hat. Jede Zeile trägt dort ihren eigenen Status.
+ * geantwortet hat. Rechts steht dort nur ein Punkt, grün oder rot: Ob jemand
+ * damals „unsicher" war, ist keine Auskunft über gestern, und die Gruppe sagt
+ * schon, auf welcher Seite er steht.
+ *
+ * **Die eigene Anwesenheit lässt sich nachtragen** — im Bearbeitungsmodus,
+ * mit „Warst du dabei?". Nur Ja oder Nein: „Unsicher" gibt es über einen
+ * vergangenen Abend nicht, und ein Satz dazu wäre Planung, die vorbei ist.
  *
  * **Der eine Satz zur Antwort** hängt an der Anwesenheitszeile (`note`), gilt
  * für alle drei Status und wechselt nur seine Beschriftung. Eine Verspätung
@@ -25,23 +31,26 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { useMe, usePeople } from '@/lib/api/hooks';
-import {
-  ANSWER,
-  LATE_ICON,
-  NOTE_FIELD,
-  lateLabel,
-} from '@/components/domain/attendance-answers';
+import { Segmented } from '@/components/ui/segmented';
+import { useMe, usePeople, useSetAttendance } from '@/lib/api/hooks';
+import { ANSWER } from '@/components/domain/attendance-answers';
+import { AnswerNote } from '@/components/domain/answer-note';
 import { cn } from '@/lib/cn';
 import type { AttendanceStatus, Meeting, Person } from '@/lib/api/types';
+
+/** Was rechts in einer Zeile steht: der Status, oder am vergangenen Abend ein Punkt. */
+type Marker = 'status' | 'present' | 'away';
 
 export function AttendanceCard({
   meeting,
   readOnly = false,
+  editSelf = false,
 }: {
   meeting: Meeting;
   /** Ein vergangener oder abgesagter Abend: daran ändert niemand mehr etwas. */
   readOnly?: boolean;
+  /** Am vergangenen Abend im Bearbeitungsmodus: die eigene Anwesenheit nachtragen. */
+  editSelf?: boolean;
 }) {
   const people = usePeople();
   const me = useMe();
@@ -72,6 +81,14 @@ export function AttendanceCard({
 
   return (
     <>
+      {editSelf && me.me && (
+        <SelfAttendance
+          meetingId={meeting.id}
+          personId={me.me.id}
+          status={statusOf(me.me.id)}
+        />
+      )}
+
       <section>
         <SectionTitle>
           {readOnly
@@ -96,6 +113,7 @@ export function AttendanceCard({
                   note={rowOf(person.id)?.note ?? null}
                   lateMinutes={rowOf(person.id)?.lateMinutes ?? null}
                   isMe={person.id === me.me?.id}
+                  marker={readOnly ? 'present' : 'status'}
                 />
               ))}
             </ul>
@@ -136,6 +154,7 @@ export function AttendanceCard({
                   note={rowOf(person.id)?.note ?? null}
                   lateMinutes={null}
                   isMe={person.id === me.me?.id}
+                  marker={readOnly ? 'away' : 'status'}
                 />
               ))}
             </ul>
@@ -146,21 +165,60 @@ export function AttendanceCard({
   );
 }
 
+/**
+ * „Warst du dabei?" — nachtragen, wie es war.
+ *
+ * Direkt über `useSetAttendance` und nicht über den Antwort-Hook: Der fragt
+ * vor einer Absage, ob die eigenen Rollen frei werden sollen, und an einem
+ * vergangenen Abend wird nichts frei (der Server prüft das selbst). Es geht
+ * auch keine Nachricht raus. Steht man auf „weiß nicht", ist keines gewählt.
+ */
+function SelfAttendance({
+  meetingId,
+  personId,
+  status,
+}: {
+  meetingId: string;
+  personId: string;
+  status: AttendanceStatus;
+}) {
+  const setAttendance = useSetAttendance(meetingId);
+
+  return (
+    <Card className="flex flex-wrap items-center justify-between gap-3">
+      <p className="text-sm font-bold text-stone-800">Warst du dabei?</p>
+      <Segmented<AttendanceStatus>
+        size="sm"
+        label="Warst du dabei?"
+        value={status}
+        onChange={(next) => {
+          if (next !== status) setAttendance.mutate({ personId, status: next });
+        }}
+        options={[
+          { value: 'ABSENT', label: 'Nein' },
+          { value: 'ATTENDING', label: 'Ja' },
+        ]}
+      />
+    </Card>
+  );
+}
+
 function PersonRow({
   person,
   status,
   note,
   lateMinutes,
   isMe,
+  marker,
 }: {
   person: Person;
   status: AttendanceStatus;
   note: string | null;
   lateMinutes: number | null;
   isMe: boolean;
+  marker: Marker;
 }) {
   const answer = ANSWER[status];
-  const NoteIcon = NOTE_FIELD[status].icon;
   const late = status === 'ATTENDING' ? lateMinutes : null;
   const twoLines = Boolean(note) || late !== null;
 
@@ -183,32 +241,41 @@ function PersonRow({
         <p className="truncate text-sm font-bold text-stone-800">
           {isMe ? 'Du' : person.name}
         </p>
-        {/* Die Verspätung sticht heraus, der Satz nicht: Sie ändert etwas am
-            Abend selbst, ein Satz erklärt nur. */}
-        {late !== null && (
-          <p className="mt-0.5 flex items-center gap-1.5 text-xs font-semibold text-terracotta-600">
-            <LATE_ICON size={13} className="shrink-0" />
-            {lateLabel(late)}
-          </p>
-        )}
-        {note && (
-          <p className="mt-0.5 flex items-start gap-1.5 text-xs leading-relaxed text-stone-500">
-            <NoteIcon size={13} className="mt-0.5 shrink-0" />
-            <span className="min-w-0">{note}</span>
-          </p>
-        )}
+        <AnswerNote
+          status={status}
+          note={note}
+          lateMinutes={late}
+          className="mt-0.5"
+        />
       </div>
 
-      <span
-        className={cn(
-          'flex shrink-0 items-center gap-1.5 text-[11px] font-semibold',
-          twoLines && 'mt-1',
-          answer.text,
-        )}
-      >
-        <span className={cn('size-1.5 rounded-full', answer.dot)} />
-        {answer.short}
-      </span>
+      {marker === 'status' ? (
+        <span
+          className={cn(
+            'flex shrink-0 items-center gap-1.5 text-[11px] font-semibold',
+            twoLines && 'mt-1',
+            answer.text,
+          )}
+        >
+          <span className={cn('size-1.5 rounded-full', answer.dot)} />
+          {answer.short}
+        </span>
+      ) : (
+        // Am vergangenen Abend nur ein Punkt: Die Gruppe darüber sagt schon,
+        // auf welcher Seite jemand steht, und „unsicher" ist über gestern
+        // keine Auskunft.
+        <span
+          className={cn(
+            'size-2 shrink-0 rounded-full',
+            twoLines && 'mt-2',
+            marker === 'present' ? 'bg-success' : 'bg-alert',
+          )}
+        >
+          <span className="sr-only">
+            {marker === 'present' ? 'war da' : 'war nicht da'}
+          </span>
+        </span>
+      )}
     </li>
   );
 }

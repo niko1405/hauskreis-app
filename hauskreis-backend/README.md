@@ -1293,6 +1293,17 @@ selbst angelegte Termine (z. B. „Geburtstag von …") davor, durch einen
 erzeugten ersetzt zu werden. Abgesichert ist das zusätzlich durch einen
 Unique-Index auf `(hauskreis_id, date)`.
 
+**Ein Datum mit Grabstein bleibt leer** (`skipped_meeting_date`). Admins dürfen
+jeden Termin löschen (`DELETE …/meetings/:id`, still, ohne Nachricht) — einen
+erzeugten legte der Lauf aber in der nächsten Nacht wieder an, denn an dem Tag
+fehlt ja einer. `MeetingService.remove()` löscht deshalb einen erzeugten Abend
+und legt in **derselben Transaktion** den Grabstein an; der Generator nimmt
+diese Daten aus „fehlt". Eine eigene Tabelle und kein Status am Termin: Ein
+gelöschter Abend soll nirgends mehr auftauchen, und ein Status müsste jede
+Abfrage der App ausfiltern. Grabsteine vor heute räumt der Lauf selbst weg —
+dort legt er ohnehin nichts an. Absagen bleibt der Normalfall; Löschen ist für
+den Termin, den es nie hätte geben sollen.
+
 Die Datumslogik liegt bewusst als reine Funktionen in
 [`meeting-schedule.ts`](src/meeting/meeting-schedule.ts) (UTC-Mitternacht, damit
 Kalendertage nicht über Zeitzonen verrutschen) und ist dort direkt getestet.
@@ -1388,7 +1399,7 @@ beiden.
 Übrig sind zwei Spalten, die kein Baustein beantwortet:
 
 - `generated` — ob der nächtliche Lauf den Abend angelegt hat. Daran hängen der
-  Taktschlag oben und „löschen statt absagen".
+  Taktschlag oben und der Grabstein beim Löschen.
 - `special` — ob er aus dem Rhythmus fällt (Geburtstag, Freizeit). Daran hängen
   die zwei Benachrichtigungsarten für besondere Termine, die Actionstep-Ausnahme
   und die Markierung in der Terminliste.
@@ -2868,7 +2879,8 @@ Die Zeilen tragen deshalb `source`:
 - **`SELF`** — jemand hat für diesen Abend geantwortet. Wird **nie** von einem
   Zeitraum überschrieben oder zurückgenommen.
 - **`ABSENCE`** — aus einem Zeitraum abgeleitet. Wird beim nächsten Abgleich neu
-  aufgebaut.
+  aufgebaut. Der **Grund** des Zeitraums steht als `note` daran, wie ein Satz
+  von Hand; ändert er sich, zieht der Abgleich ihn an diesen Zeilen nach.
 - **`AUTO`** — aus „ich bin grundsätzlich dabei" vorab zugesagt. Weicht einem
   Zeitraum, siehe unten.
 - **`ROLE`** — zugesagt, weil die Person an dem Abend eine Rolle bekommen hat.
@@ -3130,7 +3142,7 @@ bewegt hat.
 Einrichtung und zum Nachschauen. Idempotent: ein zweiter Aufruf antwortet mit
 `created: 0`.
 
-**Jetzt weiterschalten** (`POST …/rotate`), auch mitten in einer laufenden
+**Nächste Runde vorziehen** (`POST …/rotate`), auch mitten in einer laufenden
 Periode. Zuerst macht die laufende Runde Platz, in zwei bewusst
 unterschiedlichen Weisen:
 
@@ -3300,6 +3312,45 @@ selbst zuständig, und wer gerade beschenkt wurde, ist als nächstes an der Reih
 Beschenkter noch als Schenkender. Das ist keine Strafe, sondern die Bauart: Der
 Platz in der Reihe ist der Geburtstag.
 
+### Preis, Anteil und „bezahlt"
+
+`price_cents` ist der **Gesamtpreis**. Jede Antwort mit Preis trägt dazu
+`shareCents`: geteilt durch alle Angekommenen außer dem Geburtstagskind, wer
+besorgt hat eingeschlossen — er zahlt seinen Teil auch, nur eben vorab.
+Gezählt wird live; eine gespeicherte Zahl wäre eine zweite Wahrheit neben der
+Mitgliederliste. Für das Geburtstagskind sind Preis und Anteil `null`.
+
+Wer mitzahlt (alle außer Geburtstagskind und Besorgendem), hakt seinen Anteil
+**selbst** ab: `PUT …/birthdays/:id/payment`, zurück mit `DELETE`. Eine Zeile
+in `birthday_payment` je Person und Geburtstag, ihre Existenz ist die Aussage.
+Ohne `If-Match` — ein Haken je Person, kein Wettlauf — und ohne Frist: Gerade
+wer es verpasst hat, soll es nachholen. Das Detail sagt `mustPay` und
+`paidByMe`; `payments` (wer schon hat) bekommt nur, wer besorgt hat.
+
+**Was offen ist, bleibt sichtbar**, auch nach dem Geburtstag:
+`BirthdayService.openPayments` liefert die Geburtstage mit Preis, an denen der
+eigene Haken fehlt — in der Übersicht als `openPayments`, auf „Heute" als
+`giftPayments`. Höchstens `OPEN_PAYMENT_DAYS` (90) Tage zurück: Preise aus der
+Zeit vor dem Haken stünden sonst alle auf einmal offen da.
+
+### Benutzerdefiniert: nur vollständig
+
+`GET …/birthdays/pairings` liefert **zweimal** dieselbe Liste: `pairings` (die
+gespeicherte Zuteilung, im Modus `MANUAL` die geltende) und `rotation` (die
+ausgerechnete, `rotate()` über dieselben Leute). Die Verwaltung zeigt die
+Zuteilung so in beiden Modi, und wer auf „Benutzerdefiniert" umstellt, fängt mit
+der Rotation an, die bis eben galt. Beide Listen stehen nach Geburtstag im Jahr
+(`inYearOrder`, dieselbe Folge, in der `rotate` den Kreis legt), jede Zeile mit
+`birthday` als `MM-DD` — das Jahr und damit das Alter gehen nicht heraus.
+
+`PUT …/birthdays/pairings` nimmt nur eine **vollständige** Zuteilung: Bei zwei
+oder mehr Leuten mit Geburtstag muss jede:r genau einmal Geburtstagskind und
+genau einmal Schenkende:r sein, sonst `400`. Früher füllte der Planer Lücken
+beim Speichern selbst — der Admin hätte dann etwas gespeichert, das er nie
+gesehen hat. `repairPairings` bleibt für den anderen Fall: Ändert sich danach
+die Gruppe, schließt der Planer die Lücke und setzt `pairings_repaired_at`, und
+die Verwaltung sagt es.
+
 ### Warum die Zuständigkeit gespeichert wird
 
 Sie wird gerechnet **und** gespeichert. Rechnen allein könnte die Vergangenheit
@@ -3323,9 +3374,9 @@ Zeile, wie `meeting_actionstep_done`.
 darf gehen, ohne ihn mitzunehmen (`SET NULL`). Damit gilt für Kommentare
 automatisch dieselbe Regel wie für Vorschläge: Wer Geburtstag hat, bekommt
 `ideas: null` und damit auch kein Wort davon. Ein neuer Kommentar meldet sich
-(`GIFT_IDEA_COMMENTED`, `related_key` = Kommentar-Id) bei dem, der den Vorschlag
-gemacht hat, und bei allen, die dort schon geschrieben haben — sonst bei
-niemandem. Löschen darf Vorschläge wie Kommentare nur, wer sie geschrieben hat;
+(`GIFT_IDEA_COMMENTED`, `related_key` = Kommentar-Id) bei **allen Angekommenen
+außer dem Geburtstagskind** und dem, der schreibt. Nur an die Beteiligten ging
+ein „hat sie schon" an dem vorbei, der das Geschenk gerade besorgen wollte. Löschen darf Vorschläge wie Kommentare nur, wer sie geschrieben hat;
 die Antwort sagt es mit `canRemove` bzw. `mine`, damit das Frontend keinen
 Papierkorb zeigt, der nur eine 403 auslöst.
 

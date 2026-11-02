@@ -3,10 +3,25 @@
 /**
  * Navigation. Mobil die Leiste unten wie im Entwurf, ab `md` eine Spalte
  * links — dieselben fünf Ziele, damit man nicht zwei Menüs pflegt.
+ *
+ * **Die Spalte trägt drei Dinge mehr**, und zwar die, für die es mobil die
+ * Kopfleiste gibt: den Weg zur Gruppe, die Glocke und — für Admins — die
+ * Verwaltung. Unten ist die Leiste mit fünf Zielen voll; die Spalte hat Platz,
+ * und eine Kopfleiste über einer Seitenspalte wäre eine zweite Navigation an
+ * einem zweiten Rand (`smart-header.tsx`, dort `md:hidden`).
  */
-import { Archive, CalendarDays, Home, Settings, Users } from 'lucide-react';
+import {
+  Archive,
+  CalendarDays,
+  Home,
+  Settings,
+  Shield,
+  Users,
+  UsersRound,
+} from 'lucide-react';
 import Link from '@/components/ui/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { useUnreadFirstSteps } from '@/features/help/use-unread-help';
 import { useUnreadRelease } from '@/features/releases/use-unread-release';
 import { useUnreadAdmin } from '@/features/admin/use-unread-admin';
@@ -14,6 +29,8 @@ import { useMe } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { useKeyboardOpen } from '@/lib/use-keyboard-open';
+import { SidebarBell } from './notification-bell';
+import { NotificationInbox } from './notification-inbox';
 
 export const NAV_ITEMS = [
   { href: '/', label: 'Heute', icon: Home },
@@ -33,24 +50,47 @@ export const NAV_ITEMS = [
  */
 const UNREAD_HREF = '/profil';
 
+/** Die beiden Ziele, die es nur in der Spalte gibt — mobil führt ein Knopf hin. */
+const GROUP_ITEM = { href: '/hauskreis', label: 'Gruppe', icon: UsersRound };
+const ADMIN_ITEM = { href: '/admin', label: 'Verwaltung', icon: Shield };
+
+/**
+ * Ob diese Adresse am Rechner ein Ziel der Spalte ist, ohne ein Tab zu sein.
+ *
+ * Dort braucht die Seite keinen Zurück-Pfeil: Der Weg hinein und hinaus ist
+ * die Spalte, wie bei den Tabs. Mobil behalten sie ihn — dort führt ein Knopf
+ * im Profil oder in der Kopfleiste hin.
+ */
+export function isSidebarRoute(pathname: string): boolean {
+  return [GROUP_ITEM.href, ADMIN_ITEM.href].some((href) =>
+    matches(href, pathname),
+  );
+}
+
 /**
  * Drei Gründe, ein Punkt.
  *
- * Alle drei Wege enden im Profil — „Was ist neu", „Hilfe" und der
+ * Alle drei Wege enden mobil im Profil — „Was ist neu", „Hilfe" und der
  * Admin-Bereich. Ein zweiter Punkt daneben würde die Leiste nicht genauer
  * machen, sondern nur unruhiger; welcher gemeint ist, sagt der Bildschirm eine
  * Ebene tiefer.
  *
  * Der dritte gilt **nur Admins**: Bei allen anderen steht der Knopf gar nicht
  * da, und ein Punkt, der auf etwas Unsichtbares zeigt, bliebe für immer stehen.
+ * In der Spalte hat die Verwaltung ihren eigenen Platz und damit ihren eigenen
+ * Punkt (`admin: false`).
  */
-function useUnreadProfile(): boolean {
+function useUnreadProfile({ admin: withAdmin }: { admin: boolean }): boolean {
   const release = useUnreadRelease();
   const firstSteps = useUnreadFirstSteps();
   const admin = useUnreadAdmin();
   const me = useMe();
 
-  return release.unread || firstSteps.unread || (me.isAdmin && admin.unread);
+  return (
+    release.unread ||
+    firstSteps.unread ||
+    (withAdmin && me.isAdmin && admin.unread)
+  );
 }
 
 /**
@@ -108,7 +148,7 @@ function NavIcon({
   strokeWidth,
   unread,
 }: {
-  icon: (typeof NAV_ITEMS)[number]['icon'];
+  icon: typeof Home;
   size: number;
   strokeWidth?: number;
   unread: boolean;
@@ -128,7 +168,7 @@ function NavIcon({
 
 export function TabBar() {
   const isActive = useIsActive();
-  const unread = useUnreadProfile();
+  const unread = useUnreadProfile({ admin: true });
   const items = useNavItems();
   const keyboard = useKeyboardOpen();
 
@@ -177,52 +217,93 @@ export function TabBar() {
 
 export function Sidebar() {
   const isActive = useIsActive();
-  const unread = useUnreadProfile();
+  const profileUnread = useUnreadProfile({ admin: false });
+  const adminUnread = useUnreadAdmin();
+  const me = useMe();
   const items = useNavItems();
+  const [inbox, setInbox] = useState(false);
+
+  // Die Gruppe steht vor dem Profil: Sie ist ein Ort, an den man geht, das
+  // Profil der, an dem man sich einstellt — und das steht in jeder Liste der
+  // App am Ende.
+  const main = [
+    ...items.filter(({ href }) => href !== UNREAD_HREF),
+    GROUP_ITEM,
+    ...items.filter(({ href }) => href === UNREAD_HREF),
+  ];
+
+  const item = (
+    { href, label, icon }: { href: string; label: string; icon: typeof Home },
+    unread: boolean,
+  ) => {
+    const active = isActive(href);
+    return (
+      <li key={href}>
+        <Link
+          href={href}
+          aria-current={active ? 'page' : undefined}
+          className={cn(
+            'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition-colors',
+            active
+              ? 'bg-terracotta-50 text-terracotta-700'
+              : 'text-stone-500 hover:bg-stone-100',
+          )}
+        >
+          <NavIcon icon={icon} size={18} unread={unread} />
+          {label}
+        </Link>
+      </li>
+    );
+  };
 
   return (
-    <nav
-      aria-label="Hauptnavigation"
-      // Der sichere Rand kommt zum vorhandenen Abstand dazu: Auf dem iPad vom
-      // Home-Bildschirm reicht die App bis unter die Statusleiste, und dort
-      // stünde sonst „Hauskreis" unter der Uhr.
-      //
-      // **Sie bleibt stehen, während die Seite scrollt** (`sticky` mit der
-      // Fensterhöhe). Sie war ein gewöhnliches Kind der Zeile, so hoch wie die
-      // Seite, und die fünf Ziele scrollten mit dem Inhalt aus dem Bild — am
-      // Ende einer langen Liste war der Weg woandershin eine Bildschirmhöhe
-      // weit oben. Ihr Rand reicht damit auch immer über das ganze Fenster.
-      className="hidden w-56 shrink-0 border-r border-line px-4 pt-[calc(env(safe-area-inset-top)+2rem)] pb-8 md:sticky md:top-0 md:block md:h-dvh md:self-start md:overflow-y-auto"
-    >
-      <p className="mb-6 px-3 font-serif text-2xl font-bold text-stone-900">
-        Hauskreis
-      </p>
-      <ul className="space-y-1">
-        {items.map(({ href, label, icon: Icon }) => {
-          const active = isActive(href);
-          return (
-            <li key={href}>
-              <Link
-                href={href}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition-colors',
-                  active
-                    ? 'bg-terracotta-50 text-terracotta-700'
-                    : 'text-stone-500 hover:bg-stone-100',
-                )}
-              >
-                <NavIcon
-                  icon={Icon}
-                  size={18}
-                  unread={unread && href === UNREAD_HREF}
-                />
-                {label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    // **Sie bleibt stehen, während die Seite scrollt** (`sticky` mit der
+    // Fensterhöhe). Sie war ein gewöhnliches Kind der Zeile, so hoch wie die
+    // Seite, und die Ziele scrollten mit dem Inhalt aus dem Bild — am Ende
+    // einer langen Liste war der Weg woandershin eine Bildschirmhöhe weit
+    // oben. Ihr Rand reicht damit auch immer über das ganze Fenster.
+    //
+    // **Gescrollt wird nur die Liste, nicht die Spalte.** Die Blase hinter der
+    // Glocke ragt rechts über die Spalte hinaus; ein `overflow` an ihr schnitte
+    // sie ab. `z-40` hebt sie samt Blase über den Inhalt daneben.
+    <aside className="hidden w-56 shrink-0 border-r border-line md:sticky md:top-0 md:z-40 md:flex md:h-dvh md:flex-col md:self-start print:hidden">
+      <nav
+        aria-label="Hauptnavigation"
+        // Der sichere Rand kommt zum vorhandenen Abstand dazu: Auf dem iPad vom
+        // Home-Bildschirm reicht die App bis unter die Statusleiste, und dort
+        // stünde sonst „Hauskreis" unter der Uhr.
+        className="min-h-0 flex-1 overflow-y-auto px-4 pt-[calc(env(safe-area-inset-top)+2rem)] pb-4"
+      >
+        <p className="mb-6 px-3 font-serif text-2xl font-bold text-stone-900">
+          Hauskreis
+        </p>
+        <ul className="space-y-1">
+          {main.map((entry) =>
+            item(entry, profileUnread && entry.href === UNREAD_HREF),
+          )}
+        </ul>
+
+        {/* Abgesetzt: Die Ziele darüber hat jede:r, dieses nur, wer die Gruppe
+            verwaltet. Am Rechner steht es hier statt als Knopf im Profil. */}
+        {me.isAdmin && (
+          <ul className="mt-3 space-y-1 border-t border-line pt-3">
+            {item(ADMIN_ITEM, adminUnread.unread)}
+          </ul>
+        )}
+      </nav>
+
+      {/* Unten, wo sie nicht mit den Zielen verwechselt wird: Die Glocke ist
+          kein Ort, sondern eine Box, die über der Seite aufgeht. */}
+      <div className="shrink-0 px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
+        <div className="relative">
+          <SidebarBell onClick={() => setInbox(true)} />
+          <NotificationInbox
+            placement="sidebar"
+            open={inbox}
+            onClose={() => setInbox(false)}
+          />
+        </div>
+      </div>
+    </aside>
   );
 }

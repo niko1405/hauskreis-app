@@ -17,11 +17,14 @@ tests {
 }
 
 docs {
-  Nur bei selbst angelegten Terminen (`generated: false`). Ein erzeugter Abend wird abgesagt
-  (`POST …/cancel`), nicht gelöscht: dass am Dienstag nichts war, gehört in
-  die Geschichte der Gruppe und in die Vorschlagslogik — und der Terminplaner
-  legte ihn beim nächsten Lauf ohnehin wieder an. Für alles andere kommt
-  hier ein 400.
+  Löscht einen Termin still — nur Admins, an jedem Termin. Absagen
+  (`POST …/cancel`) bleibt der Normalfall: dass am Dienstag nichts war,
+  gehört in die Geschichte der Gruppe, und alle erfahren es. Gelöscht wird,
+  was es nie hätte geben sollen.
+
+  Einen **erzeugten** Abend (`generated: true`) legte der Terminplaner in der
+  nächsten Nacht wieder an. Der Server merkt sich deshalb sein Datum
+  (`skipped_meeting_date`), und der Lauf lässt es leer.
 
   Es geht **keine** Benachrichtigung raus. Eine Absage für einen Termin, den
   es nie gab, wäre für viele die erste Nachricht darüber, dass er existierte.

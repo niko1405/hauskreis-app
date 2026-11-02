@@ -11,16 +11,10 @@ import { Badge } from '@/components/ui/badge';
 import { PRESSABLE } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import { formatDayRange, formatRelativeDay } from '@/lib/date';
-import {
-  attendanceCounts,
-  meetingHeadline,
-  meetingKindLabel,
-  meetingPhase,
-} from '@/lib/meeting';
+import { attendanceCounts, meetingHeadline, meetingPhase } from '@/lib/meeting';
 import { useMe, usePeople } from '@/lib/api/hooks';
 import type { AttendanceStatus, MeetingListItem } from '@/lib/api/types';
 import { AnswerNoteSheet } from './answer-note-sheet';
-import { ownAnswerLine } from './attendance-answers';
 import { AnswerButtons, isAnswerable } from './answer-buttons';
 import { DateBox, TimeAndPlace } from './date-box';
 import { RoleChip } from './role-badge';
@@ -54,7 +48,6 @@ export function MeetingCard({
   const topicPeople = meeting.topicResponsibles.map((r) => r.person);
 
   const myRow = meeting.attendances.find((row) => row.personId === me?.id);
-  const myLine = ownAnswerLine(myRow);
   const answerable = isAnswerable(meeting, me?.id);
 
   return (
@@ -140,13 +133,12 @@ export function MeetingCard({
                 weil sie sich einstellen lässt, ist „18 Uhr wie immer" keine
                 sichere Annahme.
 
-                Die Art des Abends steht nur dahinter, wenn er einen eigenen
-                Titel trägt: Sonst steht sie schon als Überschrift darüber, und
-                zweimal dasselbe ist eines zu viel. */}
+                Die Art des Abends steht hier nicht, auch nicht bei eigenem
+                Titel: Was der Abend hat, sagen die Chips darunter, und wer ihm
+                einen Namen gibt, hat damit schon gesagt, was er ist. */}
             <TimeAndPlace
               startTime={meeting.startTime}
               location={meeting.location}
-              extra={meeting.title ? meetingKindLabel(meeting) : undefined}
             />
           </div>
         </div>
@@ -200,13 +192,6 @@ export function MeetingCard({
           <div className="mt-3">
             <AnswerButtons meeting={meeting} onAnswered={setNoteFor} />
           </div>
-        )}
-
-        {/* Der eigene Satz, einzeilig — wie im eingeklappten Antwort-Balken. Er
-            ist der Grund, aus dem man die Karte sonst öffnen müsste, um zu
-            sehen, ob man überhaupt etwas dazugesagt hat. */}
-        {answerable && myLine && (
-          <p className="mt-2 truncate text-[11px] text-stone-400">{myLine}</p>
         )}
       </Link>
 

@@ -4,12 +4,17 @@
  * Die Einstellungen der Gruppe (Rhythmus, Actionstep, Gebet) und die Läufe,
  * die sonst nachts von selbst passieren — hier von Hand auslösbar, mit dem
  * Ergebnis daneben.
+ *
+ * Die Einstellungen sind Entwurf, bis der Balken unten sie schreibt
+ * (`admin-draft.tsx`); die Läufe sind Aktionen und wirken sofort.
  */
 import { Play } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
+import { CheckRow } from '@/components/ui/check-row';
 import { Field, Select, TextInput } from '@/components/ui/field';
-import { SwitchRow } from '@/components/ui/switch';
+import { InfoTip } from '@/components/ui/info-tip';
 import { ConflictBanner } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api/errors';
@@ -25,13 +30,16 @@ import {
   useUpdateMeetingSchedule,
   useUpdatePrayerBuddyConfig,
 } from '@/lib/api/hooks';
-import { useState } from 'react';
+import type {
+  MeetingSchedule,
+  UpdateMeetingScheduleInput,
+} from '@/lib/api/types';
+import { useAdminDraftSection } from './admin-draft';
 
 export function MaintenanceAdmin() {
   return (
     <>
-      <MeetingScheduleCard />
-      <WeeklyActionstepCard />
+      <ScheduleSettings />
       <PrayerBuddyConfigCard />
       <JobsCard />
     </>
@@ -75,279 +83,232 @@ const ZONES: string[] = Intl.supportedValuesOf?.('timeZone') ?? [
   'Europe/Berlin',
 ];
 
-/**
- * Wann sich die Gruppe trifft.
- *
- * Beides in einem Formular und mit einem Speichern-Knopf, weil es ein Satz ist:
- * „wir treffen uns dienstags um 18 Uhr". Getrennt wären es zwei Entscheidungen,
- * von denen man die zweite vergisst.
- */
-function MeetingScheduleCard() {
-  const schedule = useMeetingSchedule();
-  const update = useUpdateMeetingSchedule();
-  const toast = useToast();
-  const [entwurf, setEntwurf] = useState<{
-    weekday: string;
-    intervalWeeks: string;
-    startTime: string;
-    timeZone: string;
-  } | null>(null);
+/** Was in der Verwaltung zum Rhythmus einstellbar ist — eine Zeile am Server. */
+type Schedule = Required<UpdateMeetingScheduleInput>;
 
-  const current = schedule.data?.data;
-  const wert = entwurf ?? {
-    weekday: String(current?.weekday ?? 2),
-    intervalWeeks: String(current?.intervalWeeks ?? 1),
+function scheduleOf(current: MeetingSchedule | undefined): Schedule {
+  return {
+    autoGenerate: current?.autoGenerate ?? true,
+    weekday: current?.weekday ?? 2,
+    intervalWeeks: current?.intervalWeeks ?? 1,
     startTime: current?.startTime ?? '18:00',
     timeZone: current?.timeZone ?? 'Europe/Berlin',
+    praiseEvenings: current?.praiseEvenings ?? true,
+    snackSlot: current?.snackSlot ?? false,
+    weeklyActionstep: current?.weeklyActionstep ?? true,
   };
-
-  const unverändert =
-    Number(wert.weekday) === current?.weekday &&
-    Number(wert.intervalWeeks) === current?.intervalWeeks &&
-    wert.startTime === current?.startTime &&
-    wert.timeZone === current?.timeZone;
-
-  const anlegt = current?.autoGenerate ?? true;
-
-  return (
-    <section>
-      <SectionTitle>Termin-Rhythmus</SectionTitle>
-      <Card className="space-y-4">
-        {update.conflict && (
-          <ConflictBanner onResolve={update.resolveConflict} />
-        )}
-
-        {/* Der Schalter steht über allem anderen, denn er entscheidet, ob das
-            Übrige überhaupt eine Frage ist — dasselbe Muster wie bei den
-            Gebetsbuddys. Er schreibt sofort, das Formular darunter auf
-            Knopfdruck: Ein Schalter ist eine Entscheidung, ein Formular sind
-            vier. */}
-        <SwitchRow
-          label="Termine automatisch anlegen"
-          description="Die App hält immer sieben Abende im Voraus bereit. Aus heißt: Ihr legt eure Termine selbst an — was schon im Kalender steht, bleibt stehen."
-          checked={anlegt}
-          disabled={update.isPending}
-          onChange={(next) =>
-            update.mutate(
-              { autoGenerate: next },
-              {
-                onSuccess: () =>
-                  toast.success(
-                    next
-                      ? 'Die App legt wieder Termine an.'
-                      : 'Ab jetzt legt ihr eure Termine selbst an.',
-                  ),
-              },
-            )
-          }
-        />
-
-        {anlegt && (
-          <>
-            <p className="text-[11px] leading-relaxed text-stone-400">
-              Hier stellst du den Rhythmus eurer Treffen ein. Er gilt für
-              Termine, die der Zeitplaner ab jetzt anlegt. Was schon im Kalender
-              steht, behält seinen Tag und seine Zeit — dafür hat längst jemand
-              zugesagt.
-            </p>
-
-            <Field label="Wochentag">
-              <Select
-                value={wert.weekday}
-                onChange={(event) =>
-                  setEntwurf({ ...wert, weekday: event.target.value })
-                }
-              >
-                {WEEKDAYS.map((name, index) => (
-                  <option key={name} value={index}>
-                    {name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            {/* Der Abstand als Auswahl und nicht als Zahlenfeld: „alle 9 Wochen"
-            ist keine Frage, die jemand hat — und ein Feld, das sie zulässt,
-            müsste sie beantworten. */}
-            <Field label="Abstand">
-              <Select
-                value={wert.intervalWeeks}
-                onChange={(event) =>
-                  setEntwurf({ ...wert, intervalWeeks: event.target.value })
-                }
-              >
-                {INTERVALS.map(({ weeks, label }) => (
-                  <option key={weeks} value={weeks}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            <Field
-              label="Uhrzeit"
-              hint="Ab wann der Inhalt eines Themas allen gehört, richtet sich danach."
-            >
-              <TextInput
-                type="time"
-                value={wert.startTime}
-                onChange={(event) =>
-                  setEntwurf({ ...wert, startTime: event.target.value })
-                }
-              />
-            </Field>
-
-            {/* Die dritte Angabe desselben Satzes: „dienstags um 18 Uhr" ist ohne
-            sie nicht zu deuten — und „welchen Tag haben wir" ebenso wenig. */}
-            <Field
-              label="Zeitzone"
-              hint="In dieser Zone gilt die Uhrzeit — und in ihr zählt die App die Tage."
-            >
-              <Select
-                value={wert.timeZone}
-                onChange={(event) =>
-                  setEntwurf({ ...wert, timeZone: event.target.value })
-                }
-              >
-                {ZONES.map((zone) => (
-                  <option key={zone} value={zone}>
-                    {zone}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            <Button
-              variant="secondary"
-              className="w-full"
-              loading={update.isPending}
-              disabled={unverändert}
-              onClick={() =>
-                update.mutate(
-                  {
-                    weekday: Number(wert.weekday),
-                    intervalWeeks: Number(wert.intervalWeeks),
-                    startTime: wert.startTime,
-                    timeZone: wert.timeZone,
-                  },
-                  {
-                    onSuccess: () => {
-                      setEntwurf(null);
-                      toast.success('Rhythmus gespeichert.');
-                    },
-                  },
-                )
-              }
-            >
-              Speichern
-            </Button>
-
-            {/* Unter dem Speichern-Knopf und ohne ihn: Er sagt etwas über die
-                **Bausteine** der Abende, nicht über ihre Lage — und schreibt
-                deshalb sofort, wie der Schalter ganz oben. */}
-            <SwitchRow
-              label="Lobpreis- und Gebetsabende"
-              description="Der jeweils letzte Termin im Monat bekommt Lieder und ein Testimony statt eines Themas. Gilt für neue Termine — was schon im Kalender steht, behält seine Bausteine."
-              checked={current?.praiseEvenings ?? true}
-              disabled={update.isPending}
-              onChange={(next) =>
-                update.mutate(
-                  { praiseEvenings: next },
-                  {
-                    onSuccess: () =>
-                      toast.success(
-                        next
-                          ? 'Der letzte Abend im Monat wird wieder ein Lobpreisabend.'
-                          : 'Ab jetzt bekommt jeder erzeugte Abend ein Thema.',
-                      ),
-                  },
-                )
-              }
-            />
-
-            {/* Daneben und nicht darüber: Beide sagen etwas über die Bausteine
-                der erzeugten Abende. Anders als der Lobpreisabend ist dieser
-                voreingestellt **aus** — die Rolle ist eine Einladung, und wer
-                sie nicht will, soll sie nicht abwählen müssen. */}
-            <SwitchRow
-              label="Snacks vorbelegen"
-              description="Erzeugte Termine bekommen den Baustein „Snacks“ gleich mit. Gilt für neue Termine — an einem einzelnen Abend lässt er sich immer anhaken, auch ohne diese Vorgabe."
-              checked={current?.snackSlot ?? false}
-              disabled={update.isPending}
-              onChange={(next) =>
-                update.mutate(
-                  { snackSlot: next },
-                  {
-                    onSuccess: () =>
-                      toast.success(
-                        next
-                          ? 'Neue Termine bringen die Snacks mit.'
-                          : 'Neue Termine kommen ohne Snacks.',
-                      ),
-                  },
-                )
-              }
-            />
-          </>
-        )}
-
-        {current?.updatedBy && (
-          <p className="text-[11px] text-stone-400">
-            Zuletzt geändert von {current.updatedBy.name}.
-          </p>
-        )}
-      </Card>
-    </section>
-  );
 }
 
 /**
- * Der Actionstep der Woche — der Vorsatz, den man die Woche über vor sich
- * herträgt.
+ * Termin-Rhythmus und Actionstep der Woche — zwei Karten, **ein** Entwurf.
  *
- * Eine eigene Karte, obwohl er in derselben Zeile wie der Termin-Rhythmus
- * steht: Er ist keine Aussage darüber, wann ihr euch trefft, sondern darüber,
- * was danach stehen bleibt. Er wohnt nur dort, weil „die Woche" die zwischen
- * zwei Terminen ist.
+ * Beide stehen in derselben Zeile am Server (`meeting_schedule_config`), und
+ * die schreibt man mit `If-Match`. Zwei Entwürfe wären zwei Schreibvorgänge
+ * hintereinander auf dieselbe Version, und der zweite bekäme einen Konflikt
+ * mit dem ersten. Getrennte Karten bleiben es trotzdem: Der Actionstep sagt
+ * nicht, wann ihr euch trefft, sondern was danach stehen bleibt.
  */
-function WeeklyActionstepCard() {
+function ScheduleSettings() {
   const schedule = useMeetingSchedule();
   const update = useUpdateMeetingSchedule();
-  const toast = useToast();
+  const [draft, setDraft] = useState<Schedule | null>(null);
 
   const current = schedule.data?.data;
+  const saved = scheduleOf(current);
+  const value = draft ?? saved;
+  const set = (patch: Partial<Schedule>) => setDraft({ ...value, ...patch });
+
+  // Geschrieben wird nur, was sich geändert hat — wie im Bearbeiten-Dialog
+  // eines Termins.
+  const changes = (Object.keys(value) as (keyof Schedule)[]).filter(
+    (key) => value[key] !== saved[key],
+  );
+
+  useAdminDraftSection('schedule', {
+    dirty: current !== undefined && changes.length > 0,
+    save: async () => {
+      const input: UpdateMeetingScheduleInput = Object.fromEntries(
+        changes.map((key) => [key, value[key]]),
+      );
+      await update.mutateAsync(input);
+      setDraft(null);
+    },
+    reset: () => setDraft(null),
+  });
 
   return (
-    <section>
-      <SectionTitle>Actionstep der Woche</SectionTitle>
-      <Card className="space-y-4">
-        {/* Eine eigene Mutation neben der des Rhythmus — kippt sie wegen einer
-            fremden Änderung (412), sagt das der Hinweis statt eines Schalters,
-            der still zurückspringt. */}
-        {update.conflict && (
-          <ConflictBanner onResolve={update.resolveConflict} />
-        )}
-        <SwitchRow
-          label={'Auf „Heute" anzeigen'}
-          description="Der Vorsatz vom letzten Abend zum Abhaken, plus die wöchentliche Erinnerung. An Einheiten und über die Nachbereitung bleibt der Actionstep stehen, wenn diese Option ausgeschalten ist."
-          checked={current?.weeklyActionstep ?? true}
-          disabled={update.isPending}
-          onChange={(next) =>
-            update.mutate(
-              { weeklyActionstep: next },
-              {
-                onSuccess: () =>
-                  toast.success(
-                    next
-                      ? 'Der Actionstep steht wieder auf „Heute".'
-                      : 'Der Actionstep der Woche ist aus.',
-                  ),
-              },
-            )
+    <>
+      <section>
+        <SectionTitle
+          info={
+            <>
+              Tag, Abstand, Uhrzeit und Zeitzone gelten für Termine, die die App
+              ab jetzt anlegt. Was schon im Kalender steht, behält seinen Tag
+              und seine Zeit — dafür hat längst jemand zugesagt.
+            </>
           }
-        />
-      </Card>
-    </section>
+        >
+          Termin-Rhythmus
+        </SectionTitle>
+        <Card className="space-y-4">
+          {update.conflict && (
+            <ConflictBanner onResolve={update.resolveConflict} />
+          )}
+
+          {/* Steht über allem anderen, denn es entscheidet, ob das Übrige
+              überhaupt eine Frage ist — dasselbe Muster wie bei den
+              Gebetsbuddys. */}
+          <CheckRow
+            label="Termine automatisch anlegen"
+            hint="Sieben Abende stehen immer im Voraus bereit."
+            info={
+              <>
+                Aus heißt: Ihr legt eure Termine selbst an. Was schon im
+                Kalender steht, bleibt stehen, und auch „Termine vorausplanen“
+                unter Läufe legt dann nichts an. Solange es an ist, sind von
+                Hand angelegte Termine als „besonders“ vorbelegt — sie sind dann
+                meistens ein Geburtstag oder eine Freizeit.
+              </>
+            }
+            checked={value.autoGenerate}
+            onChange={(next) => set({ autoGenerate: next })}
+          />
+
+          {value.autoGenerate && (
+            <>
+              <Field label="Wochentag">
+                <Select
+                  value={value.weekday}
+                  onChange={(event) =>
+                    set({ weekday: Number(event.target.value) })
+                  }
+                >
+                  {WEEKDAYS.map((name, index) => (
+                    <option key={name} value={index}>
+                      {name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              <Field label="Abstand">
+                <Select
+                  value={value.intervalWeeks}
+                  onChange={(event) =>
+                    set({ intervalWeeks: Number(event.target.value) })
+                  }
+                >
+                  {INTERVALS.map(({ weeks, label }) => (
+                    <option key={weeks} value={weeks}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              <Field
+                label="Uhrzeit"
+                info={
+                  <>
+                    Ab dieser Uhrzeit hat ein Abend begonnen: Dann sehen alle
+                    den Inhalt seines Themas, und die Nachbereitung lässt sich
+                    anlegen.
+                  </>
+                }
+              >
+                <TextInput
+                  type="time"
+                  value={value.startTime}
+                  onChange={(event) => set({ startTime: event.target.value })}
+                />
+              </Field>
+
+              {/* Die dritte Angabe desselben Satzes: „dienstags um 18 Uhr" ist
+                  ohne sie nicht zu deuten — und „welchen Tag haben wir" ebenso
+                  wenig. */}
+              <Field
+                label="Zeitzone"
+                info={
+                  <>
+                    In dieser Zone gilt die Uhrzeit, und in ihr zählt die App,
+                    welchen Tag wir haben. Anders als Tag und Uhrzeit gilt sie
+                    sofort für alle Termine.
+                  </>
+                }
+              >
+                <Select
+                  value={value.timeZone}
+                  onChange={(event) => set({ timeZone: event.target.value })}
+                >
+                  {ZONES.map((zone) => (
+                    <option key={zone} value={zone}>
+                      {zone}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              <div className="space-y-1 border-t border-line pt-3">
+                <CheckRow
+                  label="Lobpreis- und Gebetsabende"
+                  hint="Der letzte Termin im Monat bekommt Lieder und ein Testimony statt eines Themas."
+                  info={
+                    <>
+                      Gilt für neue Termine — was schon im Kalender steht,
+                      behält seine Bausteine. Am einzelnen Abend lässt sich das
+                      jederzeit über „Bearbeiten“ umbauen.
+                    </>
+                  }
+                  checked={value.praiseEvenings}
+                  onChange={(next) => set({ praiseEvenings: next })}
+                />
+
+                {/* Anders als der Lobpreisabend voreingestellt **aus** — die
+                    Rolle ist eine Einladung, und wer sie nicht will, soll sie
+                    nicht abwählen müssen. */}
+                <CheckRow
+                  label="Snacks vorbelegen"
+                  hint="Neue Termine bekommen die Rolle „Snacks“ gleich mit."
+                  info={
+                    <>
+                      Gilt für neue Termine. An einem einzelnen Abend lässt sich
+                      der Baustein immer anhaken, auch ohne diese Vorgabe.
+                    </>
+                  }
+                  checked={value.snackSlot}
+                  onChange={(next) => set({ snackSlot: next })}
+                />
+              </div>
+            </>
+          )}
+
+          {current?.updatedBy && (
+            <p className="text-[11px] text-stone-400">
+              Zuletzt geändert von {current.updatedBy.name}.
+            </p>
+          )}
+        </Card>
+      </section>
+
+      <section>
+        <SectionTitle>Actionstep der Woche</SectionTitle>
+        <Card>
+          <CheckRow
+            label={'Auf „Heute“ anzeigen'}
+            hint="Der Vorsatz vom letzten Abend zum Abhaken, mit wöchentlicher Erinnerung."
+            info={
+              <>
+                Aus heißt: keine Karte auf „Heute“ und keine Erinnerung. Der
+                Actionstep an Einheiten und in der Nachbereitung bleibt, und die
+                anderen erfahren weiterhin, wenn einer eingetragen wird.
+              </>
+            }
+            checked={value.weeklyActionstep}
+            onChange={(next) => set({ weeklyActionstep: next })}
+          />
+        </Card>
+      </section>
+    </>
   );
 }
 
@@ -356,10 +317,36 @@ function PrayerBuddyConfigCard() {
   const update = useUpdatePrayerBuddyConfig();
   const rotate = useRotatePrayerBuddies();
   const toast = useToast();
-  const [weeks, setWeeks] = useState('');
+  const [draft, setDraft] = useState<{
+    enabled: boolean;
+    weeks: string;
+  } | null>(null);
 
   const current = config.data?.data;
-  const value = weeks || String(current?.periodLengthWeeks ?? 2);
+  const saved = {
+    enabled: current?.enabled ?? true,
+    weeks: String(current?.periodLengthWeeks ?? 2),
+  };
+  const value = draft ?? saved;
+  const weeks = Number(value.weeks);
+
+  useAdminDraftSection('prayer', {
+    dirty:
+      current !== undefined &&
+      (value.enabled !== saved.enabled || value.weeks !== saved.weeks),
+    invalid:
+      value.enabled && !(Number.isInteger(weeks) && weeks >= 1 && weeks <= 12)
+        ? 'Eine Gebetsrunde dauert 1 bis 12 Wochen.'
+        : undefined,
+    save: async () => {
+      await update.mutateAsync({
+        ...(value.enabled !== saved.enabled ? { enabled: value.enabled } : {}),
+        ...(value.weeks !== saved.weeks ? { periodLengthWeeks: weeks } : {}),
+      });
+      setDraft(null);
+    },
+    reset: () => setDraft(null),
+  });
 
   return (
     <section>
@@ -369,67 +356,64 @@ function PrayerBuddyConfigCard() {
           <ConflictBanner onResolve={update.resolveConflict} />
         )}
 
-        {/* Der Schalter steht über allem anderen, denn er entscheidet, ob das
-            Übrige überhaupt eine Frage ist. Aus heißt ganz aus: kein Tab, keine
-            Karte auf „Heute", keine Benachrichtigungsart. Bestehende Runden
-            bleiben stehen und sind beim Wiedereinschalten wieder da. */}
-        <SwitchRow
+        {/* Steht über allem anderen, denn es entscheidet, ob das Übrige
+            überhaupt eine Frage ist. */}
+        <CheckRow
           label="Gebetsbuddys"
-          description="Alle paar Wochen neue Zweier- und Dreiergruppen, die füreinander beten. Ohne sie fällt der Gebets-Tab weg."
-          checked={current?.enabled ?? true}
-          disabled={update.isPending}
-          onChange={(next) =>
-            update.mutate(
-              { enabled: next },
-              {
-                onSuccess: () =>
-                  toast.success(
-                    next
-                      ? 'Gebetsbuddys sind wieder da.'
-                      : 'Gebetsbuddys sind aus.',
-                  ),
-              },
-            )
+          hint="Zweier- und Dreiergruppen, die füreinander beten."
+          info={
+            <>
+              Aus heißt ganz aus: kein Gebet-Tab, keine Karte auf „Heute“, keine
+              Nachrichten. Bestehende Runden bleiben gespeichert und sind beim
+              Wiedereinschalten wieder da.
+            </>
           }
+          checked={value.enabled}
+          onChange={(next) => setDraft({ ...value, enabled: next })}
         />
 
-        {current?.enabled !== false && (
+        {value.enabled && (
           <>
-            <p className="text-[11px] leading-relaxed text-stone-400">
-              Hier kannst du einstellen, wie viele Wochen eine Gebetsrunde
-              dauert. Vorgabe sind zwei Wochen. Die Änderung gilt für die
-              Runden, die ab jetzt angelegt werden.
-            </p>
-
-            <Field label="Länge einer Runde" hint="Angabe in Wochen">
+            <Field
+              label="Länge einer Runde in Wochen"
+              info={
+                <>
+                  Vorgabe sind zwei Wochen. Die Änderung gilt für Runden, die ab
+                  jetzt angelegt werden.
+                </>
+              }
+            >
               <TextInput
                 type="number"
                 min="1"
                 max="12"
-                value={value}
-                onChange={(event) => setWeeks(event.target.value)}
+                value={value.weeks}
+                onChange={(event) =>
+                  setDraft({ ...value, weeks: event.target.value })
+                }
               />
             </Field>
 
-            <div className="flex gap-2">
+            {/* Eine Aktion und kein Teil des Entwurfs: Sie zieht eine Runde
+                vor, die schon geplant ist. Nicht „neu würfeln": Fünf Runden
+                stehen im Voraus, also wird die nächste geplante vorgezogen. */}
+            <div className="flex items-center gap-3 rounded-md border border-line p-3">
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1.5 text-sm font-bold text-stone-800">
+                  Nächste Runde vorziehen
+                  <InfoTip label="Nächste Runde vorziehen">
+                    Beendet die laufende Runde und zieht die nächste geplante
+                    auf heute vor. Alle bekommen Bescheid, wer jetzt ihr Buddy
+                    ist. Danach steht der Vorlauf wieder voll.
+                  </InfoTip>
+                </p>
+                <p className="text-[11px] text-stone-400">
+                  Wirkt sofort, ohne Speichern.
+                </p>
+              </div>
               <Button
                 variant="secondary"
-                className="flex-1"
-                loading={update.isPending}
-                disabled={Number(value) === current?.periodLengthWeeks}
-                onClick={() =>
-                  update.mutate(
-                    { periodLengthWeeks: Number(value) },
-                    {
-                      onSuccess: () => toast.success('Rhythmus gespeichert.'),
-                    },
-                  )
-                }
-              >
-                Speichern
-              </Button>
-              <Button
-                className="flex-1"
+                size="sm"
                 loading={rotate.isPending}
                 onClick={() =>
                   rotate.mutate(true, {
@@ -442,16 +426,10 @@ function PrayerBuddyConfigCard() {
                   })
                 }
               >
-                Jetzt weiterschalten
+                <Play size={12} />
+                Los
               </Button>
             </div>
-
-            {/* Nicht „neu würfeln": Fünf Runden stehen im Voraus, also wird die
-            nächste geplante vorgezogen. */}
-            <p className="text-[11px] leading-relaxed text-stone-400">
-              Beendet die laufende Runde und zieht die nächste geplante auf
-              heute vor. Danach steht der Vorlauf wieder voll.
-            </p>
           </>
         )}
 
@@ -468,6 +446,7 @@ function PrayerBuddyConfigCard() {
 interface Job {
   label: string;
   hint: string;
+  info: string;
   pending: boolean;
   run: () => void;
 }
@@ -493,7 +472,8 @@ function JobsCard() {
   const jobs: Job[] = [
     {
       label: 'Termine vorausplanen',
-      hint: 'Legt Abende an, bis sieben im Voraus stehen. Sinnvoll direkt nach einer Änderung am Rhythmus.',
+      hint: 'Legt Abende an, bis sieben im Voraus stehen.',
+      info: 'Läuft jede Nacht um 3 Uhr. Sinnvoll direkt nach einer Änderung am Rhythmus. Ist „Termine automatisch anlegen“ aus, legt er nichts an.',
       pending: generate.isPending,
       run: () =>
         generate.mutate(undefined, {
@@ -504,7 +484,8 @@ function JobsCard() {
     },
     {
       label: 'Gebetsrunden vorausplanen',
-      hint: 'Legt Runden an, bis fünf im Voraus stehen. Meldet niemandem etwas — das passiert erst, wenn eine Runde beginnt.',
+      hint: 'Legt Runden an, bis fünf im Voraus stehen.',
+      info: 'Läuft jede Nacht um 4 Uhr. Meldet niemandem etwas — das passiert erst, wenn eine Runde beginnt.',
       pending: planRounds.isPending,
       run: () =>
         planRounds.mutate(undefined, {
@@ -519,7 +500,8 @@ function JobsCard() {
     },
     {
       label: 'Gebetsrunde prüfen',
-      hint: 'Sinnvoll, wenn jemand neu dazugekommen oder gegangen ist: Die laufende Runde wird nachgezogen — niemand steht draußen, niemand bleibt allein, keine Gruppe größer als drei. Neu gewürfelt wird nicht.',
+      hint: 'Zieht die laufende Runde nach, wenn jemand kam oder ging.',
+      info: 'Niemand steht draußen, niemand bleibt allein, keine Gruppe wird größer als drei. Neu gewürfelt wird nicht. Läuft jede Nacht um 4 Uhr.',
       pending: repairRound.isPending,
       run: () =>
         repairRound.mutate(undefined, {
@@ -534,7 +516,8 @@ function JobsCard() {
     },
     {
       label: 'Abwesenheiten abgleichen',
-      hint: 'Sagt Termine ab, für die jemand als abwesend eingetragen ist. Sinnvoll, wenn ein Urlaub einen Abend noch nicht abgesagt hat.',
+      hint: 'Sagt Termine ab, die in eine Abwesenheit fallen.',
+      info: 'Läuft jede Nacht um 3:30 Uhr. Sinnvoll, wenn ein Urlaub einen Abend noch nicht abgesagt hat.',
       pending: syncAbsences.isPending,
       run: () =>
         syncAbsences.mutate(undefined, {
@@ -547,7 +530,8 @@ function JobsCard() {
     },
     {
       label: 'Verwaiste Orte wegräumen',
-      hint: 'Löscht stillgelegte Orte, an denen kein Termin und niemand mehr hängt. Läuft nie von selbst.',
+      hint: 'Löscht stillgelegte Orte, an denen nichts mehr hängt.',
+      info: 'Läuft nie von selbst. Ein Ort, an dem ein Termin stattfand oder jemand wohnt, bleibt stehen.',
       pending: purgeLocations.isPending,
       run: () =>
         purgeLocations.mutate(undefined, {
@@ -567,12 +551,10 @@ function JobsCard() {
       <SectionTitle>Läufe</SectionTitle>
       <Card className="space-y-3">
         <p className="text-[11px] leading-relaxed text-stone-400">
-          Normalerweise brauchst du hier nichts zu tun: Termine vorausplanen,
-          Gebetsrunden planen und prüfen und Abwesenheiten abgleichen erledigt
-          die App jede Nacht von selbst. Die Knöpfe sind für den Fall, dass du
-          nicht bis morgen warten willst — etwa direkt nach einer Änderung am
-          Rhythmus oder wenn jemand neu dazugekommen ist. Jeder Lauf erledigt
-          nur, was noch fehlt; zweimal drücken schadet nicht.
+          Automatismen der App laufen jeweils jede Nacht von selbst. Hier kannst
+          du diese manuell auslösen, um zu prüfen, ob alles stimmt, oder um nach
+          einer Änderung am Rhythmus oder an den Gebetsbuddys die nächsten
+          Termine und Runden sofort anzulegen.
         </p>
         {jobs.map((job) => (
           <div
@@ -580,7 +562,10 @@ function JobsCard() {
             className="flex items-center gap-3 rounded-md border border-line p-3"
           >
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-stone-800">{job.label}</p>
+              <p className="flex items-center gap-1.5 text-sm font-bold text-stone-800">
+                {job.label}
+                <InfoTip label={job.label}>{job.info}</InfoTip>
+              </p>
               <p className="text-[11px] leading-relaxed text-stone-400">
                 {job.hint}
               </p>

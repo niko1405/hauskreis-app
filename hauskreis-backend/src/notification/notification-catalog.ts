@@ -454,11 +454,10 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     type: NotificationType.GIFT_IDEA_COMMENTED,
     category: 'Geburtstage',
     label: 'Kommentare zu Geschenkideen',
-    // Nur an die, die schon beteiligt sind: wer den Vorschlag gemacht oder
-    // dort etwas geschrieben hat. Alle anderen lesen es, wenn sie
-    // vorbeischauen — sonst wäre jeder Satz eine Nachricht an neun Leute.
+    // An alle außer dem Geburtstagskind: Nur an die Beteiligten ging ein
+    // „hat sie schon" an dem vorbei, der gerade besorgen wollte.
     description:
-      'Wenn jemand einen Vorschlag kommentiert, den du gemacht oder selbst kommentiert hast.',
+      'Wenn jemand einen Geschenk-Vorschlag kommentiert — außer bei deinem eigenen Geburtstag.',
     schedule: { kind: 'EVENT' },
     defaultEnabled: true,
   },

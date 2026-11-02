@@ -199,9 +199,9 @@ function Loaded({ personId }: { personId: string }) {
 
         {/* Nur ohne Kopfleiste. Ist sie an, führt der hervorgehobene Knopf
             dort zur Gruppe, und zwei Wege zum selben Ziel auf einem Bildschirm
-            sind einer zu viel. */}
+            sind einer zu viel. Am Rechner steht die Gruppe in der Spalte. */}
         {!header.shown && (
-          <section>
+          <section className="md:hidden">
             <SectionTitle>Euer Hauskreis</SectionTitle>
             <Link href="/hauskreis">
               <Button variant="secondary" className="w-full">
@@ -212,8 +212,10 @@ function Loaded({ personId }: { personId: string }) {
           </section>
         )}
 
+        {/* Am Rechner ist die Verwaltung ein Ziel der Seitenspalte, samt
+            ihrem Punkt — hier stünde sie ein zweites Mal. */}
         {me.isAdmin && (
-          <section>
+          <section className="md:hidden">
             <SectionTitle>Verwaltung</SectionTitle>
             <Link href="/admin">
               <Button variant="secondary" className="w-full">

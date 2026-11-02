@@ -9,6 +9,10 @@
  * etwas darüber sieht, soll sie abschalten können — der Weg zur Gruppe steht
  * dann im Profil.
  *
+ * **Nur mobil.** Am Rechner gibt es die Leiste nicht — Gruppe und Glocke
+ * stehen dort in der Seitenspalte —, und der Schalter im Profil ist dort
+ * ausgeblendet.
+ *
  * **Warum im Gerät und nicht auf dem Server**, genau wie bei `lib/theme.ts`:
  * Es ist eine Aussage über diesen Bildschirm, nicht über diese Person. Auf dem
  * Telefon mit Leiste und am Rechner ohne ist kein Widerspruch, sondern der

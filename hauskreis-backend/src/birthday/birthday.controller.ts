@@ -124,9 +124,9 @@ export class BirthdayController {
     await this.config.setPairings(params.hauskreisId, dto, membership.id);
     await this.planner.plan(params.hauskreisId);
 
-    // Erst nach dem Planen lesen. Wer jemanden auf „Niemand" stehen lässt,
-    // bekommt vom Planer einen zugewiesen — die Antwort soll zeigen, was jetzt
-    // gilt, und nicht, was eine Sekunde lang galt.
+    // Erst nach dem Planen lesen. Hat sich die Gruppe in der Zwischenzeit
+    // geändert, schließt der Planer die Lücke — die Antwort soll zeigen, was
+    // jetzt gilt, und nicht, was eine Sekunde lang galt.
     return this.config.listPairings(params.hauskreisId);
   }
 
@@ -152,6 +152,39 @@ export class BirthdayController {
       params.id,
       dto,
       membership.id,
+    );
+  }
+
+  /**
+   * Den eigenen Anteil abhaken — jede:r für sich, außer Geburtstagskind und
+   * dem, der besorgt hat. Ohne `If-Match`: ein Haken je Person.
+   */
+  @Put(':id/payment')
+  @ApiZodResponse(BirthdayDetailResponseDto)
+  markPaid(
+    @Param() params: BirthdayParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.birthdays.setPaid(
+      params.hauskreisId,
+      params.id,
+      membership.id,
+      true,
+    );
+  }
+
+  @Delete(':id/payment')
+  @HttpCode(HttpStatus.OK)
+  @ApiZodResponse(BirthdayDetailResponseDto)
+  unmarkPaid(
+    @Param() params: BirthdayParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.birthdays.setPaid(
+      params.hauskreisId,
+      params.id,
+      membership.id,
+      false,
     );
   }
 
