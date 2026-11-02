@@ -579,7 +579,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'songs',
     question: 'Wie hinterlege ich Text und Akkorde für mich?',
     answer:
-      'Öffne das Lied und tipp auf **„Eigene Version anlegen"**. Das geht, sobald das Lied einen **Link zum Liedtext** hat — fehlt er, trägst du ihn zuerst unter „Bearbeiten" ein. Dann zwei Schritte:\n\n1. **Sheet holen** — „Öffnen" führt zum Liedtext. Dort alles markieren und kopieren.\n2. **Hier einfügen** — ins Feld oder mit „Aus Zwischenablage einfügen".\n\nDarunter steht sofort die **Vorschau**: Die App erkennt Akkorde über dem Text genauso wie ChordPro, räumt auf, was beim Kopieren mitkommt (auch „Page 1/3"), und sagt dir die Tonart. Was nicht passt, bearbeitest du dort (siehe nächste Frage). Gespeichert wird **oben rechts**.\n\nBeim Anlegen eines neuen Lieds — im Archiv wie am Termin — kannst du die Version gleich mit hinterlegen.',
+      'Öffne das Lied und tipp ganz unten auf **„Eigene Version anlegen"**. Das geht, sobald das Lied einen **Link zum Liedtext** hat — fehlt er, trägst du ihn zuerst unter „Bearbeiten" ein. Dann zwei Schritte:\n\n1. **Sheet holen** — „Öffnen" führt zum Liedtext. Dort alles markieren und kopieren.\n2. **Hier einfügen** — ins Feld oder mit „Aus Zwischenablage einfügen".\n\nDarunter steht sofort die **Vorschau**: Die App erkennt Akkorde über dem Text genauso wie ChordPro, räumt auf, was beim Kopieren mitkommt (auch „Page 1/3"), und sagt dir die Tonart. Was nicht passt, bearbeitest du dort (siehe nächste Frage). Gespeichert wird **oben rechts**.\n\nBeim Anlegen eines neuen Lieds — im Archiv wie am Termin — kannst du die Version gleich mit hinterlegen.',
     keywords: [
       'text',
       'akkorde',

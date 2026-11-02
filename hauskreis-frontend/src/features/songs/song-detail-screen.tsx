@@ -14,6 +14,11 @@
  * (`lib/own-songs/store.ts`), und die Seite sagt das an der Stelle, an der es
  * gilt.
  *
+ * **Der Link ist die Hauptsache.** Die meisten kommen hierher, um den Text vor
+ * sich zu haben, und dafür ist er der Weg — deshalb steht er als großer Knopf
+ * gleich unter dem Titel. Eine eigene Version legt sich an, wer spielt; solange
+ * es keine gibt, lädt nur ein Hinweis ganz unten dazu ein.
+ *
  * **Lesen ist der Normalfall**, wie auf der Themenseite. Was man ändert —
  * Angaben, die eigene Version, das Löschen —, steht hinter „Bearbeiten".
  * Gespeichert wird dort trotzdem gezielt: die Angaben mit einem Knopf, alles
@@ -40,6 +45,7 @@ import {
   Guitar,
   ExternalLink,
   FileMusic,
+  FileText,
   Info,
   Link2,
   Lock,
@@ -56,7 +62,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BackButton } from '@/components/layout/back-button';
 import { EditBar } from '@/components/layout/edit-bar';
 import { Badge } from '@/components/ui/badge';
-import { Button, IconButton } from '@/components/ui/button';
+import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
 import { Segmented } from '@/components/ui/segmented';
@@ -191,8 +197,7 @@ function Loaded({
     setEditing((current) => !current);
   };
 
-  const facts = [
-    song.artist ?? 'Interpret unbekannt',
+  const played = [
     song.timesPlayed > 0
       ? `${song.timesPlayed}× gesungen`
       : 'noch nie gesungen',
@@ -252,7 +257,10 @@ function Loaded({
           <h1 className="mt-1 font-serif text-3xl leading-tight font-bold text-stone-900">
             {song.title}
           </h1>
-          <p className="mt-1 text-sm text-stone-400">{facts.join(' · ')}</p>
+          <p className="mt-0.5 text-[15px] text-stone-500">
+            {song.artist ?? 'Interpret unbekannt'}
+          </p>
+          <p className="mt-2 text-xs text-stone-400">{played.join(' · ')}</p>
         </header>
 
         {editing ? (
@@ -262,15 +270,13 @@ function Loaded({
             onDirty={setFieldsDirty}
           />
         ) : (
-          <SourceLink url={song.lyricsUrl} />
+          <SourceLink
+            url={song.lyricsUrl}
+            onRequestEdit={() => setEditing(true)}
+          />
         )}
 
-        <OwnVersion
-          song={song}
-          own={own}
-          editing={editing}
-          onRequestEdit={() => setEditing(true)}
-        />
+        <OwnVersion song={song} own={own} editing={editing} />
 
         {editing && !meetingId && <DeleteSong song={song} own={own} />}
       </div>
@@ -474,14 +480,38 @@ function hostOf(url: string): string {
   }
 }
 
-/** Der Weg nach draußen — oben, weil er die erste Frage beantwortet. */
-function SourceLink({ url }: { url: string | null }) {
+/**
+ * Der Weg nach draußen — der eine gefüllte Knopf der Seite.
+ *
+ * Fehlt der Link, steht an seiner Stelle eine gestrichelte Lücke mit dem Weg
+ * dorthin: Ohne Link fehlt der Seite ihre Hauptsache, und ein Satz in
+ * Grau sagte das zu leise.
+ */
+function SourceLink({
+  url,
+  onRequestEdit,
+}: {
+  url: string | null;
+  onRequestEdit: () => void;
+}) {
   if (!isHttpUrl(url)) {
     return (
-      <p className="flex items-center gap-2 text-xs text-stone-400">
-        <Link2 size={13} />
-        Noch kein Link zum Liedtext — unter „Bearbeiten" ergänzen.
-      </p>
+      <div className="flex items-center gap-4 rounded-card border border-dashed border-line-strong p-4">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-stone-100 text-stone-400">
+          <Link2 size={20} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold text-stone-700">
+            Noch kein Link zum Liedtext
+          </span>
+          <span className="block text-xs text-stone-400">
+            Text oder Akkorde, etwa von Ultimate Guitar
+          </span>
+        </span>
+        <Button size="sm" variant="secondary" onClick={onRequestEdit}>
+          Eintragen
+        </Button>
+      </div>
     );
   }
 
@@ -490,20 +520,22 @@ function SourceLink({ url }: { url: string | null }) {
       href={url}
       target="_blank"
       rel="noreferrer"
-      className="flex items-center gap-3 rounded-card border border-line bg-card p-4 transition-colors hover:border-terracotta-400"
+      className={cn(
+        'flex items-center gap-4 rounded-card bg-terracotta-500 p-4 text-white transition-colors hover:bg-terracotta-700',
+        'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas focus-visible:outline-none',
+        PRESSABLE,
+      )}
     >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-terracotta-50 text-terracotta-600">
-        <Link2 size={16} />
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
+        <FileText size={20} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-bold text-stone-800">
-          Zum Liedtext
-        </span>
-        <span className="block truncate text-[11px] text-stone-400">
+        <span className="block text-base font-bold">Zum Liedtext</span>
+        <span className="block truncate text-xs text-white/75">
           {hostOf(url)}
         </span>
       </span>
-      <ExternalLink size={16} className="shrink-0 text-terracotta-600" />
+      <ExternalLink size={18} className="shrink-0 text-white/80" />
     </a>
   );
 }
@@ -530,13 +562,10 @@ function OwnVersion({
   song,
   own,
   editing,
-  onRequestEdit,
 }: {
   song: Song;
   own: OwnSong | null;
   editing: boolean;
-  /** Ohne Link gibt es keine eigene Version — der Weg dorthin ist „Bearbeiten". */
-  onRequestEdit: () => void;
 }) {
   const toast = useToast();
   const confirm = useConfirm();
@@ -577,101 +606,70 @@ function OwnVersion({
   const shownKey = transposed ? (shift?.key ?? null) : key;
 
   return (
-    <section>
-      <SectionTitle action={<PrivateNote />}>Deine Version</SectionTitle>
-
+    <>
       {own && sheet && shift ? (
-        <Card className="p-4">
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            {hasChords(sheet) && !editing && (
-              <ModeSwitch value={mode} onChange={setMode} />
-            )}
-            {shownKey && (
-              <KeyBadge
-                tonart={shownKey}
-                original={transposed ? (key ?? '?') : null}
-              />
-            )}
-            {own.capo && <Badge>Kapo {own.capo}</Badge>}
-            {editing ? (
-              <span className="ml-auto flex gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => setEditor(true)}
-                >
-                  <Pencil size={13} /> Ändern
-                </Button>
-                <Button
-                  size="sm"
-                  variant="danger"
-                  onClick={() => void removeVersion()}
-                >
-                  <Trash2 size={13} /> Entfernen
-                </Button>
-              </span>
-            ) : (
-              // Auf dem Telefon nur das Symbol, dafür groß: Es ist der eine
-              // Knopf der Karte, den man mit dem Instrument in der Hand trifft.
-              <>
-                <IconButton
-                  label="Vollbild"
-                  onClick={() => setFullscreen(true)}
-                  className="ml-auto size-11 border border-line bg-card text-terracotta-600 hover:text-terracotta-700 sm:hidden"
-                >
-                  <Maximize2 size={22} />
-                </IconButton>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="ml-auto hidden sm:inline-flex"
-                  onClick={() => setFullscreen(true)}
-                >
-                  <Maximize2 size={13} /> Vollbild
-                </Button>
-              </>
-            )}
-          </div>
-          <ChordSheetView
-            sheet={sheet}
-            chord={shift.chord}
-            mode={editing ? 'chords' : mode}
-          />
-        </Card>
+        <section>
+          <SectionTitle action={<PrivateNote />}>Deine Version</SectionTitle>
+          <Card className="p-4">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              {hasChords(sheet) && !editing && (
+                <ModeSwitch value={mode} onChange={setMode} />
+              )}
+              {shownKey && (
+                <KeyBadge
+                  tonart={shownKey}
+                  original={transposed ? (key ?? '?') : null}
+                />
+              )}
+              {own.capo && <Badge>Kapo {own.capo}</Badge>}
+              {editing ? (
+                <span className="ml-auto flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setEditor(true)}
+                  >
+                    <Pencil size={13} /> Ändern
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => void removeVersion()}
+                  >
+                    <Trash2 size={13} /> Entfernen
+                  </Button>
+                </span>
+              ) : (
+                // Auf dem Telefon nur das Symbol, dafür groß: Es ist der eine
+                // Knopf der Karte, den man mit dem Instrument in der Hand trifft.
+                <>
+                  <IconButton
+                    label="Vollbild"
+                    onClick={() => setFullscreen(true)}
+                    className="ml-auto size-11 border border-line bg-card text-terracotta-600 hover:text-terracotta-700 sm:hidden"
+                  >
+                    <Maximize2 size={22} />
+                  </IconButton>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="ml-auto hidden sm:inline-flex"
+                    onClick={() => setFullscreen(true)}
+                  >
+                    <Maximize2 size={13} /> Vollbild
+                  </Button>
+                </>
+              )}
+            </div>
+            <ChordSheetView
+              sheet={sheet}
+              chord={shift.chord}
+              mode={editing ? 'chords' : mode}
+            />
+          </Card>
+        </section>
       ) : (
-        <Card className="flex flex-col items-center p-6 text-center">
-          <span className="flex size-11 items-center justify-center rounded-full bg-terracotta-50 text-terracotta-600">
-            <FileMusic size={20} />
-          </span>
-          <p className="mt-3 font-serif text-lg font-bold text-stone-900">
-            Hinterleg dir Text & Akkorde
-          </p>
-          {/* Ohne Link kein Editor: Was in einer eigenen Version steht, kommt
-              von der verlinkten Seite, und ihr erster Schritt zeigte sonst ins
-              Leere. */}
-          <p className="mt-1 max-w-xs text-xs leading-relaxed text-stone-500">
-            {linked
-              ? 'Liedtext öffnen, alles kopieren, hier einfügen — die App erkennt die Akkorde. Die Version bleibt auf diesem Gerät, niemand sonst sieht sie.'
-              : 'Trag zuerst einen Link zum Liedtext ein — von dort kopierst du Text & Akkorde.'}
-          </p>
-          {linked ? (
-            <Button className="mt-4" onClick={() => setEditor(true)}>
-              <Lock size={14} />
-              Eigene Version anlegen
-            </Button>
-          ) : (
-            !editing && (
-              <Button
-                className="mt-4"
-                variant="secondary"
-                onClick={onRequestEdit}
-              >
-                <Link2 size={14} />
-                Link eintragen
-              </Button>
-            )
-          )}
-        </Card>
+        <OwnVersionNote linked={linked} onCreate={() => setEditor(true)} />
       )}
 
       {editor && (
@@ -718,7 +716,49 @@ function OwnVersion({
           onClose={() => setFullscreen(false)}
         />
       )}
-    </section>
+    </>
+  );
+}
+
+/**
+ * Die Einladung zur eigenen Version — unten und leise.
+ *
+ * Text und Akkorde hinterlegt sich, wer spielt; für alle anderen ist die Seite
+ * der Link oben. Als großer Kasten an zweiter Stelle sah die Einladung aus wie
+ * die Hauptsache der Seite. Wie es geht, erklärt der Editor selbst.
+ *
+ * Ohne Link gibt es keinen Knopf: Was in einer eigenen Version steht, kommt
+ * von der verlinkten Seite, und der Weg zum Link steht schon oben.
+ */
+function OwnVersionNote({
+  linked,
+  onCreate,
+}: {
+  linked: boolean;
+  onCreate: () => void;
+}) {
+  return (
+    <aside className="flex items-start gap-3 rounded-card border border-line p-4">
+      <FileMusic size={16} className="mt-0.5 shrink-0 text-stone-400" />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs leading-relaxed text-stone-500">
+          <span className="font-semibold text-stone-700">Spielst du mit?</span>{' '}
+          {linked
+            ? 'Hinterleg dir Text & Akkorde, mit Vollbild und Transponieren. Sie bleiben auf diesem Gerät.'
+            : 'Sobald ein Link zum Liedtext da ist, kannst du dir hier Text & Akkorde hinterlegen.'}
+        </p>
+        {linked && (
+          <button
+            type="button"
+            onClick={onCreate}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-md text-xs font-semibold text-terracotta-600 hover:text-terracotta-700 focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none"
+          >
+            <Lock size={12} />
+            Eigene Version anlegen
+          </button>
+        )}
+      </div>
+    </aside>
   );
 }
 

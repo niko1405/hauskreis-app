@@ -625,7 +625,7 @@ function Loaded({
                 {meeting.location?.address ??
                   (meeting.location
                     ? 'Keine Adresse hinterlegt'
-                    : 'Trag oben einen Gastgeber oder Treffpunkt ein')}
+                    : 'Trage einen Gastgeber oder Treffpunkt ein')}
               </p>
             </div>
 

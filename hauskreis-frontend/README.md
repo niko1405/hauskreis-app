@@ -1097,7 +1097,7 @@ aus dem Rest der App heraustreten statt aus der Seite. Sie heißt „Setlist".
   **Vorschlag** wischt ebenso und gibt den Papierkorb frei, der ihn ohne
   Rückfrage vom Abend nimmt — außer am vergangenen oder abgesagten Abend
   (`readOnly`). Steckt ein Link in der Zeile, schluckt `SwipeActions` den Klick
-  nach einem Zug, sonst öffnete ein Maus-Zug die Liedseite.
+  nach einem Zug, sonst öffnete der Zug die Liedseite.
 - **Ein Tipp auf ein Lied führt auf seine Seite** (`/lied?id=…&termin=…`).
   Bearbeiten darf dort jede:r — gemeint ist der kaputte Link, den irgendwer beim
   Üben bemerkt —, und danach lädt die Seite die Liederliste des Termins neu, die
@@ -1733,6 +1733,12 @@ wäre kein Entwurf, sondern ein Versäumnis. Gefragt wird nach
 `pointerType === 'mouse'`: Ein Touchscreen schickt beim Tippen ebenfalls ein
 `pointerenter`, und die Zeile ginge schon beim Antippen auf.
 
+**Mit der Maus wird die Zeile schmaler, statt zu rücken** (`marginRight` statt
+`x`). Nach links geschoben lag ihr Anfang außerhalb der Karte — bei den
+Vorschlägen am Termin genau der Kreis, mit dem das Musik-Team ein Lied in die
+Setlist nimmt. Ziehen lässt sich die Zeile mit der Maus deshalb nicht
+(`drag={maus ? false : 'x'}`); beim Wischen rückt sie wie bisher.
+
 **Immer nur eine offen.** Ein winziger Speicher wie in `overlay-lock.ts`
 (`useSyncExternalStore`, eine Id) hält fest, welche Zeile offen ist; wer aufgeht,
 schließt die andere. Einen „Fertig"-Knopf je Zeile braucht es deshalb nicht.
@@ -1839,6 +1845,16 @@ App, die nichts anzeigt.
 
 Als Build-Kommando gehört dort `pnpm build` hinterlegt, nicht `next build`: Im
 Skript steckt `--webpack`, und ohne das bricht der Bau ab (siehe unten).
+
+**Die Schriften liegen im Repo** (`src/app/fonts/`, eingebunden mit
+`next/font/local` in `layout.tsx`) — der Latin-Schnitt von Google Fonts, als
+Datei. `next/font/google` holt sie beim Bauen von Google, und das hängt den Bau
+an eine Antwort, die er nicht in der Hand hat: Auf Cloudflare kam einmal eine
+Adresse ohne Dateiendung zurück, und der Loader brach mit
+`Cannot read properties of null (reading '1')` ab. Zeichen außerhalb von Latin
+zeichnet der Browser in der Ersatzschrift. Eine neue Schrift oder ein neuer
+Schnitt heißt: die `woff2` aus dem CSS von `fonts.googleapis.com/css2` laden
+und daneben legen.
 
 [`public/_headers`](public/_headers) reist mit nach `out/` und regelt das
 Caching am Rand. Der Grund dafür ist `sw.js`: Cachte ein CDN den Service Worker,
@@ -2241,12 +2257,14 @@ in `back`. Und er fragt nach Ungespeichertem wie jeder Link.
 ## Lieder haben eine eigene Seite
 
 `/lied?id=…` (`features/songs/song-detail-screen.tsx`), vom Termin aus mit
-`&termin=…`. Oben, was alle sehen: Titel, „8× gesungen · zuletzt am …" und
-„Zum Liedtext". Die Zahlen kommen mit dem einzelnen Lied (`timesPlayed`,
+`&termin=…`. Oben, was alle sehen: Titel, Interpret, „8× gesungen · zuletzt am
+…" und als gefüllter Knopf „Zum Liedtext" (`SourceLink`) — ohne Link eine
+gestrichelte Lücke mit „Eintragen", die in „Bearbeiten" schaltet. Die Zahlen kommen mit dem einzelnen Lied (`timesPlayed`,
 `lastPlayedAt`, dazu `meetingCount` — Löschen geht nur, wenn es an keinem Abend
 steht, nur für Admins und nur aus dem Archiv; die Seite sagt das, statt einen
 Knopf anzubieten, der mit `400` antwortet). Darunter „Deine Version", als Text;
-Akkorde sind ein Umschalter entfernt.
+Akkorde sind ein Umschalter entfernt. Gibt es noch keine, steht statt der
+Sektion nur `OwnVersionNote` ganz unten — sie ist Sache der Musiker.
 
 Unten steht statt der Tab-Leiste `EditBar` (`components/layout/edit-bar.tsx`,
 dieselbe wie am vergangenen Termin): „Bearbeiten" für Angaben (`SongFields`),
