@@ -1,34 +1,42 @@
 import type { Metadata, Viewport } from 'next';
-import {
-  Instrument_Serif,
-  Plus_Jakarta_Sans,
-  Roboto_Slab,
-} from 'next/font/google';
+import localFont from 'next/font/local';
 import { BootWatchdog } from '@/components/layout/boot-watchdog';
 import { StatusBarScrim } from '@/components/layout/status-bar-scrim';
 import { ThemeScript } from '@/components/layout/theme-script';
 import { Providers } from './providers';
 import './globals.css';
 
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+/*
+ * Die Schriften liegen im Repo (`fonts/`, der Latin-Schnitt von Google Fonts)
+ * und nicht hinter `next/font/google`. Das lädt sie beim Bauen von Google, und
+ * wenn Google dem Build-Server eine Adresse ohne Dateiendung schickt, bricht
+ * der Build ab — so geschehen auf Cloudflare. Was außerhalb von Latin liegt
+ * (etwa „Ł"), zeichnet der Browser Zeichen für Zeichen in der Ersatzschrift.
+ */
+const jakarta = localFont({
+  src: './fonts/plus-jakarta-sans-latin.woff2',
+  weight: '200 800',
   variable: '--font-jakarta',
   display: 'swap',
 });
 
-const instrument = Instrument_Serif({
-  subsets: ['latin'],
+const instrument = localFont({
+  src: [
+    { path: './fonts/instrument-serif-latin.woff2', style: 'normal' },
+    { path: './fonts/instrument-serif-italic-latin.woff2', style: 'italic' },
+  ],
   weight: '400',
-  style: ['normal', 'italic'],
   variable: '--font-instrument',
   display: 'swap',
+  adjustFontFallback: 'Times New Roman',
 });
 
-const robotoSlab = Roboto_Slab({
-  subsets: ['latin'],
+const robotoSlab = localFont({
+  src: './fonts/roboto-slab-latin.woff2',
+  weight: '100 900',
   variable: '--font-roboto-slab',
   display: 'swap',
+  adjustFontFallback: 'Times New Roman',
 });
 
 export const metadata: Metadata = {

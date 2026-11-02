@@ -1840,6 +1840,16 @@ App, die nichts anzeigt.
 Als Build-Kommando gehört dort `pnpm build` hinterlegt, nicht `next build`: Im
 Skript steckt `--webpack`, und ohne das bricht der Bau ab (siehe unten).
 
+**Die Schriften liegen im Repo** (`src/app/fonts/`, eingebunden mit
+`next/font/local` in `layout.tsx`) — der Latin-Schnitt von Google Fonts, als
+Datei. `next/font/google` holt sie beim Bauen von Google, und das hängt den Bau
+an eine Antwort, die er nicht in der Hand hat: Auf Cloudflare kam einmal eine
+Adresse ohne Dateiendung zurück, und der Loader brach mit
+`Cannot read properties of null (reading '1')` ab. Zeichen außerhalb von Latin
+zeichnet der Browser in der Ersatzschrift. Eine neue Schrift oder ein neuer
+Schnitt heißt: die `woff2` aus dem CSS von `fonts.googleapis.com/css2` laden
+und daneben legen.
+
 [`public/_headers`](public/_headers) reist mit nach `out/` und regelt das
 Caching am Rand. Der Grund dafür ist `sw.js`: Cachte ein CDN den Service Worker,
 könnte eine installierte PWA ihren eigenen Worker nicht mehr erneuern — ein
