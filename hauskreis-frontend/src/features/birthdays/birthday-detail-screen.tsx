@@ -20,10 +20,18 @@
  * Person (`shareCents`, gerechnet vom Server). Wer mitzahlt, hakt seinen Anteil
  * selbst ab; wer besorgt hat, sieht, wer schon hat. Bis zum Haken steht der
  * Geburtstag bei jedem unter „Noch offen" — auch wenn er vorbei ist.
+ *
+ * **Ist er vorbei, ist es eine andere Seite.** Man kommt über „Noch offen"
+ * hierher, um zu bezahlen oder nachzusehen, wer schon hat — nicht mehr, um
+ * Ideen zu sammeln. Also: „hat das Geschenk besorgt", „wurde 25", oben
+ * „Vorbei", darunter „Was geschenkt wurde", und keine Vorschläge. Nur wer
+ * besorgt hat und noch nicht eingetragen hat, was es wurde, sieht sie weiter —
+ * zum Nachtragen.
  */
 import {
   BellRing,
   Cake,
+  CalendarCheck,
   Check,
   ExternalLink,
   Gift,
@@ -53,6 +61,7 @@ import {
   useBirthday,
   useCommentGiftIdea,
   useDecideGift,
+  useMe,
   useNudgeBirthday,
   usePeople,
   useProposeGiftIdea,
@@ -120,16 +129,26 @@ function Loaded({
   occasionId: string;
   data: BirthdayDetail;
 }) {
+  const past = data.daysUntil < 0;
+
   return (
     <div className="space-y-6 px-5 pt-safe-4 pb-10">
       <div className="flex items-center justify-between">
         <BackButton fallback={BIRTHDAYS} />
-        {data.frozen && !data.isOwn && (
-          <Badge>
-            <Lock size={11} />
-            steht fest
-          </Badge>
-        )}
+        {!data.isOwn &&
+          (past ? (
+            <Badge>
+              <CalendarCheck size={11} />
+              Vorbei
+            </Badge>
+          ) : (
+            data.frozen && (
+              <Badge>
+                <Lock size={11} />
+                steht fest
+              </Badge>
+            )
+          ))}
       </div>
 
       <Hero data={data} />
@@ -193,7 +212,11 @@ function Hero({ data }: { data: BirthdayDetail }) {
             {countdown(data.daysUntil)}
           </Badge>
         )}
-        {data.age !== null && <Badge>wird {data.age}</Badge>}
+        {data.age !== null && (
+          <Badge>
+            {data.daysUntil < 0 ? 'wurde' : 'wird'} {data.age}
+          </Badge>
+        )}
       </div>
     </header>
   );
@@ -229,10 +252,20 @@ function Others({
   data: BirthdayDetail;
 }) {
   const [proposing, setProposing] = useState(false);
+  const past = data.daysUntil < 0;
 
   const ideas = data.ideas ?? [];
-  const open = ideas.filter((idea) => idea.giftedOn === null);
-  const gifted = ideas.filter((idea) => idea.giftedOn !== null);
+  // Verschenkt heißt: an einem **früheren** Geburtstag. Was für diesen
+  // ausgesucht ist, bleibt bei den Vorschlägen, als gewählte Karte — es stand
+  // sonst zweimal da, oben als „Es wird" und unten als „schon geschenkt".
+  const earlier = (idea: GiftIdea) =>
+    idea.giftedOn !== null && idea.giftedOn < data.occursOn;
+  const open = ideas.filter((idea) => !earlier(idea));
+  const gifted = ideas.filter(earlier);
+
+  // Vorbei braucht die Vorschläge nur noch, wer besorgt hat und nachtragen
+  // will, was es geworden ist (`canDecide` gilt zwei Wochen über den Tag).
+  const proposals = !past || (data.canDecide && data.gift === null);
 
   const card = (idea: GiftIdea) => (
     <IdeaCard
@@ -247,68 +280,79 @@ function Others({
 
   return (
     <>
-      <GiftStatusCard occasionId={occasionId} data={data} />
+      <GiftStatusCard occasionId={occasionId} data={data} past={past} />
 
       {data.canDecide && <PriceCard occasionId={occasionId} data={data} />}
 
-      <section>
-        <SectionTitle
-          action={
-            open.length > 0 && (
-              <span className="text-[11px] font-semibold text-stone-400 normal-case">
-                {open.length === 1 ? '1 Idee' : `${open.length} Ideen`}
-              </span>
-            )
-          }
-        >
-          Vorschläge
-        </SectionTitle>
+      {past && (
+        <GivenGift
+          gift={data.gift}
+          idea={ideas.find((idea) => idea.id === data.gift?.id)}
+          canDecide={data.canDecide}
+        />
+      )}
 
-        <div className="space-y-3">
-          {open.map(card)}
+      {proposals && (
+        <section>
+          <SectionTitle
+            action={
+              open.length > 0 && (
+                <span className="text-[11px] font-semibold text-stone-400 normal-case">
+                  {open.length === 1 ? '1 Idee' : `${open.length} Ideen`}
+                </span>
+              )
+            }
+          >
+            Vorschläge
+          </SectionTitle>
 
-          {open.length === 0 && (
-            <Card className="flex flex-col items-center gap-2 py-6 text-center">
-              <Gift size={22} className="text-stone-300" />
-              <p className="text-sm font-bold text-stone-700">
-                Noch keine Idee
-              </p>
-              <p className="max-w-xs text-[11px] leading-relaxed text-stone-400">
-                Was würde {data.person.name} freuen? Jede Idee hilft dem, der
-                das Geschenk besorgt.
-              </p>
-            </Card>
-          )}
+          <div className="space-y-3">
+            {open.map(card)}
 
-          {data.canPropose && (
-            <button
-              type="button"
-              onClick={() => setProposing(true)}
-              className={cn(
-                'flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong px-3 py-3 text-[12px] font-semibold text-stone-500 transition-colors hover:border-terracotta-400 hover:text-terracotta-600',
-                PRESSABLE,
-              )}
-            >
-              <Plus size={14} />
-              Idee vorschlagen
-            </button>
-          )}
-        </div>
-      </section>
+            {open.length === 0 && (
+              <Card className="flex flex-col items-center gap-2 py-6 text-center">
+                <Gift size={22} className="text-stone-300" />
+                <p className="text-sm font-bold text-stone-700">
+                  Noch keine Idee
+                </p>
+                <p className="max-w-xs text-[11px] leading-relaxed text-stone-400">
+                  Was würde {data.person.name} freuen? Jede Idee hilft dem, der
+                  das Geschenk besorgt.
+                </p>
+              </Card>
+            )}
 
-      {gifted.length > 0 && (
+            {data.canPropose && (
+              <button
+                type="button"
+                onClick={() => setProposing(true)}
+                className={cn(
+                  'flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong px-3 py-3 text-[12px] font-semibold text-stone-500 transition-colors hover:border-terracotta-400 hover:text-terracotta-600',
+                  PRESSABLE,
+                )}
+              >
+                <Plus size={14} />
+                Idee vorschlagen
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
+      {!past && gifted.length > 0 && (
         <section>
           <SectionTitle>Schon einmal geschenkt</SectionTitle>
           <GiftedList
             occasionId={occasionId}
             ideas={gifted}
-            selectedId={data.gift?.id ?? null}
             canDecide={data.canDecide}
           />
         </section>
       )}
 
-      {data.canNudge && <NudgeCard occasionId={occasionId} data={data} />}
+      {!past && data.canNudge && (
+        <NudgeCard occasionId={occasionId} data={data} />
+      )}
 
       <ProposeSheet
         occasionId={occasionId}
@@ -321,23 +365,79 @@ function Others({
 }
 
 /**
- * Was schon einmal geschenkt wurde — zum Nachsehen, nicht zum Abstimmen.
+ * Was es an einem vergangenen Geburtstag geworden ist.
+ *
+ * Nur das Geschenk dieses Jahres — der Verlauf früherer Jahre hilft beim
+ * Aussuchen, und ausgesucht wird hier nichts mehr. Steht nichts drin, sagt die
+ * Karte das, statt zu verschwinden: Sonst sähe die Seite aus, als fehlte
+ * etwas.
+ */
+function GivenGift({
+  gift,
+  idea,
+  canDecide,
+}: {
+  gift: BirthdayDetail['gift'];
+  idea: GiftIdea | undefined;
+  canDecide: boolean;
+}) {
+  return (
+    <section>
+      <SectionTitle>Was geschenkt wurde</SectionTitle>
+      {gift ? (
+        <Card className="flex items-start gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-success-bg text-success">
+            <Gift size={16} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] leading-snug font-bold break-words text-stone-800">
+              {gift.text}
+            </p>
+            {idea?.proposedBy && (
+              <p className="mt-0.5 text-[11px] text-stone-400">
+                Vorgeschlagen von {idea.proposedBy.name}
+              </p>
+            )}
+            {isHttpUrl(idea?.url) && (
+              <div className="mt-2">
+                <ShopLink url={idea.url} />
+              </div>
+            )}
+          </div>
+        </Card>
+      ) : (
+        <Card>
+          <p className="text-[12px] text-stone-400">
+            {canDecide
+              ? 'Noch nicht eingetragen — such unten aus, was es geworden ist.'
+              : 'Nicht eingetragen, was es geworden ist.'}
+          </p>
+        </Card>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Was an früheren Geburtstagen geschenkt wurde — zum Nachsehen, nicht zum
+ * Abstimmen.
  *
  * Sie stehen hier, damit niemand dasselbe zweimal aussucht. Stimmen und
  * Kommentare gehören zu einer offenen Frage, und die ist hier beantwortet;
  * deshalb eine Zeile je Geschenk statt einer Karte. Auswählen kann, wer
  * besorgt, trotzdem: Ein Buch war vor drei Jahren richtig und ist es
  * vielleicht wieder.
+ *
+ * **Der Text bricht um**, Jahr und Link stehen darunter. Alles in einer Zeile
+ * schnitt auf dem Telefon den Namen des Geschenks nach einem Wort ab.
  */
 function GiftedList({
   occasionId,
   ideas,
-  selectedId,
   canDecide,
 }: {
   occasionId: string;
   ideas: GiftIdea[];
-  selectedId: string | null;
   canDecide: boolean;
 }) {
   const decide = useDecideGift(occasionId);
@@ -347,46 +447,38 @@ function GiftedList({
     <Card className="p-0">
       <ul className="divide-y divide-line">
         {ideas.map((idea) => (
-          <li key={idea.id} className="flex items-center gap-3 px-4 py-3">
-            <Gift size={15} className="shrink-0 text-stone-300" />
+          <li key={idea.id} className="flex items-start gap-3 px-4 py-3">
+            <Gift size={15} className="mt-0.5 shrink-0 text-stone-300" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-stone-700">
+              <p className="text-sm font-semibold break-words text-stone-700">
                 {idea.text}
               </p>
-              {idea.giftedOn && (
-                <p className="text-[11px] text-stone-400">
-                  geschenkt {idea.giftedOn.slice(0, 4)}
-                </p>
-              )}
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-stone-400">
+                {idea.giftedOn && <span>{idea.giftedOn.slice(0, 4)}</span>}
+                <ShopLink url={idea.url} />
+              </div>
             </div>
-            <ShopLink url={idea.url} />
-            {selectedId === idea.id ? (
-              <Badge variant="terracotta">
-                <Check size={11} />
-                ausgesucht
-              </Badge>
-            ) : (
-              canDecide && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={decide.isPending}
-                  onClick={() =>
-                    decide.mutate(
-                      { giftIdeaId: idea.id },
-                      {
-                        onSuccess: () =>
-                          toast.success(
-                            'Ausgesucht — die anderen wissen Bescheid.',
-                          ),
-                        onError: (error) => toast.error(errorMessage(error)),
-                      },
-                    )
-                  }
-                >
-                  Wieder nehmen
-                </Button>
-              )
+            {canDecide && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0"
+                disabled={decide.isPending}
+                onClick={() =>
+                  decide.mutate(
+                    { giftIdeaId: idea.id },
+                    {
+                      onSuccess: () =>
+                        toast.success(
+                          'Ausgesucht — die anderen wissen Bescheid.',
+                        ),
+                      onError: (error) => toast.error(errorMessage(error)),
+                    },
+                  )
+                }
+              >
+                Wieder nehmen
+              </Button>
             )}
           </li>
         ))}
@@ -402,65 +494,80 @@ function GiftedList({
  * „worauf lasse ich mich ein" ist gerade die Frage derer, die mitzahlen.
  * Darunter, was daraus für einen selbst folgt: der eigene Anteil zum
  * Abhaken, oder für den, der besorgt hat, wer schon gezahlt hat.
+ *
+ * Vorbei steht der Satz in der Vergangenheit, und „Es wird" fällt weg — was es
+ * wurde, steht darunter unter „Was geschenkt wurde". Ob man selbst besorgt,
+ * fragt die Karte an der Person und nicht an `canDecide`: Das endet zwei
+ * Wochen nach dem Tag, und danach hieße es sonst „Ben hat besorgt" für Ben.
  */
 function GiftStatusCard({
   occasionId,
   data,
+  past,
 }: {
   occasionId: string;
   data: BirthdayDetail;
+  past: boolean;
 }) {
+  const me = useMe();
+  const mine = data.responsible !== null && data.responsible.id === me.me?.id;
+  const name = data.responsible?.name ?? '';
+
   return (
     <Card className="space-y-3">
       {data.responsible ? (
         <div className="flex items-center gap-3">
           <Avatar person={data.responsible} size="md" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-stone-800">
-              {data.canDecide
+          <p className="min-w-0 flex-1 text-sm font-bold text-stone-800">
+            {past
+              ? mine
+                ? 'Du hast das Geschenk besorgt'
+                : `${name} hat das Geschenk besorgt`
+              : mine
                 ? 'Du besorgst das Geschenk'
-                : `${data.responsible.name} besorgt das Geschenk`}
-            </p>
-            {data.frozen && (
-              <p className="mt-0.5 text-[11px] text-stone-400">
-                Daran ändert sich nichts mehr — der Geburtstag ist zu nah.
+                : `${name} besorgt das Geschenk`}
+          </p>
+        </div>
+      ) : (
+        <p className="text-[11px] leading-relaxed text-stone-400">
+          {past
+            ? 'Für das Geschenk war niemand eingeteilt.'
+            : 'Für das Geschenk ist niemand eingeteilt. Vorschlagen darf trotzdem jede:r — jemand nimmt es sicher mit.'}
+        </p>
+      )}
+
+      {!past && (
+        <div
+          className={cn(
+            'flex items-center gap-3 rounded-lg border px-3 py-2.5',
+            data.gift
+              ? 'border-success-line bg-success-bg'
+              : 'border-dashed border-line-strong',
+          )}
+        >
+          <Gift
+            size={16}
+            className={cn(
+              'shrink-0',
+              data.gift ? 'text-success' : 'text-stone-300',
+            )}
+          />
+          <div className="min-w-0 flex-1">
+            {data.gift ? (
+              <p className="text-sm text-stone-700">
+                Es wird:{' '}
+                <span className="font-bold text-stone-900">
+                  {data.gift.text}
+                </span>
+              </p>
+            ) : (
+              <p className="text-[12px] text-stone-400">
+                Noch nichts ausgesucht
               </p>
             )}
           </div>
         </div>
-      ) : (
-        <p className="text-[11px] leading-relaxed text-stone-400">
-          Für das Geschenk ist niemand eingeteilt. Vorschlagen darf trotzdem
-          jede:r — jemand nimmt es sicher mit.
-        </p>
       )}
-
-      <div
-        className={cn(
-          'flex items-center gap-3 rounded-lg border px-3 py-2.5',
-          data.gift
-            ? 'border-success-line bg-success-bg'
-            : 'border-dashed border-line-strong',
-        )}
-      >
-        <Gift
-          size={16}
-          className={cn(
-            'shrink-0',
-            data.gift ? 'text-success' : 'text-stone-300',
-          )}
-        />
-        <div className="min-w-0 flex-1">
-          {data.gift ? (
-            <p className="text-sm text-stone-700">
-              Es wird:{' '}
-              <span className="font-bold text-stone-900">{data.gift.text}</span>
-            </p>
-          ) : (
-            <p className="text-[12px] text-stone-400">Noch nichts ausgesucht</p>
-          )}
-        </div>
-      </div>
 
       {/* Immer der Gesamtpreis, und der Anteil gleich dahinter: Allein die
           Zahl ließ offen, ob sie für einen selbst gilt oder für alle. */}
@@ -698,7 +805,6 @@ function IdeaCard({
         <span className="flex items-center gap-1.5 text-[11px] text-stone-400">
           <Avatar person={idea.proposedBy} size="xs" zoomable={false} />
           {idea.proposedBy?.name ?? 'Ehemaliges Mitglied'}
-          {idea.giftedOn && ' · schon geschenkt'}
         </span>
         <ShopLink url={idea.url} />
       </div>

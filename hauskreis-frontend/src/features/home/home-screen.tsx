@@ -110,12 +110,14 @@ export function HomeScreen() {
           />
 
           {/* Unter den Rollen, weil es auch eine ist — nur eine, die nach dem
-              Abend kommt: den eigenen Anteil am Geschenk geben. Bis zum Haken
-              auf der Seite des Geburtstags, auch wenn der Tag vorbei ist. */}
+              Abend kommt: den eigenen Anteil am Geschenk geben, oder als
+              Besorger:in nachsehen, wer noch fehlt. Bis zum Haken auf der
+              Seite des Geburtstags, auch wenn der Tag vorbei ist. „Noch offen"
+              wie im Register, weil es beides meint. */}
           {giftPayments.length > 0 && (
             <div className="mt-4 space-y-2">
               <p className="px-1 text-[11px] font-semibold tracking-wider text-stone-400 uppercase">
-                Noch zu bezahlen
+                Noch offen
               </p>
               <OpenPayments items={giftPayments} />
             </div>

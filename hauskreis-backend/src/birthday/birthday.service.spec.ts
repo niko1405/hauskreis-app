@@ -45,7 +45,12 @@ function occasion(overrides: Record<string, unknown> = {}) {
 }
 
 function setup(
-  options: { occasion?: Record<string, unknown>; paid?: string[] } = {},
+  options: {
+    occasion?: Record<string, unknown>;
+    paid?: string[];
+    /** Was die Abfrage nach eigenem Vorgestreckten liefert. */
+    advanced?: Record<string, unknown>[];
+  } = {},
 ) {
   const row = occasion(options.occasion);
   const notify = jest.fn().mockResolvedValue(undefined);
@@ -55,7 +60,17 @@ function setup(
       paidAt: new Date('2026-08-12T10:00:00.000Z'),
     })),
   );
-  const occasionFindMany = jest.fn().mockResolvedValue([row]);
+  // Zwei Abfragen nach Geburtstagen: Wer besorgt hat, steht bei der nach dem
+  // Vorgestreckten als Gleichheit in `responsiblePersonId`, bei der nach der
+  // eigenen Schuld nicht.
+  const occasionFindMany = jest.fn(
+    (args: { where: { responsiblePersonId?: unknown } }) =>
+      Promise.resolve(
+        typeof args.where.responsiblePersonId === 'string'
+          ? (options.advanced ?? [])
+          : [row],
+      ),
+  );
   const upsert = jest.fn().mockResolvedValue({});
   const deleteMany = jest.fn().mockResolvedValue({ count: 1 });
   const personFindMany = jest.fn(
@@ -234,8 +249,66 @@ describe('BirthdayService — Anteil und bezahlt', () => {
       },
     });
     expect(open).toEqual([
-      expect.objectContaining({ occasionId: OCCASION, shareCents: 2000 }),
+      expect.objectContaining({
+        occasionId: OCCASION,
+        shareCents: 2000,
+        collecting: null,
+      }),
     ]);
+  });
+
+  /**
+   * Wer besorgt hat, findet den vergangenen Geburtstag ebenfalls dort — als
+   * „2 von 3 haben bezahlt", bis alle es haben.
+   */
+  describe('für den, der besorgt hat', () => {
+    const advanced = (paid: string[]) => ({
+      ...occasion(),
+      payments: paid.map((personId) => ({ personId })),
+    });
+
+    it('fragt nur nach vergangenen, eigenen der letzten drei Monate', async () => {
+      const { service, occasionFindMany } = setup();
+
+      await service.openPayments('hk', BEN.id);
+
+      const where = occasionFindMany.mock.calls
+        .map((call) => call[0].where)
+        .find((entry) => entry.responsiblePersonId === BEN.id);
+      expect(where).toMatchObject({
+        priceCents: { not: null },
+        occursOn: {
+          gte: new Date(
+            utc('2026-08-20').getTime() - OPEN_PAYMENT_DAYS * 86_400_000,
+          ),
+          lt: utc('2026-08-20'),
+        },
+      });
+    });
+
+    it('zählt, wer schon gezahlt hat', async () => {
+      // Chris hat, Dora noch nicht — Anna hat Geburtstag, Ben selbst zählt nicht.
+      const { service } = setup({ advanced: [advanced([CHRIS.id])] });
+
+      const open = await service.openPayments('hk', BEN.id);
+
+      expect(open).toContainEqual(
+        expect.objectContaining({
+          occasionId: OCCASION,
+          collecting: { paid: 1, of: 2 },
+        }),
+      );
+    });
+
+    it('verschwindet, sobald alle gezahlt haben', async () => {
+      const { service } = setup({
+        advanced: [advanced([CHRIS.id, DORA.id])],
+      });
+
+      const open = await service.openPayments('hk', BEN.id);
+
+      expect(open.filter((row) => row.collecting !== null)).toEqual([]);
+    });
   });
 
   it('kennt für Ehemalige nichts Offenes', async () => {

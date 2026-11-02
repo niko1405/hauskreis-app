@@ -2428,6 +2428,10 @@ export interface components {
           text: string;
         } | null;
         shareCents: number | null;
+        collecting: {
+          paid: number;
+          of: number;
+        } | null;
       }[];
       members: {
         person: {
@@ -4248,6 +4252,10 @@ export interface components {
           text: string;
         } | null;
         shareCents: number | null;
+        collecting: {
+          paid: number;
+          of: number;
+        } | null;
       }[];
     };
     HeaderImageListResponseDto: {

@@ -1,14 +1,19 @@
 'use client';
 
 /**
- * Geschenk-Anteile, die man noch nicht abgehakt hat — im Register
- * „Geburtstage" und auf „Heute".
+ * Was beim Geschenk-Geld noch offen ist — im Register „Geburtstage" und auf
+ * „Heute".
  *
- * **Auch für vergangene Geburtstage**, und genau um die geht es: Ist der Tag
- * vorbei, zeigt das Register schon den nächsten, und der Preis stand nirgends
- * mehr. Wer das Überweisen verpasst hatte, fand ihn nicht wieder. Die Zeile
- * bleibt, bis man auf der Seite des Geburtstags „bezahlt" abhakt — oder drei
- * Monate um sind (`OPEN_PAYMENT_DAYS` im Backend).
+ * **Der eigene Anteil**, auch für vergangene Geburtstage, und genau um die
+ * geht es: Ist der Tag vorbei, zeigt das Register schon den nächsten, und der
+ * Preis stand nirgends mehr. Wer das Überweisen verpasst hatte, fand ihn nicht
+ * wieder. Die Zeile bleibt, bis man auf der Seite des Geburtstags „bezahlt"
+ * abhakt — oder drei Monate um sind (`OPEN_PAYMENT_DAYS` im Backend).
+ *
+ * **Und für den, der besorgt hat** (`collecting`): ein vergangener Geburtstag,
+ * an dem noch jemand fehlt, als „3 von 7 haben bezahlt". Sonst käme er nach
+ * dem Tag nicht mehr an die Liste, wer schon gezahlt hat. Neutral statt
+ * getönt — es ist keine eigene Schuld.
  *
  * Ohne Einträge zeichnet sie nichts, auch keine Überschrift: Ein „Nichts
  * offen" wäre eine Nachricht über etwas, das niemand vermisst.
@@ -32,7 +37,10 @@ export function OpenPayments({ items }: { items: OpenGiftPayment[] }) {
           <Link
             href={`/geburtstag?id=${item.occasionId}`}
             className={cn(
-              'flex items-center gap-3 rounded-card border border-warn-line bg-warn-bg/40 p-3.5',
+              'flex items-center gap-3 rounded-card border p-3.5',
+              item.collecting
+                ? 'border-line bg-card'
+                : 'border-warn-line bg-warn-bg/40',
               PRESSABLE,
               'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
             )}
@@ -43,9 +51,11 @@ export function OpenPayments({ items }: { items: OpenGiftPayment[] }) {
                 Geschenk für {item.person.name}
               </p>
               <p className="truncate text-[11px] text-stone-500">
-                {item.shareCents !== null
-                  ? `${formatCents(item.shareCents)} · dein Anteil`
-                  : 'Dein Anteil'}
+                {item.collecting
+                  ? `${item.collecting.paid} von ${item.collecting.of} haben bezahlt`
+                  : item.shareCents !== null
+                    ? `${formatCents(item.shareCents)} · dein Anteil`
+                    : 'Dein Anteil'}
                 {' · '}
                 {formatDayMonth(item.occursOn)}
               </p>
