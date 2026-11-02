@@ -23,6 +23,8 @@ afterEach(() => {
 function setup(
   options: {
     meeting?: Record<string, unknown> | null;
+    /** Welcher Abend als nächster ansteht (`findNextMeetingId`). */
+    next?: string | null;
     people?: string[];
     unlocked?: Array<{
       home: { id: string; name: string };
@@ -43,6 +45,12 @@ function setup(
         }
       : options.meeting,
   );
+
+  const meetingFindFirst = jest
+    .fn()
+    .mockResolvedValue(
+      options.next === null ? null : { id: options.next ?? 'meeting-1' },
+    );
 
   const personFindMany = jest
     .fn()
@@ -67,7 +75,7 @@ function setup(
   const service = withClock(
     new MeetingNotificationService(
       {
-        meeting: { findUnique: meetingFindUnique },
+        meeting: { findUnique: meetingFindUnique, findFirst: meetingFindFirst },
         person: { findMany: personFindMany, findUnique: personFindUnique },
         notificationLog: { deleteMany: logDeleteMany },
       } as unknown as PrismaService,
@@ -270,5 +278,64 @@ describe('handleDecline', () => {
 
       expect(anAlle(notify)).toBeUndefined();
     });
+  });
+});
+
+describe('notifyHostAboutAnswer', () => {
+  it('sagt dem Gastgeber des nächsten Abends, wer unsicher wird', async () => {
+    const { service, notify } = setup();
+
+    await service.notifyHostAboutAnswer('meeting-1', 'antonia', {
+      kind: 'unsure',
+    });
+
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        personId: 'anna',
+        type: NotificationType.ATTENDANCE_DECLINED,
+        relatedMeetingId: 'meeting-1',
+        relatedPersonId: 'antonia',
+        // Sonst schluckte die Entdopplung sie als Dublette einer Absage.
+        relatedKey: 'unsicher',
+      }),
+    );
+    expect(notify.mock.calls[0][0].payload.body).toBe(
+      'Antonia weiß für 4. August noch nicht, ob es klappt.',
+    );
+  });
+
+  it('nennt bei einer Verspätung die Minuten', async () => {
+    const { service, notify } = setup();
+
+    await service.notifyHostAboutAnswer('meeting-1', 'antonia', {
+      kind: 'late',
+      minutes: 30,
+    });
+
+    expect(notify.mock.calls[0][0].relatedKey).toBe('spaeter:30');
+    expect(notify.mock.calls[0][0].payload.body).toBe(
+      'Antonia kommt am 4. August ca. 30 Min später.',
+    );
+  });
+
+  it('schweigt, wenn es nicht der nächste Abend ist', async () => {
+    const { service, notify } = setup({ next: 'meeting-0' });
+
+    await service.notifyHostAboutAnswer('meeting-1', 'antonia', {
+      kind: 'unsure',
+    });
+
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('schweigt, wenn der Gastgeber es selbst ist', async () => {
+    const { service, notify } = setup();
+
+    await service.notifyHostAboutAnswer('meeting-1', 'anna', {
+      kind: 'late',
+      minutes: 15,
+    });
+
+    expect(notify).not.toHaveBeenCalled();
   });
 });

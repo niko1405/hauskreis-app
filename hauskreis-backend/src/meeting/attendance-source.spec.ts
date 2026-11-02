@@ -19,8 +19,26 @@ import { setAttendanceSchema } from './dto/meeting.dto';
  * next sync considered the row its own and would have deleted a deliberate
  * "doch, ich komme" as soon as the holiday was shortened.
  */
-function setup(previousStatus: AttendanceStatus = AttendanceStatus.ABSENT) {
-  const upsert = jest.fn().mockResolvedValue({});
+function setup(
+  previousStatus: AttendanceStatus | null = AttendanceStatus.ABSENT,
+  previousLate: number | null = null,
+) {
+  // Gibt die Zeile zurück, wie Prisma sie schriebe: `undefined` heißt „nicht
+  // anfassen", also bleibt die Verspätung von vorher stehen.
+  const upsert = jest
+    .fn()
+    .mockImplementation(
+      (args: {
+        update: { status: AttendanceStatus; lateMinutes?: number | null };
+      }) =>
+        Promise.resolve({
+          status: args.update.status,
+          lateMinutes:
+            args.update.lateMinutes === undefined
+              ? previousLate
+              : args.update.lateMinutes,
+        }),
+    );
   const releaseFor = jest.fn().mockResolvedValue({
     host: false,
     song: false,
@@ -29,6 +47,7 @@ function setup(previousStatus: AttendanceStatus = AttendanceStatus.ABSENT) {
   });
   const handleDecline = jest.fn();
   const announceRelease = jest.fn();
+  const notifyHostAboutAnswer = jest.fn();
 
   const db = {
     meeting: {
@@ -41,7 +60,13 @@ function setup(previousStatus: AttendanceStatus = AttendanceStatus.ABSENT) {
     },
     person: { findFirst: jest.fn().mockResolvedValue({ id: 'niko' }) },
     meetingAttendance: {
-      findUnique: jest.fn().mockResolvedValue({ status: previousStatus }),
+      findUnique: jest
+        .fn()
+        .mockResolvedValue(
+          previousStatus === null
+            ? null
+            : { status: previousStatus, lateMinutes: previousLate },
+        ),
       upsert,
     },
   };
@@ -60,6 +85,7 @@ function setup(previousStatus: AttendanceStatus = AttendanceStatus.ABSENT) {
       {
         handleDecline,
         announceRelease,
+        notifyHostAboutAnswer,
       } as unknown as MeetingNotificationService,
       { reconcile } as unknown as MeetingCancellationService,
       // Position 5 und 6 (Zuteilungs-Benachrichtigung, Verfügbarkeit) spielen
@@ -79,6 +105,7 @@ function setup(previousStatus: AttendanceStatus = AttendanceStatus.ABSENT) {
     releaseFor,
     handleDecline,
     announceRelease,
+    notifyHostAboutAnswer,
   };
 }
 
@@ -274,5 +301,70 @@ describe('MeetingService.setAttendance und die Rollen', () => {
     });
 
     expect(releaseFor).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Der Gastgeber des nächsten Abends hört auch von „unsicher" und Verspätung.
+ * Ob es der nächste ist, prüft `notifyHostAboutAnswer` selbst — hier geht es
+ * nur darum, wann überhaupt gefragt wird.
+ */
+describe('MeetingService.setAttendance und der Gastgeber', () => {
+  it('meldet, wenn eine Zusage auf „weiß noch nicht" geht', async () => {
+    const { service, notifyHostAboutAnswer } = setup(
+      AttendanceStatus.ATTENDING,
+    );
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.UNKNOWN,
+    });
+
+    expect(notifyHostAboutAnswer).toHaveBeenCalledWith('m-1', 'niko', {
+      kind: 'unsure',
+    });
+  });
+
+  it('meldet nichts, wenn vorher gar keine Antwort dastand', async () => {
+    const { service, notifyHostAboutAnswer } = setup(null);
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.UNKNOWN,
+    });
+
+    expect(notifyHostAboutAnswer).not.toHaveBeenCalled();
+  });
+
+  it('meldet eine neue Verspätung mit ihren Minuten', async () => {
+    const { service, notifyHostAboutAnswer } = setup(
+      AttendanceStatus.ATTENDING,
+    );
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.ATTENDING,
+      lateMinutes: 30,
+    });
+
+    expect(notifyHostAboutAnswer).toHaveBeenCalledWith('m-1', 'niko', {
+      kind: 'late',
+      minutes: 30,
+    });
+  });
+
+  it('meldet dieselbe Verspätung kein zweites Mal', async () => {
+    const { service, notifyHostAboutAnswer } = setup(
+      AttendanceStatus.ATTENDING,
+      30,
+    );
+
+    await service.setAttendance('hk-1', 'm-1', {
+      personId: 'niko',
+      status: AttendanceStatus.ATTENDING,
+      note: 'Bringe Kuchen mit',
+    });
+
+    expect(notifyHostAboutAnswer).not.toHaveBeenCalled();
   });
 });

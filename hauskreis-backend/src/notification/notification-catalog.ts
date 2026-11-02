@@ -330,13 +330,15 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   {
     type: NotificationType.ATTENDANCE_DECLINED,
     category: 'Termine',
-    label: 'Jemand sagt ab',
-    // Zwei Nachrichten, ein Schalter — beschrieben werden deshalb auch beide.
-    // Die zweite geht an alle und ist die einzige Absage, die etwas zu tun
-    // übrig lässt; ein eigener Eintrag dafür machte die Liste länger und die
-    // Entscheidung nicht klarer (siehe `announceReleasedRoles`).
+    label: 'Jemand sagt ab oder kommt später',
+    // Drei Nachrichten, ein Schalter — beschrieben werden deshalb auch alle.
+    // Die an alle ist die einzige Absage, die etwas zu tun übrig lässt; „wird
+    // unsicher" und „kommt später" gehen nur an den Gastgeber des nächsten
+    // Abends. Eigene Einträge dafür machten die Liste länger und die
+    // Entscheidung nicht klarer (siehe `announceReleasedRoles`,
+    // `notifyHostAboutAnswer`).
     description:
-      'Wenn jemand für einen Abend absagt, den du hostest — und wenn dadurch eine Rolle frei wird, etwa das Thema oder die Musik.',
+      'Wenn jemand für einen Abend absagt, den du hostest — beim nächsten Abend auch, wenn jemand unsicher wird oder später kommt. Und wenn durch eine Absage eine Rolle frei wird, etwa das Thema oder die Musik.',
     schedule: { kind: 'EVENT' },
     defaultEnabled: true,
   },
