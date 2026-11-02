@@ -48,16 +48,28 @@ import { cn } from '@/lib/cn';
 import type { MeetingListItem, PersonRef } from '@/lib/api/types';
 import { useRoleAssignment } from './detail/use-role-assignment';
 
-const AssignmentSheet = dynamic(() =>
-  import('@/components/domain/assignment-sheet').then((m) => m.AssignmentSheet),
+/*
+ * Die Sheets werden erst beim ersten Öffnen geladen — mit `loading: () => null`
+ * als eigener Suspense-Grenze. Ohne `loading` setzt `next/dynamic` **keine**
+ * und das ladende Sheet hält die nächste Grenze darüber an: die ganze Seite,
+ * die dann hinter dem aufgehenden Sheet ihre Skeletons zeigt.
+ */
+const AssignmentSheet = dynamic(
+  () =>
+    import('@/components/domain/assignment-sheet').then(
+      (m) => m.AssignmentSheet,
+    ),
+  { loading: () => null },
 );
 
-const VenueSheet = dynamic(() =>
-  import('@/components/domain/venue-sheet').then((m) => m.VenueSheet),
+const VenueSheet = dynamic(
+  () => import('@/components/domain/venue-sheet').then((m) => m.VenueSheet),
+  { loading: () => null },
 );
 
-const SnackSheet = dynamic(() =>
-  import('@/components/domain/snack-sheet').then((m) => m.SnackSheet),
+const SnackSheet = dynamic(
+  () => import('@/components/domain/snack-sheet').then((m) => m.SnackSheet),
+  { loading: () => null },
 );
 
 /**

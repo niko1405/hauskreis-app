@@ -49,8 +49,12 @@ const MeetingCalendar = dynamic(
   () => import('./meeting-calendar').then((m) => m.MeetingCalendar),
   { loading: () => <CardSkeleton /> },
 );
-const CreateMeetingSheet = dynamic(() =>
-  import('./create-meeting-sheet').then((m) => m.CreateMeetingSheet),
+// `loading: () => null` ist die eigene Suspense-Grenze des Sheets — ohne sie
+// zeigte beim ersten Öffnen die Liste dahinter ihre Skeletons (siehe
+// `meeting-detail-screen.tsx`).
+const CreateMeetingSheet = dynamic(
+  () => import('./create-meeting-sheet').then((m) => m.CreateMeetingSheet),
+  { loading: () => null },
 );
 
 type View = 'liste' | 'planung' | 'kalender' | 'geburtstage';
