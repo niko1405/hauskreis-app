@@ -14,6 +14,12 @@
  * nach `pointerType === 'mouse'`: Ein Touchscreen schickt beim Tippen ebenfalls
  * ein `pointerenter`, und die Zeile ginge schon beim Antippen auf.
  *
+ * **Dort wird die Zeile schmaler, statt zu rücken.** Ein Zug nach links
+ * schöbe ihren Anfang aus dem Bild — und am Anfang steht oft gerade das, wofür
+ * der Zeiger gekommen ist: der Kreis, mit dem das Musik-Team einen Vorschlag
+ * in die Setlist nimmt. Beim Wischen rückt sie weiter, denn dort hält der
+ * Finger die Zeile selbst. Gezogen wird mit der Maus deshalb gar nicht.
+ *
  * **Immer nur eine offen.** Ein winziger Speicher wie in `overlay-lock.ts` hält
  * fest, welche Zeile gerade offen ist; wer aufgeht, schließt die andere. Ein
  * „Fertig"-Knopf je Zeile braucht es deshalb nicht.
@@ -24,7 +30,7 @@
  * jeder zweiten Zeile zu weit oder zu kurz.
  *
  * **Ein Wisch ist kein Tipp.** Steckt in der Zeile ein Link (die Setlist am
- * Termin), endet ein Zug mit der Maus mit einem Klick auf ihn — und öffnete
+ * Termin), kann ein Zug mit einem Klick auf ihn enden — und öffnete
  * die Seite, die man gar nicht wollte. Der Klick nach einem Zug wird deshalb
  * geschluckt; der nächste Druck setzt das zurück.
  */
@@ -90,6 +96,7 @@ export function SwipeActions({
   const knoepfe = useRef<HTMLDivElement>(null);
   const gezogen = useRef(false);
   const [breite, setBreite] = useState(0);
+  const [maus, setMaus] = useState(false);
   const controls = useAnimationControls();
 
   useLayoutEffect(() => {
@@ -109,12 +116,15 @@ export function SwipeActions({
 
   // `animate` und nicht das `animate`-Attribut: Das Ziehen setzt `x` selbst,
   // und zwei Quellen für denselben Wert streiten sich beim Loslassen.
+  // Mit der Maus gibt der rechte Rand nach (`marginRight`), sonst rückt die
+  // ganze Zeile (`x`).
   useEffect(() => {
     void controls.start({
-      x: auf ? -breite : 0,
+      x: auf && !maus ? -breite : 0,
+      marginRight: auf && maus ? breite : 0,
       transition: { type: 'spring', damping: 30, stiffness: 300 },
     });
-  }, [auf, breite, controls]);
+  }, [auf, maus, breite, controls]);
 
   const zeigen = () => setOffen(id);
   const schliessen = () => setOffen(offen === id ? null : offen);
@@ -123,10 +133,14 @@ export function SwipeActions({
     <div
       className={cn('relative overflow-hidden', className)}
       onPointerEnter={(event) => {
-        if (event.pointerType === 'mouse') zeigen();
+        if (event.pointerType !== 'mouse') return;
+        setMaus(true);
+        zeigen();
       }}
       onPointerLeave={(event) => {
-        if (event.pointerType === 'mouse') schliessen();
+        if (event.pointerType !== 'mouse') return;
+        setMaus(false);
+        schliessen();
       }}
     >
       {/* Fest im Hintergrund am rechten Rand — die Zeile darüber gibt sie
@@ -161,7 +175,7 @@ export function SwipeActions({
       </div>
 
       <motion.div
-        drag="x"
+        drag={maus ? false : 'x'}
         // Die Richtung wird einmal entschieden und dann gehalten: Ohne das
         // würde jeder senkrechte Wisch die Zeile ein Stück mitnehmen.
         dragDirectionLock

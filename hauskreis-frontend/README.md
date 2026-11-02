@@ -1097,7 +1097,7 @@ aus dem Rest der App heraustreten statt aus der Seite. Sie heißt „Setlist".
   **Vorschlag** wischt ebenso und gibt den Papierkorb frei, der ihn ohne
   Rückfrage vom Abend nimmt — außer am vergangenen oder abgesagten Abend
   (`readOnly`). Steckt ein Link in der Zeile, schluckt `SwipeActions` den Klick
-  nach einem Zug, sonst öffnete ein Maus-Zug die Liedseite.
+  nach einem Zug, sonst öffnete der Zug die Liedseite.
 - **Ein Tipp auf ein Lied führt auf seine Seite** (`/lied?id=…&termin=…`).
   Bearbeiten darf dort jede:r — gemeint ist der kaputte Link, den irgendwer beim
   Üben bemerkt —, und danach lädt die Seite die Liederliste des Termins neu, die
@@ -1732,6 +1732,12 @@ nicht, und eine Liste, die auf dem Telefon bearbeitbar ist und im Fenster nicht,
 wäre kein Entwurf, sondern ein Versäumnis. Gefragt wird nach
 `pointerType === 'mouse'`: Ein Touchscreen schickt beim Tippen ebenfalls ein
 `pointerenter`, und die Zeile ginge schon beim Antippen auf.
+
+**Mit der Maus wird die Zeile schmaler, statt zu rücken** (`marginRight` statt
+`x`). Nach links geschoben lag ihr Anfang außerhalb der Karte — bei den
+Vorschlägen am Termin genau der Kreis, mit dem das Musik-Team ein Lied in die
+Setlist nimmt. Ziehen lässt sich die Zeile mit der Maus deshalb nicht
+(`drag={maus ? false : 'x'}`); beim Wischen rückt sie wie bisher.
 
 **Immer nur eine offen.** Ein winziger Speicher wie in `overlay-lock.ts`
 (`useSyncExternalStore`, eine Id) hält fest, welche Zeile offen ist; wer aufgeht,
