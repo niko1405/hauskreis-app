@@ -257,8 +257,15 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Wer steht an einem vergangenen Abend unter „War nicht da"?',
     answer:
-      'Alle, die nicht zugesagt hatten: wer abgesagt hat, und wer unsicher war oder nie geantwortet hat. Ein Tipp klappt die Liste auf; dort steht bei jedem, was er geantwortet hatte, samt seinem Satz dazu.\n\nOben unter **„Wer war da"** stehen nur die Zusagen.',
-    keywords: ['vergangen', 'anwesend', 'gefehlt', 'nicht da', 'abwesend'],
+      'Alle, die nicht zugesagt hatten: wer abgesagt hat, und wer unsicher war oder nie geantwortet hat. Ein Tipp klappt die Liste auf; ein roter Punkt steht dort bei jedem, ein grüner oben unter **„Wer war da"** — dort stehen nur die Zusagen. Den Satz, den jemand zu seiner Antwort geschrieben hatte, siehst du weiter.\n\n**Für dich selbst kannst du es nachtragen:** Unten auf „Bearbeiten" tippen, dann steht oben „Warst du dabei?" mit Ja oder Nein. Rollen werden dabei nicht frei, und niemand bekommt eine Nachricht.',
+    keywords: [
+      'vergangen',
+      'anwesend',
+      'gefehlt',
+      'nicht da',
+      'abwesend',
+      'nachtragen',
+    ],
   },
   {
     id: 'meetings-autoattend',
@@ -289,7 +296,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Wie trage ich eine Abwesenheit ein — und was passiert dann?',
     answer:
-      'Im Profil unter „Abwesenheiten", als Zeitraum von–bis.\n\nDie App sagt daraufhin alle Abende in diesem Zeitraum für dich ab und **gibt deine Aufgaben frei**: Gastgeber (samt Ort, wenn es dein Zuhause war), Musik, Testimony und die Themen-Zuteilung. Sonst stünde im Plan ein Gastgeber, der nachweislich verreist ist. Eine vorbereitete Themen-Einheit wird dabei nur gelöst und wartet als Entwurf.\n\nDas wirkt sofort, nicht erst am nächsten Morgen, und es gilt nur nach vorn — ein Urlaub, den du im Nachhinein einträgst, schreibt nicht um, wer damals da war.\n\n**Für einen einzelnen Abend kannst du trotzdem zusagen.** Deine Zusage sticht den Zeitraum: Du stehst dann wieder ganz normal in den Vorschlägen und kannst auch eine Rolle übernehmen. Für alle anderen Abende bleibt der Urlaub.\n\nVerkürzt oder löschst du den Zeitraum wieder, bekommst du die Abende zurück. Was du von Hand beantwortet hattest, bleibt in beiden Richtungen unangetastet.',
+      'Im Profil unter „Abwesenheiten", als Zeitraum von–bis.\n\nDie App sagt daraufhin alle Abende in diesem Zeitraum für dich ab und **gibt deine Aufgaben frei**. Einen **Grund**, den du dazuschreibst („Urlaub in Italien"), sehen die anderen an jeder dieser Absagen.\n\nFrei werden: Gastgeber (samt Ort, wenn es dein Zuhause war), Musik, Testimony und die Themen-Zuteilung. Sonst stünde im Plan ein Gastgeber, der nachweislich verreist ist. Eine vorbereitete Themen-Einheit wird dabei nur gelöst und wartet als Entwurf.\n\nDas wirkt sofort, nicht erst am nächsten Morgen, und es gilt nur nach vorn — ein Urlaub, den du im Nachhinein einträgst, schreibt nicht um, wer damals da war.\n\n**Für einen einzelnen Abend kannst du trotzdem zusagen.** Deine Zusage sticht den Zeitraum: Du stehst dann wieder ganz normal in den Vorschlägen und kannst auch eine Rolle übernehmen. Für alle anderen Abende bleibt der Urlaub.\n\nVerkürzt oder löschst du den Zeitraum wieder, bekommst du die Abende zurück. Was du von Hand beantwortet hattest, bleibt in beiden Richtungen unangetastet.',
     keywords: ['urlaub', 'weg', 'verreist', 'zeitraum', 'abwesend'],
   },
   {
@@ -816,7 +823,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'birthdays',
     question: 'Wie funktionieren die Geschenk-Vorschläge?',
     answer:
-      'Auf der Seite eines Geburtstags kann jede:r Ideen vorschlagen und bei beliebig vielen zustimmen — bei Geschenken sind oft zwei gut und einer scheidet aus. Wer vorschlägt, stimmt automatisch mit zu.\n\n**Aussuchen darf nur, wer das Geschenk besorgt.** Damit ist die Abstimmung beendet; zurücknehmen geht trotzdem. Danach kann diese Person noch eintragen, was es gekostet hat — die anderen bekommen eine Nachricht.\n\nVorschläge gehören der **Person**, nicht dem einzelnen Geburtstag. Was letztes Jahr übrig blieb, steht dieses Jahr wieder da; was genommen wurde, steht unter „Schon einmal geschenkt", damit es niemand zweimal aussucht.\n\n**Zu jedem Vorschlag kannst du kommentieren** — „gibt es das auch in Blau?", „hat sie schon". Wer den Vorschlag gemacht oder dort schon geschrieben hat, bekommt eine Nachricht. Das Geburtstagskind sieht davon nichts.\n\n**Wegnehmen** kann einen Vorschlag oder Kommentar nur, wer ihn geschrieben hat: nach links wischen.\n\nWer das Geschenk besorgt, kann unten auf der Seite **alle an die Vorschläge erinnern** — einmal am Tag, an alle außer dem Geburtstagskind.',
+      'Auf der Seite eines Geburtstags kann jede:r Ideen vorschlagen und bei beliebig vielen zustimmen — bei Geschenken sind oft zwei gut und einer scheidet aus. Wer vorschlägt, stimmt automatisch mit zu.\n\n**Aussuchen darf nur, wer das Geschenk besorgt.** Damit ist die Abstimmung beendet; zurücknehmen geht trotzdem. Danach kann diese Person noch eintragen, was es gekostet hat — die anderen bekommen eine Nachricht.\n\nVorschläge gehören der **Person**, nicht dem einzelnen Geburtstag. Was letztes Jahr übrig blieb, steht dieses Jahr wieder da; was genommen wurde, steht unter „Schon einmal geschenkt", damit es niemand zweimal aussucht.\n\n**Zu jedem Vorschlag kannst du kommentieren** — „gibt es das auch in Blau?", „hat sie schon". Alle außer dem Geburtstagskind bekommen eine Nachricht; das Geburtstagskind sieht davon nichts.\n\n**Der Preis ist der Gesamtpreis**, und daneben steht, was das **pro Person** macht — geteilt durch alle außer dem Geburtstagskind. Hast du deinen Anteil gegeben, hakst du auf der Seite **„Ich habe meinen Anteil bezahlt"** ab; wer besorgt hat, sieht, wer schon hat. Bis dahin steht der Betrag bei dir unter **„Noch offen"** im Register „Geburtstage" und auf „Heute" — auch wenn der Geburtstag schon vorbei ist.\n\n**Wegnehmen** kann einen Vorschlag oder Kommentar nur, wer ihn geschrieben hat: nach links wischen.\n\nWer das Geschenk besorgt, kann unten auf der Seite **alle an die Vorschläge erinnern** — einmal am Tag, an alle außer dem Geburtstagskind.',
     keywords: [
       'vorschlag',
       'idee',
@@ -839,7 +846,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'birthdays',
     question: 'Wo sind die vergangenen Geburtstage?',
     answer:
-      'Es gibt keine. Wer gestern gefeiert hat, steht ab heute wieder ganz unten unter „Kommende" — mit seinem Geburtstag in einem Jahr.\n\nWas bleibt, sind deine eigenen früheren Zuständigkeiten: Unter „Deine Aufgabe" lässt sich aufklappen, für wen du in den letzten Runden das Geschenk besorgt hast.',
+      'Es gibt keine. Wer gestern gefeiert hat, steht ab heute wieder ganz unten unter „Kommende" — mit seinem Geburtstag in einem Jahr.\n\nWas bleibt, sind deine eigenen früheren Zuständigkeiten: Unter „Deine Aufgabe" lässt sich aufklappen, für wen du in den letzten Runden das Geschenk besorgt hast. Und hast du deinen Anteil an einem Geschenk noch nicht abgehakt, steht dieser Geburtstag ganz oben unter **„Noch offen"**.',
     keywords: ['vergangen', 'archiv', 'historie', 'früher'],
   },
   {

@@ -130,6 +130,21 @@ export function useNudgeBirthday(occasionId: string) {
   );
 }
 
+/**
+ * „Ich habe meinen Anteil bezahlt" — für sich selbst.
+ *
+ * Auch „Heute" fällt mit: Dort steht der Anteil unter „Noch zu bezahlen",
+ * bis er abgehakt ist.
+ */
+export function useSetGiftPaid(occasionId: string) {
+  const { hauskreisId, keys } = useHk();
+
+  return useApiMutation(
+    (paid: boolean) => birthdaysApi.setGiftPaid(hauskreisId, occasionId, paid),
+    { invalidateKeys: [...birthdayKeys(keys, occasionId), keys.home] },
+  );
+}
+
 export function useDecideGift(occasionId: string) {
   const { hauskreisId, keys } = useHk();
 

@@ -38,6 +38,12 @@ export interface SyncResult {
  * The rows go through the ordinary attendance path, so the drop-out and
  * capacity notifications from Phase 8 fire on their own — a holiday declared
  * weeks ahead reaches the host exactly like a manual cancellation.
+ *
+ * **Der Grund des Zeitraums steht an der Absage** (`note`), wie der Satz, den
+ * jemand von Hand dazuschreibt. Wer „Urlaub in Italien" einträgt, soll in der
+ * Zusagenliste nicht als stumme Absage dastehen — die Frage „warum fehlt er"
+ * ist dieselbe, ob die Absage getippt oder abgeleitet ist. Ändert sich der
+ * Grund, zieht der nächste Abgleich ihn an den abgeleiteten Zeilen nach.
  */
 @Injectable()
 export class AbsenceSyncService {
@@ -68,9 +74,17 @@ export class AbsenceSyncService {
     const today = await this.clock.today(hauskreisId, options.now);
 
     const [periods, meetings] = await Promise.all([
+      // Nach Beginn sortiert: Decken zwei Zeiträume denselben Abend, steht
+      // der Grund des früheren daran — und zwar bei jedem Lauf derselbe.
       this.prisma.absencePeriod.findMany({
         where: { hauskreisId, personId, endDate: { gte: today } },
-        select: { personId: true, startDate: true, endDate: true },
+        select: {
+          personId: true,
+          startDate: true,
+          endDate: true,
+          reason: true,
+        },
+        orderBy: { startDate: 'asc' },
       }),
       // Ohne Filter auf `status`: Ein Abend kann ausfallen, *weil* alle
       // abgesagt haben — die Absage ist dann eine Folge dieser Zeilen und keine
@@ -84,7 +98,7 @@ export class AbsenceSyncService {
           date: true,
           attendances: {
             where: { personId },
-            select: { status: true, source: true },
+            select: { status: true, source: true, note: true },
           },
         },
       }),
@@ -92,8 +106,19 @@ export class AbsenceSyncService {
 
     const calendar = new AbsenceCalendar(periods);
 
+    /** Was an der Absage dieses Abends steht — der Grund des Zeitraums. */
+    const reasonOn = (date: Date): string | null =>
+      periods.find(
+        (period) =>
+          period.startDate.getTime() <= date.getTime() &&
+          date.getTime() <= period.endDate.getTime(),
+      )?.reason ?? null;
+
     const toDecline: string[] = [];
     const toWithdraw: string[] = [];
+    /** Abgeleitete Absagen, deren Grund sich seither geändert hat. */
+    const toRenote: { meetingId: string; note: string | null }[] = [];
+    const noteOf = new Map<string, string | null>();
 
     for (const meeting of meetings) {
       const existing = meeting.attendances[0];
@@ -115,8 +140,14 @@ export class AbsenceSyncService {
 
       if (away && !derived) {
         toDecline.push(meeting.id);
+        noteOf.set(meeting.id, reasonOn(meeting.date));
       } else if (!away && derived) {
         toWithdraw.push(meeting.id);
+      } else if (away && derived) {
+        const note = reasonOn(meeting.date);
+        if ((existing.note ?? null) !== note) {
+          toRenote.push({ meetingId: meeting.id, note });
+        }
       }
     }
 
@@ -153,9 +184,9 @@ export class AbsenceSyncService {
       // `ABSENCE`-Zeile kommt hier ohnehin nicht an: Die zählt oben als
       // `derived` und landet gar nicht erst in dieser Liste.
       //
-      // Eine **Notiz** geht dabei nie verloren: Sie entsteht nur beim
-      // Antworten von Hand, sitzt also auf einer `SELF`-Zeile — und die fasst
-      // dieser Lauf grundsätzlich nicht an.
+      // Eine **getippte Notiz** geht dabei nie verloren: Sie sitzt auf einer
+      // `SELF`-Zeile — und die fasst dieser Lauf grundsätzlich nicht an. Die
+      // Notiz einer abgeleiteten Absage ist der Grund des Zeitraums.
       await this.prisma.meetingAttendance.deleteMany({
         where: {
           personId,
@@ -170,12 +201,30 @@ export class AbsenceSyncService {
           personId,
           status: AttendanceStatus.ABSENT,
           source: AttendanceSource.ABSENCE,
+          note: noteOf.get(meetingId) ?? null,
         })),
         skipDuplicates: true,
       });
 
       // Wie oben: die neue Absage steht in der Antwort des Termins.
       await touchMeetings(this.prisma, toDecline);
+    }
+
+    // Der Grund wurde geändert, der Zeitraum deckt den Abend weiter: Nur der
+    // Satz an der Absage zieht nach. Keine Nachricht — abgesagt war schon.
+    if (toRenote.length > 0) {
+      await Promise.all(
+        toRenote.map(({ meetingId, note }) =>
+          this.prisma.meetingAttendance.updateMany({
+            where: { meetingId, personId, source: AttendanceSource.ABSENCE },
+            data: { note },
+          }),
+        ),
+      );
+      await touchMeetings(
+        this.prisma,
+        toRenote.map(({ meetingId }) => meetingId),
+      );
     }
 
     // Ein Urlaub macht Rollen genauso frei wie eine Absage von Hand — sonst

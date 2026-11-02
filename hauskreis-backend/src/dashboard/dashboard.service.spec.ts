@@ -5,7 +5,11 @@ import type { AssignmentService } from './assignment.service';
 import type { PrayerBuddyService } from '../prayer-buddy/prayer-buddy.service';
 import { withClock } from '../meeting/group-clock.testing';
 import { withFeatures } from '../hauskreis/group-features.testing';
-import type { GroupFeatures } from '../hauskreis/group-features.service';
+import type {
+  GroupFeatures,
+  GroupFeaturesService,
+} from '../hauskreis/group-features.service';
+import type { BirthdayService } from '../birthday/birthday.service';
 
 /** Die Zone der Gruppe — in den Tests immer dieselbe. */
 const BERLIN = 'Europe/Berlin';
@@ -185,6 +189,11 @@ function setup(
         {
           resolve: jest.fn().mockResolvedValue({ enabled: true, leadDays: 14 }),
         } as unknown as NotificationPreferenceService,
+        // Kommt gleich über `withFeatures`.
+        undefined as unknown as GroupFeaturesService,
+        {
+          openPayments: jest.fn().mockResolvedValue([]),
+        } as unknown as BirthdayService,
       ),
     ),
     options.features,

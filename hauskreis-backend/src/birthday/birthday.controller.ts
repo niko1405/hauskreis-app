@@ -156,6 +156,39 @@ export class BirthdayController {
   }
 
   /**
+   * Den eigenen Anteil abhaken — jede:r für sich, außer Geburtstagskind und
+   * dem, der besorgt hat. Ohne `If-Match`: ein Haken je Person.
+   */
+  @Put(':id/payment')
+  @ApiZodResponse(BirthdayDetailResponseDto)
+  markPaid(
+    @Param() params: BirthdayParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.birthdays.setPaid(
+      params.hauskreisId,
+      params.id,
+      membership.id,
+      true,
+    );
+  }
+
+  @Delete(':id/payment')
+  @HttpCode(HttpStatus.OK)
+  @ApiZodResponse(BirthdayDetailResponseDto)
+  unmarkPaid(
+    @Param() params: BirthdayParamsDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.birthdays.setPaid(
+      params.hauskreisId,
+      params.id,
+      membership.id,
+      false,
+    );
+  }
+
+  /**
    * Alle anderen an die Vorschläge erinnern — nur, wer das Geschenk besorgt,
    * und höchstens einmal am Tag.
    */

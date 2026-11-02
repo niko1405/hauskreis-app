@@ -2023,6 +2023,36 @@ weiß, stimmt er für später Ernannte von selbst. In der Tab-Leiste läuft er m
 „Was ist neu" und „Erste Schritte" in **einen** Punkt zusammen, aber nur bei
 Admins: Ein Punkt, der auf etwas Unsichtbares zeigt, bliebe für immer stehen.
 
+## Der Satz zur Antwort, mit Symbol
+
+`components/domain/answer-note.tsx` zeigt, was jemand zu seiner Antwort
+dazugesagt hat — Verspätung (terracotta, Uhr) und Satz (Symbol aus
+`NOTE_FIELD`). Zwei Stellen nutzen es: die Zusagenliste am Termin und der
+eingeklappte Antwort-Balken (`compact`, je eine Zeile). Derselbe Satz sieht
+damit an beiden Stellen gleich aus. Terminkarte und Kalender bleiben bei der
+einzeiligen Textform (`ownAnswerLine`).
+
+**Am vergangenen Abend** trägt die Zusagenliste rechts nur einen Punkt — grün
+unter „Wer war da", rot unter „War nicht da" —, und im Bearbeitungsmodus steht
+darüber „Warst du dabei?" (Ja | Nein). Geschrieben wird direkt über
+`useSetAttendance`, ohne die Rückfrage zur Rollenfreigabe aus
+`useAttendanceAnswer`: An einem vergangenen Abend gibt der Server nichts frei.
+
+## Setlist ziehen am Telefon
+
+Der Griff in `songs-card.tsx` startet den Zug per natives `pointerdown`
+(`controls.start`) und fängt zusätzlich `touchstart` mit `passive: false` ab.
+`touch-none` allein hielt iOS nicht davon ab, die Seite zu scrollen — die ganze
+Seite zog mit, statt dass sich das Lied bewegte.
+
+## Noch offen: Geschenk-Anteile
+
+`features/birthdays/open-payments.tsx` zeigt die Anteile, die man noch nicht
+abgehakt hat, als Zeilen auf die Seite des Geburtstags — oben im Register
+„Geburtstage" (`openPayments` der Übersicht) und auf „Heute" unter „Deine
+Rollen" (`giftPayments`). Ohne Einträge zeichnet es nichts. Geld steht in ganzen
+Cent und wird erst beim Anzeigen umgerechnet (`lib/money.ts`).
+
 ## Die Verwaltung: ein Formular, ein Speichern
 
 `features/admin/admin-draft.tsx`. Jede Karte der Verwaltung hält ihren eigenen

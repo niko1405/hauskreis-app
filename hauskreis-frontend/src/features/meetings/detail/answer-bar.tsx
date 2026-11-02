@@ -40,7 +40,8 @@ import { BottomSlot } from '@/components/layout/bottom-slot';
 import { Button } from '@/components/ui/button';
 import { lockOverlay } from '@/components/ui/overlay-lock';
 import { dismissed, raised } from '@/components/ui/swipe';
-import { ANSWERS, ownAnswerLine } from '@/components/domain/attendance-answers';
+import { ANSWERS } from '@/components/domain/attendance-answers';
+import { AnswerNote } from '@/components/domain/answer-note';
 import { AttendanceNoteFields } from '@/components/domain/attendance-note-fields';
 import { useAttendanceAnswer } from '@/components/domain/use-attendance-answer';
 import { useMe, useSetAttendance } from '@/lib/api/hooks';
@@ -246,11 +247,19 @@ function Bar({
           {/* Eingeklappt steht der eigene Satz einzeilig da: Er ist der Grund,
               aus dem man den Balken sonst aufklappen müsste, und zugleich der
               Hinweis, dass überhaupt einer dasteht. Ausgeklappt steht er im
-              Feld darunter — zweimal wäre er eine Behauptung zu viel. */}
-          {!open && ownAnswerLine({ note, lateMinutes }) && (
-            <p className="mt-2 truncate text-[11px] text-stone-400">
-              {ownAnswerLine({ note, lateMinutes })}
-            </p>
+              Feld darunter — zweimal wäre er eine Behauptung zu viel.
+
+              Mit Symbol wie in der Zusagenliste darüber: Derselbe Satz soll
+              an beiden Stellen gleich aussehen, und ob es eine Verspätung
+              oder eine Info ist, sieht man am Symbol. */}
+          {!open && (
+            <AnswerNote
+              compact
+              status={status}
+              note={note}
+              lateMinutes={lateMinutes}
+              className="mt-2"
+            />
           )}
         </div>
 

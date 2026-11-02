@@ -2879,7 +2879,8 @@ Die Zeilen tragen deshalb `source`:
 - **`SELF`** — jemand hat für diesen Abend geantwortet. Wird **nie** von einem
   Zeitraum überschrieben oder zurückgenommen.
 - **`ABSENCE`** — aus einem Zeitraum abgeleitet. Wird beim nächsten Abgleich neu
-  aufgebaut.
+  aufgebaut. Der **Grund** des Zeitraums steht als `note` daran, wie ein Satz
+  von Hand; ändert er sich, zieht der Abgleich ihn an diesen Zeilen nach.
 - **`AUTO`** — aus „ich bin grundsätzlich dabei" vorab zugesagt. Weicht einem
   Zeitraum, siehe unten.
 - **`ROLE`** — zugesagt, weil die Person an dem Abend eine Rolle bekommen hat.
@@ -3311,6 +3312,27 @@ selbst zuständig, und wer gerade beschenkt wurde, ist als nächstes an der Reih
 Beschenkter noch als Schenkender. Das ist keine Strafe, sondern die Bauart: Der
 Platz in der Reihe ist der Geburtstag.
 
+### Preis, Anteil und „bezahlt"
+
+`price_cents` ist der **Gesamtpreis**. Jede Antwort mit Preis trägt dazu
+`shareCents`: geteilt durch alle Angekommenen außer dem Geburtstagskind, wer
+besorgt hat eingeschlossen — er zahlt seinen Teil auch, nur eben vorab.
+Gezählt wird live; eine gespeicherte Zahl wäre eine zweite Wahrheit neben der
+Mitgliederliste. Für das Geburtstagskind sind Preis und Anteil `null`.
+
+Wer mitzahlt (alle außer Geburtstagskind und Besorgendem), hakt seinen Anteil
+**selbst** ab: `PUT …/birthdays/:id/payment`, zurück mit `DELETE`. Eine Zeile
+in `birthday_payment` je Person und Geburtstag, ihre Existenz ist die Aussage.
+Ohne `If-Match` — ein Haken je Person, kein Wettlauf — und ohne Frist: Gerade
+wer es verpasst hat, soll es nachholen. Das Detail sagt `mustPay` und
+`paidByMe`; `payments` (wer schon hat) bekommt nur, wer besorgt hat.
+
+**Was offen ist, bleibt sichtbar**, auch nach dem Geburtstag:
+`BirthdayService.openPayments` liefert die Geburtstage mit Preis, an denen der
+eigene Haken fehlt — in der Übersicht als `openPayments`, auf „Heute" als
+`giftPayments`. Höchstens `OPEN_PAYMENT_DAYS` (90) Tage zurück: Preise aus der
+Zeit vor dem Haken stünden sonst alle auf einmal offen da.
+
 ### Benutzerdefiniert: nur vollständig
 
 `GET …/birthdays/pairings` liefert **zweimal** dieselbe Liste: `pairings` (die
@@ -3352,9 +3374,9 @@ Zeile, wie `meeting_actionstep_done`.
 darf gehen, ohne ihn mitzunehmen (`SET NULL`). Damit gilt für Kommentare
 automatisch dieselbe Regel wie für Vorschläge: Wer Geburtstag hat, bekommt
 `ideas: null` und damit auch kein Wort davon. Ein neuer Kommentar meldet sich
-(`GIFT_IDEA_COMMENTED`, `related_key` = Kommentar-Id) bei dem, der den Vorschlag
-gemacht hat, und bei allen, die dort schon geschrieben haben — sonst bei
-niemandem. Löschen darf Vorschläge wie Kommentare nur, wer sie geschrieben hat;
+(`GIFT_IDEA_COMMENTED`, `related_key` = Kommentar-Id) bei **allen Angekommenen
+außer dem Geburtstagskind** und dem, der schreibt. Nur an die Beteiligten ging
+ein „hat sie schon" an dem vorbei, der das Geschenk gerade besorgen wollte. Löschen darf Vorschläge wie Kommentare nur, wer sie geschrieben hat;
 die Antwort sagt es mit `canRemove` bzw. `mine`, damit das Frontend keinen
 Papierkorb zeigt, der nur eine 403 auslöst.
 

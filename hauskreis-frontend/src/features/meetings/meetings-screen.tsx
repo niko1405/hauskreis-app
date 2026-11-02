@@ -4,7 +4,7 @@
  * „Termine" — vier Sichten: Liste, Mehrwochen-Planung, Kalender, Geburtstage.
  * Alles außer der Liste wird erst geladen, wenn man es auswählt.
  */
-import { Plus, Search } from 'lucide-react';
+import { CalendarCheck, CalendarClock, Plus, Search } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useDeferredValue, useMemo, useState } from 'react';
@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/layout/app-shell';
 import { MeetingCard } from '@/components/domain/meeting-card';
 import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { TextInput } from '@/components/ui/field';
+import { Segmented } from '@/components/ui/segmented';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import { BirthdayCard } from '@/features/birthdays/birthday-card';
 import {
@@ -218,13 +219,28 @@ function MeetingListView() {
             aria-label="Termine durchsuchen"
           />
         </div>
-        <button
-          type="button"
-          onClick={() => setScope(scope === 'upcoming' ? 'past' : 'upcoming')}
-          className="shrink-0 rounded-full border border-line bg-card px-3.5 py-2.5 text-xs font-bold text-stone-500 hover:border-line-strong"
-        >
-          {scope === 'upcoming' ? 'Kommende' : 'Vergangene'}
-        </button>
+        {/* Zwei Symbole statt eines Worts: Der Knopf zeigte nur, was gerade
+            gilt, und daneben stand ein Suchfeld, das Platz braucht. So stehen
+            beide Richtungen da — die Uhr für „steht noch an", der Haken für
+            „war schon" —, und die gewählte ist hervorgehoben. */}
+        <Segmented
+          iconOnly
+          label="Welche Termine"
+          value={scope}
+          onChange={setScope}
+          options={[
+            {
+              value: 'upcoming',
+              label: 'Kommende Termine',
+              icon: <CalendarClock size={16} />,
+            },
+            {
+              value: 'past',
+              label: 'Vergangene Termine',
+              icon: <CalendarCheck size={16} />,
+            },
+          ]}
+        />
       </div>
 
       {query.isLoading && (

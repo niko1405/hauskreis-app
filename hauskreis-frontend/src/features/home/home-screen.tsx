@@ -33,6 +33,7 @@ import { ScreenHeader } from '@/components/layout/screen-header';
 import { ReleaseBanner } from '@/features/releases/release-banner';
 import { greetingOf } from './greeting';
 import { MyRoles } from './my-roles';
+import { OpenPayments } from '@/features/birthdays/open-payments';
 import { OwnerWelcomeSheet } from './owner-welcome-sheet';
 import { PrayerBuddyCard } from './prayer-buddy-card';
 import type { HomeActionstep, HomeNextMeeting } from '@/lib/api/types';
@@ -66,6 +67,7 @@ export function HomeScreen() {
     weeklyActionstep,
     openActionstep,
     prayerBuddies,
+    giftPayments,
   } = home.data;
 
   // Wechselt täglich und passt zur Tageszeit. Die Personen-Id geht mit ein,
@@ -106,6 +108,18 @@ export function HomeScreen() {
             roles={myRoles}
             nextMeetingId={currentMeeting?.id ?? nextMeeting?.id ?? null}
           />
+
+          {/* Unter den Rollen, weil es auch eine ist — nur eine, die nach dem
+              Abend kommt: den eigenen Anteil am Geschenk geben. Bis zum Haken
+              auf der Seite des Geburtstags, auch wenn der Tag vorbei ist. */}
+          {giftPayments.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="px-1 text-[11px] font-semibold tracking-wider text-stone-400 uppercase">
+                Noch zu bezahlen
+              </p>
+              <OpenPayments items={giftPayments} />
+            </div>
+          )}
         </section>
 
         {/* Drei Abschnitte in der Reihenfolge, in der man sie braucht: der

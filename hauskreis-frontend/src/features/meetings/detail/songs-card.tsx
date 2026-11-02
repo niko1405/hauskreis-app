@@ -432,8 +432,19 @@ function SetlistRow({
       event.stopPropagation();
       controls.start(event);
     };
+    // **Und die Seite darf nicht mitscrollen.** `touch-none` am Griff reicht
+    // dafür auf iOS nicht: Safari beginnt die Scroll-Geste trotzdem, und die
+    // ganze Seite zog mit, statt dass sich das Lied bewegte. Ein abgefangenes
+    // `touchstart` startet keine — die Pointer-Ereignisse, mit denen Motion
+    // zieht, kommen davon unberührt weiter an. `passive: false`, sonst wäre
+    // `preventDefault` wirkungslos.
+    const hold = (event: TouchEvent) => event.preventDefault();
     node.addEventListener('pointerdown', start);
-    return () => node.removeEventListener('pointerdown', start);
+    node.addEventListener('touchstart', hold, { passive: false });
+    return () => {
+      node.removeEventListener('pointerdown', start);
+      node.removeEventListener('touchstart', hold);
+    };
   }, [controls, mayPick]);
 
   const row = (

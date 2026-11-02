@@ -11,6 +11,10 @@
  * daneben — wie bei den Antwort-Knöpfen im Kalender. Das Wort bleibt für
  * Screenreader stehen.
  *
+ * `iconOnly` lässt das Wort auch am Rechner weg; es steht dann als Tooltip
+ * und für Screenreader da — für Umschalter, die neben einem Suchfeld wenig
+ * Platz haben (Terminliste).
+ *
  * `fill` streckt ihn über die volle Breite — für ein Formular, in dem er ein
  * Feld ist und kein Umschalter neben einer Überschrift. Die Knöpfe teilen sich
  * den Platz nach ihrem Inhalt (`flex-auto`), nicht zu gleichen Teilen: Bei
@@ -25,6 +29,7 @@ export function Segmented<Value extends string>({
   size = 'md',
   label,
   fill = false,
+  iconOnly = false,
 }: {
   value: Value;
   onChange: (value: Value) => void;
@@ -33,6 +38,7 @@ export function Segmented<Value extends string>({
   /** Wofür die Gruppe steht, für Screenreader. */
   label?: string;
   fill?: boolean;
+  iconOnly?: boolean;
 }) {
   return (
     <div
@@ -49,6 +55,7 @@ export function Segmented<Value extends string>({
           type="button"
           role="radio"
           aria-checked={value === option.value}
+          title={iconOnly ? option.label : undefined}
           onClick={() => onChange(option.value)}
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full font-semibold transition-colors',
@@ -63,7 +70,9 @@ export function Segmented<Value extends string>({
         >
           {option.icon}
           {option.icon ? (
-            <span className="sr-only sm:not-sr-only">{option.label}</span>
+            <span className={cn('sr-only', !iconOnly && 'sm:not-sr-only')}>
+              {option.label}
+            </span>
           ) : (
             option.label
           )}

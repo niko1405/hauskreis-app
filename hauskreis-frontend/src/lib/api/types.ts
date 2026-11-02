@@ -280,6 +280,7 @@ export type SyncResult = S['SyncResultResponseDto'];
 export type BirthdayOverview = S['BirthdayOverviewResponseDto'];
 export type BirthdayOccasion = BirthdayOverview['upcoming'][number];
 export type BirthdayDetail = S['BirthdayDetailResponseDto'];
+export type OpenGiftPayment = BirthdayOverview['openPayments'][number];
 export type GiftIdea = S['GiftIdeaListResponseDto'][number];
 export type BirthdayGiftConfig = S['BirthdayGiftConfigResponseDto'];
 export type UpdateBirthdayGiftConfigInput = S['UpdateBirthdayGiftConfigDto'];
