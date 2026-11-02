@@ -18,6 +18,38 @@ export interface GiftablePerson {
 export type Duties = ReadonlyMap<string, string>;
 
 /**
+ * Nur die, die einen Platz in der Reihe haben.
+ *
+ * Die Abfragen filtern bereits auf `birthdate: { not: null }`; das
+ * Ausrufezeichen steht hier einmal statt an jeder Aufrufstelle — im Planer und
+ * in der Verwaltung, die die Rotation zum Ansehen ausrechnet.
+ */
+export function giftable(
+  people: { id: string; name: string; birthdate: Date | null }[],
+): GiftablePerson[] {
+  return people.map((person) => ({
+    id: person.id,
+    name: person.name,
+    birthdate: person.birthdate!,
+  }));
+}
+
+/**
+ * Die Reihenfolge der Geburtstage im Jahr.
+ *
+ * Gleicher Tag bricht auf die Id — dieselbe Regel, nach der `rotate` den Kreis
+ * legt. Sonst stünde eine Liste, die die Rotation zeigt, bei zwei Zwillingen
+ * in anderer Folge da als der Kreis, den sie erklärt.
+ */
+export function inYearOrder<T extends GiftablePerson>(
+  people: readonly T[],
+): T[] {
+  return people.toSorted(
+    (a, b) => compareInYear(a.birthdate, b.birthdate) || (a.id < b.id ? -1 : 1),
+  );
+}
+
+/**
  * Die rotierende Zuteilung: **du bekommst den, der als nächstes dran ist.**
  *
  * Alle Geburtstage der Reihe nach durchs Jahr, und wer gerade gefeiert hat, ist
@@ -47,9 +79,7 @@ export type Duties = ReadonlyMap<string, string>;
 export function rotate(people: readonly GiftablePerson[]): Duties {
   if (people.length < 2) return new Map();
 
-  const order = people.toSorted(
-    (a, b) => compareInYear(a.birthdate, b.birthdate) || (a.id < b.id ? -1 : 1),
-  );
+  const order = inYearOrder(people);
 
   const duties = new Map<string, string>();
   for (const [index, person] of order.entries()) {

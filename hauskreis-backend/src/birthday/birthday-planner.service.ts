@@ -15,7 +15,7 @@ import { GroupClockService } from '../meeting/group-clock.service';
 import { CRON_TIME_ZONE } from '../common/time/local-evening';
 import { currentDay } from '../meeting/meeting-schedule';
 import { daysUntil, nextBirthday } from './birthday-dates';
-import { repairPairings, rotate, type Duties } from './rotation';
+import { giftable, repairPairings, rotate, type Duties } from './rotation';
 import { DEFAULT_GIFT_CONFIG, type GiftSettings } from './birthday-settings';
 
 export interface PlanResult {
@@ -449,22 +449,6 @@ export class BirthdayPlannerService {
  * genau der eine Geburtstag, um den es ging, blieb als einziger ohne
  * Zuständigen stehen.
  */
-/**
- * Nur die, die einen Platz in der Reihe haben.
- *
- * Die Abfrage filtert bereits auf `birthdate: { not: null }`; das Ausrufezeichen
- * steht hier einmal statt an jeder Aufrufstelle.
- */
-function giftable(
-  people: { id: string; name: string; birthdate: Date | null }[],
-) {
-  return people.map((person) => ({
-    id: person.id,
-    name: person.name,
-    birthdate: person.birthdate!,
-  }));
-}
-
 export function frozen(
   occasion: {
     occursOn: Date;

@@ -227,6 +227,7 @@ model Hauskreis {
   giftIdeas            GiftIdea[]
   ideas                GroupIdea[]
   notes                Note[]
+  skippedMeetingDates  SkippedMeetingDate[]
 
   @@map("hauskreis")
 }
@@ -469,8 +470,9 @@ model Meeting {
   ///
   /// 1. **Der Taktschlag.** Die Reihe der erzeugten Abende gibt den Rhythmus
   ///    vor; ein Geburtstag am Samstag verschöbe sonst den Takt der Dienstage.
-  /// 2. **Löschen statt Absagen.** Einen erzeugten Abend legt der Terminplaner
-  ///    sofort wieder an — deshalb sagt man ihn ab.
+  /// 2. **Der Grabstein beim Löschen.** Einen erzeugten Abend legte der
+  ///    Terminplaner in der nächsten Nacht wieder an. Wer ihn löscht, hinterlässt
+  ///    deshalb sein Datum in `SkippedMeetingDate`.
   ///
   /// `@default(false)`: Angelegt wird von Hand, erzeugt wird vom Generator, und
   /// der schreibt die Spalte ausdrücklich — wie er schon die Bausteine
@@ -613,6 +615,28 @@ model Meeting {
   @@unique([hauskreisId, date])
   @@index([hauskreisId, date])
   @@map("meeting")
+}
+
+/// Ein Datum, an dem der Terminplaner **nichts** anlegen soll — weil ein Admin
+/// den erzeugten Abend dort gelöscht hat.
+///
+/// Der Generator ist idempotent über „fehlt an diesem Tag ein Termin": Ein
+/// gelöschter Dienstag fehlte in der nächsten Nacht, und er stünde wieder da.
+/// Absagen geht dagegen ohne Grabstein, die Zeile bleibt ja stehen.
+///
+/// Eine eigene Tabelle und kein Status am Termin: Ein gelöschter Abend soll
+/// nirgends mehr auftauchen, und ein Status müsste jede Abfrage der App
+/// ausfiltern. Vergangene Daten räumt der Generator selbst wieder weg — dort
+/// legt er ohnehin nichts an.
+model SkippedMeetingDate {
+  hauskreisId String   @map("hauskreis_id") @db.Uuid
+  date        DateTime @db.Date
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  hauskreis Hauskreis @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+
+  @@id([hauskreisId, date])
+  @@map("skipped_meeting_date")
 }
 
 /// Ein Stoff, den die Gruppe durcharbeitet — bewusst **nicht** an einen Abend

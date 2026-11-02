@@ -10,6 +10,11 @@
  * Mit `icon` steht auf dem Telefon nur das Symbol und ab `sm` das Wort
  * daneben — wie bei den Antwort-Knöpfen im Kalender. Das Wort bleibt für
  * Screenreader stehen.
+ *
+ * `fill` streckt ihn über die volle Breite — für ein Formular, in dem er ein
+ * Feld ist und kein Umschalter neben einer Überschrift. Die Knöpfe teilen sich
+ * den Platz nach ihrem Inhalt (`flex-auto`), nicht zu gleichen Teilen: Bei
+ * fünf Stufen wäre „Normal" sonst so breit wie „Oft".
  */
 import { cn } from '@/lib/cn';
 
@@ -19,6 +24,7 @@ export function Segmented<Value extends string>({
   options,
   size = 'md',
   label,
+  fill = false,
 }: {
   value: Value;
   onChange: (value: Value) => void;
@@ -26,12 +32,16 @@ export function Segmented<Value extends string>({
   size?: 'sm' | 'md';
   /** Wofür die Gruppe steht, für Screenreader. */
   label?: string;
+  fill?: boolean;
 }) {
   return (
     <div
       role="radiogroup"
       aria-label={label}
-      className="flex shrink-0 rounded-full border border-line bg-card p-0.5"
+      className={cn(
+        'flex rounded-full border border-line bg-card p-0.5',
+        fill ? 'w-full' : 'shrink-0',
+      )}
     >
       {options.map((option) => (
         <button
@@ -42,7 +52,10 @@ export function Segmented<Value extends string>({
           onClick={() => onChange(option.value)}
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full font-semibold transition-colors',
-            size === 'sm' ? 'px-3 py-1 text-xs' : 'px-4 py-1.5 text-sm',
+            fill && 'flex-auto justify-center',
+            size === 'sm'
+              ? cn('py-1 text-xs', fill ? 'px-2 sm:px-3' : 'px-3')
+              : 'px-4 py-1.5 text-sm',
             value === option.value
               ? 'bg-terracotta-500 text-white'
               : 'text-stone-500 hover:text-stone-700',

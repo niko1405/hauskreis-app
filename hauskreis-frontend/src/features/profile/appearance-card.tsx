@@ -10,6 +10,7 @@
  * Darunter steht der Schalter für die **Kopfleiste**. Er gehört
  * hierher, weil er dieselbe Sorte Einstellung ist: eine Aussage über diesen
  * Bildschirm, nicht über diese Person — und wie das Thema liegt er im Gerät.
+ * Am Rechner fehlt er: Dort gibt es keine Kopfleiste.
  */
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { Card, SectionTitle } from '@/components/ui/card';
@@ -69,7 +70,7 @@ export function AppearanceCard() {
             Kompromiss — sie trägt den Weg zur Gruppe und die Glocke, liegt
             dafür aber über den Kopfbildern. Wer sie nicht will, findet beides
             danach im Profil. */}
-        <div className="border-t border-line pt-3">
+        <div className="border-t border-line pt-3 md:hidden">
           <SwitchRow
             label="Kopfleiste anzeigen"
             description="Die Leiste über den Tabs mit Gruppenbild, „Gruppe“ und Glocke. Ohne sie erreichst du die Gruppe über dein Profil."

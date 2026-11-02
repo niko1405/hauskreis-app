@@ -11,38 +11,128 @@
  * **Zwei Arten zu verteilen.** „Der Reihe nach" rechnet die Zuständigkeit aus
  * den Geburtstagen selbst: Wer gerade gefeiert hat, besorgt das Geschenk für
  * den, der als nächstes dran ist. In einem Jahr ist damit jede:r genau einmal
- * dran, und niemand für sich selbst. „Fest" nimmt stattdessen die Zuteilung,
- * die hier darunter steht, und behält sie Runde für Runde bei.
+ * dran, und niemand für sich selbst. „Benutzerdefiniert" nimmt stattdessen die
+ * Zuteilung, die hier eingetragen ist, und behält sie Runde für Runde bei.
+ *
+ * **Die Zuteilung steht in beiden Fällen da** — bei „Der Reihe nach" zum
+ * Ansehen, bei „Benutzerdefiniert" zum Ändern, in derselben Karte. Wer
+ * umstellt, fängt mit genau der Zuteilung an, die bis eben galt.
  */
 import { Gift, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { Checkbox, Field, Select } from '@/components/ui/field';
+import { CheckRow } from '@/components/ui/check-row';
+import { Field, Select } from '@/components/ui/field';
+import { InfoTip } from '@/components/ui/info-tip';
+import { Segmented } from '@/components/ui/segmented';
 import { CardSkeleton, ConflictBanner } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
+import { cn } from '@/lib/cn';
 import {
   useBirthdayConfig,
   useGiftPairings,
   useSetGiftPairings,
   useUpdateBirthdayConfig,
 } from '@/lib/api/hooks';
-import { errorMessage } from '@/lib/api/errors';
 import { formatTimestamp } from '@/lib/date';
+import type { GiftPairings } from '@/lib/api/types';
+import { useAdminDraftSection } from './admin-draft';
+
+type Mode = 'ROTATING' | 'MANUAL';
+type Row = GiftPairings['pairings'][number];
+
+/** Für wen wer besorgt — `birthdayPersonId → responsiblePersonId`, leer heißt: noch niemand. */
+type Assignment = Record<string, string>;
+
+function assignmentOf(rows: Row[]): Assignment {
+  return Object.fromEntries(
+    rows.map((row) => [row.birthdayPerson.id, row.responsible?.id ?? '']),
+  );
+}
 
 export function BirthdayGiftAdmin() {
   const config = useBirthdayConfig();
   const update = useUpdateBirthdayConfig();
+  const pairings = useGiftPairings();
+  const setPairings = useSetGiftPairings();
   const toast = useToast();
 
   const [draft, setDraft] = useState<{
     enabled: boolean;
-    mode: 'ROTATING' | 'MANUAL';
-    freezeDays: string;
+    mode: Mode;
+    freezeDays: number;
   } | null>(null);
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
 
   const current = config.data?.data;
+  const saved = {
+    enabled: current?.enabled ?? false,
+    mode: current?.mode ?? 'ROTATING',
+    freezeDays: current?.freezeDays ?? 14,
+  };
+  const value = draft ?? saved;
+
+  const stored = pairings.data?.pairings ?? [];
+  const rotation = pairings.data?.rotation ?? [];
+  const manual = value.enabled && value.mode === 'MANUAL';
+  const wasManual = saved.mode === 'MANUAL';
+
+  // Womit „Benutzerdefiniert" anfängt: mit dem, was gilt. War es schon
+  // benutzerdefiniert, ist das die gespeicherte Zuteilung — sonst die
+  // Rotation, genau wie der Planer beim Wechsel.
+  const base = assignmentOf(wasManual ? stored : rotation);
+  const pairs = assignment ?? base;
+  const storedPairs = assignmentOf(stored);
+
+  const configDirty =
+    value.enabled !== saved.enabled ||
+    value.mode !== saved.mode ||
+    value.freezeDays !== saved.freezeDays;
+  // Beim Wechsel auf „Benutzerdefiniert" wird die Zuteilung immer mit
+  // geschrieben: Eine früher gespeicherte, längst veraltete stünde sonst wieder
+  // in Kraft, und angezeigt wurde die Rotation.
+  const pairingsDirty =
+    manual &&
+    (!wasManual ||
+      rotation.some(
+        (row) =>
+          (pairs[row.birthdayPerson.id] ?? '') !==
+          (storedPairs[row.birthdayPerson.id] ?? ''),
+      ));
+  const gap =
+    manual &&
+    rotation.length >= 2 &&
+    rotation.some((row) => !pairs[row.birthdayPerson.id]);
+
+  useAdminDraftSection('birthdays', {
+    dirty: current !== undefined && (configDirty || pairingsDirty),
+    invalid: gap ? 'Bei den Geschenken fehlt noch jemand.' : undefined,
+    save: async () => {
+      // Erst die Einstellungen (mit `If-Match`), dann die Zuteilung (ohne).
+      // Umgekehrt höbe das Speichern der Zuteilung die Version, und die
+      // Einstellungen bekämen einen Konflikt mit dem eigenen Schritt davor.
+      if (configDirty) await update.mutateAsync(value);
+      if (pairingsDirty) {
+        await setPairings.mutateAsync({
+          pairings: Object.entries(pairs)
+            .filter(([, responsiblePersonId]) => responsiblePersonId !== '')
+            .map(([birthdayPersonId, responsiblePersonId]) => ({
+              birthdayPersonId,
+              responsiblePersonId,
+            })),
+        });
+      }
+      await pairings.refetch();
+      setDraft(null);
+      setAssignment(null);
+    },
+    reset: () => {
+      setDraft(null);
+      setAssignment(null);
+    },
+  });
 
   if (config.isLoading) {
     return (
@@ -53,17 +143,6 @@ export function BirthdayGiftAdmin() {
     );
   }
 
-  const value = draft ?? {
-    enabled: current?.enabled ?? false,
-    mode: current?.mode ?? 'ROTATING',
-    freezeDays: String(current?.freezeDays ?? 14),
-  };
-
-  const unchanged =
-    value.enabled === current?.enabled &&
-    value.mode === current?.mode &&
-    Number(value.freezeDays) === current?.freezeDays;
-
   return (
     <section>
       <SectionTitle>Geburtstags-Geschenke</SectionTitle>
@@ -72,45 +151,61 @@ export function BirthdayGiftAdmin() {
           <ConflictBanner onResolve={update.resolveConflict} />
         )}
 
-        <Checkbox
+        <CheckRow
           label="Für Geschenke jemanden einteilen"
-          description="Aus heißt: Geburtstage stehen im Kalender, aber es wird nichts zugeteilt."
+          hint="Aus: Die Geburtstage stehen im Kalender, aber niemand wird eingeteilt."
           checked={value.enabled}
-          onChange={(event) =>
-            setDraft({ ...value, enabled: event.target.checked })
-          }
+          onChange={(enabled) => setDraft({ ...value, enabled })}
         />
 
         {value.enabled && (
           <>
-            <Field
-              label="Wie wird eingeteilt?"
-              hint="„Der Reihe nach“ heißt: Du besorgst das Geschenk für den, dessen Geburtstag nach deinem kommt."
-            >
-              <Select
+            <div>
+              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-500">
+                Wie wird eingeteilt?
+                <InfoTip label="Wie wird eingeteilt?">
+                  <strong className="font-semibold">Der Reihe nach:</strong> Du
+                  besorgst das Geschenk für den, dessen Geburtstag nach deinem
+                  kommt. Die App rechnet das selbst aus, auch wenn jemand dazu
+                  kommt oder geht.
+                  <br />
+                  <strong className="font-semibold">
+                    Benutzerdefiniert:
+                  </strong>{' '}
+                  Ihr legt fest, wer für wen besorgt. Jede:r ist genau einmal
+                  dran, und für jeden Geburtstag muss jemand eingetragen sein.
+                  Kommt jemand dazu oder geht, schließt die App die Lücke und
+                  sagt es hier.
+                </InfoTip>
+              </p>
+              <Segmented<Mode>
+                fill
+                size="sm"
+                label="Wie wird eingeteilt?"
                 value={value.mode}
-                disabled={!value.enabled}
-                onChange={(event) =>
-                  setDraft({
-                    ...value,
-                    mode: event.target.value as 'ROTATING' | 'MANUAL',
-                  })
-                }
-              >
-                <option value="ROTATING">Der Reihe nach</option>
-                <option value="MANUAL">Fest zugeteilt</option>
-              </Select>
-            </Field>
+                onChange={(mode) => setDraft({ ...value, mode })}
+                options={[
+                  { value: 'ROTATING', label: 'Der Reihe nach' },
+                  { value: 'MANUAL', label: 'Benutzerdefiniert' },
+                ]}
+              />
+            </div>
 
             <Field
               label="Ab wann steht es fest"
-              hint="In Tagen vor dem Geburtstag. Danach ändert sich die Zuteilung nicht mehr — auch nicht, wenn jemand seinen Geburtstag nachträgt."
+              info={
+                <>
+                  Ab dieser Frist vor dem Geburtstag ändert sich die Zuteilung
+                  nicht mehr — auch nicht, wenn jemand seinen Geburtstag
+                  nachträgt oder ihr hier etwas umstellt. Steht schon ein Preis
+                  dran, bleibt sie ohnehin.
+                </>
+              }
             >
               <Select
                 value={value.freezeDays}
-                disabled={!value.enabled}
                 onChange={(event) =>
-                  setDraft({ ...value, freezeDays: event.target.value })
+                  setDraft({ ...value, freezeDays: Number(event.target.value) })
                 }
               >
                 {[7, 14, 21, 30].map((days) => (
@@ -121,28 +216,63 @@ export function BirthdayGiftAdmin() {
               </Select>
             </Field>
 
-            <Button
-              variant="secondary"
-              disabled={unchanged}
-              loading={update.isPending}
-              onClick={() =>
-                update.mutate(
-                  {
-                    enabled: value.enabled,
-                    mode: value.mode,
-                    freezeDays: Number(value.freezeDays),
-                  },
-                  {
-                    onSuccess: () => {
-                      setDraft(null);
-                      toast.success('Gespeichert — die Zuteilung zieht nach.');
-                    },
-                  },
-                )
+            {/* Der Hinweis, dass hier etwas ohne einen Menschen entschieden
+                wurde. „Passt so" schreibt dieselbe Zuteilung noch einmal — dann
+                hat jemand hingesehen. */}
+            {manual && wasManual && current?.pairingsRepairedAt && (
+              <div className="flex gap-2.5 rounded-lg border border-alert-line bg-alert-bg p-3">
+                <TriangleAlert
+                  size={14}
+                  className="mt-0.5 shrink-0 text-alert"
+                />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <p className="text-[11px] leading-relaxed text-stone-600">
+                    Am {formatTimestamp(current.pairingsRepairedAt)} hat sich
+                    die Gruppe geändert, und die App hat die Lücke in der
+                    Zuteilung geschlossen. Sieh sie einmal durch.
+                  </p>
+                  {!pairingsDirty && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      loading={setPairings.isPending}
+                      onClick={() =>
+                        setPairings.mutate(
+                          {
+                            pairings: stored.flatMap((row) =>
+                              row.responsible
+                                ? [
+                                    {
+                                      birthdayPersonId: row.birthdayPerson.id,
+                                      responsiblePersonId: row.responsible.id,
+                                    },
+                                  ]
+                                : [],
+                            ),
+                          },
+                          { onSuccess: () => toast.success('Bestätigt.') },
+                        )
+                      }
+                    >
+                      Passt so
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <Pairings
+              rows={rotation}
+              shown={manual ? null : rotation}
+              pairs={pairs}
+              loading={pairings.isLoading}
+              onAssign={(birthdayPersonId, responsiblePersonId) =>
+                setAssignment({
+                  ...pairs,
+                  [birthdayPersonId]: responsiblePersonId,
+                })
               }
-            >
-              Speichern
-            </Button>
+            />
           </>
         )}
 
@@ -152,172 +282,147 @@ export function BirthdayGiftAdmin() {
           </p>
         )}
       </Card>
-
-      {current?.enabled && current.mode === 'MANUAL' && (
-        <PairingsCard repairedAt={current.pairingsRepairedAt} />
-      )}
     </section>
   );
 }
 
 /**
- * Die feste Zuteilung: wer besorgt das Geschenk für wen.
+ * Wer besorgt für wen — in Geburtstagsreihenfolge, damit sich die Kette von
+ * oben nach unten liest.
  *
- * **Gespeichert wird sie als Ganzes**, nicht Zeile für Zeile — eine Zuteilung
- * stimmt nur vollständig. Wer B von A auf C umhängt, muss auch wissen, was aus
- * A wird; zwei Aufrufe hintereinander hätten dazwischen einen Zustand, den
- * niemand wollte, und den der Planer in der Zwischenzeit ausrollen würde.
+ * **Die Richtung steht in jeder Zeile**: links, wer Geburtstag hat, rechts,
+ * „wird beschenkt von" und wer besorgt. Ohne das ließe sich dieselbe Liste
+ * auch andersherum lesen, und genau die Verwechslung wäre teuer.
  *
- * Aufgelistet sind **alle** mit eingetragenem Geburtstag, auch die ohne
- * Zuständigen: Ein Loch ist genau das, was man hier sehen soll.
+ * **Zur Wahl steht nur, wer noch frei ist.** Jede:r besorgt genau ein
+ * Geschenk; eine Auswahl, die jemanden zweimal anböte, verspräche etwas, das
+ * der Server ablehnt. Gerät man dabei in eine Sackgasse — in der letzten Zeile
+ * ist nur noch die Person selbst übrig —, sagt die Zeile das, und eine andere
+ * gibt jemanden frei.
  */
-/**
- * Jemanden eintragen — und dort wegnehmen, wo er vorher stand.
- *
- * Die Auswahl verhält sich damit wie eine Radiogruppe, und zwar aus einem
- * Grund, den man dem Formular nicht ansieht: **Jede:r besorgt genau ein
- * Geschenk.** Das ist die Zusage der ganzen Reihe — einmal im Jahr dran, nie
- * für sich selbst —, und der Server lehnt eine zweite Zuständigkeit ab.
- *
- * Die naheliegende Alternative wäre, belegte Namen auszugrauen. Sie führt in
- * eine Sackgasse: Wer sich durch die Liste klickt, kann bei der letzten Zeile
- * nur noch sich selbst übrig haben und käme dort nicht mehr heraus, ohne von
- * vorn anzufangen. So bleibt jeder Zwischenstand gültig — die Zeile, aus der
- * jemand herausrutscht, steht auf „Niemand", und das ist ein erlaubter
- * Zustand: Der Planer füllt sie beim Speichern.
- */
-function assign(
-  current: Record<string, string>,
-  birthdayPersonId: string,
-  responsiblePersonId: string,
-): Record<string, string> {
-  const next: Record<string, string> = {};
+function Pairings({
+  rows,
+  shown,
+  pairs,
+  loading,
+  onAssign,
+}: {
+  /** Alle mit Geburtstag, in Reihenfolge. */
+  rows: Row[];
+  /** Die Zuteilung zum Ansehen (`Der Reihe nach`); `null` heißt: zum Ändern. */
+  shown: Row[] | null;
+  pairs: Assignment;
+  loading: boolean;
+  onAssign: (birthdayPersonId: string, responsiblePersonId: string) => void;
+}) {
+  if (loading) return <CardSkeleton />;
 
-  for (const [forWhom, responsible] of Object.entries(current)) {
-    next[forWhom] = responsible === responsiblePersonId ? '' : responsible;
+  if (rows.length < 2) {
+    return (
+      <p className="text-[11px] leading-relaxed text-stone-400">
+        {rows.length === 0
+          ? 'Noch hat niemand seinen Geburtstag eingetragen. Ohne Datum gibt es keinen Platz in der Reihe.'
+          : 'Bisher hat nur eine Person ihren Geburtstag eingetragen — zum Beschenken braucht es zwei.'}
+      </p>
+    );
   }
 
-  next[birthdayPersonId] = responsiblePersonId;
-  return next;
-}
-
-function PairingsCard({ repairedAt }: { repairedAt: string | null }) {
-  const pairings = useGiftPairings();
-  const save = useSetGiftPairings();
-  const toast = useToast();
-  const [draft, setDraft] = useState<Record<string, string> | null>(null);
-
-  if (pairings.isLoading) return <CardSkeleton />;
-
-  const rows = pairings.data?.pairings ?? [];
-  const current = Object.fromEntries(
-    rows.map((row) => [row.birthdayPerson.id, row.responsible?.id ?? '']),
-  );
-  const value = draft ?? current;
-
-  const unchanged = rows.every(
-    (row) => value[row.birthdayPerson.id] === current[row.birthdayPerson.id],
-  );
+  const taken = new Set(Object.values(pairs).filter(Boolean));
 
   return (
-    <Card className="mt-2 space-y-4">
-      {/* Der Hinweis, dass hier etwas ohne einen Menschen entschieden wurde.
-          Er verschwindet mit dem Speichern — dann hat jemand hingesehen. */}
-      {repairedAt && (
-        <div className="flex gap-2.5 rounded-lg border border-alert-line bg-alert-bg p-3">
-          <TriangleAlert size={14} className="mt-0.5 shrink-0 text-alert" />
-          <p className="text-[11px] leading-relaxed text-stone-600">
-            Am {formatTimestamp(repairedAt)} hat sich die Gruppe geändert, und
-            die Zuteilung war danach lückenhaft. Sie wurde automatisch
-            geschlossen — sieh sie einmal durch und speichere.
-          </p>
-        </div>
-      )}
+    <div className="space-y-2">
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-stone-500">
+        <Gift size={13} className="text-stone-400" aria-hidden />
+        Wer besorgt für wen
+      </p>
 
       <ul className="space-y-2">
-        {rows.map((row) => (
-          <li
-            key={row.birthdayPerson.id}
-            className="flex flex-col gap-2 rounded-md border border-line p-3 sm:flex-row sm:items-center sm:gap-3"
-          >
-            <span className="flex min-w-0 items-center gap-2 sm:flex-1">
-              <Avatar person={row.birthdayPerson} size="xs" />
-              <span className="truncate text-[12px] font-bold text-stone-800">
-                {row.birthdayPerson.name}
-              </span>
-              <Gift size={12} className="shrink-0 text-stone-300" />
-            </span>
+        {rows.map((row) => {
+          const id = row.birthdayPerson.id;
+          const responsible = shown
+            ? (shown.find((entry) => entry.birthdayPerson.id === id)
+                ?.responsible ?? null)
+            : null;
+          const chosen = pairs[id] ?? '';
+          const options = rows.filter(
+            (other) =>
+              other.birthdayPerson.id !== id &&
+              (other.birthdayPerson.id === chosen ||
+                !taken.has(other.birthdayPerson.id)),
+          );
+          const empty = !shown && chosen === '';
 
-            <Select
-              className="sm:w-48"
-              value={value[row.birthdayPerson.id] ?? ''}
-              onChange={(event) =>
-                setDraft(
-                  assign(value, row.birthdayPerson.id, event.target.value),
-                )
-              }
+          return (
+            <li
+              key={id}
+              className={cn(
+                'flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:gap-3',
+                empty ? 'border-alert-line bg-alert-bg/40' : 'border-line',
+              )}
             >
-              <option value="">Niemand</option>
-              {rows
-                .filter(
-                  (other) => other.birthdayPerson.id !== row.birthdayPerson.id,
-                )
-                .map((other) => (
-                  <option
-                    key={other.birthdayPerson.id}
-                    value={other.birthdayPerson.id}
+              <span className="flex min-w-0 items-center gap-2 sm:flex-1">
+                <Avatar person={row.birthdayPerson} size="xs" />
+                <span className="truncate text-[12px] font-bold text-stone-800">
+                  {row.birthdayPerson.name}
+                </span>
+                <span className="shrink-0 text-[11px] text-stone-400">
+                  {formatBirthday(row.birthday)}
+                </span>
+              </span>
+
+              <span className="flex min-w-0 items-center gap-2 sm:w-72 sm:shrink-0">
+                <span className="shrink-0 text-[11px] text-stone-400">
+                  wird beschenkt von
+                </span>
+
+                {shown ? (
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <Avatar person={responsible} size="xs" />
+                    <span className="truncate text-[12px] font-semibold text-stone-700">
+                      {responsible?.name ?? 'niemandem'}
+                    </span>
+                  </span>
+                ) : options.length === 0 && chosen === '' ? (
+                  <span className="text-[11px] text-alert">
+                    Niemand mehr frei — ändere eine andere Zeile.
+                  </span>
+                ) : (
+                  <Select
+                    className={cn('min-w-0 flex-1', empty && 'border-alert')}
+                    value={chosen}
+                    aria-label={`Wer besorgt das Geschenk für ${row.birthdayPerson.name}`}
+                    onChange={(event) => onAssign(id, event.target.value)}
                   >
-                    {other.birthdayPerson.name}
-                  </option>
-                ))}
-            </Select>
-          </li>
-        ))}
+                    <option value="" disabled>
+                      Bitte wählen …
+                    </option>
+                    {options.map((other) => (
+                      <option
+                        key={other.birthdayPerson.id}
+                        value={other.birthdayPerson.id}
+                      >
+                        {other.birthdayPerson.name}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </span>
+            </li>
+          );
+        })}
       </ul>
-
-      {rows.length === 0 && (
-        <p className="text-[11px] leading-relaxed text-stone-400">
-          Noch hat niemand seinen Geburtstag eingetragen. Ohne Datum gibt es
-          keinen Platz in der Reihe.
-        </p>
-      )}
-
-      {rows.length > 0 && (
-        <p className="text-[11px] leading-relaxed text-stone-400">
-          Jede:r besorgt genau ein Geschenk. Trägst du jemanden hier ein,
-          rutscht er dort heraus, wo er vorher stand. Bleibt eine Zeile auf
-          „Niemand", füllt die App sie beim Speichern selbst.
-        </p>
-      )}
-
-      <Button
-        variant="secondary"
-        disabled={unchanged}
-        loading={save.isPending}
-        onClick={() =>
-          save.mutate(
-            {
-              pairings: Object.entries(value)
-                // Leer heißt „niemand" und ist ein gültiger Zustand — er wird
-                // weggelassen statt als Zuteilung auf nichts geschickt.
-                .filter(([, responsiblePersonId]) => responsiblePersonId !== '')
-                .map(([birthdayPersonId, responsiblePersonId]) => ({
-                  birthdayPersonId,
-                  responsiblePersonId,
-                })),
-            },
-            {
-              onSuccess: () => {
-                setDraft(null);
-                toast.success('Zuteilung gespeichert.');
-              },
-              onError: (error) => toast.error(errorMessage(error)),
-            },
-          )
-        }
-      >
-        Zuteilung speichern
-      </Button>
-    </Card>
+    </div>
   );
+}
+
+/** `MM-DD` → „12. Mai". Im Schaltjahr 2000 gerechnet, damit es den 29. Februar gibt. */
+function formatBirthday(monthDay: string): string {
+  const [month, day] = monthDay.split('-').map(Number);
+  return new Date(
+    Date.UTC(2000, (month ?? 1) - 1, day ?? 1),
+  ).toLocaleDateString('de-DE', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+  });
 }

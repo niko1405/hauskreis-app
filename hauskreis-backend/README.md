@@ -1293,6 +1293,17 @@ selbst angelegte Termine (z. B. „Geburtstag von …") davor, durch einen
 erzeugten ersetzt zu werden. Abgesichert ist das zusätzlich durch einen
 Unique-Index auf `(hauskreis_id, date)`.
 
+**Ein Datum mit Grabstein bleibt leer** (`skipped_meeting_date`). Admins dürfen
+jeden Termin löschen (`DELETE …/meetings/:id`, still, ohne Nachricht) — einen
+erzeugten legte der Lauf aber in der nächsten Nacht wieder an, denn an dem Tag
+fehlt ja einer. `MeetingService.remove()` löscht deshalb einen erzeugten Abend
+und legt in **derselben Transaktion** den Grabstein an; der Generator nimmt
+diese Daten aus „fehlt". Eine eigene Tabelle und kein Status am Termin: Ein
+gelöschter Abend soll nirgends mehr auftauchen, und ein Status müsste jede
+Abfrage der App ausfiltern. Grabsteine vor heute räumt der Lauf selbst weg —
+dort legt er ohnehin nichts an. Absagen bleibt der Normalfall; Löschen ist für
+den Termin, den es nie hätte geben sollen.
+
 Die Datumslogik liegt bewusst als reine Funktionen in
 [`meeting-schedule.ts`](src/meeting/meeting-schedule.ts) (UTC-Mitternacht, damit
 Kalendertage nicht über Zeitzonen verrutschen) und ist dort direkt getestet.
@@ -1388,7 +1399,7 @@ beiden.
 Übrig sind zwei Spalten, die kein Baustein beantwortet:
 
 - `generated` — ob der nächtliche Lauf den Abend angelegt hat. Daran hängen der
-  Taktschlag oben und „löschen statt absagen".
+  Taktschlag oben und der Grabstein beim Löschen.
 - `special` — ob er aus dem Rhythmus fällt (Geburtstag, Freizeit). Daran hängen
   die zwei Benachrichtigungsarten für besondere Termine, die Actionstep-Ausnahme
   und die Markierung in der Terminliste.
@@ -3130,7 +3141,7 @@ bewegt hat.
 Einrichtung und zum Nachschauen. Idempotent: ein zweiter Aufruf antwortet mit
 `created: 0`.
 
-**Jetzt weiterschalten** (`POST …/rotate`), auch mitten in einer laufenden
+**Nächste Runde vorziehen** (`POST …/rotate`), auch mitten in einer laufenden
 Periode. Zuerst macht die laufende Runde Platz, in zwei bewusst
 unterschiedlichen Weisen:
 
@@ -3299,6 +3310,24 @@ selbst zuständig, und wer gerade beschenkt wurde, ist als nächstes an der Reih
 **Wer keinen Geburtstag eingetragen hat, steht nicht in der Reihe** — weder als
 Beschenkter noch als Schenkender. Das ist keine Strafe, sondern die Bauart: Der
 Platz in der Reihe ist der Geburtstag.
+
+### Benutzerdefiniert: nur vollständig
+
+`GET …/birthdays/pairings` liefert **zweimal** dieselbe Liste: `pairings` (die
+gespeicherte Zuteilung, im Modus `MANUAL` die geltende) und `rotation` (die
+ausgerechnete, `rotate()` über dieselben Leute). Die Verwaltung zeigt die
+Zuteilung so in beiden Modi, und wer auf „Benutzerdefiniert" umstellt, fängt mit
+der Rotation an, die bis eben galt. Beide Listen stehen nach Geburtstag im Jahr
+(`inYearOrder`, dieselbe Folge, in der `rotate` den Kreis legt), jede Zeile mit
+`birthday` als `MM-DD` — das Jahr und damit das Alter gehen nicht heraus.
+
+`PUT …/birthdays/pairings` nimmt nur eine **vollständige** Zuteilung: Bei zwei
+oder mehr Leuten mit Geburtstag muss jede:r genau einmal Geburtstagskind und
+genau einmal Schenkende:r sein, sonst `400`. Früher füllte der Planer Lücken
+beim Speichern selbst — der Admin hätte dann etwas gespeichert, das er nie
+gesehen hat. `repairPairings` bleibt für den anderen Fall: Ändert sich danach
+die Gruppe, schließt der Planer die Lücke und setzt `pairings_repaired_at`, und
+die Verwaltung sagt es.
 
 ### Warum die Zuständigkeit gespeichert wird
 

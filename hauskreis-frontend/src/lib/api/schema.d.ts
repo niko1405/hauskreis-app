@@ -2546,6 +2546,24 @@ export interface components {
           /** Format: date-time */
           photoUpdatedAt: string | null;
         };
+        birthday: string;
+        responsible: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        } | null;
+      }[];
+      rotation: {
+        birthdayPerson: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+          /** Format: date-time */
+          photoUpdatedAt: string | null;
+        };
+        birthday: string;
         responsible: {
           /** Format: uuid */
           id: string;

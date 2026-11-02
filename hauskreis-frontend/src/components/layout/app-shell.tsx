@@ -13,16 +13,19 @@ import {
   FloatingActionProvider,
 } from './floating-action';
 import { GlobalProgress } from './global-progress';
+import { useInboxBadge } from './notification-bell';
 import { PullToRefresh } from './pull-to-refresh';
 import { SmartHeader } from './smart-header';
 import { useHasSmartHeader } from './use-header-scroll';
 import { useInboxDeeplink } from './use-inbox-deeplink';
-import { isTabRoute, Sidebar, TabBar } from './nav';
+import { isSidebarRoute, isTabRoute, Sidebar, TabBar } from './nav';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   // Steht hier und nicht in der Glocke: Der Haken muss auch dann greifen, wenn
   // die Push-Nachricht auf einen Bildschirm ohne Kopfleiste führt.
   useInboxDeeplink();
+  // Einmal hier und nicht in jeder Glocke — am Rechner sind es zwei.
+  useInboxBadge();
   const pathname = usePathname();
 
   return (
@@ -134,6 +137,7 @@ export function PageHeader({
   // Verwaltung, Hilfe und „Was ist neu" nicht — und keine dieser Seiten sollte
   // sich das merken müssen.
   const underHeader = useHasSmartHeader();
+  const pathname = usePathname();
 
   return (
     // `pt-safe-6` ist der sichere Rand **plus** 1.5rem in einer Regel; warum es
@@ -145,7 +149,14 @@ export function PageHeader({
       )}
     >
       <div>
-        {back && <BackButton fallback={back} className="mb-3" />}
+        {/* Am Rechner ist die Verwaltung ein Ziel der Spalte, und der Weg
+            hinaus ist die Spalte — wie bei den Tabs. */}
+        {back && (
+          <BackButton
+            fallback={back}
+            className={cn('mb-3', isSidebarRoute(pathname) && 'md:hidden')}
+          />
+        )}
         <h1 className="font-serif text-3xl leading-tight font-bold text-stone-900">
           {title}
         </h1>

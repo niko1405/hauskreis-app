@@ -848,8 +848,15 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     adminOnly: true,
     question: 'Wir schenken uns nichts — geht das auch?',
     answer:
-      'Ja, und es ist sogar die Vorgabe. In der Verwaltung unter „Geburtstags-Geschenke" lässt sich das Einteilen ganz abschalten: Dann stehen die Geburtstage weiter im Kalender und in der Liste, aber niemand bekommt eine Aufgabe und niemand eine Nachricht.\n\nDort lässt sich statt „der Reihe nach" auch eine **feste** Zuteilung wählen, die Jahr für Jahr gleich bleibt. Ändert sich dabei die Gruppe, schließt das System entstehende Lücken selbst und weist in der Verwaltung darauf hin — der Modus bleibt trotzdem „fest".',
-    keywords: ['ausschalten', 'deaktivieren', 'fest', 'manuell', 'verwaltung'],
+      'Ja, und es ist sogar die Vorgabe. In der Verwaltung unter „Geburtstags-Geschenke" lässt sich das Einteilen ganz abschalten: Dann stehen die Geburtstage weiter im Kalender und in der Liste, aber niemand bekommt eine Aufgabe und niemand eine Nachricht.\n\nIst es an, steht dort auch, **wer für wen besorgt** — bei „Der Reihe nach" zum Ansehen. Mit **„Benutzerdefiniert"** legt ihr die Zuteilung selbst fest, und sie bleibt Jahr für Jahr gleich. Gespeichert wird sie nur vollständig: Für jeden Geburtstag muss jemand eingetragen sein, und jede:r besorgt genau ein Geschenk. Ändert sich später die Gruppe, schließt die App die entstandene Lücke selbst und weist in der Verwaltung darauf hin — der Modus bleibt trotzdem „Benutzerdefiniert".',
+    keywords: [
+      'ausschalten',
+      'deaktivieren',
+      'fest',
+      'manuell',
+      'benutzerdefiniert',
+      'verwaltung',
+    ],
   },
   // ── Notizen ───────────────────────────────────────────────────────────────
   {
@@ -1146,7 +1153,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     id: 'admin-actionstep',
     category: 'admin',
     adminOnly: true,
-    question: 'Was macht der Schalter „Actionstep der Woche"?',
+    question: 'Was macht „Actionstep der Woche" in der Verwaltung?',
     answer:
       'Er entscheidet, ob der Vorsatz vom letzten Abend die Woche über auf **„Heute"** steht und ob die wöchentliche Erinnerung daran kommt.\n\n**Aus** heißt: keine Karte auf „Heute", keine Erinnerung, und die Benachrichtigungsart verschwindet aus den Einstellungen. Zusammenfassung und Actionstep am Abend bzw. an der Einheit bleiben, und wenn dort einer eingetragen wird, bekommen die anderen weiterhin Bescheid.',
     keywords: ['actionstep', 'woche', 'heute', 'ausschalten', 'vorsatz'],
@@ -1166,7 +1173,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     adminOnly: true,
     question: 'Wie greife ich in die Gebetsrunden ein?',
     answer:
-      'Unter „Gebets-Rhythmus" stellst du die Länge einer Runde ein (eine bis zwölf Wochen, Vorgabe zwei). Dort lassen sich die Gebetsbuddys auch ganz abschalten; dann fällt der Gebet-Tab weg, und bestehende Runden kommen beim Wiedereinschalten zurück.\n\n**„Jetzt weiterschalten"** beendet die laufende Runde und zieht die nächste geplante auf heute vor — alles Weitere rutscht mit. Die nächste Runde wird dabei **nicht** neu zusammengestellt, sie kommt nur früher.\n\n**„Gebetsrunden vorausplanen"** unter „Läufe" füllt den Vorlauf auf fünf Runden auf. Es meldet dabei niemandem etwas; das passiert erst, wenn eine Runde beginnt.',
+      'Unter „Gebets-Rhythmus" stellst du die Länge einer Runde ein (eine bis zwölf Wochen, Vorgabe zwei). Dort lassen sich die Gebetsbuddys auch ganz abschalten; dann fällt der Gebet-Tab weg, und bestehende Runden kommen beim Wiedereinschalten zurück.\n\n**„Nächste Runde vorziehen"** beendet die laufende Runde und zieht die nächste geplante auf heute vor — alles Weitere rutscht mit. Die nächste Runde wird dabei **nicht** neu zusammengestellt, sie kommt nur früher.\n\n**„Gebetsrunden vorausplanen"** unter „Läufe" füllt den Vorlauf auf fünf Runden auf. Es meldet dabei niemandem etwas; das passiert erst, wenn eine Runde beginnt.',
     keywords: ['rotation', 'weiterschalten', 'gebet', 'runde'],
   },
   {
@@ -1184,7 +1191,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     adminOnly: true,
     question: 'Wie verwalte ich Mitglieder?',
     answer:
-      'In der Verwaltung unter „Mitglieder".\n\n**Einladen** — nur eine E-Mail-Adresse nötig. Bis zur ersten Anmeldung steht dort „eingeladen", und die Einladung lässt sich samt Konto zurücknehmen.\n\n**Entfernen** — geht denselben Weg wie ein selbst gewähltes Verlassen: Die Person kommt aus allen kommenden Planungen heraus, das Archiv behält ihren Namen, und eine neue Einladung an dieselbe Adresse holt alles zurück.\n\n**Admin-Rechte** lassen sich geben und nehmen. Der letzte Admin kann sich selbst nicht degradieren.\n\n**Dich selbst** kannst du hier nicht entfernen — dafür gibt es „Hauskreis verlassen" im Profil, wo auch die Frage nach der Nachfolge gestellt wird.',
+      'In der Verwaltung unter „Mitglieder".\n\n**Einladen** — der Knopf ganz oben öffnet ein Fenster; nur eine E-Mail-Adresse ist nötig. Bis zur ersten Anmeldung steht dort „eingeladen", und die Einladung lässt sich samt Konto zurücknehmen. Kommt jemand zurück, der sein **Konto gelöscht** hatte, wähle dort „War schon einmal dabei" und die passende Zeile — dann stehen seine vergangenen Abende wieder unter seinem Namen. Wer den Hauskreis nur verlassen hatte, wird über seine Adresse von selbst wiedererkannt.\n\n**Entfernen** — geht denselben Weg wie ein selbst gewähltes Verlassen: Die Person kommt aus allen kommenden Planungen heraus, das Archiv behält ihren Namen, und eine neue Einladung an dieselbe Adresse holt alles zurück.\n\n**Admin-Rechte** lassen sich geben und nehmen. Der letzte Admin kann sich selbst nicht degradieren.\n\n**Dich selbst** kannst du hier nicht entfernen — dafür gibt es „Hauskreis verlassen" im Profil, wo auch die Frage nach der Nachfolge gestellt wird.',
     keywords: ['personen', 'mitglieder', 'entfernen', 'rechte', 'admin'],
   },
   {
@@ -1193,8 +1200,16 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     adminOnly: true,
     question: 'Was macht die Gewichtung?',
     answer:
-      'Sie sagt, wie oft die Gruppe bei wem sein möchte — im Verhältnis zueinander. Der Normalwert ist 1: so oft wie alle anderen.\n\nHöher heißt öfter, niedriger heißt seltener. **Null heißt nie vorgeschlagen**, ohne die Wohnung von der Liste zu nehmen — praktisch für eine Adresse, die weit draußen liegt.\n\nDie Gewichtung hängt an der Wohnung, nicht an der Person: Wer zusammen wohnt, teilt sie sich.\n\nDie Orte selbst stehen im Archiv, nicht hier — hier steht nur die Gewichtung, weil sie eine Aussage über Menschen ist.',
-    keywords: ['gewicht', 'häufigkeit', 'öfter', 'seltener', 'null'],
+      'Sie sagt, wie oft die Gruppe bei wem sein möchte — im Verhältnis zueinander. Je Wohnung gibt es vier Stufen: **Nie**, **Selten** (halb so oft), **Normal** (die Vorgabe) und **Oft** (doppelt so oft). Wer es genauer will, wählt „Benutzerdefiniert" und gibt eine Zahl ein — 1 ist normal.\n\n**Nie heißt nie vorgeschlagen**, ohne die Wohnung von der Liste zu nehmen — praktisch für eine Adresse, die weit draußen liegt.\n\nDer Balken darüber zeigt, wie sich die Vorschläge damit ungefähr verteilen. Die Gewichtung hängt an der Wohnung, nicht an der Person: Wer zusammen wohnt, teilt sie sich.\n\nDie Orte selbst stehen im Archiv, nicht hier — hier steht nur die Gewichtung, weil sie eine Aussage über Menschen ist.',
+    keywords: [
+      'gewicht',
+      'häufigkeit',
+      'öfter',
+      'seltener',
+      'nie',
+      'null',
+      'verteilung',
+    ],
   },
   {
     id: 'admin-absagen',
@@ -1202,7 +1217,16 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     adminOnly: true,
     question: 'Wann sage ich einen Abend ab, wann lösche ich ihn?',
     answer:
-      '**Absagen** ist der Normalfall: Der Abend bleibt im Archiv als „fiel aus". Du kannst einen Grund angeben — ein „fällt aus" ohne Erklärung erzeugt genau die Rückfragen, die man sich sparen will. Alle bekommen eine Nachricht. Bei einem vergangenen Abend heißt der Knopf „Als abgesagt markieren", und dann geht keine Nachricht raus.\n\nEine Absage lässt sich zurücknehmen.\n\n**Löschen** geht nur bei selbst angelegten Terminen, und niemand wird benachrichtigt. Ein Dienstag, der ausfällt, gehört in eure Geschichte (und die App legte ihn ohnehin wieder an); ein versehentlich eingetragener Geburtstag war nie da.',
-    keywords: ['absagen', 'löschen', 'ausfallen', 'grund'],
+      '**Absagen** ist der Normalfall: Der Abend bleibt im Archiv als „fiel aus". Du kannst einen Grund angeben — ein „fällt aus" ohne Erklärung erzeugt genau die Rückfragen, die man sich sparen will. Alle bekommen eine Nachricht. Bei einem vergangenen Abend heißt der Knopf „Als abgesagt markieren", und dann geht keine Nachricht raus.\n\nEine Absage lässt sich zurücknehmen.\n\n**Löschen** ist für Termine, die es nie hätte geben sollen — ein versehentlich eingetragener Geburtstag, ein Dienstag in den Ferien, über den niemand eine Absage lesen will. Es geht an jedem Termin, nur für Admins, und niemand wird benachrichtigt. Der Abend verschwindet auch aus dem Archiv; einen von der App angelegten legt sie danach nicht wieder an.',
+    keywords: ['absagen', 'löschen', 'ausfallen', 'grund', 'ferien'],
+  },
+  {
+    id: 'admin-speichern',
+    category: 'admin',
+    adminOnly: true,
+    question: 'Wann gilt, was ich in der Verwaltung umstelle?',
+    answer:
+      'Erst beim **Speichern**. Sobald du etwas änderst, erscheint unten ein Balken mit „Speichern" und „Verwerfen" — er gilt für die ganze Seite, und er verschwindet wieder, wenn alles so ist wie gespeichert. Willst du die Seite mit ungespeicherten Änderungen verlassen, fragt die App nach.\n\nSofort wirken nur die **Aktionen**: jemanden einladen, Rechte geben, entfernen, eine Gebetsrunde vorziehen und die Läufe.\n\nDie Einzelheiten zu jeder Einstellung stehen hinter dem (i) daneben.',
+    keywords: ['speichern', 'verwerfen', 'balken', 'ungespeichert', 'gilt'],
   },
 ];

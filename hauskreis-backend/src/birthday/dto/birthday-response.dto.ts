@@ -140,11 +140,27 @@ export const birthdayDetailResponseSchema =
 
 export const giftPairingResponseSchema = z.object({
   birthdayPerson: personRefSchema,
+  /// Monat und Tag, `MM-DD` — ohne Jahr. Die Verwaltung schreibt „12. Mai"
+  /// neben den Namen; das Alter hat dort nichts zu suchen.
+  birthday: z.string().regex(/^\d{2}-\d{2}$/),
   responsible: personRefSchema.nullable(),
 });
 
+/**
+ * Die Zuteilung, wie sie in der Verwaltung steht — **zweimal**.
+ *
+ * `pairings` ist die gespeicherte feste Zuteilung (im Modus „Benutzerdefiniert"
+ * die geltende), `rotation` die ausgerechnete „Der Reihe nach". Beide kommen
+ * immer mit: Die Verwaltung zeigt im Modus „Der Reihe nach", wer wen bekommt,
+ * und wer auf „Benutzerdefiniert" umstellt, fängt mit genau dieser Zuteilung
+ * an — so wie der Planer beim Wechsel.
+ *
+ * Beide nach Geburtstag im Jahr sortiert, damit sich die Kette von oben nach
+ * unten liest.
+ */
 export const giftPairingListResponseSchema = z.object({
   pairings: z.array(giftPairingResponseSchema),
+  rotation: z.array(giftPairingResponseSchema),
   config: birthdayGiftConfigResponseSchema,
 });
 

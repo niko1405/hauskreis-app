@@ -130,6 +130,10 @@ export class MeetingGeneratorService {
    * Ein Termin kann mehrere Tage dauern, deshalb reicht der Vergleich auf das
    * Startdatum nicht: liegt der Abend **mitten** in einer Freizeit, stünde
    * sonst ein Hauskreis-Abend im Zeltlager.
+   *
+   * **Und ein Datum mit Grabstein bleibt leer** (`SkippedMeetingDate`): Dort
+   * hat ein Admin den erzeugten Abend gelöscht, und „fehlt" heißt an diesem
+   * Tag „soll fehlen".
    */
   async generateFor(
     hauskreisId: string,
@@ -155,17 +159,30 @@ export class MeetingGeneratorService {
     });
     const last = dates.at(-1) as Date;
 
-    const existing = await this.prisma.meeting.findMany({
-      where: {
-        hauskreisId,
-        date: { lte: last },
-        OR: [{ date: { in: dates } }, { endDate: { gte: dates[0] as Date } }],
-      },
-      select: { date: true, endDate: true },
+    // Vergangene Grabsteine sperren nichts mehr — dort legt der Lauf ohnehin
+    // nichts an. Weggeräumt, damit die Tabelle nicht mit den Jahren wächst.
+    await this.prisma.skippedMeetingDate.deleteMany({
+      where: { hauskreisId, date: { lt: today } },
     });
+
+    const [existing, skipped] = await Promise.all([
+      this.prisma.meeting.findMany({
+        where: {
+          hauskreisId,
+          date: { lte: last },
+          OR: [{ date: { in: dates } }, { endDate: { gte: dates[0] as Date } }],
+        },
+        select: { date: true, endDate: true },
+      }),
+      this.prisma.skippedMeetingDate.findMany({
+        where: { hauskreisId, date: { in: dates } },
+        select: { date: true },
+      }),
+    ]);
 
     const missing = dates.filter(
       (date) =>
+        !skipped.some((row) => row.date.getTime() === date.getTime()) &&
         !existing.some(
           (meeting) =>
             meeting.date <= date && (meeting.endDate ?? meeting.date) >= date,

@@ -98,4 +98,161 @@ describe('BirthdayConfigService.setPairings', () => {
       ),
     ).rejects.toThrow(/Sich selbst/);
   });
+
+  /**
+   * Eine Lücke füllte früher der Planer beim Speichern — der Admin hätte also
+   * etwas gespeichert, das er nie gesehen hat.
+   */
+  it('weist eine Zuteilung mit Lücke zurück', async () => {
+    await expect(
+      konfigDienst().setPairings(
+        'hk-1',
+        { pairings: [pairing('a', 'b'), pairing('b', 'a')] },
+        'admin',
+      ),
+    ).rejects.toThrow(/jeden Geburtstag/);
+  });
+
+  it('nimmt eine vollständige Zuteilung an', async () => {
+    const { service, transaction } = speicherDienst([
+      { id: 'a' },
+      { id: 'b' },
+      { id: 'c' },
+    ]);
+
+    await service.setPairings(
+      'hk-1',
+      { pairings: [pairing('a', 'c'), pairing('b', 'a'), pairing('c', 'b')] },
+      'admin',
+    );
+
+    expect(transaction).toHaveBeenCalled();
+  });
+
+  /** Allein gibt es niemanden, der schenken könnte — leer ist dann vollständig. */
+  it('nimmt bei einer einzigen Person die leere Zuteilung an', async () => {
+    const { service, transaction } = speicherDienst([{ id: 'a' }]);
+
+    await service.setPairings('hk-1', { pairings: [] }, 'admin');
+
+    expect(transaction).toHaveBeenCalled();
+  });
+});
+
+/** Wie `konfigDienst`, aber mit allem, was ein gelungenes Speichern braucht. */
+function speicherDienst(people: { id: string }[]) {
+  const transaction = jest.fn().mockResolvedValue([]);
+  const prisma = {
+    // Mit Geburtstag: Nach dem Speichern liest der Dienst die Zuteilung neu.
+    person: {
+      findMany: jest.fn().mockResolvedValue(
+        people.map((person) => ({
+          ...person,
+          name: person.id,
+          photoUpdatedAt: null,
+          birthdate: new Date('1990-05-12T00:00:00.000Z'),
+        })),
+      ),
+    },
+    birthdayGiftPairing: {
+      deleteMany: jest.fn(),
+      createMany: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    birthdayGiftConfig: {
+      updateMany: jest.fn(),
+      findUnique: jest.fn().mockResolvedValue({ enabled: true }),
+    },
+    $transaction: transaction,
+  } as unknown as PrismaService;
+
+  return { service: new BirthdayConfigService(prisma), transaction };
+}
+
+const geboren = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+
+/**
+ * Was die Verwaltung zu sehen bekommt: die gespeicherte Zuteilung und die
+ * ausgerechnete Rotation, beide in der Reihenfolge der Geburtstage im Jahr.
+ */
+describe('BirthdayConfigService.listPairings', () => {
+  function listDienst(
+    stored: { birthdayPersonId: string; responsible: object }[],
+  ) {
+    const people = [
+      {
+        id: 'c',
+        name: 'Chris',
+        photoUpdatedAt: null,
+        birthdate: geboren('1990-11-02'),
+      },
+      {
+        id: 'a',
+        name: 'Anna',
+        photoUpdatedAt: null,
+        birthdate: geboren('1985-03-14'),
+      },
+      {
+        id: 'b',
+        name: 'Ben',
+        photoUpdatedAt: null,
+        birthdate: geboren('2001-07-30'),
+      },
+    ];
+    const prisma = {
+      person: { findMany: jest.fn().mockResolvedValue(people) },
+      birthdayGiftPairing: { findMany: jest.fn().mockResolvedValue(stored) },
+      birthdayGiftConfig: {
+        findUnique: jest.fn().mockResolvedValue({ enabled: true }),
+      },
+    } as unknown as PrismaService;
+
+    return new BirthdayConfigService(prisma);
+  }
+
+  it('sortiert nach Geburtstag im Jahr und nennt ihn ohne Jahr', async () => {
+    const { pairings } = await listDienst([]).listPairings('hk-1');
+
+    expect(
+      pairings.map((row) => [row.birthdayPerson.name, row.birthday]),
+    ).toEqual([
+      ['Anna', '03-14'],
+      ['Ben', '07-30'],
+      ['Chris', '11-02'],
+    ]);
+  });
+
+  it('gibt kein Geburtsjahr heraus', async () => {
+    const { pairings } = await listDienst([]).listPairings('hk-1');
+
+    expect(pairings[0]?.birthdayPerson).not.toHaveProperty('birthdate');
+  });
+
+  /** Wer gerade gefeiert hat, besorgt für den Nächsten — der Erste bekommt vom Letzten. */
+  it('rechnet die Rotation mit', async () => {
+    const { rotation } = await listDienst([]).listPairings('hk-1');
+
+    expect(
+      rotation.map((row) => [row.birthdayPerson.id, row.responsible?.id]),
+    ).toEqual([
+      ['a', 'c'],
+      ['b', 'a'],
+      ['c', 'b'],
+    ]);
+  });
+
+  it('zeigt eine gespeicherte Lücke als leer', async () => {
+    const { pairings } = await listDienst([
+      {
+        birthdayPersonId: 'a',
+        responsible: { id: 'b', name: 'Ben', photoUpdatedAt: null },
+      },
+    ]).listPairings('hk-1');
+
+    expect(pairings.map((row) => row.responsible?.id ?? null)).toEqual([
+      'b',
+      null,
+      null,
+    ]);
+  });
 });

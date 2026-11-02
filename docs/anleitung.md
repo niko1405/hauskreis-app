@@ -210,6 +210,10 @@ Alle Einstellungen aus Kapitel 3, dazu die Mitgliederliste, der Admin-Bereich
 **Datenschutzerklärung**, das **Impressum**, die **Hilfe** und **„Was ist
 neu"**.
 
+Am Rechner stehen **Gruppe** und **Verwaltung** (nur für Admins) dagegen in der
+Spalte links, und die **Glocke** mit deinen Benachrichtigungen sitzt unten in
+dieser Spalte.
+
 ---
 
 ## 6. Termine und Rollen
@@ -582,8 +586,11 @@ zwischen:
 - **„Der Reihe nach"** — du besorgst das Geschenk für den, dessen Geburtstag
   nach deinem kommt. Daraus folgt von selbst, dass jede:r im Jahr genau einmal
   dran ist und niemand für sich selbst zuständig ist.
-- **„Fest zugeteilt"** — der Admin legt die Paare von Hand fest, und sie bleiben
-  Runde für Runde gleich.
+- **„Benutzerdefiniert"** — der Admin legt fest, wer für wen besorgt, und das
+  bleibt Runde für Runde gleich. Für jeden Geburtstag muss dabei jemand
+  eingetragen sein.
+
+In beiden Fällen steht in der Verwaltung, wer wen beschenkt.
 
 > Mehr dazu: Profil → Hilfe → „Geburtstage".
 

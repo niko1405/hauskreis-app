@@ -417,6 +417,21 @@ sechster Tab machte sie eng. Ein starrer Balken oben wäre aber das Ende der
 Kopfbilder, die auf drei Bildschirmen die halbe Gestaltung tragen — also eine
 Leiste, die sich zum Scrollen verhält.
 
+**Nur mobil.** Ab `md` gibt es die Seitenspalte (`nav.tsx`), und die trägt, wofür
+es die Leiste gibt: **„Gruppe"** als Ziel vor dem Profil, für Admins abgesetzt
+**„Verwaltung"** (im Profil fehlt sie am Rechner) und unten die **Glocke** als
+Karte mit Wort und Zahl (`SidebarBell`). Die Leiste trägt deshalb `md:hidden`,
+und `.pt-header-6` fällt ab `md` auf den Wert von `pt-safe-6` zurück. Per CSS
+und nicht per Breitenabfrage in `useHasSmartHeader`: Die Seiten werden zur
+Bauzeit gerendert, und eine Abfrage gäbe im ersten Bild die falsche Antwort.
+Ebenso fehlen am Rechner der Schalter „Kopfleiste anzeigen" und der Knopf zur
+Gruppe im Profil. Gruppe und Verwaltung tragen dort keinen Zurück-Pfeil
+(`isSidebarRoute`) — hinein und hinaus führt die Spalte.
+
+Weil am Rechner damit zwei Glocken gerendert werden (die der Leiste nur
+ausgeblendet), hält `useInboxBadge` die Zahl **einmal** in `AppShell` frisch —
+Anmeldung am Service Worker und App-Abzeichen. Die Glocken lesen nur.
+
 **Abschaltbar** (Profil → Darstellung). Die Wahl liegt im Gerät
 (`lib/header-preference.ts`, gebaut wie `lib/theme.ts`) und hängt an genau einer
 Zeile in `useHasSmartHeader` — von dort fällt alles andere ab: `SmartHeader`
@@ -1854,6 +1869,13 @@ dann, wenn die Art in den Einstellungen abgeschaltet ist**. In der Box zu stehen
 stört niemanden. Sie liegt darum unter `/api/notifications` und nicht unter
 `/api/push`.
 
+**Zwei Platzierungen, eine Box** (`placement`). Mobil geht sie unter der Glocke
+der Kopfleiste auf (`fixed`, rechts oben), am Rechner neben der Glocke unten in
+der Seitenspalte und nach oben (`absolute` an der Karte der Glocke, Zipfel
+links). Die Spalte scrollt deshalb nur ihre Liste und nicht sich selbst — ein
+`overflow` an ihr schnitte die Blase ab —, und `md:z-40` hebt sie über den
+Inhalt daneben.
+
 Gelesenes verschwindet aus der Box, aber nicht aus der Welt: Es wandert nach
 „Früher", aufklappbar, die letzten dreißig.
 
@@ -2001,6 +2023,44 @@ weiß, stimmt er für später Ernannte von selbst. In der Tab-Leiste läuft er m
 „Was ist neu" und „Erste Schritte" in **einen** Punkt zusammen, aber nur bei
 Admins: Ein Punkt, der auf etwas Unsichtbares zeigt, bliebe für immer stehen.
 
+## Die Verwaltung: ein Formular, ein Speichern
+
+`features/admin/admin-draft.tsx`. Jede Karte der Verwaltung hält ihren eigenen
+Entwurf und meldet über `useAdminDraftSection` nur an, **ob** sie abweicht,
+**ob** sie so gespeichert werden darf (`invalid`, ein Satz) und **wie** sie
+speichert und verwirft. Der Provider zeigt daraus unten einen Balken
+(`BottomSlot`, wie `EditBar`) — da, solange etwas abweicht, weg, sobald Soll und
+Ist gleich sind — und meldet `useUnsavedGuard` an.
+
+- **Gespeichert wird nacheinander**, in der Reihenfolge der Karten, über
+  `mutateAsync`. Beim ersten Fehler hört es auf; gemeldet hat der Hook schon
+  (Toast oder `ConflictBanner`), und was nicht geschrieben wurde, steht weiter
+  als Entwurf da.
+- **Rhythmus und Actionstep sind ein Entwurf** (`ScheduleSettings`): Sie stehen
+  in derselben Zeile am Server, und zwei Schreibvorgänge mit `If-Match`
+  hintereinander kämen sich in die Quere. Geschrieben wird nur, was sich
+  geändert hat.
+- **Geschenke**: erst die Einstellungen (mit `If-Match`), dann die Zuteilung
+  (ohne) — andersherum höbe die Zuteilung die Version. Beim Wechsel auf
+  „Benutzerdefiniert" wird die Zuteilung immer mitgeschickt, vorbelegt mit der
+  Rotation, die bis eben galt.
+- **Aktionen bleiben Aktionen**: einladen (ein Sheet), Rechte, entfernen,
+  „Nächste Runde vorziehen", die Läufe.
+
+**Das (i)** (`components/ui/info-tip.tsx`) trägt die Einzelheiten, damit unter
+jeder Einstellung höchstens ein kurzer Satz steht. Ein Tipp öffnet die Blase,
+ein zweiter, ein Tipp daneben oder Escape schließt sie. Beim Öffnen wird sie in
+den Rahmen geschoben, in dem sie steht (`<main>` oder ein Sheet) — ein (i) am
+rechten Rand ließe sie sonst hinter der Kante verschwinden. `Field`,
+`SectionTitle` und `CheckRow` nehmen es als `info`.
+
+**Die Gewichtung** (`host-weights-admin.tsx`) sind Stufen statt einer Zahl —
+Nie, Selten, Normal, Oft, Benutzerdefiniert (`Segmented` mit `fill`). Darüber
+ein gestapelter Balken aus dem Entwurf, in den Diagrammfarben `--color-chart-*`
+(`globals.css`, hell und dunkel gegen `card` geprüft); die Farbe hängt an der
+Stelle der Wohnung in der Liste, nicht an ihrem Anteil, und neben jedem Punkt
+steht die Zahl.
+
 ## Ein Link, der weiß, was ungespeichert ist
 
 `components/ui/link.tsx` und `components/ui/unsaved.ts`.
@@ -2073,8 +2133,10 @@ Ein wortlos ausgegrauter Knopf wäre kein Hinweis, sondern ein Fehler.
 **Was an oder aus ist und sofort gilt, ist ein Schalter** (`components/ui/switch.tsx`,
 `Switch` und `SwitchRow`). Das Häkchen (`Checkbox`) bleibt für das, was man
 auswählt oder abhakt, und für Angaben in einem Formular mit Speichern-Knopf —
-Bausteine eines Abends, der Entwurf der Geschenk-Verwaltung, erledigte Ideen,
-Filter. `SwitchRow` ist ein `<label>` über die ganze Zeile, und weil
+Bausteine eines Abends, die ganze Verwaltung, erledigte Ideen, Filter. Das
+gezeichnete Häkchen dafür ist `components/ui/check-row.tsx` (`CheckRow`), mit
+drei `<label htmlFor>` statt eines umschließenden — das (i) daneben darf sonst
+nicht in der Zeile stehen, ohne beim Antippen das Kästchen umzulegen. `SwitchRow` ist ein `<label>` über die ganze Zeile, und weil
 ein `button` beschriftbar ist, schaltet ein Tipp auf den Text mit.
 
 **„Deine Angaben" sind zwei Karten.** „Über dich" (Name, Geburtstag) speichert
@@ -2090,7 +2152,8 @@ halb getippten Namen.
 
 **Jede Unterseite hat einen Zurück-Pfeil** (`PageHeader` mit `back`, dahinter
 `components/layout/back-button.tsx`): Präferenzen, Konto, Hilfe, „Was ist neu",
-Verwaltung, Gruppe und Anleitung. Ohne ihn wäre der Weg hinaus ein Sprung
+Verwaltung, Gruppe und Anleitung — Verwaltung und Gruppe nur mobil, am Rechner
+sind sie Ziele der Seitenspalte. Ohne ihn wäre der Weg hinaus ein Sprung
 woandershin statt zurück. Er geht zurück, wohin man kam (`router.back()`), und nur ohne
 Vorgeschichte — eine Push-Nachricht, die direkt auf `/neu` führt — auf das Ziel
 in `back`. Und er fragt nach Ungespeichertem wie jeder Link.

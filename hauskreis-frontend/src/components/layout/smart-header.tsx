@@ -36,6 +36,11 @@
  * Die negative Untermarge (`header-inset`) nimmt ihr die Höhe im Fluss, sodass
  * sie über dem Inhalt liegt statt vor ihm.
  *
+ * **Nur mobil** (`md:hidden`). Am Rechner trägt die Seitenspalte den Weg zur
+ * Gruppe und die Glocke (`nav.tsx`) — eine Leiste darüber wäre eine zweite
+ * Navigation an einem zweiten Rand, und sie läge über den Kopfbildern, ohne
+ * dass dort unten etwas eng wäre.
+ *
  * **Warum die Nachrichten-Blase daneben steht und nicht darin.** Die Leiste
  * trägt beim Wegfahren ein `transform`, und ein transformiertes Element wird
  * zum Bezugsrahmen für jedes `position: fixed` darin — dieselbe Eigenschaft,
@@ -65,7 +70,7 @@ export function SmartHeader() {
     <>
       <header
         className={cn(
-          'header-inset sticky top-0 z-40 transition-colors duration-200',
+          'header-inset sticky top-0 z-40 transition-colors duration-200 md:hidden',
           // Der Übergang gilt **nur beim Zurückkommen**. Beim Wegfahren fällt
           // die Klasse im selben Render weg, in dem die Verschiebung dazukommt:
           // Die Leiste ist damit sofort weg, statt sich sichtbar hinauszu-

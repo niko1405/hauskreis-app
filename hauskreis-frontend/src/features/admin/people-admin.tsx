@@ -8,6 +8,10 @@
  * bleibt `null`, bis sich jemand zum ersten Mal anmeldet. Solange lässt sich
  * die Einladung samt Konto zurückziehen — danach nicht mehr, denn dann gehört
  * das Konto einem Menschen und nicht mehr dieser Gruppe.
+ *
+ * Alles hier sind **Aktionen** und kein Entwurf: Sie wirken sofort, und wo es
+ * nötig ist, fragen sie vorher nach. Der Speichern-Balken der Verwaltung
+ * (`admin-draft.tsx`) hat mit ihnen nichts zu tun.
  */
 import {
   Clock,
@@ -18,6 +22,7 @@ import {
   ShieldOff,
   Trash2,
   UserPlus,
+  UserRound,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -26,9 +31,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
-import { Field, Select, TextInput } from '@/components/ui/field';
+import { Field, TextInput } from '@/components/ui/field';
+import { InfoTip } from '@/components/ui/info-tip';
+import { Segmented } from '@/components/ui/segmented';
+import { Sheet } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
+import { cn } from '@/lib/cn';
 import { ConflictError, errorMessage } from '@/lib/api/errors';
 import {
   useDeletePerson,
@@ -49,11 +58,45 @@ export function PeopleAdmin() {
   const toast = useToast();
   const confirm = useConfirm();
   const [inviting, setInviting] = useState(false);
+  /**
+   * Zählt die Öffnungen. Als Schlüssel am Sheet setzt er das Formular bei
+   * jedem Öffnen zurück — und nicht beim Schließen, sonst leerte es sich
+   * sichtbar, während es noch hinausfährt.
+   */
+  const [opened, setOpened] = useState(0);
 
   return (
     <section>
-      <SectionTitle>Mitglieder</SectionTitle>
+      <SectionTitle
+        info={
+          <>
+            <strong className="font-semibold">Eingeladen</strong> heißt: Die
+            Person hat sich noch nie angemeldet. Solange lässt sich die
+            Einladung samt Konto zurückziehen.{' '}
+            <strong className="font-semibold">Entfernen</strong> nimmt jemanden
+            aus allen kommenden Planungen; vergangene Abende zeigen weiter, wer
+            dabei war, und eine neue Einladung an dieselbe Adresse holt alles
+            zurück.
+          </>
+        }
+      >
+        Mitglieder
+      </SectionTitle>
       <Card className="space-y-4">
+        {/* Oben und gefüllt: Einladen ist das, wofür die meisten hierher
+            kommen. Unter einer Liste von neun Leuten stand der Knopf eine
+            Bildschirmhöhe weit weg und sah aus wie eine Nebensache. */}
+        <Button
+          className="w-full"
+          onClick={() => {
+            setOpened((count) => count + 1);
+            setInviting(true);
+          }}
+        >
+          <UserPlus size={15} />
+          Jemanden einladen
+        </Button>
+
         {people.isLoading && <Skeleton className="h-24 w-full" />}
 
         <ul className="space-y-2">
@@ -182,20 +225,13 @@ export function PeopleAdmin() {
             </li>
           ))}
         </ul>
-
-        {inviting ? (
-          <InviteForm onDone={() => setInviting(false)} />
-        ) : (
-          <Button
-            variant="secondary"
-            className="w-full"
-            onClick={() => setInviting(true)}
-          >
-            <UserPlus size={14} />
-            Jemanden einladen
-          </Button>
-        )}
       </Card>
+
+      <InviteSheet
+        key={opened}
+        open={inviting}
+        onClose={() => setInviting(false)}
+      />
     </section>
   );
 }
@@ -257,17 +293,30 @@ function RoleToggle({ person }: { person: PersonListEntry }) {
   );
 }
 
-function InviteForm({ onDone }: { onDone: () => void }) {
+/**
+ * Einladen, in einem Sheet.
+ *
+ * Inline in der Karte schob das Formular die Mitgliederliste weg, und auf dem
+ * Telefon lag das Adressfeld hinter der Tastatur — dieselbe Überlegung wie bei
+ * den Ideen der Gruppe.
+ */
+function InviteSheet({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'member' | 'admin'>('member');
 
   /**
-   * Ob der Teil „war schon einmal dabei" offen ist, und wenn ja, welche Zeile
-   * gewählt wurde. Beides getrennt, damit das Zuklappen die Wahl aufhebt —
-   * eine unsichtbare Zuordnung mitzuschicken wäre die unangenehmste Art, sie
-   * zu vergessen.
+   * Wer das ist — und, bei „war schon einmal dabei", welche Zeile. Beides
+   * getrennt, damit der Wechsel zurück auf „neu" die Wahl aufhebt: Eine
+   * unsichtbare Zuordnung mitzuschicken wäre die unangenehmste Art, sie zu
+   * vergessen.
    */
-  const [merging, setMerging] = useState(false);
+  const [returning, setReturning] = useState(false);
   const [formerPersonId, setFormerPersonId] = useState('');
 
   const invite = useInvitePerson();
@@ -280,7 +329,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
       {
         email: email.trim(),
         role,
-        ...(merging && formerPersonId !== '' ? { formerPersonId } : {}),
+        ...(returning && formerPersonId !== '' ? { formerPersonId } : {}),
       },
       {
         onSuccess: (person) => {
@@ -294,7 +343,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
               `${person.email} angelegt, aber die Einladungsmail ging nicht raus. Schick sie über den Knopf in der Zeile erneut.`,
             );
           }
-          onDone();
+          onClose();
         },
         onError: (error) =>
           toast.error(
@@ -307,54 +356,127 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <div className="space-y-3 border-t border-line pt-4">
-      <Field
-        label="E-Mail"
-        hint="Mehr braucht es nicht: Name und Nutzername wählt die Person beim Aktivieren ihres Kontos selbst."
-      >
-        <TextInput
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-      </Field>
-      <Field label="Rolle">
-        <Select
-          value={role}
-          onChange={(event) =>
-            setRole(event.target.value as 'member' | 'admin')
-          }
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Jemanden einladen"
+      subtitle="Die Person bekommt eine Mail mit einem Link zum Anmelden."
+      footer={
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
+            Abbrechen
+          </Button>
+          <Button
+            className="flex-1"
+            loading={invite.isPending}
+            disabled={
+              email.trim() === '' || (returning && formerPersonId === '')
+            }
+            onClick={submit}
+          >
+            <Mail size={15} />
+            Einladen
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-5">
+        <Field
+          label="E-Mail"
+          info="Mehr braucht es nicht: Name und Nutzername wählt die Person beim Aktivieren ihres Kontos selbst."
         >
-          <option value="member">Mitglied</option>
-          <option value="admin">Admin</option>
-        </Select>
-      </Field>
-      <FormerMemberPicker
-        open={merging}
-        onToggle={() => {
-          setMerging((was) => !was);
-          setFormerPersonId('');
-        }}
-        chosen={formerPersonId}
-        onChoose={setFormerPersonId}
-      />
+          <TextInput
+            type="email"
+            autoComplete="off"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </Field>
 
-      <div className="flex gap-2">
-        <Button variant="ghost" size="sm" className="flex-1" onClick={onDone}>
-          Abbrechen
-        </Button>
-        <Button
-          size="sm"
-          className="flex-1"
-          loading={invite.isPending}
-          disabled={email.trim() === ''}
-          onClick={submit}
-        >
-          <Mail size={13} />
-          Einladen
-        </Button>
+        <div>
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-500">
+            Rolle
+            <InfoTip label="Rolle">
+              Admins dürfen einladen, entfernen, Rechte vergeben und alles hier
+              in der Verwaltung einstellen. Ändern lässt es sich jederzeit.
+            </InfoTip>
+          </p>
+          <Segmented
+            fill
+            size="sm"
+            label="Rolle"
+            value={role}
+            onChange={setRole}
+            options={[
+              { value: 'member', label: 'Mitglied' },
+              { value: 'admin', label: 'Admin' },
+            ]}
+          />
+        </div>
+
+        <FormerMemberPicker
+          returning={returning}
+          onReturning={(next) => {
+            setReturning(next);
+            setFormerPersonId('');
+          }}
+          chosen={formerPersonId}
+          onChoose={setFormerPersonId}
+        />
       </div>
-    </div>
+    </Sheet>
+  );
+}
+
+/** Eine Antwort zum Antippen — Kreis, Titel, ein Satz darunter. */
+function ChoiceCard({
+  selected,
+  onSelect,
+  title,
+  description,
+  icon,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  title: string;
+  description?: string;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+      className={cn(
+        'flex w-full items-start gap-3 rounded-md border p-3 text-left transition-colors',
+        'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+        selected
+          ? 'border-terracotta-500 bg-terracotta-50/60'
+          : 'border-line bg-card hover:border-line-strong',
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          'mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2',
+          selected ? 'border-terracotta-500' : 'border-line-strong',
+        )}
+      >
+        {selected && <span className="size-2 rounded-full bg-terracotta-500" />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5 text-sm font-bold text-stone-800">
+          {icon}
+          {title}
+        </span>
+        {description && (
+          <span className="mt-0.5 block text-[11px] leading-relaxed text-stone-400">
+            {description}
+          </span>
+        )}
+      </span>
+    </button>
   );
 }
 
@@ -369,71 +491,90 @@ function InviteForm({ onDone }: { onDone: () => void }) {
  * Knopf stünde die Person nach ihrer Rückkehr neben ihrer eigenen
  * Vergangenheit.
  *
- * Standardmäßig zu, und das ist keine Sparsamkeit: Der Normalfall ist eine
- * neue Person, und eine Auswahlliste ehemaliger Mitglieder über jedem
- * Einladen-Formular wäre eine Frage, die sich fast nie stellt.
+ * **Eine Frage mit zwei Antworten, nicht ein Link.** Der Weg stand als graue
+ * Zeile „War schon einmal dabei?" unter dem Formular und wurde übersehen —
+ * oder für etwas gehalten, das jede Rückkehr betrifft. Jetzt fragt das Sheet
+ * ausdrücklich, wer das ist; „Jemand Neues" ist vorgewählt, weil es der
+ * Normalfall ist, und die zweite Antwort sagt in ihrer Unterzeile, für wen sie
+ * gedacht ist.
  *
- * Die Einträge heißen alle gleich, deshalb steht neben jedem, was er getan
- * hat. In einer Gruppe von neun ist „hat 14 Abende gehostet, zuletzt im
- * Februar" eine Beschreibung, bei der jede:r sofort weiß, wer gemeint ist.
+ * Die Einträge heißen alle gleich, deshalb steht bei jedem, was er getan hat.
+ * In einer Gruppe von neun ist „14× gehostet, dabei bis Januar" eine
+ * Beschreibung, bei der jede:r sofort weiß, wer gemeint ist.
  */
 function FormerMemberPicker({
-  open,
-  onToggle,
+  returning,
+  onReturning,
   chosen,
   onChoose,
 }: {
-  open: boolean;
-  onToggle: () => void;
+  returning: boolean;
+  onReturning: (returning: boolean) => void;
   chosen: string;
   onChoose: (id: string) => void;
 }) {
-  const former = useFormerMembers(open);
+  const former = useFormerMembers(returning);
   const entries = former.data ?? [];
 
   return (
     <div>
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={onToggle}
-        className="flex items-center gap-1.5 text-[11px] font-semibold text-stone-400 hover:text-stone-600"
-      >
-        <History size={12} />
-        War schon einmal dabei?
-      </button>
+      <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-500">
+        Wer ist das?
+        <InfoTip label="Wer ist das?">
+          „War schon einmal dabei“ brauchst du nur für jemanden, der sein Konto
+          gelöscht hat. Dann stehen seine vergangenen Abende unter „Ehemaliges
+          Mitglied“, und hier holst du sie zurück unter seinen Namen. Wer den
+          Hauskreis bloß verlassen hat, wird über seine E-Mail-Adresse von
+          selbst wiedererkannt.
+        </InfoTip>
+      </p>
 
-      {open && (
-        <div className="mt-2 space-y-2 rounded-md border border-line bg-canvas p-3">
-          {former.isLoading && <Skeleton className="h-8 w-full" />}
+      <div role="radiogroup" aria-label="Wer ist das?" className="space-y-2">
+        <ChoiceCard
+          selected={!returning}
+          onSelect={() => onReturning(false)}
+          icon={<UserRound size={14} className="text-stone-400" />}
+          title="Jemand Neues"
+        />
+        <ChoiceCard
+          selected={returning}
+          onSelect={() => onReturning(true)}
+          icon={<History size={14} className="text-stone-400" />}
+          title="War schon einmal dabei"
+          description="Hat das Konto gelöscht und kommt zurück."
+        />
+      </div>
+
+      {returning && (
+        <div className="mt-3 space-y-2 border-l-2 border-terracotta-100 pl-3">
+          {former.isLoading && <Skeleton className="h-12 w-full" />}
 
           {!former.isLoading && entries.length === 0 && (
             <p className="text-[11px] leading-relaxed text-stone-400">
-              Hier steht niemand. Wer den Hauskreis nur verlassen hat, wird über
-              seine E-Mail-Adresse ohnehin wiedererkannt — dafür brauchst du
-              nichts weiter zu tun.
+              Hier steht niemand — es hat noch niemand sein Konto gelöscht. Wer
+              den Hauskreis nur verlassen hat, wird über seine E-Mail-Adresse
+              von selbst wiedererkannt.
             </p>
           )}
 
           {entries.length > 0 && (
             <>
-              <p className="text-[11px] leading-relaxed text-stone-400">
-                Wähle die Zeile, zu der die eingeladene Person gehört. Ihre
-                vergangenen Termine stehen danach wieder unter ihrem Namen statt
-                unter „Ehemaliges Mitglied".
-              </p>
-              <Select
-                value={chosen}
+              <p className="text-[11px] text-stone-400">Wer davon ist es?</p>
+              <div
+                role="radiogroup"
                 aria-label="Ehemaliges Mitglied"
-                onChange={(event) => onChoose(event.target.value)}
+                className="space-y-2"
               >
-                <option value="">Niemand — neue Person</option>
                 {entries.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {describeFormerMember(entry)}
-                  </option>
+                  <ChoiceCard
+                    key={entry.id}
+                    selected={chosen === entry.id}
+                    onSelect={() => onChoose(entry.id)}
+                    title={`Dabei ${formatMonth(entry.joinedAt)} – ${formatMonth(entry.anonymizedAt)}`}
+                    description={describeFormerMember(entry)}
+                  />
                 ))}
-              </Select>
+              </div>
             </>
           )}
         </div>
@@ -442,7 +583,7 @@ function FormerMemberPicker({
   );
 }
 
-/** Woran man eine Zeile ohne Namen wiedererkennt. */
+/** Woran man eine Zeile ohne Namen wiedererkennt — was jemand getan hat. */
 function describeFormerMember(entry: FormerMember): string {
   const parts = [
     entry.hostedCount > 0 ? `${entry.hostedCount}× gehostet` : null,
@@ -450,10 +591,7 @@ function describeFormerMember(entry: FormerMember): string {
     entry.attendedCount > 0 ? `${entry.attendedCount} Abende dabei` : null,
   ].filter(Boolean);
 
-  const since = `dabei seit ${formatMonth(entry.joinedAt)}`;
-  const until = `weg seit ${formatMonth(entry.anonymizedAt)}`;
-
-  return [since, until, ...parts].join(' · ');
+  return parts.length > 0 ? parts.join(' · ') : 'Keine Abende in der App';
 }
 
 function formatMonth(iso: string): string {

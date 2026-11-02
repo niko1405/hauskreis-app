@@ -109,6 +109,11 @@ export function useHeaderScroll(): {
  * gibt. `/termin` fällt dabei von selbst heraus: Es ist kein Präfix von
  * `/termine`.
  *
+ * **Am Rechner nie** — dort trägt die Seitenspalte, wofür es die Leiste gibt.
+ * Das entscheidet CSS und nicht diese Funktion (`md:hidden` an der Leiste,
+ * `.pt-header-6` in `globals.css`): Die Seiten werden zur Bauzeit gerendert,
+ * und eine Breitenabfrage hier gäbe beim ersten Bild die falsche Antwort.
+ *
  * **Und ob man sie überhaupt haben will.** Die Einstellung liegt im Gerät
  * (`useHeaderPreference`) und hängt hier — an genau einer Zeile, von der alles
  * andere abfällt: `SmartHeader` rendert dann nichts, `PageHeader` nimmt wieder

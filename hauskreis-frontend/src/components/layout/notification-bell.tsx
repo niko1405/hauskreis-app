@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * Die Glocke mit der Zahl.
+ * Die Glocke mit der Zahl — zweimal: rund in der Kopfleiste (mobil) und als
+ * Zeile unten in der Seitenspalte (am Rechner).
  *
  * Die Zahl kommt aus `unreadCount` und nicht aus `unread.length`: Die Liste ist
  * gedeckelt, die Zahl nicht. Ab hundert steht „99+" da — drei Zeichen sind das
@@ -17,6 +18,29 @@ import { PRESSABLE } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import { useInbox, useInboxLiveUpdates } from '@/lib/api/hooks';
 
+/**
+ * Hält die Zahl frisch und trägt sie ans App-Symbol — **einmal** für die ganze
+ * App (`app-shell.tsx`).
+ *
+ * Stand in der Glocke, bis es zwei Glocken gab: Am Rechner sind die der
+ * Kopfleiste (ausgeblendet, aber gerendert) und die der Spalte gleichzeitig
+ * da, und jede hätte sich am Service Worker angemeldet.
+ */
+export function useInboxBadge(): void {
+  const inbox = useInbox();
+
+  useInboxLiveUpdates();
+  useAppBadge(inbox.data?.unreadCount ?? 0);
+}
+
+function label(count: number): string {
+  return count > 0
+    ? `Benachrichtigungen, ${count} ungelesen`
+    : 'Benachrichtigungen';
+}
+
+const shortCount = (count: number) => (count > 99 ? '99+' : String(count));
+
 export function NotificationBell({
   atTop,
   onClick,
@@ -27,18 +51,11 @@ export function NotificationBell({
   const inbox = useInbox();
   const count = inbox.data?.unreadCount ?? 0;
 
-  useInboxLiveUpdates();
-  useAppBadge(count);
-
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={
-        count > 0
-          ? `Benachrichtigungen, ${count} ungelesen`
-          : 'Benachrichtigungen'
-      }
+      aria-label={label(count)}
       className={cn(
         'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors',
         PRESSABLE,
@@ -63,12 +80,56 @@ export function NotificationBell({
                 : 'bg-alert ring-header-bar',
             )}
           >
-            {count > 99 ? '99+' : count}
+            {shortCount(count)}
           </span>
           <span className="sr-only">({count} ungelesen)</span>
         </>
       )}
     </button>
+  );
+}
+
+/**
+ * Die Glocke am Rechner, unten in der Seitenspalte.
+ *
+ * Eine Zeile mit Wort und Zahl statt eines runden Knopfs: In der Spalte steht
+ * sie unter Zielen, die alle ein Wort tragen, und ein einzelnes Symbol sähe
+ * dort aus wie etwas, das vergessen wurde. Die Karte darum hebt sie von den
+ * Zielen ab — sie führt nirgendwohin, sie öffnet eine Box.
+ */
+export function SidebarBell({ onClick }: { onClick: () => void }) {
+  const inbox = useInbox();
+  const count = inbox.data?.unreadCount ?? 0;
+
+  return (
+    <div className="rounded-card border border-line bg-card p-1 shadow-sm">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label(count)}
+        className={cn(
+          'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition-colors',
+          'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+          count > 0
+            ? 'text-stone-800 hover:bg-stone-100'
+            : 'text-stone-500 hover:bg-stone-100',
+        )}
+      >
+        <Bell
+          size={18}
+          className={count > 0 ? 'text-terracotta-500' : undefined}
+        />
+        Benachrichtigungen
+        {count > 0 && (
+          <span
+            aria-hidden
+            className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-terracotta-500 px-1.5 text-[10px] font-bold text-white"
+          >
+            {shortCount(count)}
+          </span>
+        )}
+      </button>
+    </div>
   );
 }
 

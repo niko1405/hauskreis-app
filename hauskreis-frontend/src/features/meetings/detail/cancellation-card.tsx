@@ -201,16 +201,20 @@ export function CancelMeetingBlock({
 }
 
 /**
- * „Termin löschen" — nur bei einem selbst angelegten, nur für Admins.
+ * „Termin löschen" — nur für Admins, an jedem Termin.
  *
- * Der Unterschied zum Absagen ist kein technischer: ein Hauskreis-Abend, der
- * ausfällt, bleibt Teil der Geschichte und der Vorschlagslogik, und einen
- * erzeugten legte der Terminplaner ohnehin wieder an. Ein versehentlich
- * angelegter Termin dagegen war nie da — deshalb geht dafür auch keine Nachricht
- * raus, während eine Absage alle erreicht.
+ * Der Unterschied zum Absagen ist kein technischer: Ein Abend, der ausfällt,
+ * bleibt Teil der Geschichte und der Vorschlagslogik, und alle erfahren es.
+ * Gelöscht wird, was es nie hätte geben sollen — ein versehentlich angelegter
+ * Termin, oder ein Dienstag in den Ferien, über den niemand eine Absage lesen
+ * will. Deshalb geht dafür auch keine Nachricht raus.
  *
- * Auch an einem abgesagten Termin sichtbar: ein abgesagter selbst angelegter
- * Termin ist genau der, den man loswerden will.
+ * Einen **erzeugten** Abend legt der Terminplaner danach nicht wieder an: Der
+ * Server merkt sich das Datum. Das sagt die Rückfrage, denn es ist der
+ * Unterschied, den man sonst erst nächste Woche bemerkt.
+ *
+ * Auch an einem abgesagten Termin sichtbar: Ein abgesagter Termin ist oft
+ * genau der, den man loswerden will.
  */
 export function DeleteMeetingBlock({ meeting }: { meeting: Meeting }) {
   const router = useRouter();
@@ -219,14 +223,14 @@ export function DeleteMeetingBlock({ meeting }: { meeting: Meeting }) {
   const confirm = useConfirm();
   const toast = useToast();
 
-  // Nur selbst angelegte Termine: Einen erzeugten Abend legt der Terminplaner
-  // gleich wieder an — deshalb sagt man ihn ab, statt ihn zu löschen.
-  if (!isAdmin || meeting.generated) return null;
+  if (!isAdmin) return null;
 
   const ask = async () => {
     const ok = await confirm({
       title: `„${meetingHeadline(meeting)}" löschen?`,
-      body: 'Zusagen, Liedvorschläge und Zuteilungen dieses Termins gehen mit. Niemand bekommt eine Nachricht darüber.',
+      body: meeting.generated
+        ? 'Der Abend verschwindet ganz — auch aus dem Archiv —, und die App legt ihn nicht wieder an. Zusagen, Liedvorschläge und Zuteilungen gehen mit. Niemand bekommt eine Nachricht.'
+        : 'Zusagen, Liedvorschläge und Zuteilungen dieses Termins gehen mit. Niemand bekommt eine Nachricht darüber.',
       confirmLabel: 'Löschen',
       tone: 'danger',
     });

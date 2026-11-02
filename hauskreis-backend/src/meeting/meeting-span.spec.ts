@@ -164,17 +164,21 @@ describe('MeetingService.create — mehrere Tage', () => {
 });
 
 /**
- * Löschen und Absagen sind zwei verschiedene Dinge, und der Unterschied ist
- * kein technischer: ein Dienstag, der ausfällt, bleibt Teil der Geschichte —
- * und der Terminplaner legte ihn ohnehin gleich wieder an.
+ * Löschen ist still und endgültig — auch bei einem erzeugten Abend. Den legte
+ * der Terminplaner sonst in der nächsten Nacht wieder an, deshalb hinterlässt
+ * er einen Grabstein.
  */
 function setupRemove(generated: boolean) {
   const del = jest.fn().mockResolvedValue({});
+  const skip = jest.fn().mockResolvedValue({ count: 1 });
+  const date = new Date('2026-08-18');
   const prisma = {
     meeting: {
-      findFirst: jest.fn().mockResolvedValue({ id: 'm1', generated }),
+      findFirst: jest.fn().mockResolvedValue({ id: 'm1', date, generated }),
       delete: del,
     },
+    skippedMeetingDate: { createMany: skip },
+    $transaction: jest.fn((steps: Promise<unknown>[]) => Promise.all(steps)),
   };
 
   const service = withClock(
@@ -194,24 +198,28 @@ function setupRemove(generated: boolean) {
     ),
   );
 
-  return { service, del };
+  return { service, del, skip, date };
 }
 
 describe('MeetingService.remove', () => {
-  it('löscht einen selbst angelegten Termin', async () => {
-    const { service, del } = setupRemove(false);
+  it('löscht einen selbst angelegten Termin ohne Grabstein', async () => {
+    const { service, del, skip } = setupRemove(false);
 
     await service.remove('hk-1', 'm1');
 
     expect(del).toHaveBeenCalledWith({ where: { id: 'm1' } });
+    expect(skip).not.toHaveBeenCalled();
   });
 
-  it('weist einen erzeugten ab — der wird abgesagt, nicht gelöscht', async () => {
-    const { service, del } = setupRemove(true);
+  it('löscht auch einen erzeugten — und sperrt sein Datum', async () => {
+    const { service, del, skip, date } = setupRemove(true);
 
-    await expect(service.remove('hk-1', 'm1')).rejects.toThrow(
-      BadRequestException,
-    );
-    expect(del).not.toHaveBeenCalled();
+    await service.remove('hk-1', 'm1');
+
+    expect(del).toHaveBeenCalledWith({ where: { id: 'm1' } });
+    expect(skip).toHaveBeenCalledWith({
+      data: [{ hauskreisId: 'hk-1', date }],
+      skipDuplicates: true,
+    });
   });
 });
