@@ -3,12 +3,21 @@
 /**
  * „Termine" — vier Sichten: Liste, Mehrwochen-Planung, Kalender, Geburtstage.
  * Alles außer der Liste wird erst geladen, wenn man es auswählt.
+ *
+ * **Gesucht wird in einem eigenen Modus**, wie im Archiv: In Ruhe steht nur
+ * eine Lupe neben dem Umschalter, ein Tipp darauf holt das Feld nach oben,
+ * klappt Kopf und Register ein und schickt die Kopfleiste weg. Ein Suchfeld,
+ * das immer dasteht, nahm einer Liste Platz, in der man meistens nur den
+ * nächsten Dienstag sucht.
  */
 import { CalendarCheck, CalendarClock, Plus, Search } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { PageHeader } from '@/components/layout/app-shell';
+import { suppressHeader } from '@/components/layout/header-suppress';
 import { MeetingCard } from '@/components/domain/meeting-card';
 import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { TextInput } from '@/components/ui/field';
@@ -21,6 +30,7 @@ import {
   usePrefetchMeeting,
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
+import { useBlurOnTouchMove } from '@/lib/use-blur-on-touch-move';
 import type { BirthdayOccasion, MeetingListItem } from '@/lib/api/types';
 
 const AssignmentTable = dynamic(
@@ -39,8 +49,12 @@ const MeetingCalendar = dynamic(
   () => import('./meeting-calendar').then((m) => m.MeetingCalendar),
   { loading: () => <CardSkeleton /> },
 );
-const CreateMeetingSheet = dynamic(() =>
-  import('./create-meeting-sheet').then((m) => m.CreateMeetingSheet),
+// `loading: () => null` ist die eigene Suspense-Grenze des Sheets — ohne sie
+// zeigte beim ersten Öffnen die Liste dahinter ihre Skeletons (siehe
+// `meeting-detail-screen.tsx`).
+const CreateMeetingSheet = dynamic(
+  () => import('./create-meeting-sheet').then((m) => m.CreateMeetingSheet),
+  { loading: () => null },
 );
 
 type View = 'liste' | 'planung' | 'kalender' | 'geburtstage';
@@ -66,10 +80,56 @@ function initialView(tab: string | null): View {
   return VIEWS.some((view) => view.key === tab) ? (tab as View) : 'liste';
 }
 
+/** Die Feder, mit der der Kopf ein- und ausklappt — dieselbe wie im Archiv. */
+const HEAD_SPRING = { type: 'spring', damping: 30, stiffness: 260 } as const;
+
 export function MeetingsScreen() {
   const tab = useSearchParams().get('tab');
   const [view, setView] = useState<View>(() => initialView(tab));
   const [creating, setCreating] = useState(false);
+  const [search, setSearch] = useState('');
+  const [searching, setSearching] = useState(false);
+  const field = useRef<HTMLInputElement>(null);
+
+  // Wer sucht, will oben das Feld sehen und nicht Glocke und Gruppe darüber.
+  useEffect(() => {
+    if (!searching) return;
+    return suppressHeader();
+  }, [searching]);
+
+  useBlurOnTouchMove(searching);
+
+  /**
+   * In den Suchmodus — **mit der Tastatur im selben Tipp**.
+   *
+   * iOS öffnet sie nur, wenn der Fokus noch in der Geste gesetzt wird. Also
+   * synchron: `flushSync` zeichnet das Feld, und es steht dann schon oben —
+   * es ist das erste Element der Seite, und gescrollt wird vorher nach ganz
+   * oben. Ein Feld, das schon oben liegt, verschiebt iOS beim Fokussieren
+   * nicht. Das Hilfsfeld aus dem Archiv braucht es deshalb hier nicht: Dort
+   * steht das Feld in Ruhe unter dem Kopf und muss erst hinauf.
+   */
+  const enterSearch = () => {
+    flushSync(() => setSearching(true));
+    window.scrollTo({ top: 0 });
+    field.current?.focus({ preventScroll: true });
+  };
+
+  // Abbrechen heißt auch: Der Begriff ist weg. Ein Filter, der danach weiter
+  // wirkt, sähe aus wie eine Liste, in der Termine fehlen.
+  const leaveSearch = () => {
+    setSearch('');
+    setSearching(false);
+    field.current?.blur();
+    window.scrollTo({ top: 0 });
+  };
+
+  // Escape beendet den Modus, Enter nur die Eingabe — gesucht wird ohnehin
+  // schon beim Tippen.
+  const onSearchKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') leaveSearch();
+    if (event.key === 'Enter') event.currentTarget.blur();
+  };
 
   /**
    * Das Register wechseln — und es in die Adresse schreiben, **ohne** einen
@@ -93,41 +153,105 @@ export function MeetingsScreen() {
 
   return (
     <div>
-      <PageHeader
-        title="Termine"
-        action={
-          <IconButton
-            label="Termin anlegen"
-            onClick={() => setCreating(true)}
-            className="bg-terracotta-500 text-white hover:bg-terracotta-700 hover:text-white"
+      {/* Das Feld steht **vor** dem Kopf und nicht an seiner Stelle: So ist es
+          vom ersten Bild an oben, während der Kopf darunter einklappt
+          (`enterSearch`). Es klebt, damit es beim Scrollen durch die Treffer
+          stehen bleibt. */}
+      <AnimatePresence initial={false}>
+        {searching && (
+          <motion.div
+            key="search"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="sticky top-0 z-30 flex items-center bg-canvas px-5 pt-safe-4 pb-3"
           >
-            <Plus size={18} />
-          </IconButton>
-        }
-      />
+            <div className="relative flex-1">
+              <Search
+                size={15}
+                className="absolute top-1/2 left-3.5 -translate-y-1/2 text-stone-300"
+              />
+              <TextInput
+                ref={field}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                onKeyDown={onSearchKey}
+                enterKeyHint="search"
+                autoComplete="off"
+                placeholder="Termine durchsuchen …"
+                className="pl-9"
+                aria-label="Termine durchsuchen"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={leaveSearch}
+              className={cn(
+                'pl-3 text-sm font-semibold whitespace-nowrap text-terracotta-600',
+                PRESSABLE,
+              )}
+            >
+              Abbrechen
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="no-scrollbar flex gap-2 overflow-x-auto px-5 pb-4">
-        {VIEWS.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => selectView(key)}
-            aria-pressed={view === key}
-            className={cn(
-              'shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-colors',
-              PRESSABLE,
-              view === key
-                ? 'border-terracotta-500 bg-terracotta-500 text-white'
-                : 'border-line bg-card text-stone-500 hover:border-line-strong',
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* Höhe statt Verschiebung, wie im Archiv: Ein `transform` am
+          Seiteninhalt würde zum Bezugsrahmen der `fixed`-Sheets darin. */}
+      <motion.div
+        initial={false}
+        animate={
+          searching ? { height: 0, opacity: 0 } : { height: 'auto', opacity: 1 }
+        }
+        transition={HEAD_SPRING}
+        inert={searching}
+        aria-hidden={searching}
+        className="overflow-hidden"
+      >
+        <PageHeader
+          title="Termine"
+          action={
+            <IconButton
+              label="Termin anlegen"
+              onClick={() => setCreating(true)}
+              className="bg-terracotta-500 text-white hover:bg-terracotta-700 hover:text-white"
+            >
+              <Plus size={18} />
+            </IconButton>
+          }
+        />
+
+        <div className="no-scrollbar flex gap-2 overflow-x-auto px-5 pb-4">
+          {VIEWS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => selectView(key)}
+              aria-pressed={view === key}
+              className={cn(
+                'shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-colors',
+                PRESSABLE,
+                view === key
+                  ? 'border-terracotta-500 bg-terracotta-500 text-white'
+                  : 'border-line bg-card text-stone-500 hover:border-line-strong',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </motion.div>
 
       <div className="px-5">
-        {view === 'liste' && <MeetingListView />}
+        {view === 'liste' && (
+          <MeetingListView
+            search={search}
+            searching={searching}
+            onSearch={enterSearch}
+          />
+        )}
         {view === 'planung' && <AssignmentTable />}
         {view === 'kalender' && <MeetingCalendar />}
         {view === 'geburtstage' && <BirthdaysScreen />}
@@ -154,8 +278,15 @@ type ListEntry =
   | { kind: 'meeting'; date: string; meeting: MeetingListItem }
   | { kind: 'birthday'; date: string; occasion: BirthdayOccasion };
 
-function MeetingListView() {
-  const [search, setSearch] = useState('');
+function MeetingListView({
+  search,
+  searching,
+  onSearch,
+}: {
+  search: string;
+  searching: boolean;
+  onSearch: () => void;
+}) {
   const [scope, setScope] = useState<'upcoming' | 'past'>('upcoming');
   const deferredSearch = useDeferredValue(search);
 
@@ -206,23 +337,14 @@ function MeetingListView() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search
-            size={15}
-            className="absolute top-1/2 left-3.5 -translate-y-1/2 text-stone-300"
-          />
-          <TextInput
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Suchen …"
-            className="pl-9"
-            aria-label="Termine durchsuchen"
-          />
-        </div>
-        {/* Zwei Symbole statt eines Worts: Der Knopf zeigte nur, was gerade
-            gilt, und daneben stand ein Suchfeld, das Platz braucht. So stehen
-            beide Richtungen da — die Uhr für „steht noch an", der Haken für
-            „war schon" —, und die gewählte ist hervorgehoben. */}
+        {/* Das Wort zum Umschalter daneben: Der trägt nur Symbole, und die Zeile
+            sagt so auch beim Suchen, worin gerade gesucht wird. */}
+        <p className="min-w-0 flex-1 truncate px-1 text-[11px] font-semibold tracking-wider text-stone-400 uppercase">
+          {scope === 'upcoming' ? 'Kommende' : 'Vergangene'}
+        </p>
+        {/* Zwei Symbole statt eines Worts: So stehen beide Richtungen da — die
+            Uhr für „steht noch an", der Haken für „war schon" —, und die
+            gewählte ist hervorgehoben. */}
         <Segmented
           iconOnly
           label="Welche Termine"
@@ -241,6 +363,15 @@ function MeetingListView() {
             },
           ]}
         />
+        {!searching && (
+          <IconButton
+            label="Termine durchsuchen"
+            onClick={onSearch}
+            className="border border-line bg-card"
+          >
+            <Search size={16} />
+          </IconButton>
+        )}
       </div>
 
       {query.isLoading && (

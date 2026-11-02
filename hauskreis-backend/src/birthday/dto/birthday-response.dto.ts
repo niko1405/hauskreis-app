@@ -82,8 +82,9 @@ export const birthdayOccasionResponseSchema = z.object({
 });
 
 /**
- * Ein Anteil, den ich noch nicht abgehakt habe — unter „Noch offen" im
- * Register und auf „Heute".
+ * Was beim Geschenk-Geld noch offen ist — unter „Noch offen" im Register und
+ * auf „Heute": ein Anteil, den ich noch nicht abgehakt habe, oder (mit
+ * `collecting`) ein vergangener Geburtstag, für den ich vorgestreckt habe.
  */
 export const openGiftPaymentResponseSchema = z.object({
   occasionId: z.uuid(),
@@ -92,6 +93,11 @@ export const openGiftPaymentResponseSchema = z.object({
   occursOn: isoDateOut,
   gift: z.object({ id: z.uuid(), text: z.string() }).nullable(),
   shareCents: z.int().nullable(),
+  /// Gesetzt, wenn **ich** besorgt habe und der Geburtstag vorbei ist: wie
+  /// viele schon gezahlt haben, von wie vielen. Dann ist die Zeile keine
+  /// eigene Schuld, sondern der Weg zur Liste, wer noch fehlt. `null` heißt:
+  /// mein eigener Anteil ist offen.
+  collecting: z.object({ paid: z.int(), of: z.int() }).nullable(),
 });
 
 /** Ein Mitglied in der Liste „alle Geburtstage" — auch ohne eingetragenen. */

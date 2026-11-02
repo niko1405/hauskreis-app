@@ -8,6 +8,12 @@
  * anderen" sagen die Stimmen. In einer Karte sähen sie aus wie eine Liste mit
  * einem Bruch in der Mitte.
  *
+ * **Die Vorschläge sind eine Liste, kein Stapel Kästen.** Die Setlist trägt
+ * ihren Rahmen in Terracotta und ihren Kopf mit Symbol — sie ist die Auswahl.
+ * Die Vorschläge stehen darunter schlichter: eine Überschrift und eine Karte
+ * mit Trennlinien. Vorher war es eine Karte voller Zeilen mit eigenem Rand,
+ * und neben der Setlist sah das aus wie eine zweite, gleich wichtige.
+ *
  * **Die Setlist steht auch dann da, wenn sie leer ist** — sobald es überhaupt
  * Lieder gibt: Gerade dann ist die Frage offen. Was an ihrer Stelle
  * steht, hängt daran, wer liest: für das Musik-Team eine Aufforderung, für
@@ -210,47 +216,26 @@ export function SongsCard({
   );
 }
 
-/** Symbol-Kästchen, Titel in Versalien, Unterzeile — der Kopf beider Karten. */
+/** Symbol-Kästchen, Titel in Versalien, Unterzeile — der Kopf der Setlist. */
 function CardHead({
   icon,
   title,
   subtitle,
-  tone,
 }: {
   icon: React.ReactNode;
   title: string;
   subtitle: string;
-  tone: 'selected' | 'muted';
 }) {
-  const selected = tone === 'selected';
-
   return (
     <div className="flex items-center gap-3">
-      <span
-        className={cn(
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border',
-          selected
-            ? 'border-terracotta-500/30 bg-terracotta-500/10 text-terracotta-500'
-            : 'border-line bg-canvas text-stone-400',
-        )}
-      >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-terracotta-500/30 bg-terracotta-500/10 text-terracotta-500">
         {icon}
       </span>
       <span className="min-w-0">
-        <span
-          className={cn(
-            'block text-sm font-bold tracking-widest uppercase',
-            selected ? 'text-terracotta-500' : 'text-stone-400',
-          )}
-        >
+        <span className="block text-sm font-bold tracking-widest text-terracotta-500 uppercase">
           {title}
         </span>
-        <span
-          className={cn(
-            'block text-[11px]',
-            selected ? 'text-terracotta-500/80' : 'text-stone-400',
-          )}
-        >
+        <span className="block text-[11px] text-terracotta-500/80">
           {subtitle}
         </span>
       </span>
@@ -349,7 +334,6 @@ function SetlistCard({
         icon={<Music size={18} />}
         title="Setlist"
         subtitle={`${songCount(setlist.length)} ausgewählt`}
-        tone="selected"
       />
 
       {setlist.length === 0 ? (
@@ -532,28 +516,30 @@ function SuggestionsCard({
   const [open, setOpen] = useState(true);
 
   return (
-    <div className="space-y-4 rounded-card border border-line bg-card p-4 sm:p-5">
+    <div className="space-y-3">
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="block w-full text-left"
+        className="flex w-full items-center gap-2 rounded-md px-1 text-left focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none"
       >
-        <CardHead
-          icon={
-            <ChevronDown
-              size={18}
-              className={cn('transition-transform', !open && '-rotate-90')}
-            />
-          }
-          title="Vorschläge"
-          subtitle={`${songCount(rest.length)} in der Liste`}
-          tone="muted"
+        <span className="text-xs font-bold tracking-wider text-stone-400 uppercase">
+          Vorschläge
+        </span>
+        <span className="text-[11px] font-semibold text-stone-400 tabular-nums">
+          {rest.length}
+        </span>
+        <ChevronDown
+          size={15}
+          className={cn(
+            'ml-auto text-stone-400 transition-transform',
+            !open && '-rotate-90',
+          )}
         />
       </button>
 
       {open && rest.length > 0 && (
-        <ul className="space-y-2.5">
+        <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-card">
           {rest.map((entry) => (
             <SuggestionRow
               key={entry.id}
@@ -589,8 +575,10 @@ function SuggestionRow({
   const vote = useVoteMeetingSong(meetingId);
   const remove = useRemoveMeetingSong(meetingId);
 
+  // Ohne eigenen Rand: Die Zeilen trennt die Linie der Liste. Die Fläche
+  // bleibt, denn beim Wischen liegen die Knöpfe darunter.
   const row = (
-    <div className="flex items-center gap-3 rounded-2xl border border-line bg-canvas p-3">
+    <div className="flex items-center gap-3 bg-card px-4 py-3">
       {mayPick && (
         <button
           type="button"
@@ -626,7 +614,6 @@ function SuggestionRow({
         row
       ) : (
         <SwipeActions
-          className="rounded-2xl"
           actions={[
             {
               icon: <Trash2 size={15} />,
@@ -647,9 +634,10 @@ function SuggestionRow({
 /**
  * „^ 3" — wie sehr die anderen das singen wollen, und ob man selbst dabei ist.
  *
- * Gefüllt heißt: meine Stimme ist dabei. Ein zweiter Tipp nimmt sie zurück.
- * Am vergangenen Abend bleibt nur die Zahl stehen, ohne Knopf — und ohne
- * Stimmen gar nichts, eine Null wäre dort keine Auskunft.
+ * Getönt heißt: meine Stimme ist dabei. Ein zweiter Tipp nimmt sie zurück.
+ * Ohne Rahmen — in einer Liste mit Trennlinien wäre jede Pille ein weiterer
+ * Kasten. Am vergangenen Abend bleibt nur die Zahl stehen, ohne Knopf — und
+ * ohne Stimmen gar nichts, eine Null wäre dort keine Auskunft.
  */
 function VotePill({
   votes,
@@ -665,10 +653,8 @@ function VotePill({
   onToggle: () => void;
 }) {
   const classes = cn(
-    'inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-sm font-bold tabular-nums transition-colors',
-    votedByMe
-      ? 'border-terracotta-500/60 bg-terracotta-500/15 text-terracotta-500'
-      : 'border-line-strong text-stone-500',
+    'inline-flex min-h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-sm font-bold tabular-nums transition-colors',
+    votedByMe ? 'bg-terracotta-500/15 text-terracotta-500' : 'text-stone-400',
   );
 
   if (disabled) {
@@ -694,7 +680,7 @@ function VotePill({
       className={cn(
         classes,
         PRESSABLE,
-        !votedByMe && 'hover:border-terracotta-400 hover:text-terracotta-500',
+        !votedByMe && 'hover:bg-stone-100 hover:text-terracotta-500',
       )}
     >
       <ChevronUp size={14} strokeWidth={3} />

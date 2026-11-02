@@ -15117,6 +15117,27 @@
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991,
                   "nullable": true
+                },
+                "collecting": {
+                  "type": "object",
+                  "properties": {
+                    "paid": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "of": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "paid",
+                    "of"
+                  ],
+                  "additionalProperties": false,
+                  "nullable": true
                 }
               },
               "required": [
@@ -15124,7 +15145,8 @@
                 "person",
                 "occursOn",
                 "gift",
-                "shareCents"
+                "shareCents",
+                "collecting"
               ],
               "additionalProperties": false
             }
@@ -22490,6 +22512,27 @@
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991,
                   "nullable": true
+                },
+                "collecting": {
+                  "type": "object",
+                  "properties": {
+                    "paid": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "of": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "paid",
+                    "of"
+                  ],
+                  "additionalProperties": false,
+                  "nullable": true
                 }
               },
               "required": [
@@ -22497,7 +22540,8 @@
                 "person",
                 "occursOn",
                 "gift",
-                "shareCents"
+                "shareCents",
+                "collecting"
               ],
               "additionalProperties": false
             }

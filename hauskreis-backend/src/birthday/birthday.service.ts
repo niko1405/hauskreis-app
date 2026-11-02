@@ -335,12 +335,19 @@ export class BirthdayService {
   }
 
   /**
-   * Was ich noch bezahlen muss — für „Heute" und das Register.
+   * Was beim Geschenk-Geld noch offen ist — für „Heute" und das Register.
    *
-   * Ein Geburtstag mit Preis, den ich nicht selbst besorgt habe, der nicht
-   * meiner ist und an dem mein Haken fehlt. Auch ein vergangener: Genau der
-   * ist der Fall, um den es geht — das Register zeigt dann schon den nächsten,
-   * und der Preis stünde sonst nirgends mehr.
+   * **Was ich noch bezahlen muss**: ein Geburtstag mit Preis, den ich nicht
+   * selbst besorgt habe, der nicht meiner ist und an dem mein Haken fehlt.
+   * Auch ein vergangener: Genau der ist der Fall, um den es geht — das
+   * Register zeigt dann schon den nächsten, und der Preis stünde sonst
+   * nirgends mehr.
+   *
+   * **Und was ich zurückbekomme** (`collecting`): ein vergangener Geburtstag,
+   * für den ich besorgt habe und an dem noch jemand fehlt. Sonst käme, wer
+   * vorgestreckt hat, nach dem Tag nicht mehr an die Liste, wer schon gezahlt
+   * hat. Ein kommender bekommt keine solche Zeile: Dort steht die Aufgabe
+   * ohnehin unter „Deine Rollen".
    */
   async openPayments(hauskreisId: string, viewerId: string) {
     const today = currentDay(await this.clock.zoneOf(hauskreisId));
@@ -364,23 +371,42 @@ export class BirthdayService {
     // nichts für einen Geburtstag, an dem er nicht dabei war.
     if (!memberIds.includes(viewerId)) return [];
 
-    const rows = await this.prisma.birthdayOccasion.findMany({
-      where: {
-        hauskreisId,
-        priceCents: { not: null },
-        occursOn: { gte: addDays(today, -OPEN_PAYMENT_DAYS) },
-        personId: { not: viewerId },
-        AND: [
-          { responsiblePersonId: { not: null } },
-          { responsiblePersonId: { not: viewerId } },
-        ],
-        payments: { none: { personId: viewerId } },
-      },
-      select: occasionSelect,
-      orderBy: { occursOn: 'asc' },
-    });
+    const since = addDays(today, -OPEN_PAYMENT_DAYS);
+    const [owed, advanced] = await Promise.all([
+      this.prisma.birthdayOccasion.findMany({
+        where: {
+          hauskreisId,
+          priceCents: { not: null },
+          occursOn: { gte: since },
+          personId: { not: viewerId },
+          AND: [
+            { responsiblePersonId: { not: null } },
+            { responsiblePersonId: { not: viewerId } },
+          ],
+          payments: { none: { personId: viewerId } },
+        },
+        select: occasionSelect,
+        orderBy: { occursOn: 'asc' },
+      }),
+      this.prisma.birthdayOccasion.findMany({
+        where: {
+          hauskreisId,
+          responsiblePersonId: viewerId,
+          priceCents: { not: null },
+          occursOn: { gte: since, lt: today },
+        },
+        select: {
+          ...occasionSelect,
+          payments: { select: { personId: true } },
+        },
+        orderBy: { occursOn: 'asc' },
+      }),
+    ]);
 
-    return rows.map((row) => ({
+    const shape = (
+      row: OccasionRow,
+      collecting: { paid: number; of: number } | null,
+    ) => ({
       occasionId: row.id,
       person: {
         id: row.person.id,
@@ -390,7 +416,26 @@ export class BirthdayService {
       occursOn: row.occursOn,
       gift: row.selectedIdea,
       shareCents: shareOf(row.priceCents!, memberIds, row.person.id),
-    }));
+      collecting,
+    });
+
+    // Dieselben Zahlenden wie im Detail: alle, die dabei sind, außer
+    // Geburtstagskind und mir.
+    const collecting = advanced.flatMap((row) => {
+      const payers = memberIds.filter(
+        (memberId) => memberId !== row.person.id && memberId !== viewerId,
+      );
+      const paidBy = new Set(row.payments.map((payment) => payment.personId));
+      const paid = payers.filter((payer) => paidBy.has(payer)).length;
+
+      return payers.length > 0 && paid < payers.length
+        ? [shape(row, { paid, of: payers.length })]
+        : [];
+    });
+
+    return [...owed.map((row) => shape(row, null)), ...collecting].toSorted(
+      (a, b) => a.occursOn.getTime() - b.occursOn.getTime(),
+    );
   }
 
   /** Wer gerade dabei ist — für Anteil und Zahlungsliste. */

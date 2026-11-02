@@ -12,7 +12,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useOverlayOpen } from '@/components/ui/overlay-lock';
 import { useHeaderPreference } from '@/lib/header-preference';
-import { useHeaderSuppressed } from './header-suppress';
+import { useHeaderSuppressed, useHeaderTopOnly } from './header-suppress';
 import { isTabRoute } from './nav';
 
 /** Ab hier gilt die Seite nicht mehr als „ganz oben". */
@@ -43,6 +43,7 @@ export function useHeaderScroll(): {
   const pathname = usePathname();
   const overlay = useOverlayOpen();
   const suppressed = useHeaderSuppressed();
+  const topOnly = useHeaderTopOnly();
 
   // Ein Wechsel des Ziels beginnt oben — Next scrollt dorthin zurück. Ohne
   // das bliebe die Leiste auf einer frisch geöffneten Seite weggefahren.
@@ -94,7 +95,15 @@ export function useHeaderScroll(): {
   //
   // Die Bitte eines Bildschirms sticht beides: Im Suchmodus soll sie auch dann
   // weg sein, wenn darüber gerade ein Sheet liegt.
-  return { atTop, hidden: (hidden && !overlay) || suppressed, suppressed };
+  //
+  // „Nur ganz oben" (Archiv) braucht keinen eigenen Übergang: Nach unten ist
+  // sie über die Richtung schon weg, bevor `atTop` umschlägt — und zurück
+  // kommt sie erst mit `atTop`, also als Schleier und nie als Balken.
+  return {
+    atTop,
+    hidden: (hidden && !overlay) || suppressed || (topOnly && !atTop),
+    suppressed,
+  };
 }
 
 /**

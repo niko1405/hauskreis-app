@@ -110,12 +110,14 @@ export function HomeScreen() {
           />
 
           {/* Unter den Rollen, weil es auch eine ist — nur eine, die nach dem
-              Abend kommt: den eigenen Anteil am Geschenk geben. Bis zum Haken
-              auf der Seite des Geburtstags, auch wenn der Tag vorbei ist. */}
+              Abend kommt: den eigenen Anteil am Geschenk geben, oder als
+              Besorger:in nachsehen, wer noch fehlt. Bis zum Haken auf der
+              Seite des Geburtstags, auch wenn der Tag vorbei ist. „Noch offen"
+              wie im Register, weil es beides meint. */}
           {giftPayments.length > 0 && (
             <div className="mt-4 space-y-2">
               <p className="px-1 text-[11px] font-semibold tracking-wider text-stone-400 uppercase">
-                Noch zu bezahlen
+                Noch offen
               </p>
               <OpenPayments items={giftPayments} />
             </div>
@@ -197,6 +199,7 @@ export function HomeScreen() {
             <PastOrCurrentMeeting
               meeting={lastMeeting}
               className="bg-canvas shadow-none"
+              past
             />
           </section>
         )}
@@ -308,12 +311,17 @@ function OpenActionstepCard({ step }: { step: HomeActionstep }) {
 function PastOrCurrentMeeting({
   meeting,
   className,
+  past = false,
 }: {
   meeting: HomeNextMeeting;
   className?: string;
+  /** Der letzte Abend — zu ihm führt kein Weg mehr nach Maps. */
+  past?: boolean;
 }) {
   if (!meeting.summaryText) {
-    return <NextMeetingCard meeting={meeting} className={className} />;
+    return (
+      <NextMeetingCard meeting={meeting} className={className} maps={!past} />
+    );
   }
 
   return (
@@ -362,10 +370,17 @@ function PastOrCurrentMeeting({
 function NextMeetingCard({
   meeting,
   className,
+  maps = true,
 }: {
   meeting: HomeNextMeeting;
   /** Der laufende Abend bekommt hier seine grüne Tönung. */
   className?: string;
+  /**
+   * Ob Ort und runder Knopf nach Maps führen. Beim letzten Abend nicht: Zu
+   * dem geht niemand mehr hin, und der terracotta Knopf wäre auf einer sonst
+   * gedämpften Karte die lauteste Stelle.
+   */
+  maps?: boolean;
 }) {
   return (
     <Card className={cn('space-y-4', className)}>
@@ -392,7 +407,7 @@ function NextMeetingCard({
           <TimeAndPlace
             startTime={meeting.startTime}
             location={meeting.location}
-            linkToMaps
+            linkToMaps={maps}
           />
         </div>
 
@@ -400,7 +415,7 @@ function NextMeetingCard({
             Abend zu, und „wie komme ich hin" ist dort die nächste Frage. In der
             Terminliste liest man quer über Wochen — da wäre er an jeder Zeile
             ein Ziel, das niemand meint. */}
-        {meeting.location && (
+        {maps && meeting.location && (
           <a
             href={mapsUrl(meeting.location)}
             target="_blank"

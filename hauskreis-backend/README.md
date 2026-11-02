@@ -716,7 +716,7 @@ jeder mit Label, Begründung und Default-Rhythmus.
 | `PRAYER_BUDDY_HALFTIME`  | Halbzeit der laufenden Rotation               | alle in einer Gruppe ab zwei                           | morgens       |
 | `MEETING_CANCELLED`      | Abend fällt aus — oder findet doch statt      | alle                                                   | sofort        |
 | `MEETING_TIME_CHANGED`   | der **nächste** Abend fängt anders an         | alle außer der Person, die es geändert hat             | sofort        |
-| `ATTENDANCE_DECLINED`    | jemand sagt ab                                | der Host — und alle, wenn dadurch eine Rolle frei wird | sofort        |
+| `ATTENDANCE_DECLINED`    | jemand sagt ab, wird unsicher, kommt später   | der Host — und alle, wenn dadurch eine Rolle frei wird | sofort        |
 | `HOST_CAPACITY_UNLOCKED` | genug Absagen, dass eine kleine Wohnung passt | Bewohner:innen dieser Wohnung                          | sofort        |
 | `MEMBER_LEFT`            | jemand verlässt den Hauskreis                 | alle Verbleibenden                                     | sofort        |
 | `MEETING_TODAY`          | heute ist Hauskreis                           | alle — der Text richtet sich nach der eigenen Antwort  | morgens       |
@@ -2791,7 +2791,7 @@ sollen sich gleich verhalten. Ein bereits abgesagter Abend bleibt still, ein
 vergangener auch — dass Dienstag vor drei Wochen nicht stattgefunden hat, ist
 Buchhaltung und keine Nachricht.
 
-**`ATTENDANCE_DECLINED`** sind **zwei** Nachrichten unter einem Schalter. Die
+**`ATTENDANCE_DECLINED`** sind **drei** Nachrichten unter einem Schalter. Die
 erste geht an den Host dieses Abends, der schließlich einkauft. Nur beim
 Übergang nach „abwesend" — dieselbe Antwort nochmal zu speichern löst nichts
 aus, und dass man selbst abgesagt hat, muss einem niemand mitteilen.
@@ -2819,6 +2819,17 @@ kleine Wohnung freischalten.
 
 Gerechnet wird nur der **Übergang**: Dieselbe Antwort ein zweites Mal zu
 speichern — etwa nur, um die Notiz zu ändern — gibt nichts frei.
+
+Die dritte geht **nur am nächsten Abend** an den Host
+(`notifyHostAboutAnswer`): wer auf „weiß noch nicht" geht und wer eine
+Verspätung angibt. Für einen Abend in fünf Wochen ist „weiß noch nicht" der
+Normalfall; am nächsten ist es die Auskunft, mit der er einkauft. „Nächster"
+heißt dasselbe wie bei der Uhrzeit (`findNextMeetingId`). `setAttendance`
+fragt nur bei einem echten Wechsel: „unsicher" nur, wenn vorher eine andere
+Antwort dastand — ohne Zeile war man es schon —, eine Verspätung nur, wenn sie
+neu ist oder sich ändert. `related_key` (`unsicher`, `spaeter:30`) trennt sie
+von der Absage derselben Person und schluckt dieselbe Meldung beim Hin- und
+Herschalten.
 
 **`MEETING_TIME_CHANGED`** geht raus, wenn sich `startMinutes` ändert — aber
 **nur beim nächsten** geplanten Abend der Gruppe (dieselbe Abfrage wie der
@@ -3333,6 +3344,13 @@ eigene Haken fehlt — in der Übersicht als `openPayments`, auf „Heute" als
 `giftPayments`. Höchstens `OPEN_PAYMENT_DAYS` (90) Tage zurück: Preise aus der
 Zeit vor dem Haken stünden sonst alle auf einmal offen da.
 
+**Und für den, der besorgt hat**, dieselbe Liste mit `collecting: { paid, of }`:
+vergangene Geburtstage, für die er vorgestreckt hat und an denen noch jemand
+fehlt. Gezählt wird wie im Detail — alle Angekommenen außer Geburtstagskind und
+ihm selbst. Sonst käme er nach dem Tag nicht mehr an die Liste, wer schon hat.
+Kommende bekommen diese Zeile nicht, dort steht die Aufgabe unter „Deine
+Rollen". Bei der eigenen Schuld ist `collecting` `null`.
+
 ### Benutzerdefiniert: nur vollständig
 
 `GET …/birthdays/pairings` liefert **zweimal** dieselbe Liste: `pairings` (die
@@ -3423,6 +3441,9 @@ ist nichts, worauf man zeigen könnte.
   Zusammenfassung und Actionstep desselben Abends sind zwei Nachrichten.
 - **Der Kommentar** bei `GIFT_IDEA_COMMENTED` und **der Tag** bei
   `BIRTHDAY_IDEAS_REQUESTED` — dieselbe Runde, viele Anlässe.
+- **Was sich geändert hat** bei `ATTENDANCE_DECLINED` an den Host des nächsten
+  Abends (`unsicher`, `spaeter:30`) — sonst sähe „wird unsicher" aus wie die
+  Absage derselben Person.
 
 Bestehende Zeilen tragen `NULL` und behalten genau die Bedeutung, die sie
 hatten.

@@ -252,7 +252,7 @@ function Loaded({ personId }: { personId: string }) {
 
             <Field
               label="Geburtstag"
-              hint="Optional — nützlich für die Geschenke-Planung."
+              hint="Nützlich für die Geschenke-Planung."
             >
               <TextInput
                 type="date"
@@ -333,7 +333,7 @@ function Loaded({ personId }: { personId: string }) {
               description={
                 flag('testimonyToldBefore')
                   ? 'Die App schlägt dich fürs Testimony nicht mehr vor.'
-                  : 'Die App schlägt dich fürs Testimony vor — Abende hier kennt sie selbst.'
+                  : 'Du stehst bei Testimony zur Wahl.'
               }
               checked={flag('testimonyToldBefore')}
               onChange={toggle('testimonyToldBefore')}

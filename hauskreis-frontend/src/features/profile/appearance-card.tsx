@@ -33,6 +33,9 @@ export function AppearanceCard() {
     <section>
       <SectionTitle>Darstellung</SectionTitle>
       <Card className="space-y-2">
+        <p className="text-[11px] leading-relaxed text-stone-400">
+          Gilt nur auf diesem Gerät:
+        </p>
         <div
           role="radiogroup"
           aria-label="Darstellung"
@@ -61,10 +64,6 @@ export function AppearanceCard() {
             );
           })}
         </div>
-        <p className="text-[11px] leading-relaxed text-stone-400">
-          Gilt nur auf diesem Gerät. „System" folgt der Einstellung deines
-          Smartphones oder Rechners.
-        </p>
 
         {/* Auch eine Sache des Geräts und deshalb hier: Die Leiste ist ein
             Kompromiss — sie trägt den Weg zur Gruppe und die Glocke, liegt

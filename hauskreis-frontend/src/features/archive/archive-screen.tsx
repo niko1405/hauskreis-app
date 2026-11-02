@@ -21,7 +21,10 @@ import { AnimatePresence, animate, motion } from 'motion/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDeferredValue, useEffect, useRef, useState } from 'react';
 import { PageHeader } from '@/components/layout/app-shell';
-import { suppressHeader } from '@/components/layout/header-suppress';
+import {
+  restrictHeaderToTop,
+  suppressHeader,
+} from '@/components/layout/header-suppress';
 import { FloatingAction } from '@/components/layout/floating-action';
 import { AvatarStack } from '@/components/ui/avatar';
 import { Button, PRESSABLE } from '@/components/ui/button';
@@ -53,6 +56,7 @@ import {
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { formatDay } from '@/lib/date';
+import { useBlurOnTouchMove } from '@/lib/use-blur-on-touch-move';
 import { useOwnSongIds, useOwnSongs } from '@/lib/own-songs/use-own-songs';
 import type { SongListParams } from '@/lib/api/params';
 import type { SongListItem, TopicListItem } from '@/lib/api/types';
@@ -145,16 +149,16 @@ export function ArchiveScreen() {
   /** Womit zuletzt aufs Feld gedrückt wurde — Finger oder Maus. */
   const pointer = useRef('mouse');
 
-  // Die Kopfleiste geht im Suchmodus **und** solange die Leiste klebt. Sonst
-  // führe sie beim kleinsten Hochwischen über das Feld, das gerade oben
-  // stehen soll — zurück kommt sie erst, wenn man über die Leiste hinweg
-  // wieder beim Kopf ist.
-  const keepHeaderAway = searching || pinned;
+  // **Die Kopfleiste steht hier nur ganz oben.** Wer scrollt, hat das Feld
+  // oben kleben, und eine Leiste, die beim Hochwischen darüberführe, verdeckte
+  // genau das. Zurück kommt sie erst, wenn man wieder beim Kopf ist.
+  useEffect(() => restrictHeaderToTop(), []);
 
+  // Im Suchmodus geht sie ganz — auch ganz oben, wo das Feld jetzt steht.
   useEffect(() => {
-    if (!keepHeaderAway) return;
+    if (!searching) return;
     return suppressHeader();
-  }, [keepHeaderAway]);
+  }, [searching]);
 
   // Klebt sie? Gefragt wird die Leiste selbst: `sticky` hält sie bei 0,
   // sobald sie dort ankommt — und nur dann steht sie genau dort. Gedrosselt
@@ -185,28 +189,8 @@ export function ArchiveScreen() {
     };
   }, []);
 
-  /**
-   * Scrollen durch die Treffer schließt die Tastatur — wie bei Spotify.
-   *
-   * Nicht nur aus Gewohnheit: Bei offener Tastatur schiebt iOS den sichtbaren
-   * Ausschnitt gegen das Layout, und `sticky` klebt am Layout. Das Feld
-   * rutschte damit beim Scrollen aus dem Bild, obwohl es „oben klebte". Ohne
-   * Tastatur sind beide dasselbe. Den Modus beendet das nicht — nur die
-   * Eingabe; weitertippen heißt einmal ins Feld tippen.
-   */
-  useEffect(() => {
-    if (!searching) return;
-
-    const onTouchMove = (event: TouchEvent) => {
-      const active = focusedOf(field.current, proxy.current);
-      if (!active) return;
-      if (event.target instanceof Node && active.contains(event.target)) return;
-      active.blur();
-    };
-
-    document.addEventListener('touchmove', onTouchMove, { passive: true });
-    return () => document.removeEventListener('touchmove', onTouchMove);
-  }, [searching]);
+  // Scrollen durch die Treffer schließt die Tastatur — warum, steht beim Hook.
+  useBlurOnTouchMove(searching);
 
   /**
    * Das Netz unter dem Hilfsfeld (`enterSearchByTouch`).
@@ -434,7 +418,7 @@ export function ArchiveScreen() {
       <div ref={head} aria-hidden={searching} className="overflow-hidden">
         <PageHeader
           title="Archiv"
-          subtitle="Durchsuche Themen, Lieder, Locations, Notizen und Termine."
+          subtitle="Durchsuche Themen, Lieder, Orte, Notizen und Termine."
         />
       </div>
 

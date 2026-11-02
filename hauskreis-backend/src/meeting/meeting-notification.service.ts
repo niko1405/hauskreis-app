@@ -256,9 +256,11 @@ export class MeetingNotificationService {
    * er kommt. Die beiden **anderen** Folgen einer Absage gelten hier aber
    * nicht, und darum geht dieser Weg an `handleDecline` vorbei:
    *
-   * - Der Gastgeber bekommt **nichts**. „Weiß noch nicht" ist keine Absage, und
-   *   wer einkauft, plant ohnehin mit den Unentschiedenen mit
-   *   (`countExpectedAttendance`).
+   * - Der Gastgeber bekommt hier **nichts**. „Weiß noch nicht" ist keine
+   *   Absage, und wer einkauft, plant ohnehin mit den Unentschiedenen mit
+   *   (`countExpectedAttendance`). Beim **nächsten** Abend erfährt er es
+   *   trotzdem, nur auf einem anderen Weg und mit anderen Worten
+   *   (`notifyHostAboutAnswer`).
    * - Es wird **keine zu kleine Wohnung frei**. Genau deshalb: Die Zahl der
    *   erwarteten Gäste sinkt nicht, wenn jemand von „dabei" auf „weiß noch
    *   nicht" geht.
@@ -371,6 +373,89 @@ export class MeetingNotificationService {
         payload: {
           title: 'Absage für deinen Abend',
           body: `${person.name} kann am ${formatShortDate(meeting.date)} nicht.`,
+          url: appPath.meeting(meeting.id),
+        },
+      },
+    ]);
+  }
+
+  /**
+   * „Anna weiß noch nicht" und „Anna kommt später" — für den Gastgeber des
+   * **nächsten** Abends.
+   *
+   * Nur des nächsten, wie bei der Uhrzeit: Für einen Abend in fünf Wochen ist
+   * ein „weiß noch nicht" der Normalfall und keine Nachricht wert. Am nächsten
+   * ist es die Auskunft, mit der er einkauft und die Stühle stellt.
+   *
+   * Derselbe Schalter wie die Absage (`ATTENDANCE_DECLINED`): Wer „jemand sagt
+   * ab" abonniert hat, will genau wissen, wer an seinem Abend fehlt oder später
+   * kommt. `relatedKey` trennt diese Nachricht von der Absage derselben Person
+   * — und schluckt dieselbe Meldung, wenn jemand hin- und herschaltet.
+   */
+  async notifyHostAboutAnswer(
+    meetingId: string,
+    personId: string,
+    change: { kind: 'unsure' } | { kind: 'late'; minutes: number },
+  ): Promise<void> {
+    const meeting = await this.prisma.meeting.findUnique({
+      where: { id: meetingId },
+      select: {
+        id: true,
+        hauskreisId: true,
+        date: true,
+        endDate: true,
+        status: true,
+        hostPersonId: true,
+      },
+    });
+
+    if (
+      !meeting ||
+      meeting.status !== MeetingStatus.PLANNED ||
+      !meeting.hostPersonId ||
+      meeting.hostPersonId === personId ||
+      (await this.clock.isPast(meeting.hauskreisId, meeting))
+    ) {
+      return;
+    }
+
+    const next = await findNextMeetingId(
+      this.prisma,
+      meeting.hauskreisId,
+      await this.clock.today(meeting.hauskreisId),
+    );
+    if (next !== meeting.id) return;
+
+    const person = await this.prisma.person.findUnique({
+      where: { id: personId },
+      select: { name: true },
+    });
+    if (!person) return;
+
+    const date = formatShortDate(meeting.date);
+    const copy =
+      change.kind === 'unsure'
+        ? {
+            relatedKey: 'unsicher',
+            title: 'Noch unsicher',
+            body: `${person.name} weiß für ${date} noch nicht, ob es klappt.`,
+          }
+        : {
+            relatedKey: `spaeter:${change.minutes}`,
+            title: 'Kommt später',
+            body: `${person.name} kommt am ${date} ca. ${change.minutes} Min später.`,
+          };
+
+    await this.sendAll([
+      {
+        personId: meeting.hostPersonId,
+        type: NotificationType.ATTENDANCE_DECLINED,
+        relatedMeetingId: meeting.id,
+        relatedPersonId: personId,
+        relatedKey: copy.relatedKey,
+        payload: {
+          title: copy.title,
+          body: copy.body,
           url: appPath.meeting(meeting.id),
         },
       },

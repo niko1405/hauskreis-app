@@ -10,6 +10,10 @@
  * Die Rückfrage vor dem Zusammenziehen ist der Kern: gleiche Anschrift ist ein
  * starkes Indiz für eine Wohngemeinschaft, aber ein Tippfehler sieht genauso
  * aus. Und ein stiller Zusammenzug halbierte still das Host-Gewicht beider.
+ *
+ * **Unter jedem Feld steht ein kurzer Satz**, was es sonst bewirkt, liegt
+ * hinter dem (i) — wie in der Verwaltung. Wer hier zum zweiten Mal ist, will
+ * eine Adresse ändern und keine Absätze lesen.
  */
 import { Home, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -17,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
 import { Field, TextInput } from '@/components/ui/field';
+import { InfoTip } from '@/components/ui/info-tip';
 import { Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { useUnsavedGuard } from '@/components/ui/unsaved';
@@ -135,7 +140,13 @@ export function HomeCard({
 
         <Field
           label="Adresse"
-          hint="Daraus wird deine Wohnung — sie heißt dann „Bei dir“ und taucht in den Host-Vorschlägen auf."
+          info={
+            <>
+              Sie heißt dann „Bei dir“ und taucht in den Host-Vorschlägen auf.
+              Wohnt unter derselben Anschrift schon jemand, fragt die App, ob
+              ihr zusammenwohnt.
+            </>
+          }
         >
           <TextInput
             value={address}
@@ -149,10 +160,13 @@ export function HomeCard({
 
         <Field
           label="Wie viele passen rein"
-          hint={
-            flatmates.length > 0
-              ? 'Gilt für eure Wohnung — deine Mitbewohner:innen sehen dieselbe Zahl und können sie ändern.'
-              : 'Optional. Passen an einem Abend mehr Leute als angegeben, wird deine Wohnung für diesen einen Abend übersprungen.'
+          info={
+            <>
+              Kommen an einem Abend mehr Leute, als hier steht, wird deine
+              Wohnung für diesen einen Abend übersprungen.
+              {flatmates.length > 0 &&
+                ' Deine Mitbewohner:innen sehen dieselbe Zahl und können sie ändern.'}
+            </>
           }
         >
           <TextInput
@@ -166,14 +180,16 @@ export function HomeCard({
 
         {sharedWith && (
           <div className="rounded-md border border-terracotta-200 bg-terracotta-50/60 p-3">
-            <p className="text-xs font-bold text-terracotta-700">
+            <p className="flex items-center gap-1.5 text-xs font-bold text-terracotta-700">
               Dort wohnt schon jemand
+              <InfoTip label="Zusammenwohnen">
+                Dann teilt ihr euch eine Wohnung — und damit auch, wie oft ihr
+                als Gastgeber:innen dran seid.
+              </InfoTip>
             </p>
             <p className="mt-1 text-xs leading-relaxed text-stone-600">
               Unter dieser Anschrift wohnt{' '}
               <strong>{residentNames(sharedWith)}</strong>. Wohnt ihr zusammen?
-              Dann teilt ihr euch eine Wohnung — und damit auch, wie oft ihr als
-              Gastgeber:innen dran seid.
             </p>
             <div className="mt-3 flex gap-2">
               <Button

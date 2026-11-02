@@ -928,7 +928,7 @@ export class MeetingService {
 
     const previous = await this.prisma.meetingAttendance.findUnique({
       where: { meetingId_personId: { meetingId: id, personId: dto.personId } },
-      select: { status: true },
+      select: { status: true, lateMinutes: true },
     });
 
     // Notiz und Verspätung gehören zu **dieser** Antwort, nicht zur Person.
@@ -1024,6 +1024,35 @@ export class MeetingService {
           released,
         );
       }
+    }
+
+    // **Der Gastgeber des nächsten Abends** erfährt auch, wer unsicher wird
+    // oder später kommt (`notifyHostAboutAnswer`). „Unsicher" nur, wenn vorher
+    // etwas anderes dastand: Ohne Zeile war man es schon, und das wäre keine
+    // Neuigkeit. Eine Verspätung nur, wenn sie neu ist oder sich ändert — ein
+    // zweiter Druck auf „Speichern" ist keine.
+    const wurdeUnsicher =
+      dto.status === AttendanceStatus.UNKNOWN &&
+      previous !== null &&
+      previous.status !== AttendanceStatus.UNKNOWN;
+    const späterVorher =
+      previous?.status === AttendanceStatus.ATTENDING
+        ? previous.lateMinutes
+        : null;
+    const später =
+      attendance.status === AttendanceStatus.ATTENDING
+        ? attendance.lateMinutes
+        : null;
+
+    if (wurdeUnsicher) {
+      await this.meetingNotifications.notifyHostAboutAnswer(id, dto.personId, {
+        kind: 'unsure',
+      });
+    } else if (später !== null && später !== späterVorher) {
+      await this.meetingNotifications.notifyHostAboutAnswer(id, dto.personId, {
+        kind: 'late',
+        minutes: später,
+      });
     }
 
     // Diese Antwort kann die letzte gewesen sein, die den Abend noch hielt —

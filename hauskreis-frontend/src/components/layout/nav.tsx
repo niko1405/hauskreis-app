@@ -13,11 +13,12 @@
 import {
   Archive,
   CalendarDays,
+  HeartHandshake,
   Home,
   Settings,
   Shield,
-  Users,
   UsersRound,
+  type LucideIcon,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { usePathname } from 'next/navigation';
@@ -29,13 +30,17 @@ import { useMe } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { useKeyboardOpen } from '@/lib/use-keyboard-open';
+import { NavIcon } from './nav-icon';
 import { SidebarBell } from './notification-bell';
 import { NotificationInbox } from './notification-inbox';
 
 export const NAV_ITEMS = [
   { href: '/', label: 'Heute', icon: Home },
   { href: '/termine', label: 'Termine', icon: CalendarDays },
-  { href: '/gebet', label: 'Gebet', icon: Users },
+  // Nicht `Users`: Am Rechner steht „Gruppe" in derselben Spalte, und zwei
+  // Ziele mit demselben Bild sind eines zu viel. Dasselbe Symbol trägt die
+  // Gebets-Nachricht in der Box.
+  { href: '/gebet', label: 'Gebet', icon: HeartHandshake },
   { href: '/archiv', label: 'Archiv', icon: Archive },
   { href: '/profil', label: 'Profil', icon: Settings },
 ] as const;
@@ -132,40 +137,6 @@ function useIsActive() {
   return (href: string) => matches(href, pathname);
 }
 
-/**
- * Das Symbol mit dem Punkt daneben, wenn es etwas Neues zu sehen gibt.
- *
- * Der Ring in Leinwandfarbe ist kein Zierrat: Er hebt den Punkt vom Symbol ab,
- * über dem er sitzt, und zwar hell wie dunkel. Ohne ihn verschwimmt er bei
- * aktivem Ziel mit der Terracotta-Farbe darunter.
- *
- * `sr-only`: Für alle, die nicht hinsehen, ist ein farbiger Kreis nichts. Der
- * Punkt steht dort, wo er ausgesprochen gehört — im Ziel, nicht daneben.
- */
-function NavIcon({
-  icon: Icon,
-  size,
-  strokeWidth,
-  unread,
-}: {
-  icon: typeof Home;
-  size: number;
-  strokeWidth?: number;
-  unread: boolean;
-}) {
-  return (
-    <span className="relative">
-      <Icon size={size} strokeWidth={strokeWidth} />
-      {unread && (
-        <>
-          <span className="absolute -top-0.5 -right-1 size-2 rounded-full bg-terracotta-500 ring-2 ring-canvas" />
-          <span className="sr-only">(Neues)</span>
-        </>
-      )}
-    </span>
-  );
-}
-
 export function TabBar() {
   const isActive = useIsActive();
   const unread = useUnreadProfile({ admin: true });
@@ -233,7 +204,7 @@ export function Sidebar() {
   ];
 
   const item = (
-    { href, label, icon }: { href: string; label: string; icon: typeof Home },
+    { href, label, icon }: { href: string; label: string; icon: LucideIcon },
     unread: boolean,
   ) => {
     const active = isActive(href);
@@ -292,11 +263,13 @@ export function Sidebar() {
         )}
       </nav>
 
-      {/* Unten, wo sie nicht mit den Zielen verwechselt wird: Die Glocke ist
-          kein Ort, sondern eine Box, die über der Seite aufgeht. */}
+      {/* Unten, abgesetzt von den Zielen: Die Glocke ist kein Ort, sondern
+          eine Box, die über der Seite aufgeht. Aussehen tut sie trotzdem wie
+          eine Zeile der Spalte — eine Karte darum war eine zweite Fläche für
+          etwas, das man mehrmals am Tag drückt. */}
       <div className="shrink-0 px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
         <div className="relative">
-          <SidebarBell onClick={() => setInbox(true)} />
+          <SidebarBell open={inbox} onClick={() => setInbox(true)} />
           <NotificationInbox
             placement="sidebar"
             open={inbox}

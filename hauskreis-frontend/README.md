@@ -328,6 +328,12 @@ Nachgeladen wird per `useInfiniteList` über `skip`/`take`; verzweigt wird auf
 Detailseiten werden beim Antippen der Karte vorgeladen, Kalender, Tabelle und
 Sheets liegen hinter `next/dynamic`.
 
+**Ein Sheet hinter `next/dynamic` braucht `loading: () => null`.** Ohne
+`loading` setzt `next/dynamic` keine eigene Suspense-Grenze: Beim ersten Öffnen
+hält das ladende Sheet die nächste Grenze darüber an — die der Seite oder der
+ganzen Planungstabelle —, und hinter dem aufgehenden Sheet erscheinen deren
+Skeletons. Mit `null` als Fallback wartet nur das Sheet selbst.
+
 ### Datumsfelder
 
 Ein Kalendertag ist `2026-08-11` und **kein** Zeitpunkt. `new Date('2026-08-11')`
@@ -2052,6 +2058,50 @@ abgehakt hat, als Zeilen auf die Seite des Geburtstags — oben im Register
 „Geburtstage" (`openPayments` der Übersicht) und auf „Heute" unter „Deine
 Rollen" (`giftPayments`). Ohne Einträge zeichnet es nichts. Geld steht in ganzen
 Cent und wird erst beim Anzeigen umgerechnet (`lib/money.ts`).
+
+Zeilen mit `collecting` gehören dem, der besorgt hat: „3 von 7 haben bezahlt",
+neutral statt warn-getönt. Sie sind sein Weg zurück auf einen vergangenen
+Geburtstag.
+
+## Vergangene Geburtstage
+
+`birthday-detail-screen.tsx` zeigt einen Geburtstag mit `daysUntil < 0`
+anders: „Vorbei" statt „steht fest", „wurde 25", „… hat das Geschenk
+besorgt", und statt „Es wird" und der Vorschläge die Sektion „Was geschenkt
+wurde" mit dem Geschenk dieses Jahres. Die Vorschläge bleiben nur für den, der
+besorgt hat, `canDecide` hat und noch nichts eingetragen hat. Ob man selbst
+besorgt hat, fragt die Seite über `useMe` und nicht über `canDecide` — das endet
+zwei Wochen nach dem Tag.
+
+„Schon einmal geschenkt" zeigt nur Ideen mit `giftedOn` **vor** diesem
+Geburtstag. Das für diesen ausgesuchte bleibt bei den Vorschlägen.
+
+## Suchmodus auf „Termine"
+
+Statt eines Suchfelds steht in der Listenzeile eine Lupe. `enterSearch` in
+`meetings-screen.tsx` zeichnet das Feld per `flushSync`, scrollt nach oben und
+fokussiert — alles im selben Tipp, sonst öffnet iOS die Tastatur nicht. Das
+Feld steht **vor** dem Kopf (`PageHeader` + Register), der darunter auf Höhe 0
+einklappt; es ist also vom ersten Bild an oben, und iOS verschiebt beim
+Fokussieren nichts. Das Archiv braucht dafür ein Hilfsfeld, weil sein Feld in
+Ruhe unter dem Kopf steht.
+
+Beide Suchmodi schließen die Tastatur beim Scrollen über
+`lib/use-blur-on-touch-move.ts`.
+
+## Kopfleiste: weg oder nur ganz oben
+
+`header-suppress.ts` kennt zwei Bitten an die Kopfleiste. `suppressHeader`
+schickt sie ganz weg (beide Suchmodi). `restrictHeaderToTop` lässt sie nur
+ganz oben stehen (Archiv): `useHeaderScroll` versteckt sie dann, sobald
+`atTop` nicht mehr gilt, und beim Hochwischen kommt sie nicht zurück.
+
+## Seitenspalte
+
+`NavIcon` (Symbol mit Punkt für Neues) steht in `components/layout/nav-icon.tsx`
+und nicht in `nav.tsx`, weil auch die Glocke der Spalte (`SidebarBell` in
+`notification-bell.tsx`) es nutzt — und `nav.tsx` die Glocke einbindet. Die
+Glocke ist dort eine Zeile wie die Ziele, mit Punkt statt Zahl.
 
 ## Die Verwaltung: ein Formular, ein Speichern
 

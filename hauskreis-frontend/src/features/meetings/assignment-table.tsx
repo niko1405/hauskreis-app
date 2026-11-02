@@ -7,7 +7,9 @@
  * hier plant man **quer** — „wer hostet in den nächsten sechs Wochen" ist eine
  * Spalte, keine sechs Zeilen. Das Raster scrollt deshalb waagerecht in seinem
  * eigenen Kasten, und zwei Knöpfe verkleinern es, wenn man mehr auf einmal
- * sehen will.
+ * sehen will. Sie stehen rechts in derselben Zeile wie der Umschalter über der
+ * Liste, als **ein** Regler mit zwei Hälften — es ist eine Frage („wie groß"),
+ * und zwei lose Knöpfe am linken Rand sahen aus wie zwei.
  *
  * Kein Pinch-Zoom: der kollidiert auf Mobilgeräten mit dem Seiten-Zoom des
  * Browsers und lässt sich nicht zuverlässig davon trennen.
@@ -28,7 +30,7 @@ import Link from '@/components/ui/link';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
-import { IconButton } from '@/components/ui/button';
+import { PRESSABLE } from '@/components/ui/button';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import {
   useMeeting,
@@ -48,16 +50,28 @@ import { cn } from '@/lib/cn';
 import type { MeetingListItem, PersonRef } from '@/lib/api/types';
 import { useRoleAssignment } from './detail/use-role-assignment';
 
-const AssignmentSheet = dynamic(() =>
-  import('@/components/domain/assignment-sheet').then((m) => m.AssignmentSheet),
+/*
+ * Die Sheets werden erst beim ersten Öffnen geladen — mit `loading: () => null`
+ * als eigener Suspense-Grenze. Ohne `loading` setzt `next/dynamic` **keine**
+ * und das ladende Sheet hält die nächste Grenze darüber an: die ganze Seite,
+ * die dann hinter dem aufgehenden Sheet ihre Skeletons zeigt.
+ */
+const AssignmentSheet = dynamic(
+  () =>
+    import('@/components/domain/assignment-sheet').then(
+      (m) => m.AssignmentSheet,
+    ),
+  { loading: () => null },
 );
 
-const VenueSheet = dynamic(() =>
-  import('@/components/domain/venue-sheet').then((m) => m.VenueSheet),
+const VenueSheet = dynamic(
+  () => import('@/components/domain/venue-sheet').then((m) => m.VenueSheet),
+  { loading: () => null },
 );
 
-const SnackSheet = dynamic(() =>
-  import('@/components/domain/snack-sheet').then((m) => m.SnackSheet),
+const SnackSheet = dynamic(
+  () => import('@/components/domain/snack-sheet').then((m) => m.SnackSheet),
+  { loading: () => null },
 );
 
 /**
@@ -110,6 +124,35 @@ interface Cell {
   absent: 'slot-off' | 'not-needed' | null;
 }
 
+/** Eine Hälfte des Reglers — gesperrt heißt: in diese Richtung geht es nicht weiter. */
+function ZoomButton({
+  label,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center justify-center rounded-full px-3 py-1.5 text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-700 disabled:text-stone-300 disabled:hover:bg-transparent',
+        PRESSABLE,
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
   const from = today();
   const to = addDays(from, weeks * 7);
@@ -140,27 +183,34 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between px-1">
-        <p className="text-[11px] text-stone-400">
-          Antippen zum Eintragen · grün heißt fertig geplant
+      {/* Dieselbe Zeile wie über der Liste: links das Wort, rechts der
+          Regler, in der Höhe des Umschalters dort. */}
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 flex-1 truncate px-1 text-[11px] font-semibold tracking-wider text-stone-400 uppercase">
+          Nächste {weeks} Wochen
         </p>
-        <div className="flex items-center gap-1">
-          <IconButton
+        <div
+          role="group"
+          aria-label="Größe der Tabelle"
+          className="flex shrink-0 items-center rounded-full border border-line bg-card p-0.5"
+        >
+          <ZoomButton
             label="Kleiner anzeigen"
             disabled={zoom === ZOOM_STEPS.length - 1}
             onClick={() =>
               setZoom((z) => Math.min(z + 1, ZOOM_STEPS.length - 1))
             }
           >
-            <Minus size={15} />
-          </IconButton>
-          <IconButton
+            <Minus size={16} />
+          </ZoomButton>
+          <span aria-hidden className="h-4 w-px bg-line" />
+          <ZoomButton
             label="Größer anzeigen"
             disabled={zoom === 0}
             onClick={() => setZoom((z) => Math.max(z - 1, 0))}
           >
-            <Plus size={15} />
-          </IconButton>
+            <Plus size={16} />
+          </ZoomButton>
         </div>
       </div>
 
