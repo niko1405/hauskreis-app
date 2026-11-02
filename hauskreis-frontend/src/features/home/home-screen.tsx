@@ -199,6 +199,7 @@ export function HomeScreen() {
             <PastOrCurrentMeeting
               meeting={lastMeeting}
               className="bg-canvas shadow-none"
+              past
             />
           </section>
         )}
@@ -310,12 +311,17 @@ function OpenActionstepCard({ step }: { step: HomeActionstep }) {
 function PastOrCurrentMeeting({
   meeting,
   className,
+  past = false,
 }: {
   meeting: HomeNextMeeting;
   className?: string;
+  /** Der letzte Abend — zu ihm führt kein Weg mehr nach Maps. */
+  past?: boolean;
 }) {
   if (!meeting.summaryText) {
-    return <NextMeetingCard meeting={meeting} className={className} />;
+    return (
+      <NextMeetingCard meeting={meeting} className={className} maps={!past} />
+    );
   }
 
   return (
@@ -364,10 +370,17 @@ function PastOrCurrentMeeting({
 function NextMeetingCard({
   meeting,
   className,
+  maps = true,
 }: {
   meeting: HomeNextMeeting;
   /** Der laufende Abend bekommt hier seine grüne Tönung. */
   className?: string;
+  /**
+   * Ob Ort und runder Knopf nach Maps führen. Beim letzten Abend nicht: Zu
+   * dem geht niemand mehr hin, und der terracotta Knopf wäre auf einer sonst
+   * gedämpften Karte die lauteste Stelle.
+   */
+  maps?: boolean;
 }) {
   return (
     <Card className={cn('space-y-4', className)}>
@@ -394,7 +407,7 @@ function NextMeetingCard({
           <TimeAndPlace
             startTime={meeting.startTime}
             location={meeting.location}
-            linkToMaps
+            linkToMaps={maps}
           />
         </div>
 
@@ -402,7 +415,7 @@ function NextMeetingCard({
             Abend zu, und „wie komme ich hin" ist dort die nächste Frage. In der
             Terminliste liest man quer über Wochen — da wäre er an jeder Zeile
             ein Ziel, das niemand meint. */}
-        {meeting.location && (
+        {maps && meeting.location && (
           <a
             href={mapsUrl(meeting.location)}
             target="_blank"
