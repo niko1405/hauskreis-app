@@ -101,7 +101,7 @@ const ICONS: Record<NotificationEntry['type'], typeof Bell> = {
   TESTIMONY_REMINDER: Sparkles,
   ACTIONSTEP_REMINDER: Check,
   ROLE_ASSIGNED: Users,
-  PRAYER_BUDDY_ASSIGNED: Users,
+  PRAYER_BUDDY_ASSIGNED: HeartHandshake,
   PRAYER_BUDDY_HALFTIME: HeartHandshake,
   MEETING_CANCELLED: CalendarX,
   MEETING_TIME_CHANGED: CalendarClock,
