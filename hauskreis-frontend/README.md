@@ -2257,12 +2257,14 @@ in `back`. Und er fragt nach Ungespeichertem wie jeder Link.
 ## Lieder haben eine eigene Seite
 
 `/lied?id=…` (`features/songs/song-detail-screen.tsx`), vom Termin aus mit
-`&termin=…`. Oben, was alle sehen: Titel, „8× gesungen · zuletzt am …" und
-„Zum Liedtext". Die Zahlen kommen mit dem einzelnen Lied (`timesPlayed`,
+`&termin=…`. Oben, was alle sehen: Titel, Interpret, „8× gesungen · zuletzt am
+…" und als gefüllter Knopf „Zum Liedtext" (`SourceLink`) — ohne Link eine
+gestrichelte Lücke mit „Eintragen", die in „Bearbeiten" schaltet. Die Zahlen kommen mit dem einzelnen Lied (`timesPlayed`,
 `lastPlayedAt`, dazu `meetingCount` — Löschen geht nur, wenn es an keinem Abend
 steht, nur für Admins und nur aus dem Archiv; die Seite sagt das, statt einen
 Knopf anzubieten, der mit `400` antwortet). Darunter „Deine Version", als Text;
-Akkorde sind ein Umschalter entfernt.
+Akkorde sind ein Umschalter entfernt. Gibt es noch keine, steht statt der
+Sektion nur `OwnVersionNote` ganz unten — sie ist Sache der Musiker.
 
 Unten steht statt der Tab-Leiste `EditBar` (`components/layout/edit-bar.tsx`,
 dieselbe wie am vergangenen Termin): „Bearbeiten" für Angaben (`SongFields`),
