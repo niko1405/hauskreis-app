@@ -324,10 +324,11 @@ function LoginScreen() {
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-stone-500">
           Schön, dass du da bist! Inspiriert von der allerersten christlichen
-          Gemeinschaft aus Apostelgeschichte 2 (Acts 2), steht bei uns das
-          Miteinander im Mittelpunkt. Acts2 ist eine Hauskreis-App, die deine
-          Kleingruppe mithilfe von coolen Features auf ein neues Level bringt.
-          Probier es aus und leg los!
+          Gemeinschaft aus Apostelgeschichte 2, steht bei uns das Miteinander im
+          Mittelpunkt. Acts2 ist eine Hauskreis-App, die deine Kleingruppe bei
+          der Organisation unterstützt. Sie hilft euch, Termine zu planen,
+          Themen und Lieder zu teilen sowie vieles mehr. Probier es aus und leg
+          los!
         </p>
         <Button
           size="lg"

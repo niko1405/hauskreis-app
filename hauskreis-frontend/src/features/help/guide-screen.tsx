@@ -54,6 +54,18 @@ export function GuideScreen() {
             füllen — und was wo steht. Du kannst sie ausdrucken oder als PDF
             speichern und weiterschicken.
           </p>
+          <p className="mt-3 text-sm leading-relaxed text-stone-500">
+            Öffne zunächst den Browser deiner Wahl und navigiere zu{' '}
+            <a
+              href="https://acts2.de"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-terracotta-500 hover:underline"
+            >
+              https://acts2.de
+            </a>
+            .
+          </p>
         </header>
 
         <div className="space-y-8">
