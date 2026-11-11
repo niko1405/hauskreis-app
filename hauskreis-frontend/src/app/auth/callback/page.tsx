@@ -14,7 +14,12 @@ import { hasAuthParams, useAuth } from 'react-oidc-context';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
-import { ACTION_STATUS_PARAM, returnPathOf } from '@/lib/auth/oidc-config';
+import {
+  ACTION_STATUS_PARAM,
+  accountActionOf,
+  returnPathOf,
+  type AccountAction,
+} from '@/lib/auth/oidc-config';
 import { useSlow } from '@/lib/use-slow';
 
 export default function AuthCallbackPage() {
@@ -33,7 +38,7 @@ export default function AuthCallbackPage() {
       // Nach einer Konto-Aktion (Passwort ändern) zurück auf den Bildschirm,
       // von dem sie ausging — sonst steht man ohne Erklärung auf der
       // Startseite und weiß nicht, ob etwas passiert ist.
-      reportActionStatus(toast);
+      reportActionStatus(toast, accountActionOf(auth.user?.state));
       router.replace(returnPathOf(auth.user?.state));
       return;
     }
@@ -57,9 +62,7 @@ export default function AuthCallbackPage() {
   if (auth.error) {
     return (
       <Centered>
-        <ErrorState
-          error={new Error(`Anmeldung fehlgeschlagen: ${auth.error.message}`)}
-        />
+        <ErrorState error={new Error(describeSigninError(auth.error))} />
         <Button
           className="mt-3 w-full"
           onClick={() => void auth.signinRedirect()}
@@ -101,7 +104,10 @@ export default function AuthCallbackPage() {
  * doppelt passieren (React im Entwicklungsmodus tut das), ohne dass zwei
  * Meldungen erscheinen.
  */
-function reportActionStatus(toast: ReturnType<typeof useToast>): void {
+function reportActionStatus(
+  toast: ReturnType<typeof useToast>,
+  action: AccountAction | undefined,
+): void {
   const status = new URLSearchParams(window.location.search).get(
     ACTION_STATUS_PARAM,
   );
@@ -109,11 +115,31 @@ function reportActionStatus(toast: ReturnType<typeof useToast>): void {
 
   window.history.replaceState({}, '', window.location.pathname);
 
+  // Die Einwilligung meldet sich nicht zurück: Wer zugestimmt hat, ist danach
+  // einfach drin, und das ist die Auskunft. Ein „Passwort geändert" an dieser
+  // Stelle war genau die Verwechslung, wegen der die Aktion jetzt mitreist.
+  if (action === 'TERMS_AND_CONDITIONS') return;
+
   // `cancelled` bleibt still — wer abbricht, weiß, dass nichts passiert ist.
   if (status === 'success') toast.success('Passwort geändert.');
   if (status === 'error') {
     toast.error('Das hat nicht geklappt — dein Passwort ist unverändert.');
   }
+}
+
+/**
+ * Was beim Anmelden schiefging, in einem Satz für Menschen.
+ *
+ * `access_denied` ist kein Defekt, sondern eine Entscheidung: Die Einwilligung
+ * wurde abgelehnt oder die Anmeldung bei Google abgebrochen. Dafür ist
+ * „Anmeldung fehlgeschlagen: access_denied" die falsche Antwort — es ist nichts
+ * kaputt, und ein neuer Versuch ist ein Knopf weit weg.
+ */
+function describeSigninError(error: Error): string {
+  if ('error' in error && error.error === 'access_denied') {
+    return 'Die Anmeldung wurde abgebrochen. Ohne deine Zustimmung zur Datenschutzerklärung geht es nicht weiter — du kannst es jederzeit noch einmal versuchen.';
+  }
+  return `Anmeldung fehlgeschlagen: ${error.message}`;
 }
 
 function Centered({ children }: { children: React.ReactNode }) {
