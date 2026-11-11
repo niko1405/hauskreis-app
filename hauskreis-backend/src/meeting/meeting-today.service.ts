@@ -23,17 +23,39 @@ import type { ReminderRunResult } from '../notification/meeting-reminder.service
  * sich Zusagen ändern. Wer abgesagt hat, wird deshalb gefragt, ob das noch
  * stimmt — und wer nie geantwortet hat, überhaupt einmal.
  */
-function body(status: AttendanceStatus, wann: string, wo: string): string {
-  const kopf = `Heute um ${wann} ${wo}.`;
-
+function body(status: AttendanceStatus, kopf: string): string {
   switch (status) {
     case AttendanceStatus.ATTENDING:
       return `${kopf} Bis später!`;
     case AttendanceStatus.ABSENT:
       return `${kopf} Du hast abgesagt — stimmt das noch?`;
     case AttendanceStatus.UNKNOWN:
-      return `${kopf} Bist du dabei?`;
+      return `${kopf} Du stehst auf „Unsicher" — bist du dabei?`;
   }
+}
+
+/**
+ * Der erste Satz: wann und wo.
+ *
+ * **Ein Zuhause heißt schon „Bei Niko"** (`homeName`), und ein „bei" davor
+ * ergab „bei Bei Niko". Klein geschrieben passt der Name so, wie er ist, in
+ * den Satz — samt Mitbewohner:innen („bei Niko & Chris"), die ein Blick auf
+ * den Gastgeber allein verlöre. Ein Treffpunkt trägt einen eigenen Namen, vor
+ * den keine Präposition sicher passt („bei Schlosspark"); er steht deshalb
+ * für sich, nach einem Strich.
+ *
+ * Ohne Ort endet der Satz mit einer Frage und bekommt keinen Punkt dahinter.
+ */
+function head(wann: string, location: { name: string } | null): string {
+  if (!location) {
+    return `Heute um ${wann} ist Hauskreis — der Ort ist noch offen! Wo treffen wir uns?`;
+  }
+
+  const wo = location.name.startsWith('Bei ')
+    ? `bei ${location.name.slice('Bei '.length)}`
+    : `— ${location.name}`;
+
+  return `Heute um ${wann} ${wo}.`;
 }
 
 /**
@@ -106,11 +128,7 @@ export class MeetingTodayService {
       meeting.attendances.map((row) => [row.personId, row.status]),
     );
 
-    const wann = formatWallClock(meeting.startMinutes);
-    // Ohne Ort steht dort dieselbe Auskunft wie überall sonst in der App.
-    const wo = meeting.location
-      ? `bei ${meeting.location.name}`
-      : 'ist Hauskreis — der Ort ist noch offen';
+    const kopf = head(formatWallClock(meeting.startMinutes), meeting.location);
 
     const results = await Promise.all(
       people.map((person) =>
@@ -122,8 +140,7 @@ export class MeetingTodayService {
             title: 'Heute ist Hauskreis',
             body: body(
               answers.get(person.id) ?? AttendanceStatus.UNKNOWN,
-              wann,
-              wo,
+              kopf,
             ),
             url: appPath.meeting(meeting.id),
           },

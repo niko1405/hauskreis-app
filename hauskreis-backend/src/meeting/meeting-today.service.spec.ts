@@ -29,7 +29,8 @@ function setup(
       ? {
           id: 'm-1',
           startMinutes: 1080,
-          location: { name: 'Chris' },
+          // So heißt ein Zuhause wirklich (`homeName`).
+          location: { name: 'Bei Chris' },
           attendances: [
             { personId: 'anna', status: AttendanceStatus.ATTENDING },
             { personId: 'chris', status: AttendanceStatus.ABSENT },
@@ -78,9 +79,53 @@ describe('MeetingTodayService.sendDueReminders', () => {
     expect(texte.get('chris')).toBe(
       'Heute um 18:00 bei Chris. Du hast abgesagt — stimmt das noch?',
     );
-    // Keine Zeile heißt „weiß noch nicht", nicht „nicht gemeint".
-    expect(texte.get('lena')).toBe('Heute um 18:00 bei Chris. Bist du dabei?');
+    // Keine Zeile heißt „weiß noch nicht", nicht „nicht gemeint" — und so
+    // steht es auch in der Anwesenheitsliste.
+    expect(texte.get('lena')).toBe(
+      'Heute um 18:00 bei Chris. Du stehst auf „Unsicher" — bist du dabei?',
+    );
     expect(result.notified).toBe(3);
+  });
+
+  /**
+   * Ein Zuhause heißt schon „Bei …" — ein „bei" davor ergab „bei Bei Niko".
+   * Der Name trägt auch die Mitbewohner:innen, die der Gastgeber allein nicht
+   * nennte.
+   */
+  it('schreibt ein Zuhause nicht doppelt mit „bei"', async () => {
+    const { service, notify } = setup({
+      meeting: {
+        id: 'm-1',
+        startMinutes: 1080,
+        location: { name: 'Bei Niko & Chris' },
+        attendances: [{ personId: 'anna', status: AttendanceStatus.ATTENDING }],
+      },
+      people: ['anna'],
+    });
+
+    await service.sendDueReminders('hk-1', { now: HEUTE });
+
+    expect(notify.mock.calls[0][0].payload.body).toBe(
+      'Heute um 18:00 bei Niko & Chris. Bis später!',
+    );
+  });
+
+  it('setzt vor einen Treffpunkt keine Präposition', async () => {
+    const { service, notify } = setup({
+      meeting: {
+        id: 'm-1',
+        startMinutes: 1140,
+        location: { name: 'Schlosspark' },
+        attendances: [{ personId: 'anna', status: AttendanceStatus.ATTENDING }],
+      },
+      people: ['anna'],
+    });
+
+    await service.sendDueReminders('hk-1', { now: HEUTE });
+
+    expect(notify.mock.calls[0][0].payload.body).toBe(
+      'Heute um 19:00 — Schlosspark. Bis später!',
+    );
   });
 
   it('nennt statt eines Ortes, dass er offen ist', async () => {
@@ -96,8 +141,9 @@ describe('MeetingTodayService.sendDueReminders', () => {
 
     await service.sendDueReminders('hk-1', { now: HEUTE });
 
+    // Der Satz endet mit einer Frage — ohne Punkt dahinter.
     expect(notify.mock.calls[0][0].payload.body).toBe(
-      'Heute um 19:00 ist Hauskreis — der Ort ist noch offen. Bist du dabei?',
+      'Heute um 19:00 ist Hauskreis — der Ort ist noch offen! Wo treffen wir uns? Du stehst auf „Unsicher" — bist du dabei?',
     );
   });
 
