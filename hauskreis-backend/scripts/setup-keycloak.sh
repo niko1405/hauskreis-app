@@ -566,6 +566,72 @@ echo "    Redirect-URI: ${FRONTEND_URL}/*"
 ensure_audience_mapper "${FRONTEND_UUID}"
 ensure_terms_mapper "${FRONTEND_UUID}"
 
+# ---------------------------------------------------------------------------
+# Anmeldung mit Google — Identity Brokering
+#
+# Google ist ein Identity Provider **in Keycloak**, nicht neben ihm: Die App
+# meldet sich weiter bei Keycloak an und bekommt weiter Keycloak-Tokens; nur
+# fragt Keycloak auf Wunsch Google, wer da ist. Für Backend, Guard und
+# Datenmodell ändert sich dadurch nichts.
+#
+#   trustEmail   Google liefert `email_verified`. Ohne das schickte Keycloak
+#                jedem Google-Konto noch eine Bestätigungsmail — für eine
+#                Adresse, die Google gerade nachgewiesen hat.
+#   syncMode     IMPORT: Name und Adresse kommen beim ersten Anmelden, danach
+#                gehören sie dem Konto. Mit FORCE überschriebe jede Anmeldung
+#                eine Adresse, die jemand im Profil geändert hat.
+#   Flow         „first broker login", unverändert. Gibt es die Adresse schon
+#                als Konto, fragt Keycloak, ob verknüpft werden soll, und
+#                verlangt einen Nachweis (Mail oder Passwort). Still
+#                zusammengeführt wird nichts.
+#
+# Die Einwilligung braucht hier keinen eigenen Schritt: `TERMS_AND_CONDITIONS`
+# ist `defaultAction` (siehe oben), und ein Konto aus dem ersten Google-Login
+# bekommt sie beim Anlegen wie eines aus der Registrierung.
+#
+# Nur mit Zugangsdaten. Fehlen sie, bleibt alles, wie es ist — auch ein schon
+# eingerichteter Provider, den dieser Lauf dann nicht kennt.
+# ---------------------------------------------------------------------------
+GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
+GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-}"
+
+if [ -n "${GOOGLE_CLIENT_ID}" ] && [ -n "${GOOGLE_CLIENT_SECRET}" ]; then
+  echo "==> Anmeldung mit Google"
+  GOOGLE_IDP="{
+    \"alias\": \"google\",
+    \"displayName\": \"Google\",
+    \"providerId\": \"google\",
+    \"enabled\": true,
+    \"trustEmail\": true,
+    \"storeToken\": false,
+    \"addReadTokenRoleOnCreate\": false,
+    \"linkOnly\": false,
+    \"hideOnLogin\": false,
+    \"firstBrokerLoginFlowAlias\": \"first broker login\",
+    \"config\": {
+      \"clientId\": \"${GOOGLE_CLIENT_ID}\",
+      \"clientSecret\": \"${GOOGLE_CLIENT_SECRET}\",
+      \"defaultScope\": \"openid profile email\",
+      \"syncMode\": \"IMPORT\",
+      \"guiOrder\": \"1\"
+    }
+  }"
+
+  if [ "$(api_status "${KC_URL}/admin/realms/${REALM}/identity-provider/instances/google")" = "404" ]; then
+    kc_curl -X POST "${KC_URL}/admin/realms/${REALM}/identity-provider/instances" \
+      -d "${GOOGLE_IDP}" >/dev/null
+    echo "    angelegt"
+  else
+    kc_curl -X PUT "${KC_URL}/admin/realms/${REALM}/identity-provider/instances/google" \
+      -d "${GOOGLE_IDP}" >/dev/null
+    echo "    aktualisiert"
+  fi
+  echo "    Weiterleitungs-URI für die Google Cloud Console:"
+  echo "      ${KC_URL}/realms/${REALM}/broker/google/endpoint"
+else
+  echo "==> Anmeldung mit Google: übersprungen (GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET leer)"
+fi
+
 # Grant the service account permission to manage users (needed for the invite flow).
 echo "==> Granting realm-management roles to service account"
 # Die Kennung des Clients steht schon in `EXISTING`. Kein `xargs` hier: Es
