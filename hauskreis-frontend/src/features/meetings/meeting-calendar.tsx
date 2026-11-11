@@ -41,7 +41,6 @@ import {
   isAnswerable,
 } from '@/components/domain/answer-buttons';
 import { AnswerNoteSheet } from '@/components/domain/answer-note-sheet';
-import { ownAnswerLine } from '@/components/domain/attendance-answers';
 import type {
   AttendanceStatus,
   BirthdayOccasion,
@@ -280,7 +279,6 @@ function MonthRow({ meeting }: { meeting: MeetingListItem }) {
 
   const cancelled = meeting.status === 'CANCELLED';
   const myRow = meeting.attendances.find((row) => row.personId === me?.id);
-  const myLine = ownAnswerLine(myRow);
 
   return (
     <li>
@@ -306,14 +304,6 @@ function MonthRow({ meeting }: { meeting: MeetingListItem }) {
               ? 'Fällt aus'
               : (meeting.location?.name ?? 'Ort noch offen')}
           </span>
-          {/* Der eigene Satz, einzeilig — wie auf der Terminkarte. Er ist der
-              Grund, aus dem man die Zeile sonst öffnen müsste, um zu sehen, ob
-              man überhaupt etwas dazugesagt hat. */}
-          {myLine && (
-            <span className="mt-0.5 block truncate text-[11px] text-stone-400">
-              {myLine}
-            </span>
-          )}
         </Link>
 
         {isAnswerable(meeting, me?.id) && (

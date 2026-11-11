@@ -354,12 +354,7 @@ export function TopicChoiceSheet({
   const themen = choices.data?.topics ?? [];
 
   return (
-    <Sheet
-      open={open}
-      onClose={schliessen}
-      title="Thema wählen"
-      subtitle="Ein Abend für sich, oder ein Thema über mehrere"
-    >
+    <Sheet open={open} onClose={schliessen} title="Thema wählen">
       {choices.isLoading && <CardSkeleton />}
       {choices.error && <ErrorState error={choices.error} />}
 

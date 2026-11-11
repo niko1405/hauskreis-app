@@ -192,7 +192,7 @@ function IdeaSheet({
             }}
           />
         </Field>
-        <Field label="Notiz" hint="Optional">
+        <Field label="Notiz (optional)">
           <TextArea
             value={note}
             rows={3}
