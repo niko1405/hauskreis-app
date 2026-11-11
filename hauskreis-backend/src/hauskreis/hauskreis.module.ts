@@ -5,6 +5,9 @@ import { HauskreisPhotoService } from './hauskreis-photo.service';
 import { HauskreisService } from './hauskreis.service';
 import { MembershipService } from './membership.service';
 import { InvitationController } from './invitation.controller';
+import { InviteLinkController } from './invite-link.controller';
+import { InviteLinkService } from './invite-link.service';
+import { JoinController } from './join.controller';
 import { PersonModule } from '../person/person.module';
 import { PrayerBuddyModule } from '../prayer-buddy/prayer-buddy.module';
 import { BirthdayModule } from '../birthday/birthday.module';
@@ -37,11 +40,14 @@ import { MEMBERSHIP_SERVICE } from './membership.token';
     HauskreisController,
     HauskreisPhotoController,
     InvitationController,
+    InviteLinkController,
+    JoinController,
   ],
   providers: [
     HauskreisService,
     HauskreisPhotoService,
     MembershipService,
+    InviteLinkService,
     // Zusätzlich unter einer Zeichenkette, damit `PersonService.remove` den
     // Dienst nachschlagen kann, ohne die Klasse zu importieren — die
     // Begründung steht in `membership.token.ts`.

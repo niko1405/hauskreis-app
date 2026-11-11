@@ -30,6 +30,8 @@ export const appPath = {
   birthday: (occasionId: string) => `/geburtstag?id=${occasionId}`,
   /** Eine Notiz — wer dazugenommen wird, landet gleich darin. */
   note: (noteId: string) => `/notiz?id=${noteId}`,
+  /** Der Gruppen-Bildschirm: Bild, Beschreibung, wer dazugehört. */
+  group: () => '/hauskreis',
   home: () => '/',
   /**
    * „Neu in Acts2".

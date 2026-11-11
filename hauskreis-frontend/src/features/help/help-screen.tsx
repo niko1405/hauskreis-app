@@ -22,11 +22,13 @@ import { PageHeader } from '@/components/layout/app-shell';
 import { TextInput } from '@/components/ui/field';
 import { EmptyState } from '@/components/ui/states';
 import { useMe } from '@/lib/api/hooks';
+import { IDENTITY_PROVIDERS } from '@/lib/auth/oidc-config';
 import { cn } from '@/lib/cn';
 import {
   FAQ_CATEGORIES,
   FAQ_ENTRIES,
   FIRST_STEPS_ID,
+  fitsIdentityProviders,
   type FaqCategory,
   type FaqEntry,
 } from './faq-content';
@@ -74,7 +76,8 @@ export function HelpScreen() {
       FAQ_ENTRIES.filter(
         (entry) =>
           (isAdmin || !entry.adminOnly) &&
-          (prayer || entry.category !== 'prayer'),
+          (prayer || entry.category !== 'prayer') &&
+          fitsIdentityProviders(entry, IDENTITY_PROVIDERS),
       ),
     [isAdmin, prayer],
   );

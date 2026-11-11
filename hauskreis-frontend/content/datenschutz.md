@@ -7,7 +7,7 @@ Bereitstellung unserer Applikation verarbeiten.
 
 Die verwendeten Begriffe sind nicht geschlechtsspezifisch.
 
-**Stand:** 19. August 2026
+**Stand:** 4. November 2026
 
 ## Verantwortlicher
 
@@ -258,15 +258,18 @@ ausgeliefert.
 Die nachfolgenden Dienste werden auf zwei verschiedenen Wegen erreicht, und der
 Unterschied ist für Sie wesentlich: Ein Aufruf **von unserem Server aus**
 überträgt die IP-Adresse unseres Servers, nicht Ihre. Nur wo Ihr Browser selbst
-einen Anbieter anspricht — beim Öffnen eines Kartenlinks —, erfährt dieser Ihre
-IP-Adresse.
+einen Anbieter anspricht — beim Öffnen eines Kartenlinks oder bei der Anmeldung
+mit Google —, erfährt dieser Ihre IP-Adresse.
 
 **Verarbeitete Datenarten:** Inhaltsdaten (eingegebene Liedtitel und
 Interpreten); Standortdaten (die Anschrift eines Treffpunkts, beim Öffnen eines
-Kartenlinks); Meta-, Kommunikations- und Verfahrensdaten.
+Kartenlinks); Bestandsdaten (Name, E-Mail-Adresse und Kennung Ihres
+Google-Kontos, bei der Anmeldung mit Google); Meta-, Kommunikations- und
+Verfahrensdaten.
 
 **Rechtsgrundlagen:** Einwilligung (Art. 6 Abs. 1 S. 1 lit. a DSGVO);
-Berechtigte Interessen (Art. 6 Abs. 1 S. 1 lit. f DSGVO).
+Vertragserfüllung und vorvertragliche Anfragen (Art. 6 Abs. 1 S. 1 lit. b
+DSGVO); Berechtigte Interessen (Art. 6 Abs. 1 S. 1 lit. f DSGVO).
 
 ### Weitere Hinweise zu Verarbeitungsprozessen, Verfahren und Diensten
 
@@ -302,6 +305,31 @@ Barrow Street, Dublin 4, Irland. Rechtsgrundlagen: Einwilligung
 (Art. 6 Abs. 1 S. 1 lit. a DSGVO), erteilt durch das Antippen des Links.
 Website: [google.com/maps](https://www.google.com/maps). Datenschutzerklärung:
 [business.safety.google/privacy](https://business.safety.google/privacy/).
+Grundlage Drittlandtransfers: Data Privacy Framework (DPF).
+
+**Anmeldung mit Google:** Statt mit Nutzername und Passwort können Sie sich
+mit Ihrem Google-Konto anmelden. Das geschieht **nur, wenn Sie den Knopf „Weiter
+mit Google" wählen**; sonst besteht bei der Anmeldung keine Verbindung zu
+Google.
+
+Wählen Sie ihn, leitet Ihr Browser Sie zu Google weiter, wo Sie sich anmelden
+und der Weitergabe zustimmen. Google übermittelt uns daraufhin Ihren Namen, Ihre
+E-Mail-Adresse, ob Google diese Adresse bestätigt hat, und eine Kennung Ihres
+Google-Kontos. Wir legen damit ein Konto in unserem Anmeldedienst an
+beziehungsweise verknüpfen es mit Ihrem bestehenden Konto — Letzteres erst,
+nachdem Sie nachgewiesen haben, dass Ihnen das bestehende Konto gehört. Ein
+Passwort oder andere Inhalte Ihres Google-Kontos erhalten wir nicht. Google
+erfährt dabei, dass Sie sich bei Acts2 anmelden, sowie Ihre IP-Adresse.
+
+Ihre Einwilligung in die Verarbeitung der Angaben aus dem Hauskreis (siehe
+oben) holen wir nach der Anmeldung bei Google ein, bevor Sie die Applikation
+nutzen können — genau wie bei einer Registrierung mit Passwort. Die Verknüpfung
+mit Google endet, wenn Sie Ihr Konto löschen. Dienstanbieter: Google Ireland
+Limited, Gordon House, Barrow Street, Dublin 4, Irland. Rechtsgrundlagen:
+Vertragserfüllung und vorvertragliche Anfragen (Art. 6 Abs. 1 S. 1 lit. b
+DSGVO), weil Sie die Anmeldung über Google selbst wählen. Website:
+[google.com](https://www.google.com/). Datenschutzerklärung:
+[policies.google.com/privacy](https://policies.google.com/privacy).
 Grundlage Drittlandtransfers: Data Privacy Framework (DPF).
 
 **Push-Benachrichtigungen:** Wenn Sie Push-Benachrichtigungen aktivieren,

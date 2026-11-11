@@ -70,6 +70,7 @@ import {
   Sparkles,
   StickyNote,
   UserMinus,
+  UserPlus,
   Users,
 } from 'lucide-react';
 import { AnimatePresence, motion, useAnimationControls } from 'motion/react';
@@ -113,6 +114,7 @@ const ICONS: Record<NotificationEntry['type'], typeof Bell> = {
   ATTENDANCE_DECLINED: MessageSquareX,
   HOST_CAPACITY_UNLOCKED: Home,
   MEMBER_LEFT: UserMinus,
+  MEMBER_JOINED: UserPlus,
   CUSTOM_MEETING_CREATED: CalendarClock,
   CUSTOM_MEETING_REMINDER: CalendarClock,
   BIRTHDAY_GIFT_ASSIGNED: Gift,

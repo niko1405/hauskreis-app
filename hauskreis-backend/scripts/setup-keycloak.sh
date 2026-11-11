@@ -352,8 +352,13 @@ kc_curl -X PUT \
 echo "    aktiv und Vorgabe für neue Konten"
 
 # Bestandskonten. Übersprungen wird, wer sie schon angenommen hat: Keycloak
-# hinterlegt dabei das Attribut `termsAndConditions` mit einem Zeitstempel —
+# hinterlegt dabei das Attribut `terms_and_conditions` mit einem Zeitstempel —
 # und genau das ist zugleich der Nachweis nach Art. 7 (1) DSGVO.
+#
+# **`terms_and_conditions`, nicht `termsAndConditions`.** Hier stand die
+# CamelCase-Schreibweise, und die gibt es in Keycloak 26 nicht. Kein Konto
+# hatte also je zugestimmt, und jeder Lauf dieses Skripts legte allen die Seite
+# erneut vor. Nachgesehen an einem Konto, das zugestimmt hatte.
 #
 # `briefRepresentation=false`, weil die knappe Fassung die Attribute weglässt;
 # ohne sie sähe jedes Konto aus, als hätte es nie zugestimmt, und alle bekämen
@@ -364,7 +369,7 @@ NACHZUTRAGEN=$(
     node -pe '
       const users = JSON.parse(require("fs").readFileSync(0, "utf8"));
       users
-        .filter((user) => !user.attributes?.termsAndConditions)
+        .filter((user) => !user.attributes?.terms_and_conditions)
         .filter((user) => !(user.requiredActions ?? []).includes("TERMS_AND_CONDITIONS"))
         .map((user) => `${user.id} ${user.username}`)
         .join("\n");
@@ -411,12 +416,11 @@ client_uuid() {
     | node -pe 'const a=JSON.parse(require("fs").readFileSync(0,"utf8")); a.length ? a[0].id : ""'
 }
 
-# The API refuses tokens without the right `aud`, and Keycloak only puts one
-# there when a mapper says so. Both clients get it: the frontend issues the
-# tokens people use, the backend client issues the ones scripts and the Bruno
-# collection use.
-ensure_audience_mapper() {
-  local uuid="$1" name="hauskreis-api-audience"
+# Ein Protocol Mapper an einem Client — angelegt, wenn es ihn unter diesem
+# Namen noch nicht gibt. Bestehende werden nicht angefasst: Der Name ist das
+# Versprechen, dass er tut, was hier steht.
+ensure_mapper() {
+  local uuid="$1" name="$2" body="$3"
 
   local existing
   existing=$(kc_curl \
@@ -425,20 +429,50 @@ ensure_audience_mapper() {
 
   if [ "${existing}" = "0" ]; then
     kc_curl -X POST \
-      "${KC_URL}/admin/realms/${REALM}/clients/${uuid}/protocol-mappers/models" -d "{
-        \"name\": \"${name}\",
-        \"protocol\": \"openid-connect\",
-        \"protocolMapper\": \"oidc-audience-mapper\",
-        \"config\": {
-          \"included.client.audience\": \"${API_AUDIENCE}\",
-          \"access.token.claim\": \"true\",
-          \"id.token.claim\": \"false\"
-        }
-      }" >/dev/null
-    echo "    audience mapper added"
+      "${KC_URL}/admin/realms/${REALM}/clients/${uuid}/protocol-mappers/models" \
+      -d "${body}" >/dev/null
+    echo "    ${name}: angelegt"
   else
-    echo "    audience mapper already there"
+    echo "    ${name}: schon da"
   fi
+}
+
+# The API refuses tokens without the right `aud`, and Keycloak only puts one
+# there when a mapper says so. Both clients get it: the frontend issues the
+# tokens people use, the backend client issues the ones scripts and the Bruno
+# collection use.
+ensure_audience_mapper() {
+  ensure_mapper "$1" "hauskreis-api-audience" "{
+    \"name\": \"hauskreis-api-audience\",
+    \"protocol\": \"openid-connect\",
+    \"protocolMapper\": \"oidc-audience-mapper\",
+    \"config\": {
+      \"included.client.audience\": \"${API_AUDIENCE}\",
+      \"access.token.claim\": \"true\",
+      \"id.token.claim\": \"false\"
+    }
+  }"
+}
+
+# Die Einwilligung als Claim `terms_accepted` — der Zeitstempel aus dem
+# Konto-Attribut, das Keycloak beim Zustimmen setzt. Daran hängt die zweite Tür
+# im Backend (`KEYCLOAK_REQUIRE_TERMS`, `auth.guard.ts`): Ohne diesen Mapper
+# trüge kein Token die Einwilligung, und mit eingeschaltetem Schalter käme
+# niemand mehr herein. Deshalb gehört er an beide Clients, wie die Audience.
+ensure_terms_mapper() {
+  ensure_mapper "$1" "hauskreis-terms-accepted" "{
+    \"name\": \"hauskreis-terms-accepted\",
+    \"protocol\": \"openid-connect\",
+    \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",
+    \"config\": {
+      \"user.attribute\": \"terms_and_conditions\",
+      \"claim.name\": \"terms_accepted\",
+      \"jsonType.label\": \"String\",
+      \"access.token.claim\": \"true\",
+      \"id.token.claim\": \"false\",
+      \"userinfo.token.claim\": \"false\"
+    }
+  }"
 }
 
 # Two clients on purpose. A browser cannot keep a secret, so the frontend gets a
@@ -486,6 +520,7 @@ fi
 echo "    Direct Access Grants: ${DIRECT_GRANTS}"
 
 ensure_audience_mapper "${EXISTING}"
+ensure_terms_mapper "${EXISTING}"
 
 echo "==> Ensuring frontend client '${FRONTEND_CLIENT_ID}' (public, PKCE)"
 FRONTEND_UUID=$(client_uuid "${FRONTEND_CLIENT_ID}")
@@ -529,6 +564,73 @@ echo "    Redirect-URI: ${FRONTEND_URL}/*"
 # Bedingung, unter der Keycloak ihn überhaupt anzeigt.
 
 ensure_audience_mapper "${FRONTEND_UUID}"
+ensure_terms_mapper "${FRONTEND_UUID}"
+
+# ---------------------------------------------------------------------------
+# Anmeldung mit Google — Identity Brokering
+#
+# Google ist ein Identity Provider **in Keycloak**, nicht neben ihm: Die App
+# meldet sich weiter bei Keycloak an und bekommt weiter Keycloak-Tokens; nur
+# fragt Keycloak auf Wunsch Google, wer da ist. Für Backend, Guard und
+# Datenmodell ändert sich dadurch nichts.
+#
+#   trustEmail   Google liefert `email_verified`. Ohne das schickte Keycloak
+#                jedem Google-Konto noch eine Bestätigungsmail — für eine
+#                Adresse, die Google gerade nachgewiesen hat.
+#   syncMode     IMPORT: Name und Adresse kommen beim ersten Anmelden, danach
+#                gehören sie dem Konto. Mit FORCE überschriebe jede Anmeldung
+#                eine Adresse, die jemand im Profil geändert hat.
+#   Flow         „first broker login", unverändert. Gibt es die Adresse schon
+#                als Konto, fragt Keycloak, ob verknüpft werden soll, und
+#                verlangt einen Nachweis (Mail oder Passwort). Still
+#                zusammengeführt wird nichts.
+#
+# Die Einwilligung braucht hier keinen eigenen Schritt: `TERMS_AND_CONDITIONS`
+# ist `defaultAction` (siehe oben), und ein Konto aus dem ersten Google-Login
+# bekommt sie beim Anlegen wie eines aus der Registrierung.
+#
+# Nur mit Zugangsdaten. Fehlen sie, bleibt alles, wie es ist — auch ein schon
+# eingerichteter Provider, den dieser Lauf dann nicht kennt.
+# ---------------------------------------------------------------------------
+GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
+GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET:-}"
+
+if [ -n "${GOOGLE_CLIENT_ID}" ] && [ -n "${GOOGLE_CLIENT_SECRET}" ]; then
+  echo "==> Anmeldung mit Google"
+  GOOGLE_IDP="{
+    \"alias\": \"google\",
+    \"displayName\": \"Google\",
+    \"providerId\": \"google\",
+    \"enabled\": true,
+    \"trustEmail\": true,
+    \"storeToken\": false,
+    \"addReadTokenRoleOnCreate\": false,
+    \"linkOnly\": false,
+    \"hideOnLogin\": false,
+    \"firstBrokerLoginFlowAlias\": \"first broker login\",
+    \"config\": {
+      \"clientId\": \"${GOOGLE_CLIENT_ID}\",
+      \"clientSecret\": \"${GOOGLE_CLIENT_SECRET}\",
+      \"defaultScope\": \"openid profile email\",
+      \"syncMode\": \"IMPORT\",
+      \"guiOrder\": \"1\"
+    }
+  }"
+
+  if [ "$(api_status "${KC_URL}/admin/realms/${REALM}/identity-provider/instances/google")" = "404" ]; then
+    kc_curl -X POST "${KC_URL}/admin/realms/${REALM}/identity-provider/instances" \
+      -d "${GOOGLE_IDP}" >/dev/null
+    echo "    angelegt"
+  else
+    kc_curl -X PUT "${KC_URL}/admin/realms/${REALM}/identity-provider/instances/google" \
+      -d "${GOOGLE_IDP}" >/dev/null
+    echo "    aktualisiert"
+  fi
+  echo "    Weiterleitungs-URI für die Google Cloud Console:"
+  echo "      ${KC_URL}/realms/${REALM}/broker/google/endpoint"
+else
+  echo "==> Anmeldung mit Google: übersprungen (GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET leer)"
+fi
 
 # Grant the service account permission to manage users (needed for the invite flow).
 echo "==> Granting realm-management roles to service account"

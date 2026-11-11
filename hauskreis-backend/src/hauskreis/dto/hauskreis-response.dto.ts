@@ -75,6 +75,46 @@ export const invitationResponseSchema = z.object({
   hauskreis: z.object({ id: z.uuid(), name: z.string() }),
 });
 
+/**
+ * Der Einladungslink, wie die Verwaltung ihn sieht.
+ *
+ * Nur der Code — die Adresse baut das Frontend selbst (`/beitreten#<code>`).
+ * Der Server weiß nicht verlässlich, unter welcher Adresse die App gerade
+ * läuft, und eine falsche wäre schlimmer als keine.
+ *
+ * Auch ein **abgelaufener** steht hier: „seit gestern abgelaufen" ist eine
+ * bessere Auskunft als ein leerer Platz.
+ */
+export const inviteLinkSchema = z.object({
+  code: z.string(),
+  expiresAt: isoDateTimeOut,
+  createdAt: isoDateTimeOut,
+  /// Wie oft jemand darüber beigetreten ist — seit dem letzten Erneuern.
+  joinCount: z.number().int().nonnegative(),
+  /// Wer ihn erstellt hat; `null`, wenn die Person nicht mehr dabei ist.
+  createdBy: z.object({ id: z.uuid(), name: z.string() }).nullable(),
+});
+
+/**
+ * In einer Hülle, weil „kein Link" eine gültige Antwort ist — und ein leerer
+ * Rumpf keine, die ein Client sicher lesen kann.
+ */
+export const inviteLinkStateSchema = z.object({
+  link: inviteLinkSchema.nullable(),
+});
+
+/**
+ * Was hinter einem Link steckt — für jemanden, der vielleicht noch gar nicht
+ * angemeldet ist.
+ *
+ * Bewusst nur der Name: Mehr braucht es nicht, um zu entscheiden, ob man
+ * beitreten will, und alles Weitere sieht man ohnehin, sobald man drin ist. Die
+ * Id steht dabei, damit das Frontend erkennt, dass man schon dazugehört.
+ */
+export const resolvedInviteLinkSchema = z.object({
+  hauskreis: z.object({ id: z.uuid(), name: z.string() }),
+});
+
 export class HauskreisResponseDto extends createZodDto(
   hauskreisResponseSchema,
 ) {}
@@ -84,6 +124,12 @@ export class AccountDeletedResponseDto extends createZodDto(
 ) {}
 export class InvitationListResponseDto extends createZodDto(
   z.array(invitationResponseSchema),
+) {}
+export class InviteLinkStateResponseDto extends createZodDto(
+  inviteLinkStateSchema,
+) {}
+export class ResolvedInviteLinkResponseDto extends createZodDto(
+  resolvedInviteLinkSchema,
 ) {}
 export class HauskreisListResponseDto extends createZodDto(
   z.array(hauskreisResponseSchema),

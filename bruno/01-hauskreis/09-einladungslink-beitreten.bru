@@ -1,0 +1,36 @@
+meta {
+  name: Über den Link beitreten (schon dabei)
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/invite-links/join
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  { "code": "{{inviteCode}}" }
+}
+
+tests {
+  test("ändert nichts, wer schon dabei ist", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.id).to.equal(bru.getEnvVar("myPersonId"));
+  });
+}
+
+docs {
+  Mit dem Admin-Token, der schon in diesem Hauskreis ist: ein zweiter Klick auf
+  denselben Link ist kein Fehler, sondern dieselbe Mitgliedschaft.
+
+  Wer **in einem anderen** Hauskreis ist, bekommt ohne `"switchConfirmed": true`
+  ein `409` mit `code: SWITCH_NOT_CONFIRMED`; als einzige Admin-Person dort ein
+  `400`, bis `successorPersonId` dabei steht. Über den Link kommt man immer als
+  Mitglied herein.
+}

@@ -344,6 +344,7 @@ Name, Geburtstag und Wohnung je Mitgliedschaft doppelt zu pflegen.
 | **Verlassen** (`POST …/leave`)                              | `active = false`, `keycloakUserId = null` **und** `username = null`                                                 |
 | **Einladen**                                                | Person-Zeile **ohne** `keycloakUserId` — ein Angebot, keine Übernahme                                               |
 | **Annehmen** (`POST /api/me/invitations/{personId}/accept`) | verlässt den bisherigen Hauskreis im selben Zug                                                                     |
+| **Beitreten per Link** (`POST /api/invite-links/join`)      | wie Annehmen, immer als Mitglied; `409`, solange man woanders dabei ist und `switchConfirmed` fehlt                 |
 
 Beim Verlassen bleibt die Zeile stehen, damit vergangene Abende weiter zeigen,
 wer gehostet hat; frei wird nur die `keycloakUserId`, sonst käme man nirgends
@@ -446,6 +447,77 @@ noch das Konto wegzuräumen.
 Reihenfolge, in der Postgres die Zeilen zurückgibt, in welchem Hauskreis jemand
 landet. Dann kommt ein `404`, und das Frontend zeigt
 `GET /api/me/invitations` zur Auswahl.
+
+### Beitreten per Link
+
+Die E-Mail-Einladung verknüpft über eine **Adresse**, der Link über ein
+**Geheimnis**. Wer ihn hat, tritt bei — mit einem bestehenden Konto, einem
+neuen oder über Google, und immer als Mitglied.
+
+| Route                                         | Wer                | Was                                                    |
+| --------------------------------------------- | ------------------ | ------------------------------------------------------ |
+| `GET/PUT/DELETE …/hauskreise/:id/invite-link` | Admin              | lesen (auch abgelaufen), neu erstellen, abschalten     |
+| `POST /api/invite-links/resolve`              | **ohne Anmeldung** | Name des Hauskreises hinter dem Code, sonst `404`      |
+| `POST /api/invite-links/join`                 | angemeldet         | beitreten; `409 SWITCH_NOT_CONFIRMED`, `400` Nachfolge |
+
+- **Höchstens ein Link je Hauskreis** (`hauskreis_invite_link`, Schlüssel ist
+  die Gruppe). `PUT` würfelt immer einen neuen Code — „Erneuern" ist der Knopf
+  für „der alte ist irgendwo gelandet", und ein Verlängern, das ihn weiter
+  gelten lässt, wäre dort die falsche Antwort.
+- **Der Code steht im Rumpf, nie im Pfad.** Pfade landen in jedem
+  Zugriffsprotokoll; pino schreibt `req.url` mit. Im Frontend steht er hinter
+  dem `#` und erreicht den Webserver nie.
+- **Beide öffentlichen Routen sind gedrosselt** (10/min). Bei 128 Bit ist Raten
+  aussichtslos; die Drossel hält es billig aussichtslos.
+- **Unbekannt, erneuert und abgelaufen antworten gleich** (`404`). Eine
+  Unterscheidung verriete nur, dass es den Code einmal gab.
+- **Die Rückfrage beim Wechsel verlangt der Server.** Ohne `switchConfirmed`
+  kommt `409` mit `code: SWITCH_NOT_CONFIRMED` — ein Aufruf, der vergessen hat
+  zu fragen, holt niemanden aus seinem Hauskreis.
+- **Erst prüfen, dann gehen, dann ankommen.** Gehört die eigene Adresse im
+  Ziel-Hauskreis einem anderen Konto, scheitert der Beitritt, **bevor**
+  `leave` läuft. Andersherum stünde am Ende jemand ohne jeden Hauskreis da.
+- **Offene E-Mail-Einladung an dieselbe Adresse:** wird übernommen, samt Rolle.
+  **Verlassene Zeile:** wird geweckt, als Mitglied. Beides wegen
+  `@@unique([hauskreisId, email])`, und damit die Geschichte an der Person
+  bleibt, die sie gemacht hat.
+- **Ankommen hat einen Ort:** `PersonService.welcome` — Gebetsrotation,
+  Geburtstage, ausgefallene Abende und `MEMBER_JOINED` an die anderen. Alle drei
+  Wege hinein (erstes Anmelden, Einladung annehmen, Link) rufen ihn; vorher
+  stand die Hälfte davon doppelt in `acceptInvitation`.
+
+### Die zweite Tür: die Einwilligung
+
+Die Einwilligung nach Art. 9 DSGVO fragt Keycloak ab (`TERMS_AND_CONDITIONS`
+als `defaultAction`, bei Einladungen ausdrücklich in `setupActions`). Dass das
+auf **jedem** Weg hinein passiert — Registrierung, Einladungsmail, erstes
+Anmelden über Google —, hängt aber an Realm-Einstellungen, und beim Einladen
+ist sie genau daran schon einmal vorbeigegangen.
+
+Deshalb prüft der `AuthGuard` sie ein zweites Mal, gebaut wie die bestätigte
+Adresse: Mit `KEYCLOAK_REQUIRE_TERMS=true` weist er jedes Token ohne Claim
+`terms_accepted` mit `403` und `code: TERMS_NOT_ACCEPTED` ab. Den Claim setzt
+ein Mapper aus dem Konto-Attribut `terms_and_conditions` (Zeitstempel des
+Zustimmens), angelegt von `setup-keycloak.sh` an beiden Clients.
+
+- **Ein Schalter, Vorgabe aus**: Der Claim existiert erst mit dem Mapper. Ein
+  Server, der vor dem Skript ausgerollt wird, sperrte sonst jeden aus.
+- **403 und nicht 401**, aus demselben Grund wie bei der Adresse: Ein Refresh
+  führt keine Required Actions aus.
+- Das Frontend holt die Seite **gezielt** (`kc_action=TERMS_AND_CONDITIONS`).
+  Eine bloße Anmeldung zeigte sie nicht, wenn die Aktion am Konto gar nicht
+  aussteht, und führte zurück auf denselben Bildschirm.
+- **Das Attribut heißt `terms_and_conditions`.** Das Skript suchte bis eben
+  nach `termsAndConditions`, das es in Keycloak 26 nicht gibt — und legte
+  deshalb bei jedem Lauf allen Bestandskonten die Seite erneut vor.
+- Über die Admin-API lässt sich das Attribut **nicht** setzen: Das
+  Benutzerprofil verwirft es beim Anlegen still. Dafür hängt Keycloak 26.4
+  auch einem so angelegten Konto die Einwilligung an (`defaultAction`), und bis
+  sie gegeben ist, gibt es gar kein Token — der Passwort-Grant antwortet mit
+  „Account is not fully set up". Frisch angelegte Testkonten stimmen deshalb
+  einmal im Browser zu; erst danach gehen curl und Bruno. Ein Token ohne
+  Einwilligung stellt Keycloak also nie aus, solange der Realm stimmt — die Tür
+  im Backend ist für den Fall, dass er es einmal nicht tut.
 
 ## Conditional Requests (ETag, 304, 412)
 
@@ -3832,6 +3904,38 @@ Der Weg hinein ist derselbe, den jede:r geht:
 Kein Bootstrap-Skript daneben. Ein zweiter Weg hinein müsste gepflegt werden,
 liefe im Alltag nie, und veraltete deshalb still — während dieser hier ohnehin
 funktionieren muss.
+
+### Anmeldung mit Google
+
+Google ist ein **Identity Provider in Keycloak** (Identity Brokering), nicht ein
+zweiter Anmeldedienst neben ihm. Die App meldet sich weiter bei Keycloak an und
+bekommt weiter Keycloak-Tokens; Guard, JWKS-Prüfung und Datenmodell bleiben,
+wie sie sind.
+
+1. **Google Cloud Console → Google Auth Platform.** Branding: App-Name
+   „Acts2", Support-Adresse, autorisierte Domain `acts2.de`, Link auf
+   `https://acts2.de/datenschutz`. Zielgruppe **Extern**, Status **„In
+   Produktion"** — im Teststatus kommen nur eingetragene Testnutzer herein. Die
+   Scopes `openid email profile` sind nicht sensibel; eine Prüfung durch Google
+   braucht es dafür nicht.
+2. **Client** vom Typ **Webanwendung**, autorisierte Weiterleitungs-URI
+   `https://auth.acts2.de/realms/hauskreis/broker/google/endpoint` (lokal
+   `http://localhost:8080/realms/hauskreis/broker/google/endpoint`, Google
+   erlaubt `http://localhost`).
+3. `GOOGLE_CLIENT_ID` und `GOOGLE_CLIENT_SECRET` in die Secrets, dann
+   `setup-keycloak.sh --production`. Ohne die beiden überspringt das Skript den
+   Schritt und fasst einen schon eingerichteten Provider nicht an.
+4. Im Frontend `NEXT_PUBLIC_OIDC_IDPS=google` (Cloudflare Pages, Bauzeit) —
+   sonst fehlt „Weiter mit Google" in der App; auf Keycloaks eigener
+   Anmeldeseite steht der Knopf trotzdem.
+
+Was das Skript einstellt und warum: `trustEmail` (Google weist die Adresse
+nach, eine zweite Bestätigungsmail wäre Unsinn), `syncMode: IMPORT` (eine im
+Profil geänderte Adresse überschreibt das nächste Anmelden nicht), und der
+unveränderte Flow „first broker login": Gibt es die Adresse schon als Konto,
+fragt Keycloak, ob verknüpft werden soll, und verlangt einen Nachweis — Passwort
+oder Mail. Still zusammengeführt wird nichts. Die Einwilligung kommt beim ersten
+Google-Login wie bei der Registrierung (`defaultAction`).
 
 `--production` bricht ab, solange eine der folgenden Variablen noch auf ihrer
 Entwicklungs-Vorgabe steht: `SMTP_HOST`, `SMTP_FROM`, `KEYCLOAK_URL`,

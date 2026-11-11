@@ -4,6 +4,7 @@ export * from './use-dashboard';
 export * from './use-group';
 export * from './use-header-images';
 export * from './use-hk';
+export * from './use-invite-links';
 export * from './use-locations';
 export * from './use-me';
 export * from './use-meeting-prayer-requests';

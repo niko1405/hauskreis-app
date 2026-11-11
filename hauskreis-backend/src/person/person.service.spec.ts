@@ -1,5 +1,5 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { PersonService } from './person.service';
+import { PersonService, displayNameFrom } from './person.service';
 // Type-only: keeps Jest from loading the real PrismaClient.
 import type { PrismaService } from '../prisma/prisma.service';
 import type { KeycloakAdminService } from '../auth/keycloak-admin.service';
@@ -84,7 +84,7 @@ function setup() {
     .mockResolvedValue({ hauskreisDeleted: false, successorPersonId: null });
   // Die Geburtstags-Reihe zieht mit; was dabei herauskommt, prüft
   // `birthday-planner.service.spec.ts`. Sie fehlte hier, und weil
-  // `welcomeIntoRotation` Fehler schluckt, stand bei jedem Lauf still ein
+  // `welcome` Fehler schluckt, stand bei jedem Lauf still ein
   // „planner.plan is not a function" im Protokoll.
   const plan = jest.fn().mockResolvedValue({
     created: 0,
@@ -95,11 +95,16 @@ function setup() {
   // jemand dazukommt oder zusagt. Geprüft wird das in
   // `meeting-cancellation.service.spec.ts`; hier zählt, dass gefragt wird.
   const reviveUpcoming = jest.fn().mockResolvedValue(undefined);
+  // „Anna ist jetzt dabei" an die anderen. Was die Nachricht sagt, prüfen die
+  // Fälle unten; ohne sie stünde wie bei `plan` still ein Fehler im Protokoll.
+  const notify = jest
+    .fn()
+    .mockResolvedValue({ delivered: 1, pruned: 0, failed: 0, skipped: 0 });
   const moduleRef = {
     get: jest.fn((token: unknown) =>
       token === MEMBERSHIP_SERVICE
         ? { leave }
-        : { replanAfterMembershipChange, plan, reviveUpcoming },
+        : { replanAfterMembershipChange, plan, reviveUpcoming, notify },
     ),
   };
   const service = withClock(
@@ -121,6 +126,7 @@ function setup() {
     autoAttendance,
     leave,
     reviveUpcoming,
+    notify,
   };
 }
 
@@ -555,6 +561,127 @@ describe('PersonService und der Nutzername', () => {
       where: { id: 'p3' },
       data: { acceptedAt: undefined, username: 'neu' },
     });
+  });
+
+  /**
+   * Bei Google vergibt Keycloak die Adresse als Nutzernamen. Die stünde sonst
+   * auf jeder Karte — der Name aus dem Google-Konto ist der, den jemand meint.
+   */
+  it('nimmt bei Google den Namen aus dem Konto statt der Adresse', async () => {
+    const { service, person } = setup();
+    person.findUnique.mockResolvedValue({
+      id: 'p3',
+      keycloakUserId: 'kc-1',
+      username: null,
+      acceptedAt: null,
+    });
+    person.update.mockResolvedValue({ id: 'p3' });
+
+    await service.resolveForUser({
+      keycloakUserId: 'kc-1',
+      email: 'anna.berger@gmail.com',
+      username: 'anna.berger@gmail.com',
+      name: 'Anna Berger',
+      emailVerified: true,
+      termsAccepted: true,
+      roles: [],
+    });
+
+    expect(person.update).toHaveBeenCalledWith({
+      where: { id: 'p3' },
+      data: {
+        acceptedAt: expect.any(Date),
+        username: 'anna.berger@gmail.com',
+        name: 'Anna Berger',
+      },
+    });
+  });
+});
+
+describe('displayNameFrom', () => {
+  const base = { keycloakUserId: 'kc-1', emailVerified: true, roles: [] };
+
+  it('nimmt den selbst gewählten Nutzernamen', () => {
+    expect(
+      displayNameFrom({ ...base, username: 'lea.m', name: 'Lea Meier' }),
+    ).toBe('lea.m');
+  });
+
+  it('nimmt den Namen, wenn der Nutzername eine Adresse ist', () => {
+    expect(
+      displayNameFrom({
+        ...base,
+        username: 'lea@gmail.com',
+        name: 'Lea Meier',
+        email: 'lea@gmail.com',
+      }),
+    ).toBe('Lea Meier');
+  });
+
+  it('fällt auf den Teil vor dem @ zurück, wenn es keinen Namen gibt', () => {
+    expect(
+      displayNameFrom({
+        ...base,
+        username: 'lea@gmail.com',
+        // Ohne Namen setzt der Guard den Nutzernamen ein — also die Adresse.
+        name: 'lea@gmail.com',
+        email: 'lea@gmail.com',
+      }),
+    ).toBe('lea');
+  });
+});
+
+describe('PersonService.welcome', () => {
+  /**
+   * Das Gegenstück zu „X ist nicht mehr dabei". Seit es den Einladungslink
+   * gibt, ist es die Kontrolle dahinter: Wer den Link hat, kommt ohne weitere
+   * Frage herein, und die Gruppe soll es merken.
+   */
+  it('sagt den anderen, dass jemand dazugekommen ist', async () => {
+    const { service, person, notify } = setup();
+    const arrived = new Date('2026-11-04T18:00:00.000Z');
+    person.findUnique.mockResolvedValue({ name: 'Anna', acceptedAt: arrived });
+    person.findMany.mockResolvedValue([{ id: 'p-a' }, { id: 'p-b' }]);
+
+    await service.welcome('hk-1', 'p-anna');
+
+    expect(person.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          hauskreisId: 'hk-1',
+          id: { not: 'p-anna' },
+          acceptedAt: { not: null },
+        }),
+      }),
+    );
+    expect(notify).toHaveBeenCalledTimes(2);
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        personId: 'p-a',
+        type: 'MEMBER_JOINED',
+        relatedPersonId: 'p-anna',
+        // Der Zeitpunkt des Ankommens: Wer geht und wiederkommt, kommt ein
+        // zweites Mal an, und das ist keine Dublette.
+        relatedKey: arrived.toISOString(),
+        payload: expect.objectContaining({
+          title: 'Anna ist jetzt dabei',
+          url: '/hauskreis',
+        }),
+      }),
+    );
+  });
+
+  it('schickt die Nachricht auch, wenn die Rotation klemmt', async () => {
+    const { service, person, notify, replanAfterMembershipChange } = setup();
+    replanAfterMembershipChange.mockRejectedValue(new Error('Datenbank weg'));
+    person.findUnique.mockResolvedValue({
+      name: 'Anna',
+      acceptedAt: new Date('2026-11-04T18:00:00.000Z'),
+    });
+    person.findMany.mockResolvedValue([{ id: 'p-a' }]);
+
+    await expect(service.welcome('hk-1', 'p-anna')).resolves.toBeUndefined();
+    expect(notify).toHaveBeenCalledTimes(1);
   });
 });
 

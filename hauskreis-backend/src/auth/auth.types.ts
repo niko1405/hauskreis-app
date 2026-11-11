@@ -15,6 +15,11 @@ export interface AuthenticatedUser {
    * deren Platz übernehmen.
    */
   emailVerified: boolean;
+  /**
+   * Ob Keycloak die Einwilligung (`TERMS_AND_CONDITIONS`) als angenommen führt
+   * — Claim `terms_accepted`. Nur geprüft, wenn `KEYCLOAK_REQUIRE_TERMS` an ist.
+   */
+  termsAccepted?: boolean;
   roles: string[];
 }
 

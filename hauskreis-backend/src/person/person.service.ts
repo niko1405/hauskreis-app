@@ -17,6 +17,8 @@ import { AutoAttendanceService } from '../attendance/auto-attendance.service';
 import { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
 import { BirthdayPlannerService } from '../birthday/birthday-planner.service';
 import { NotificationService } from '../notification/notification.service';
+import { appPath } from '../notification/app-paths';
+import { ANGEKOMMEN } from './angekommen';
 import { MEMBERSHIP_SERVICE } from '../hauskreis/membership.token';
 import type { MembershipService } from '../hauskreis/membership.service';
 import type {
@@ -1163,7 +1165,7 @@ export class PersonService {
             })
           : linked;
 
-      if (firstLogin) await this.welcomeIntoRotation(person.hauskreisId);
+      if (firstLogin) await this.welcome(person.hauskreisId, person.id);
 
       return person;
     }
@@ -1208,13 +1210,19 @@ export class PersonService {
       },
     });
 
-    await this.welcomeIntoRotation(person.hauskreisId);
+    await this.welcome(person.hauskreisId, person.id);
 
     return person;
   }
 
   /**
-   * Nimmt jemanden in die Gebetsrotation auf, der gerade zum ersten Mal da ist.
+   * Jemand ist gerade angekommen — in die Rotationen und den anderen gesagt.
+   *
+   * **Ein Ort für alle Wege hinein.** Drei führen hierher: das erste Anmelden
+   * (`resolveForUser`), das Annehmen einer Einladung und der Einladungslink
+   * (beide `MembershipService`). Stünde das hier dreimal, käme die nächste
+   * Folge des Ankommens an einer der drei Stellen nicht an — beim Annehmen ist
+   * genau das mit der Nachricht an die anderen schon passiert.
    *
    * **Fehler werden geschluckt, und das ist der Kern dieser Methode.** Sie läuft
    * im Anfrageweg — `resolveForUser` steht am Anfang jeder authentifizierten
@@ -1222,8 +1230,11 @@ export class PersonService {
    * risse die Anfrage mit, bestünde die Begrüßung in dieser App aus einer
    * Fehlermeldung, und zwar wegen einer Sache, die den neuen Menschen in diesem
    * Moment am wenigsten interessiert. Der Cron um vier Uhr baut ohnehin nach.
+   *
+   * Zwei getrennte Versuche, weil die Nachricht nicht an einer Rotation hängen
+   * soll: Die Rotation holt die Nacht nach, die Nachricht niemand.
    */
-  private async welcomeIntoRotation(hauskreisId: string): Promise<void> {
+  async welcome(hauskreisId: string, personId: string): Promise<void> {
     try {
       await this.replanPrayerBuddies(hauskreisId);
       await this.replanBirthdays(hauskreisId);
@@ -1236,6 +1247,63 @@ export class PersonService {
         error instanceof Error ? error.stack : String(error),
       );
     }
+
+    try {
+      await this.announceArrival(hauskreisId, personId);
+    } catch (error) {
+      this.logger.error(
+        `Person ${personId} ist angekommen, aber die anderen erfuhren es nicht`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
+
+  /**
+   * „Anna ist jetzt dabei" — an alle, die schon da sind.
+   *
+   * Das Gegenstück zu `MEMBER_LEFT`, und seit es den Einladungslink gibt mehr
+   * als Höflichkeit: Wer den Link hat, kommt ohne weitere Frage herein. Dass die
+   * Gruppe es erfährt, ist die Kontrolle dahinter.
+   *
+   * Entdoppelt über den **Zeitpunkt des Ankommens** (`relatedKey`), nicht nur
+   * über die Person: Wer geht und später wiederkommt, kommt ein zweites Mal an,
+   * und das ist keine Dublette des ersten.
+   */
+  private async announceArrival(
+    hauskreisId: string,
+    personId: string,
+  ): Promise<void> {
+    const person = await this.prisma.person.findUnique({
+      where: { id: personId },
+      select: { name: true, acceptedAt: true },
+    });
+
+    if (!person?.acceptedAt) return;
+
+    const others = await this.prisma.person.findMany({
+      where: { hauskreisId, ...ANGEKOMMEN, id: { not: personId } },
+      select: { id: true },
+    });
+
+    const notifications = this.moduleRef.get(NotificationService, {
+      strict: false,
+    });
+
+    await Promise.all(
+      others.map((other) =>
+        notifications.notify({
+          personId: other.id,
+          type: NotificationType.MEMBER_JOINED,
+          relatedPersonId: personId,
+          relatedKey: person.acceptedAt!.toISOString(),
+          payload: {
+            title: `${person.name} ist jetzt dabei`,
+            body: `${person.name} ist neu in eurem Hauskreis.`,
+            url: appPath.group(),
+          },
+        }),
+      ),
+    );
   }
 }
 
@@ -1249,19 +1317,38 @@ function localPartOf(email: string): string {
 }
 
 /**
+ * Der Anzeigename, mit dem jemand ankommt.
+ *
+ * Der **Nutzername**, wenn es einer ist, den der Mensch selbst gewählt hat —
+ * dann soll genau der in der App stehen, sonst hießen dieselben Leute an zwei
+ * Stellen verschieden.
+ *
+ * **Bei einer Anmeldung über Google ist er das nicht.** Keycloak nimmt dort die
+ * Adresse als Nutzernamen, und „anna.berger@gmail.com" stünde dann auf jeder
+ * Karte. Dann gilt der Name aus dem Konto (Vor- und Nachname, den Google
+ * mitschickt), und fehlt auch der, der Teil der Adresse vor dem `@`.
+ */
+export function displayNameFrom(user: AuthenticatedUser): string | undefined {
+  if (user.username && !user.username.includes('@')) return user.username;
+  if (user.name && !user.name.includes('@')) return user.name;
+  if (user.email) return localPartOf(user.email);
+  return user.username;
+}
+
+/**
  * Übernimmt den Nutzernamen aus dem Token — und beim allerersten Mal auch den
  * Anzeigenamen.
  *
- * Den Nutzernamen hat der Mensch gerade in Keycloak **selbst gewählt**; genau
- * der soll in der App stehen, sonst hießen dieselben Leute an zwei Stellen
- * verschieden.
+ * Den Nutzernamen hat der Mensch gerade in Keycloak **selbst gewählt** (oder
+ * Keycloak hat ihn beim Anmelden über Google vergeben); er soll in der App
+ * stehen, sonst hießen dieselben Leute an zwei Stellen verschieden.
  *
  * Der **Anzeigename** wird nur bei der ersten Anmeldung vorbelegt, und das ist
  * das richtige Signal: bis dahin steht dort, was jemand anders beim Einladen
  * eingetippt hat — nach der Einladungsreform der lokale Teil der Adresse. Danach
  * ist er entweder selbst gewählt oder von hier, und ihn bei jeder Anmeldung neu
  * zu überschreiben nähme eine Entscheidung zurück, die jemand im Profil
- * getroffen hat.
+ * getroffen hat. Welcher es wird, sagt `displayNameFrom`.
  *
  * `undefined`, wenn nichts zu tun ist — dann spart der Aufrufer den Schreibweg.
  */
@@ -1276,6 +1363,6 @@ function namingFromToken(
 
   return {
     username: user.username,
-    ...(firstLogin ? { name: user.username } : {}),
+    ...(firstLogin ? { name: displayNameFrom(user) } : {}),
   };
 }

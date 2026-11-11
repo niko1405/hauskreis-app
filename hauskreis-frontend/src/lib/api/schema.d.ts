@@ -404,6 +404,22 @@ export interface paths {
     patch: operations['GroupIdeaController_update'];
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/invite-link': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['InviteLinkController_get'];
+    put: operations['InviteLinkController_replace'];
+    post?: never;
+    delete: operations['InviteLinkController_remove'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/leave': {
     parameters: {
       query?: never;
@@ -1396,6 +1412,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/invite-links/join': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['JoinController_join'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/invite-links/resolve': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['JoinController_resolve'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/me': {
     parameters: {
       query?: never;
@@ -1763,6 +1811,41 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
       version: number;
+    };
+    InviteLinkStateResponseDto: {
+      link: {
+        code: string;
+        /** Format: date-time */
+        expiresAt: string;
+        /** Format: date-time */
+        createdAt: string;
+        joinCount: number;
+        createdBy: {
+          /** Format: uuid */
+          id: string;
+          name: string;
+        } | null;
+      } | null;
+    };
+    ReplaceInviteLinkDto: {
+      /** @enum {number} */
+      validDays: 1 | 7 | 30;
+    };
+    ResolveInviteLinkDto: {
+      code: string;
+    };
+    ResolvedInviteLinkResponseDto: {
+      hauskreis: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+      };
+    };
+    JoinViaLinkDto: {
+      code: string;
+      switchConfirmed?: boolean;
+      /** Format: uuid */
+      successorPersonId?: string;
     };
     PersonListResponseDto: {
       /** Format: uuid */
@@ -2181,7 +2264,8 @@ export interface components {
         | 'PRAYER_BUDDY_HALFTIME'
         | 'GIFT_IDEA_COMMENTED'
         | 'BIRTHDAY_IDEAS_REQUESTED'
-        | 'NOTE_SHARED';
+        | 'NOTE_SHARED'
+        | 'MEMBER_JOINED';
       /** @enum {string} */
       category:
         | 'Deine Rollen'
@@ -2250,7 +2334,8 @@ export interface components {
         | 'PRAYER_BUDDY_HALFTIME'
         | 'GIFT_IDEA_COMMENTED'
         | 'BIRTHDAY_IDEAS_REQUESTED'
-        | 'NOTE_SHARED';
+        | 'NOTE_SHARED'
+        | 'MEMBER_JOINED';
       /** @enum {string} */
       category:
         | 'Deine Rollen'
@@ -2357,7 +2442,8 @@ export interface components {
           | 'PRAYER_BUDDY_HALFTIME'
           | 'GIFT_IDEA_COMMENTED'
           | 'BIRTHDAY_IDEAS_REQUESTED'
-          | 'NOTE_SHARED';
+          | 'NOTE_SHARED'
+          | 'MEMBER_JOINED';
         title: string;
         body: string;
         url: string | null;
@@ -2399,7 +2485,8 @@ export interface components {
           | 'PRAYER_BUDDY_HALFTIME'
           | 'GIFT_IDEA_COMMENTED'
           | 'BIRTHDAY_IDEAS_REQUESTED'
-          | 'NOTE_SHARED';
+          | 'NOTE_SHARED'
+          | 'MEMBER_JOINED';
         title: string;
         body: string;
         url: string | null;
@@ -6699,6 +6786,173 @@ export interface operations {
       };
       /** @description Kein `If-Match` mitgeschickt. Den ETag aus dem vorangehenden GET verwenden. */
       428: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  InviteLinkController_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Der aktuelle Link, auch ein abgelaufener — oder keiner */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['InviteLinkStateResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  InviteLinkController_replace: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceInviteLinkDto'];
+      };
+    };
+    responses: {
+      /** @description Der neue Link; ein bisheriger ist damit ungültig */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['InviteLinkStateResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  InviteLinkController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Gelöscht, kein Inhalt */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nicht angemeldet */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden */
+      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -12409,6 +12663,126 @@ export interface operations {
       };
     };
   };
+  JoinController_join: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['JoinViaLinkDto'];
+      };
+    };
+    responses: {
+      /** @description Die neue Mitgliedschaft; eine bisherige ist damit beendet. Schon dabei: unverändert */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MeResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  JoinController_resolve: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ResolveInviteLinkDto'];
+      };
+    };
+    responses: {
+      /** @description Der Hauskreis hinter dem Link; 404, wenn er nicht mehr gilt */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ResolvedInviteLinkResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
   MeController_me: {
     parameters: {
       query?: never;
@@ -13248,7 +13622,8 @@ export interface operations {
           | 'PRAYER_BUDDY_HALFTIME'
           | 'GIFT_IDEA_COMMENTED'
           | 'BIRTHDAY_IDEAS_REQUESTED'
-          | 'NOTE_SHARED';
+          | 'NOTE_SHARED'
+          | 'MEMBER_JOINED';
       };
       cookie?: never;
     };

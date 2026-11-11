@@ -11,7 +11,8 @@
  * entscheidet ein Mensch, welche gilt.
  */
 import { useState } from 'react';
-import { HousePlus, LogOut, Mail, Trash2 } from 'lucide-react';
+import { HousePlus, LinkIcon, LogOut, Mail, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from 'react-oidc-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -24,10 +25,12 @@ import {
   useCreateHauskreis,
   useDeleteOrphanedAccount,
   useInvitations,
+  useResolveInviteLink,
 } from '@/lib/api/hooks';
 import type { Invitation } from '@/lib/api/types';
 import { LegalFooter } from '@/components/layout/legal-footer';
 import { armOwnerWelcome } from '@/lib/owner-welcome';
+import { usePendingJoin } from '@/lib/pending-join';
 
 export function NoHauskreisScreen({ email }: { email?: string }) {
   const auth = useAuth();
@@ -45,6 +48,8 @@ export function NoHauskreisScreen({ email }: { email?: string }) {
             einem einladen.
           </p>
         </header>
+
+        <PendingJoinCard />
 
         {invitations.isLoading && <Skeleton className="h-24 w-full" />}
 
@@ -186,6 +191,42 @@ function CreateHauskreisCard() {
       },
     );
   }
+}
+
+/**
+ * Ein Einladungslink, der auf dem Weg hierher verloren ging.
+ *
+ * Der Normalfall braucht diese Karte nicht: Nach dem Anmelden führt der
+ * OIDC-`state` zurück auf `/beitreten`. Aber wer die Bestätigungsmail in einem
+ * anderen Tab öffnet, kommt über „Zurück zu Acts2" hier an — und dann steht
+ * der Hauskreis, zu dem er wollte, wenigstens ganz oben.
+ *
+ * Nur mit gültigem Link: Ein abgelaufener wäre eine Einladung, die nirgends
+ * hinführt.
+ */
+function PendingJoinCard() {
+  const code = usePendingJoin();
+  const target = useResolveInviteLink(code);
+  const router = useRouter();
+
+  if (!target.data) return null;
+
+  return (
+    <Card className="space-y-3 border-terracotta-400">
+      <div>
+        <p className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
+          <LinkIcon size={11} />
+          Einladungslink
+        </p>
+        <p className="mt-0.5 font-serif text-xl font-bold text-stone-900">
+          {target.data.hauskreis.name}
+        </p>
+      </div>
+      <Button className="w-full" onClick={() => router.push('/beitreten')}>
+        Beitreten
+      </Button>
+    </Card>
+  );
 }
 
 /**

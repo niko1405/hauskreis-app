@@ -1,0 +1,39 @@
+meta {
+  name: Einladungslink erstellen
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/invite-link
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  { "validDays": 7 }
+}
+
+script:post-response {
+  bru.setEnvVar("inviteCode", res.body.link.code);
+}
+
+tests {
+  test("legt einen Link an, der eine Woche gilt", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.link.code).to.match(/^[A-Za-z0-9_-]{22}$/);
+    expect(res.body.link.joinCount).to.equal(0);
+  });
+}
+
+docs {
+  Nur Admin. Höchstens ein Link je Hauskreis — ein zweites `PUT` würfelt einen
+  neuen Code, und der alte gilt sofort nicht mehr. Laufzeit 1, 7 oder 30 Tage.
+
+  Setzt {{inviteCode}} für die nächsten Requests. Die Adresse zum Teilen baut
+  das Frontend selbst: `https://acts2.de/beitreten#<code>`.
+}

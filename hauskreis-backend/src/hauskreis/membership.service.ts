@@ -6,9 +6,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PersonService } from '../person/person.service';
+import { PersonService, displayNameFrom } from '../person/person.service';
 import { PhotoService } from '../person/photo.service';
 import { GroupFeaturesService } from './group-features.service';
+import { InviteLinkService } from './invite-link.service';
 import { PrayerBuddyGeneratorService } from '../prayer-buddy/prayer-buddy-generator.service';
 import { BirthdayPlannerService } from '../birthday/birthday-planner.service';
 import {
@@ -19,11 +20,22 @@ import { MeetingCancellationService } from '../meeting/meeting-cancellation.serv
 import { NotificationService } from '../notification/notification.service';
 import { appPath } from '../notification/app-paths';
 import { NotificationType, PersonRole } from '../../generated/prisma/enums';
+import { Prisma } from '../../generated/prisma/client';
 import type { AuthenticatedUser } from '../auth/auth.types';
 import type {
   CreateHauskreisDto,
+  JoinViaLinkDto,
   LeaveHauskreisDto,
 } from './dto/hauskreis.dto';
+
+/**
+ * Der Fall, auf den das Frontend eigens reagiert: Wer über einen Link beitreten
+ * will und noch woanders dabei ist, hat den Wechsel nicht bestätigt.
+ *
+ * Wie `EMAIL_NOT_VERIFIED` ein fester Wert neben einer Meldung, die sich ändern
+ * darf.
+ */
+export const SWITCH_NOT_CONFIRMED = 'SWITCH_NOT_CONFIRMED';
 
 /**
  * Beitreten, gründen, verlassen — alles, was die **Zugehörigkeit** eines
@@ -49,6 +61,7 @@ export class MembershipService {
     private readonly notifications: NotificationService,
     private readonly photos: PhotoService,
     private readonly features: GroupFeaturesService,
+    private readonly inviteLinks: InviteLinkService,
   ) {}
 
   /**
@@ -533,25 +546,168 @@ export class MembershipService {
       data: { keycloakUserId: user.keycloakUserId, acceptedAt: new Date() },
     });
 
-    // Wie bei der ersten Anmeldung: Die Rotation zieht nach, aber sie darf das
-    // Ankommen nicht zum Scheitern bringen. Der Cron um vier Uhr baut nach.
+    // Wie bei der ersten Anmeldung: Rotationen, Geburtstage, ausgefallene
+    // Abende und die Nachricht an die anderen — an einem Ort für alle Wege
+    // hinein. Scheitern lässt es das Ankommen nicht.
+    await this.people.welcome(invitation.hauskreisId, person.id);
+
+    return person;
+  }
+
+  /**
+   * Beitreten über den Einladungslink — immer als Mitglied.
+   *
+   * **Erst prüfen, dann gehen, dann ankommen.** Was im neuen Hauskreis schief
+   * gehen kann (eine Adresse, die dort schon einem anderen Konto gehört), wird
+   * geklärt, *bevor* der alte verlassen ist. Andersherum stünde am Ende jemand
+   * ohne jeden Hauskreis da, der in keinen von beiden wollte.
+   *
+   * **Die Rückfrage gehört dem Server.** Wer noch woanders dabei ist, kommt nur
+   * mit `switchConfirmed` weiter, sonst `409`. Ein Aufruf, der vergessen hat zu
+   * fragen, soll niemanden aus seinem Hauskreis holen können.
+   *
+   * Eine **offene Einladung** an dieselbe Adresse wird übernommen statt
+   * verdoppelt — samt ihrer Rolle: Wer per Mail als Admin eingeladen wurde und
+   * dann den Link nimmt, war trotzdem als Admin gemeint. Die Regel „über den
+   * Link nur Mitglied" gilt dem, was der Link selbst vergibt.
+   */
+  async joinViaLink(user: AuthenticatedUser, dto: JoinViaLinkDto) {
+    const { hauskreis } = await this.inviteLinks.resolve(dto.code);
+
+    const current = await this.prisma.person.findUnique({
+      where: { keycloakUserId: user.keycloakUserId },
+      select: {
+        id: true,
+        hauskreisId: true,
+        active: true,
+        hauskreis: { select: { name: true } },
+      },
+    });
+
+    // Schon dabei: Ein zweiter Klick auf denselben Link ist kein Fehler.
+    if (current?.active && current.hauskreisId === hauskreis.id) {
+      return this.prisma.person.findUniqueOrThrow({
+        where: { id: current.id },
+      });
+    }
+
+    if (current?.active && !dto.switchConfirmed) {
+      throw new ConflictException({
+        message: `Du bist noch bei „${current.hauskreis.name}" dabei. Wenn du „${hauskreis.name}" beitrittst, verlässt du ihn.`,
+        code: SWITCH_NOT_CONFIRMED,
+      });
+    }
+
+    const existing = await this.joinTarget(hauskreis.id, user);
+
+    // Zuerst gehen, dann ankommen: `keycloakUserId` ist global eindeutig.
+    // Nachfolge und Auflösen einer leeren Gruppe regelt `leave` wie immer.
+    if (current?.active) {
+      await this.leave(current.hauskreisId, current.id, {
+        successorPersonId: dto.successorPersonId,
+      });
+    }
+
+    const arrival = {
+      keycloakUserId: user.keycloakUserId,
+      acceptedAt: new Date(),
+      active: true,
+      // Wie beim ersten Anmelden: der Name aus dem Konto, nicht ein
+      // Platzhalter, den jemand anders hinterlassen hat.
+      username: user.username ?? null,
+      name: displayNameFrom(user) ?? 'Neues Mitglied',
+    };
+
+    let person;
+
     try {
-      await this.prayerBuddies.replanAfterMembershipChange(
-        invitation.hauskreisId,
-      );
-      await this.birthdays.plan(invitation.hauskreisId);
-      // Eine Person mehr heißt: „alle haben abgesagt" stimmt womöglich nicht
-      // mehr. Gezählt wird gegen die Zahl der Angekommenen, und die ist gerade
-      // um eins gewachsen — ohne dass jemand seine Anwesenheit angefasst hat.
-      await this.cancellations.reviveUpcoming(invitation.hauskreisId);
+      person = await this.prisma.$transaction(async (tx) => {
+        const joined = existing
+          ? await tx.person.update({
+              where: { id: existing.id },
+              data: {
+                ...arrival,
+                // Eine verlassene Zeile kommt als Mitglied zurück. Eine
+                // offene Einladung behält, was der Admin für sie gewählt hat.
+                ...(existing.active ? {} : { role: PersonRole.MEMBER }),
+                version: { increment: 1 },
+              },
+            })
+          : await tx.person.create({
+              data: {
+                ...arrival,
+                hauskreisId: hauskreis.id,
+                email: user.email ?? null,
+                role: PersonRole.MEMBER,
+              },
+            });
+
+        // `updateMany`, weil der Link in derselben Sekunde abgeschaltet worden
+        // sein kann — dann gibt es nichts mehr zu zählen, aber auch nichts zu
+        // bereuen: Gegolten hat er, als jemand ihn benutzte.
+        await tx.hauskreisInviteLink.updateMany({
+          where: { hauskreisId: hauskreis.id },
+          data: { joinCount: { increment: 1 } },
+        });
+
+        return joined;
+      });
     } catch (error) {
-      this.logger.error(
-        `Einladung in Hauskreis ${invitation.hauskreisId} angenommen, aber die Rotationen ließen sich nicht nachziehen`,
-        error instanceof Error ? error.stack : String(error),
+      // Zwei Klicks kurz hintereinander: Der erste hat die Zeile schon
+      // angelegt, der zweite stößt an `keycloak_user_id`. Für den, der
+      // geklickt hat, ist das derselbe Ausgang.
+      if (isUniqueViolation(error)) {
+        const already = await this.prisma.person.findFirst({
+          where: {
+            keycloakUserId: user.keycloakUserId,
+            hauskreisId: hauskreis.id,
+            active: true,
+          },
+        });
+        if (already) return already;
+      }
+      throw error;
+    }
+
+    await this.people.welcome(hauskreis.id, person.id);
+
+    return person;
+  }
+
+  /**
+   * Welche Zeile im Ziel-Hauskreis die eigene wird — `null` heißt: eine neue.
+   *
+   * Gesucht wird über die Adresse, und das ist hier keine Verknüpfung, sondern
+   * eine Rücksicht: `@@unique([hauskreisId, email])` ließe eine zweite Zeile
+   * mit derselben Adresse gar nicht zu. Gefunden werden kann
+   *
+   * - eine **offene Einladung** — die wird übernommen;
+   * - eine **verlassene** Zeile — die wird geweckt, wie beim Einladen, damit
+   *   die Geschichte an der Person bleibt, die sie gemacht hat;
+   * - eine Zeile, die einem **anderen Konto** gehört — dann geht es nicht.
+   *
+   * Anonymisierte Zeilen haben keine Adresse mehr und tauchen hier nie auf.
+   */
+  private async joinTarget(
+    hauskreisId: string,
+    user: AuthenticatedUser,
+  ): Promise<{ id: string; active: boolean } | null> {
+    if (!user.email) return null;
+
+    const byEmail = await this.prisma.person.findFirst({
+      where: { hauskreisId, email: user.email },
+      select: { id: true, active: true, keycloakUserId: true },
+    });
+
+    if (!byEmail) return null;
+
+    if (byEmail.active && byEmail.keycloakUserId !== null) {
+      throw new ConflictException(
+        'Zu deiner E-Mail-Adresse gibt es in diesem Hauskreis schon ein anderes Konto.',
       );
     }
 
-    return person;
+    return { id: byEmail.id, active: byEmail.active };
   }
 
   /**
@@ -579,6 +735,14 @@ export class MembershipService {
       );
     }
   }
+}
+
+/** `P2002` — eine eindeutige Spalte war schon belegt. */
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  );
 }
 
 /**

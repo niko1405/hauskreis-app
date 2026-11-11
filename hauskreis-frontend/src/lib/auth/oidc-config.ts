@@ -18,6 +18,38 @@ export const OIDC_CLIENT_ID =
 /** Muss zur Redirect-URI des Keycloak-Clients passen (`FRONTEND_URL`, Port 3001). */
 export const REDIRECT_PATH = '/auth/callback';
 
+/**
+ * Die Anmeldewege neben Nutzername und Passwort — Identity Provider **in
+ * Keycloak** (siehe `scripts/setup-keycloak.sh`).
+ *
+ * Eine Bauzeit-Variable und keine Abfrage: Der Knopf steht auf dem allerersten
+ * Bildschirm, vor jeder Anmeldung, und ein Ladezustand dort wäre ein Flackern
+ * für ein Ja/Nein. Kommagetrennt (`google`); leer heißt: kein Knopf. Steht
+ * hier ein Provider, den Keycloak nicht kennt, endet der Knopf auf einer
+ * Fehlerseite — deshalb nur eintragen, was das Setup-Skript eingerichtet hat.
+ */
+export const IDENTITY_PROVIDERS: readonly string[] = (
+  process.env.NEXT_PUBLIC_OIDC_IDPS ?? ''
+)
+  .split(',')
+  .map((alias) => alias.trim())
+  .filter(Boolean);
+
+/**
+ * Gleich zum Anbieter statt erst auf Keycloaks Anmeldeseite.
+ *
+ * `kc_idp_hint` ist Keycloaks Weg dafür: Die Seite mit Nutzername und
+ * Passwort wird übersprungen, und man landet direkt bei Google. Ob das Konto
+ * dabei neu entsteht oder schon da ist, entscheidet Keycloak — für den Knopf
+ * gibt es nur „weiter mit Google".
+ */
+export function idpHintArgs(alias: string, returnTo?: string) {
+  return {
+    extraQueryParams: { kc_idp_hint: alias },
+    ...(returnTo ? { state: { returnTo } } : {}),
+  };
+}
+
 function buildSettings(): UserManagerSettings {
   const origin = window.location.origin;
 
@@ -71,13 +103,36 @@ function buildSettings(): UserManagerSettings {
  * warum das Passwort nicht über die Keycloak-Account-Konsole geändert wird —
  * so bekommt man dieselbe Seite zu sehen wie beim Einstieg, im Theme der App,
  * und landet danach wieder da, wo man losgelaufen ist.
+ *
+ * Die **Einwilligung** geht denselben Weg: Fehlt sie im Token, holt
+ * `TERMS_AND_CONDITIONS` die Seite mit dem Haken gezielt hervor — auch dann,
+ * wenn Keycloak sie für dieses Konto gerade nicht von sich aus zeigen würde.
+ * Eine bloße Anmeldung führte dort in eine Schleife.
  */
-export function accountActionArgs(action: 'UPDATE_PASSWORD', returnTo: string) {
+export type AccountAction = 'UPDATE_PASSWORD' | 'TERMS_AND_CONDITIONS';
+
+export function accountActionArgs(action: AccountAction, returnTo: string) {
   return {
     extraQueryParams: { kc_action: action },
-    // Kommt als `user.state` zurück; die Callback-Seite liest den Pfad daraus.
-    state: { returnTo },
+    // Kommt als `user.state` zurück; die Callback-Seite liest den Pfad daraus
+    // — und welche Aktion es war, damit „Passwort geändert" nicht nach einer
+    // Einwilligung erscheint.
+    state: { returnTo, action },
   };
+}
+
+/** Welche Konto-Aktion gerade zurückkommt, falls es eine war. */
+export function accountActionOf(state: unknown): AccountAction | undefined {
+  if (
+    typeof state === 'object' &&
+    state !== null &&
+    'action' in state &&
+    (state.action === 'UPDATE_PASSWORD' ||
+      state.action === 'TERMS_AND_CONDITIONS')
+  ) {
+    return state.action;
+  }
+  return undefined;
 }
 
 /** Wohin nach dem Rücksprung — nur eigene Pfade, kein offener Redirect. */

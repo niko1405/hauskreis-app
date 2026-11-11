@@ -60,6 +60,28 @@ export function isEmailUnverified(e: unknown): boolean {
 }
 
 /**
+ * Die zweite Tür, gebaut wie die erste: Das Token ist echt, aber die
+ * Einwilligung fehlt (`code: 'TERMS_NOT_ACCEPTED'`). Auch hier hilft kein neues
+ * Token — nur eine Anmeldung, die die Seite mit dem Haken zeigt.
+ */
+export function isTermsNotAccepted(e: unknown): boolean {
+  return (
+    e instanceof ForbiddenError && e.payload?.code === 'TERMS_NOT_ACCEPTED'
+  );
+}
+
+/**
+ * Beitreten über einen Link, während man noch woanders dabei ist — ohne
+ * bestätigt zu haben, dass man wechseln will. Die Rückfrage verlangt der
+ * Server, nicht nur die Oberfläche.
+ */
+export function isSwitchNotConfirmed(e: unknown): boolean {
+  return (
+    e instanceof ConflictError && e.payload?.code === 'SWITCH_NOT_CONFIRMED'
+  );
+}
+
+/**
  * 404 — nicht vorhanden **oder** zu einem anderen Hauskreis gehörend. Der
  * Server unterscheidet das absichtlich nicht.
  */

@@ -7,18 +7,20 @@
  * angemeldet aber unbekannt (`/api/me` → 404: der Mensch hat ein
  * Keycloak-Konto, aber keine Person im Hauskreis) und angemeldet und bekannt.
  */
-import { LogIn, MailCheck, WifiOff } from 'lucide-react';
+import { LogIn, MailCheck, ShieldCheck, WifiOff } from 'lucide-react';
 import { useAuth } from 'react-oidc-context';
 import {
   useMe,
   useMeetingSchedule,
   useResendVerification,
 } from '@/lib/api/hooks';
-import { isEmailUnverified } from '@/lib/api/errors';
+import { isEmailUnverified, isTermsNotAccepted } from '@/lib/api/errors';
+import { accountActionArgs } from '@/lib/auth/oidc-config';
 import { useSessionRestore } from '@/lib/auth/use-session-restore';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { useOnline } from '@/lib/use-online';
 import { useSlow } from '@/lib/use-slow';
+import { IdpButtons } from './idp-buttons';
 import { LegalFooter } from './legal-footer';
 import { setGroupZone } from '@/lib/date';
 import { Button } from '@/components/ui/button';
@@ -98,6 +100,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (isEmailUnverified(me.error))
     return <VerifyEmailScreen email={auth.user?.profile.email} />;
 
+  // Dieselbe Bauart: nichts kaputt, es fehlt ein Haken. Die Prüfung steht im
+  // Server (`KEYCLOAK_REQUIRE_TERMS`), hier nur der Weg zu Keycloaks Seite.
+  if (isTermsNotAccepted(me.error)) return <TermsScreen />;
+
   if (me.error) {
     return (
       <FullScreen>
@@ -140,7 +146,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function FullScreen({ children }: { children: React.ReactNode }) {
+export function FullScreen({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-shell p-6">
       <div className="w-full max-w-sm">{children}</div>
@@ -228,7 +234,7 @@ function FullScreenHint({
  * Refresh-Grant keine Required Actions aus. Nur eine echte Anmeldung stellt ein
  * Token mit dem neuen Stand aus.
  */
-function VerifyEmailScreen({ email }: { email?: string }) {
+export function VerifyEmailScreen({ email }: { email?: string }) {
   const auth = useAuth();
   const resend = useResendVerification();
   const toast = useToast();
@@ -291,6 +297,63 @@ function VerifyEmailScreen({ email }: { email?: string }) {
 }
 
 /**
+ * „Stimm einmal zu."
+ *
+ * Der Server lässt niemanden herein, dessen Token die Einwilligung nicht trägt
+ * — die zweite Tür neben der bestätigten Adresse. Gefragt wird sie in Keycloak,
+ * und zwar über eine Konto-Aktion (`kc_action=TERMS_AND_CONDITIONS`) und nicht
+ * über eine bloße Anmeldung: Steht die Aktion am Konto gar nicht aus — etwa bei
+ * einem Konto, das vor der Einwilligung angelegt wurde —, zeigte Keycloak beim
+ * Anmelden nichts, das neue Token wäre so leer wie das alte, und man stünde
+ * wieder hier.
+ *
+ * `returnTo`, weil derselbe Bildschirm beim Beitreten über einen Link
+ * auftaucht — dort soll es danach mit dem Beitreten weitergehen.
+ */
+export function TermsScreen({ returnTo = '/' }: { returnTo?: string }) {
+  const auth = useAuth();
+
+  return (
+    <FullScreen>
+      <div className="rounded-card border border-line bg-card p-8 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-stone-100 text-stone-500">
+          <ShieldCheck size={22} />
+        </div>
+        <h1 className="mt-4 font-serif text-2xl font-bold text-stone-900">
+          Noch ein Schritt
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-stone-500">
+          In einem Hauskreis geht es auch um Glauben und Gebetsanliegen — das
+          sind besonders geschützte Angaben. Bevor es losgeht, brauchen wir
+          deshalb einmal deine Zustimmung.
+        </p>
+
+        <Button
+          size="lg"
+          className="mt-6 w-full"
+          onClick={() =>
+            void auth.signinRedirect(
+              accountActionArgs('TERMS_AND_CONDITIONS', returnTo),
+            )
+          }
+        >
+          Zur Zustimmung
+        </Button>
+
+        <button
+          type="button"
+          className="mt-5 text-xs text-stone-400 underline underline-offset-2"
+          onClick={() => void auth.signoutRedirect()}
+        >
+          Abmelden
+        </button>
+      </div>
+      <LegalFooter className="mt-6" />
+    </FullScreen>
+  );
+}
+
+/**
  * Die Anmeldung muss von einem Klick ausgehen — ein automatischer Redirect
  * beim Laden würde die App auf iOS aus dem Home-Bildschirm-Modus werfen.
  */
@@ -338,6 +401,8 @@ function LoginScreen() {
           <LogIn size={16} />
           Anmelden
         </Button>
+
+        <IdpButtons className="mt-2 space-y-2" />
 
         <p className="mt-5 text-sm text-stone-500">
           Kein Account?{' '}

@@ -18,7 +18,6 @@ import { DoorOpen, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
-import { Select } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast';
 import { isStatus } from '@/lib/api/errors';
@@ -31,6 +30,8 @@ import {
   usePeople,
 } from '@/lib/api/hooks';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
+import type { Invitation } from '@/lib/api/types';
+import { SuccessorPicker } from './successor-picker';
 
 /**
  * Ob mein Weggehen den ganzen Hauskreis mitnähme.
@@ -120,9 +121,6 @@ export function HauskreisCard() {
  */
 function PendingInvitations({ currentName }: { currentName?: string }) {
   const invitations = useInvitations();
-  const accept = useAcceptInvitation();
-  const toast = useToast();
-  const confirm = useConfirm();
 
   const open = invitations.data ?? [];
   if (open.length === 0) return null;
@@ -130,58 +128,100 @@ function PendingInvitations({ currentName }: { currentName?: string }) {
   return (
     <div className="mt-3 space-y-2">
       {open.map((invitation) => (
-        <Card
+        <PendingInvitation
           key={invitation.personId}
-          className="space-y-3 border-terracotta-400"
-        >
-          <div>
-            <p className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
-              Einladung
-            </p>
-            <p className="mt-0.5 text-sm font-bold text-stone-800">
-              {invitation.hauskreis.name}
-            </p>
-            <p className="mt-1 text-[11px] leading-relaxed text-stone-500">
-              Wenn du annimmst, bist du nicht mehr bei
-              {currentName
-                ? ` „${currentName}"`
-                : ' deinem jetzigen Hauskreis'}{' '}
-              dabei.
-            </p>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="w-full"
-            loading={accept.isPending}
-            onClick={async () => {
-              const ok = await confirm({
-                title: `Zu „${invitation.hauskreis.name}" wechseln?`,
-                body: currentName
-                  ? `Du bist danach nicht mehr bei „${currentName}" dabei. Was du dort beigetragen hast, bleibt im Archiv stehen.`
-                  : 'Du verlässt damit deinen jetzigen Hauskreis. Was du dort beigetragen hast, bleibt im Archiv stehen.',
-                confirmLabel: 'Wechseln',
-              });
-              if (!ok) return;
-
-              accept.mutate(
-                { personId: invitation.personId },
-                {
-                  onSuccess: () => {
-                    toast.success(
-                      `Du bist bei „${invitation.hauskreis.name}".`,
-                    );
-                    window.location.assign('/');
-                  },
-                },
-              );
-            }}
-          >
-            Wechseln
-          </Button>
-        </Card>
+          invitation={invitation}
+          currentName={currentName}
+        />
       ))}
     </div>
+  );
+}
+
+/**
+ * Eine Einladung samt Rückfrage — und, falls nötig, der Nachfolge.
+ *
+ * Wer hier die einzige Admin-Person ist, bekommt vom Server ein `400`, wie beim
+ * Verlassen. Die Auswahl dafür stand nur im `LeaveSheet`; hier blieb der
+ * Wechsel an genau dieser Stelle hängen.
+ */
+function PendingInvitation({
+  invitation,
+  currentName,
+}: {
+  invitation: Invitation;
+  currentName?: string;
+}) {
+  const accept = useAcceptInvitation();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [successorNeeded, setSuccessorNeeded] = useState(false);
+  const [successor, setSuccessor] = useState('');
+
+  const submit = () =>
+    accept.mutate(
+      {
+        personId: invitation.personId,
+        successorPersonId: successor === '' ? undefined : successor,
+      },
+      {
+        onSuccess: () => {
+          toast.success(`Du bist bei „${invitation.hauskreis.name}".`);
+          window.location.assign('/');
+        },
+        onError: (error) => {
+          if (isStatus(error, 400)) setSuccessorNeeded(true);
+        },
+      },
+    );
+
+  return (
+    <Card className="space-y-3 border-terracotta-400">
+      <div>
+        <p className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
+          Einladung
+        </p>
+        <p className="mt-0.5 text-sm font-bold text-stone-800">
+          {invitation.hauskreis.name}
+        </p>
+        <p className="mt-1 text-[11px] leading-relaxed text-stone-500">
+          Wenn du annimmst, bist du nicht mehr bei
+          {currentName
+            ? ` „${currentName}"`
+            : ' deinem jetzigen Hauskreis'}{' '}
+          dabei.
+        </p>
+      </div>
+
+      {successorNeeded && (
+        <SuccessorPicker value={successor} onChange={setSuccessor} />
+      )}
+
+      <Button
+        variant="secondary"
+        size="sm"
+        className="w-full"
+        loading={accept.isPending}
+        disabled={successorNeeded && successor === ''}
+        onClick={async () => {
+          // Die Rückfrage einmal: Wer schon die Nachfolge wählt, hat sie
+          // beantwortet.
+          if (!successorNeeded) {
+            const ok = await confirm({
+              title: `Zu „${invitation.hauskreis.name}" wechseln?`,
+              body: currentName
+                ? `Du bist danach nicht mehr bei „${currentName}" dabei. Was du dort beigetragen hast, bleibt im Archiv stehen.`
+                : 'Du verlässt damit deinen jetzigen Hauskreis. Was du dort beigetragen hast, bleibt im Archiv stehen.',
+              confirmLabel: 'Wechseln',
+            });
+            if (!ok) return;
+          }
+          submit();
+        }}
+      >
+        Wechseln
+      </Button>
+    </Card>
   );
 }
 
@@ -207,7 +247,6 @@ export function LeaveSheet({
   const leave = useLeaveHauskreis(hauskreisId);
   const remove = useDeleteAccount(hauskreisId);
   const people = usePeople();
-  const { me } = useMe();
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -220,10 +259,6 @@ export function LeaveSheet({
    */
   const [successorNeeded, setSuccessorNeeded] = useState(false);
   const [successor, setSuccessor] = useState('');
-
-  const others = (people.data ?? []).filter(
-    (person) => person.active && person.id !== me?.id,
-  );
 
   const dissolves = useDissolvesOnLeave();
 
@@ -343,24 +378,7 @@ export function LeaveSheet({
         )}
 
         {successorNeeded && (
-          <div className="space-y-2 rounded-md border border-warn-line bg-warn-bg p-3">
-            <p className="text-xs leading-relaxed text-warn">
-              Du bist die einzige Person mit Admin-Rechten. Bestimme, wer
-              übernimmt — sonst kann danach niemand mehr einladen.
-            </p>
-            <Select
-              value={successor}
-              aria-label="Nachfolge"
-              onChange={(event) => setSuccessor(event.target.value)}
-            >
-              <option value="">Bitte wählen</option>
-              {others.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name}
-                </option>
-              ))}
-            </Select>
-          </div>
+          <SuccessorPicker value={successor} onChange={setSuccessor} />
         )}
       </div>
     </Sheet>
