@@ -56,8 +56,22 @@ export interface FaqEntry {
    * keine Absicherung: Wer die Endpunkte kennt, bekommt trotzdem sein `403`.
    */
   adminOnly?: boolean;
+  /**
+   * Nur, wenn dieser Anmeldeweg eingerichtet ist (`NEXT_PUBLIC_OIDC_IDPS`).
+   * Eine Antwort über „Weiter mit Google" auf einer App ohne diesen Knopf
+   * beschriebe etwas, das es dort nicht gibt.
+   */
+  requiresIdp?: string;
   /** Wonach jemand sucht, ohne dass es im Text vorkommt. */
   keywords?: string[];
+}
+
+/** Ob ein Eintrag zu den Anmeldewegen dieser App passt. */
+export function fitsIdentityProviders(
+  entry: FaqEntry,
+  providers: readonly string[],
+): boolean {
+  return !entry.requiresIdp || providers.includes(entry.requiresIdp);
 }
 
 /**
@@ -84,8 +98,17 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'start',
     question: 'Wie melde ich mich an?',
     answer:
-      'Mit deinem Anmeldenamen **oder** deiner E-Mail-Adresse und deinem Passwort. Beides funktioniert.\n\nDeinen Zugang hast du beim Einladen per Mail bekommen: Über den Link darin suchst du dir einen Anmeldenamen aus und legst dein Passwort fest. Danach bist du direkt drin.',
+      'Mit deinem Anmeldenamen **oder** deiner E-Mail-Adresse und deinem Passwort. Beides funktioniert.\n\nDeinen Zugang hast du auf einem von zwei Wegen bekommen: **per Mail** — über den Link darin suchst du dir einen Anmeldenamen aus und legst dein Passwort fest — oder über einen **Einladungslink**, mit dem du dir selbst ein Konto angelegt hast. Danach bist du direkt drin.',
     keywords: ['login', 'einloggen', 'passwort', 'benutzername'],
+  },
+  {
+    id: 'start-google',
+    category: 'start',
+    requiresIdp: 'google',
+    question: 'Kann ich mich mit Google anmelden?',
+    answer:
+      'Ja — mit **„Weiter mit Google"** auf dem Anmeldebildschirm. Ein eigenes Passwort für Acts2 brauchst du dann nicht.\n\nBeim ersten Mal stimmst du der Datenschutzerklärung zu, wie bei jeder Registrierung.\n\n**Hast du schon ein Konto mit derselben Adresse**, legt die Anmeldeseite kein zweites an, sondern fragt, ob beides verbunden werden soll. Bestätigen musst du das mit deinem bisherigen Passwort oder über eine Mail — so kann niemand mit einer fremden Google-Adresse dein Konto übernehmen. Danach funktioniert beides.',
+    keywords: ['google', 'gmail', 'konto', 'ohne passwort', 'social login'],
   },
   {
     id: 'start-installieren',
@@ -956,8 +979,16 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'account',
     question: 'Wie lade ich jemanden ein?',
     answer:
-      'Das machen Admins, in der **Verwaltung** unter „Mitglieder". Es braucht nur eine E-Mail-Adresse.\n\nDie eingeladene Person bekommt eine Mail mit einem Link: Dort sucht sie sich einen Anmeldenamen aus, legt ein Passwort fest und ist drin.\n\nBis dahin steht sie in der Liste mit dem Abzeichen **„eingeladen"**. Solange lässt sich die Einladung samt Konto wieder zurücknehmen; danach nicht mehr — dann gehört das Konto einer Person und nicht mehr der Gruppe.\n\nKam die Mail nicht an, gibt es einen Knopf, sie erneut zu schicken.',
-    keywords: ['einladung', 'neu', 'mitglied', 'hinzufügen'],
+      'Das machen Admins, in der **Verwaltung** unter „Mitglieder" — auf zwei Wegen.\n\n**Per E-Mail:** Es braucht nur die Adresse. Die eingeladene Person bekommt eine Mail mit einem Link: Dort sucht sie sich einen Anmeldenamen aus, legt ein Passwort fest und ist drin. Bis dahin steht sie in der Liste mit dem Abzeichen **„eingeladen"**. Solange lässt sich die Einladung samt Konto wieder zurücknehmen; danach nicht mehr — dann gehört das Konto einer Person und nicht mehr der Gruppe. Kam die Mail nicht an, gibt es einen Knopf, sie erneut zu schicken.\n\n**Per Link:** Ein Link, den du teilst, wo eure Gruppe schreibt. Wer ihn öffnet, meldet sich an oder legt ein Konto an und ist mit einem Tipp dabei — **immer als Mitglied**. Der Link läuft nach einem Tag, einer Woche oder einem Monat ab, je nachdem, was du beim Erstellen wählst, und lässt sich jederzeit erneuern oder abschalten. Wer beitritt, steht sofort in der Liste, und alle anderen bekommen Bescheid.',
+    keywords: ['einladung', 'neu', 'mitglied', 'hinzufügen', 'link', 'teilen'],
+  },
+  {
+    id: 'account-link',
+    category: 'account',
+    question: 'Ich habe einen Einladungslink bekommen — wie geht das?',
+    answer:
+      'Öffne ihn. Oben steht, zu welchem Hauskreis er führt.\n\n**Noch kein Konto?** Leg eins an — danach geht es von selbst zurück, und ein Tipp auf „Beitreten" reicht.\n\n**Schon ein Konto, aber noch in keinem Hauskreis?** Anmelden, „Beitreten", fertig.\n\n**Schon in einem anderen Hauskreis?** Dann fragt die App, ob du wechseln willst. Wechseln heißt: Du verlässt den bisherigen — was du dort beigetragen hast, bleibt im Archiv stehen. „Abbrechen" lässt alles, wie es ist.\n\nSagt die Seite, dass der Link nicht mehr gilt, ist er abgelaufen oder wurde erneuert. Frag im Hauskreis nach einem neuen.',
+    keywords: ['link', 'beitreten', 'einladung', 'whatsapp'],
   },
   {
     id: 'account-passwort',
@@ -1012,7 +1043,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'account',
     question: 'Kann ich in zwei Hauskreisen sein?',
     answer:
-      'Nein. Ein Konto gehört zu einem Hauskreis.\n\nEin Wechsel ist deshalb ein Umzug: Nimmst du eine Einladung an, verlässt du den bisherigen. Die App sagt das vorher deutlich und fragt nach.',
+      'Nein. Ein Konto gehört zu einem Hauskreis.\n\nEin Wechsel ist deshalb ein Umzug: Nimmst du eine Einladung an oder trittst über einen Einladungslink bei, verlässt du den bisherigen. Die App sagt das vorher deutlich und fragt nach.',
     keywords: ['zwei', 'wechseln', 'mehrere', 'gruppen'],
   },
   {
@@ -1115,6 +1146,15 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     keywords: ['passwort', 'sicherheit', 'keycloak', 'wo liegt'],
   },
   {
+    id: 'privacy-google',
+    category: 'privacy',
+    requiresIdp: 'google',
+    question: 'Was erfährt Google, wenn ich mich damit anmelde?',
+    answer:
+      'Dass du dich bei Acts2 anmeldest — mehr nicht. Was im Hauskreis passiert, Termine, Gebetsanliegen, Themen, geht nie an Google.\n\n**Von Google bekommt Acts2** deinen Namen, deine E-Mail-Adresse und eine Kennung deines Google-Kontos — kein Passwort, keine Kontakte, kein Postfach.\n\nWer „Weiter mit Google" nicht drückt, hat bei der Anmeldung nichts mit Google zu tun.',
+    keywords: ['google', 'daten', 'weitergabe', 'anmeldung'],
+  },
+  {
     id: 'privacy-daten',
     category: 'privacy',
     question: 'Welche Daten speichert die App über mich?',
@@ -1199,7 +1239,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     adminOnly: true,
     question: 'Wie verwalte ich Mitglieder?',
     answer:
-      'In der Verwaltung unter „Mitglieder".\n\n**Einladen** — der Knopf ganz oben öffnet ein Fenster; nur eine E-Mail-Adresse ist nötig. Bis zur ersten Anmeldung steht dort „eingeladen", und die Einladung lässt sich samt Konto zurücknehmen. Kommt jemand zurück, der sein **Konto gelöscht** hatte, wähle dort „War schon einmal dabei" und die passende Zeile — dann stehen seine vergangenen Abende wieder unter seinem Namen. Wer den Hauskreis nur verlassen hatte, wird über seine Adresse von selbst wiedererkannt.\n\n**Entfernen** — geht denselben Weg wie ein selbst gewähltes Verlassen: Die Person kommt aus allen kommenden Planungen heraus, das Archiv behält ihren Namen, und eine neue Einladung an dieselbe Adresse holt alles zurück.\n\n**Admin-Rechte** lassen sich geben und nehmen. Der letzte Admin kann sich selbst nicht degradieren.\n\n**Dich selbst** kannst du hier nicht entfernen — dafür gibt es „Hauskreis verlassen" im Profil, wo auch die Frage nach der Nachfolge gestellt wird.',
+      'In der Verwaltung unter „Mitglieder".\n\n**Einladen** — der Knopf ganz oben öffnet ein Fenster; nur eine E-Mail-Adresse ist nötig. Bis zur ersten Anmeldung steht dort „eingeladen", und die Einladung lässt sich samt Konto zurücknehmen. Kommt jemand zurück, der sein **Konto gelöscht** hatte, wähle dort „War schon einmal dabei" und die passende Zeile — dann stehen seine vergangenen Abende wieder unter seinem Namen. Wer den Hauskreis nur verlassen hatte, wird über seine Adresse von selbst wiedererkannt.\n\n**Per Link einladen** — im selben Fenster unter „Per Link": erstellen, teilen, erneuern, abschalten. Über den Link kommt man nur als Mitglied herein; Admin-Rechte gibst du danach in der Liste.\n\n**Entfernen** — geht denselben Weg wie ein selbst gewähltes Verlassen: Die Person kommt aus allen kommenden Planungen heraus, das Archiv behält ihren Namen, und eine neue Einladung an dieselbe Adresse holt alles zurück.\n\n**Admin-Rechte** lassen sich geben und nehmen. Der letzte Admin kann sich selbst nicht degradieren.\n\n**Dich selbst** kannst du hier nicht entfernen — dafür gibt es „Hauskreis verlassen" im Profil, wo auch die Frage nach der Nachfolge gestellt wird.',
     keywords: ['personen', 'mitglieder', 'entfernen', 'rechte', 'admin'],
   },
   {

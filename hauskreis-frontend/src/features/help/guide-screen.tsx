@@ -22,14 +22,18 @@
 import { Printer } from 'lucide-react';
 import { BackButton } from '@/components/layout/back-button';
 import { Button } from '@/components/ui/button';
-import { FAQ_ENTRIES } from './faq-content';
+import { IDENTITY_PROVIDERS } from '@/lib/auth/oidc-config';
+import { FAQ_ENTRIES, fitsIdentityProviders } from './faq-content';
 import { FaqAnswer } from './faq-answer';
 
 export function GuideScreen() {
   // Die Reihenfolge der Datei ist die gedachte Reihenfolge — erst „was ist
   // das", dann anmelden, installieren, Profil, zurechtfinden.
   const steps = FAQ_ENTRIES.filter(
-    (entry) => entry.category === 'start' && !entry.adminOnly,
+    (entry) =>
+      entry.category === 'start' &&
+      !entry.adminOnly &&
+      fitsIdentityProviders(entry, IDENTITY_PROVIDERS),
   );
 
   return (

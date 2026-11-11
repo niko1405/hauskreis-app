@@ -328,6 +328,17 @@ NEXT_PUBLIC_OIDC_AUTHORITY  https://auth.acts2.de/realms/hauskreis
 NEXT_PUBLIC_OIDC_CLIENT_ID  hauskreis-app
 ```
 
+Optional eine vierte, sobald Google in Keycloak eingerichtet ist (Backend-README,
+„Anmeldung mit Google"):
+
+```
+NEXT_PUBLIC_OIDC_IDPS       google
+```
+
+Ohne sie fehlt nur „Weiter mit Google" in der App. Steht sie da, ohne dass
+Keycloak den Provider kennt, endet der Knopf auf einer Fehlerseite — deshalb
+erst das Setup-Skript, dann diese Variable.
+
 Das `/api` gehört mit hinein. Fehlt eine Variable, greifen die Vorgaben im Code,
 und die zeigen auf `localhost` — kein Fehler beim Bauen, kein Fehler beim Laden,
 nur eine App, die nichts anzeigt.
@@ -499,6 +510,13 @@ Was **blockiert**, solange es fehlt:
       `SMTP_HOST`/`SMTP_FROM` auf den Entwicklungswerten stehen.
 - [ ] **Cloudflare Pages** angelegt, die drei `NEXT_PUBLIC_*` gesetzt, `acts2.de`
       als Custom Domain verbunden (Schritt 7).
+- [ ] **Einwilligung als Pflicht im Token:** nach dem ersten
+      `setup-keycloak.sh --production` (es legt den Mapper `terms_accepted` an)
+      `KEYCLOAK_REQUIRE_TERMS=true` in die Secrets und die API neu starten. In
+      umgekehrter Reihenfolge käme niemand mehr herein.
+- [ ] **Optional Google-Login:** `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` in die
+      Secrets, `setup-keycloak.sh --production` erneut, dann
+      `NEXT_PUBLIC_OIDC_IDPS=google` in Cloudflare Pages und neu bauen.
 - [ ] **`CORS_ORIGINS`, `APP_URL` und `FRONTEND_URL`** stehen alle drei auf
       `https://acts2.de`. Weicht eine ab, ist der Fehler CORS oder
       `invalid_redirect_uri`.

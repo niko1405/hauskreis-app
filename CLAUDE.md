@@ -29,7 +29,7 @@ Ziel ist eine **PWA**, die die Organisation des Hauskreises übernimmt – einfa
 | Frontend        | Next.js 16 (App Router) + React 19, TanStack Query, Tailwind 4, PWA über Serwist (`@serwist/next`) |
 | Backend         | NestJS 11 (TypeScript, Express-Adapter)                                                            |
 | Datenbank / ORM | PostgreSQL 17 + Prisma 7 (Driver Adapter `@prisma/adapter-pg`)                                     |
-| Auth            | Keycloak 26 (OIDC), Token-Prüfung via JWKS (`jose`); „Admin" gilt pro Hauskreis an der Person      |
+| Auth            | Keycloak 26 (OIDC), Google als Identity Provider in Keycloak; JWKS (`jose`); „Admin" pro Hauskreis |
 | Validierung     | Zod 4 über `nestjs-zod` (global registrierte Pipe)                                                 |
 | Paketmanager    | pnpm                                                                                               |
 | Lint/Format     | oxlint + Prettier                                                                                  |
@@ -61,6 +61,12 @@ Mehrere Features (Host, Thema) folgen demselben Muster – bitte konsistent im B
 - zB `id`, `name`, `plays_instrument: bool`, `active: bool`, `birthdate`, `testimony_told_before: bool`
 - Man kann als User einstellen, ob man gerade generell hosten kann; die Vorschläge berücksichtigen das
 - **Konto löschen heißt anonymisieren, nicht löschen.** Die Zeile bleibt, Name, E-Mail und Geburtsdatum fallen weg, das Anmelde-Konto auch. Ein hartes Löschen nähme die Zuschreibung (Gastgeber, Themen-Owner) _und_ die Mitgliedschaft (wer welche Einheit gehalten hat, Anwesenheiten) mit — das Archiv wäre danach nicht anonym, sondern löchrig. Im Archiv steht dann „Ehemaliges Mitglied"
+
+### `hauskreis_invite_link` (Einladungslink)
+
+- **Höchstens einer je Hauskreis**, deshalb ist `hauskreis_id` der Schlüssel: `code` (128 Bit, base64url, eindeutig), `expires_at`, `created_by_person_id`, `join_count`. Erneuern überschreibt den Code, Abschalten löscht die Zeile, abgelaufen ist, was `expires_at` hinter sich hat — eine Zeile je Gruppe braucht keinen Aufräumlauf
+- **Eine eigene Tabelle und keine Spalte am `hauskreis`**: Der Code ist ein Geheimnis, und `GET /hauskreise` lesen alle Mitglieder. Im Klartext gespeichert, weil der Admin den Link jederzeit wieder kopieren können soll
+- **Eine Rolle steht nicht daran**: Über den Link kommt man immer als Mitglied herein
 
 ### `locations`
 
@@ -380,6 +386,17 @@ Mehrere Features (Host, Thema) folgen demselben Muster – bitte konsistent im B
 - **Gelesen wird gesetzt, geschrieben im Klartext.** Die Auszeichnung ist absichtlich klein: `#` und `##` für Überschriften, `- ` für Listen, `1. ` für Nummern, `**fett**`, Links — und **Checklisten** (`- [ ]`). **Jede Zeile bleibt eine Zeile**, anders als in Markdown: Wer „Zelt" und darunter „Schlafsack" schreibt, meint zwei Zeilen. Niemand muss die Zeichen kennen: Über dem Textfeld stehen Knöpfe, die sie setzen, und Enter setzt eine Liste fort (`lib/notes/markdown.ts`). **Beim Schreiben steht die gesetzte Fassung daneben** — am Rechner rechts neben dem Textfeld und live, auf dem Telefon hinter „Schreiben | Vorschau" in der Knopfleiste: Dort ist für beides kein Platz. Abhaken geht auch in der Vorschau; der Haken landet im Entwurf
 - **Checklisten hakt man in der Leseansicht ab**, ohne in „Bearbeiten" zu wechseln — bei einer Packliste ist das die Hauptsache. Der Haken geht **ohne `If-Match`** an den Server (`POST …/notes/:id/check`): Zwei, die gleichzeitig verschiedene Punkte abhaken, sind der Normalfall und kein Konflikt. Die Vorbedingung ist stattdessen der **Text des Punkts** — steht an der Stelle inzwischen etwas anderes, gibt es 409 statt eines Hakens am falschen Punkt. Hat dazwischen nur jemand anders abgehakt, setzt der Server auf dem neuen Stand noch einmal an
 - **Beim Schreiben bleibt der eigene Entwurf**, auch wenn jemand anders dazwischen gespeichert hat. Der übliche Hinweis bei 412 lädt neu und bittet um einen zweiten Versuch — hier wäre dabei der eigene Text weg. Stattdessen zwei Wege: **„Meine Fassung speichern"** (geschickt wird nur, was man selbst gegenüber dem Stand beim Öffnen geändert hat) oder **„Ihre übernehmen"**
+
+17. **Beitreten per Link und Anmeldung mit Google**
+
+- **Der Link verknüpft über ein Geheimnis, die E-Mail-Einladung über eine Adresse.** Wer ihn hat, tritt bei, mit welchem Konto auch immer — bestehend, neu oder über Google. Gedacht für die WhatsApp-Gruppe: einmal teilen, und jede:r kommt herein. Über ihn kommt man **nur als Mitglied** herein; Admin-Rechte vergibt man danach in der Liste. Erstellt wird er in der Verwaltung im selben Sheet wie die E-Mail-Einladung („Per E-Mail | Per Link") — **ein Knopf für eine Absicht**
+- **Er läuft ab** — 1, 7 oder 30 Tage, beim Erstellen gewählt, Vorgabe 7. Einen ohne Ablauf gibt es nicht: Er läge für immer in einem Chatverlauf und öffnete eine Gruppe mit Gebetsanliegen. Erneuern macht den alten sofort wertlos, und dass jemand beigetreten ist, erfahren alle (`MEMBER_JOINED`, das Gegenstück zu `MEMBER_LEFT` — gesendet von **einer** Stelle für alle Wege hinein, `PersonService.welcome`)
+- **Der Code steht hinter dem `#`** (`/beitreten#<code>`) und geht an die API im **Rumpf**, nie im Pfad: Weder Webserver noch `Referer` noch Zugriffsprotokoll sollen einen Schlüssel zur Gruppe sehen. Auf der Seite wird er sofort aus der Adresszeile genommen und im Gerät gemerkt (`pending-join.ts`), damit der Umweg über Keycloak, Google oder eine Bestätigungsmail in einem anderen Tab ihn nicht verliert. Den Namen des Hauskreises zeigt die Seite **vor** jeder Anmeldung (`POST invite-links/resolve`, öffentlich, gedrosselt): „Wofür lege ich das gerade an?" ist die erste Frage
+- **Wer schon in einem anderen Hauskreis ist, wird gefragt — vom Server.** Ohne `switchConfirmed` antwortet `POST invite-links/join` mit `409` (`SWITCH_NOT_CONFIRMED`); ein Aufruf, der vergessen hat zu fragen, soll niemanden aus seinem Hauskreis holen. Der Wechsel ist derselbe Umzug wie beim Annehmen einer Einladung: erst `leave` (samt Nachfolge und Auflösen einer leeren Gruppe), dann ankommen. **Erst prüfen, dann gehen**: Was im neuen Hauskreis scheitern kann, wird geklärt, bevor der alte verlassen ist
+- **Eine offene E-Mail-Einladung an dieselbe Adresse wird übernommen**, samt ihrer Rolle — wer als Admin eingeladen war und den Link nimmt, war trotzdem als Admin gemeint. Eine verlassene Zeile wird geweckt, als Mitglied
+- **Google ist ein Identity Provider _in_ Keycloak, nicht daneben** (Identity Brokering). Die App bekommt weiter Keycloak-Tokens; Guard, JWKS-Prüfung und Datenmodell bleiben, wie sie sind. `trustEmail` an, weil Google die Adresse nachweist; der Flow „first broker login" unverändert: Gibt es die Adresse schon als Konto, wird nur mit Nachweis (Passwort oder Mail) verknüpft, nie still zusammengeführt. Der Knopf „Weiter mit Google" führt per `kc_idp_hint` an Keycloaks Anmeldeseite vorbei und steht nur da, wo `NEXT_PUBLIC_OIDC_IDPS` ihn nennt
+- **Bei Google ist der Nutzername eine Adresse** — Keycloak vergibt sie. Der Anzeigename beim ersten Ankommen ist dann der Name aus dem Google-Konto (`displayNameFrom`), sonst stünde „anna.berger@gmail.com" auf jeder Karte
+- **Die Einwilligung gilt auf jedem Weg hinein**, auch über Google: `TERMS_AND_CONDITIONS` ist `defaultAction`, und ein Konto aus dem ersten Google-Login bekommt sie beim Anlegen. Dazu eine **zweite Tür im Backend**, gebaut wie die bestätigte Adresse: Mit `KEYCLOAK_REQUIRE_TERMS` weist der Guard jedes Token ohne Claim `terms_accepted` (aus dem Attribut `terms_and_conditions`) mit `403 TERMS_NOT_ACCEPTED` ab. Das Frontend holt die Seite dann **gezielt** per `kc_action=TERMS_AND_CONDITIONS` — eine bloße Anmeldung zeigte sie nicht, wenn die Aktion am Konto gar nicht aussteht, und endete in einer Schleife
 
 ## 7. Backlog (nicht priorisiert)
 
