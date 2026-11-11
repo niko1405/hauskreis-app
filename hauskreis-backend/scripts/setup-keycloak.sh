@@ -352,8 +352,13 @@ kc_curl -X PUT \
 echo "    aktiv und Vorgabe für neue Konten"
 
 # Bestandskonten. Übersprungen wird, wer sie schon angenommen hat: Keycloak
-# hinterlegt dabei das Attribut `termsAndConditions` mit einem Zeitstempel —
+# hinterlegt dabei das Attribut `terms_and_conditions` mit einem Zeitstempel —
 # und genau das ist zugleich der Nachweis nach Art. 7 (1) DSGVO.
+#
+# **`terms_and_conditions`, nicht `termsAndConditions`.** Hier stand die
+# CamelCase-Schreibweise, und die gibt es in Keycloak 26 nicht. Kein Konto
+# hatte also je zugestimmt, und jeder Lauf dieses Skripts legte allen die Seite
+# erneut vor. Nachgesehen an einem Konto, das zugestimmt hatte.
 #
 # `briefRepresentation=false`, weil die knappe Fassung die Attribute weglässt;
 # ohne sie sähe jedes Konto aus, als hätte es nie zugestimmt, und alle bekämen
@@ -364,7 +369,7 @@ NACHZUTRAGEN=$(
     node -pe '
       const users = JSON.parse(require("fs").readFileSync(0, "utf8"));
       users
-        .filter((user) => !user.attributes?.termsAndConditions)
+        .filter((user) => !user.attributes?.terms_and_conditions)
         .filter((user) => !(user.requiredActions ?? []).includes("TERMS_AND_CONDITIONS"))
         .map((user) => `${user.id} ${user.username}`)
         .join("\n");
