@@ -316,8 +316,7 @@ function Others({
                   Noch keine Idee
                 </p>
                 <p className="max-w-xs text-[11px] leading-relaxed text-stone-400">
-                  Was würde {data.person.name} freuen? Jede Idee hilft dem, der
-                  das Geschenk besorgt.
+                  Was würde {data.person.name} freuen?
                 </p>
               </Card>
             )}

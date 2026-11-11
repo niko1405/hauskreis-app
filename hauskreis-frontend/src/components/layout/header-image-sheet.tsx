@@ -85,7 +85,7 @@ export function HeaderImageSheet({
             <Choice
               icon={<RotateCcw size={16} />}
               label="Zurück zum Standard"
-              hint="Dann steht wieder der Verlauf da."
+              hint="Standard-Hintergrund ohne Bild."
               disabled={busy}
               onClick={async () => {
                 const ok = await confirm({

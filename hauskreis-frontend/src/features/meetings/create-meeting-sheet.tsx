@@ -118,12 +118,7 @@ export function CreateMeetingSheet({
           />
         </Field>
 
-        {/* Steht immer da: Eine Freizeit ist mehrtägig, ganz gleich, wie sie
-            angelegt wurde. */}
-        <Field
-          label="Bis"
-          hint="Optional — für eine Freizeit oder ein Wochenende."
-        >
+        <Field label="Bis (optional)">
           <TextInput
             type="date"
             value={endDate}
@@ -132,10 +127,7 @@ export function CreateMeetingSheet({
           />
         </Field>
 
-        <Field
-          label="Titel"
-          hint="Optional — bspw „Geburtstagsfeier“. Bleibt er leer, benennt sich der Abend nach seinen Bausteinen."
-        >
+        <Field label="Titel (optional)">
           <TextInput
             value={title}
             placeholder="Ohne Titel"
@@ -145,7 +137,7 @@ export function CreateMeetingSheet({
 
         <CheckRow
           label="Besonderer Termin"
-          hint="Ein Geburtstag, eine Freizeit — alle bekommen Bescheid und kurz vorher eine Erinnerung, und er steht in der Liste hervorgehoben."
+          hint="Alle bekommen Bescheid und kurz vorher eine Erinnerung, und er steht in der Liste hervorgehoben."
           checked={besonders}
           onChange={setSpecial}
         />

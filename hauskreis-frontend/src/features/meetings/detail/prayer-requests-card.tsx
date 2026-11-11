@@ -157,8 +157,7 @@ export function PrayerRequestsCard({
 
         {entries.length === 0 && (
           <p className="text-[11px] leading-relaxed text-stone-400">
-            Noch hat niemand etwas eingetragen. Auch wer an dem Abend nicht
-            dabei ist, darf hier etwas hinschreiben.
+            Noch hat niemand etwas eingetragen.
           </p>
         )}
       </Card>
