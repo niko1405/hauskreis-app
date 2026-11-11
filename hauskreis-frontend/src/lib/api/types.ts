@@ -117,6 +117,13 @@ export type LeaveResult = S['LeaveResultResponseDto'];
 export type AccountDeleted = S['AccountDeletedResponseDto'];
 /** Eine Person-Zeile, die noch niemandem gehört — das Angebot eines Hauskreises. */
 export type Invitation = S['InvitationListResponseDto'][number];
+/** Der Einladungslink in der Verwaltung — `link: null` heißt „keiner". */
+export type InviteLinkState = S['InviteLinkStateResponseDto'];
+export type InviteLink = NonNullable<InviteLinkState['link']>;
+export type InviteLinkValidDays = S['ReplaceInviteLinkDto']['validDays'];
+/** Wohin ein Link führt — lesbar auch ohne Anmeldung. */
+export type ResolvedInviteLink = S['ResolvedInviteLinkResponseDto'];
+export type JoinViaLinkInput = S['JoinViaLinkDto'];
 
 export type MeetingStatus = Meeting['status'];
 export type AttendanceStatus = Meeting['attendances'][number]['status'];

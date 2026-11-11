@@ -49,6 +49,7 @@ import {
   useSetPersonRole,
 } from '@/lib/api/hooks';
 import type { FormerMember, PersonListEntry } from '@/lib/api/types';
+import { InviteLinkPanel } from './invite-link-panel';
 
 export function PeopleAdmin() {
   const people = usePeople();
@@ -319,6 +320,12 @@ function InviteSheet({
   const [returning, setReturning] = useState(false);
   const [formerPersonId, setFormerPersonId] = useState('');
 
+  /**
+   * Ein Knopf für eine Absicht — „jemanden einladen" —, und das Sheet fragt,
+   * wie. Zwei Knöpfe in der Karte wären zwei Antworten auf dieselbe Frage.
+   */
+  const [mode, setMode] = useState<'email' | 'link'>('email');
+
   const invite = useInvitePerson();
   const toast = useToast();
 
@@ -360,71 +367,133 @@ function InviteSheet({
       open={open}
       onClose={onClose}
       title="Jemanden einladen"
-      subtitle="Die Person bekommt eine Mail mit einem Link zum Anmelden."
+      subtitle={
+        mode === 'email'
+          ? 'Die Person bekommt eine Mail mit einem Link zum Anmelden.'
+          : 'Wer den Link hat, kann beitreten — als Mitglied.'
+      }
       footer={
-        <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={onClose}>
-            Abbrechen
+        mode === 'link' ? (
+          <Button variant="secondary" className="w-full" onClick={onClose}>
+            Fertig
           </Button>
-          <Button
-            className="flex-1"
-            loading={invite.isPending}
-            disabled={
-              email.trim() === '' || (returning && formerPersonId === '')
-            }
-            onClick={submit}
-          >
-            <Mail size={15} />
-            Einladen
-          </Button>
-        </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={onClose}>
+              Abbrechen
+            </Button>
+            <Button
+              className="flex-1"
+              loading={invite.isPending}
+              disabled={
+                email.trim() === '' || (returning && formerPersonId === '')
+              }
+              onClick={submit}
+            >
+              <Mail size={15} />
+              Einladen
+            </Button>
+          </div>
+        )
       }
     >
       <div className="space-y-5">
-        <Field
-          label="E-Mail"
-          info="Mehr braucht es nicht: Name und Nutzername wählt die Person beim Aktivieren ihres Kontos selbst."
-        >
-          <TextInput
-            type="email"
-            autoComplete="off"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        </Field>
-
-        <div>
-          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-500">
-            Rolle
-            <InfoTip label="Rolle">
-              Admins dürfen einladen, entfernen, Rechte vergeben und alles hier
-              in der Verwaltung einstellen. Ändern lässt es sich jederzeit.
-            </InfoTip>
-          </p>
-          <Segmented
-            fill
-            size="sm"
-            label="Rolle"
-            value={role}
-            onChange={setRole}
-            options={[
-              { value: 'member', label: 'Mitglied' },
-              { value: 'admin', label: 'Admin' },
-            ]}
-          />
-        </div>
-
-        <FormerMemberPicker
-          returning={returning}
-          onReturning={(next) => {
-            setReturning(next);
-            setFormerPersonId('');
-          }}
-          chosen={formerPersonId}
-          onChoose={setFormerPersonId}
+        <Segmented
+          fill
+          size="sm"
+          label="Wie einladen"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: 'email', label: 'Per E-Mail' },
+            { value: 'link', label: 'Per Link' },
+          ]}
         />
+
+        {mode === 'link' ? (
+          <InviteLinkPanel />
+        ) : (
+          <EmailInviteFields
+            email={email}
+            onEmail={setEmail}
+            role={role}
+            onRole={setRole}
+            returning={returning}
+            onReturning={(next) => {
+              setReturning(next);
+              setFormerPersonId('');
+            }}
+            formerPersonId={formerPersonId}
+            onFormerPersonId={setFormerPersonId}
+          />
+        )}
       </div>
     </Sheet>
+  );
+}
+
+/** Adresse, Rolle und „war schon einmal dabei" — die Einladung per Mail. */
+function EmailInviteFields({
+  email,
+  onEmail,
+  role,
+  onRole,
+  returning,
+  onReturning,
+  formerPersonId,
+  onFormerPersonId,
+}: {
+  email: string;
+  onEmail: (email: string) => void;
+  role: 'member' | 'admin';
+  onRole: (role: 'member' | 'admin') => void;
+  returning: boolean;
+  onReturning: (returning: boolean) => void;
+  formerPersonId: string;
+  onFormerPersonId: (personId: string) => void;
+}) {
+  return (
+    <>
+      <Field
+        label="E-Mail"
+        info="Mehr braucht es nicht: Name und Nutzername wählt die Person beim Aktivieren ihres Kontos selbst."
+      >
+        <TextInput
+          type="email"
+          autoComplete="off"
+          value={email}
+          onChange={(event) => onEmail(event.target.value)}
+        />
+      </Field>
+
+      <div>
+        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-500">
+          Rolle
+          <InfoTip label="Rolle">
+            Admins dürfen einladen, entfernen, Rechte vergeben und alles hier in
+            der Verwaltung einstellen. Ändern lässt es sich jederzeit.
+          </InfoTip>
+        </p>
+        <Segmented
+          fill
+          size="sm"
+          label="Rolle"
+          value={role}
+          onChange={onRole}
+          options={[
+            { value: 'member', label: 'Mitglied' },
+            { value: 'admin', label: 'Admin' },
+          ]}
+        />
+      </div>
+
+      <FormerMemberPicker
+        returning={returning}
+        onReturning={onReturning}
+        chosen={formerPersonId}
+        onChoose={onFormerPersonId}
+      />
+    </>
   );
 }
 

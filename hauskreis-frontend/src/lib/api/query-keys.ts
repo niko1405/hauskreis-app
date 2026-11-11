@@ -29,6 +29,11 @@ export const qk = {
   hauskreisDetail: (hauskreisId: string) =>
     ['hauskreise', 'detail', hauskreisId] as const,
   invitations: ['invitations'] as const,
+  /**
+   * Wohin ein Einladungslink führt. Außerhalb des Hauskreis-Baums: Wer ihn
+   * öffnet, gehört diesem Hauskreis gerade noch nicht an.
+   */
+  inviteLinkTarget: (code: string) => ['invite-link', code] as const,
   /** Ändert sich nur mit einem Deploy — deshalb außerhalb des Hauskreis-Baums. */
   releases: ['releases'] as const,
 
@@ -65,6 +70,9 @@ export const qk = {
         /** Ehemalige mit gelöschtem Konto — nur im Einladen-Formular gebraucht. */
         former: [...root, 'people', 'former'] as const,
       },
+
+      /** Der Einladungslink — nur in der Verwaltung. */
+      inviteLink: [...root, 'invite-link'] as const,
 
       locations: {
         all: [...root, 'locations'] as const,

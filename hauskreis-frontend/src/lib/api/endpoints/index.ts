@@ -9,6 +9,7 @@ export * as coreApi from './core';
 export * as dashboardApi from './dashboard';
 export * as groupApi from './group';
 export * as headerImagesApi from './header-images';
+export * as inviteLinksApi from './invite-links';
 export * as locationsApi from './locations';
 export * as meetingPrayerRequestsApi from './meeting-prayer-requests';
 export * as meetingSongsApi from './meeting-songs';
