@@ -1,0 +1,22 @@
+meta {
+  name: Einladungslink abschalten
+  type: http
+  seq: 10
+}
+
+delete {
+  url: {{baseUrl}}/hauskreise/{{hauskreisId}}/invite-link
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("antwortet ohne Inhalt", function () {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Danach führt der Link nirgends mehr hin — wer schon beigetreten ist, bleibt
+  dabei. Der nächste Request prüft, dass er wirklich weg ist.
+}

@@ -1,0 +1,35 @@
+meta {
+  name: Einladungslink auflösen (ohne Anmeldung)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/invite-links/resolve
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  { "code": "{{inviteCode}}" }
+}
+
+tests {
+  test("nennt den Hauskreis, ohne dass jemand angemeldet ist", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.body.hauskreis.id).to.equal(bru.getEnvVar("hauskreisId"));
+    expect(res.body.hauskreis.name).to.be.a("string");
+  });
+}
+
+docs {
+  Öffentlich, weil wer den Link öffnet oft noch kein Konto hat — und gedrosselt
+  (10/min). Der Code steht im Rumpf, nicht im Pfad: Pfade landen im
+  Zugriffsprotokoll.
+
+  Unbekannt, erneuert und abgelaufen antworten gleich mit `404`.
+}

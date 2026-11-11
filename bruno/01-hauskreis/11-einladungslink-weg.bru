@@ -1,0 +1,25 @@
+meta {
+  name: Abgeschalteter Link führt nirgends hin
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/invite-links/resolve
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  { "code": "{{inviteCode}}" }
+}
+
+tests {
+  test("antwortet mit 404", function () {
+    expect(res.getStatus()).to.equal(404);
+  });
+}

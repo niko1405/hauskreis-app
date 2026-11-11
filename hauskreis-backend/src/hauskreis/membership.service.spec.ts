@@ -4,8 +4,15 @@
  * Der heikelste Fall ist das Verlassen: wer als einzige Admin-Person geht,
  * darf keine Gruppe zurücklassen, in der niemand mehr einladen kann.
  */
-import { BadRequestException, ConflictException } from '@nestjs/common';
-import { MembershipService } from './membership.service';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
+import { MembershipService, SWITCH_NOT_CONFIRMED } from './membership.service';
+import type { InviteLinkService } from './invite-link.service';
+import type { BirthdayPlannerService } from '../birthday/birthday-planner.service';
+import { Prisma } from '../../generated/prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { PersonService } from '../person/person.service';
 import type { PhotoService } from '../person/photo.service';
@@ -605,5 +612,258 @@ describe('deleteAccount, wenn Keycloak nicht antwortet', () => {
         (call) => call[0].data.anonymizedAt !== undefined,
       ),
     ).toBe(true);
+  });
+});
+
+/**
+ * Beitreten über den Einladungslink.
+ *
+ * Eigene Attrappen statt `setup()`: Dort antwortet `findFirst` auf jede Frage
+ * mit derselben Zeile, und hier sind es zwei verschiedene Fragen — wer ich bin
+ * und wem meine Adresse im neuen Hauskreis gehört. Das Verlassen selbst prüft
+ * der Block weiter oben; hier zählt, ob und wann es aufgerufen wird.
+ */
+function joinSetup(
+  options: {
+    current?: Record<string, unknown> | null;
+    byEmail?: Record<string, unknown> | null;
+  } = {},
+) {
+  const person = {
+    findUnique: jest.fn().mockResolvedValue(options.current ?? null),
+    findFirst: jest.fn().mockResolvedValue(options.byEmail ?? null),
+    findUniqueOrThrow: jest
+      .fn()
+      .mockImplementation(({ where }: { where: { id: string } }) =>
+        Promise.resolve({ id: where.id }),
+      ),
+    update: jest
+      .fn()
+      .mockImplementation(({ where }: { where: { id: string } }) =>
+        Promise.resolve({ id: where.id }),
+      ),
+    create: jest.fn().mockResolvedValue({ id: 'p-joined' }),
+  };
+  const linkUpdate = jest.fn().mockResolvedValue({ count: 1 });
+  const prisma = {
+    person,
+    hauskreisInviteLink: { updateMany: linkUpdate },
+    $transaction: jest.fn((run: (tx: unknown) => unknown) => run(prisma)),
+  } as unknown as PrismaService;
+
+  const welcome = jest.fn().mockResolvedValue(undefined);
+  const resolve = jest
+    .fn()
+    .mockResolvedValue({ hauskreis: { id: 'hk-neu', name: 'Neustadt' } });
+
+  const service = withFeatures(
+    new MembershipService(
+      prisma,
+      { welcome } as unknown as PersonService,
+      {} as PrayerBuddyGeneratorService,
+      {} as BirthdayPlannerService,
+      {} as RoleReleaseService,
+      {} as MeetingCancellationService,
+      {} as NotificationService,
+      {} as PhotoService,
+      undefined as never,
+      { resolve } as unknown as InviteLinkService,
+    ),
+  );
+  const leave = jest
+    .spyOn(service, 'leave')
+    .mockResolvedValue({ hauskreisDeleted: false, successorPersonId: null });
+
+  return { service, person, linkUpdate, welcome, resolve, leave };
+}
+
+describe('MembershipService.joinViaLink', () => {
+  const joiner: AuthenticatedUser = {
+    keycloakUserId: 'kc-anna',
+    email: 'anna@example.com',
+    username: 'anna',
+    name: 'Anna Berger',
+    emailVerified: true,
+    roles: [],
+  };
+  const code = 'abcdefghijklmnopqrstuv';
+
+  const elsewhere = {
+    id: 'p-alt',
+    hauskreisId: 'hk-alt',
+    active: true,
+    hauskreis: { name: 'Altstadt' },
+  };
+
+  it('legt eine neue Zeile an — als Mitglied', async () => {
+    const { service, person, linkUpdate, welcome } = joinSetup();
+
+    await expect(service.joinViaLink(joiner, { code })).resolves.toEqual({
+      id: 'p-joined',
+    });
+
+    expect(person.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        hauskreisId: 'hk-neu',
+        keycloakUserId: 'kc-anna',
+        email: 'anna@example.com',
+        username: 'anna',
+        name: 'anna',
+        role: PersonRole.MEMBER,
+        acceptedAt: expect.any(Date),
+      }),
+    });
+    expect(linkUpdate).toHaveBeenCalledWith({
+      where: { hauskreisId: 'hk-neu' },
+      data: { joinCount: { increment: 1 } },
+    });
+    // Ankommen heißt: Rotationen und die Nachricht an die anderen.
+    expect(welcome).toHaveBeenCalledWith('hk-neu', 'p-joined');
+  });
+
+  it('ändert nichts, wer schon dabei ist', async () => {
+    const { service, person, welcome, leave } = joinSetup({
+      current: { ...elsewhere, id: 'p-da', hauskreisId: 'hk-neu' },
+    });
+
+    await expect(service.joinViaLink(joiner, { code })).resolves.toEqual({
+      id: 'p-da',
+    });
+
+    expect(person.create).not.toHaveBeenCalled();
+    expect(person.update).not.toHaveBeenCalled();
+    expect(leave).not.toHaveBeenCalled();
+    expect(welcome).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Die Rückfrage gehört dem Server: Ein Aufruf, der vergessen hat zu fragen,
+   * soll niemanden aus seinem Hauskreis holen.
+   */
+  it('verlangt die Bestätigung, wer noch woanders dabei ist', async () => {
+    const { service, person, leave } = joinSetup({ current: elsewhere });
+
+    const error = await service
+      .joinViaLink(joiner, { code })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ConflictException);
+    expect((error as ConflictException).getResponse()).toEqual(
+      expect.objectContaining({ code: SWITCH_NOT_CONFIRMED }),
+    );
+    expect(leave).not.toHaveBeenCalled();
+    expect(person.create).not.toHaveBeenCalled();
+  });
+
+  it('verlässt mit Bestätigung erst den alten und tritt dann bei', async () => {
+    const { service, person, leave } = joinSetup({ current: elsewhere });
+
+    await service.joinViaLink(joiner, {
+      code,
+      switchConfirmed: true,
+      successorPersonId: '00000000-0000-4000-8000-000000000001',
+    });
+
+    expect(leave).toHaveBeenCalledWith('hk-alt', 'p-alt', {
+      successorPersonId: '00000000-0000-4000-8000-000000000001',
+    });
+    expect(leave.mock.invocationCallOrder[0]).toBeLessThan(
+      person.create.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it('bleibt, wo er ist, wenn das Verlassen eine Nachfolge verlangt', async () => {
+    const { service, person, leave } = joinSetup({ current: elsewhere });
+    leave.mockRejectedValue(new BadRequestException('Nachfolge fehlt'));
+
+    await expect(
+      service.joinViaLink(joiner, { code, switchConfirmed: true }),
+    ).rejects.toThrow(BadRequestException);
+    expect(person.create).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Wer per Mail als Admin eingeladen wurde und den Link nimmt, war trotzdem
+   * als Admin gemeint — und `@@unique([hauskreisId, email])` ließe eine zweite
+   * Zeile ohnehin nicht zu.
+   */
+  it('übernimmt eine offene Einladung samt ihrer Rolle', async () => {
+    const { service, person } = joinSetup({
+      byEmail: { id: 'p-einladung', active: true, keycloakUserId: null },
+    });
+
+    await service.joinViaLink(joiner, { code });
+
+    expect(person.create).not.toHaveBeenCalled();
+    const { data } = person.update.mock.calls[0]![0] as {
+      data: Record<string, unknown>;
+    };
+    expect(data).toEqual(
+      expect.objectContaining({ keycloakUserId: 'kc-anna', active: true }),
+    );
+    expect(data).not.toHaveProperty('role');
+  });
+
+  it('weckt eine verlassene Zeile — als Mitglied', async () => {
+    const { service, person } = joinSetup({
+      byEmail: { id: 'p-frueher', active: false, keycloakUserId: null },
+    });
+
+    await service.joinViaLink(joiner, { code });
+
+    expect(person.update).toHaveBeenCalledWith({
+      where: { id: 'p-frueher' },
+      data: expect.objectContaining({
+        active: true,
+        role: PersonRole.MEMBER,
+        keycloakUserId: 'kc-anna',
+      }),
+    });
+  });
+
+  /**
+   * Erst prüfen, dann gehen: Sonst stünde am Ende jemand ohne jeden Hauskreis
+   * da, der in keinen von beiden wollte.
+   */
+  it('verlässt nichts, wenn die Adresse drüben einem anderen Konto gehört', async () => {
+    const { service, person, leave } = joinSetup({
+      current: elsewhere,
+      byEmail: { id: 'p-fremd', active: true, keycloakUserId: 'kc-fremd' },
+    });
+
+    await expect(
+      service.joinViaLink(joiner, { code, switchConfirmed: true }),
+    ).rejects.toThrow(ConflictException);
+    expect(leave).not.toHaveBeenCalled();
+    expect(person.create).not.toHaveBeenCalled();
+    expect(person.update).not.toHaveBeenCalled();
+  });
+
+  it('reicht einen ungültigen Link als 404 durch', async () => {
+    const { service, resolve, person } = joinSetup();
+    resolve.mockRejectedValue(new NotFoundException('gilt nicht mehr'));
+
+    await expect(service.joinViaLink(joiner, { code })).rejects.toThrow(
+      NotFoundException,
+    );
+    expect(person.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('nimmt einen Doppelklick als denselben Beitritt', async () => {
+    const { service, person, welcome } = joinSetup();
+    person.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('belegt', {
+        code: 'P2002',
+        clientVersion: 'test',
+      }),
+    );
+    person.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'p-erster-klick' });
+
+    await expect(service.joinViaLink(joiner, { code })).resolves.toEqual({
+      id: 'p-erster-klick',
+    });
+    expect(welcome).not.toHaveBeenCalled();
   });
 });

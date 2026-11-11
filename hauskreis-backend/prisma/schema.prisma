@@ -144,6 +144,9 @@ enum NotificationType {
   /// Jemand hat dich zu einer Notiz dazugenommen — oder sie für die ganze
   /// Gruppe geöffnet.
   NOTE_SHARED
+  /// Jemand ist dazugekommen — über den Link oder eine angenommene Einladung.
+  /// Das Gegenstück zu `MEMBER_LEFT`.
+  MEMBER_JOINED
 
   @@map("notification_type")
 }
@@ -228,6 +231,7 @@ model Hauskreis {
   ideas                GroupIdea[]
   notes                Note[]
   skippedMeetingDates  SkippedMeetingDate[]
+  inviteLink           HauskreisInviteLink?
 
   @@map("hauskreis")
 }
@@ -367,6 +371,7 @@ model Person {
   giftPairingFor          BirthdayGiftPairing[]     @relation("GiftPairingFor")
   giftPairingBy           BirthdayGiftPairing[]     @relation("GiftPairingBy")
   birthdayGiftConfigEdits BirthdayGiftConfig[]      @relation("BirthdayGiftConfigEditor")
+  inviteLinksCreated      HauskreisInviteLink[]     @relation("InviteLinkBy")
 
   @@unique([hauskreisId, email])
   @@index([hauskreisId])
@@ -638,6 +643,35 @@ model SkippedMeetingDate {
 
   @@id([hauskreisId, date])
   @@map("skipped_meeting_date")
+}
+
+/// Der Link, über den man einem Hauskreis beitritt — höchstens einer je Gruppe.
+///
+/// **Eine eigene Tabelle und keine Spalte am `hauskreis`**: Der Code ist ein
+/// Geheimnis, und `GET /hauskreise` lesen alle Mitglieder. Hier steht er von
+/// selbst außerhalb jeder Antwort, die nicht ausdrücklich nach ihm fragt.
+///
+/// Erneuern überschreibt den Code (der alte ist sofort tot), Abschalten löscht
+/// die Zeile, und abgelaufen ist, was `expires_at` hinter sich hat. Eine Zeile
+/// je Gruppe braucht keinen Aufräumlauf.
+///
+/// Wer darüber kommt, kommt immer als **Mitglied** herein. Die Rolle steht
+/// deshalb gar nicht erst hier.
+model HauskreisInviteLink {
+  hauskreisId       String   @id @map("hauskreis_id") @db.Uuid
+  /// 128 Bit Zufall, base64url. Im Klartext, weil der Admin den Link jederzeit
+  /// wieder kopieren können soll — ein Hash ließe ihn nur einmal sehen.
+  code              String   @unique
+  expiresAt         DateTime @map("expires_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  createdByPersonId String?  @map("created_by_person_id") @db.Uuid
+  /// Wie oft jemand darüber beigetreten ist — ab dem letzten Erneuern.
+  joinCount         Int      @default(0) @map("join_count")
+
+  hauskreis Hauskreis @relation(fields: [hauskreisId], references: [id], onDelete: Cascade)
+  createdBy Person?   @relation("InviteLinkBy", fields: [createdByPersonId], references: [id], onDelete: SetNull)
+
+  @@map("hauskreis_invite_link")
 }
 
 /// Ein Stoff, den die Gruppe durcharbeitet — bewusst **nicht** an einen Abend

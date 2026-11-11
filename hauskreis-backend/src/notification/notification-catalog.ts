@@ -372,6 +372,18 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
     defaultEnabled: true,
   },
   {
+    type: NotificationType.MEMBER_JOINED,
+    category: 'Gruppe & App',
+    label: 'Jemand kommt dazu',
+    // Das Gegenstück zum Gehen, und seit es den Einladungslink gibt mehr als
+    // Höflichkeit: Wer den Link hat, kommt ohne weitere Frage herein. Dass
+    // die anderen es erfahren, ist die Kontrolle dahinter.
+    description:
+      'Wenn jemand neu in den Hauskreis kommt — über den Einladungslink oder eine angenommene Einladung.',
+    schedule: { kind: 'EVENT' },
+    defaultEnabled: true,
+  },
+  {
     type: NotificationType.CUSTOM_MEETING_CREATED,
     category: 'Termine',
     label: 'Ein besonderer Termin kommt dazu',
