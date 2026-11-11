@@ -72,6 +72,10 @@ services:
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-hauskreis-backend}
       KEYCLOAK_ALLOWED_AZP: ${KEYCLOAK_ALLOWED_AZP:-hauskreis-app}
+      # Die zweite Tür neben der bestätigten Adresse: ohne Einwilligung im Token
+      # kein Zutritt. Vorgabe aus, weil der Claim erst mit dem Mapper aus
+      # `setup-keycloak.sh` existiert — siehe .env.prod.example.
+      KEYCLOAK_REQUIRE_TERMS: ${KEYCLOAK_REQUIRE_TERMS:-false}
       KEYCLOAK_FRONTEND_CLIENT_ID: ${KEYCLOAK_FRONTEND_CLIENT_ID:-hauskreis-app}
       # Wohin die Einladungsmail zurückführt. Ohne das endet sie auf einer
       # Keycloak-Seite statt in der App.

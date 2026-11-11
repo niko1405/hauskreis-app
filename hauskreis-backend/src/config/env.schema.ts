@@ -102,6 +102,15 @@ export const envSchema = z.object({
         .map((clientId) => clientId.trim())
         .filter(Boolean),
     ),
+  /// Ob ein Token die Einwilligung tragen muss (Claim `terms_accepted`).
+  ///
+  /// Keycloak fragt sie ohnehin ab (`TERMS_AND_CONDITIONS`); diese Prüfung
+  /// macht die Regel unabhängig davon, dass das auf jedem Weg hinein auch
+  /// wirklich passiert — beim E-Mail-Einladen ist sie schon einmal daran
+  /// vorbeigegangen. Ein Schalter und keine feste Regel, weil der Claim erst
+  /// existiert, wenn `scripts/setup-keycloak.sh` den Mapper angelegt hat: Ein
+  /// Server, der vor dem Skript ausgerollt wird, sperrte sonst jeden aus.
+  KEYCLOAK_REQUIRE_TERMS: z.stringbool().default(false),
   // Gate for the CSV seed script. Note: z.coerce.boolean() would turn the
   // string "false" into true, so parse the literal instead.
   SEED_ENABLED: z.stringbool().default(false),

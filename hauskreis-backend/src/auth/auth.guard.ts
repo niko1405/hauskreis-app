@@ -23,6 +23,9 @@ import type { AuthenticatedUser } from './auth.types';
  */
 export const EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED';
 
+/** Die zweite Tür, gebaut wie die erste — siehe `canActivate`. */
+export const TERMS_NOT_ACCEPTED = 'TERMS_NOT_ACCEPTED';
+
 interface KeycloakClaims extends JWTPayload {
   email?: string;
   /// Ob Keycloak die Adresse als bestätigt führt. Siehe `AuthenticatedUser`.
@@ -31,6 +34,9 @@ interface KeycloakClaims extends JWTPayload {
   preferred_username?: string;
   /// The "authorized party" — the client the token was issued to.
   azp?: string;
+  /// Wann die Einwilligung angenommen wurde (Sekunden seit 1970), aus dem
+  /// Konto-Attribut `terms_and_conditions`. Fehlt, solange sie aussteht.
+  terms_accepted?: string;
   realm_access?: { roles?: string[] };
 }
 
@@ -40,6 +46,7 @@ export class AuthGuard implements CanActivate {
   private readonly issuer: string;
   private readonly audience: string;
   private readonly allowedAzp: readonly string[];
+  private readonly requireTerms: boolean;
 
   constructor(
     private readonly config: AppConfigService,
@@ -56,6 +63,7 @@ export class AuthGuard implements CanActivate {
     const internalBase = internalKeycloakUrl(this.config);
     this.audience = this.config.get('KEYCLOAK_AUDIENCE');
     this.allowedAzp = this.config.get('KEYCLOAK_ALLOWED_AZP');
+    this.requireTerms = this.config.get('KEYCLOAK_REQUIRE_TERMS');
     this.jwks = createRemoteJWKSet(
       new URL(`${internalBase}/realms/${realm}/protocol/openid-connect/certs`),
     );
@@ -138,6 +146,24 @@ export class AuthGuard implements CanActivate {
       });
     }
 
+    // Die zweite Tür, und sie ist aus demselben Holz. Keycloak fragt die
+    // Einwilligung beim Anlegen eines Kontos ab — bei der Registrierung, beim
+    // ersten Anmelden über Google, und über die Einladungsmail. Dass das auf
+    // **jedem** Weg passiert, hängt aber an Einstellungen im Realm, und beim
+    // Einladen ist die Einwilligung genau daran schon einmal vorbeigegangen
+    // (siehe `KeycloakAdminService.setupActions`). Hier steht die Regel ein
+    // zweites Mal, und zwar dort, wo jede Anfrage vorbeikommt.
+    //
+    // 403 und nicht 401, aus demselben Grund wie oben: ein Refresh führt keine
+    // Required Actions aus. Erst eine echte Anmeldung holt die Seite mit dem
+    // Haken — das Frontend schickt dafür zu Keycloak.
+    if (this.requireTerms && !claims.terms_accepted) {
+      throw new ForbiddenException({
+        message: 'Bitte stimme zuerst der Datenschutzerklärung zu',
+        code: TERMS_NOT_ACCEPTED,
+      });
+    }
+
     const user: AuthenticatedUser = {
       keycloakUserId: claims.sub,
       // Kleingeschrieben, wie alles, was in `person.email` steht (siehe
@@ -150,6 +176,7 @@ export class AuthGuard implements CanActivate {
       username: claims.preferred_username,
       name: claims.name ?? claims.preferred_username,
       emailVerified: claims.email_verified === true,
+      termsAccepted: Boolean(claims.terms_accepted),
       roles: claims.realm_access?.roles ?? [],
     };
 
