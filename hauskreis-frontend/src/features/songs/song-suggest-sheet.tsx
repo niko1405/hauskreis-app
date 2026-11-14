@@ -30,6 +30,7 @@
 import { useDeferredValue, useState } from 'react';
 import { ArrowLeft, Check, Library, Music, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useConfirm } from '@/components/ui/confirm';
 import { Sheet } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast';
 import { SongPickerBody } from '@/components/domain/song-picker-body';
@@ -201,8 +202,8 @@ function useNewSongForm({
   reset: () => void;
 } {
   const toast = useToast();
+  const confirm = useConfirm();
   const [values, setValues] = useState<SongFieldValues>(EMPTY);
-  const [confirming, setConfirming] = useState(false);
 
   const input = songInput(values);
   const own = useOwnVersionDraft(input);
@@ -222,7 +223,6 @@ function useNewSongForm({
 
   const reset = () => {
     setValues(EMPTY);
-    setConfirming(false);
     own.reset();
   };
 
@@ -281,42 +281,35 @@ function useNewSongForm({
     </div>
   );
 
-  const footer = confirming ? (
-    <div className="space-y-2 rounded-md border border-warn-line bg-warn-bg p-3">
-      <p className="text-xs leading-relaxed text-warn">
-        {exactHit ? (
-          <>
-            „{exactHit.title}" steht schon in eurer Liederliste. Willst du
-            wirklich einen zweiten Eintrag anlegen?
-          </>
-        ) : (
-          <>
-            „{input.title}" kennt die App noch nicht. Neu anlegen? Es landet
-            dann in eurer Liederliste und lässt sich beim nächsten Mal einfach
-            auswählen.
-          </>
-        )}
-      </p>
-      <div className="flex gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex-1"
-          onClick={() => setConfirming(false)}
-        >
-          Nochmal ansehen
-        </Button>
-        <Button
-          size="sm"
-          className="flex-1"
-          loading={add.isPending || own.saving}
-          onClick={() => submit()}
-        >
-          {exactHit ? 'Trotzdem anlegen' : 'Anlegen'}
-        </Button>
-      </div>
-    </div>
-  ) : (
+  /**
+   * Die Rückfrage vor dem Anlegen — als Modal, nicht als Kasten im Fuß.
+   *
+   * Ein neues Lied landet in der Liederliste der ganzen Gruppe; ein Tippfehler
+   * im Titel wäre danach ein zweiter Eintrag für dasselbe Lied. Deshalb wird
+   * gefragt — vor allem, wenn es den Titel schon gibt. Ein gelber Kasten
+   * im Fuß des Sheets sah aus wie eine Warnung, als sei etwas schiefgegangen;
+   * es ist aber nur die Frage „sicher?".
+   */
+  const confirmAndAdd = async () => {
+    const ok = await confirm(
+      exactHit
+        ? {
+            title: 'Zweiten Eintrag anlegen?',
+            body: `„${exactHit.title}" steht schon in eurer Liederliste. Wähl es lieber oben unter den Treffern aus.`,
+            confirmLabel: 'Trotzdem anlegen',
+            cancelLabel: 'Nochmal ansehen',
+          }
+        : {
+            title: 'Neues Lied anlegen?',
+            body: `„${input.title}" landet in eurer Liederliste und lässt sich beim nächsten Mal einfach auswählen.`,
+            confirmLabel: 'Anlegen',
+            cancelLabel: 'Nochmal ansehen',
+          },
+    );
+    if (ok) submit();
+  };
+
+  const footer = (
     <div className="flex gap-2">
       <Button variant="ghost" className="flex-1" onClick={onBack}>
         <ArrowLeft size={14} /> Zurück
@@ -324,7 +317,8 @@ function useNewSongForm({
       <Button
         className="flex-1"
         disabled={input.title === ''}
-        onClick={() => setConfirming(true)}
+        loading={add.isPending || own.saving}
+        onClick={() => void confirmAndAdd()}
       >
         Hinzufügen
       </Button>

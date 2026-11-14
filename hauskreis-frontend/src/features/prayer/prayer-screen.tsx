@@ -38,7 +38,12 @@ import {
   usePrayerBuddyRounds,
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import { formatDayMonth, formatDayRange, formatRelativeDay } from '@/lib/date';
+import {
+  formatDayMonth,
+  formatDayRange,
+  formatRelativeDay,
+  today,
+} from '@/lib/date';
 import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { circleOf } from './circle';
 import type {
@@ -212,14 +217,34 @@ function RoundBlock({ round }: { round: PrayerBuddyRound }) {
       <p className="mb-2 flex items-baseline gap-2 px-1 text-xs font-bold text-stone-500">
         {formatDayRange(round.periodStart, round.periodEnd)}
         <span className="text-[11px] font-semibold text-stone-400">
-          {/* Der Anfang, nicht das Ende: „in 2 Wochen" ist die Antwort auf
-              „wann bin ich dran", „vor 6 Wochen" auf „wann war das". */}
-          ab {formatRelativeDay(round.periodStart)}
+          {roundWhen(round)}
         </span>
       </p>
       <GroupList groups={round.groups} />
     </div>
   );
+}
+
+/**
+ * Wo eine Runde von heute aus steht — als ganzer Satzteil.
+ *
+ * Vorher stand dort „ab in einer Woche" und „ab vor 3 Wochen": Ein „ab" vor
+ * einem Abstand liest sich nicht, schon gar nicht rückwärts. Jetzt hat jede
+ * Richtung ihr Verb, und gemessen wird am Ende, das die Frage beantwortet —
+ * eine kommende Runde am Anfang („wann bin ich dran"), eine vergangene am
+ * Ende („wie lange ist das her"). Die laufende steht oben in eigener Karte;
+ * taucht sie hier doch auf, sagt die Zeile, bis wann.
+ */
+function roundWhen(round: PrayerBuddyRound): string {
+  const now = today();
+
+  if (round.periodStart > now) {
+    return `beginnt ${formatRelativeDay(round.periodStart)}`;
+  }
+  if (round.periodEnd < now) {
+    return `endete ${formatRelativeDay(round.periodEnd)}`;
+  }
+  return `läuft bis ${formatDayMonth(round.periodEnd)}`;
 }
 
 /**

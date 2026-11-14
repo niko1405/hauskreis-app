@@ -164,6 +164,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/hauskreise/{hauskreisId}/birthdays/occasions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['BirthdayController_findBetween'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/hauskreise/{hauskreisId}/birthdays/pairings': {
     parameters: {
       query?: never;
@@ -2644,6 +2660,38 @@ export interface components {
         version: number;
       };
     };
+    BirthdayOccasionListResponseDto: {
+      /** Format: uuid */
+      id: string;
+      person: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      };
+      /** Format: date */
+      occursOn: string;
+      age: number | null;
+      daysUntil: number;
+      responsible: {
+        /** Format: uuid */
+        id: string;
+        name: string;
+        /** Format: date-time */
+        photoUpdatedAt: string | null;
+      } | null;
+      frozen: boolean;
+      isOwn: boolean;
+      giftDecided: boolean;
+      gift: {
+        /** Format: uuid */
+        id: string;
+        text: string;
+      } | null;
+      priceCents: number | null;
+      shareCents: number | null;
+    }[];
     BirthdayGiftConfigResponseDto: {
       enabled: boolean;
       /** @enum {string} */
@@ -5516,6 +5564,66 @@ export interface operations {
       };
       /** @description Kein `If-Match` mitgeschickt. Den ETag aus dem vorangehenden GET verwenden. */
       428: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+    };
+  };
+  BirthdayController_findBetween: {
+    parameters: {
+      query: {
+        from: string;
+        to: string;
+      };
+      header?: never;
+      path: {
+        hauskreisId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BirthdayOccasionListResponseDto'];
+        };
+      };
+      /** @description Eingabe passt nicht zum Schema — `errors` nennt die Felder */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Token fehlt, ist abgelaufen oder gehört zu einem fremden Client */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Angemeldet, aber ohne das nötige Recht */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorDto'];
+        };
+      };
+      /** @description Nicht vorhanden — oder gehört zu einem anderen Hauskreis */
+      404: {
         headers: {
           [name: string]: unknown;
         };

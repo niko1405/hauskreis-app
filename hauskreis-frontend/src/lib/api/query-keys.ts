@@ -196,6 +196,9 @@ export const qk = {
       birthdays: {
         all: [...root, 'birthdays'] as const,
         overview: [...root, 'birthdays', 'overview'] as const,
+        /** Ein Zeitraum für den Kalender — unter `all`, damit jede Änderung ihn mitnimmt. */
+        range: (from: string, to: string) =>
+          [...root, 'birthdays', 'range', from, to] as const,
         detail: (occasionId: string) =>
           [...root, 'birthdays', 'detail', occasionId] as const,
         config: [...root, 'birthdays', 'config'] as const,

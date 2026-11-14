@@ -5,6 +5,7 @@
 import { ForbiddenException, BadRequestException } from '@nestjs/common';
 import { BirthdayService, OPEN_PAYMENT_DAYS } from './birthday.service';
 import { birthdayDetailResponseSchema } from './dto/birthday-response.dto';
+import { birthdayRangeQuerySchema, MAX_RANGE_DAYS } from './dto/birthday.dto';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { NotificationService } from '../notification/notification.service';
 import type { BirthdayConfigService } from './birthday-config.service';
@@ -316,5 +317,78 @@ describe('BirthdayService — Anteil und bezahlt', () => {
 
     await expect(service.openPayments('hk', id(5))).resolves.toEqual([]);
     expect(occasionFindMany).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Der Kalender blättert auch zurück — und ein vergangener Geburtstag ist eine
+ * Runde mit eigener Ansicht, also steht er dort.
+ */
+describe('BirthdayService.between', () => {
+  it('liefert auch vergangene Geburtstage des Zeitraums', async () => {
+    const { service, occasionFindMany } = setup();
+
+    const rows = await service.between(
+      'hk',
+      CHRIS.id,
+      utc('2026-08-01'),
+      utc('2026-08-31'),
+    );
+
+    expect(occasionFindMany.mock.calls[0][0].where).toEqual({
+      hauskreisId: 'hk',
+      occursOn: { gte: utc('2026-08-01'), lte: utc('2026-08-31') },
+    });
+    // Der 10. August liegt vor „heute" (20. August) und steht trotzdem da.
+    expect(rows).toMatchObject([
+      { id: OCCASION, occursOn: utc('2026-08-10'), daysUntil: -10 },
+    ]);
+  });
+
+  it('verrät dem Geburtstagskind auch hier nichts über das Geschenk', async () => {
+    const { service } = setup();
+
+    const [row] = await service.between(
+      'hk',
+      ANNA.id,
+      utc('2026-08-01'),
+      utc('2026-08-31'),
+    );
+
+    expect(row).toMatchObject({
+      isOwn: true,
+      gift: null,
+      priceCents: null,
+      shareCents: null,
+    });
+  });
+});
+
+describe('birthdayRangeQuerySchema', () => {
+  it('nimmt einen Monat', () => {
+    expect(
+      birthdayRangeQuerySchema.safeParse({
+        from: '2026-08-01',
+        to: '2026-08-31',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('lehnt einen verdrehten Zeitraum ab', () => {
+    expect(
+      birthdayRangeQuerySchema.safeParse({
+        from: '2026-08-31',
+        to: '2026-08-01',
+      }).success,
+    ).toBe(false);
+  });
+
+  it(`lehnt mehr als ${MAX_RANGE_DAYS} Tage ab`, () => {
+    expect(
+      birthdayRangeQuerySchema.safeParse({
+        from: '2026-01-01',
+        to: '2026-12-31',
+      }).success,
+    ).toBe(false);
   });
 });

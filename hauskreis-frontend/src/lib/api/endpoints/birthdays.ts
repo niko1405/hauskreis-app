@@ -20,6 +20,7 @@ import { hkPath } from './paths';
 import type {
   BirthdayDetail,
   BirthdayGiftConfig,
+  BirthdayOccasion,
   BirthdayOverview,
   CreateGiftIdeaCommentInput,
   CreateGiftIdeaInput,
@@ -37,6 +38,21 @@ export function getBirthdayOverview(
   signal?: AbortSignal,
 ): Promise<BirthdayOverview> {
   return apiGet<BirthdayOverview>(base(hauskreisId), { signal });
+}
+
+/**
+ * Die Geburtstage eines Zeitraums, vergangene eingeschlossen — für den
+ * Kalender. Die Übersicht kennt je Person nur das nächste Vorkommen.
+ */
+export function getBirthdayOccasions(
+  hauskreisId: string,
+  range: { from: string; to: string },
+  signal?: AbortSignal,
+): Promise<BirthdayOccasion[]> {
+  return apiGet<BirthdayOccasion[]>(`${base(hauskreisId)}/occasions`, {
+    query: { ...range },
+    signal,
+  });
 }
 
 export function getBirthday(

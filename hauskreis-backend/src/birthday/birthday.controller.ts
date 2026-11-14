@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { BirthdayService } from './birthday.service';
 import { BirthdayConfigService } from './birthday-config.service';
@@ -15,6 +16,7 @@ import { BirthdayPlannerService } from './birthday-planner.service';
 import { HauskreisParamsDto } from '../hauskreis/dto/hauskreis.dto';
 import {
   BirthdayParamsDto,
+  BirthdayRangeQueryDto,
   CreateGiftIdeaCommentDto,
   CreateGiftIdeaDto,
   DecideGiftDto,
@@ -26,6 +28,7 @@ import {
 import {
   BirthdayDetailResponseDto,
   BirthdayGiftConfigResponseDto,
+  BirthdayOccasionListResponseDto,
   BirthdayOverviewResponseDto,
   GiftIdeaListResponseDto,
   GiftPairingListResponseDto,
@@ -48,7 +51,7 @@ import {
  * Wer Geburtstag hat, bekommt zu seiner eigenen Runde nichts geschickt. Stünde
  * die Kennung im Pfad, wäre die Überraschung eine Zeichenkette weit weg.
  *
- * `config` und `pairings` stehen **vor** `:id` — sonst nähme Nest sie als
+ * `occasions`, `config` und `pairings` stehen **vor** `:id` — sonst nähme Nest sie als
  * Kennung und antwortete mit einem Validierungsfehler. Derselbe Hinweis steht
  * schon an `meeting.controller.ts`.
  */
@@ -68,6 +71,30 @@ export class BirthdayController {
     @CurrentMembership() membership: HauskreisMembership,
   ) {
     return this.birthdays.overview(params.hauskreisId, membership.id);
+  }
+
+  /**
+   * Die Geburtstage eines Zeitraums, auch vergangene — für den Kalender.
+   *
+   * Die Übersicht führt je Person nur das nächste Vorkommen; im Kalender
+   * blättert man aber auch zurück. Vergangene Runden bleiben als Geschichte
+   * stehen und haben eine eigene Ansicht, also können sie dort auch stehen.
+   * Aus der Zeit, bevor es die App gab, steht nichts — errechnet wird hier
+   * nichts, was es nie gab.
+   */
+  @Get('occasions')
+  @ApiZodResponse(BirthdayOccasionListResponseDto)
+  findBetween(
+    @Param() params: HauskreisParamsDto,
+    @Query() query: BirthdayRangeQueryDto,
+    @CurrentMembership() membership: HauskreisMembership,
+  ) {
+    return this.birthdays.between(
+      params.hauskreisId,
+      membership.id,
+      query.from,
+      query.to,
+    );
   }
 
   @Get('config')

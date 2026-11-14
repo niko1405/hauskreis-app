@@ -34,6 +34,23 @@ export function useBirthdays() {
   });
 }
 
+/**
+ * Die Geburtstage eines Zeitraums, vergangene eingeschlossen — der Kalender
+ * blättert auch zurück. Je Monat eine Abfrage, mit derselben Frische wie die
+ * Übersicht.
+ */
+export function useBirthdayOccasions(from: string, to: string) {
+  const { hauskreisId, enabled, keys } = useHk();
+
+  return useQuery({
+    queryKey: keys.birthdays.range(from, to),
+    queryFn: ({ signal }) =>
+      birthdaysApi.getBirthdayOccasions(hauskreisId, { from, to }, signal),
+    enabled,
+    staleTime: STALE.list,
+  });
+}
+
 export function useBirthday(occasionId: string | undefined) {
   const { hauskreisId, enabled, keys } = useHk();
 

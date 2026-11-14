@@ -212,6 +212,10 @@ export class BirthdayOverviewResponseDto extends createZodDto(
 export class BirthdayDetailResponseDto extends createZodDto(
   birthdayDetailResponseSchema,
 ) {}
+/** Die Geburtstage eines Zeitraums, für den Kalender — vergangene eingeschlossen. */
+export class BirthdayOccasionListResponseDto extends createZodDto(
+  z.array(birthdayOccasionResponseSchema),
+) {}
 export class BirthdayGiftConfigResponseDto extends createZodDto(
   birthdayGiftConfigResponseSchema,
 ) {}
