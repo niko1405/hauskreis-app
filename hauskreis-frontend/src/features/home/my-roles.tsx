@@ -55,6 +55,8 @@ const CATEGORIES: Exclude<AssignmentRole, 'PRAYER_BUDDY'>[] = [
 
 type Tab = 'next' | 'later';
 
+const TABS: readonly Tab[] = ['next', 'later'];
+
 export function MyRoles({
   roles,
   nextMeetingId,
@@ -85,8 +87,6 @@ export function MyRoles({
     ),
   ).filter((role) => role !== undefined);
 
-  const shown = tab === 'next' ? atNextMeeting : later;
-
   return (
     <>
       <div
@@ -109,33 +109,53 @@ export function MyRoles({
         />
       </div>
 
-      <div
-        role="tabpanel"
-        aria-label={tab === 'next' ? 'Nächstes' : 'Zukünftige'}
-      >
-        {shown.length > 0 ? (
-          <Card className="overflow-hidden p-0">
-            <ul className="divide-y divide-line">
-              {shown.map((role) => (
-                <li key={roleKey(role)}>
-                  <RoleRow role={role} urgent={tab === 'next'} />
-                </li>
-              ))}
-            </ul>
-          </Card>
-        ) : (
-          <Empty
-            tab={tab}
-            noMeeting={nextMeetingId === null}
-            onShowLater={
-              // Nur unter „Du hast frei!" — ohne nächsten Abend steht ohnehin
-              // „Kein Termin geplant", und „Zukünftige" ist dann alles.
-              tab === 'next' && nextMeetingId !== null && later.length > 0
-                ? () => setTab('later')
-                : undefined
-            }
-          />
-        )}
+      {/* **Beide Register liegen übereinander in derselben Zelle**, nur eines
+          ist zu sehen. Der Kasten ist damit so hoch wie das höhere von beiden,
+          und beim Umschalten springt nichts darunter — eine feste
+          Mindesthöhe wäre bei drei Rollen zu klein und bei einer zu groß. */}
+      <div className="grid">
+        {TABS.map((panel) => {
+          const active = panel === tab;
+          const items = panel === 'next' ? atNextMeeting : later;
+
+          return (
+            <div
+              key={panel}
+              role="tabpanel"
+              aria-label={panel === 'next' ? 'Nächstes' : 'Zukünftige'}
+              aria-hidden={!active}
+              inert={!active}
+              className={cn('[grid-area:1/1]', !active && 'invisible')}
+            >
+              {items.length > 0 ? (
+                <Card className="overflow-hidden p-0">
+                  <ul className="divide-y divide-line">
+                    {items.map((role) => (
+                      <li key={roleKey(role)}>
+                        <RoleRow role={role} urgent={panel === 'next'} />
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              ) : (
+                <Empty
+                  tab={panel}
+                  noMeeting={nextMeetingId === null}
+                  onShowLater={
+                    // Nur unter „Du hast frei!" — ohne nächsten Abend steht
+                    // ohnehin „Kein Termin geplant", und „Zukünftige" ist dann
+                    // alles.
+                    panel === 'next' &&
+                    nextMeetingId !== null &&
+                    later.length > 0
+                      ? () => setTab('later')
+                      : undefined
+                  }
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
     </>
   );
@@ -224,11 +244,13 @@ function Empty({
   return (
     <Card
       className={cn(
-        'border-dashed bg-transparent shadow-none',
+        'flex h-full flex-col border-dashed bg-transparent shadow-none',
         onShowLater && 'overflow-hidden',
       )}
     >
-      <div className="flex flex-col items-center gap-2 py-2 text-center">
+      {/* `flex-1` und mittig: Ist das andere Register höher, steht der Satz
+          in der Mitte der Fläche statt oben mit einer Lücke darunter. */}
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 py-2 text-center">
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-canvas text-stone-300">
           <Icon size={22} />
         </span>
