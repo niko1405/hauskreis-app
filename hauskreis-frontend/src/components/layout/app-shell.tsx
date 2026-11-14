@@ -34,7 +34,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <ShellProviders>
       <div className="px-safe flex min-h-dvh justify-center bg-shell">
         <GlobalProgress />
-        <div className="flex w-full max-w-md flex-col border-line-strong/50 bg-canvas shadow-xl md:max-w-5xl md:flex-row md:border-x">
+        {/* Mit dem Fenster wachsend, in Stufen: bis `lg` wie gehabt, ab `xl`
+            und `2xl` breiter. Auf einem großen Bildschirm stand die App sonst
+            als schmaler Streifen in der Mitte — Kalender und Planung haben
+            Platz für mehr, und lange Listen werden kürzer. Gedeckelt bleibt
+            sie trotzdem: Eine Karte über 2500 Pixel liest niemand. */}
+        <div className="flex w-full max-w-md flex-col border-line-strong/50 bg-canvas shadow-xl md:max-w-5xl md:flex-row md:border-x xl:max-w-6xl 2xl:max-w-[90rem]">
           <Sidebar />
           {/* `min-w-0` ist hier kein Zierrat. Ab `md` ist das hier ein Flex-Kind
             einer Zeile, und ein Flex-Kind darf ohne das nicht unter seine
