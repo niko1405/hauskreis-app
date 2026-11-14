@@ -323,8 +323,12 @@ function InviteSheet({
   /**
    * Ein Knopf für eine Absicht — „jemanden einladen" —, und das Sheet fragt,
    * wie. Zwei Knöpfe in der Karte wären zwei Antworten auf dieselbe Frage.
+   *
+   * **Der Link zuerst.** Er ist der übliche Weg: einmal in die WhatsApp-Gruppe,
+   * und jede:r kommt herein. Die Mail braucht man für den einen, den man
+   * gleich als Admin haben will, oder für jemanden außerhalb des Chats.
    */
-  const [mode, setMode] = useState<'email' | 'link'>('email');
+  const [mode, setMode] = useState<'email' | 'link'>('link');
 
   const invite = useInvitePerson();
   const toast = useToast();
@@ -367,17 +371,10 @@ function InviteSheet({
       open={open}
       onClose={onClose}
       title="Jemanden einladen"
-      subtitle={
-        mode === 'email'
-          ? 'Die Person bekommt eine Mail mit einem Link zum Anmelden.'
-          : 'Wer den Link hat, kann beitreten — als Mitglied.'
-      }
+      // Beim Link wirkt jede Aktion sofort — es gibt nichts abzuschließen, und
+      // zu geht das Sheet über sein ×.
       footer={
-        mode === 'link' ? (
-          <Button variant="secondary" className="w-full" onClick={onClose}>
-            Fertig
-          </Button>
-        ) : (
+        mode === 'link' ? undefined : (
           <div className="flex gap-2">
             <Button variant="secondary" className="flex-1" onClick={onClose}>
               Abbrechen
@@ -405,8 +402,8 @@ function InviteSheet({
           value={mode}
           onChange={setMode}
           options={[
-            { value: 'email', label: 'Per E-Mail' },
             { value: 'link', label: 'Per Link' },
+            { value: 'email', label: 'Per E-Mail' },
           ]}
         />
 

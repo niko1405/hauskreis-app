@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Der Einladungslink — die zweite Art, jemanden einzuladen.
+ * Der Einladungslink — der übliche Weg, jemanden einzuladen.
  *
  * Die E-Mail-Einladung verknüpft über eine Adresse, der Link über ein
  * Geheimnis: Wer ihn hat, tritt bei, mit welchem Konto auch immer. Dafür ist er
@@ -12,12 +12,17 @@
  * Über ihn kommt man nur als Mitglied herein; Admin-Rechte vergibt man danach
  * in der Liste.
  *
+ * **Knapp gehalten.** Ohne Link steht da nur, wie lange er gelten soll, und ein
+ * Knopf; mit Link der Link und wie er weiterkommt. Was er bewirkt, steht hinter
+ * dem (i) — wer zum zweiten Mal einlädt, liest es nicht mehr.
+ *
  * Aktionen wie alles in der Mitgliederverwaltung: Sie wirken sofort.
  */
-import { Copy, Link2Off, RefreshCw, Share2 } from 'lucide-react';
+import { Copy, Share2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/components/ui/confirm';
+import { InfoTip } from '@/components/ui/info-tip';
 import { Segmented } from '@/components/ui/segmented';
 import { ErrorState, Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -38,6 +43,27 @@ const VALIDITY = [
 
 type Validity = (typeof VALIDITY)[number]['value'];
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Wie lange ein bestehender Link gelten sollte — fürs Erneuern.
+ *
+ * Erneuern fragt nicht noch einmal nach der Laufzeit: Wer einen Link für einen
+ * Tag gemacht hat, will den neuen auch für einen Tag. Gespeichert ist sie
+ * nicht, nur Anfang und Ende; daraus gerechnet und auf die nächste der drei
+ * Stufen gelegt.
+ */
+function validityOf(link: InviteLink): InviteLinkValidDays {
+  const days =
+    (new Date(link.expiresAt).getTime() - new Date(link.createdAt).getTime()) /
+    DAY_MS;
+  const options: InviteLinkValidDays[] = [1, 7, 30];
+
+  return options.reduce((best, option) =>
+    Math.abs(option - days) < Math.abs(best - days) ? option : best,
+  );
+}
+
 export function InviteLinkPanel() {
   const state = useInviteLink();
   const replace = useReplaceInviteLink();
@@ -56,91 +82,97 @@ export function InviteLinkPanel() {
   const link = state.data?.link ?? null;
   const active = link !== null && new Date(link.expiresAt) > new Date();
 
-  const create = async () => {
+  if (!active) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-500">
+            Gültig für
+            <InfoTip label="Einladungslink">
+              Wer den Link öffnet, tritt mit einem bestehenden oder neuen Konto
+              bei — immer als Mitglied. Admin-Rechte vergibst du danach in der
+              Liste.
+            </InfoTip>
+          </p>
+          <Segmented
+            fill
+            size="sm"
+            label="Gültig für"
+            value={validity}
+            onChange={setValidity}
+            options={[...VALIDITY]}
+          />
+        </div>
+
+        <Button
+          className="w-full"
+          loading={replace.isPending}
+          onClick={() =>
+            replace.mutate(Number(validity) as InviteLinkValidDays, {
+              onSuccess: () => toast.success('Link steht.'),
+            })
+          }
+        >
+          Link erstellen
+        </Button>
+      </div>
+    );
+  }
+
+  const renew = async () => {
     // Erneuern macht den alten Link wertlos — wer ihn schon hat, steht danach
     // vor „gilt nicht mehr". Das soll niemand aus Versehen auslösen.
-    if (active) {
-      const ok = await confirm({
-        title: 'Link erneuern?',
-        body: 'Der bisherige Link geht danach nicht mehr. Wer ihn schon bekommen, aber noch nicht benutzt hat, braucht den neuen.',
-        confirmLabel: 'Erneuern',
-      });
-      if (!ok) return;
-    }
+    const ok = await confirm({
+      title: 'Link erneuern?',
+      body: 'Der bisherige Link geht danach nicht mehr. Wer ihn schon bekommen, aber noch nicht benutzt hat, braucht den neuen.',
+      confirmLabel: 'Erneuern',
+    });
+    if (!ok) return;
 
-    replace.mutate(Number(validity) as InviteLinkValidDays, {
-      onSuccess: () =>
-        toast.success(active ? 'Neuer Link steht.' : 'Link steht.'),
+    replace.mutate(validityOf(link), {
+      onSuccess: () => toast.success('Neuer Link steht.'),
+    });
+  };
+
+  const switchOff = async () => {
+    const ok = await confirm({
+      title: 'Link abschalten?',
+      body: 'Danach führt er nirgends mehr hin. Wer schon beigetreten ist, bleibt dabei.',
+      confirmLabel: 'Abschalten',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    remove.mutate(undefined, {
+      onSuccess: () => toast.success('Link abgeschaltet.'),
     });
   };
 
   return (
-    <div className="space-y-5">
-      {active ? (
-        <ActiveLink link={link} />
-      ) : (
-        <p className="text-sm leading-relaxed text-stone-500">
-          {link
-            ? `Der letzte Link ist am ${formatTimestamp(link.expiresAt)} abgelaufen.`
-            : 'Es gibt gerade keinen Link.'}{' '}
-          Erstell einen und teil ihn, wo eure Gruppe schreibt — wer ihn öffnet,
-          kann mit einem bestehenden oder einem neuen Konto beitreten.
-        </p>
-      )}
+    <div className="space-y-4">
+      <ActiveLink link={link} />
 
-      <div>
-        <p className="mb-1.5 text-xs font-semibold text-stone-500">
-          {active ? 'Ein neuer Link gilt' : 'Gilt'}
-        </p>
-        <Segmented
-          fill
-          size="sm"
-          label="Gültigkeit"
-          value={validity}
-          onChange={setValidity}
-          options={[...VALIDITY]}
-        />
-      </div>
-
-      <div className="flex gap-2">
-        {active && (
-          <Button
-            variant="ghost"
-            className="flex-1 text-alert"
-            loading={remove.isPending}
-            onClick={async () => {
-              const ok = await confirm({
-                title: 'Link abschalten?',
-                body: 'Danach führt er nirgends mehr hin. Wer schon beigetreten ist, bleibt dabei.',
-                confirmLabel: 'Abschalten',
-                tone: 'danger',
-              });
-              if (!ok) return;
-              remove.mutate(undefined, {
-                onSuccess: () => toast.success('Link abgeschaltet.'),
-              });
-            }}
-          >
-            <Link2Off size={14} />
-            Abschalten
-          </Button>
-        )}
+      {/* Klein und für sich: Beides braucht man selten, und keins davon soll
+          neben „Teilen" stehen, wo der Daumen gerade ist. */}
+      <div className="flex justify-center gap-1">
         <Button
-          variant={active ? 'secondary' : 'primary'}
-          className="flex-1"
+          variant="ghost"
+          size="sm"
           loading={replace.isPending}
-          onClick={() => void create()}
+          onClick={() => void renew()}
         >
-          <RefreshCw size={14} />
-          {active ? 'Erneuern' : 'Link erstellen'}
+          Erneuern
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-alert"
+          loading={remove.isPending}
+          onClick={() => void switchOff()}
+        >
+          Abschalten
         </Button>
       </div>
-
-      <p className="text-[11px] leading-relaxed text-stone-400">
-        Über den Link kommt man als Mitglied herein; Admin-Rechte vergibst du
-        danach in der Liste. Wer beitritt, steht sofort darin, und alle anderen
-        bekommen Bescheid.
-      </p>
     </div>
   );
 }
@@ -189,15 +221,15 @@ function ActiveLink({ link }: { link: InviteLink }) {
 
   return (
     <div className="space-y-3">
-      <p className="rounded-md bg-canvas px-3 py-2 font-mono text-xs break-all text-stone-700 select-all">
-        {url}
-      </p>
-      <p className="text-[11px] text-stone-400">
-        Gilt bis {formatTimestamp(link.expiresAt)}
-        {link.joinCount > 0 &&
-          ` · ${link.joinCount === 1 ? 'einmal' : `${link.joinCount}-mal`} benutzt`}
-        {link.createdBy && ` · erstellt von ${link.createdBy.name}`}
-      </p>
+      <div>
+        <p className="rounded-md bg-canvas px-3 py-2 font-mono text-xs break-all text-stone-700 select-all">
+          {url}
+        </p>
+        <p className="mt-1.5 text-[11px] text-stone-400">
+          Gilt bis {formatTimestamp(link.expiresAt)}
+          {link.joinCount > 0 && ` · ${link.joinCount}× benutzt`}
+        </p>
+      </div>
       <div className="flex gap-2">
         {canShare && (
           <Button className="flex-1" onClick={() => void share()}>
