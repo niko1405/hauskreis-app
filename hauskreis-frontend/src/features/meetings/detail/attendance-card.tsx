@@ -28,9 +28,9 @@
  * davor las er sich wie ein Datenfeld. Die Verspätung bleibt eine Zeile in
  * Terracotta darüber — sie ändert etwas am Abend, der Satz erklärt nur.
  *
- * Die eigene Antwort steht unten am Bildschirm (`answer-bar.tsx`, dort weiter
- * knapp mit Symbol über `AnswerNote`); Farben, Kurzformen und Symbole teilen
- * sich beide über `domain/attendance-answers.ts`.
+ * Die eigene Antwort steht unten am Bildschirm (`answer-bar.tsx`, der Satz
+ * dort erst ausgeklappt); Farben, Kurzformen und Symbole teilen sich beide über
+ * `domain/attendance-answers.ts`.
  */
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
