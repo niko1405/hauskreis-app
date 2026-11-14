@@ -681,31 +681,36 @@ function Loaded({
         {/* Eine Zeile je Rolle, die es an **diesem** Abend gibt — dieselbe
             Aufstellung, nach der auch die Planungstabelle „fertig geplant"
             entscheidet (`meetingRoles`), nur ohne den Gastgeber: der steht
-            oben am Ort. Ein Baustein, der aus ist, steht gar nicht da. */}
-        <section>
-          <SectionTitle
-            action={
-              <span className="text-[11px] font-semibold text-stone-400 normal-case">
-                {besetzt} von {rollen.length} besetzt
-              </span>
-            }
-          >
-            Zuständigkeiten
-          </SectionTitle>
+            oben am Ort. Ein Baustein, der aus ist, steht gar nicht da.
 
-          <div className="space-y-2">
-            {rollen.map((slot) => (
-              <RoleRow
-                key={slot.role}
-                role={slot.role}
-                people={slot.people}
-                onEdit={
-                  cancelled || reading ? undefined : () => openRole(slot.role)
-                }
-              />
-            ))}
-          </div>
-        </section>
+            **Bleibt keine übrig, fehlt die ganze Sektion** — „0 von 0
+            besetzt" über einer leeren Fläche wäre eine Auskunft über nichts. */}
+        {rollen.length > 0 && (
+          <section>
+            <SectionTitle
+              action={
+                <span className="text-[11px] font-semibold text-stone-400 normal-case">
+                  {besetzt} von {rollen.length} besetzt
+                </span>
+              }
+            >
+              Zuständigkeiten
+            </SectionTitle>
+
+            <div className="space-y-2">
+              {rollen.map((slot) => (
+                <RoleRow
+                  key={slot.role}
+                  role={slot.role}
+                  people={slot.people}
+                  onEdit={
+                    cancelled || reading ? undefined : () => openRole(slot.role)
+                  }
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {meeting.hasSongSlot && (
           <SongsCard
