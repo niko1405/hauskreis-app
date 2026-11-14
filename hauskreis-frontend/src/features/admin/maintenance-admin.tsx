@@ -36,14 +36,18 @@ import type {
 } from '@/lib/api/types';
 import { useAdminDraftSection } from './admin-draft';
 
-export function MaintenanceAdmin() {
-  return (
-    <>
-      <ScheduleSettings />
-      <PrayerBuddyConfigCard />
-      <JobsCard />
-    </>
-  );
+/**
+ * Die Rhythmen der Gruppe: Termine, Gebet, Actionstep — in dieser Folge, direkt
+ * nach den Mitgliedern. Sie sagen, wie die Gruppe lebt; Geschenke und
+ * Gewichtung sind Feinheiten, die man seltener anfasst.
+ */
+export function GroupSettingsAdmin() {
+  return <ScheduleSettings between={<PrayerBuddyConfigCard />} />;
+}
+
+/** Die Läufe — ganz am Ende, denn man braucht sie selten. */
+export function JobsAdmin() {
+  return <JobsCard />;
 }
 
 /** 0 = Sonntag … 6 = Samstag, wie `Date.getUTCDay()` es zählt. */
@@ -107,8 +111,13 @@ function scheduleOf(current: MeetingSchedule | undefined): Schedule {
  * hintereinander auf dieselbe Version, und der zweite bekäme einen Konflikt
  * mit dem ersten. Getrennte Karten bleiben es trotzdem: Der Actionstep sagt
  * nicht, wann ihr euch trefft, sondern was danach stehen bleibt.
+ *
+ * `between` steht zwischen den beiden — der Gebets-Rhythmus: Er ist ein
+ * Rhythmus wie der der Termine und gehört neben ihn, auch wenn er eine eigene
+ * Zeile am Server hat. Ein Platz statt eines zweiten Entwurfs, aus dem Grund
+ * oben.
  */
-function ScheduleSettings() {
+function ScheduleSettings({ between }: { between?: React.ReactNode }) {
   const schedule = useMeetingSchedule();
   const update = useUpdateMeetingSchedule();
   const [draft, setDraft] = useState<Schedule | null>(null);
@@ -289,6 +298,8 @@ function ScheduleSettings() {
           )}
         </Card>
       </section>
+
+      {between}
 
       <section>
         <SectionTitle>Actionstep der Woche</SectionTitle>
