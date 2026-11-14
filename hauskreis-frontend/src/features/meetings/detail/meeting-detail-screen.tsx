@@ -11,8 +11,11 @@
  * Zwei Dinge prägen den Aufbau:
  *
  * **Ort und Gastgeber sind eine Entscheidung.** Wer hostet, hostet bei sich.
- * Deshalb gibt es dafür auch nur **ein** Bedienelement: `VenueSheet` mit zwei
- * Registern, „Zuhause" und „Treffpunkte". Die Ort-Zeile hier ist reine Anzeige.
+ * Deshalb gibt es dafür auch nur **ein** Sheet: `VenueSheet` mit zwei
+ * Registern, „Zuhause" und „Treffpunkte". Es öffnet sich von zwei Stellen aus —
+ * vom Stift der Host-Zeile und vom Knopf an „Ort & Anreise". Der zweite ist
+ * nötig: Ist ein Treffpunkt gewählt, gibt es keine Host-Rolle und damit keine
+ * Host-Zeile, und ohne ihn käme man nicht mehr zurück zu einem Zuhause.
  * Durchgesetzt wird die Kopplung im Backend (`MeetingService.resolveVenue`).
  *
  * **Ein vergangener Abend ist ein eigener Zustand**, nicht ein ausgegrauter
@@ -29,6 +32,7 @@ import {
   ExternalLink,
   Info,
   MapPin,
+  MapPinPen,
   Navigation,
   Pencil,
   UserPen,
@@ -636,6 +640,21 @@ function Loaded({
             {/* Mobil nur das Symbol: Mit Wort nahm der Knopf Name und
                 Adresse daneben so viel Platz, dass beide abgeschnitten waren.
                 Was er tut, sagt `aria-label`. */}
+            {/* **Den Ort ändern, hier, wo er steht.** Bisher führte nur der
+                Stift der Host-Zeile ins Sheet — und nach einem Treffpunkt gab
+                es die Zeile nicht mehr (ein Treffpunkt braucht keinen
+                Gastgeber). Dieser Knopf öffnet dasselbe Sheet, in beiden
+                Fällen. Nicht an einem abgesagten Abend und nicht beim
+                Nachlesen, wie die Stifte der Rollen. */}
+            {!cancelled && !reading && (
+              <IconButton
+                label="Ort ändern"
+                onClick={() => setChoosingVenue(true)}
+              >
+                <MapPinPen size={17} />
+              </IconButton>
+            )}
+
             {meeting.location && !reading && (
               <a
                 href={mapsUrl(meeting.location)}
