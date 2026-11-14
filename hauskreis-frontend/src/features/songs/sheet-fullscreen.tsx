@@ -476,7 +476,7 @@ export function SheetFullscreen({
         label="Vollbild schließen"
         onClick={onClose}
         className={cn(
-          'absolute top-[calc(env(safe-area-inset-top)+1rem)] right-4 border border-line bg-card shadow-sm transition-opacity',
+          'absolute top-[calc(var(--safe-top)+1rem)] right-4 border border-line bg-card shadow-sm transition-opacity',
           !toolbar && 'pointer-events-none opacity-0',
         )}
       >

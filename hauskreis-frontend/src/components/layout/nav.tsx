@@ -243,7 +243,7 @@ export function Sidebar() {
         // Der sichere Rand kommt zum vorhandenen Abstand dazu: Auf dem iPad vom
         // Home-Bildschirm reicht die App bis unter die Statusleiste, und dort
         // stünde sonst „Hauskreis" unter der Uhr.
-        className="min-h-0 flex-1 overflow-y-auto px-4 pt-[calc(env(safe-area-inset-top)+2rem)] pb-4"
+        className="min-h-0 flex-1 overflow-y-auto px-4 pt-[calc(var(--safe-top)+2rem)] pb-4"
       >
         <p className="mb-6 px-3 font-serif text-2xl font-bold text-stone-900">
           Hauskreis

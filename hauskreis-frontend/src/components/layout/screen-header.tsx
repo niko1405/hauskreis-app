@@ -92,7 +92,7 @@ export function ScreenHeader({
       {/* Das Bild geht randlos bis unter die Statusleiste — das ist der
           native Eindruck. Nur sein Inhalt rückt um den sicheren Rand nach
           unten, damit der Titel nicht neben der Dynamic Island klebt. */}
-      <div className="relative flex items-end justify-between gap-4 px-5 pt-[calc(env(safe-area-inset-top)+8rem)] pb-4">
+      <div className="relative flex items-end justify-between gap-4 px-5 pt-[calc(var(--safe-top)+8rem)] pb-4">
         <div className="min-w-0">
           <h1 className="font-serif text-3xl leading-tight font-bold text-stone-900">
             {title}

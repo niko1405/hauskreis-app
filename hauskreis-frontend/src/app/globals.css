@@ -370,12 +370,38 @@ input[type='time']::-webkit-date-and-time-value {
  * `pt-safe` ist absichtlich kein Abstand am Gerüst, sondern einer, den
  * einzelne Kopfzeilen setzen: das Kopfbild soll randlos bis ganz oben gehen,
  * nur sein Inhalt tiefer beginnen.
+ *
+ * **Oben rechnet alles mit `--safe-top`, nicht mit `env()` direkt.** Seit
+ * iOS 26/27 legt iOS in der installierten App eine Unschärfe über den oberen
+ * Rand, die ein Stück unter die Statusleiste reicht (WebKit-Bug 301994). Mit
+ * `black-translucent` lässt sie sich nicht abstellen; der eine Weg, der sie
+ * abschaltet — eine deckende Fläche ganz oben —, füllt die Statusleiste mit
+ * einem dicken Balken und nimmt dem Kopfbild den Rand. Also gehen Knöpfe,
+ * Titel und Zurück-Pfeile unter der Unschärfe hindurch: Das Foto läuft weiter
+ * bis ganz oben und wird dort weichgezeichnet wie in jeder iOS-App, alles, was
+ * man drückt oder liest, steht darunter scharf.
+ *
+ * Nur in der installierten App unter iOS (`display-mode: standalone` und
+ * `-webkit-touch-callout`, das es nur in WebKit auf iOS gibt). Im Browser-Tab,
+ * unter Android und am Rechner ist `--safe-top` genau der sichere Rand. Der
+ * Schleier über der Uhr (`StatusBarScrim`) rechnet weiter mit `env()`: Er gilt
+ * der Statusleiste selbst, nicht dem, was darunter steht.
  */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+@media (display-mode: standalone) {
+  @supports (-webkit-touch-callout: none) {
+    :root {
+      --safe-top: calc(env(safe-area-inset-top, 0px) + 2rem);
+    }
+  }
+}
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .pt-safe {
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--safe-top);
 }
 
 /* Der sichere Rand **plus** ein eigener Abstand.
@@ -392,10 +418,10 @@ input[type='time']::-webkit-date-and-time-value {
  * sicheren Rand.
  */
 .pt-safe-4 {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 1rem);
+  padding-top: calc(var(--safe-top) + 1rem);
 }
 .pt-safe-6 {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 1.5rem);
+  padding-top: calc(var(--safe-top) + 1.5rem);
 }
 
 /* Das Gegenstück zu `pt-safe-4` — für einen Block, der den sicheren Rand
@@ -404,7 +430,7 @@ input[type='time']::-webkit-date-and-time-value {
  * oben, ist das Padding genau die Fläche unter der Statusleiste. So sind
  * Ruhe- und Klebeplatz derselbe, und es gibt nichts, das umspringen müsste. */
 .-mt-safe-4 {
-  margin-top: calc((env(safe-area-inset-top, 0px) + 1rem) * -1);
+  margin-top: calc((var(--safe-top) + 1rem) * -1);
 }
 .px-safe {
   padding-left: env(safe-area-inset-left, 0px);
@@ -423,14 +449,14 @@ input[type='time']::-webkit-date-and-time-value {
  * wie es ohne sie durchlief. `fixed` hätte dasselbe getan, aber die zentrierte
  * Spalte samt Seitenleiste ab `md` ein zweites Mal nachbauen müssen. */
 .h-header {
-  height: calc(env(safe-area-inset-top, 0px) + 3.5rem);
+  height: calc(var(--safe-top) + 3.5rem);
 }
 .header-inset {
-  margin-bottom: calc((env(safe-area-inset-top, 0px) + 3.5rem) * -1);
+  margin-bottom: calc((var(--safe-top) + 3.5rem) * -1);
 }
 /* Der Anfang der Sprechblase hinter der Glocke: genau unter der Leiste. */
 .top-header {
-  top: calc(env(safe-area-inset-top, 0px) + 3.5rem);
+  top: calc(var(--safe-top) + 3.5rem);
 }
 
 /* Der Schleier ganz oben, solange nicht gescrollt wurde.
@@ -468,13 +494,13 @@ input[type='time']::-webkit-date-and-time-value {
 /* Für die Kopfzeilen ohne Bild (Termine, Archiv): ihr eigener Abstand plus die
    Leiste darüber. Ohne das stünde der Titel dahinter. */
 .pt-header-6 {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 3.5rem + 1.5rem);
+  padding-top: calc(var(--safe-top) + 3.5rem + 1.5rem);
 }
 /* Am Rechner gibt es die Leiste nicht (`md:hidden` an ihr) — dann ist das
    wieder `pt-safe-6`. */
 @media (min-width: 48rem) {
   .pt-header-6 {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 1.5rem);
+    padding-top: calc(var(--safe-top) + 1.5rem);
   }
 }
 
