@@ -8,8 +8,15 @@
  * Umschalter Text/Akkorde, das Transponieren und „Anpassen" (Gitarre oder
  * Klavier). Das sind Fragen, die man einmal vor dem Lied beantwortet — sie
  * scrollen mit weg. Unten bleibt nur, was man während des Spielens braucht:
- * Schrift und Autoscroll mit seinem Tempo. Läuft der Autoscroll, tritt die
- * Leiste nach ein paar Sekunden zurück; ein Tipp aufs Blatt holt sie wieder.
+ * der Autoscroll mit seinem Tempo, und am Rechner die Schrift. Läuft der
+ * Autoscroll, tritt die Leiste nach ein paar Sekunden zurück; ein Tipp aufs
+ * Blatt holt sie wieder.
+ *
+ * **Die Schrift zieht man mit zwei Fingern größer**, wie ein Foto — auf dem
+ * Telefon gibt es dafür keinen Knopf. Ein „Aa", das eine Pille über dem
+ * Play-Knopf aufklappt, waren zwei Griffe für etwas, das die Finger in einem
+ * erledigen. Am Rechner gibt es keine zwei Finger; dort steht links in der
+ * Leiste ein kleiner Regler, in seiner eigenen Spalte.
  *
  * **Ein Tipp auf einen Akkord** — oben oder im Text — zeigt ihn groß, mit allen
  * Varianten zum Durchblättern. Die gewählte gilt für jede Stelle mit genau
@@ -37,7 +44,7 @@ import {
   SlidersHorizontal,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { lockOverlay } from '@/components/ui/overlay-lock';
 import { Segmented } from '@/components/ui/segmented';
@@ -131,7 +138,8 @@ export function SheetFullscreen({
   const [scale, setScale] = useState(SCALE_DEFAULT);
   const [playing, setPlaying] = useState(false);
   const [toolbar, setToolbar] = useState(true);
-  const [scaleOpen, setScaleOpen] = useState(false);
+  /** Ob gerade mit zwei Fingern gezogen wird — dann steht die Größe oben. */
+  const [pinching, setPinching] = useState(false);
   const [instrument, setInstrument] = useState<Instrument>('guitar');
   const [choices, setChoices] = useState(initialVoicings);
   const [panel, setPanel] = useState<OpenPanel>(null);
@@ -157,7 +165,6 @@ export function SheetFullscreen({
   useEffect(() => {
     onEscape.current = () => {
       if (panel) setPanel(null);
-      else if (scaleOpen) setScaleOpen(false);
       else onClose();
     };
   });
@@ -309,10 +316,7 @@ export function SheetFullscreen({
   // Läuft er, tritt die Leiste nach einer Weile zurück. Steht er, bleibt sie.
   useEffect(() => {
     if (!playing || !toolbar) return;
-    const timer = window.setTimeout(() => {
-      setToolbar(false);
-      setScaleOpen(false);
-    }, 2500);
+    const timer = window.setTimeout(() => setToolbar(false), 2500);
     return () => window.clearTimeout(timer);
   }, [playing, toolbar]);
 
@@ -324,6 +328,126 @@ export function SheetFullscreen({
       return next;
     });
   };
+
+  // Die Größe für die Listener unten, die einmal angemeldet werden und den
+  // Zustand sonst vom ersten Rendern sähen.
+  const scaleNow = useRef(scale);
+  useEffect(() => {
+    scaleNow.current = scale;
+  });
+
+  /**
+   * Wo das Blatt nach dem Größerziehen stehen soll: Die Stelle zwischen den
+   * Fingern bleibt zwischen den Fingern. Ohne das spränge der Text unter
+   * ihnen weg, sobald er umbricht — gemessen als Anteil an der ganzen Höhe,
+   * weil sich die Höhe mit der Schrift ändert.
+   */
+  const anchor = useRef<{ ratio: number; offset: number } | null>(null);
+  useLayoutEffect(() => {
+    const element = scroller.current;
+    const target = anchor.current;
+    if (!element || !target) return;
+    anchor.current = null;
+    element.scrollTop = target.ratio * element.scrollHeight - target.offset;
+  }, [scale]);
+
+  /**
+   * Zwei Finger ziehen die Schrift größer oder kleiner.
+   *
+   * Nativ angemeldet und **nicht passiv**: Nur so lässt sich die Geste dem
+   * Browser wegnehmen — sonst zöge Safari im Tab die ganze Seite mit
+   * (`user-scalable=no` ignoriert er dort). `gesturestart` ist Safaris eigene
+   * Zoom-Geste und wird aus demselben Grund abgefangen. Ein Finger bleibt
+   * Scrollen; erst der zweite macht daraus das Ziehen. Bild für Bild und nicht
+   * bei jedem `touchmove`: Jede neue Größe bricht das ganze Blatt neu um.
+   */
+  useEffect(() => {
+    const element = scroller.current;
+    if (!element) return;
+
+    let start: { distance: number; scale: number } | null = null;
+    let frame = 0;
+    let wanted: { scale: number; offset: number } | null = null;
+
+    /** Genau zwei Finger — sonst `null`, und es wird nicht gezogen. */
+    const fingers = (touches: TouchList) => {
+      const a = touches.item(0);
+      const b = touches.item(1);
+      return touches.length === 2 && a && b ? ([a, b] as const) : null;
+    };
+
+    const spread = ([a, b]: readonly [Touch, Touch]) =>
+      Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+
+    const apply = () => {
+      frame = 0;
+      if (!wanted) return;
+      const { scale: next, offset } = wanted;
+      wanted = null;
+      if (next === scaleNow.current) return;
+      anchor.current = {
+        ratio: (element.scrollTop + offset) / element.scrollHeight,
+        offset,
+      };
+      setScale(next);
+    };
+
+    const onStart = (event: TouchEvent) => {
+      const pair = fingers(event.touches);
+      if (!pair) return;
+      event.preventDefault();
+      start = { distance: spread(pair), scale: scaleNow.current };
+      setPinching(true);
+    };
+
+    const onMove = (event: TouchEvent) => {
+      const pair = fingers(event.touches);
+      if (!start || !pair) return;
+      event.preventDefault();
+      const middle =
+        (pair[0].clientY + pair[1].clientY) / 2 -
+        element.getBoundingClientRect().top;
+      wanted = {
+        scale:
+          Math.round(
+            clamp(
+              (start.scale * spread(pair)) / start.distance,
+              SCALE_MIN,
+              SCALE_MAX,
+            ) * 100,
+          ) / 100,
+        offset: middle,
+      };
+      if (!frame) frame = requestAnimationFrame(apply);
+    };
+
+    const onEnd = (event: TouchEvent) => {
+      if (!start || event.touches.length >= 2) return;
+      start = null;
+      // Gemerkt wird erst beim Loslassen — nicht bei jedem Bild dazwischen.
+      window.setTimeout(() => {
+        writeScale(scaleNow.current);
+        setPinching(false);
+      }, 120);
+    };
+
+    const block = (event: Event) => event.preventDefault();
+
+    element.addEventListener('touchstart', onStart, { passive: false });
+    element.addEventListener('touchmove', onMove, { passive: false });
+    element.addEventListener('touchend', onEnd);
+    element.addEventListener('touchcancel', onEnd);
+    element.addEventListener('gesturestart', block);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      element.removeEventListener('touchstart', onStart);
+      element.removeEventListener('touchmove', onMove);
+      element.removeEventListener('touchend', onEnd);
+      element.removeEventListener('touchcancel', onEnd);
+      element.removeEventListener('gesturestart', block);
+    };
+  }, []);
 
   const togglePlay = () => {
     const element = scroller.current;
@@ -483,7 +607,20 @@ export function SheetFullscreen({
         <X size={18} />
       </IconButton>
 
-      {/* Unten nur, was man beim Spielen braucht: Schrift und Autoscroll. */}
+      {/* Die Größe, solange zwei Finger ziehen — oben in der Mitte, wo sie
+          keine Hand verdeckt. */}
+      <div
+        aria-hidden
+        className={cn(
+          'pointer-events-none absolute top-[calc(var(--safe-top)+1.25rem)] left-1/2 -translate-x-1/2 rounded-full border border-line bg-card/90 px-3.5 py-1.5 text-sm font-bold text-stone-700 tabular-nums shadow-sm backdrop-blur transition-opacity duration-150',
+          pinching ? 'opacity-100' : 'opacity-0',
+        )}
+      >
+        {Math.round(scale * 100)} %
+      </div>
+
+      {/* Unten nur, was man beim Spielen braucht: der Autoscroll, und am
+          Rechner die Schrift. */}
       <div
         inert={!toolbar}
         className={cn(
@@ -492,8 +629,12 @@ export function SheetFullscreen({
         )}
       >
         <div className="mx-auto w-full max-w-3xl px-5 pt-2 pb-3">
-          {scaleOpen && (
-            <div className="mb-2 flex justify-center">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+            {/* **Nur mit Maus oder Trackpad** (`pointer-fine`): Wer Finger
+                hat, zieht die Schrift mit zweien größer. In seiner eigenen
+                Spalte links und dauerhaft da — eine Pille, die über dem
+                Play-Knopf aufging, deckte genau den zu. */}
+            <div className="hidden justify-self-start pointer-fine:flex">
               <Stepper
                 label="Schrift"
                 onDown={() => changeScale(-0.1)}
@@ -501,29 +642,16 @@ export function SheetFullscreen({
                 downLabel="Schrift kleiner"
                 upLabel="Schrift größer"
               >
-                <span className="min-w-12 text-center text-sm font-bold text-stone-700 tabular-nums">
+                <span
+                  title="Schriftgröße"
+                  className="flex min-w-14 items-center justify-center gap-1 text-xs font-bold text-stone-700 tabular-nums"
+                >
+                  <span className="font-serif text-sm">Aa</span>
                   {Math.round(scale * 100)} %
                 </span>
               </Stepper>
             </div>
-          )}
-
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center">
-            <button
-              type="button"
-              aria-pressed={scaleOpen}
-              aria-label="Schriftgröße"
-              onClick={() => setScaleOpen((current) => !current)}
-              className={cn(
-                'flex size-11 items-center justify-center justify-self-start rounded-full border font-serif text-base font-bold transition-colors',
-                PRESSABLE,
-                scaleOpen
-                  ? 'border-terracotta-500 bg-terracotta-500/10 text-terracotta-600'
-                  : 'border-line bg-card text-stone-700',
-              )}
-            >
-              Aa
-            </button>
+            <span className="pointer-fine:hidden" />
 
             <div className="flex flex-col items-center">
               <div className="flex items-center gap-2">

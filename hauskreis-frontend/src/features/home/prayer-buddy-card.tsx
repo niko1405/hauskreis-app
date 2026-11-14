@@ -19,10 +19,11 @@
  * Gerechnet wird mit `circleOf`, wie auf dem Gebets-Bildschirm. Zwei Kopien
  * derselben Rechnung sagen irgendwann zwei verschiedene Dinge (CLAUDE.md §6.5).
  *
- * **Wie lange die Runde noch läuft, steht in der Karte** und als Rest in Tagen
- * („Noch 4d"), nicht als Datum über ihr. Auf dem Startbildschirm fragt man
- * „wie lange noch", und ein Datum muss man dafür erst umrechnen; das Datum
- * steht im `title` und auf „Gebet".
+ * **Wie lange die Runde noch läuft, steht als Rest in Tagen** („Noch 4d"),
+ * nicht als Datum. Auf dem Startbildschirm fragt man „wie lange noch", und ein
+ * Datum muss man dafür erst umrechnen; das Datum steht im `title` und auf
+ * „Gebet". Zu zweit steht er in der Karte, zu dritt rechts über den beiden
+ * Karten — er gilt für beide.
  */
 import { ArrowDownLeft, ArrowUpRight, Hourglass } from 'lucide-react';
 import Link from '@/components/ui/link';
@@ -43,12 +44,17 @@ export function PrayerBuddyCard({
 
   const kreis = circleOf(buddies.members, myId);
   const rest = <Remaining until={buddies.until} />;
+  const trio = kreis !== null && kreis.size > 2;
 
   return (
     <section>
       {/* Die Überschrift steht über den Karten und nicht darin: Beim Trio gibt
-          es zwei davon. */}
-      <SectionTitle>Deine Gebetsbuddys</SectionTitle>
+          es zwei davon. **Und beim Trio steht der Rest daneben**, rechts über
+          den Karten: Er gilt für beide, und in der rechten Karte las er sich,
+          als liefe nur die eine Richtung ab. */}
+      <SectionTitle action={trio ? rest : undefined}>
+        Deine Gebetsbuddys
+      </SectionTitle>
 
       {kreis === null ? (
         <Card className="flex items-center justify-between gap-3">
@@ -57,9 +63,7 @@ export function PrayerBuddyCard({
           </p>
           {rest}
         </Card>
-      ) : kreis.size > 2 ? (
-        // Beim Trio steht der Rest in der rechten Karte, oben rechts — dort,
-        // wo er beim Paar auch steht. In beiden wäre er doppelt.
+      ) : trio ? (
         <div className="grid grid-cols-2 gap-3">
           <BuddyCard
             label="Du betest für"
@@ -70,7 +74,6 @@ export function PrayerBuddyCard({
             label="Für dich betet"
             icon={<ArrowDownLeft size={12} strokeWidth={2.5} />}
             person={kreis.betetFuerDich}
-            badge={rest}
           />
         </div>
       ) : (

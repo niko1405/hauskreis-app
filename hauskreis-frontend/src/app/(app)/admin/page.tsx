@@ -4,7 +4,10 @@ import { AdminDraftProvider } from '@/features/admin/admin-draft';
 import { BirthdayGiftAdmin } from '@/features/admin/birthday-gift-admin';
 import { GuideCard } from '@/features/admin/guide-card';
 import { HostWeightsAdmin } from '@/features/admin/host-weights-admin';
-import { MaintenanceAdmin } from '@/features/admin/maintenance-admin';
+import {
+  GroupSettingsAdmin,
+  JobsAdmin,
+} from '@/features/admin/maintenance-admin';
 import { MarkAdminSeen } from '@/features/admin/mark-admin-seen';
 import { PeopleAdmin } from '@/features/admin/people-admin';
 
@@ -20,12 +23,16 @@ export default function AdminPage() {
           subtitle="Verwalte hier deine Hauskreis-Gruppe."
           back="/profil"
         />
+        {/* Mitglieder, dann die Rhythmen (Termine, Gebet, Actionstep), dann
+            Geschenke und Gewichtung, am Ende die Läufe — vom Häufigen zum
+            Seltenen. */}
         <div className="space-y-6 px-5">
           <GuideCard />
           <PeopleAdmin />
-          <HostWeightsAdmin />
+          <GroupSettingsAdmin />
           <BirthdayGiftAdmin />
-          <MaintenanceAdmin />
+          <HostWeightsAdmin />
+          <JobsAdmin />
         </div>
       </AdminDraftProvider>
     </RequireAdmin>

@@ -147,17 +147,28 @@ export function TabBar() {
     <nav
       aria-label="Hauptnavigation"
       inert={keyboard}
+      // **Sie schwebt.** Außen ein durchsichtiger Rahmen, der nur Abstand
+      // hält und Klicks durchlässt (`pointer-events-none`) — sonst finge der
+      // Streifen neben der Pille die Tipps auf den Inhalt darunter ab. Ein
+      // Hauch Leinwand läuft von unten herein, damit Text, der unter der
+      // Pille durchscrollt, nicht hart an ihrem Rand steht. Unten sitzt sie
+      // im sicheren Rand und nicht darüber, wie die Leisten von iOS selbst.
+      //
       // Bei offener Tastatur geht sie nach unten weg: Liegt das Feld weit
       // unten, schiebt iOS den Ausschnitt an den Seitenfuß, und sonst stünde
       // sie direkt über der Tastatur. **Verschoben, nicht entfernt** — sie
-      // klebt im Fluss, und `hidden` kürzte das Dokument um ihre Höhe; am
-      // Seitenende spränge der Inhalt dann mitten im Tippen.
+      // klebt im Fluss (`app-shell.tsx`), und `hidden` kürzte das Dokument um
+      // ihre Höhe; am Seitenende spränge der Inhalt dann mitten im Tippen.
       className={cn(
-        'pb-safe sticky bottom-0 z-30 border-t border-line bg-canvas/95 backdrop-blur transition-[translate,opacity] duration-200 md:hidden',
-        keyboard && 'translate-y-full opacity-0',
+        'pointer-events-none bg-linear-to-t from-canvas/80 to-transparent px-3 pt-3 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)-0.25rem))] transition-[translate,opacity] duration-200 md:hidden',
+        keyboard && 'translate-y-[150%] opacity-0',
       )}
     >
-      <ul className="flex items-stretch justify-around">
+      {/* **Glas, so nah an iOS wie es eine Web-App kann**: durchscheinende
+          Leinwand, kräftig weichgezeichnet und gesättigt, was darunter liegt,
+          ein feiner Rand, oben eine Lichtkante und ein weicher Schatten nach
+          unten. Das echte „Liquid Glass" gibt iOS nur eigenen Apps. */}
+      <ul className="pointer-events-auto flex items-stretch gap-1 rounded-[1.75rem] border border-line/70 bg-canvas/70 p-1.5 shadow-[0_12px_32px_-12px_rgb(0_0_0/0.5),inset_0_1px_0_rgb(255_255_255/0.08)] backdrop-blur-xl backdrop-saturate-150">
         {items.map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (
@@ -165,9 +176,13 @@ export function TabBar() {
               <Link
                 href={href}
                 aria-current={active ? 'page' : undefined}
+                // Das aktive Ziel ist eine eigene Pille in der Pille — getönt
+                // und umrandet in Terracotta, wie jede Auswahl in der App.
                 className={cn(
-                  'flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition-colors',
-                  active ? 'text-terracotta-500' : 'text-stone-400',
+                  'flex flex-col items-center gap-1 rounded-[1.375rem] border py-2 text-[10px] font-semibold transition-colors',
+                  active
+                    ? 'border-terracotta-500/40 bg-terracotta-500/15 text-terracotta-500'
+                    : 'border-transparent text-stone-400 hover:text-stone-600',
                 )}
               >
                 <NavIcon
