@@ -26,15 +26,53 @@ export function formatShortDate(date: Date): string {
   return shortDateFormat.format(date);
 }
 
+/** Was eine Nachricht von einem Abend wissen muss, um ihn beim Namen zu nennen. */
+export interface NamedMeeting {
+  title: string | null;
+  special: boolean;
+}
+
+/**
+ * Wie eine Nachricht einen Abend nennt.
+ *
+ * „Der Hauskreis" stimmt für den Dienstag, aber nicht für „Outreach & Chillout"
+ * am Samstag — „Heute ist Hauskreis" über einer Freizeit klang, als hätte die
+ * App nicht hingesehen. **Ein eigener Titel geht deshalb immer vor.** Ohne ihn
+ * heißt ein besonderer Termin „der besondere Termin", wie in seiner Ankündigung
+ * (`custom-meeting-notification.service.ts`), und ein gewöhnlicher Abend bleibt
+ * „der Hauskreis".
+ *
+ * `start` für den Satzanfang. Der Titel steht, wie er eingetragen wurde — nur
+ * die Rückfälle bekommen dort einen großen Anfangsbuchstaben.
+ */
+export function meetingSubject(
+  meeting: NamedMeeting,
+  position: 'start' | 'inline' = 'inline',
+): string {
+  if (meeting.title) return meeting.title;
+
+  const fallback = meeting.special ? 'der besondere Termin' : 'der Hauskreis';
+
+  return position === 'start'
+    ? `${fallback.charAt(0).toUpperCase()}${fallback.slice(1)}`
+    : fallback;
+}
+
+/**
+ * „Am Dienstag ist der Hauskreis bei dir" — für die Erinnerung **und** für die
+ * Zuteilung. Zwei Fassungen desselben Satzes waren schon auseinandergelaufen,
+ * bevor der Titel dazukam.
+ */
 export function hostReminderBody(
-  date: Date,
+  meeting: NamedMeeting & { date: Date },
   locationName: string | null,
 ): string {
-  const when = formatMeetingDate(date);
+  const when = formatMeetingDate(meeting.date);
+  const what = meetingSubject(meeting);
 
   return locationName
-    ? `Am ${when} ist der Hauskreis bei dir (${locationName}).`
-    : `Am ${when} ist der Hauskreis bei dir.`;
+    ? `Am ${when} ist ${what} bei dir (${locationName}).`
+    : `Am ${when} ist ${what} bei dir.`;
 }
 
 export function topicReminderBody(

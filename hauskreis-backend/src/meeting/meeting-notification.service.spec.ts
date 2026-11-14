@@ -121,6 +121,24 @@ describe('announceCancellation', () => {
     );
   });
 
+  it('calls a special meeting without a title not „Hauskreis"', async () => {
+    const { service, notify } = setup({
+      meeting: {
+        id: 'meeting-1',
+        hauskreisId: 'hk-1',
+        date: upcoming,
+        title: null,
+        special: true,
+      },
+    });
+
+    await service.announceCancellation('meeting-1');
+
+    expect(notify.mock.calls[0][0].payload.body).toBe(
+      'Der besondere Termin am Dienstag, 4. August fällt aus.',
+    );
+  });
+
   it('says nothing about an evening that is already over', async () => {
     // Cancelling a past meeting is bookkeeping, not news.
     const { service, notify } = setup({
@@ -217,6 +235,33 @@ describe('handleDecline', () => {
     );
     expect(notify.mock.calls[0][0].payload.body).toBe(
       'Am 4. August haben genug abgesagt, dass der Hauskreis bei euch (Bei Sofie) stattfinden könnte.',
+    );
+  });
+
+  it('names a titled meeting when offering a home', async () => {
+    const { service, notify } = setup({
+      meeting: {
+        id: 'meeting-1',
+        hauskreisId: 'hk-1',
+        date: upcoming,
+        status: MeetingStatus.PLANNED,
+        hostPersonId: null,
+        locationId: null,
+        title: 'Grillabend',
+        special: true,
+      },
+      unlocked: [
+        {
+          home: { id: 'loc-sofie', name: 'Bei Sofie' },
+          residents: [{ id: 'sofie', name: 'Sofie' }],
+        },
+      ],
+    });
+
+    await service.handleDecline('meeting-1', 'antonia');
+
+    expect(notify.mock.calls[0][0].payload.body).toBe(
+      'Am 4. August haben genug abgesagt, dass Grillabend bei euch (Bei Sofie) stattfinden könnte.',
     );
   });
 

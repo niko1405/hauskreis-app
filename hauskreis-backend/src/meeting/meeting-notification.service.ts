@@ -5,6 +5,7 @@ import { RoleSuggestionService } from '../role-suggestion/role-suggestion.servic
 import {
   formatMeetingDate,
   formatShortDate,
+  meetingSubject,
 } from '../notification/reminder-copy';
 import { MeetingStatus, NotificationType } from '../../generated/prisma/enums';
 import { formatWallClock } from '../common/time/wall-clock';
@@ -89,6 +90,7 @@ export class MeetingNotificationService {
         date: true,
         endDate: true,
         title: true,
+        special: true,
         status: true,
         startMinutes: true,
       },
@@ -141,7 +143,7 @@ export class MeetingNotificationService {
         relatedMeetingId: meeting.id,
         payload: {
           title: 'Neue Uhrzeit',
-          body: `${meeting.title ?? 'Der Hauskreis'} am ${formatShortDate(meeting.date)} fängt jetzt um ${formatWallClock(meeting.startMinutes)} an, nicht um ${formatWallClock(previousMinutes)}.`,
+          body: `${meetingSubject(meeting, 'start')} am ${formatShortDate(meeting.date)} fängt jetzt um ${formatWallClock(meeting.startMinutes)} an, nicht um ${formatWallClock(previousMinutes)}.`,
           url: appPath.meeting(meeting.id),
         },
       })),
@@ -160,6 +162,7 @@ export class MeetingNotificationService {
         date: true,
         endDate: true,
         title: true,
+        special: true,
       },
     });
 
@@ -183,7 +186,7 @@ export class MeetingNotificationService {
       select: { id: true },
     });
 
-    const text = copy(meeting.title ?? 'Der Hauskreis', meeting.date);
+    const text = copy(meetingSubject(meeting, 'start'), meeting.date);
 
     return this.sendAll(
       people.map((person) => ({
@@ -230,6 +233,9 @@ export class MeetingNotificationService {
         status: true,
         hostPersonId: true,
         locationId: true,
+        // Für „Bei euch wäre jetzt Platz", das den Abend beim Namen nennt.
+        title: true,
+        special: true,
       },
     });
 
@@ -476,6 +482,8 @@ export class MeetingNotificationService {
     date: Date;
     hostPersonId: string | null;
     locationId: string | null;
+    title: string | null;
+    special: boolean;
   }): Promise<void> {
     if (meeting.hostPersonId || meeting.locationId) {
       return;
@@ -494,7 +502,7 @@ export class MeetingNotificationService {
           relatedMeetingId: meeting.id,
           payload: {
             title: 'Bei euch wäre jetzt Platz',
-            body: `Am ${formatShortDate(meeting.date)} haben genug abgesagt, dass der Hauskreis bei euch (${home.name}) stattfinden könnte.`,
+            body: `Am ${formatShortDate(meeting.date)} haben genug abgesagt, dass ${meetingSubject(meeting)} bei euch (${home.name}) stattfinden könnte.`,
             url: appPath.meeting(meeting.id),
           },
         })),

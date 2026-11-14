@@ -6,7 +6,11 @@ import {
   MeetingStatus,
   NotificationType,
 } from '../../generated/prisma/enums';
-import { formatMeetingDate } from './reminder-copy';
+import {
+  formatMeetingDate,
+  hostReminderBody,
+  type NamedMeeting,
+} from './reminder-copy';
 import { appPath } from './app-paths';
 import { GroupClockService } from '../meeting/group-clock.service';
 
@@ -70,6 +74,9 @@ export class RoleAssignmentNotifier {
         date: true,
         endDate: true,
         status: true,
+        // Der Gastgeber-Satz nennt den Abend beim Namen (`meetingSubject`).
+        title: true,
+        special: true,
         location: true,
       },
     });
@@ -87,7 +94,7 @@ export class RoleAssignmentNotifier {
             relatedRole: role,
             payload: {
               title: TITLE[role],
-              body: assignmentBody(role, meeting.date, meeting.location?.name),
+              body: assignmentBody(role, meeting, meeting.location?.name),
               url: appPath.meeting(meeting.id),
             },
           })
@@ -111,10 +118,10 @@ export class RoleAssignmentNotifier {
 
 function assignmentBody(
   role: AssignmentRole,
-  date: Date,
+  meeting: NamedMeeting & { date: Date },
   locationName?: string,
 ): string {
-  const when = formatMeetingDate(date);
+  const when = formatMeetingDate(meeting.date);
 
   // Ein `switch` **ohne `default`**: Ein Sammelzweig schickte jeder neuen
   // Rolle still den Text einer anderen („Am … machst du die Musik." an alle,
@@ -122,9 +129,8 @@ function assignmentBody(
   // Rolle einen eigenen Zweig.
   switch (role) {
     case AssignmentRole.HOST:
-      return locationName
-        ? `Am ${when} ist der Hauskreis bei dir (${locationName}).`
-        : `Am ${when} ist der Hauskreis bei dir.`;
+      // Derselbe Satz wie die Erinnerung ein paar Tage vorher.
+      return hostReminderBody(meeting, locationName ?? null);
     case AssignmentRole.TOPIC:
       return `Am ${when} bist du mit dem Thema dran.`;
     case AssignmentRole.TESTIMONY:

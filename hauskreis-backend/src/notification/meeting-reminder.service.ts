@@ -123,8 +123,8 @@ export class MeetingReminderService {
         endDate: true,
         // Ob der Abend besonders ist und wie er heißt, braucht die Erinnerung
         // an besondere Termine: sie filtert danach und sagt im Text, worum es
-        // geht. Die Rollen-Erinnerungen lesen beides nicht — ein Feld mehr im
-        // `select` kostet weniger als eine zweite Abfrage für einen Sonderfall.
+        // geht. Die Gastgeber-Erinnerung nennt den Abend ebenfalls beim Namen
+        // (`meetingSubject`) — „der Hauskreis" stimmt nicht für jeden.
         special: true,
         title: true,
         hostPersonId: true,

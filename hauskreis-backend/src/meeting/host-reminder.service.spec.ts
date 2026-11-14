@@ -14,6 +14,8 @@ type MeetingRow = {
   date: Date;
   hostPersonId: string | null;
   location: { name: string } | null;
+  title?: string | null;
+  special?: boolean;
 };
 
 /**
@@ -92,6 +94,32 @@ describe('HostReminderService.sendDueReminders', () => {
 
     expect(notify.mock.calls[0][0].payload.body).toBe(
       'Am Dienstag, 28. Juli ist der Hauskreis bei dir (Bei Anna).',
+    );
+  });
+
+  /**
+   * „Der Hauskreis" stimmt nicht für jeden Abend — ein Termin mit eigenem
+   * Titel heißt in der Erinnerung so, wie er im Kalender steht.
+   */
+  it('nennt einen Termin mit Titel beim Namen', async () => {
+    const { service, notify } = setup([
+      meeting({ title: 'Outreach & Chillout', special: true }),
+    ]);
+
+    await service.sendDueReminders({ now: utc('2026-07-25') });
+
+    expect(notify.mock.calls[0][0].payload.body).toBe(
+      'Am Dienstag, 28. Juli ist Outreach & Chillout bei dir (Bei Anna).',
+    );
+  });
+
+  it('nennt einen besonderen Termin ohne Titel nicht „Hauskreis"', async () => {
+    const { service, notify } = setup([meeting({ special: true })]);
+
+    await service.sendDueReminders({ now: utc('2026-07-25') });
+
+    expect(notify.mock.calls[0][0].payload.body).toBe(
+      'Am Dienstag, 28. Juli ist der besondere Termin bei dir (Bei Anna).',
     );
   });
 

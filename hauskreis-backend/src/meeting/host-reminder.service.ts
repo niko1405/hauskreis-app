@@ -43,7 +43,7 @@ export class HostReminderService {
                 payload: {
                   title: 'Du bist dran mit Hosten',
                   body: hostReminderBody(
-                    meeting.date,
+                    meeting,
                     meeting.location?.name ?? null,
                   ),
                   url: appPath.meeting(meeting.id),

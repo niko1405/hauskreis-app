@@ -76,6 +76,23 @@ describe('RoleAssignmentNotifier.announce', () => {
     );
   });
 
+  it('nennt beim Gastgeber einen Termin mit Titel beim Namen', async () => {
+    const { service, notify } = setup({
+      id: 'm1',
+      date: KOMMEND,
+      status: MeetingStatus.PLANNED,
+      title: 'Outreach & Chillout',
+      special: true,
+      location: { name: 'Bei Niko' },
+    });
+
+    await service.announce('m1', AssignmentRole.HOST, ['niko']);
+
+    expect(notify.mock.calls[0][0].payload.body).toBe(
+      'Am Dienstag, 11. August ist Outreach & Chillout bei dir (Bei Niko).',
+    );
+  });
+
   /**
    * Der Text muss zur Rolle passen, auch beim Testimony — selbst wenn eine
    * Testimony-Zuteilung `announce` heute gar nicht anstößt, fiele ein falscher

@@ -17,6 +17,8 @@ function setup(
   options: {
     meeting?: {
       id: string;
+      title?: string | null;
+      special?: boolean;
       startMinutes: number;
       location: { name: string } | null;
       attendances: { personId: string; status: AttendanceStatus }[];
@@ -28,6 +30,8 @@ function setup(
     options.meeting === undefined
       ? {
           id: 'm-1',
+          title: null,
+          special: false,
           startMinutes: 1080,
           // So heißt ein Zuhause wirklich (`homeName`).
           location: { name: 'Bei Chris' },
@@ -141,9 +145,63 @@ describe('MeetingTodayService.sendDueReminders', () => {
 
     await service.sendDueReminders('hk-1', { now: HEUTE });
 
-    // Der Satz endet mit einer Frage — ohne Punkt dahinter.
+    // Der Satz endet mit einer Frage — ohne Punkt dahinter. Dass heute
+    // Hauskreis ist, sagt die Überschrift.
     expect(notify.mock.calls[0][0].payload.body).toBe(
-      'Heute um 19:00 ist Hauskreis — der Ort ist noch offen! Wo treffen wir uns? Du stehst auf „Unsicher" — bist du dabei?',
+      'Heute um 19:00 — der Ort ist noch offen! Wo treffen wir uns? Du stehst auf „Unsicher" — bist du dabei?',
+    );
+  });
+
+  it('betitelt einen gewöhnlichen Abend mit „Heute ist Hauskreis"', async () => {
+    const { service, notify } = setup();
+
+    await service.sendDueReminders('hk-1', { now: HEUTE });
+
+    expect(notify.mock.calls[0][0].payload.title).toBe('Heute ist Hauskreis');
+  });
+
+  /**
+   * „Heute ist Hauskreis" über einer Freizeit klang, als hätte die App nicht
+   * hingesehen — mit eigenem Titel steht der da.
+   */
+  it('nennt einen Termin mit Titel beim Namen', async () => {
+    const { service, notify } = setup({
+      meeting: {
+        id: 'm-1',
+        title: 'Outreach & Chillout',
+        special: true,
+        startMinutes: 690,
+        location: { name: 'Bei Elisha & Eric' },
+        attendances: [{ personId: 'anna', status: AttendanceStatus.ATTENDING }],
+      },
+      people: ['anna'],
+    });
+
+    await service.sendDueReminders('hk-1', { now: HEUTE });
+
+    expect(notify.mock.calls[0][0].payload).toMatchObject({
+      title: 'Outreach & Chillout',
+      body: 'Heute um 11:30 bei Elisha & Eric. Bis später!',
+    });
+  });
+
+  it('nennt einen besonderen Termin ohne Titel nicht „Hauskreis"', async () => {
+    const { service, notify } = setup({
+      meeting: {
+        id: 'm-1',
+        title: null,
+        special: true,
+        startMinutes: 1080,
+        location: null,
+        attendances: [],
+      },
+      people: ['anna'],
+    });
+
+    await service.sendDueReminders('hk-1', { now: HEUTE });
+
+    expect(notify.mock.calls[0][0].payload.title).toBe(
+      'Heute ist ein besonderer Termin',
     );
   });
 

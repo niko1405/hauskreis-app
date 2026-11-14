@@ -13,6 +13,7 @@ import { CRON_TIME_ZONE } from '../common/time/local-evening';
 import { formatWallClock } from '../common/time/wall-clock';
 import { ANGEKOMMEN } from '../person/angekommen';
 import type { ReminderRunResult } from '../notification/meeting-reminder.service';
+import type { NamedMeeting } from '../notification/reminder-copy';
 
 /**
  * Was am Morgen des Termintags in der Nachricht steht — je nach dem, was man
@@ -35,6 +36,22 @@ function body(status: AttendanceStatus, kopf: string): string {
 }
 
 /**
+ * Die Überschrift — der Titel des Termins, wenn er einen hat.
+ *
+ * „Heute ist Hauskreis" über „Outreach & Chillout" am Samstag klang, als hätte
+ * die App nicht hingesehen. Mit eigenem Titel steht genau der da; der Satz
+ * darunter beginnt ohnehin mit „Heute um …". Ohne Titel bleibt es beim
+ * vertrauten Satz, und ein besonderer Termin heißt so, wie ihn auch seine
+ * Ankündigung nennt.
+ */
+function headline(meeting: NamedMeeting): string {
+  if (meeting.title) return meeting.title;
+  return meeting.special
+    ? 'Heute ist ein besonderer Termin'
+    : 'Heute ist Hauskreis';
+}
+
+/**
  * Der erste Satz: wann und wo.
  *
  * **Ein Zuhause heißt schon „Bei Niko"** (`homeName`), und ein „bei" davor
@@ -45,10 +62,12 @@ function body(status: AttendanceStatus, kopf: string): string {
  * für sich, nach einem Strich.
  *
  * Ohne Ort endet der Satz mit einer Frage und bekommt keinen Punkt dahinter.
+ * Dass heute etwas ist, sagt dann schon die Überschrift — der Satz nennt die
+ * Zeit und fragt nach dem Ort.
  */
 function head(wann: string, location: { name: string } | null): string {
   if (!location) {
-    return `Heute um ${wann} ist Hauskreis — der Ort ist noch offen! Wo treffen wir uns?`;
+    return `Heute um ${wann} — der Ort ist noch offen! Wo treffen wir uns?`;
   }
 
   const wo = location.name.startsWith('Bei ')
@@ -108,6 +127,8 @@ export class MeetingTodayService {
       where: { hauskreisId, date: today, status: MeetingStatus.PLANNED },
       select: {
         id: true,
+        title: true,
+        special: true,
         startMinutes: true,
         location: { select: { name: true } },
         attendances: { select: { personId: true, status: true } },
@@ -137,7 +158,7 @@ export class MeetingTodayService {
           type: NotificationType.MEETING_TODAY,
           relatedMeetingId: meeting.id,
           payload: {
-            title: 'Heute ist Hauskreis',
+            title: headline(meeting),
             body: body(
               answers.get(person.id) ?? AttendanceStatus.UNKNOWN,
               kopf,
