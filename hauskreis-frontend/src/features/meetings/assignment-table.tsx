@@ -3,13 +3,15 @@
 /**
  * Die Mehrwochen-Planung (CLAUDE.md §9).
  *
- * Auch auf dem Telefon eine Tabelle, obwohl drei Spalten auf 390 px eng sind:
- * hier plant man **quer** — „wer hostet in den nächsten sechs Wochen" ist eine
- * Spalte, keine sechs Zeilen. Das Raster scrollt deshalb waagerecht in seinem
- * eigenen Kasten, und zwei Knöpfe verkleinern es, wenn man mehr auf einmal
- * sehen will. Sie stehen rechts in derselben Zeile wie der Umschalter über der
- * Liste, als **ein** Regler mit zwei Hälften — es ist eine Frage („wie groß"),
- * und zwei lose Knöpfe am linken Rand sahen aus wie zwei.
+ * **Eine Tabelle in einer Karte, in zwei Größen.** Hier plant man **quer** —
+ * „wer hostet in den nächsten sechs Wochen" ist eine Spalte, keine sechs
+ * Zeilen. Voreingestellt ist **„Alle Spalten"**: alles auf einen Blick, auch
+ * auf dem Telefon, mit Kurzformen im Kopf und kleinen Gesichtern. Wer mehr
+ * lesen will, nimmt **„Reinzoomen"**: breitere Spalten, die volle Bezeichnung,
+ * Wochentag am Datum — das Raster scrollt dann waagerecht, und die Datumsspalte
+ * bleibt links stehen. Zwei Stufen statt eines Reglers: Es ist eine Frage
+ * („alles sehen oder genauer hinsehen"), und drei Zwischengrößen beantworteten
+ * sie nicht besser.
  *
  * Kein Pinch-Zoom: der kollidiert auf Mobilgeräten mit dem Seiten-Zoom des
  * Browsers und lässt sich nicht zuverlässig davon trennen.
@@ -25,11 +27,11 @@
  * sucht. Die Terminliste liefert ohnehin schon Gastgeber,
  * Thema, Musik, Testimony und Snacks mit, es kostet also keine zweite Abfrage.
  */
-import { CheckCircle2, Minus, Plus } from 'lucide-react';
+import { CheckCircle2, Plus, ZoomIn, ZoomOut } from 'lucide-react';
 import Link from '@/components/ui/link';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
-import { Avatar } from '@/components/ui/avatar';
+import { AvatarStack } from '@/components/ui/avatar';
 import { PRESSABLE } from '@/components/ui/button';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import {
@@ -38,7 +40,13 @@ import {
   useSetSnackResponsibles,
   useSongLeaders,
 } from '@/lib/api/hooks';
-import { addDays, formatDay, formatRelativeDay, today } from '@/lib/date';
+import {
+  addDays,
+  formatDay,
+  formatDayShort,
+  formatRelativeDay,
+  today,
+} from '@/lib/date';
 import {
   MEETING_ROLE_ORDER,
   ROLE_LABEL,
@@ -91,10 +99,25 @@ const SnackSheet = dynamic(
 type Column = MeetingRole;
 
 /**
- * Drei Stufen reichen: ganz, kleiner, klein. Ein stufenloser Regler wäre auf
- * dem Telefon schwerer zu treffen als der Unterschied wert ist.
+ * Die Spaltenköpfe in „Alle Spalten". Fünf Rollen und ein Datum auf 350
+ * Pixeln: „Testimony" passt dort nicht, „Testim." schon. Ausgeschrieben steht
+ * es im `title` und für Screenreader.
  */
-const ZOOM_STEPS = [1, 0.85, 0.7] as const;
+const SHORT_LABEL: Record<Column, string> = {
+  HOST: 'Host',
+  TOPIC: 'Thema',
+  SONG: 'Musik',
+  TESTIMONY: 'Testim.',
+  SNACK: 'Snacks',
+};
+
+/**
+ * Die grüne Tönung eines fertig geplanten Abends — **deckend** gemischt und
+ * nicht durchscheinend: Beim Reinzoomen klebt die Datumsspalte, und unter einer
+ * halb durchsichtigen Fläche schöben sich die Zellen sichtbar hindurch.
+ */
+const DONE_BG =
+  'bg-[color-mix(in_srgb,var(--color-success-bg)_45%,var(--color-card))]';
 
 /**
  * Was in einer Zelle steht — oder warum nichts darin steht.
@@ -124,41 +147,13 @@ interface Cell {
   absent: 'slot-off' | 'not-needed' | null;
 }
 
-/** Eine Hälfte des Reglers — gesperrt heißt: in diese Richtung geht es nicht weiter. */
-function ZoomButton({
-  label,
-  disabled,
-  onClick,
-  children,
-}: {
-  label: string;
-  disabled: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        'inline-flex items-center justify-center rounded-full px-3 py-1.5 text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-700 disabled:text-stone-300 disabled:hover:bg-transparent',
-        PRESSABLE,
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
 export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
   const from = today();
   const to = addDays(from, weeks * 7);
   const query = useMeetingList({ scope: 'upcoming', from, to, take: 100 });
 
-  const [zoom, setZoom] = useState(0);
+  /** `false` heißt „Alle Spalten" — die Vorgabe. */
+  const [zoom, setZoom] = useState(false);
   const [editing, setEditing] = useState<{
     meetingId: string;
     role: Column;
@@ -179,58 +174,66 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
     );
   }
 
-  const scale = ZOOM_STEPS[zoom] ?? 1;
+  const head = cn(
+    'py-3 font-bold text-stone-400 uppercase',
+    zoom
+      ? 'px-3 text-[10px] tracking-widest'
+      : 'px-1 text-[9px] tracking-wider',
+  );
 
   return (
     <div className="space-y-3">
-      {/* Dieselbe Zeile wie über der Liste: links das Wort, rechts der
-          Regler, in der Höhe des Umschalters dort. */}
       <div className="flex items-center gap-2">
         <p className="min-w-0 flex-1 truncate px-1 text-[11px] font-semibold tracking-wider text-stone-400 uppercase">
           Nächste {weeks} Wochen
         </p>
-        <div
-          role="group"
-          aria-label="Größe der Tabelle"
-          className="flex shrink-0 items-center rounded-full border border-line bg-card p-0.5"
+        {/* Der Knopf nennt, wohin er führt — nicht, wo man gerade ist. */}
+        <button
+          type="button"
+          onClick={() => setZoom((current) => !current)}
+          aria-pressed={zoom}
+          className={cn(
+            'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-card px-3.5 py-1.5 text-xs font-bold text-stone-700 transition-colors hover:border-line-strong',
+            'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+            PRESSABLE,
+          )}
         >
-          <ZoomButton
-            label="Kleiner anzeigen"
-            disabled={zoom === ZOOM_STEPS.length - 1}
-            onClick={() =>
-              setZoom((z) => Math.min(z + 1, ZOOM_STEPS.length - 1))
-            }
-          >
-            <Minus size={16} />
-          </ZoomButton>
-          <span aria-hidden className="h-4 w-px bg-line" />
-          <ZoomButton
-            label="Größer anzeigen"
-            disabled={zoom === 0}
-            onClick={() => setZoom((z) => Math.max(z - 1, 0))}
-          >
-            <Plus size={16} />
-          </ZoomButton>
-        </div>
+          {zoom ? (
+            <ZoomOut size={14} className="text-terracotta-500" />
+          ) : (
+            <ZoomIn size={14} className="text-terracotta-500" />
+          )}
+          {zoom ? 'Alle Spalten' : 'Reinzoomen'}
+        </button>
       </div>
 
-      {/* Der Zoom sitzt auf einem Wrapper, nicht auf der Tabelle selbst:
-          `transform` nimmt das Element aus dem Textfluss, der Kasten außen
-          würde sonst seine alte Höhe behalten und unten Luft lassen. Die
-          Gegenrechnung per Prozent hält ihn passend. */}
-      <div className="-mx-5 overflow-x-auto px-5">
-        <div
-          style={{
-            transform: `scale(${scale})`,
-            transformOrigin: 'top left',
-            width: `${100 / scale}%`,
-            marginBottom: `${(scale - 1) * 100}px`,
-          }}
-        >
-          <table className="w-full min-w-[48rem] border-separate border-spacing-y-2">
+      <div className="overflow-hidden rounded-card border border-line bg-card shadow-sm shadow-stone-200/40">
+        <div className={cn(zoom && 'no-scrollbar overflow-x-auto')}>
+          <table
+            className={cn(
+              'w-full border-collapse',
+              zoom ? 'min-w-[46rem]' : 'table-fixed',
+            )}
+          >
+            {!zoom && (
+              <colgroup>
+                <col className="w-[5.25rem]" />
+                {MEETING_ROLE_ORDER.map((role) => (
+                  <col key={role} />
+                ))}
+              </colgroup>
+            )}
             <thead>
-              <tr>
-                <th className="w-32 px-3 pb-1 text-left text-[10px] font-bold tracking-widest text-stone-400 uppercase">
+              <tr className="border-b border-line">
+                <th
+                  scope="col"
+                  className={cn(
+                    head,
+                    'pl-4 text-left',
+                    zoom &&
+                      'sticky left-0 z-10 w-40 border-r border-line bg-card',
+                  )}
+                >
                   Termin
                 </th>
                 {/* Aus derselben Aufstellung wie die Zellen darunter — warum,
@@ -238,18 +241,28 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
                 {MEETING_ROLE_ORDER.map((role) => (
                   <th
                     key={role}
-                    className="px-3 pb-1 text-left text-[10px] font-bold tracking-widest text-stone-400 uppercase"
+                    scope="col"
+                    title={ROLE_LABEL[role]}
+                    className={cn(head, 'text-center')}
                   >
-                    {ROLE_LABEL[role]}
+                    {zoom ? (
+                      ROLE_LABEL[role]
+                    ) : (
+                      <>
+                        <span aria-hidden>{SHORT_LABEL[role]}</span>
+                        <span className="sr-only">{ROLE_LABEL[role]}</span>
+                      </>
+                    )}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-line">
               {query.items.map((meeting) => (
                 <Row
                   key={meeting.id}
                   meeting={meeting}
+                  zoom={zoom}
                   onEdit={(role) => setEditing({ meetingId: meeting.id, role })}
                 />
               ))}
@@ -271,9 +284,11 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
 
 function Row({
   meeting,
+  zoom,
   onEdit,
 }: {
   meeting: MeetingListItem;
+  zoom: boolean;
   onEdit: (role: Column) => void;
 }) {
   const cancelled = meeting.status === 'CANCELLED';
@@ -291,7 +306,13 @@ function Row({
   const cells: Cell[] = meetingRoles(meeting);
 
   return (
-    <tr className={cn('align-middle', cancelled && 'opacity-50')}>
+    <tr
+      className={cn(
+        'align-middle',
+        fertig && DONE_BG,
+        cancelled && 'opacity-50',
+      )}
+    >
       {/* `th scope="row"`, nicht `td`: das Datum ist die Überschrift der Zeile,
           und ein Screenreader liest damit „Host, 11. August" statt nur
           „Host" — sonst weiß man in der dritten Spalte nicht mehr, um welchen
@@ -299,10 +320,12 @@ function Row({
       <th
         scope="row"
         className={cn(
-          'rounded-l-md border-y border-l px-3 py-2.5 text-left font-normal',
-          fertig
-            ? 'border-success-line bg-success-bg/40'
-            : 'border-line bg-card',
+          'py-3 pr-1 pl-4 text-left font-normal',
+          zoom &&
+            cn(
+              'sticky left-0 z-10 border-r border-line pr-3',
+              fertig ? DONE_BG : 'bg-card',
+            ),
         )}
       >
         <Link
@@ -315,39 +338,44 @@ function Row({
               ? `Termin am ${formatDay(meeting.date)} öffnen — fertig geplant`
               : `Termin am ${formatDay(meeting.date)} öffnen`
           }
-          className="block hover:underline"
+          className="block rounded-sm hover:underline focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none"
         >
-          <span className="flex items-center gap-1.5 text-sm font-bold text-stone-800">
-            {formatDay(meeting.date)}
+          <span
+            className={cn(
+              'flex items-center gap-1 font-bold whitespace-nowrap text-stone-800',
+              zoom ? 'text-sm' : 'text-[13px]',
+            )}
+          >
+            {zoom ? formatDay(meeting.date) : formatDayShort(meeting.date)}
             {/* Nicht nur die Farbe: wer sie nicht unterscheidet, sieht das
                 Zeichen. Der Titel sagt dasselbe noch einmal in Worten. */}
             {fertig && (
               <CheckCircle2
-                size={13}
+                size={12}
                 className="shrink-0 text-success"
                 aria-hidden
               />
             )}
           </span>
-          <span className="block text-[10px] text-stone-400">
+          <span
+            className={cn(
+              'block truncate text-[10px]',
+              cancelled ? 'font-semibold text-alert' : 'text-stone-400',
+            )}
+          >
             {cancelled ? 'Fällt aus' : formatRelativeDay(meeting.date)}
           </span>
         </Link>
       </th>
 
-      {cells.map((cell, index) => (
+      {cells.map((cell) => (
         <td
           key={cell.role}
-          className={cn(
-            'border-y p-1',
-            fertig
-              ? 'border-success-line bg-success-bg/40'
-              : 'border-line bg-card',
-            index === cells.length - 1 && 'rounded-r-md border-r',
-          )}
+          className={cn('text-center', zoom ? 'px-3 py-2.5' : 'px-0.5 py-2')}
         >
           <CellButton
             cell={cell}
+            zoom={zoom}
             // An einem abgesagten Abend gibt es nichts einzuteilen.
             onEdit={cancelled ? undefined : () => onEdit(cell.role)}
             label={`${ROLE_LABEL[cell.role]} am ${formatDay(meeting.date)}`}
@@ -359,23 +387,29 @@ function Row({
 }
 
 /**
- * Eine Zelle zeigt Avatare, keinen Namen — sonst passen drei Spalten auf
- * keinem Telefon nebeneinander. Der Name steht im `title` und im
- * Vorlese-Etikett, ist also mit Zeigegerät und mit Screenreader erreichbar.
+ * Eine Zelle zeigt Gesichter, keinen Namen — sonst passen fünf Spalten auf
+ * keinem Telefon nebeneinander. Der Name steht im Vorlese-Etikett.
+ *
+ * **Offen ist ein gestrichelter Kreis mit Plus**: Er sagt zugleich „fehlt" und
+ * „hier antippen", ohne ein Wort, für das in der Spalte kein Platz ist.
  */
 function CellButton({
   cell,
+  zoom,
   onEdit,
   label,
 }: {
   cell: Cell;
+  zoom: boolean;
   onEdit?: () => void;
   label: string;
 }) {
+  const circle = zoom ? 'size-9' : 'size-7';
+
   if (cell.absent === 'slot-off') {
     return (
       <span
-        className="flex px-2 py-1.5 text-[11px] text-stone-200"
+        className="inline-flex justify-center text-sm text-stone-300"
         title={`${label}: gehört an diesem Abend nicht dazu`}
       >
         –
@@ -389,22 +423,28 @@ function CellButton({
   if (cell.absent === 'not-needed' && cell.people.length === 0) {
     return (
       <MaybeButton onEdit={onEdit} label={`${label}: kein Host nötig`}>
-        <span className="text-[11px] text-transparent select-none">–</span>
+        <span className={cn('inline-block', circle)} />
       </MaybeButton>
     );
   }
 
   const content =
     cell.people.length === 0 ? (
-      <span className="text-[11px] text-stone-300 italic">offen</span>
-    ) : (
-      <span className="flex items-center gap-1">
-        {cell.people.map((person) => (
-          <span key={person.id} title={person.name}>
-            <Avatar person={person} size="xs" zoomable={false} />
-          </span>
-        ))}
+      <span
+        className={cn(
+          'inline-flex items-center justify-center rounded-full border border-dashed border-line-strong text-terracotta-500 transition-colors group-hover:border-terracotta-400',
+          circle,
+        )}
+      >
+        <Plus size={zoom ? 15 : 13} strokeWidth={2.5} />
       </span>
+    ) : (
+      <AvatarStack
+        people={cell.people}
+        size={zoom ? 'sm' : 'xs'}
+        max={zoom ? 3 : 2}
+        zoomable={false}
+      />
     );
 
   return (
@@ -428,7 +468,7 @@ function MaybeButton({
   children: React.ReactNode;
 }) {
   if (!onEdit) {
-    return <span className="flex px-2 py-1.5">{children}</span>;
+    return <span className="flex justify-center py-1">{children}</span>;
   }
 
   return (
@@ -436,7 +476,10 @@ function MaybeButton({
       type="button"
       onClick={onEdit}
       aria-label={`${label} — antippen zum Eintragen`}
-      className="flex w-full items-center rounded-sm px-2 py-1.5 transition-colors hover:bg-terracotta-50 focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none"
+      className={cn(
+        'group flex w-full items-center justify-center rounded-md py-1 transition-colors hover:bg-terracotta-500/5 focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+        PRESSABLE,
+      )}
     >
       {children}
     </button>
