@@ -363,7 +363,16 @@ function Row({
               cancelled ? 'font-semibold text-alert' : 'text-stone-400',
             )}
           >
-            {cancelled ? 'Fällt aus' : formatRelativeDay(meeting.date)}
+            {cancelled
+              ? 'Fällt aus'
+              : zoom
+                ? formatRelativeDay(meeting.date)
+                : // Die schmale Spalte fasst „in 2 Wochen", aber nicht
+                  // „in einer Woche" — dort steht die Zahl wie in den übrigen.
+                  formatRelativeDay(meeting.date).replace(
+                    'einer Woche',
+                    '1 Woche',
+                  )}
           </span>
         </Link>
       </th>
