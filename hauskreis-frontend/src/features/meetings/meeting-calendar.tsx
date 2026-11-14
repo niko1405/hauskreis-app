@@ -305,6 +305,7 @@ function MonthRow({ meeting }: { meeting: MeetingListItem }) {
               size="sm"
               startTime={meeting.startTime}
               location={meeting.location}
+              host={meeting.host}
             />
           )}
         </div>

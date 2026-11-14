@@ -9,7 +9,7 @@
  * Kopien wären zwei Meinungen darüber, wie ein Termin aussieht — und die eine
  * vergäße man beim nächsten Griff.
  */
-import { Clock, MapPin } from 'lucide-react';
+import { Clock, House, MapPin } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { dayParts } from '@/lib/date';
 import { mapsUrl } from '@/lib/meeting';
@@ -21,6 +21,8 @@ interface Place {
   address: string | null;
   latitude: number | null;
   longitude: number | null;
+  /** Ein Zuhause — dort steht der Gastgeber statt des Ortsnamens. */
+  requiresHost: boolean;
 }
 
 /**
@@ -106,15 +108,22 @@ function Dot() {
 }
 
 /**
- * „19:30 Uhr · Bei Julian" — die Zeile unter dem Titel.
+ * „19:30 Uhr · ⌂ Julian" — die Zeile unter dem Titel.
  *
  * Die beiden Symbole sind **terracotta** und nicht grau: Sie sind die einzigen
  * Farbtupfer der Zeile und sagen auf einen Blick, welche Angabe welche ist —
  * grau verschwammen sie mit dem Text, den sie beschriften.
+ *
+ * **Bei jemandem zu Hause steht der Gastgeber, mit einem Haus davor**, bei
+ * einem Treffpunkt sein Name mit der Stecknadel. Ort und Gastgeber sind dort
+ * dieselbe Auskunft: Neben „Bei Julian" stand sonst noch ein Chip „Host:
+ * Julian" — zweimal derselbe Mensch auf einer Karte. Ohne Ort bleibt es bei
+ * „Ort noch offen"; ob es ein Zuhause wird, weiß dann noch niemand.
  */
 export function TimeAndPlace({
   startTime,
   location,
+  host = null,
   linkToMaps = false,
   extra,
   size = 'md',
@@ -122,6 +131,8 @@ export function TimeAndPlace({
   startTime: string;
   /** Ein Termin ohne Ort ist kein Fehler — z. B. draußen im Park. */
   location: Place | null;
+  /** Der Gastgeber des Abends; steht bei einem Zuhause statt des Ortsnamens. */
+  host?: { name: string } | null;
   /**
    * Ob der Ort nach Maps führt. Auf „Heute" ja — dort geht man auf den Abend
    * zu. In der Liste nicht: Sie ist selbst ein Link auf den Termin, und ein
@@ -135,11 +146,13 @@ export function TimeAndPlace({
 }) {
   const small = size === 'sm';
   const iconSize = small ? 12 : 13;
+  const home = location ? location.requiresHost : host !== null;
+  const PlaceIcon = home ? House : MapPin;
   const place = (
     <>
-      <MapPin size={iconSize} className="shrink-0 text-terracotta-500" />
+      <PlaceIcon size={iconSize} className="shrink-0 text-terracotta-500" />
       <span className={cn(small && 'truncate')}>
-        {location?.name ?? 'Ort noch offen'}
+        {(home && host?.name) || location?.name || 'Ort noch offen'}
       </span>
     </>
   );

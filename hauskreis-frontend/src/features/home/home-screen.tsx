@@ -424,6 +424,12 @@ function NextMeetingCard({
    */
   maps?: boolean;
 }) {
+  const chips =
+    (meeting.hasTopicSlot && meeting.topicResponsibles.length > 0) ||
+    (meeting.hasTestimonySlot && meeting.testimonyPerson !== null) ||
+    (meeting.hasSongSlot && meeting.songLeaders.length > 0) ||
+    (meeting.hasSnackSlot && meeting.snackResponsibles.length > 0);
+
   return (
     <Card className={cn('space-y-4', className)}>
       {/* Dieselbe Kopfzeile wie auf der Terminkarte: Datums-Kästchen links,
@@ -452,6 +458,7 @@ function NextMeetingCard({
           <TimeAndPlace
             startTime={meeting.startTime}
             location={meeting.location}
+            host={meeting.host}
             linkToMaps={maps}
           />
         </div>
@@ -473,32 +480,29 @@ function NextMeetingCard({
         )}
       </div>
 
-      {/* Alle Rollen des Abends, in derselben Form wie auf der Terminkarte —
-          sonst heißt „noch kein Host" auf zwei Bildschirmen zweierlei. Der Link
-          führt aufs Detail, weil dort das „+ … eintragen" auch einlösbar ist. */}
-      <Link
-        href={`/termin?id=${meeting.id}`}
-        className="flex flex-wrap items-center gap-2"
-      >
-        {/* Braucht der Ort keinen Gastgeber — Schlosspark, Café —, steht hier
-            **nichts**. Der Ort selbst steht schon in der Kopfzeile darüber;
-            hier stand er ein zweites Mal, als terracotta Chip, und behauptete
-            damit eine Rolle, die es an dem Abend gar nicht gibt. Dieselbe
-            Regel wie in den Zuständigkeiten am Termin (`meetingRoles`). */}
-        {meeting.host && <RoleChip kind="HOST" people={[meeting.host]} />}
-        {meeting.hasTopicSlot && meeting.topicResponsibles.length > 0 && (
-          <RoleChip kind="TOPIC" people={meeting.topicResponsibles} />
-        )}
-        {meeting.hasTestimonySlot && meeting.testimonyPerson && (
-          <RoleChip kind="TESTIMONY" people={[meeting.testimonyPerson]} />
-        )}
-        {meeting.hasSongSlot && meeting.songLeaders.length > 0 && (
-          <RoleChip kind="SONG" people={meeting.songLeaders} />
-        )}
-        {meeting.hasSnackSlot && meeting.snackResponsibles.length > 0 && (
-          <RoleChip kind="SNACK" people={meeting.snackResponsibles} />
-        )}
-      </Link>
+      {/* Die Rollen des Abends, in derselben Form wie auf der Terminkarte. Der
+          Link führt aufs Detail, weil dort das „+ … eintragen" auch einlösbar
+          ist. **Der Gastgeber steht nicht dabei**: Er steht in der Kopfzeile,
+          mit einem Haus vor dem Namen — wie auf der Terminkarte. */}
+      {chips && (
+        <Link
+          href={`/termin?id=${meeting.id}`}
+          className="flex flex-wrap items-center gap-2"
+        >
+          {meeting.hasTopicSlot && meeting.topicResponsibles.length > 0 && (
+            <RoleChip kind="TOPIC" people={meeting.topicResponsibles} />
+          )}
+          {meeting.hasTestimonySlot && meeting.testimonyPerson && (
+            <RoleChip kind="TESTIMONY" people={[meeting.testimonyPerson]} />
+          )}
+          {meeting.hasSongSlot && meeting.songLeaders.length > 0 && (
+            <RoleChip kind="SONG" people={meeting.songLeaders} />
+          )}
+          {meeting.hasSnackSlot && meeting.snackResponsibles.length > 0 && (
+            <RoleChip kind="SNACK" people={meeting.snackResponsibles} />
+          )}
+        </Link>
+      )}
     </Card>
   );
 }
