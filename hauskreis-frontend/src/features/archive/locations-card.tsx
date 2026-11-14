@@ -24,7 +24,7 @@ import { isHome } from '@/lib/location';
 import { mapsUrl } from '@/lib/meeting';
 import { SwipeActions } from '@/components/ui/swipe-actions';
 import type { Location } from '@/lib/api/types';
-import { ListTab } from './list-tab';
+import { ListFilter } from './list-filter';
 
 export type PlaceScope = 'zuhause' | 'treffpunkte';
 
@@ -53,26 +53,23 @@ export function LocationsCard({
 
   return (
     <div className="space-y-3">
-      <div
-        role="tablist"
-        aria-label="Orte filtern"
-        className="flex border-b border-line"
-      >
-        <ListTab
-          active={scope === 'zuhause'}
-          count={locations.isLoading ? undefined : homes.length}
-          onSelect={() => onScope('zuhause')}
-        >
-          Zuhause
-        </ListTab>
-        <ListTab
-          active={scope === 'treffpunkte'}
-          count={locations.isLoading ? undefined : spots.length}
-          onSelect={() => onScope('treffpunkte')}
-        >
-          Treffpunkte
-        </ListTab>
-      </div>
+      <ListFilter
+        label="Orte filtern"
+        value={scope}
+        onChange={onScope}
+        options={[
+          {
+            value: 'zuhause',
+            label: 'Zuhause',
+            count: locations.isLoading ? undefined : homes.length,
+          },
+          {
+            value: 'treffpunkte',
+            label: 'Treffpunkte',
+            count: locations.isLoading ? undefined : spots.length,
+          },
+        ]}
+      />
 
       {locations.isLoading ? (
         <Skeleton className="h-40 w-full" />
