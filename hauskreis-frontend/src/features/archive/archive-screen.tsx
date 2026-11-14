@@ -1,9 +1,12 @@
 'use client';
 
 /**
- * „Archiv" — vergangene Termine, abgeschlossene Themen und die
- * Song-Datenbank. Gesucht wird serverseitig (`search`), sonst müsste die App
- * mit der Zeit alles laden, nur um clientseitig zu filtern.
+ * „Archiv" — Themen, die Song-Datenbank, Orte und Notizen. Gesucht wird
+ * serverseitig (`search`), sonst müsste die App mit der Zeit alles laden, nur
+ * um clientseitig zu filtern.
+ *
+ * Vergangene Abende stehen auf „Termine" unter „Vergangene" und nicht mehr
+ * hier: Zwei Orte für dieselbe Liste waren einer zu viel.
  */
 import {
   ArrowLeft,
@@ -17,20 +20,19 @@ import {
   Search,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
-import { AnimatePresence, animate, motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { PageHeader } from '@/components/layout/app-shell';
-import {
-  restrictHeaderToTop,
-  suppressHeader,
-} from '@/components/layout/header-suppress';
+import { suppressHeader } from '@/components/layout/header-suppress';
 import { FloatingAction } from '@/components/layout/floating-action';
 import { AvatarStack } from '@/components/ui/avatar';
-import { Button, PRESSABLE } from '@/components/ui/button';
+import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Field, TextArea, TextInput } from '@/components/ui/field';
+import { Segmented } from '@/components/ui/segmented';
 import { Sheet } from '@/components/ui/sheet';
 import {
   CardSkeleton,
@@ -43,7 +45,6 @@ import { NewSongSheet } from '@/features/songs/new-song-sheet';
 import { LocationSheet } from '@/components/domain/location-sheet';
 import { ListTab } from './list-tab';
 import { LocationsCard, type PlaceScope } from './locations-card';
-import { MeetingsArchive } from './meetings-archive';
 import { NewNoteSheet } from '@/features/notes/new-note-sheet';
 import { NotesArchive } from '@/features/notes/notes-list';
 import { errorMessage } from '@/lib/api/errors';
@@ -61,12 +62,12 @@ import { useOwnSongIds, useOwnSongs } from '@/lib/own-songs/use-own-songs';
 import type { SongListParams } from '@/lib/api/params';
 import type { SongListItem, TopicListItem } from '@/lib/api/types';
 
-type Tab = 'themen' | 'lieder' | 'orte' | 'notizen' | 'termine';
+type Tab = 'themen' | 'lieder' | 'orte' | 'notizen';
 
 /** „Meine Lieder" (mit eigener Version) oder alle der Gruppe. */
 type SongScope = 'meine' | 'alle';
 
-const TABS: readonly Tab[] = ['themen', 'lieder', 'orte', 'notizen', 'termine'];
+const TABS: readonly Tab[] = ['themen', 'lieder', 'orte', 'notizen'];
 
 /**
  * Wo man im Archiv steht, als Adresse.
@@ -89,20 +90,14 @@ function addressOf(tab: Tab, scope: SongScope, place: PlaceScope): string {
   return `/archiv?register=${tab}`;
 }
 
+// Ein alter Link auf `?register=termine` landet bei den Themen — das Register
+// gibt es nicht mehr.
 function initialTab(value: string | null): Tab {
   return TABS.find((tab) => tab === value) ?? 'themen';
 }
 
-/** Die Feder, mit der der Kopf ein- und ausklappt — eine für beide Wege. */
+/** Die Feder, mit der der Kopf ein- und ausklappt — dieselbe wie auf „Termine". */
 const HEAD_SPRING = { type: 'spring', damping: 30, stiffness: 260 } as const;
-
-/** Welches der Felder gerade den Fokus hat — oder keines. */
-function focusedOf(
-  ...inputs: (HTMLInputElement | null)[]
-): HTMLInputElement | null {
-  const active = document.activeElement;
-  return inputs.find((input) => input !== null && input === active) ?? null;
-}
 
 export function ArchiveScreen() {
   const params = useSearchParams();
@@ -121,229 +116,49 @@ export function ArchiveScreen() {
   const deferred = useDeferredValue(search).trim();
   const summary = useArchiveSummary();
 
-  // Der Suchmodus, wie man ihn von Spotify kennt: Wer ins Feld tippt, will
-  // suchen und nicht lesen, was das Archiv ist. Kopf und Kopfleiste gehen,
-  // das Feld rückt nach oben und bleibt dort, darunter die Register und die
-  // Treffer. **Er endet nur über „Abbrechen"**, nicht beim Verlassen des
-  // Felds: Auf dem Telefon schließt schon das Scrollen durch die Treffer die
-  // Tastatur, und dann spränge der Kopf mitten in der Liste zurück.
+  // Der Suchmodus, wie man ihn von Spotify kennt: Wer sucht, will suchen und
+  // nicht lesen, was das Archiv ist. Kopf und Kopfleiste gehen, das Feld steht
+  // oben und darunter die Kategorien und die Treffer. **Er endet nur über
+  // „Abbrechen"**, nicht beim Verlassen des Felds: Auf dem Telefon schließt
+  // schon das Scrollen durch die Treffer die Tastatur, und dann spränge der
+  // Kopf mitten in der Liste zurück.
   const [searching, setSearching] = useState(false);
-
-  /**
-   * Ob die Suchleiste gerade oben klebt — auch ohne Suchmodus.
-   *
-   * Wer im Archiv nach unten scrollt, behält das Feld oben, statt es mit dem
-   * Kopf aus dem Bild zu schieben; wer wieder hochscrollt, scrollt über die
-   * Leiste hinweg zurück zum Kopf. Das ist nur das Kleben und nicht der
-   * Suchmodus: kein „Abbrechen", kein eingeklappter Kopf — der steht weiter
-   * oberhalb und ist mit einem Wisch erreichbar.
-   */
-  const [pinned, setPinned] = useState(false);
-
   const field = useRef<HTMLInputElement>(null);
-  /** Das unsichtbare Feld oben, das beim Tipp die Tastatur bekommt. */
-  const proxy = useRef<HTMLInputElement>(null);
-  const head = useRef<HTMLDivElement>(null);
-  const bar = useRef<HTMLDivElement>(null);
-  const headAnimation = useRef<ReturnType<typeof animate> | null>(null);
-  /** Womit zuletzt aufs Feld gedrückt wurde — Finger oder Maus. */
-  const pointer = useRef('mouse');
 
-  // **Die Kopfleiste steht hier nur ganz oben.** Wer scrollt, hat das Feld
-  // oben kleben, und eine Leiste, die beim Hochwischen darüberführe, verdeckte
-  // genau das. Zurück kommt sie erst, wenn man wieder beim Kopf ist.
-  useEffect(() => restrictHeaderToTop(), []);
-
-  // Im Suchmodus geht sie ganz — auch ganz oben, wo das Feld jetzt steht.
+  // Wer sucht, will oben das Feld sehen und nicht Glocke und Gruppe darüber.
   useEffect(() => {
     if (!searching) return;
     return suppressHeader();
   }, [searching]);
 
-  // Klebt sie? Gefragt wird die Leiste selbst: `sticky` hält sie bei 0,
-  // sobald sie dort ankommt — und nur dann steht sie genau dort. Gedrosselt
-  // auf ein Bild wie in `use-header-scroll.ts`.
-  useEffect(() => {
-    let frame = 0;
-
-    const read = () => {
-      frame = 0;
-      const element = bar.current;
-      if (!element) return;
-      setPinned(Math.abs(element.getBoundingClientRect().top) < 1);
-    };
-
-    const onScroll = () => {
-      if (frame !== 0) return;
-      frame = requestAnimationFrame(read);
-    };
-
-    read();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-      if (frame !== 0) cancelAnimationFrame(frame);
-    };
-  }, []);
-
   // Scrollen durch die Treffer schließt die Tastatur — warum, steht beim Hook.
   useBlurOnTouchMove(searching);
 
   /**
-   * Das Netz unter dem Hilfsfeld (`enterSearchByTouch`).
+   * In den Suchmodus — **mit der Tastatur im selben Tipp**, wie auf „Termine".
    *
-   * Schiebt iOS den sichtbaren Ausschnitt trotzdem gegen das Layout, stünde
-   * das Feld halb unter der Uhr, bis die Tastatur wieder zugeht. Dann wird
-   * zurückgescrollt. Mit dem Hilfsfeld sollte das
-   * nie greifen; es steht hier, weil iOS seine Regeln dafür nicht
-   * veröffentlicht. Gegen ein Ziehen in der Liste kämpft es nicht: Das nimmt
-   * dem Feld vorher schon den Fokus.
+   * iOS öffnet sie nur, wenn der Fokus noch in der Geste gesetzt wird. Also
+   * synchron: `flushSync` zeichnet das Feld, und es steht dann schon oben — es
+   * ist das erste Element der Seite, und gescrollt wird vorher nach ganz oben.
+   * Ein Feld, das schon oben liegt, verschiebt iOS beim Fokussieren nicht.
    */
-  useEffect(() => {
-    if (!searching) return;
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-
-    const settle = () => {
-      if (!focusedOf(field.current, proxy.current)) return;
-      if (viewport.offsetTop <= 0.5) return;
-      window.scrollTo({
-        top: Math.max(0, window.scrollY - viewport.offsetTop),
-      });
-    };
-
-    viewport.addEventListener('resize', settle);
-    viewport.addEventListener('scroll', settle);
-    return () => {
-      viewport.removeEventListener('resize', settle);
-      viewport.removeEventListener('scroll', settle);
-    };
-  }, [searching]);
-
-  /**
-   * In den Suchmodus — mit **einer** Bewegung.
-   *
-   * Die Leiste trägt ihren sicheren Rand immer (`pt-safe-4 -mt-safe-4`), und
-   * es bewegt sich allein die Höhe des Kopfs — zwei Bewegungen gegeneinander
-   * ließen das Feld über seinen Platz hinausschießen und zurückkommen.
-   *
-   * Alles synchron im Handler, also im selben Bild gemalt: erst messen, dann
-   * nach ganz oben scrollen und dem Kopf genau die Höhe geben, bei der das
-   * Feld dort steht, wo es eben stand. Von dort klappt er auf die Höhe ein,
-   * bei der die Leiste in Ruhe genau oben liegt — Ruhe- und Klebeplatz sind
-   * dann derselbe, und die Treffer liegen nicht unter ihr. Wer schon klebte,
-   * hat beide Höhen gleich: Das Feld bleibt stehen, nur die Liste beginnt
-   * wieder oben.
-   *
-   * Zurück kommt die Bewegung selbst, damit `enterSearchByTouch` weiß, wann
-   * das Feld angekommen ist.
-   */
-  const enterSearch = (): Promise<void> => {
-    if (searching) return Promise.resolve();
-    setSearching(true);
-
-    const headElement = head.current;
-    const barElement = bar.current;
-    if (!headElement || !barElement) return Promise.resolve();
-
-    const padding = parseFloat(getComputedStyle(barElement).paddingTop) || 0;
-    const headTop = headElement.getBoundingClientRect().top + window.scrollY;
-    const end = Math.max(padding - headTop, 0);
-    const start = Math.max(
-      barElement.getBoundingClientRect().top + padding - headTop,
-      end,
-    );
-
-    // Das Hilfsfeld liegt dort, wo das Feld ankommt: Der Kopf ist das erste
-    // Kind der Wurzel, also steht das Feld am Ende genau `end` unter ihr.
-    if (proxy.current) proxy.current.style.top = `${end}px`;
-
-    headAnimation.current?.stop();
-    headElement.style.height = `${start}px`;
+  const enterSearch = () => {
+    flushSync(() => setSearching(true));
     window.scrollTo({ top: 0 });
-    const controls = animate(
-      headElement,
-      { height: [start, end], opacity: 0 },
-      HEAD_SPRING,
-    );
-    headAnimation.current = controls;
-    return controls.then(() => undefined);
-  };
-
-  /**
-   * Der Einstieg per Finger — mit der Tastatur **erst dort, wo das Feld
-   * ankommt**.
-   *
-   * Bekam das Feld den Fokus beim Tipp selbst, stand es danach mit offener
-   * Tastatur halb unter der Uhr, bis man daneben tippte. iOS schiebt beim
-   * Fokussieren den sichtbaren Ausschnitt gegen das Layout, um das Feld über
-   * der Tastatur zu zentrieren — und rechnet dabei mit der Lage im Moment des
-   * Tipps, unten unter dem Kopf. Gleich danach fährt das Feld nach oben, die
-   * Verschiebung aber bleibt, und `sticky` klebt am Layout, nicht am
-   * Ausschnitt. Ein Feld, das schon oben liegt, verschiebt iOS nicht.
-   *
-   * Also nimmt den Fokus zuerst das unsichtbare Hilfsfeld an der Endposition,
-   * noch in derselben Geste — sonst ginge die Tastatur gar nicht auf. Ist der
-   * Kopf eingeklappt, wandert der Fokus ins echte Feld; zwischen zwei Feldern
-   * bleibt die Tastatur offen, ohne dass es eine Geste braucht. Was man bis
-   * dahin tippt, landet über `search` schon im echten Feld.
-   */
-  const enterSearchByTouch = () => {
-    const stand = proxy.current;
-    const arrived = enterSearch();
-    if (!stand) return;
-
-    stand.focus({ preventScroll: true });
-    void arrived.then(() => {
-      const input = field.current;
-      if (!input || document.activeElement !== stand) return;
-      input.focus({ preventScroll: true });
-      const caret = input.value.length;
-      input.setSelectionRange(caret, caret);
-    });
+    field.current?.focus({ preventScroll: true });
   };
 
   // Abbrechen heißt auch: Der Begriff ist weg. Ein Filter, der nach dem
   // Verlassen weiter wirkt, sähe aus wie ein Archiv, in dem etwas fehlt.
-  // Der Kopf klappt mit derselben Feder wieder auf; danach steht seine Höhe
-  // wieder auf `auto`, damit er mit dem Fenster mitwächst.
   const leaveSearch = () => {
     setSearch('');
     setSearching(false);
-    // Von Hand und nicht über den Scroll-Listener: Im Suchmodus steht man
-    // schon bei 0, `scrollTo` löst also kein Ereignis aus — und die Leiste
-    // gälte weiter als klebend, während der Kopf sie längst nach unten schiebt.
-    setPinned(false);
     field.current?.blur();
-    proxy.current?.blur();
     window.scrollTo({ top: 0 });
-
-    const headElement = head.current;
-    if (!headElement) return;
-
-    headAnimation.current?.stop();
-    const from = headElement.offsetHeight;
-    headElement.style.height = 'auto';
-    const full = headElement.offsetHeight;
-    headElement.style.height = `${from}px`;
-
-    const controls = animate(
-      headElement,
-      { height: [from, full], opacity: 1 },
-      HEAD_SPRING,
-    );
-    headAnimation.current = controls;
-    void controls.then(() => {
-      if (headAnimation.current === controls) headElement.style.height = '';
-    });
   };
 
   // Escape beendet den Modus, Enter nur die Eingabe — gesucht wird ohnehin
-  // schon beim Tippen, und den Modus beendet allein „Abbrechen". Für das
-  // Feld und das Hilfsfeld gleich.
+  // schon beim Tippen, und den Modus beendet allein „Abbrechen".
   const onSearchKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape') leaveSearch();
     if (event.key === 'Enter') event.currentTarget.blur();
@@ -368,181 +183,128 @@ export function ArchiveScreen() {
     window.history.replaceState(null, '', addressOf(tab, songScope, place));
   };
 
-  // „Termine" steht hinten: Was man hier sucht, ist meistens ein Thema oder
-  // ein Lied. Gebraucht wird es trotzdem — ein Abend ohne Thema trägt mit der
-  // **Nachbereitung** eigenen Inhalt, den keine Themenseite zeigt.
-  const tabs: { key: Tab; label: string; count?: number }[] = [
-    // `topicsTotal` und nicht `topics`: die Kachel steht über **beiden**
-    // Registern — sonst stünde über „Eigene (1)" ein „Themen (0)", weil ein
+  // Vergangene Abende stehen hier nicht mehr: Wer einen sucht, findet ihn auf
+  // „Termine" unter „Vergangene" — und mit vier statt fünf Kategorien passen
+  // sie in eine Kapsel über die volle Breite.
+  const tabs: { value: Tab; label: string; count?: number }[] = [
+    // `topicsTotal` und nicht `topics`: die Zahl steht über **beiden**
+    // Registern — sonst stünde über „Eigene (1)" ein „Themen 0", weil ein
     // eigener Entwurf noch nicht gehalten ist.
-    { key: 'themen', label: 'Themen', count: summary.data?.totals.topicsTotal },
-    { key: 'lieder', label: 'Lieder', count: summary.data?.totals.songs },
+    {
+      value: 'themen',
+      label: 'Themen',
+      count: summary.data?.totals.topicsTotal,
+    },
+    { value: 'lieder', label: 'Lieder', count: summary.data?.totals.songs },
     // Orte gehören hierher und nicht in die Verwaltung: sie sind Teil dessen,
     // was die Gruppe über sich gesammelt hat, und jede:r darf sie pflegen.
-    { key: 'orte', label: 'Orte' },
+    { value: 'orte', label: 'Orte' },
     // Die Zahl zählt nur, was man sehen darf — wie die Liste darunter.
-    { key: 'notizen', label: 'Notizen', count: summary.data?.totals.notes },
-    // `totals.meetings` zählt ohne abgesagte — dasselbe, was die Liste in ihrer
-    // Vorgabe zeigt. Eine Zahl, die größer ist als das, was darunter steht,
-    // wirft genau die Frage auf, die sie beantworten soll.
-    { key: 'termine', label: 'Termine', count: summary.data?.totals.meetings },
+    { value: 'notizen', label: 'Notizen', count: summary.data?.totals.notes },
   ];
 
   return (
-    // `overflow-anchor` hält Chrome davon ab, während der Kopf ein- oder
-    // ausklappt, selbst nachzuscrollen — das wäre eine zweite Bewegung.
-    // `relative` für das Hilfsfeld, das von hier aus gemessen wird.
-    <div className="relative [overflow-anchor:none]">
-      {/* Unsichtbar und nicht anzutippen; es nimmt nur den ersten Fokus
-          (`enterSearchByTouch`). `text-base`, damit iOS nicht hineinzoomt. */}
-      <input
-        ref={proxy}
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        onKeyDown={onSearchKey}
-        enterKeyHint="search"
-        autoComplete="off"
-        tabIndex={-1}
-        aria-hidden
-        className="pointer-events-none absolute inset-x-5 h-10 text-base caret-transparent opacity-0"
-      />
-      {/* Ohne Kopfbild, aus demselben Grund wie bei „Termine": hier liest man
-          Listen und sucht eine Zeile. Ein Foto darüber wäre nur Weg bis zur
-          ersten — und anders als auf „Heute" oder „Gebet" kommt man hierher
-          selten zum Verweilen. */}
-      {/* Höhe statt Verschiebung: Ein `transform` am Seiteninhalt würde zum
-          Bezugsrahmen der `fixed`-Sheets darin (`pull-to-refresh.tsx`).
-          Immer gerendert und von `enterSearch`/`leaveSearch` geführt — im
-          Suchmodus ist er nur noch der Abstand, der die Leiste in Ruhe an den
-          oberen Rand legt. */}
-      <div ref={head} aria-hidden={searching} className="overflow-hidden">
-        <PageHeader
-          title="Archiv"
-          subtitle="Durchsuche Themen, Lieder, Orte, Notizen und Termine."
-        />
+    <div>
+      {/* Feld, Kopf und Kategorien sind ein Block. Im Suchmodus klebt er oben:
+          Das Feld steht **vor** dem Kopf und nicht an seiner Stelle — so ist
+          es vom ersten Bild an oben, während der Kopf darunter einklappt
+          (`enterSearch`). Die Kategorien bleiben stehen, denn gesucht wird in
+          der gewählten. */}
+      <div className={cn(searching && 'sticky top-0 z-30 bg-canvas')}>
+        <AnimatePresence initial={false}>
+          {searching && (
+            <motion.div
+              key="search"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="flex items-center px-5 pt-safe-4 pb-3"
+            >
+              <div className="relative flex-1">
+                <Search
+                  size={15}
+                  className="absolute top-1/2 left-3.5 -translate-y-1/2 text-stone-300"
+                />
+                <TextInput
+                  ref={field}
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  onKeyDown={onSearchKey}
+                  enterKeyHint="search"
+                  autoComplete="off"
+                  placeholder="Durchsuchen …"
+                  className="pl-9"
+                  aria-label="Archiv durchsuchen"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={leaveSearch}
+                className={cn(
+                  'pl-3 text-sm font-semibold whitespace-nowrap text-terracotta-600',
+                  PRESSABLE,
+                )}
+              >
+                Abbrechen
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Höhe statt Verschiebung: Ein `transform` am Seiteninhalt würde zum
+            Bezugsrahmen der `fixed`-Sheets darin (`pull-to-refresh.tsx`). */}
+        <motion.div
+          initial={false}
+          animate={
+            searching
+              ? { height: 0, opacity: 0 }
+              : { height: 'auto', opacity: 1 }
+          }
+          transition={HEAD_SPRING}
+          inert={searching}
+          aria-hidden={searching}
+          className="overflow-hidden"
+        >
+          {/* Die Suche ist eine Lupe neben dem Titel und kein Feld, das immer
+              dasteht: Meistens tippt man im Archiv eine Kategorie an und
+              blättert. */}
+          <PageHeader
+            title="Archiv"
+            subtitle="Themen, Lieder, Orte & Notizen"
+            action={
+              <IconButton
+                label="Archiv durchsuchen"
+                onClick={enterSearch}
+                className="border border-line bg-card"
+              >
+                <Search size={18} />
+              </IconButton>
+            }
+          />
+        </motion.div>
+
+        {/* Die Kategorien als **eine** Kapsel, wie die Register auf „Termine" —
+            vier gleichrangige Teile desselben Archivs, keine Reihe Etiketten. */}
+        <div className={cn('px-5', searching ? 'pb-3' : 'pb-4')}>
+          <Segmented
+            equal
+            size="lg"
+            label="Kategorie"
+            value={tab}
+            onChange={selectTab}
+            options={tabs}
+          />
+        </div>
       </div>
 
       <div
         className={cn(
-          'space-y-1 px-5',
+          'px-5',
           (tab === 'themen' || tab === 'notizen' || tab === 'lieder') &&
             'pb-20',
         )}
       >
-        {/* Feld und Register sind ein Block, der **immer** oben klebt — im
-            Suchmodus wie beim gewöhnlichen Scrollen. Er reicht mit `-mx-5`
-            über die volle Breite, sonst schauen die Treffer an den Rändern
-            darunter hervor.
-
-            **Den sicheren Rand trägt er immer** (`pt-safe-4`), und
-            `-mt-safe-4` hebt ihn im Fluss wieder auf. Dadurch liegt der Block
-            in Ruhe genau dort, wo er klebt: Das Feld gleitet beim Scrollen mit
-            dem Inhalt hoch und bleibt unter der Statusleiste stehen, ohne dass
-            irgendetwas wächst oder umspringt. Durchsichtig ist er, solange er
-            nicht klebt — dann liegt sein oberer Rand über dem Kopf; erst oben
-            braucht er eine Fläche, unter der die Treffer verschwinden.
-
-            Der Haarstrich darunter gehört nur zum Kleben **ohne** Suchmodus:
-            Dort trennt er die Leiste vom Archiv, das unter ihr weiterläuft.
-            Im Suchmodus sind Feld und Treffer eins, wie bei Spotify. */}
-        <div
-          ref={bar}
-          className={cn(
-            'sticky top-0 z-30 -mx-5 -mt-safe-4 space-y-4 px-5 pt-safe-4 pb-3 transition-[background-color,box-shadow] duration-200',
-            searching
-              ? 'bg-canvas'
-              : pinned
-                ? 'bg-canvas shadow-[0_1px_0_var(--color-line)]'
-                : 'bg-transparent',
-          )}
-        >
-          <div className="flex items-center">
-            <div className="relative flex-1">
-              <Search
-                size={15}
-                className="absolute top-1/2 left-3.5 -translate-y-1/2 text-stone-300"
-              />
-              {/* Per Finger bekommt das Feld beim ersten Tipp keinen Fokus
-                  (`mousedown` ist der Weg dorthin, auch beim Tippen), sondern
-                  das Hilfsfeld — warum, steht bei `enterSearchByTouch`. Maus
-                  und Tab-Taste gehen den gewohnten Weg über `onFocus`. */}
-              <TextInput
-                ref={field}
-                value={search}
-                onPointerDown={(event) => {
-                  pointer.current = event.pointerType;
-                }}
-                onMouseDown={(event) => {
-                  if (!searching && pointer.current !== 'mouse') {
-                    event.preventDefault();
-                  }
-                }}
-                onClick={() => {
-                  if (!searching && pointer.current !== 'mouse') {
-                    enterSearchByTouch();
-                  }
-                }}
-                onFocus={() => void enterSearch()}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  void enterSearch();
-                }}
-                onKeyDown={onSearchKey}
-                enterKeyHint="search"
-                placeholder="Durchsuchen …"
-                className="pl-9"
-                aria-label="Archiv durchsuchen"
-              />
-            </div>
-
-            <AnimatePresence initial={false}>
-              {searching && (
-                <motion.div
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 'auto', opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                  className="shrink-0 overflow-hidden"
-                >
-                  <button
-                    type="button"
-                    onClick={leaveSearch}
-                    className={cn(
-                      'pl-3 text-sm font-semibold whitespace-nowrap text-terracotta-600',
-                      PRESSABLE,
-                    )}
-                  >
-                    Abbrechen
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="no-scrollbar flex gap-2 overflow-x-auto">
-            {tabs.map(({ key, label, count }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => selectTab(key)}
-                aria-pressed={tab === key}
-                className={cn(
-                  'shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-colors',
-                  PRESSABLE,
-                  tab === key
-                    ? 'border-terracotta-500 bg-terracotta-500 text-white'
-                    : 'border-line bg-card text-stone-500 hover:border-line-strong',
-                )}
-              >
-                {label}
-                {count !== undefined && (
-                  <span className="ml-1.5 opacity-60">{count}</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {tab === 'themen' && <TopicArchive search={deferred} />}
         {tab === 'notizen' && <NotesArchive search={deferred} />}
         {tab === 'lieder' && (
@@ -555,7 +317,6 @@ export function ArchiveScreen() {
         {tab === 'orte' && (
           <LocationsCard scope={placeScope} onScope={selectPlace} />
         )}
-        {tab === 'termine' && <MeetingsArchive search={deferred} />}
       </div>
 
       {/* Anlegen über das „+" unten rechts. Es stand als Knopf über der Liste
@@ -634,9 +395,9 @@ function TopicArchive({ search }: { search: string }) {
 
   return (
     <div className="space-y-3">
-      {/* Unterstrichene Register statt Pillen: darüber steht schon eine
-          Pillen-Leiste (Themen/Lieder/Orte), und zwei gleich aussehende
-          Leisten übereinander liest man als eine. */}
+      {/* Unterstrichene Register statt einer Kapsel: darüber steht schon die
+          Kapsel der Kategorien, und zwei gleich aussehende Leisten
+          übereinander liest man als eine. */}
       <div
         role="tablist"
         aria-label="Themen filtern"
