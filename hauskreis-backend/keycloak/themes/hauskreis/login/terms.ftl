@@ -1,7 +1,7 @@
 <#--
   Die Einwilligung, und zwar die nach Art. 9 DSGVO.
 
-  **Die zweite kopierte Vorlage in diesem Theme, und der Grund steht hier.**
+  **Eine der kopierten Vorlagen in diesem Theme, und der Grund steht hier.**
   Keycloaks eigene Fassung zeigt den Text und darunter „Akzeptieren" und
   „Ablehnen" — kein Kontrollkästchen. Für eine ausdrückliche Einwilligung soll
   aber genau das dastehen: ein Haken, den ein Mensch selbst setzt, und darüber

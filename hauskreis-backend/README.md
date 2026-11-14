@@ -3929,6 +3929,15 @@ wie sie sind.
    sonst fehlt „Weiter mit Google" in der App; auf Keycloaks eigener
    Anmeldeseite steht der Knopf trotzdem.
 
+**Auf Keycloaks Seiten steht „Weiter mit Google" oben**, über dem Formular, auf
+Anmeldung und Registrierung (`login/hk-social.ftl`). Dafür sind `login.ftl` und
+`register.ftl` aus keycloak.v2 kopiert — die Reihenfolge lässt sich mit dem
+Stylesheet nicht drehen, und bei der Registrierung zeigt keycloak.v2 die
+Anbieter gar nicht. **Bei einem Keycloak-Update** schlägt
+`src/auth/keycloak-theme-templates.spec.ts` an: Dann die vier kopierten
+Vorlagen (`info.ftl`, `terms.ftl`, `login.ftl`, `register.ftl`) gegen die neuen
+Originale halten und die Version in ihrem Kopf nachziehen.
+
 Was das Skript einstellt und warum: `trustEmail` (Google weist die Adresse
 nach, eine zweite Bestätigungsmail wäre Unsinn), `syncMode: IMPORT` (eine im
 Profil geänderte Adresse überschreibt das nächste Anmelden nicht), und der

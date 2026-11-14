@@ -2,7 +2,7 @@
   Die Hinweis-Seite: Einladungslink geöffnet, Adresse bestätigt, Passwort
   gesetzt, Seite abgelaufen. Keycloak nimmt für all das dieselbe Vorlage.
 
-  **Die einzige kopierte Vorlage in diesem Theme, und das ist eine bewusste
+  **Eine der wenigen kopierten Vorlagen in diesem Theme, und eine bewusste
   Ausnahme.** Sonst gilt hier: nur Farbe und Text, keine .ftl-Dateien, damit
   ein Keycloak-Update nichts umwirft (siehe theme.properties). Für die
   Einladungsseite ging es nicht: Wer über den Link aus der Mail kommt, hat von

@@ -264,8 +264,11 @@ body#keycloak-bg {
     box-shadow 0.15s;
 }
 
-/* PatternFly zeichnet den Fokus- und Fehlerzustand als Unterstrich über ein
-   ::after-Element. Das passt nicht zu einem Feld mit runden Ecken. */
+/* PatternFly zeichnet den Rahmen eines Felds nicht am Feld, sondern über zwei
+   Pseudo-Elemente: `::before` ist ein eckiger Rahmen, `::after` der Unterstrich
+   für Fokus und Fehler. Beide liegen über unserem runden Rand — ohne diese
+   Regel stand jedes Feld in einem zweiten, eckigen Kasten. */
+.pf-v5-c-form-control::before,
 .pf-v5-c-form-control::after {
   display: none;
 }
@@ -302,10 +305,31 @@ body#keycloak-bg {
   box-shadow: 0 0 0 3px var(--hk-alert-bg);
 }
 
-/* Das Auge neben dem Passwortfeld. */
+/* Das Auge im Passwortfeld.
+   PatternFly stellt es als eigenen Kasten neben das Feld. Hier sitzt es rechts
+   **im** Feld, wie bei jedem Passwortfeld auf dem Telefon: Die Gruppe ist der
+   Bezugsrahmen, der Knopf liegt darüber, und das Feld hält rechts Platz frei,
+   damit der Text nicht unter ihm verschwindet. */
 .pf-v5-c-input-group,
 .pf-v5-c-input-group__item {
   background: transparent;
+}
+
+.pf-v5-c-input-group {
+  position: relative;
+}
+
+.pf-v5-c-input-group > .pf-v5-c-input-group__item:not(.pf-m-fill) {
+  position: absolute;
+  top: 0;
+  right: 0.375rem;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+}
+
+.pf-v5-c-input-group .pf-v5-c-form-control {
+  padding-right: 2.75rem;
 }
 
 .pf-v5-c-button.pf-m-control {
@@ -313,6 +337,12 @@ body#keycloak-bg {
   border: none;
   color: var(--hk-ink-faint);
   border-radius: 999px;
+  padding: 0.5rem;
+}
+
+/* Auch der Knopf trägt seinen Rahmen als Pseudo-Element. */
+.pf-v5-c-button.pf-m-control::after {
+  display: none;
 }
 
 .pf-v5-c-button.pf-m-control:hover {
@@ -383,6 +413,71 @@ body#keycloak-bg {
 .pf-v5-c-button:focus-visible {
   outline: 2px solid var(--hk-terracotta);
   outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------------------
+ * „Weiter mit Google" und der Trenner darunter (login/hk-social.ftl)
+ *
+ * Wie der Sekundärknopf der App (`Button variant="secondary"`): dieselbe
+ * Fläche, dieselbe Schrift, kein Rahmen. Steht oben in der Karte, auf
+ * Anmeldung und Registrierung.
+ * ---------------------------------------------------------------------- */
+.hk-social {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hk-social__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  border-radius: 999px;
+  background: var(--hk-terracotta-soft);
+  color: var(--hk-terracotta-dark);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.15s;
+}
+
+.hk-social__button:hover,
+.hk-social__button:focus {
+  background: var(--hk-terracotta-soft-hover);
+  color: var(--hk-terracotta-dark);
+  text-decoration: none;
+}
+
+.hk-social__button:focus-visible {
+  outline: 2px solid var(--hk-terracotta);
+  outline-offset: 2px;
+}
+
+.hk-social__button svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+/* „——— oder ———": zwei Haarlinien und das Wort dazwischen. */
+.hk-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+  font-size: 0.75rem;
+  color: var(--hk-ink-faint);
+}
+
+.hk-divider::before,
+.hk-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--hk-line);
 }
 
 a {
