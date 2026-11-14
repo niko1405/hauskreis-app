@@ -22,8 +22,9 @@
  *
  * `equal` teilt die volle Breite dagegen **gleich** auf — für Register, die
  * eine ganze Seite umschalten („Übersicht | Planung | Geburtstage"): Dort sind
- * die Teile gleichrangig, und gleich breit sehen sie auch so aus. Mit
- * `size="lg"` sind sie so hoch wie ein Knopf.
+ * die Teile gleichrangig, und gleich breit sehen sie auch so aus. `size="lg"`
+ * gibt der Kapsel etwas Luft um die gewählte Pille, ohne sie zu einem Balken
+ * zu machen: halbfett und nicht fett — sie ist Bedienung, keine Überschrift.
  */
 import { cn } from '@/lib/cn';
 
@@ -72,7 +73,7 @@ export function Segmented<Value extends string>({
             size === 'sm'
               ? cn('py-1 text-xs', fill ? 'px-2 sm:px-3' : 'px-3')
               : size === 'lg'
-                ? 'px-3 py-2.5 text-sm font-bold'
+                ? 'px-2 py-1.5 text-[13px]'
                 : 'px-4 py-1.5 text-sm',
             value === option.value
               ? 'bg-terracotta-500 text-white'
