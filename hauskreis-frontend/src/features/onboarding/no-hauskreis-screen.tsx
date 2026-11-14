@@ -107,7 +107,7 @@ function DeleteAccountButton() {
       onClick={async () => {
         const ok = await confirm({
           title: 'Konto löschen?',
-          body: 'Weg sind dein Name, deine E-Mail-Adresse, dein Geburtstag und deine Anmeldung — danach kommst du hier nicht mehr herein. Warst du früher schon einmal in einem Hauskreis, bleiben die vergangenen Abende so stehen, wie sie waren; du stehst dort dann als „Ehemaliges Mitglied".',
+          body: 'Weg sind dein Name, deine E-Mail-Adresse, dein Geburtstag und deine Anmeldung — danach kommst du hier nicht mehr herein.',
           confirmLabel: 'Endgültig löschen',
           tone: 'danger',
         });
