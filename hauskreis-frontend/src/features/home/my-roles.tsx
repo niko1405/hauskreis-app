@@ -20,7 +20,7 @@
  * Register stehen sie nebeneinander, und die Zahl daneben beantwortet die
  * zweite schon halb, ohne dass man umschaltet.
  */
-import { CalendarOff, Coffee } from 'lucide-react';
+import { ArrowRight, CalendarOff, Coffee } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -87,6 +87,16 @@ export function MyRoles({
 
   const shown = tab === 'next' ? atNextMeeting : later;
 
+  /**
+   * Der nächste Einsatz **nach** dem nächsten Abend — für den Fuß unter „Du
+   * hast frei!". Der früheste, nicht der der ersten Sorte: `roles` kommt
+   * chronologisch, `later` ist nach Sorten sortiert.
+   */
+  const upcoming =
+    nextMeetingId === null
+      ? undefined
+      : roles.find((role) => role.meetingId !== nextMeetingId);
+
   return (
     <>
       <div
@@ -124,7 +134,11 @@ export function MyRoles({
             </ul>
           </Card>
         ) : (
-          <Empty tab={tab} noMeeting={nextMeetingId === null} />
+          <Empty
+            tab={tab}
+            noMeeting={nextMeetingId === null}
+            upcoming={tab === 'next' ? upcoming : undefined}
+          />
         )}
       </div>
     </>
@@ -171,8 +185,22 @@ function Segment({
  *
  * Der dritte Fall ist der, den man leicht übersieht: Ohne geplanten Termin
  * wäre „Du hast frei" eine Aussage über einen Abend, den es gar nicht gibt.
+ *
+ * **Frei heißt nicht „nichts zu tun".** Steht danach schon ein Einsatz an,
+ * nennt ihn ein Fuß unter der Karte — „Nächster Einsatz: Testimony (in einer
+ * Woche)" — samt Weg dorthin. Sonst läse man „frei" und schaute nicht ins
+ * zweite Register, wo genau das steht, wofür man Vorlauf braucht.
  */
-function Empty({ tab, noMeeting }: { tab: Tab; noMeeting: boolean }) {
+function Empty({
+  tab,
+  noMeeting,
+  upcoming,
+}: {
+  tab: Tab;
+  noMeeting: boolean;
+  /** Der nächste Einsatz nach dem nächsten Abend — nur unter „Du hast frei!". */
+  upcoming?: Assignment;
+}) {
   const {
     icon: Icon,
     title,
@@ -195,6 +223,8 @@ function Empty({ tab, noMeeting }: { tab: Tab; noMeeting: boolean }) {
           hint: 'Lehn dich zurück und genieß das Treffen.',
         };
 
+  const href = upcoming ? roleHref(upcoming) : null;
+
   return (
     <Card className="border-dashed bg-transparent shadow-none">
       <div className="flex flex-col items-center gap-2 py-2 text-center">
@@ -204,8 +234,43 @@ function Empty({ tab, noMeeting }: { tab: Tab; noMeeting: boolean }) {
         <p className="text-sm font-bold text-stone-700">{title}</p>
         <p className="text-xs text-stone-400">{hint}</p>
       </div>
+
+      {upcoming && (
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-dashed border-line pt-3.5 text-xs">
+          <span className="min-w-0 truncate text-stone-500">
+            Nächster Einsatz:{' '}
+            <span className="font-bold text-stone-700">
+              {ROLE_LABEL[upcoming.role]}
+            </span>{' '}
+            ({formatRelativeDay(upcoming.date)})
+          </span>
+          {href && (
+            <Link
+              href={href}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1 rounded-md font-bold text-terracotta-600 hover:text-terracotta-700 focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+                PRESSABLE,
+              )}
+            >
+              Ansehen
+              <ArrowRight size={13} />
+            </Link>
+          )}
+        </div>
+      )}
     </Card>
   );
+}
+
+/**
+ * Wohin eine Rolle führt. Zwei Sorten Ziel: Termin-Rollen zum Abend, der
+ * Geschenk-Termin zu seinem Geburtstag. Ohne Ziel `null` — ein Link ins Nichts
+ * wäre schlechter als keiner.
+ */
+function roleHref(role: Assignment): string | null {
+  if (role.meetingId) return `/termin?id=${role.meetingId}`;
+  if (role.occasionId) return `/geburtstag?id=${role.occasionId}`;
+  return null;
 }
 
 /** Rolle *und* Abend: dieselbe Rolle kann an mehreren Terminen dranstehen. */
@@ -250,14 +315,7 @@ function RoleRow({ role, urgent }: { role: Assignment; urgent: boolean }) {
 
   // Die Zeile trägt keinen eigenen Rand — sie liegt *in* einer Karte, und ein
   // Rahmen im Rahmen wäre unruhig.
-  // Zwei Sorten Ziel: Termin-Rollen führen zum Abend, der Geschenk-Termin zu
-  // seinem Geburtstag. Ohne Ziel bleibt es eine Zeile — ein Link ins Nichts
-  // wäre schlechter als keiner.
-  const href = role.meetingId
-    ? `/termin?id=${role.meetingId}`
-    : role.occasionId
-      ? `/geburtstag?id=${role.occasionId}`
-      : null;
+  const href = roleHref(role);
 
   if (!href) {
     return <div className="px-4 py-3.5">{content}</div>;
