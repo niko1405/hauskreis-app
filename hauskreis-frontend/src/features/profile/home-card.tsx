@@ -11,13 +11,16 @@
  * starkes Indiz für eine Wohngemeinschaft, aber ein Tippfehler sieht genauso
  * aus. Und ein stiller Zusammenzug halbierte still das Host-Gewicht beider.
  *
+ * Davor kommt eine zweite, schlichtere: **„Stimmt die Adresse?"**, mit einem
+ * Knopf nach Google Maps. Nach ihr findet die Gruppe hin.
+ *
  * **Unter jedem Feld steht ein kurzer Satz**, was es sonst bewirkt, liegt
  * hinter dem (i) — wie in der Verwaltung. Wer hier zum zweiten Mal ist, will
  * eine Adresse ändern und keine Absätze lesen.
  */
-import { Home, Users } from 'lucide-react';
+import { ExternalLink, Home, MapPin, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button, PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
 import { Field, TextInput } from '@/components/ui/field';
@@ -31,7 +34,9 @@ import {
   useResolveAddress,
   useSetHome,
 } from '@/lib/api/hooks';
+import { cn } from '@/lib/cn';
 import { residentNames } from '@/lib/location';
+import { mapsUrl } from '@/lib/meeting';
 import type { Location } from '@/lib/api/types';
 
 export function HomeCard({
@@ -94,8 +99,51 @@ export function HomeCard({
     );
   };
 
-  const save = () => {
-    // Erst nachsehen, wer dort wohnt: die Frage „wohnt ihr zusammen?" lässt
+  const save = async () => {
+    // **Erst fragen, ob die Adresse stimmt** — mit dem Weg, es nachzusehen.
+    // Nach ihr findet die Gruppe hin, und ein Zahlendreher fällt erst auf,
+    // wenn alle vor der falschen Tür stehen. Nur wenn sich die Adresse
+    // geändert hat: Wer nur die Zahl der Plätze ändert, hat an ihr nichts
+    // geprüft, was zu bestätigen wäre.
+    if (trimmed !== (current?.address ?? '')) {
+      const ok = await confirm({
+        title: 'Stimmt die Adresse?',
+        // Inline-Elemente: `confirm.tsx` setzt den Text in ein `<p>`.
+        body: (
+          <>
+            <strong className="block text-stone-800">{trimmed}</strong>
+            <span className="mt-1 block">
+              Schau kurz nach, ob die Stecknadel richtig sitzt — so findet die
+              Gruppe hin.
+            </span>
+            <a
+              href={mapsUrl({
+                name: trimmed,
+                address: trimmed,
+                latitude: null,
+                longitude: null,
+              })}
+              target="_blank"
+              rel="noreferrer"
+              className={cn(
+                'mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-canvas py-2.5 text-sm font-semibold text-stone-700 transition-colors',
+                'hover:border-line-strong focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+                PRESSABLE,
+              )}
+            >
+              <MapPin size={15} className="text-terracotta-500" />
+              In Google Maps prüfen
+              <ExternalLink size={13} className="text-stone-400" />
+            </a>
+          </>
+        ),
+        cancelLabel: 'Ändern',
+        confirmLabel: 'Passt, speichern',
+      });
+      if (!ok) return;
+    }
+
+    // Dann nachsehen, wer dort wohnt: die Frage „wohnt ihr zusammen?" lässt
     // sich nur mit Namen stellen, und die stehen nur in dieser Antwort.
     resolve.mutate(trimmed, {
       onSuccess: (result) => {
@@ -216,7 +264,7 @@ export function HomeCard({
           className="w-full"
           disabled={!dirty || trimmed === ''}
           loading={resolve.isPending || setHome.isPending}
-          onClick={save}
+          onClick={() => void save()}
         >
           Adresse speichern
         </Button>

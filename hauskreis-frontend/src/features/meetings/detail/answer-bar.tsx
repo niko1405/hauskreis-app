@@ -22,7 +22,8 @@
  * und ohne Sperre, damit die Seite weiterscrollt. Ausgeklappt dazu das
  * Notizfeld. Ein Druck auf eine Antwort klappt auf: Der Status ist damit
  * gesetzt, und die nächste Frage — „willst du noch etwas dazusagen?" — steht
- * gleich offen, statt hinter einem zweiten Griff.
+ * gleich offen, statt hinter einem zweiten Griff. „Antwort speichern" klappt
+ * wieder ein: Danach ist nichts mehr zu sagen.
  *
  * **Ausgeklappt ist es ein Sheet.** Schleier, gesperrter Hintergrund, Escape,
  * ein Tipp daneben — dieselbe Overlay-Grammatik wie überall sonst in der App.
@@ -283,13 +284,23 @@ function Bar({
                     disabled={!changed}
                     loading={setAttendance.isPending}
                     onClick={() => {
-                      setTouched(false);
-                      setAttendance.mutate({
-                        personId,
-                        status,
-                        note: trimmed === '' ? null : trimmed,
-                        lateMinutes: shownLate,
-                      });
+                      setAttendance.mutate(
+                        {
+                          personId,
+                          status,
+                          note: trimmed === '' ? null : trimmed,
+                          lateMinutes: shownLate,
+                        },
+                        {
+                          // Gesagt ist gesagt: Danach klappt der Balken ein,
+                          // wie ein Sheet nach „Speichern". Erst bei Erfolg —
+                          // scheitert es, bleiben Entwurf und Feld stehen.
+                          onSuccess: () => {
+                            setTouched(false);
+                            setOpen(false);
+                          },
+                        },
+                      );
                     }}
                   >
                     Antwort speichern

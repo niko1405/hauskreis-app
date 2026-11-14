@@ -34,7 +34,8 @@ function Detail() {
     );
   }
 
-  // `von` sagt, wohin der Pfeil zurückführt — vom Termin aus zurück zum Termin.
+  // `von` sagt, wohin der Pfeil zurückführt — vom Termin aus zurück zum
+  // Termin, von „Heute" zurück nach „Heute".
   return <SessionDetailScreen sessionId={id} von={params.get('von')} />;
 }
 

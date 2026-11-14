@@ -155,11 +155,6 @@ export function CancelMeetingBlock({
           <CalendarX size={15} />
           {past ? 'Als abgesagt markieren' : 'Termin absagen'}
         </Button>
-        <p className="mt-2 text-center text-[11px] text-stone-400">
-          {past
-            ? 'Nur ein Vermerk fürs Archiv — es geht keine Benachrichtigung raus.'
-            : 'Alle bekommen eine Benachrichtigung.'}
-        </p>
       </div>
     );
   }
@@ -257,9 +252,6 @@ export function DeleteMeetingBlock({ meeting }: { meeting: Meeting }) {
         <Trash2 size={15} />
         Termin löschen
       </Button>
-      <p className="mt-2 text-center text-[11px] text-stone-400">
-        Niemand bekommt eine Nachricht.
-      </p>
     </div>
   );
 }

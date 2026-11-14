@@ -4,9 +4,11 @@
  * Das Thema des Abends — vier Zustände.
  *
  * 1. Baustein aus → die Sektion gibt es gar nicht (entschieden vom Aufrufer).
- * 2. **Niemand zugeteilt** → „Noch kein Zuständiger."
- * 3. **Zugeteilt, aber noch nichts gewählt** → wer dran ist, sieht die Optionen;
- *    alle anderen sehen, dass es sie gibt und sonst nichts.
+ * 2. **Niemand zugeteilt** → ebenfalls keine Sektion; die leere Rolle steht
+ *    unter „Zuständigkeiten".
+ * 3. **Zugeteilt, aber noch nichts gewählt** → nur wer dran ist, sieht die
+ *    Sektion, und zwar mit dem Knopf zum Wählen. Allen anderen zeigt sie der
+ *    Aufrufer nicht.
  * 4. **Gewählt** → das Thema als Überschrift, darunter *dieser* Abend.
  *
  * Die Hierarchie ist der Punkt der Sektion: oben steht, wozu der Abend gehört,
@@ -61,7 +63,7 @@ export function TopicCard({
     <section>
       <SectionTitle>Thema</SectionTitle>
       <Card className="space-y-4">
-        {!session && <NothingChosen responsibles={responsibles} />}
+        {!session && <NothingChosen />}
         {session && !sichtbar && <Withheld responsibles={responsibles} />}
 
         {session && sichtbar && (
@@ -293,20 +295,20 @@ function OtherSessionRow({ session }: { session: TopicSessionInTopic }) {
   );
 }
 
-/** Zustand 2 und 3: es steht noch nichts, und warum. */
-function NothingChosen({ responsibles }: { responsibles: PersonRef[] }) {
-  if (responsibles.length === 0) {
-    return (
-      <p className="text-sm text-stone-400">
-        Noch kein Zuständiger — trag oben jemanden ein.
-      </p>
-    );
-  }
-
+/**
+ * Zustand 3, für die eine Person, die ihn sieht: Es steht noch nichts, und sie
+ * ist dran.
+ *
+ * Alle anderen sehen die Sektion gar nicht, solange nichts gewählt ist
+ * (`meeting-detail-screen.tsx`) — „hier gibt es noch nichts zu sehen" war
+ * eine Karte, die nur ihre eigene Leere meldete. Wer zuständig ist, steht
+ * ohnehin unter „Zuständigkeiten".
+ */
+function NothingChosen() {
   return (
-    <p className="text-sm text-stone-400">
-      {namesOf(responsibles)} {responsibles.length > 1 ? 'sind' : 'ist'} für das
-      Thema zuständig — hier gibt es noch nichts zu sehen.
+    <p className="text-sm text-stone-500">
+      Du bist an diesem Abend fürs Thema zuständig — wähle ein neues, setz eines
+      fort oder nimm eine angefangene Einheit auf.
     </p>
   );
 }

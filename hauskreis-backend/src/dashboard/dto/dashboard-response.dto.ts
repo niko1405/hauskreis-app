@@ -108,6 +108,10 @@ const homeMeetingSchema = z.object({
   /// immer `null`. Steht eine da, zeigt der Startbildschirm sie **statt** der
   /// Karte: Am Mittwochmorgen ist „was war" die Nachricht, nicht „wo war es".
   summaryText: z.string().nullable(),
+  /// Die Einheit, von der `summaryText` stammt. `null` ohne Zusammenfassung
+  /// und wenn sie aus der Nachbereitung des Abends kommt — dann führt der
+  /// Startbildschirm auf den Termin statt auf die Einheit.
+  summarySessionId: z.uuid().nullable(),
 });
 
 /**
