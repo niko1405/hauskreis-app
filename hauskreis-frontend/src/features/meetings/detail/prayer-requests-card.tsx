@@ -15,9 +15,11 @@
  * beten, ist gerade dann der Punkt. Hier steht deshalb bewusst keine
  * Anwesenheitsprüfung, anders als bei den Rollen.
  *
- * **Anlegen, ändern und löschen stehen offen**, ohne Bearbeitungsmodus: Es
- * geht um den einen Satz, der einem selbst gehört. Der Papierkorb steht
- * deshalb nicht am Rand einer Liste, sondern im eigenen Kasten.
+ * **Das eigene Anliegen sieht aus wie jedes andere** — eine Sprechblase mit
+ * Gesicht und „Du". Ein eigener Kasten mit Stift und Papierkorb daneben sah
+ * aus wie ein Formular zwischen lauter Sätzen. Ein Tipp auf die eigene Blase
+ * öffnet ein Sheet: ändern, entfernen oder abbrechen. Anlegen geht über
+ * dasselbe Sheet.
  *
  * Fremde Anliegen sind nur zu lesen. Das ist keine Rechteprüfung im Frontend,
  * sondern die Form der Sache: Es gibt gar keine Adresse, unter der man an einer
@@ -26,8 +28,10 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { InlineEdit } from '@/components/ui/field';
+import { TextArea } from '@/components/ui/field';
+import { Sheet } from '@/components/ui/sheet';
 import { SpeechBubble } from '@/components/ui/speech-bubble';
 import { Skeleton } from '@/components/ui/states';
 import {
@@ -37,6 +41,7 @@ import {
   useRemoveMyPrayerRequest,
   useSaveMyPrayerRequest,
 } from '@/lib/api/hooks';
+import { cn } from '@/lib/cn';
 import type { PrayerRequest } from '@/lib/api/types';
 
 export function PrayerRequestsCard({
@@ -52,16 +57,8 @@ export function PrayerRequestsCard({
   locked: boolean;
 }) {
   const requests = useMeetingPrayerRequests(meetingId);
-  const save = useSaveMyPrayerRequest(meetingId);
-  const remove = useRemoveMyPrayerRequest(meetingId);
   const me = useMe();
-
-  /**
-   * Ob gerade ein noch leeres eigenes Anliegen offensteht. Nur hier und nicht
-   * am Server: Ein leeres Feld ist nichts, was man speichert. Dieselbe
-   * Überlegung wie in `notes-card.tsx`.
-   */
-  const [writing, setWriting] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const entries = requests.data ?? [];
   const mine = entries.find((entry) => entry.person.id === me.me?.id) ?? null;
@@ -74,8 +71,6 @@ export function PrayerRequestsCard({
   // ohne Anliegen wäre sie eine Erinnerung daran, dass niemand etwas hatte.
   if (entries.length === 0 && !mayAdd) return null;
 
-  const showMine = Boolean(mine) || writing;
-
   return (
     <section>
       <SectionTitle>Gebetsanliegen</SectionTitle>
@@ -86,68 +81,20 @@ export function PrayerRequestsCard({
           <PrayerRequestRow key={entry.person.id} entry={entry} />
         ))}
 
-        {showMine && (
-          <div className="rounded-lg border border-line-strong bg-canvas p-3">
-            <div className="mb-1.5 flex items-center gap-2">
-              {me.me && <Avatar person={me.me} size="xs" />}
-              <span className="text-[11px] font-semibold tracking-wider text-stone-500 uppercase">
-                Von dir
-              </span>
-            </div>
-
-            <InlineEdit
-              label="Mein Gebetsanliegen"
-              multiline
-              value={mine?.text ?? null}
-              emptyLabel="Noch nichts eingetragen"
-              placeholder="Wofür sollen die anderen beten?"
-              startOpen={writing}
-              onDiscard={() => setWriting(false)}
-              saving={save.isPending}
-              onSave={
-                // Ein Anliegen ist das eigene und sonst niemandes: Wer es
-                // geschrieben hat, darf es jederzeit ändern. Gesperrt ist es
-                // allein an einem vergangenen oder abgesagten Abend — dann
-                // steht die Karte gar nicht mehr zum Schreiben da.
-                locked
-                  ? undefined
-                  : (next) => {
-                      if (next === null || next.trim() === '') {
-                        setWriting(false);
-                        if (mine) remove.mutate();
-                        return;
-                      }
-                      save.mutate(next);
-                    }
-              }
-            />
-
-            {/* Nur am eigenen Anliegen — leeren geht auch über das Feld, aber
-                ein Papierkorb sagt deutlicher, dass danach nichts mehr
-                dasteht. Er steht im eigenen Kasten und nicht am Rand einer
-                Liste: das Ziel, das er trifft, ist das einzige, das einem
-                gehört. */}
-            {!locked && mine && (
-              <button
-                type="button"
-                onClick={() => {
-                  setWriting(false);
-                  remove.mutate();
-                }}
-                disabled={remove.isPending}
-                className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-stone-400 transition-colors hover:text-alert disabled:opacity-50"
-              >
-                <Trash2 size={12} />
-                Anliegen entfernen
-              </button>
-            )}
-          </div>
+        {/* Das eigene zuletzt, wie bisher — und als dieselbe Blase. Gesperrt
+            (vergangen, abgesagt) ist es nur noch zu lesen. */}
+        {mine && (
+          <PrayerRequestRow
+            entry={mine}
+            mine
+            onOpen={locked ? undefined : () => setEditing(true)}
+          />
         )}
 
-        {mayAdd && !showMine && (
+        {mayAdd && (
           <button
             type="button"
-            onClick={() => setWriting(true)}
+            onClick={() => setEditing(true)}
             className="flex w-full items-center gap-2 rounded-lg border border-dashed border-line-strong px-3 py-2.5 text-[12px] font-semibold text-stone-400 transition-colors hover:border-terracotta-400 hover:text-terracotta-600"
           >
             <Plus size={14} />
@@ -161,30 +108,57 @@ export function PrayerRequestsCard({
           </p>
         )}
       </Card>
+
+      {/* Nur solange es offen ist: So beginnt das Feld jedes Mal mit dem
+          Stand, der gerade dasteht, und nicht mit einem halben Entwurf vom
+          letzten Mal. */}
+      {editing && (
+        <PrayerRequestSheet
+          meetingId={meetingId}
+          current={mine?.text ?? null}
+          onClose={() => setEditing(false)}
+        />
+      )}
     </section>
   );
 }
 
 /**
- * Das Anliegen einer anderen Person — als Sprechblase.
+ * Ein Anliegen — als Sprechblase.
  *
  * Mit Avatar und Namen, weil man für jemanden betet und nicht für einen Text.
  * Und als Blase, weil genau das hier steht: ein Satz, den jemand der Gruppe
  * sagt — ein Kasten sähe aus wie ein Datenfeld. Die Blase selbst steht in
- * `speech-bubble.tsx`
- * — Thema und Einheit zeigen damit, wer daran arbeitet.
+ * `speech-bubble.tsx` — Thema und Einheit zeigen damit, wer daran arbeitet.
+ *
+ * Das eigene trägt „Du" statt des Namens und ist, solange der Abend offen
+ * ist, ein Knopf (`onOpen`): Ein Tipp führt ins Sheet. Kein Stift daneben —
+ * dass man den eigenen Satz ändern kann, erwartet man, und ein Symbol in der
+ * Blase wäre das Einzige, das sie von den anderen unterschiede.
  */
-function PrayerRequestRow({ entry }: { entry: PrayerRequest }) {
+function PrayerRequestRow({
+  entry,
+  mine = false,
+  onOpen,
+}: {
+  entry: PrayerRequest;
+  mine?: boolean;
+  onOpen?: () => void;
+}) {
   const lookup = usePersonLookup();
   const person = lookup.get(entry.person.id) ?? entry.person;
 
-  return (
-    <div className="flex items-start gap-2.5">
+  const content = (
+    <>
       <Avatar person={person} size="sm" className="mt-1 shrink-0" />
 
-      <SpeechBubble>
+      <SpeechBubble
+        className={cn(
+          onOpen && 'transition-colors group-hover:border-line-strong',
+        )}
+      >
         <p className="text-sm font-bold text-terracotta-700">
-          {entry.person.name}
+          {mine ? 'Du' : entry.person.name}
         </p>
         {/* `whitespace-pre-line`: Wer sein Anliegen in Zeilen aufteilt, hat
             das so gemeint. */}
@@ -192,6 +166,101 @@ function PrayerRequestRow({ entry }: { entry: PrayerRequest }) {
           {entry.text}
         </p>
       </SpeechBubble>
-    </div>
+    </>
+  );
+
+  if (!onOpen) {
+    return <div className="flex items-start gap-2.5">{content}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label="Mein Gebetsanliegen bearbeiten"
+      className="group flex w-full items-start gap-2.5 rounded-lg text-left focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none"
+    >
+      {content}
+    </button>
+  );
+}
+
+/**
+ * Das eigene Anliegen schreiben, ändern oder entfernen.
+ *
+ * Ein Sheet und kein Feld in der Karte: Inline schöbe das Formular die
+ * Anliegen der anderen weg, und auf dem Telefon läge das Feld hinter der
+ * Tastatur — dieselbe Überlegung wie bei den Ideen der Gruppe. „Abbrechen"
+ * lässt alles, wie es war. Leer speichern heißt entfernen, wie bisher; der
+ * eigene Knopf dafür sagt es nur deutlicher.
+ */
+function PrayerRequestSheet({
+  meetingId,
+  current,
+  onClose,
+}: {
+  meetingId: string;
+  current: string | null;
+  onClose: () => void;
+}) {
+  const save = useSaveMyPrayerRequest(meetingId);
+  const remove = useRemoveMyPrayerRequest(meetingId);
+  const [draft, setDraft] = useState(current ?? '');
+
+  const trimmed = draft.trim();
+  const unchanged = trimmed === (current ?? '').trim();
+
+  const submit = () => {
+    if (trimmed === '') {
+      if (current) remove.mutate(undefined, { onSuccess: onClose });
+      else onClose();
+      return;
+    }
+    save.mutate(trimmed, { onSuccess: onClose });
+  };
+
+  return (
+    <Sheet
+      open
+      onClose={onClose}
+      title="Dein Gebetsanliegen"
+      footer={
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
+            Abbrechen
+          </Button>
+          <Button
+            className="flex-1"
+            disabled={unchanged || (trimmed === '' && !current)}
+            loading={save.isPending || (trimmed === '' && remove.isPending)}
+            onClick={submit}
+          >
+            Speichern
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-3">
+        <TextArea
+          aria-label="Mein Gebetsanliegen"
+          maxLength={2000}
+          value={draft}
+          placeholder="Wofür sollen die anderen beten?"
+          onChange={(event) => setDraft(event.target.value)}
+        />
+
+        {current && (
+          <button
+            type="button"
+            onClick={() => remove.mutate(undefined, { onSuccess: onClose })}
+            disabled={remove.isPending}
+            className="flex items-center gap-1.5 text-[12px] font-semibold text-stone-400 transition-colors hover:text-alert disabled:opacity-50"
+          >
+            <Trash2 size={13} />
+            Anliegen entfernen
+          </button>
+        )}
+      </div>
+    </Sheet>
   );
 }
