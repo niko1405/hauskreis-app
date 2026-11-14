@@ -35,19 +35,70 @@ export function CardSkeleton() {
   );
 }
 
+/**
+ * Noch nichts da — gestrichelt, weil es nicht aussehen soll wie etwas, das da
+ * ist.
+ *
+ * **Mit `icon`** steht darüber eine getönte Kachel mit dem Symbol der Sache,
+ * die fehlt, und der Titel in der Schrift der Überschriften — wie „Noch
+ * niemand eingeteilt" auf „Gebet". Für die Listen, in denen man eine leere
+ * Fläche am häufigsten sieht (Lieder, Themen, Abwesenheiten): Dort ist sie
+ * oft der erste Eindruck einer neuen Gruppe, und ein grauer Satz in einem
+ * gestrichelten Kasten sah aus wie ein Fehler.
+ *
+ * `framed={false}` lässt den Rahmen weg — für die Stelle **in** einer Karte,
+ * wo ein zweiter Rahmen eine Karte in der Karte wäre.
+ */
 export function EmptyState({
   title,
   hint,
   action,
+  icon,
+  framed = true,
 }: {
   title: string;
   hint?: string;
   action?: React.ReactNode;
+  icon?: React.ReactNode;
+  framed?: boolean;
 }) {
   return (
-    <div className="rounded-card border border-dashed border-line-strong px-6 py-10 text-center">
-      <p className="text-sm font-semibold text-stone-600">{title}</p>
-      {hint && <p className="mt-1.5 text-xs text-stone-400">{hint}</p>}
+    <div
+      className={cn(
+        'flex flex-col items-center text-center',
+        framed
+          ? 'rounded-card border border-dashed border-line-strong px-6 py-10'
+          : 'px-2 py-4',
+        icon && framed && 'py-8',
+      )}
+    >
+      {icon && (
+        <span
+          aria-hidden
+          className="mb-4 flex size-12 items-center justify-center rounded-2xl border border-terracotta-500/30 bg-terracotta-500/10 text-terracotta-500"
+        >
+          {icon}
+        </span>
+      )}
+      <p
+        className={cn(
+          icon
+            ? 'font-serif text-base font-bold text-stone-800'
+            : 'text-sm font-semibold text-stone-600',
+        )}
+      >
+        {title}
+      </p>
+      {hint && (
+        <p
+          className={cn(
+            'mt-1.5 text-xs text-stone-400',
+            icon && 'max-w-xs leading-relaxed',
+          )}
+        >
+          {hint}
+        </p>
+      )}
       {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
   );

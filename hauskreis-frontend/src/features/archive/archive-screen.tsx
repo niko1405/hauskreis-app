@@ -19,6 +19,7 @@ import {
   Music,
   Plus,
   Search,
+  SearchX,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { AnimatePresence, motion } from 'motion/react';
@@ -415,11 +416,20 @@ function TopicArchive({ search }: { search: string }) {
 
       {!query.isLoading && !query.error && query.items.length === 0 && (
         <EmptyState
-          title={nurEigene ? 'Du hast noch kein Thema' : 'Noch keine Themen'}
+          icon={search ? <SearchX size={22} /> : <Layers size={22} />}
+          title={
+            search
+              ? 'Nichts gefunden'
+              : nurEigene
+                ? 'Du hast noch kein Thema'
+                : 'Noch keine Themen'
+          }
           hint={
-            nurEigene
-              ? 'Sobald du für ein Thema zugeteilt bist, kannst du dort eines anfangen.'
-              : 'Hier stehen Themen, sobald ein Termin dazu vorbei ist.'
+            search
+              ? `Kein Thema passt zu „${search}".`
+              : nurEigene
+                ? 'Über das „+" unten rechts fängst du eines an — oder an einem Abend, für den du eingeteilt bist.'
+                : 'Hier stehen Themen, sobald ein Abend dazu vorbei ist.'
           }
         />
       )}
@@ -918,10 +928,11 @@ function MySongs({ search }: { search: string }) {
     <>
       {items.length === 0 ? (
         <EmptyState
+          icon={needle ? <SearchX size={22} /> : <FileMusic size={22} />}
           title={needle ? 'Nichts gefunden' : 'Noch keine eigene Version'}
           hint={
             needle
-              ? undefined
+              ? `Keines deiner Lieder passt zu „${search}".`
               : 'Öffne ein Lied und hinterleg dir Text & Akkorde. Sie bleiben auf diesem Gerät.'
           }
         />
@@ -978,8 +989,13 @@ function AllSongs({ search, sort }: { search: string; sort: SongSort }) {
       {query.error && <ErrorState error={query.error} />}
       {!query.isLoading && query.items.length === 0 && (
         <EmptyState
-          title="Noch keine Lieder"
-          hint="Die Datenbank wächst mit jedem Vorschlag an einem Termin."
+          icon={search ? <SearchX size={22} /> : <Music size={22} />}
+          title={search ? 'Nichts gefunden' : 'Noch keine Lieder'}
+          hint={
+            search
+              ? `Kein Lied passt zu „${search}".`
+              : 'Die Liste wächst mit jedem Vorschlag an einem Abend — oder über das „+" unten rechts.'
+          }
         />
       )}
 
