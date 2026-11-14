@@ -1,18 +1,22 @@
 'use client';
 
 /**
- * Lieder eines Termins — **die Setlist und die Vorschläge, als zwei Karten.**
+ * Lieder eines Termins — **eine Karte, zwei Teile**: oben die Setlist, unter
+ * einem Strich die Vorschläge, ganz unten „Neuen Song vorschlagen".
  *
- * Zwei Karten, weil es zwei Fragen mit zwei verschiedenen Ordnungen sind:
- * „in welcher Folge singen wir" entscheidet das Musik-Team, „was wollen die
- * anderen" sagen die Stimmen. In einer Karte sähen sie aus wie eine Liste mit
- * einem Bruch in der Mitte.
+ * Es sind zwei Fragen mit zwei Ordnungen — „in welcher Folge singen wir"
+ * entscheidet das Musik-Team, „was wollen die anderen" sagen die Stimmen —,
+ * aber eine Sache: die Lieder dieses Abends. Als zwei Karten untereinander
+ * nahmen sie mehr Platz ein als jede andere Sektion der Seite. Der Strich
+ * trennt die Fragen, die Karte hält sie zusammen.
  *
- * **Die Vorschläge sind eine Liste, kein Stapel Kästen.** Die Setlist trägt
- * ihren Rahmen in Terracotta und ihren Kopf mit Symbol — sie ist die Auswahl.
- * Die Vorschläge stehen darunter schlichter: eine Überschrift und eine Karte
- * mit Trennlinien. Vorher war es eine Karte voller Zeilen mit eigenem Rand,
- * und neben der Setlist sah das aus wie eine zweite, gleich wichtige.
+ * **Die Vorschläge sind zugeklappt voreingestellt.** Wer den Termin öffnet,
+ * will wissen, was gesungen wird; die Zahl daneben sagt, ob sich das Aufklappen
+ * lohnt. Offen sind sie eine Liste mit Trennlinien, kein Stapel Kästen.
+ *
+ * **Ohne ein einziges Lied steht statt der Karte eine Einladung** — Symbol,
+ * ein Satz und ein gefüllter Knopf. Eine leere Setlist über einer leeren
+ * Vorschlagsliste wären zwei Absagen an dieselbe Frage.
  *
  * **Die Setlist steht auch dann da, wenn sie leer ist** — sobald es überhaupt
  * Lieder gibt: Gerade dann ist die Frage offen. Was an ihrer Stelle
@@ -37,14 +41,16 @@
  *
  * **Warum die Setlist terracotta ist.** „Im Set" ist eine **Auswahl**, und
  * Auswahl ist überall terracotta: der aktive Tab, der gewählte Chip, der erste
- * Platz einer Rangliste. Ein Rand in dieser Farbe genügt dafür; ein Schein um
- * die Karte ließe sie aussehen wie eine Werbefläche.
+ * Platz einer Rangliste. Ihr Kopf trägt die Farbe und ein Hauch davon läuft
+ * von oben in die Karte — der Rand bleibt neutral, denn er umschließt auch
+ * die Vorschläge, und die sind keine Auswahl.
  */
 import {
   ChevronDown,
   ChevronUp,
   Equal,
   FileMusic,
+  ListMusic,
   Minus,
   Music,
   Plus,
@@ -55,8 +61,8 @@ import { useEffect, useRef, useState } from 'react';
 import Link from '@/components/ui/link';
 import { SwipeActions } from '@/components/ui/swipe-actions';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { EmptyState, Skeleton } from '@/components/ui/states';
-import { PRESSABLE } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/states';
+import { Button, PRESSABLE } from '@/components/ui/button';
 import {
   useMeetingSongs,
   useRemoveMeetingSong,
@@ -115,32 +121,22 @@ export function SongsCard({
     return (
       <section>
         <SectionTitle>Gesungen</SectionTitle>
-        <SetlistCard
-          meetingId={meetingId}
-          setlist={setlist}
-          owned={owned}
-          mayPick={false}
-          readOnly
-        />
+        <SongsFrame>
+          <SetlistPart
+            meetingId={meetingId}
+            setlist={setlist}
+            owned={owned}
+            mayPick={false}
+            readOnly
+          />
+        </SongsFrame>
       </section>
     );
   }
 
-  const suggest = !readOnly && (
-    // Ein Knopf für eine Absicht. Was für ein Lied es ist — eines aus dem
-    // Archiv oder ein neues —, ist die zweite Frage und wird im Sheet gestellt.
-    <button
-      type="button"
-      onClick={() => setSuggesting(true)}
-      className={cn(
-        'flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-line-strong py-3 text-sm font-semibold text-stone-400 transition-colors hover:border-terracotta-300 hover:text-terracotta-600',
-        PRESSABLE,
-      )}
-    >
-      <Plus size={16} />
-      Neuen Song vorschlagen
-    </button>
-  );
+  // Ein Knopf für eine Absicht. Was für ein Lied es ist — eines aus dem
+  // Archiv oder ein neues —, ist die zweite Frage und wird im Sheet gestellt.
+  const suggest = () => setSuggesting(true);
 
   return (
     <section>
@@ -153,26 +149,12 @@ export function SongsCard({
       )}
 
       {!songs.isLoading && all.length === 0 && (
-        <Card className="space-y-4">
-          <EmptyState
-            title={
-              readOnly
-                ? 'Für diesen Abend ist nichts notiert'
-                : 'Noch keine Lieder vorgeschlagen'
-            }
-            hint={
-              readOnly
-                ? undefined
-                : 'Wer Musik macht, freut sich über Vorschläge vorab.'
-            }
-          />
-          {suggest}
-        </Card>
+        <NoSongs readOnly={readOnly} onSuggest={suggest} />
       )}
 
       {all.length > 0 && (
-        <div className="space-y-4">
-          <SetlistCard
+        <SongsFrame>
+          <SetlistPart
             meetingId={meetingId}
             setlist={setlist}
             owned={owned}
@@ -181,29 +163,30 @@ export function SongsCard({
           />
 
           {(rest.length > 0 || !readOnly) && (
-            <SuggestionsCard
-              meetingId={meetingId}
-              rest={rest}
-              owned={owned}
-              mayPick={mayPick}
-              readOnly={readOnly}
-              footer={
-                <>
-                  {suggest}
-                  {/* Die Auskunft von der Leserseite her: nicht „du darfst
-                      nicht", sondern „dafür ist jemand zuständig". Steht die
-                      leere Setlist oben, sagt sie dasselbe schon. */}
-                  {!mayPick && setlist.length > 0 && rest.length > 0 && (
-                    <p className="text-center text-[11px] text-stone-400">
-                      Das Musik-Team wählt aus diesen Vorschlägen die finale
-                      Setlist.
-                    </p>
-                  )}
-                </>
-              }
-            />
+            <div className="space-y-3 border-t border-line p-4 sm:p-5">
+              {/* Ohne Vorschläge keine Kopfzeile „Vorschläge 0" — eine Zahl,
+                  die nichts zu sagen hat. Der Knopf darunter bleibt. */}
+              {rest.length > 0 && (
+                <SuggestionsPart
+                  meetingId={meetingId}
+                  rest={rest}
+                  owned={owned}
+                  mayPick={mayPick}
+                  readOnly={readOnly}
+                  // Die Auskunft von der Leserseite her: nicht „du darfst
+                  // nicht", sondern „dafür ist jemand zuständig". Steht die
+                  // leere Setlist oben, sagt sie dasselbe schon.
+                  note={
+                    !mayPick && setlist.length > 0
+                      ? 'Das Musik-Team wählt aus diesen Vorschlägen die finale Setlist.'
+                      : null
+                  }
+                />
+              )}
+              {!readOnly && <SuggestButton onClick={suggest} />}
+            </div>
           )}
-        </div>
+        </SongsFrame>
       )}
 
       <SongSuggestSheet
@@ -213,6 +196,86 @@ export function SongsCard({
         alreadyPicked={all.map((entry) => entry.song.id)}
       />
     </section>
+  );
+}
+
+/**
+ * Die eine Karte um Setlist und Vorschläge.
+ *
+ * Wie `Card`, aber ohne eigene Polsterung — die tragen die Teile, damit der
+ * Strich dazwischen von Rand zu Rand geht. Und ohne `overflow-hidden`: Eine
+ * Setlist-Zeile, die gerade gezogen wird, soll nicht an der Kante abreißen.
+ */
+function SongsFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-card border border-line bg-card shadow-sm shadow-stone-200/40">
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Noch kein einziges Lied — eine Einladung statt zweier leerer Kästen.
+ *
+ * Das Symbol in derselben getönten Kachel wie der Kopf der Setlist, mit einem
+ * kleinen Abzeichen für „Liste": Hier entsteht eine. Der Knopf ist gefüllt —
+ * an dieser Stelle ist Vorschlagen die eine Sache, die es zu tun gibt.
+ */
+function NoSongs({
+  readOnly,
+  onSuggest,
+}: {
+  readOnly: boolean;
+  onSuggest: () => void;
+}) {
+  return (
+    <Card className="flex flex-col items-center px-6 py-8 text-center">
+      <span className="relative flex size-16 items-center justify-center rounded-2xl border border-terracotta-500/30 bg-terracotta-500/10 text-terracotta-500">
+        <Music size={28} />
+        <span className="absolute -right-1.5 -bottom-1.5 flex size-6 items-center justify-center rounded-full border-2 border-card bg-terracotta-500 text-white">
+          <ListMusic size={12} strokeWidth={2.5} />
+        </span>
+      </span>
+
+      <p className="mt-5 font-serif text-lg font-bold text-stone-900">
+        {readOnly
+          ? 'Für diesen Abend ist nichts notiert'
+          : 'Noch keine Lieder vorgeschlagen'}
+      </p>
+
+      {!readOnly && (
+        <>
+          <p className="mt-1.5 max-w-xs text-sm leading-relaxed text-stone-500">
+            Wer Musik macht, freut sich über Vorschläge vorab. Teile deinen
+            Lieblingssong für die Setlist!
+          </p>
+          <Button className="mt-5" onClick={onSuggest}>
+            <Plus size={16} />
+            Neuen Song vorschlagen
+          </Button>
+        </>
+      )}
+    </Card>
+  );
+}
+
+/** Der Fuß der Karte — umrandet, mit dem Plus in einem kleinen Kästchen. */
+function SuggestButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center justify-center gap-2.5 rounded-2xl border border-line py-3 text-sm font-semibold text-stone-700 transition-colors hover:border-terracotta-300 hover:text-terracotta-600',
+        'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+        PRESSABLE,
+      )}
+    >
+      <span className="flex size-5 items-center justify-center rounded-md border border-terracotta-500/40 bg-terracotta-500/10 text-terracotta-500">
+        <Plus size={13} strokeWidth={2.5} />
+      </span>
+      Neuen Song vorschlagen
+    </button>
   );
 }
 
@@ -288,7 +351,7 @@ function SongLink({
 
 // ------------------------------------------------------------------ Setlist
 
-function SetlistCard({
+function SetlistPart({
   meetingId,
   setlist,
   owned,
@@ -327,9 +390,10 @@ function SetlistCard({
   };
 
   return (
-    // Der Rand in Terracotta sagt „das ist die Auswahl" — ohne Schein, der die
-    // Karte aus dem Rest der App heraustreten ließe.
-    <div className="rounded-card border border-terracotta-500/40 bg-card p-4 sm:p-5">
+    // Ein Hauch Terracotta, der von oben in die Karte läuft: „das ist die
+    // Auswahl", ohne dass der Rand es sagen müsste — der umschließt auch die
+    // Vorschläge.
+    <div className="rounded-t-card bg-linear-to-b from-terracotta-500/8 to-transparent p-4 sm:p-5">
       <CardHead
         icon={<Music size={18} />}
         title="Setlist"
@@ -346,11 +410,13 @@ function SetlistCard({
                 : 'Die Setlist steht noch nicht fest'}
           </p>
           <p className="mt-1 text-[11px] leading-relaxed text-stone-400">
+            {/* „Klapp auf": Die Vorschläge stehen zugeklappt darunter, und
+                der Kreis ist erst offen zu sehen. */}
             {mayPick
               ? readOnly
-                ? 'Tipp unten auf den Kreis vor einem Lied, das dran war — das hilft der Liederliste.'
-                : 'Tippt unten auf den Kreis vor einem Vorschlag — er landet dann hier.'
-              : 'Das Musik-Team wählt aus den Vorschlägen aus.'}
+                ? 'Klapp unten die Vorschläge auf und tipp auf den Kreis vor einem Lied, das dran war — das hilft der Liederliste.'
+                : 'Klapp unten die Vorschläge auf und tipp auf den Kreis vor einem Lied — es landet dann hier.'
+              : 'Das Musik-Team wählt bald aus den Vorschlägen aus.'}
           </p>
         </div>
       ) : (
@@ -495,25 +561,25 @@ function SetlistRow({
 
 // -------------------------------------------------------------- Vorschläge
 
-function SuggestionsCard({
+function SuggestionsPart({
   meetingId,
   rest,
   owned,
   mayPick,
   readOnly,
-  footer,
+  note,
 }: {
   meetingId: string;
   rest: MeetingSong[];
   owned: ReadonlySet<string>;
   mayPick: boolean;
   readOnly: boolean;
-  footer: React.ReactNode;
+  /** Ein Satz unter der offenen Liste — wer daraus auswählt. */
+  note: string | null;
 }) {
-  // Aufklappbar, aber offen voreingestellt: Ein Vorschlag ist dazu da,
-  // gelesen zu werden. Zuklappen hilft erst, wenn die Setlist steht und die
-  // Liste darunter lang geworden ist.
-  const [open, setOpen] = useState(true);
+  // **Zugeklappt voreingestellt.** Wer den Termin öffnet, will wissen, was
+  // gesungen wird; ob sich das Aufklappen lohnt, sagt die Zahl daneben.
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="space-y-3">
@@ -521,16 +587,16 @@ function SuggestionsCard({
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="flex w-full items-center gap-2 rounded-md px-1 text-left focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none"
+        className="flex w-full items-center gap-2 rounded-md text-left focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none"
       >
         <span className="text-xs font-bold tracking-wider text-stone-400 uppercase">
           Vorschläge
         </span>
-        <span className="text-[11px] font-semibold text-stone-400 tabular-nums">
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-line bg-canvas px-1.5 text-[11px] font-bold text-stone-500 tabular-nums">
           {rest.length}
         </span>
         <ChevronDown
-          size={15}
+          size={16}
           className={cn(
             'ml-auto text-stone-400 transition-transform',
             !open && '-rotate-90',
@@ -538,22 +604,25 @@ function SuggestionsCard({
         />
       </button>
 
-      {open && rest.length > 0 && (
-        <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-card">
-          {rest.map((entry) => (
-            <SuggestionRow
-              key={entry.id}
-              entry={entry}
-              meetingId={meetingId}
-              owned={owned.has(entry.song.id)}
-              mayPick={mayPick}
-              readOnly={readOnly}
-            />
-          ))}
-        </ul>
+      {open && (
+        <>
+          <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card">
+            {rest.map((entry) => (
+              <SuggestionRow
+                key={entry.id}
+                entry={entry}
+                meetingId={meetingId}
+                owned={owned.has(entry.song.id)}
+                mayPick={mayPick}
+                readOnly={readOnly}
+              />
+            ))}
+          </ul>
+          {note && (
+            <p className="text-center text-[11px] text-stone-400">{note}</p>
+          )}
+        </>
       )}
-
-      {footer}
     </div>
   );
 }
