@@ -90,6 +90,9 @@ const ZONES: string[] = Intl.supportedValuesOf?.('timeZone') ?? [
 /** Was in der Verwaltung zum Rhythmus einstellbar ist — eine Zeile am Server. */
 type Schedule = Required<UpdateMeetingScheduleInput>;
 
+/** Der Satz „dienstags um 18 Uhr in Berlin" — nur gemeinsam zu schreiben. */
+const WHEN: (keyof Schedule)[] = ['weekday', 'startTime', 'timeZone'];
+
 function scheduleOf(current: MeetingSchedule | undefined): Schedule {
   return {
     autoGenerate: current?.autoGenerate ?? true,
@@ -132,12 +135,24 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
   const changes = (Object.keys(value) as (keyof Schedule)[]).filter(
     (key) => value[key] !== saved[key],
   );
+  // Bis auf einen Satz: Wochentag, Uhrzeit und Zeitzone sagen zusammen, wann
+  // ihr euch trefft, und der Server nimmt sie nur gemeinsam an. Wer allein die
+  // Uhrzeit umstellte, bekam sonst „Validation failed".
+  const sent = changes.some((key) => WHEN.includes(key))
+    ? [...new Set([...changes, ...WHEN])]
+    : changes;
+  // Ein geleertes Uhrzeit-Feld ist kein Fall für den Server.
+  const timeMissing = !/^([01]\d|2[0-3]):[0-5]\d$/.test(value.startTime);
 
   useAdminDraftSection('schedule', {
     dirty: current !== undefined && changes.length > 0,
+    invalid:
+      value.autoGenerate && timeMissing
+        ? 'Beim Termin-Rhythmus fehlt die Uhrzeit.'
+        : undefined,
     save: async () => {
       const input: UpdateMeetingScheduleInput = Object.fromEntries(
-        changes.map((key) => [key, value[key]]),
+        sent.map((key) => [key, value[key]]),
       );
       await update.mutateAsync(input);
       setDraft(null);

@@ -22,8 +22,12 @@
  *
  * `equal` teilt die volle Breite dagegen **gleich** auf — für Register, die
  * eine ganze Seite umschalten („Übersicht | Planung | Geburtstage"): Dort sind
- * die Teile gleichrangig, und gleich breit sehen sie auch so aus. Mit
- * `size="lg"` sind sie so hoch wie ein Knopf.
+ * die Teile gleichrangig, und gleich breit sehen sie auch so aus. `size="lg"`
+ * gibt der Kapsel etwas Luft um die gewählte Pille, ohne sie zu einem Balken
+ * zu machen: halbfett und nicht fett — sie ist Bedienung, keine Überschrift.
+ *
+ * `count` steht klein hinter dem Wort („Lieder 3"), für Register, hinter denen
+ * eine Liste liegt. Ohne Zahl steht nichts — „Orte 0" wäre keine Auskunft.
  */
 import { cn } from '@/lib/cn';
 
@@ -39,7 +43,12 @@ export function Segmented<Value extends string>({
 }: {
   value: Value;
   onChange: (value: Value) => void;
-  options: { value: Value; label: string; icon?: React.ReactNode }[];
+  options: {
+    value: Value;
+    label: string;
+    icon?: React.ReactNode;
+    count?: number;
+  }[];
   size?: 'sm' | 'md' | 'lg';
   /** Wofür die Gruppe steht, für Screenreader. */
   label?: string;
@@ -72,7 +81,7 @@ export function Segmented<Value extends string>({
             size === 'sm'
               ? cn('py-1 text-xs', fill ? 'px-2 sm:px-3' : 'px-3')
               : size === 'lg'
-                ? 'px-3 py-2.5 text-sm font-bold'
+                ? 'px-2 py-1.5 text-[13px]'
                 : 'px-4 py-1.5 text-sm',
             value === option.value
               ? 'bg-terracotta-500 text-white'
@@ -85,7 +94,12 @@ export function Segmented<Value extends string>({
               {option.label}
             </span>
           ) : (
-            option.label
+            <span className="truncate">{option.label}</span>
+          )}
+          {option.count !== undefined && (
+            <span className="-ml-0.5 shrink-0 text-[11px] opacity-70">
+              {option.count}
+            </span>
           )}
         </button>
       ))}

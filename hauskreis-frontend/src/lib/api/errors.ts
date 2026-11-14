@@ -207,6 +207,16 @@ export function errorMessage(e: unknown): string {
   if (e instanceof ForbiddenError) {
     return 'Dafür fehlt dir die Berechtigung.';
   }
+  /**
+   * Eine abgelehnte Eingabe heißt am Server „Validation failed", englisch und
+   * ohne Hinweis, was nicht passte. Formulare holen sich die Einzelheiten über
+   * `fieldErrors`; wo nur eine Zeile Platz hat, steht dieser Satz. Sieht ihn
+   * jemand, hat die Oberfläche etwas durchgelassen, das sie hätte abfangen
+   * sollen — er ist ein Fehlerbericht, kein Hinweis zum Ausbessern.
+   */
+  if (isApiError(e) && e.status === 400 && e.payload?.errors?.length) {
+    return 'Das hat der Server so nicht angenommen — eine Angabe passt nicht. Lade neu und probier es noch einmal.';
+  }
   if (isApiError(e)) {
     return e.payload?.message ?? `Fehler ${e.status}`;
   }

@@ -15,6 +15,7 @@ import {
   ScrollText,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
+import { Badge } from '@/components/ui/badge';
 import { PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
@@ -141,10 +142,13 @@ export function HomeScreen() {
           <section>
             <SectionTitle>Aktueller Termin</SectionTitle>
             {/* Grün wie das „Läuft"-Abzeichen am Termin und wie der abgehakte
-                Actionstep darüber: die Farbe von „gilt gerade". */}
+                Actionstep darüber: die Farbe von „gilt gerade". **Nur Rand und
+                Abzeichen**, wie in der Terminliste — eine getönte Fläche sah
+                aus wie eine Auswahl. */}
             <PastOrCurrentMeeting
               meeting={currentMeeting}
-              className="border-success-line bg-success-bg/30"
+              className="border-success-line"
+              running
             />
           </section>
         )}
@@ -314,15 +318,23 @@ function PastOrCurrentMeeting({
   meeting,
   className,
   past = false,
+  running = false,
 }: {
   meeting: HomeNextMeeting;
   className?: string;
   /** Der letzte Abend — zu ihm führt kein Weg mehr nach Maps. */
   past?: boolean;
+  /** Der laufende Abend — er trägt „Läuft" wie in der Terminliste. */
+  running?: boolean;
 }) {
   if (!meeting.summaryText) {
     return (
-      <NextMeetingCard meeting={meeting} className={className} maps={!past} />
+      <NextMeetingCard
+        meeting={meeting}
+        className={className}
+        maps={!past}
+        running={running}
+      />
     );
   }
 
@@ -363,11 +375,14 @@ function PastOrCurrentMeeting({
               className="ml-auto text-stone-400 transition-colors group-hover:text-terracotta-600"
             />
           </p>
-          <p className="mt-0.5 text-[11px] text-stone-400">
-            {meeting.endDate
-              ? formatDayRange(meeting.date, meeting.endDate)
-              : formatRelativeDay(meeting.date)}{' '}
-            · {meetingHeadline(meeting)}
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-stone-400">
+            <span>
+              {meeting.endDate
+                ? formatDayRange(meeting.date, meeting.endDate)
+                : formatRelativeDay(meeting.date)}{' '}
+              · {meetingHeadline(meeting)}
+            </span>
+            {running && <Badge variant="success">Läuft</Badge>}
           </p>
           {/* Nach acht Zeilen ist Schluss: Der Rest steht dort, wohin die
             Karte führt, und der Startbildschirm soll darunter noch etwas
@@ -395,10 +410,13 @@ function NextMeetingCard({
   meeting,
   className,
   maps = true,
+  running = false,
 }: {
   meeting: HomeNextMeeting;
-  /** Der laufende Abend bekommt hier seine grüne Tönung. */
+  /** Der laufende Abend bekommt hier seinen grünen Rand. */
   className?: string;
+  /** Neben „heute" steht dann „Läuft", wie auf der Terminkarte. */
+  running?: boolean;
   /**
    * Ob Ort und runder Knopf nach Maps führen. Beim letzten Abend nicht: Zu
    * dem geht niemand mehr hin, und der terracotta Knopf wäre auf einer sonst
@@ -406,6 +424,12 @@ function NextMeetingCard({
    */
   maps?: boolean;
 }) {
+  const chips =
+    (meeting.hasTopicSlot && meeting.topicResponsibles.length > 0) ||
+    (meeting.hasTestimonySlot && meeting.testimonyPerson !== null) ||
+    (meeting.hasSongSlot && meeting.songLeaders.length > 0) ||
+    (meeting.hasSnackSlot && meeting.snackResponsibles.length > 0);
+
   return (
     <Card className={cn('space-y-4', className)}>
       {/* Dieselbe Kopfzeile wie auf der Terminkarte: Datums-Kästchen links,
@@ -416,10 +440,13 @@ function NextMeetingCard({
 
         <div className="min-w-0 flex-1">
           <Link href={`/termin?id=${meeting.id}`} className="block min-w-0">
-            <span className="text-[10px] font-semibold text-stone-400">
-              {meeting.endDate
-                ? formatDayRange(meeting.date, meeting.endDate)
-                : formatRelativeDay(meeting.date)}
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-semibold text-stone-400">
+                {meeting.endDate
+                  ? formatDayRange(meeting.date, meeting.endDate)
+                  : formatRelativeDay(meeting.date)}
+              </span>
+              {running && <Badge variant="success">Läuft</Badge>}
             </span>
             <h3 className="mt-0.5 font-serif text-xl font-bold text-stone-900">
               {meetingHeadline(meeting)}
@@ -431,6 +458,7 @@ function NextMeetingCard({
           <TimeAndPlace
             startTime={meeting.startTime}
             location={meeting.location}
+            host={meeting.host}
             linkToMaps={maps}
           />
         </div>
@@ -452,32 +480,29 @@ function NextMeetingCard({
         )}
       </div>
 
-      {/* Alle Rollen des Abends, in derselben Form wie auf der Terminkarte —
-          sonst heißt „noch kein Host" auf zwei Bildschirmen zweierlei. Der Link
-          führt aufs Detail, weil dort das „+ … eintragen" auch einlösbar ist. */}
-      <Link
-        href={`/termin?id=${meeting.id}`}
-        className="flex flex-wrap items-center gap-2"
-      >
-        {/* Braucht der Ort keinen Gastgeber — Schlosspark, Café —, steht hier
-            **nichts**. Der Ort selbst steht schon in der Kopfzeile darüber;
-            hier stand er ein zweites Mal, als terracotta Chip, und behauptete
-            damit eine Rolle, die es an dem Abend gar nicht gibt. Dieselbe
-            Regel wie in den Zuständigkeiten am Termin (`meetingRoles`). */}
-        {meeting.host && <RoleChip kind="HOST" people={[meeting.host]} />}
-        {meeting.hasTopicSlot && meeting.topicResponsibles.length > 0 && (
-          <RoleChip kind="TOPIC" people={meeting.topicResponsibles} />
-        )}
-        {meeting.hasTestimonySlot && meeting.testimonyPerson && (
-          <RoleChip kind="TESTIMONY" people={[meeting.testimonyPerson]} />
-        )}
-        {meeting.hasSongSlot && meeting.songLeaders.length > 0 && (
-          <RoleChip kind="SONG" people={meeting.songLeaders} />
-        )}
-        {meeting.hasSnackSlot && meeting.snackResponsibles.length > 0 && (
-          <RoleChip kind="SNACK" people={meeting.snackResponsibles} />
-        )}
-      </Link>
+      {/* Die Rollen des Abends, in derselben Form wie auf der Terminkarte. Der
+          Link führt aufs Detail, weil dort das „+ … eintragen" auch einlösbar
+          ist. **Der Gastgeber steht nicht dabei**: Er steht in der Kopfzeile,
+          mit einem Haus vor dem Namen — wie auf der Terminkarte. */}
+      {chips && (
+        <Link
+          href={`/termin?id=${meeting.id}`}
+          className="flex flex-wrap items-center gap-2"
+        >
+          {meeting.hasTopicSlot && meeting.topicResponsibles.length > 0 && (
+            <RoleChip kind="TOPIC" people={meeting.topicResponsibles} />
+          )}
+          {meeting.hasTestimonySlot && meeting.testimonyPerson && (
+            <RoleChip kind="TESTIMONY" people={[meeting.testimonyPerson]} />
+          )}
+          {meeting.hasSongSlot && meeting.songLeaders.length > 0 && (
+            <RoleChip kind="SONG" people={meeting.songLeaders} />
+          )}
+          {meeting.hasSnackSlot && meeting.snackResponsibles.length > 0 && (
+            <RoleChip kind="SNACK" people={meeting.snackResponsibles} />
+          )}
+        </Link>
+      )}
     </Card>
   );
 }

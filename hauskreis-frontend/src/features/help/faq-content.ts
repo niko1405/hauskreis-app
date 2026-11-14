@@ -131,7 +131,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'start',
     question: 'Was steht auf welchem Bildschirm?',
     answer:
-      '**Heute** — der nächste Abend, deine eigenen Aufgaben als Abzeichen, der offene Actionstep, deine aktuellen Gebetsbuddys und der letzte vergangene Termin.\n\n**Termine** — alle kommenden Abende, wahlweise als Liste, als Planungstabelle über mehrere Wochen oder als Kalender.\n\n**Gebet** — die laufende Gebetsrunde und wer mit wem betet.\n\n**Archiv** — Themen, Lieder, Orte, Notizen und vergangene Abende. Hier legst du auch Neues an, ohne auf einen Dienstag zu warten.\n\n**Profil** — deine Angaben, Abwesenheiten, Benachrichtigungen, Darstellung, dein Zuhause und diese Hilfe.',
+      '**Heute** — der nächste Abend, deine eigenen Aufgaben als Abzeichen, der offene Actionstep, deine aktuellen Gebetsbuddys und der letzte vergangene Termin.\n\n**Termine** — alle kommenden Abende, wahlweise als Liste, als Planungstabelle über mehrere Wochen oder als Kalender, dazu unter „Vergangene" die, die schon waren, und die Geburtstage.\n\n**Gebet** — die laufende Gebetsrunde und wer mit wem betet.\n\n**Archiv** — Themen, Lieder, Orte und Notizen; die Lupe oben durchsucht sie. Hier legst du auch Neues an, ohne auf einen Dienstag zu warten.\n\n**Profil** — deine Angaben, Abwesenheiten, Benachrichtigungen, Darstellung, dein Zuhause und diese Hilfe.',
     keywords: ['menü', 'tabs', 'bildschirme', 'navigation', 'wo finde ich'],
   },
 

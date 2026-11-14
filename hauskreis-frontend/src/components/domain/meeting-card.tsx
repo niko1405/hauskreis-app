@@ -48,6 +48,11 @@ export function MeetingCard({
   // Aussage über gestern.
   const shown = past || cancelled ? counts.attending : counts.planned;
   const topicPeople = meeting.topicResponsibles.map((r) => r.person);
+  const hasChips =
+    meeting.hasTopicSlot ||
+    meeting.hasTestimonySlot ||
+    meeting.hasSongSlot ||
+    meeting.hasSnackSlot;
 
   const myRow = meeting.attendances.find((row) => row.personId === me?.id);
   const answerable = isAnswerable(meeting, me?.id);
@@ -73,10 +78,12 @@ export function MeetingCard({
           // eine Auswahl. Der Rahmen sagt es mit der Form, die die Karte
           // ohnehin hat.
           special ? 'border-special-line' : 'border-line',
-          // Dieselbe Tönung wie „Aktueller Termin" auf „Heute": Grün ist die
+          // Derselbe Rand wie „Aktueller Termin" auf „Heute": Grün ist die
           // Farbe von „gilt gerade". In einer Liste über Wochen ist der Abend,
-          // an dem man sitzt, der eine, den man sofort finden will.
-          running && 'border-success-line bg-success-bg/30',
+          // an dem man sitzt, der eine, den man sofort finden will. **Nur der
+          // Rand und das Abzeichen**, nicht die Fläche: Eine getönte Karte sah
+          // aus wie eine Auswahl.
+          running && 'border-success-line',
           cancelled && 'opacity-60',
         )}
       >
@@ -147,6 +154,7 @@ export function MeetingCard({
             <TimeAndPlace
               startTime={meeting.startTime}
               location={meeting.location}
+              host={meeting.host}
             />
           </div>
         </div>
@@ -158,43 +166,42 @@ export function MeetingCard({
             Striche sagen sollten, sagen die Formen — Chips sind Pillen mit
             Namen darin, die Antwort ein umrandeter Schalter. Getrennt wird über
             den Abstand. */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {/* Braucht der Ort keinen Gastgeber — Schlosspark, Café —, steht
-              hier **nichts**. Der Ort selbst steht schon in der Zeile über
-              den Chips; hier stand er ein zweites Mal, als terracotta Chip,
-              und behauptete damit eine Rolle, die es an dem Abend gar nicht
-              gibt. Dieselbe Regel wie in den Zuständigkeiten am Termin
-              (`meetingRoles`). */}
-          {(meeting.location === null || meeting.location.requiresHost) && (
-            <RoleChip kind="HOST" people={meeting.host ? [meeting.host] : []} />
-          )}
-          {meeting.hasTopicSlot && (
-            <RoleChip kind="TOPIC" people={topicPeople} />
-          )}
-          {/* Und das Testimony, das an derselben Stelle des Abends steht — es
+        {/* **Kein Gastgeber-Chip**: Wer einlädt, steht schon in der Zeile
+            darüber, mit einem Haus statt der Stecknadel — derselbe Mensch
+            stand sonst zweimal auf der Karte. Ohne weitere Rolle fällt die
+            Reihe deshalb ganz weg, statt als leerer Abstand stehen zu bleiben. */}
+        {hasChips && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {meeting.hasTopicSlot && (
+              <RoleChip kind="TOPIC" people={topicPeople} />
+            )}
+            {/* Und das Testimony, das an derselben Stelle des Abends steht — es
               fehlte hier wie die Musik davor. Auf einem Lobpreisabend zeigte
               die Karte damit Gastgeber und Musik, aber nicht, wer erzählt. */}
-          {meeting.hasTestimonySlot && (
-            <RoleChip
-              kind="TESTIMONY"
-              people={meeting.testimonyPerson ? [meeting.testimonyPerson] : []}
-            />
-          )}
-          {/* Musik fehlte hier, obwohl sie eine der drei Rollen ist — auf
+            {meeting.hasTestimonySlot && (
+              <RoleChip
+                kind="TESTIMONY"
+                people={
+                  meeting.testimonyPerson ? [meeting.testimonyPerson] : []
+                }
+              />
+            )}
+            {/* Musik fehlte hier, obwohl sie eine der drei Rollen ist — auf
               einem Lobpreisabend sogar die tragende. */}
-          {meeting.hasSongSlot && (
-            <RoleChip
-              kind="SONG"
-              people={meeting.songLeaders.map((leader) => leader.person)}
-            />
-          )}
-          {meeting.hasSnackSlot && (
-            <RoleChip
-              kind="SNACK"
-              people={meeting.snackResponsibles.map((row) => row.person)}
-            />
-          )}
-        </div>
+            {meeting.hasSongSlot && (
+              <RoleChip
+                kind="SONG"
+                people={meeting.songLeaders.map((leader) => leader.person)}
+              />
+            )}
+            {meeting.hasSnackSlot && (
+              <RoleChip
+                kind="SNACK"
+                people={meeting.snackResponsibles.map((row) => row.person)}
+              />
+            )}
+          </div>
+        )}
 
         {answerable && (
           <div className="mt-3">

@@ -86,8 +86,15 @@ export function ScreenHeader({
 
       {/* Der Schleier. Nach unten deckend, damit der Übergang in die Leinwand
           keine Kante hat, und oben durchscheinend, damit vom Bild etwas übrig
-          bleibt. */}
-      <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/85 to-canvas/25" />
+          bleibt.
+
+          **Hell deckt er weniger als dunkel.** Eine helle Leinwand über einem
+          Foto wäscht es aus — mit 85 % ab der Mitte blieb vom Bild ein
+          milchiger Schimmer. Hell trägt er deshalb nur das untere Drittel, wo
+          der Titel steht, und lässt oben das Bild ganz stehen; dunkel bleibt
+          er, wie er war, denn dort dunkelt er das Foto ab, statt es zu
+          bleichen. */}
+      <div className="absolute inset-0 bg-linear-to-t from-canvas via-canvas/55 via-40% to-transparent dark:via-canvas/85 dark:via-50% dark:to-canvas/25" />
 
       {/* Das Bild geht randlos bis unter die Statusleiste — das ist der
           native Eindruck. Nur sein Inhalt rückt um den sicheren Rand nach

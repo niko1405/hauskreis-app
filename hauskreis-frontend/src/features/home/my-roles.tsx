@@ -87,16 +87,6 @@ export function MyRoles({
 
   const shown = tab === 'next' ? atNextMeeting : later;
 
-  /**
-   * Der nächste Einsatz **nach** dem nächsten Abend — für den Fuß unter „Du
-   * hast frei!". Der früheste, nicht der der ersten Sorte: `roles` kommt
-   * chronologisch, `later` ist nach Sorten sortiert.
-   */
-  const upcoming =
-    nextMeetingId === null
-      ? undefined
-      : roles.find((role) => role.meetingId !== nextMeetingId);
-
   return (
     <>
       <div
@@ -137,7 +127,13 @@ export function MyRoles({
           <Empty
             tab={tab}
             noMeeting={nextMeetingId === null}
-            upcoming={tab === 'next' ? upcoming : undefined}
+            onShowLater={
+              // Nur unter „Du hast frei!" — ohne nächsten Abend steht ohnehin
+              // „Kein Termin geplant", und „Zukünftige" ist dann alles.
+              tab === 'next' && nextMeetingId !== null && later.length > 0
+                ? () => setTab('later')
+                : undefined
+            }
           />
         )}
       </div>
@@ -187,19 +183,21 @@ function Segment({
  * wäre „Du hast frei" eine Aussage über einen Abend, den es gar nicht gibt.
  *
  * **Frei heißt nicht „nichts zu tun".** Steht danach schon ein Einsatz an,
- * nennt ihn ein Fuß unter der Karte — „Nächster Einsatz: Testimony (in einer
- * Woche)" — samt Weg dorthin. Sonst läse man „frei" und schaute nicht ins
- * zweite Register, wo genau das steht, wofür man Vorlauf braucht.
+ * sagt es ein Fuß unter der Karte — „Kommende Einsätze", und „Ansehen" schaltet
+ * gleich darüber auf „Zukünftige". Sonst läse man „frei" und schaute nicht ins
+ * zweite Register, wo genau das steht, wofür man Vorlauf braucht. Der Fuß ist
+ * eine **volle** Fläche und nicht gestrichelt wie die Karte: Er ist keine
+ * Lücke, sondern ein Weg.
  */
 function Empty({
   tab,
   noMeeting,
-  upcoming,
+  onShowLater,
 }: {
   tab: Tab;
   noMeeting: boolean;
-  /** Der nächste Einsatz nach dem nächsten Abend — nur unter „Du hast frei!". */
-  upcoming?: Assignment;
+  /** Schaltet auf „Zukünftige" — nur unter „Du hast frei!", wenn dort etwas steht. */
+  onShowLater?: () => void;
 }) {
   const {
     icon: Icon,
@@ -223,10 +221,13 @@ function Empty({
           hint: 'Lehn dich zurück und genieß das Treffen.',
         };
 
-  const href = upcoming ? roleHref(upcoming) : null;
-
   return (
-    <Card className="border-dashed bg-transparent shadow-none">
+    <Card
+      className={cn(
+        'border-dashed bg-transparent shadow-none',
+        onShowLater && 'overflow-hidden',
+      )}
+    >
       <div className="flex flex-col items-center gap-2 py-2 text-center">
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-canvas text-stone-300">
           <Icon size={22} />
@@ -235,27 +236,22 @@ function Empty({
         <p className="text-xs text-stone-400">{hint}</p>
       </div>
 
-      {upcoming && (
-        <div className="mt-4 flex items-center justify-between gap-3 border-t border-dashed border-line pt-3.5 text-xs">
-          <span className="min-w-0 truncate text-stone-500">
-            Nächster Einsatz:{' '}
-            <span className="font-bold text-stone-700">
-              {ROLE_LABEL[upcoming.role]}
-            </span>{' '}
-            ({formatRelativeDay(upcoming.date)})
+      {onShowLater && (
+        <div className="-mx-5 mt-4 -mb-5 flex items-center justify-between gap-3 border-t border-line bg-card px-5 py-3 text-xs">
+          <span className="min-w-0 truncate font-semibold text-stone-600">
+            Kommende Einsätze
           </span>
-          {href && (
-            <Link
-              href={href}
-              className={cn(
-                'inline-flex shrink-0 items-center gap-1 rounded-md font-bold text-terracotta-600 hover:text-terracotta-700 focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
-                PRESSABLE,
-              )}
-            >
-              Ansehen
-              <ArrowRight size={13} />
-            </Link>
-          )}
+          <button
+            type="button"
+            onClick={onShowLater}
+            className={cn(
+              'inline-flex shrink-0 items-center gap-1 rounded-md font-bold text-terracotta-600 hover:text-terracotta-700 focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+              PRESSABLE,
+            )}
+          >
+            Ansehen
+            <ArrowRight size={13} />
+          </button>
         </div>
       )}
     </Card>

@@ -94,6 +94,17 @@ export function CreateMeetingSheet({
   return (
     <Sheet open={open} onClose={onClose} title="Neuer Termin">
       <div className="space-y-4">
+        {/* Der Titel zuerst, wie im Bearbeiten-Dialog: Er sagt, was für ein
+            Abend das ist — ein Geburtstag, eine Freizeit —, und danach fragt
+            man nach dem Wann. */}
+        <Field label="Titel (optional)">
+          <TextInput
+            value={title}
+            placeholder="Ohne Titel"
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </Field>
+
         <Field label="Von">
           <TextInput
             type="date"
@@ -121,14 +132,6 @@ export function CreateMeetingSheet({
             value={endDate}
             min={date}
             onChange={(event) => setEndDate(event.target.value)}
-          />
-        </Field>
-
-        <Field label="Titel (optional)">
-          <TextInput
-            value={title}
-            placeholder="Ohne Titel"
-            onChange={(event) => setTitle(event.target.value)}
           />
         </Field>
 

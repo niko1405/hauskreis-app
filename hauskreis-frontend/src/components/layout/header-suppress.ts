@@ -8,12 +8,6 @@
  * gehört aber der Hülle und nicht der Seite — die Seite kann sie nur bitten zu
  * gehen.
  *
- * **Zwei Bitten.** `suppressHeader` schickt sie ganz weg. `restrictHeaderToTop`
- * lässt sie nur ganz oben stehen: Im Archiv klebt das Suchfeld oben, sobald
- * man scrollt, und eine Leiste, die beim Hochwischen darüberführe, verdeckte
- * genau das. Ganz oben gehört sie trotzdem hin — dort steht der Weg zur Gruppe
- * und die Glocke.
- *
  * **Ein Zähler und ein Modul**, aus denselben Gründen wie `overlay-lock.ts`:
  * Die Rücknahme muss den doppelten Effekt im Strict Mode überstehen, und ein
  * Kontext über der ganzen App für ein Ja/Nein wäre eine Ebene zu viel. Der
@@ -26,7 +20,6 @@
 import { useSyncExternalStore } from 'react';
 
 let suppressed = 0;
-let topOnly = 0;
 
 const listeners = new Set<() => void>();
 
@@ -50,22 +43,6 @@ export function suppressHeader(): () => void {
   };
 }
 
-/** Lässt die Kopfleiste nur ganz oben stehen und gibt zurück, wie sie es wieder darf. */
-export function restrictHeaderToTop(): () => void {
-  topOnly += 1;
-  emit();
-
-  let released = false;
-
-  return () => {
-    if (released) return;
-    released = true;
-
-    topOnly -= 1;
-    emit();
-  };
-}
-
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -76,15 +53,6 @@ export function useHeaderSuppressed(): boolean {
   return useSyncExternalStore(
     subscribe,
     () => suppressed > 0,
-    () => false,
-  );
-}
-
-/** Ob die Leiste nur ganz oben stehen soll. Auf dem Server nie. */
-export function useHeaderTopOnly(): boolean {
-  return useSyncExternalStore(
-    subscribe,
-    () => topOnly > 0,
     () => false,
   );
 }
