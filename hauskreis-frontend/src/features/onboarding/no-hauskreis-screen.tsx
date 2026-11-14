@@ -4,14 +4,17 @@
  * Der Einstieg, wenn zu diesem Konto (noch) kein Hauskreis gehört.
  *
  * Keine Fehlermeldung: Es ist kein Fehler, sondern der normale Anfang, und es
- * gibt zwei Wege heraus.
+ * gibt zwei Wege heraus — beitreten oder gründen. **Beitreten steht zuerst**:
+ * Die meisten kommen, weil jemand sie dazuholt. Dafür eine Karte mit zwei
+ * Wegen: den Einladungslink einfügen, oder — wer keinen hat — der Leitung die
+ * eigene Adresse geben, damit sie per Mail einlädt.
  *
  * Erreicht wird der Bildschirm auf drei Wegen: beim allerersten Öffnen ohne
  * Einladung, nach dem Verlassen, und wenn mehrere Einladungen offen sind — dann
  * entscheidet ein Mensch, welche gilt.
  */
 import { useState } from 'react';
-import { HousePlus, LinkIcon, LogOut, Mail, Trash2 } from 'lucide-react';
+import { HousePlus, LinkIcon, LogOut, Trash2, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from 'react-oidc-context';
 import { Button } from '@/components/ui/button';
@@ -30,7 +33,7 @@ import {
 import type { Invitation } from '@/lib/api/types';
 import { LegalFooter } from '@/components/layout/legal-footer';
 import { armOwnerWelcome } from '@/lib/owner-welcome';
-import { usePendingJoin } from '@/lib/pending-join';
+import { codeFromInput, usePendingJoin } from '@/lib/pending-join';
 
 export function NoHauskreisScreen({ email }: { email?: string }) {
   const auth = useAuth();
@@ -44,8 +47,8 @@ export function NoHauskreisScreen({ email }: { email?: string }) {
             Willkommen
           </h1>
           <p className="mt-1.5 text-sm leading-relaxed text-stone-500">
-            Ein Hauskreis fehlt noch. Gründe einen eigenen — oder lass dich von
-            einem einladen.
+            Ein Hauskreis fehlt noch. Tritt einem bei — oder gründe einen
+            eigenen.
           </p>
         </header>
 
@@ -57,21 +60,9 @@ export function NoHauskreisScreen({ email }: { email?: string }) {
           <InvitationCard key={invitation.personId} invitation={invitation} />
         ))}
 
-        <CreateHauskreisCard />
+        <JoinCard email={email} />
 
-        <Card className="space-y-2">
-          <p className="flex items-center gap-2 text-sm font-bold text-stone-800">
-            <Mail size={15} className="text-stone-400" />
-            Eingeladen werden
-          </p>
-          <p className="text-xs leading-relaxed text-stone-500">
-            Wer schon in einem Hauskreis ist, kann dich einladen. Gib dafür
-            diese Adresse weiter:
-          </p>
-          <p className="rounded-md bg-canvas px-3 py-2 text-center font-mono text-xs break-all text-stone-700">
-            {email ?? 'die Adresse deines Kontos'}
-          </p>
-        </Card>
+        <CreateHauskreisCard />
 
         <Button
           variant="ghost"
@@ -137,6 +128,75 @@ function DeleteAccountButton() {
       <Trash2 size={14} />
       Konto löschen
     </Button>
+  );
+}
+
+/**
+ * Einem Hauskreis beitreten — mit dem Link, oder über die eigene Adresse.
+ *
+ * **Eingefügt, nicht getippt.** Der Code im Link ist ein Geheimnis aus 22
+ * Zeichen und nicht zum Abschreiben gedacht; das Feld nimmt deshalb den ganzen
+ * Link genauso wie den Code allein (`codeFromInput`). Weiter geht es auf
+ * `/beitreten` — derselbe Weg, als hätte man den Link angetippt: Name des
+ * Hauskreises, Rückfrage bei einem Wechsel, Fehlerseite für einen
+ * abgelaufenen Link. Der Code reist im `#`, wie im Link selbst.
+ *
+ * **Die Alternative steht in derselben Karte**, darunter: Wer keinen Link hat,
+ * gibt der Leitung seine Adresse, und sie lädt per Mail ein. Zwei Karten wären
+ * zwei Antworten auf dieselbe Frage — „wie komme ich in meinen Hauskreis".
+ */
+function JoinCard({ email }: { email?: string }) {
+  const router = useRouter();
+  const [input, setInput] = useState('');
+
+  const code = codeFromInput(input);
+  // Erst ab der Länge eines Codes: Wer ihn doch von Hand tippt, soll nicht
+  // nach dem ersten Zeichen schon eine Fehlermeldung lesen.
+  const unreadable = input.trim().length >= 16 && code === null;
+
+  const submit = () => {
+    if (code) router.push(`/beitreten#${code}`);
+  };
+
+  return (
+    <Card className="space-y-3">
+      <p className="flex items-center gap-2 text-sm font-bold text-stone-800">
+        <UserPlus size={15} className="text-terracotta-500" />
+        Einem Hauskreis beitreten
+      </p>
+      <Field
+        label="Einladungslink oder Code"
+        error={
+          unreadable
+            ? 'Das ist kein Einladungslink. Füg den ganzen Link ein oder den Teil nach dem #.'
+            : undefined
+        }
+      >
+        <TextInput
+          value={input}
+          placeholder="https://acts2.de/beitreten#…"
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => event.key === 'Enter' && submit()}
+        />
+      </Field>
+      <Button className="w-full" disabled={code === null} onClick={submit}>
+        Weiter
+      </Button>
+
+      <div className="space-y-2 border-t border-line pt-3">
+        <p className="text-xs leading-relaxed text-stone-500">
+          Keinen Link? Gib der Leitung deines Hauskreises diese Adresse — dann
+          kann sie dich per Mail einladen:
+        </p>
+        <p className="rounded-md bg-canvas px-3 py-2 text-center font-mono text-xs break-all text-stone-700">
+          {email ?? 'die Adresse deines Kontos'}
+        </p>
+      </div>
+    </Card>
   );
 }
 

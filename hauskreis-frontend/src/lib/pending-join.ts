@@ -33,8 +33,33 @@ const CODE_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;
 
 /** Liest den Code aus `#…` der aktuellen Adresse, falls einer dasteht. */
 export function codeFromHash(hash: string): string | null {
-  const code = decodeURIComponent(hash.replace(/^#/, '')).trim();
+  let code: string;
+  try {
+    code = decodeURIComponent(hash.replace(/^#/, '')).trim();
+  } catch {
+    // Ein `%` ohne gültige Folge — von Hand eingefügt oder abgeschnitten.
+    return null;
+  }
   return CODE_PATTERN.test(code) ? code : null;
+}
+
+/**
+ * Der Code aus dem, was jemand eingefügt hat: der ganze Link oder nur der
+ * Code dahinter.
+ *
+ * Gebraucht auf dem Bildschirm ohne Hauskreis. Der häufigste Grund dafür steht
+ * auf dem iPhone: Ein Link aus WhatsApp öffnet Safari, nicht die installierte
+ * App — wer dort beitreten will, kopiert ihn und fügt ihn hier ein. Ob dabei
+ * `https://…/beitreten#…`, nur `#…` oder der nackte Code ankommt, soll keine
+ * Rolle spielen — auch nicht die ganze WhatsApp-Nachricht samt Text davor
+ * und danach: Der Code endet am ersten Leerraum.
+ */
+export function codeFromInput(input: string): string | null {
+  const text = input.trim();
+  // Aus einem Link der Teil hinter `beitreten#`, sonst das Eingefügte selbst
+  // (`codeFromHash` nimmt ein `#` davor mit weg).
+  const candidate = /\/beitreten#(\S+)/.exec(text)?.[1] ?? text;
+  return codeFromHash(candidate);
 }
 
 function read(): string | null {
