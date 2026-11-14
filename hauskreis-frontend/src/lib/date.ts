@@ -207,6 +207,20 @@ export function formatDayShort(day: CalendarDay): string {
   return DAY_MONTH_SHORT.format(parseDay(day));
 }
 
+/**
+ * `14.11` — das Datum in Ziffern, so knapp es geht.
+ *
+ * Für die Datumsspalte der gezoomten Planung: Sie klebt links, während das
+ * Raster daneben scrollt, und jeder Pixel darin fehlt den Rollen. Ohne Punkt
+ * am Ende — in einer Spalte voller Daten ist er nur ein Zeichen mehr. Beide
+ * Teile zweistellig, wie im Datums-Kästchen: Untereinander stehen die Ziffern
+ * dann wie in einer Spalte.
+ */
+export function formatDayNumeric(day: CalendarDay): string {
+  const [, month, date] = day.split('-');
+  return `${date}.${month}`;
+}
+
 /** `11. August` */
 export function formatDayMonth(day: CalendarDay): string {
   return DAY_MONTH.format(parseDay(day));
