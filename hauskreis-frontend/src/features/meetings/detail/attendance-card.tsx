@@ -23,18 +23,27 @@
  * für alle drei Status und wechselt nur seine Beschriftung. Eine Verspätung
  * steht daneben als eigene Zeile (`lateMinutes`).
  *
- * Die eigene Antwort steht unten am Bildschirm (`answer-bar.tsx`); Farben,
- * Kurzformen und Symbole teilen sich beide über
- * `domain/attendance-answers.ts`.
+ * **Der Satz steht als Sprechblase unter dem Namen**, wie ein Gebetsanliegen:
+ * Es ist etwas, das jemand der Gruppe sagt, und als graue Zeile mit Symbol
+ * davor las er sich wie ein Datenfeld. Die Verspätung bleibt eine Zeile in
+ * Terracotta darüber — sie ändert etwas am Abend, der Satz erklärt nur.
+ *
+ * Die eigene Antwort steht unten am Bildschirm (`answer-bar.tsx`, dort weiter
+ * knapp mit Symbol über `AnswerNote`); Farben, Kurzformen und Symbole teilen
+ * sich beide über `domain/attendance-answers.ts`.
  */
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { Segmented } from '@/components/ui/segmented';
+import { SpeechBubble } from '@/components/ui/speech-bubble';
 import { useMe, usePeople, useSetAttendance } from '@/lib/api/hooks';
-import { ANSWER } from '@/components/domain/attendance-answers';
-import { AnswerNote } from '@/components/domain/answer-note';
+import {
+  ANSWER,
+  LATE_ICON,
+  lateLabel,
+} from '@/components/domain/attendance-answers';
 import { cn } from '@/lib/cn';
 import type { AttendanceStatus, Meeting, Person } from '@/lib/api/types';
 
@@ -241,12 +250,23 @@ function PersonRow({
         <p className="truncate text-sm font-bold text-stone-800">
           {isMe ? 'Du' : person.name}
         </p>
-        <AnswerNote
-          status={status}
-          note={note}
-          lateMinutes={late}
-          className="mt-0.5"
-        />
+        {late !== null && (
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs font-semibold text-terracotta-600">
+            <LATE_ICON size={13} className="shrink-0" />
+            {lateLabel(late)}
+          </p>
+        )}
+        {/* Der Abstand außen, nicht an der Blase: Der Zipfel hängt an ihrem
+            äußeren Rahmen und braucht über ihr Platz. */}
+        {note && (
+          <div className="mt-2">
+            <SpeechBubble tail="top" size="sm">
+              <p className="text-xs leading-relaxed break-words whitespace-pre-line text-stone-600">
+                {note}
+              </p>
+            </SpeechBubble>
+          </div>
+        )}
       </div>
 
       {marker === 'status' ? (

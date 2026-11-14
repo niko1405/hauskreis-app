@@ -16,31 +16,48 @@ import { cn } from '@/lib/cn';
  *
  * `surface` ist die Fläche der Blase: `shell` in einer Karte, von der sie sich
  * abheben soll; `card` direkt auf der Seite, wo sie selbst die Karte ist.
+ *
+ * `tail` sagt, wo der Sprecher steht: `left` neben der Blase (Gesicht links,
+ * Blase rechts), `top` darüber — in der Zusagenliste hängt der Satz unter dem
+ * Namen, und der Zipfel zeigt nach oben auf ihn. `size="sm"` ist die knappe
+ * Fassung für Listen, in denen die Blase nur einen Satz trägt.
  */
 export function SpeechBubble({
   surface = 'shell',
+  tail = 'left',
+  size = 'md',
   className,
   children,
 }: {
   surface?: 'shell' | 'card';
+  tail?: 'left' | 'top';
+  size?: 'sm' | 'md';
   className?: string;
   children: React.ReactNode;
 }) {
   const fill = surface === 'card' ? 'bg-card' : 'bg-shell';
 
   return (
-    <div className="relative min-w-0 flex-1">
-      {/* Nach links aus der Blase heraus, auf Höhe der ersten Zeile. */}
+    <div className={cn('relative min-w-0', tail === 'left' && 'flex-1')}>
       <span
         aria-hidden
         className={cn(
-          'absolute top-3 -left-[5px] size-2.5 rotate-45 border-b border-l border-line',
+          'absolute size-2.5 rotate-45 border-l border-line',
+          // Links: auf Höhe der ersten Zeile aus der Blase heraus. Oben: kurz
+          // hinter der Ecke nach oben heraus, zum Namen darüber.
+          tail === 'left'
+            ? 'top-3 -left-[5px] border-b'
+            : '-top-[5px] left-4 border-t',
           fill,
         )}
       />
       <div
         className={cn(
-          'rounded-lg rounded-tl-none border border-line px-3.5 py-2.5',
+          'border border-line',
+          // Eine Zeile Text in einer Blase mit dem großen Radius ist eine Pille;
+          // die knappe Fassung bekommt deshalb einen kleineren.
+          size === 'sm' ? 'rounded-xl px-3 py-1.5' : 'rounded-lg px-3.5 py-2.5',
+          tail === 'left' && 'rounded-tl-none',
           fill,
           className,
         )}
