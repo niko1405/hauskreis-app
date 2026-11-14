@@ -722,29 +722,33 @@ function Loaded({
             Termintag gehört er denen, die ihn vorbereiten. Der Actionstep der
             nächsten Woche eine Woche zu früh für alle wäre genau das Gegenteil
             von dem, wozu er da ist. */}
-        {/* Beim Nachlesen nur mit Thema: Ein Kasten, der „noch nichts gewählt"
-            sagt, beschreibt an einem vergangenen Abend keine offene Aufgabe,
-            sondern eine Lücke im Protokoll — und die schließt man unter
-            „Bearbeiten". */}
-        {meeting.hasTopicSlot && (!reading || meeting.topicSession) && (
-          <TopicCard
-            meeting={meeting}
-            responsibles={roles.topicPeople}
-            mayChoose={mayChooseTopic && !reading}
-            saving={update.isPending || roles.saving || session.saving}
-            onChoose={openTopicChoice}
-          >
-            {/* Abhaken darf jede:r für sich, auch wer den Text nicht ändern
+        {/* **Ohne gewähltes Thema nur für die, die es wählen.** Allen anderen
+            sagte der Kasten bloß „hier gibt es noch nichts" — wer dran ist,
+            steht schon unter „Zuständigkeiten". Eine gewählte, noch
+            zurückgehaltene Einheit bleibt sichtbar: Dass etwas vorbereitet
+            wird, ist eine Auskunft. Beim Nachlesen gilt dasselbe aus anderem
+            Grund — dort wäre „noch nichts gewählt" eine Lücke im Protokoll,
+            und die schließt man unter „Bearbeiten". */}
+        {meeting.hasTopicSlot &&
+          (meeting.topicSession || (mayChooseTopic && !reading)) && (
+            <TopicCard
+              meeting={meeting}
+              responsibles={roles.topicPeople}
+              mayChoose={mayChooseTopic && !reading}
+              saving={update.isPending || roles.saving || session.saving}
+              onChoose={openTopicChoice}
+            >
+              {/* Abhaken darf jede:r für sich, auch wer den Text nicht ändern
                 darf — es ist der eigene Vorsatz. Erst ab Abendbeginn: einen
                 Vorsatz für heute Abend hakt man heute früh nicht ab. */}
-            {started && (
-              <ActionstepCheck
-                meetingId={meeting.id}
-                done={meeting.actionstepDone}
-              />
-            )}
-          </TopicCard>
-        )}
+              {started && (
+                <ActionstepCheck
+                  meetingId={meeting.id}
+                  done={meeting.actionstepDone}
+                />
+              )}
+            </TopicCard>
+          )}
 
         {/* Direkt hinter dem Thema: Die Anliegen entstehen am Abend selbst
             und gehören zu seinem Inhalt. Die Anwesenheitsliste steht danach —

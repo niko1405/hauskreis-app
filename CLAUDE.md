@@ -185,6 +185,7 @@ Mehrere Features (Host, Thema) folgen demselben Muster – bitte konsistent im B
    - **Die Rolle an einem vergangenen Abend zu leeren heißt fast immer „der hatte gar kein Thema"** — sonst stünde ein anderer Name darin. Also wird gefragt, und ein Ja nimmt den ganzen Baustein weg: die Einheit löst sich und wartet als Entwurf, der Abend bekommt seine Nachbereitung. Ein Nein lässt alles stehen, auch die Namen
    - **Angelegt wird über einen Knopf, nicht über ein Textfeld.** Am Termin führt „neue Einheit" wie „neues Thema" in dasselbe Formular wie im Archiv — Titel, Zusammenfassung, Actionstep; beim Thema davor noch ein Schritt für Titel und Zusammenfassung des Themas. **Der Titel ist Pflicht**, auch am Server, sonst stünde später in jeder Liste „Einheit ohne Titel"
    - **Geschrieben wird die Einheit auf ihrer eigenen Seite**, nicht am Termin. Die Terminkarte zeigt sie und führt hinein; zwei Orte für dieselben drei Felder wären zwei Meinungen darüber, wo sie hingehören — und der Termin kann weniger (kein Löschen, kein Überthema, keine Beteiligten)
+   - **Der Thema-Kasten am Termin steht erst da, wenn etwas gewählt ist** — außer für die Zuständigen, die dort wählen. Allen anderen meldete er nur seine eigene Leere („hier gibt es noch nichts zu sehen"); wer dran ist, steht unter „Zuständigkeiten". Eine gewählte, noch zurückgehaltene Einheit steht für alle da: Dass etwas vorbereitet wird, ist eine Auskunft
    - Gleiche Vorschlagslogik wie beim Host (nach "zuletzt Thema gehabt"), gezählt wird die Zuteilung am Termin
 
 3. **Song-Zuteilung**
