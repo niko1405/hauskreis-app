@@ -10,21 +10,21 @@
  * und setzt sich einzeln zusammen, und er ist der übliche Weg zu einem Termin
  * über mehrere Tage. Eine Freizeit von Freitag bis Sonntag ist ein Termin,
  * kein Stapel aus dreien.
+ *
+ * **Ohne Ort.** Der ergibt sich meistens erst — aus dem Gastgeber, der sich
+ * noch meldet, oder weil man draußen ist —, und er wird am Termin selbst
+ * eingetragen wie an jedem anderen. Im Anlegen stand er als Feld, das man
+ * fast immer leer ließ.
  */
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Field, Select, TextInput } from '@/components/ui/field';
+import { Field, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast';
 import { CheckRow } from '@/components/ui/check-row';
 import { SlotToggles } from '@/components/domain/slot-toggles';
-import {
-  useCreateMeeting,
-  useLocations,
-  useMeetingSchedule,
-} from '@/lib/api/hooks';
+import { useCreateMeeting, useMeetingSchedule } from '@/lib/api/hooks';
 import { EMPTY_SLOTS, applySlotToggle } from '@/lib/meeting';
-import { isSelectableWithoutHost } from '@/lib/location';
 import { addDays, today } from '@/lib/date';
 import type { MeetingSlotKey, MeetingSlots } from '@/lib/meeting';
 
@@ -44,7 +44,6 @@ export function CreateMeetingSheet({
    */
   const [startTime, setStartTime] = useState('');
   const [title, setTitle] = useState('');
-  const [locationId, setLocationId] = useState('');
   // Leer bis auf die Gebetsanliegen: Ein Termin von Hand muss nichts
   // erfüllen. Wer Thema und Lieder will, hakt zwei Bausteine an.
   const [slots, setSlots] = useState<MeetingSlots>(EMPTY_SLOTS);
@@ -55,7 +54,6 @@ export function CreateMeetingSheet({
    */
   const [special, setSpecial] = useState<boolean | null>(null);
 
-  const locations = useLocations();
   const schedule = useMeetingSchedule();
   const create = useCreateMeeting();
   const toast = useToast();
@@ -77,7 +75,6 @@ export function CreateMeetingSheet({
         endDate: endDate === '' ? null : endDate,
         startTime: zeit,
         title: title.trim() === '' ? null : title.trim(),
-        locationId: locationId === '' ? null : locationId,
         ...(special === null ? {} : { special }),
         ...slots,
       },
@@ -147,29 +144,6 @@ export function CreateMeetingSheet({
           hint="Lässt sich später jederzeit ändern."
         >
           <SlotToggles slots={slots} onToggle={toggle} />
-        </Field>
-
-        {/* Immer da: man trifft sich immer irgendwo, auch bei einem
-            Geburtstag. Offen bleiben darf es trotzdem. */}
-        <Field
-          label="Ort"
-          hint="Kann offen bleiben — etwa für ein Treffen draußen. Wohnungen ergeben sich aus dem Gastgeber."
-        >
-          <Select
-            value={locationId}
-            onChange={(event) => setLocationId(event.target.value)}
-          >
-            <option value="">Noch offen</option>
-            {/* Nur Treffpunkte: eine Wohnung folgt ihrem Gastgeber, und sie
-                hier zu wählen hätte der Server ohnehin abgelehnt. */}
-            {(locations.data ?? [])
-              .filter((location) => isSelectableWithoutHost(location))
-              .map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.name}
-                </option>
-              ))}
-          </Select>
         </Field>
 
         <div className="flex gap-2 pt-2">
