@@ -22,7 +22,7 @@ import Link from '@/components/ui/link';
 import { useMemo, useState } from 'react';
 import { IconButton } from '@/components/ui/button';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
-import { useBirthdayOccasions, useMe, useMeetingList } from '@/lib/api/hooks';
+import { useBirthdayOccasions, useMeetingList } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import {
   addDays,
@@ -39,8 +39,6 @@ import {
   today,
 } from '@/lib/date';
 import { meetingHeadline, meetingPhase } from '@/lib/meeting';
-import { isAnswerable } from '@/components/domain/answer-buttons';
-import { ANSWER } from '@/components/domain/attendance-answers';
 import { DateBox, TimeAndPlace } from '@/components/domain/date-box';
 import type { BirthdayOccasion, MeetingListItem } from '@/lib/api/types';
 
@@ -255,9 +253,10 @@ export function MeetingCalendar() {
  *
  * **Hier wird nicht geantwortet**, anders als in der Terminliste und am Termin.
  * Den Kalender macht man auf, um einen Tag zu finden; die Knöpfe daneben
- * machten aus jeder Zeile eine Frage und die Liste doppelt so unruhig. Was man
- * selbst geantwortet hat, steht rechts als Punkt — die Auskunft bleibt, die
- * Entscheidung fällt in der Liste oder am Abend.
+ * machten aus jeder Zeile eine Frage und die Liste doppelt so unruhig. **Auch
+ * die eigene Antwort steht nicht da**: Als farbiger Punkt war sie an fast jedem
+ * kommenden Abend grün und las sich wie „kommt noch". Rechts steht nur ein
+ * leises `›` — die Zeile führt in den Termin, und dort steht die Antwort.
  *
  * Gebaut wie die Terminkarte, nur knapp: dasselbe Datums-Kästchen (klein, ohne
  * Monat — der steht über dem Raster; ein Zeitraum als „14–16"), der Titel und
@@ -268,24 +267,16 @@ export function MeetingCalendar() {
  * nicht „mit wie vielen".
  */
 function MonthRow({ meeting }: { meeting: MeetingListItem }) {
-  const { me } = useMe();
-
   const cancelled = meeting.status === 'CANCELLED';
   const running = !cancelled && meetingPhase(meeting) === 'running';
   const special = meeting.special && !cancelled;
-  const mine = isAnswerable(meeting, me?.id)
-    ? ANSWER[
-        meeting.attendances.find((row) => row.personId === me?.id)?.status ??
-          'UNKNOWN'
-      ]
-    : null;
 
   return (
     <li>
       <Link
         href={`/termin?id=${meeting.id}`}
         className={cn(
-          'flex items-center gap-3 rounded-lg border bg-card p-2.5 pr-4 transition-colors',
+          'flex items-center gap-3 rounded-lg border bg-card p-2.5 pr-3 transition-colors',
           'hover:border-line-strong focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
           special ? 'border-special-line' : 'border-line',
           // Dieselbe Tönung wie in der Liste und auf „Heute": grün heißt
@@ -318,14 +309,11 @@ function MonthRow({ meeting }: { meeting: MeetingListItem }) {
           )}
         </div>
 
-        {mine && (
-          <span
-            title={mine.short}
-            className={cn('size-2 shrink-0 rounded-full', mine.dot)}
-          >
-            <span className="sr-only">Deine Antwort: {mine.short}</span>
-          </span>
-        )}
+        <ChevronRight
+          size={16}
+          aria-hidden
+          className="shrink-0 text-stone-300"
+        />
       </Link>
     </li>
   );
