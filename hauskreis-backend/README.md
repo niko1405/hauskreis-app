@@ -3959,6 +3959,12 @@ und eine eingehängte Datei zählt nicht dazu.
 eine Prüfsumme des Theme-Verzeichnisses, nur wenn sich dort wirklich etwas
 geändert hat.
 
+**Und der Browser speichert die CSS 30 Tage**, unter einer Adresse, die nur das
+Keycloak-Release wechselt. Deshalb steht in `login/theme.properties` hinter
+`hauskreis.css` ein `?v=` mit dem Anfang ihres SHA-256. Wer die CSS ändert,
+zieht ihn nach — `keycloak-theme-templates.spec.ts` schlägt sonst an und nennt
+den neuen Wert.
+
 #### Warum es von jedem Bündel zwei Fassungen gibt
 
 Keycloak baut das Nachrichtenbündel in **zwei Durchgängen**: erst Englisch über

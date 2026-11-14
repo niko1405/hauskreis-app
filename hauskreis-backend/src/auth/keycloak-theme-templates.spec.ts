@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -47,5 +48,35 @@ describe('Kopierte Keycloak-Vorlagen', () => {
 
   it.each(COPIED)('%s stammt aus der Version, die Compose startet', (file) => {
     expect(copiedFrom(file)).toBe(version);
+  });
+});
+
+/**
+ * Hält den Cache-Brecher am Stylesheet an dessen Inhalt fest.
+ *
+ * Keycloak liefert Theme-Dateien 30 Tage gecacht unter einer Adresse aus, die
+ * sich nur mit dem Keycloak-Release ändert. Ohne neues `?v=` sähen Leute nach
+ * einer CSS-Änderung die neuen Vorlagen mit der alten CSS — genau so stand
+ * einmal ein kartenbreites Google-„G" auf der Registrierung. Der Wert ist der
+ * Anfang des SHA-256 der Datei; die Zeilenenden werden vorher vereinheitlicht,
+ * damit ein Checkout unter Windows nicht anders rechnet als der Server.
+ */
+describe('Stylesheet des Anmelde-Themes', () => {
+  it('trägt in theme.properties den Stand seiner CSS', () => {
+    const css = readFileSync(
+      join(LOGIN_THEME, 'resources', 'css', 'hauskreis.css'),
+      'utf8',
+    ).replace(/\r\n/g, '\n');
+    const expected = createHash('sha256').update(css).digest('hex').slice(0, 8);
+
+    const properties = readFileSync(
+      join(LOGIN_THEME, 'theme.properties'),
+      'utf8',
+    );
+    const actual = /css\/hauskreis\.css\?v=([0-9a-f]+)/.exec(properties)?.[1];
+
+    // Die Meldung soll den neuen Wert gleich mitliefern: Wer die CSS geändert
+    // hat, trägt ihn in theme.properties ein und ist fertig.
+    expect(`hauskreis.css?v=${actual}`).toBe(`hauskreis.css?v=${expected}`);
   });
 });
