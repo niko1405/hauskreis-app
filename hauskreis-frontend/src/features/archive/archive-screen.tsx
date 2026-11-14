@@ -14,10 +14,12 @@ import {
   FileMusic,
   FileText,
   Layers,
+  ListFilter as ListFilterIcon,
   Lock,
   Music,
   Plus,
   Search,
+  SearchX,
 } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { AnimatePresence, motion } from 'motion/react';
@@ -43,7 +45,7 @@ import {
 import { useToast } from '@/components/ui/toast';
 import { NewSongSheet } from '@/features/songs/new-song-sheet';
 import { LocationSheet } from '@/components/domain/location-sheet';
-import { ListTab } from './list-tab';
+import { ListFilter } from './list-filter';
 import { LocationsCard, type PlaceScope } from './locations-card';
 import { NewNoteSheet } from '@/features/notes/new-note-sheet';
 import { NotesArchive } from '@/features/notes/notes-list';
@@ -395,40 +397,39 @@ function TopicArchive({ search }: { search: string }) {
 
   return (
     <div className="space-y-3">
-      {/* Unterstrichene Register statt einer Kapsel: darüber steht schon die
-          Kapsel der Kategorien, und zwei gleich aussehende Leisten
-          übereinander liest man als eine. */}
-      <div
-        role="tablist"
-        aria-label="Themen filtern"
-        className="flex border-b border-line"
-      >
-        <ListTab
-          active={nurEigene}
-          count={summary.data?.totals.topicsMine}
-          onSelect={() => setNurEigene(true)}
-        >
-          Eigene Themen
-        </ListTab>
-        <ListTab
-          active={!nurEigene}
-          count={summary.data?.totals.topics}
-          onSelect={() => setNurEigene(false)}
-        >
-          Alle Themen
-        </ListTab>
-      </div>
+      <ListFilter
+        label="Themen filtern"
+        value={nurEigene ? 'meine' : 'alle'}
+        onChange={(next) => setNurEigene(next === 'meine')}
+        options={[
+          {
+            value: 'meine',
+            label: 'Meine',
+            count: summary.data?.totals.topicsMine,
+          },
+          { value: 'alle', label: 'Alle', count: summary.data?.totals.topics },
+        ]}
+      />
 
       {query.isLoading && <CardSkeleton />}
       {query.error && <ErrorState error={query.error} />}
 
       {!query.isLoading && !query.error && query.items.length === 0 && (
         <EmptyState
-          title={nurEigene ? 'Du hast noch kein Thema' : 'Noch keine Themen'}
+          icon={search ? <SearchX size={22} /> : <Layers size={22} />}
+          title={
+            search
+              ? 'Nichts gefunden'
+              : nurEigene
+                ? 'Du hast noch kein Thema'
+                : 'Noch keine Themen'
+          }
           hint={
-            nurEigene
-              ? 'Sobald du für ein Thema zugeteilt bist, kannst du dort eines anfangen.'
-              : 'Hier stehen Themen, sobald ein Termin dazu vorbei ist.'
+            search
+              ? `Kein Thema passt zu „${search}".`
+              : nurEigene
+                ? 'Über das „+" unten rechts fängst du eines an — oder an einem Abend, für den du eingeteilt bist.'
+                : 'Hier stehen Themen, sobald ein Abend dazu vorbei ist.'
           }
         />
       )}
@@ -837,36 +838,73 @@ function SongLibrary({
 }) {
   const summary = useArchiveSummary();
   const own = useOwnSongs();
+  const [sort, setSort] = useState<SongSort>('popular');
 
   return (
     <div className="space-y-3">
-      <div
-        role="tablist"
-        aria-label="Lieder filtern"
-        className="flex border-b border-line"
-      >
-        <ListTab
-          active={scope === 'meine'}
-          count={own.data?.length}
-          onSelect={() => onScope('meine')}
-        >
-          Meine Lieder
-        </ListTab>
-        <ListTab
-          active={scope === 'alle'}
-          count={summary.data?.totals.songs}
-          onSelect={() => onScope('alle')}
-        >
-          Alle Lieder
-        </ListTab>
-      </div>
+      <ListFilter
+        label="Lieder filtern"
+        value={scope}
+        onChange={onScope}
+        options={[
+          { value: 'meine', label: 'Meine', count: own.data?.length },
+          { value: 'alle', label: 'Alle', count: summary.data?.totals.songs },
+        ]}
+        action={
+          // Nur bei allen: Die eigenen stehen ohnehin nach Titel, und eine
+          // Sortierung nach „gesungen" kennt das Gerät nicht.
+          scope === 'alle' && <SortButton sort={sort} onChange={setSort} />
+        }
+      />
 
       {scope === 'meine' ? (
         <MySongs search={search} />
       ) : (
-        <AllSongs search={search} />
+        <AllSongs search={search} sort={sort} />
       )}
     </div>
+  );
+}
+
+type SongSort = NonNullable<SongListParams['sort']>;
+
+/** Die Reihenfolge, in der der Knopf weiterschaltet — und was er dann sagt. */
+const SORTS: { key: SongSort; label: string; long: string }[] = [
+  { key: 'popular', label: 'Häufigste', long: 'am häufigsten gesungen' },
+  { key: 'recent', label: 'Zuletzt', long: 'zuletzt gesungen' },
+  { key: 'title', label: 'A–Z', long: 'nach Titel' },
+];
+
+/**
+ * **Ein Knopf statt drei Pillen.** Die Sortierung ist eine Einstellung, die man
+ * selten ändert, und drei Pillen in einer eigenen Zeile nahmen der Liste mehr
+ * Platz als die Frage wert ist. Jeder Druck schaltet zur nächsten; was gerade
+ * gilt, steht auf dem Knopf.
+ */
+function SortButton({
+  sort,
+  onChange,
+}: {
+  sort: SongSort;
+  onChange: (sort: SongSort) => void;
+}) {
+  const index = SORTS.findIndex((entry) => entry.key === sort);
+  const current = SORTS[index] ?? SORTS[0]!;
+  const next = SORTS[(index + 1) % SORTS.length] ?? SORTS[0]!;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(next.key)}
+      aria-label={`Sortiert ${current.long} — tippen für ${next.long}`}
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-card px-3 py-1 text-[12px] font-semibold text-stone-600 transition-colors hover:border-line-strong',
+        PRESSABLE,
+      )}
+    >
+      <ListFilterIcon size={13} className="text-terracotta-500" aria-hidden />
+      {current.label}
+    </button>
   );
 }
 
@@ -890,10 +928,11 @@ function MySongs({ search }: { search: string }) {
     <>
       {items.length === 0 ? (
         <EmptyState
+          icon={needle ? <SearchX size={22} /> : <FileMusic size={22} />}
           title={needle ? 'Nichts gefunden' : 'Noch keine eigene Version'}
           hint={
             needle
-              ? undefined
+              ? `Keines deiner Lieder passt zu „${search}".`
               : 'Öffne ein Lied und hinterleg dir Text & Akkorde. Sie bleiben auf diesem Gerät.'
           }
         />
@@ -939,46 +978,24 @@ function MySongs({ search }: { search: string }) {
   );
 }
 
-function AllSongs({ search }: { search: string }) {
-  const [sort, setSort] =
-    useState<NonNullable<SongListParams['sort']>>('popular');
+function AllSongs({ search, sort }: { search: string; sort: SongSort }) {
   const owned = useOwnSongIds();
 
   const query = useSongList({ search: search || undefined, sort });
 
-  const sorts: { key: NonNullable<SongListParams['sort']>; label: string }[] = [
-    { key: 'popular', label: 'Am häufigsten' },
-    { key: 'recent', label: 'Zuletzt gesungen' },
-    { key: 'title', label: 'A–Z' },
-  ];
-
   return (
     <>
-      <div className="flex gap-2">
-        {sorts.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setSort(key)}
-            aria-pressed={sort === key}
-            className={cn(
-              'rounded-full px-3 py-1 text-[11px] font-semibold transition-colors',
-              sort === key
-                ? 'bg-inverse text-inverse-fg'
-                : 'bg-stone-100 text-stone-500 hover:bg-stone-200',
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
       {query.isLoading && <CardSkeleton />}
       {query.error && <ErrorState error={query.error} />}
       {!query.isLoading && query.items.length === 0 && (
         <EmptyState
-          title="Noch keine Lieder"
-          hint="Die Datenbank wächst mit jedem Vorschlag an einem Termin."
+          icon={search ? <SearchX size={22} /> : <Music size={22} />}
+          title={search ? 'Nichts gefunden' : 'Noch keine Lieder'}
+          hint={
+            search
+              ? `Kein Lied passt zu „${search}".`
+              : 'Die Liste wächst mit jedem Vorschlag an einem Abend — oder über das „+" unten rechts.'
+          }
         />
       )}
 

@@ -7,9 +7,10 @@
  * „wer hostet in den nächsten sechs Wochen" ist eine Spalte, keine sechs
  * Zeilen. Voreingestellt ist **„Alle Spalten"**: alles auf einen Blick, auch
  * auf dem Telefon, mit Kurzformen im Kopf und kleinen Gesichtern. Wer mehr
- * lesen will, nimmt **„Reinzoomen"**: breitere Spalten, die volle Bezeichnung,
- * Wochentag am Datum — das Raster scrollt dann waagerecht, und die Datumsspalte
- * bleibt links stehen. Zwei Stufen statt eines Reglers: Es ist eine Frage
+ * lesen will, nimmt **„Reinzoomen"**: breitere Spalten und die volle
+ * Bezeichnung — das Raster scrollt dann waagerecht, und die Datumsspalte bleibt
+ * links stehen. **Dort so knapp wie möglich** („14.11"): Sie steht dauerhaft
+ * im Bild, und jeder Pixel darin fehlt den Rollen daneben. Zwei Stufen statt eines Reglers: Es ist eine Frage
  * („alles sehen oder genauer hinsehen"), und drei Zwischengrößen beantworteten
  * sie nicht besser.
  *
@@ -43,6 +44,7 @@ import {
 import {
   addDays,
   formatDay,
+  formatDayNumeric,
   formatDayShort,
   formatRelativeDay,
   today,
@@ -231,7 +233,7 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
                     head,
                     'pl-4 text-left',
                     zoom &&
-                      'sticky left-0 z-10 w-40 border-r border-line bg-card',
+                      'sticky left-0 z-10 w-px border-r border-line bg-card pr-3 whitespace-nowrap',
                   )}
                 >
                   Termin
@@ -333,11 +335,9 @@ function Row({
           // Der sichtbare Text steht in zwei `span`s, und die statische
           // Prüfung sieht darin keinen Namen. Ausgesprochen ist er ohnehin
           // besser als „11. Aug. in 3 Tagen" am Stück.
-          aria-label={
-            fertig
-              ? `Termin am ${formatDay(meeting.date)} öffnen — fertig geplant`
-              : `Termin am ${formatDay(meeting.date)} öffnen`
-          }
+          aria-label={`Termin am ${formatDay(meeting.date)} öffnen${
+            cancelled ? ' — fällt aus' : fertig ? ' — fertig geplant' : ''
+          }`}
           className="block rounded-sm hover:underline focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none"
         >
           <span
@@ -346,7 +346,15 @@ function Row({
               zoom ? 'text-sm' : 'text-[13px]',
             )}
           >
-            {zoom ? formatDay(meeting.date) : formatDayShort(meeting.date)}
+            {/* Gezoomt nur die Ziffern und abgesagt durchgestrichen — ein
+                „Fällt aus" darunter machte die ganze Spalte breiter. */}
+            <span
+              className={cn(zoom && cancelled && 'text-alert line-through')}
+            >
+              {zoom
+                ? formatDayNumeric(meeting.date)
+                : formatDayShort(meeting.date)}
+            </span>
             {/* Nicht nur die Farbe: wer sie nicht unterscheidet, sieht das
                 Zeichen. Der Titel sagt dasselbe noch einmal in Worten. */}
             {fertig && (
@@ -357,23 +365,23 @@ function Row({
               />
             )}
           </span>
-          <span
-            className={cn(
-              'block truncate text-[10px]',
-              cancelled ? 'font-semibold text-alert' : 'text-stone-400',
-            )}
-          >
-            {cancelled
-              ? 'Fällt aus'
-              : zoom
-                ? formatRelativeDay(meeting.date)
+          {!zoom && (
+            <span
+              className={cn(
+                'block truncate text-[10px]',
+                cancelled ? 'font-semibold text-alert' : 'text-stone-400',
+              )}
+            >
+              {cancelled
+                ? 'Fällt aus'
                 : // Die schmale Spalte fasst „in 2 Wochen", aber nicht
                   // „in einer Woche" — dort steht die Zahl wie in den übrigen.
                   formatRelativeDay(meeting.date).replace(
                     'einer Woche',
                     '1 Woche',
                   )}
-          </span>
+            </span>
+          )}
         </Link>
       </th>
 

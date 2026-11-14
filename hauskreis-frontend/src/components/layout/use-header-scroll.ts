@@ -9,7 +9,7 @@
  * Zurückwischen mitten in der Seite ist die Leiste da und trotzdem nicht oben.
  */
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useOverlayOpen } from '@/components/ui/overlay-lock';
 import { useHeaderPreference } from '@/lib/header-preference';
 import { useHeaderSuppressed } from './header-suppress';
@@ -43,6 +43,12 @@ export function useHeaderScroll(): {
   const pathname = usePathname();
   const overlay = useOverlayOpen();
   const suppressed = useHeaderSuppressed();
+  /** Für den Scroll-Handler, der nur einmal angemeldet wird. */
+  const frozen = useRef(false);
+
+  useEffect(() => {
+    frozen.current = overlay;
+  }, [overlay]);
 
   // Ein Wechsel des Ziels beginnt oben — Next scrollt dorthin zurück. Ohne
   // das bliebe die Leiste auf einer frisch geöffneten Seite weggefahren.
@@ -58,6 +64,15 @@ export function useHeaderScroll(): {
     const read = () => {
       frame = 0;
       const y = window.scrollY;
+
+      // Unter einem Sheet zählt kein Scrollen: iOS lässt die Seite trotz
+      // `overflow: hidden` nachfedern, und die Leiste käme hinter dem Sheet
+      // hervor. Die Strecke wird trotzdem mitgeführt, sonst zählte nach dem
+      // Schließen der ganze Weg als eine Bewegung.
+      if (frozen.current) {
+        last = y;
+        return;
+      }
 
       setAtTop(y < TOP_THRESHOLD);
 
@@ -88,15 +103,15 @@ export function useHeaderScroll(): {
     };
   }, []);
 
-  // Liegt ein Sheet darüber, bleibt sie stehen. `lockOverlay` friert den
-  // Hintergrund ohnehin ein; ohne diese Zeile bliebe sie in dem Zustand
-  // hängen, in dem sie beim Öffnen gerade war — meistens weggefahren.
+  // **Liegt ein Sheet darüber, bleibt sie, wie sie war.** War sie
+  // weggefahren, kommt sie nicht hervor: Hinter dem Sheet tauchte sonst eine
+  // Leiste auf, als hätte man nach oben gewischt — und das hat man nicht.
   //
-  // Die Bitte eines Bildschirms sticht beides: Im Suchmodus soll sie auch dann
-  // weg sein, wenn darüber gerade ein Sheet liegt.
+  // Die Bitte eines Bildschirms sticht das: Im Suchmodus ist sie weg, auch
+  // wenn darüber gerade ein Sheet liegt.
   return {
     atTop,
-    hidden: (hidden && !overlay) || suppressed,
+    hidden: hidden || suppressed,
     suppressed,
   };
 }

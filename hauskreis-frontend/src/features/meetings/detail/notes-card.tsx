@@ -68,8 +68,7 @@ export function NotesPrompt({
             Nachbereitung hinzufügen?
           </p>
           <p className="mt-0.5 text-[11px] leading-relaxed text-stone-400">
-            Für eine Zusammenfassung des Abends und einen Actionstep für die
-            Woche.
+            Für eine Zusammenfassung und ggf. einen Actionstep.
           </p>
         </div>
         <Button variant="secondary" size="sm" loading={saving} onClick={onAdd}>

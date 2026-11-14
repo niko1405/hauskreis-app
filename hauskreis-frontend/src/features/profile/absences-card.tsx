@@ -5,7 +5,7 @@
  * Termine automatisch abgesagt und bei der Host-Vorschlagslogik
  * zurückgestellt — deshalb ist das mehr als ein Kalendereintrag.
  */
-import { Plus, Trash2 } from 'lucide-react';
+import { Plane, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
@@ -34,8 +34,10 @@ export function AbsencesCard({ personId }: { personId: string }) {
 
         {!list.isLoading && list.items.length === 0 && (
           <EmptyState
-            title="Nichts eingetragen"
-            hint="Trag Urlaub oder Reisen ein — dann sagt die App die Termine für dich ab."
+            framed={false}
+            icon={<Plane size={22} />}
+            title="Keine Abwesenheiten"
+            hint="Trag Urlaub oder Reisen ein — dann sagt die App die Termine für dich ab und gibt deine Aufgaben frei."
           />
         )}
 
