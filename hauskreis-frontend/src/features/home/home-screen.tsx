@@ -6,6 +6,7 @@
  * Actionstep, aktuelle Gebetsbuddys.
  */
 import {
+  ArrowUpRight,
   CheckCircle2,
   ChevronRight,
   Circle,
@@ -304,7 +305,8 @@ function OpenActionstepCard({ step }: { step: HomeActionstep }) {
  * Am Mittwochmorgen ist „was war" die Nachricht und nicht „wo war es": Datum,
  * Uhrzeit und Ort des Abends von gestern kennt man, die Zusammenfassung hat
  * man vielleicht verpasst. Steht eine da, tritt sie **an die Stelle** der
- * Karte, und darunter führt ein Knopf zum Termin. Ohne Zusammenfassung bleibt
+ * Karte, und darunter führt ein Knopf zum Termin. Die Zusammenfassung selbst
+ * führt dorthin, wo sie steht — an einem Themenabend auf die Einheit. Ohne Zusammenfassung bleibt
  * es die Karte wie immer — eine leere Rückblick-Fläche wäre eine Aufforderung
  * an alle, die nichts schreiben dürfen.
  */
@@ -324,35 +326,57 @@ function PastOrCurrentMeeting({
     );
   }
 
+  // **Die Karte führt dorthin, wo die Zusammenfassung steht** — an einem
+  // Themenabend auf die Einheit: Dort steht sie samt Actionstep und Thema, und
+  // genau das will lesen, wer hier tippt. Aus der Nachbereitung kommt sie vom
+  // Termin selbst. Der Knopf darunter bleibt der Weg zum Abend.
+  const summaryHref = meeting.summarySessionId
+    ? `/einheit?id=${meeting.summarySessionId}&von=heute`
+    : `/termin?id=${meeting.id}`;
+
   return (
     <div className="space-y-3">
       {/* Dieselbe Kante wie die Infos am Termin: terracotta links heißt in
           der App „hier steht, was jemand der Gruppe sagt". */}
-      <Card
-        // Die Kante nach der Tönung: Ein `border-…`-Farbton für alle Seiten
-        // (das Grün des laufenden Abends) schlüge sonst auch die linke.
+      <Link
+        href={summaryHref}
         className={cn(
-          'bg-card',
-          className,
-          'border-l-[3px] border-l-terracotta-500',
+          'group block rounded-card focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+          PRESSABLE,
         )}
       >
-        <p className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
-          <ScrollText size={12} />
-          Zusammenfassung
-        </p>
-        <p className="mt-0.5 text-[11px] text-stone-400">
-          {meeting.endDate
-            ? formatDayRange(meeting.date, meeting.endDate)
-            : formatRelativeDay(meeting.date)}{' '}
-          · {meetingHeadline(meeting)}
-        </p>
-        {/* Nach acht Zeilen ist Schluss: Der Rest steht am Termin, und der
-            Startbildschirm soll darunter noch etwas zeigen. */}
-        <p className="mt-3 line-clamp-8 text-sm leading-relaxed whitespace-pre-line text-stone-700">
-          {meeting.summaryText}
-        </p>
-      </Card>
+        <Card
+          // Die Kante nach der Tönung: Ein `border-…`-Farbton für alle Seiten
+          // (das Grün des laufenden Abends) schlüge sonst auch die linke.
+          className={cn(
+            'bg-card transition-colors group-hover:border-line-strong',
+            className,
+            'border-l-[3px] border-l-terracotta-500',
+          )}
+        >
+          <p className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
+            <ScrollText size={12} />
+            Zusammenfassung
+            <ArrowUpRight
+              size={14}
+              aria-hidden
+              className="ml-auto text-stone-400 transition-colors group-hover:text-terracotta-600"
+            />
+          </p>
+          <p className="mt-0.5 text-[11px] text-stone-400">
+            {meeting.endDate
+              ? formatDayRange(meeting.date, meeting.endDate)
+              : formatRelativeDay(meeting.date)}{' '}
+            · {meetingHeadline(meeting)}
+          </p>
+          {/* Nach acht Zeilen ist Schluss: Der Rest steht dort, wohin die
+            Karte führt, und der Startbildschirm soll darunter noch etwas
+            zeigen. */}
+          <p className="mt-3 line-clamp-8 text-sm leading-relaxed whitespace-pre-line text-stone-700">
+            {meeting.summaryText}
+          </p>
+        </Card>
+      </Link>
 
       <Link
         href={`/termin?id=${meeting.id}`}

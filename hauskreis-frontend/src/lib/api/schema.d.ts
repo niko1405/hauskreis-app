@@ -4185,6 +4185,8 @@ export interface components {
         /** @enum {string} */
         myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
         summaryText: string | null;
+        /** Format: uuid */
+        summarySessionId: string | null;
       } | null;
       lastMeeting: {
         /** Format: uuid */
@@ -4251,6 +4253,8 @@ export interface components {
         /** @enum {string} */
         myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
         summaryText: string | null;
+        /** Format: uuid */
+        summarySessionId: string | null;
       } | null;
       nextMeeting: {
         /** Format: uuid */
@@ -4317,6 +4321,8 @@ export interface components {
         /** @enum {string} */
         myAttendance: 'ATTENDING' | 'ABSENT' | 'UNKNOWN';
         summaryText: string | null;
+        /** Format: uuid */
+        summarySessionId: string | null;
       } | null;
       myRoles: {
         /** @enum {string} */

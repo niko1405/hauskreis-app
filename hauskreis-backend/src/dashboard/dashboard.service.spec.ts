@@ -460,7 +460,10 @@ describe('DashboardService.build', () => {
     expect(home.lastMeeting?.summaryText).toBe(
       'Wir haben über Dankbarkeit gesprochen',
     );
+    // Aus der Nachbereitung: Es gibt keine Einheit, auf die man führen könnte.
+    expect(home.lastMeeting?.summarySessionId).toBeNull();
     expect(home.nextMeeting?.summaryText).toBeNull();
+    expect(home.nextMeeting?.summarySessionId).toBeNull();
   });
 
   it('nimmt die Zusammenfassung der Einheit, wenn der Abend ein Thema hat', async () => {
@@ -489,6 +492,8 @@ describe('DashboardService.build', () => {
     expect(home.lastMeeting?.summaryText).toBe(
       'Vergebung ist ein Weg, kein Moment',
     );
+    // Der Startbildschirm führt damit auf die Einheit statt auf den Termin.
+    expect(home.lastMeeting?.summarySessionId).toBe('s1');
   });
 
   /**

@@ -89,6 +89,12 @@ export interface HomeMeeting {
    * sie an der Einheit, sonst an der Nachbereitung des Abends.
    */
   summaryText: string | null;
+  /**
+   * Die Einheit, von der `summaryText` stammt — sonst `null`, auch wenn eine
+   * Zusammenfassung dasteht: Dann kommt sie aus der Nachbereitung des Abends.
+   * Der Startbildschirm führt mit ihr auf die Einheit statt auf den Termin.
+   */
+  summarySessionId: string | null;
 }
 
 export interface HomeScreen {
@@ -357,6 +363,19 @@ export class DashboardService {
           )
         : null;
 
+      // Am Baustein entschieden wie `actionstepOf`, und an der Einheit über
+      // dieselbe Sichtbarkeit wie ihr Titel. Am laufenden und letzten Abend
+      // ist die ohnehin erreicht — die Prüfung kostet nichts und hält die
+      // Regel an einer Stelle.
+      const fromSession = meeting.hasTopicSlot && session?.contentVisible;
+      const summary = nonEmpty(
+        meeting.hasTopicSlot
+          ? fromSession
+            ? session.summaryText
+            : null
+          : meeting.summaryText,
+      );
+
       return {
         id: meeting.id,
         date: isoDate(meeting.date),
@@ -382,19 +401,8 @@ export class DashboardService {
         testimonyPerson: meeting.testimonyPerson,
         // No row means nobody answered yet, which is exactly UNKNOWN.
         myAttendance: meeting.attendances[0]?.status ?? 'UNKNOWN',
-        // Am Baustein entschieden wie `actionstepOf`, und an der Einheit über
-        // dieselbe Sichtbarkeit wie ihr Titel. Am laufenden und letzten Abend
-        // ist die ohnehin erreicht — die Prüfung kostet nichts und hält die
-        // Regel an einer Stelle.
-        summaryText: recap
-          ? nonEmpty(
-              meeting.hasTopicSlot
-                ? session?.contentVisible
-                  ? session.summaryText
-                  : null
-                : meeting.summaryText,
-            )
-          : null,
+        summaryText: recap ? summary : null,
+        summarySessionId: recap && summary && fromSession ? session.id : null,
       };
     };
 

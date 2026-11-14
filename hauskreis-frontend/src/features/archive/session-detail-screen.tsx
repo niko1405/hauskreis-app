@@ -124,9 +124,10 @@ function Loaded({
   /**
    * Zurück dorthin, wo man herkam.
    *
-   * Drei Wege führen hierher, und der Pfeil soll den zurückgehen, den man kam:
-   * vom **Termin** (dann steht es in der Adresse), von der **Themenseite**, oder
-   * bei einer alleinstehenden Einheit aus dem **Archiv**. Kein `router.back()`:
+   * Vier Wege führen hierher, und der Pfeil soll den zurückgehen, den man kam:
+   * vom **Termin** oder von der Zusammenfassung auf **Heute** (dann steht es
+   * in der Adresse), von der **Themenseite**, oder bei einer alleinstehenden
+   * Einheit aus dem **Archiv**. Kein `router.back()`:
    * Das Ziel soll einen Neuladen überstehen, und ein geteilter Link soll dasselbe
    * tun wie der eigene Aufruf.
    *
@@ -134,11 +135,13 @@ function Loaded({
    * dem man zurückkönnte — dann gilt wieder die Herkunft aus der Sorte.
    */
   const zurueck =
-    von === 'termin' && session.meeting
-      ? { href: `/termin?id=${session.meeting.id}`, label: 'Zum Termin' }
-      : allein
-        ? { href: '/archiv', label: 'Archiv' }
-        : { href: `/thema?id=${session.topic.id}`, label: 'Zum Thema' };
+    von === 'heute'
+      ? { href: '/', label: 'Heute' }
+      : von === 'termin' && session.meeting
+        ? { href: `/termin?id=${session.meeting.id}`, label: 'Zum Termin' }
+        : allein
+          ? { href: '/archiv', label: 'Archiv' }
+          : { href: `/thema?id=${session.topic.id}`, label: 'Zum Thema' };
 
   return (
     <div className="space-y-6 px-5 pt-safe-4 pb-10">
