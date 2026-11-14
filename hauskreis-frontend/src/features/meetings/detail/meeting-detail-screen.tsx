@@ -12,10 +12,10 @@
  *
  * **Ort und Gastgeber sind eine Entscheidung.** Wer hostet, hostet bei sich.
  * Deshalb gibt es dafür auch nur **ein** Sheet: `VenueSheet` mit zwei
- * Registern, „Zuhause" und „Treffpunkte". Es öffnet sich von zwei Stellen aus —
- * vom Stift der Host-Zeile und vom Knopf an „Ort & Anreise". Der zweite ist
- * nötig: Ist ein Treffpunkt gewählt, gibt es keine Host-Rolle und damit keine
- * Host-Zeile, und ohne ihn käme man nicht mehr zurück zu einem Zuhause.
+ * Registern, „Zuhause" und „Treffpunkte" — und nur **einen** Eingang, den Knopf
+ * an „Ort & Anreise". Unter „Zuständigkeiten" steht der Gastgeber nicht: Ein
+ * Zuhause heißt schon „Bei Lena", und eine zweite Zeile mit eigenem Stift wäre
+ * dieselbe Frage zweimal — die nach einem Treffpunkt obendrein verschwand.
  * Durchgesetzt wird die Kopplung im Backend (`MeetingService.resolveVenue`).
  *
  * **Ein vergangener Abend ist ein eigener Zustand**, nicht ein ausgegrauter
@@ -79,7 +79,7 @@ import {
 import { ROLE_ICON } from '@/components/domain/role-badge';
 import { ActionstepCheck } from '@/components/domain/actionstep-check';
 import { EditBar } from '@/components/layout/edit-bar';
-import type { MeetingRole } from '@/lib/meeting';
+import type { MeetingRole, MeetingRoleSlot } from '@/lib/meeting';
 import type { AssignmentRole, PersonRef } from '@/lib/api/types';
 import { AnswerBar } from './answer-bar';
 import { AttendanceCard } from './attendance-card';
@@ -276,8 +276,14 @@ function Loaded({
    * Ausgabe: Dieselbe Aufstellung entscheidet in der Planungstabelle über
    * „fertig geplant". Stünde sie hier ein zweites Mal, könnte über einer Liste
    * mit vier Zeilen „3 von 5 besetzt" stehen.
+   *
+   * **Ohne den Gastgeber** — Liste und Zähler: Er steht an „Ort & Anreise",
+   * wo man ihn auch ändert. Die Planungstabelle zählt ihn weiter mit.
    */
-  const rollen = activeMeetingRoles(meeting);
+  const rollen = activeMeetingRoles(meeting).filter(
+    (slot): slot is MeetingRoleSlot & { role: Exclude<MeetingRole, 'HOST'> } =>
+      slot.role !== 'HOST',
+  );
   const besetzt = rollen.filter((slot) => slot.people.length > 0).length;
 
   const patch = (input: Parameters<typeof update.mutate>[0]) =>
@@ -301,15 +307,14 @@ function Loaded({
   // Schranken hintereinander wären eine zu viel.
 
   /**
-   * Ein Eingang für fünf Zeilen — jede führt woandershin.
+   * Ein Eingang für die Zeilen — jede führt woandershin.
    *
-   * Der Gastgeber ins Ort-Sheet, weil er *ist* der Ort; die Snacks in ihre
-   * schlichte Auswahl, weil es dort nichts vorzuschlagen gibt; die übrigen drei
-   * ins Zuteilungs-Sheet mit Rangfolge. Die Zeile selbst weiß davon nichts —
-   * sie kennt nur ihre Rolle.
+   * Die Snacks in ihre schlichte Auswahl, weil es dort nichts vorzuschlagen
+   * gibt; die übrigen ins Zuteilungs-Sheet mit Rangfolge. Der Gastgeber steht
+   * hier nicht (`rollen`), er wird mit dem Ort gewählt. Die Zeile selbst weiß
+   * davon nichts — sie kennt nur ihre Rolle.
    */
-  const openRole = (role: MeetingRole) => {
-    if (role === 'HOST') return setChoosingVenue(true);
+  const openRole = (role: Exclude<MeetingRole, 'HOST'>) => {
     if (role === 'SNACK') return setChoosingSnacks(true);
 
     return setSheet(role);
@@ -611,65 +616,63 @@ function Loaded({
 
         {/* **Zwei Sektionen, nicht eine.** Der Ort beantwortet eine andere
             Frage als die Rollen: „wo treffen wir uns" gegen „wer macht was" —
-            samt Adresse. */}
+            samt Adresse. Und er ist der **einzige** Ort, an dem man ihn
+            ändert: Der Gastgeber steht nicht noch einmal unter
+            „Zuständigkeiten". */}
         <section>
           <SectionTitle>Ort & Anreise</SectionTitle>
-          <Card className="flex items-center gap-4">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-terracotta-100 bg-terracotta-50 text-terracotta-600">
-              <MapPin size={20} />
-            </span>
+          <Card className="space-y-4">
+            <div className="flex items-center gap-4">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-terracotta-100 bg-terracotta-50 text-terracotta-600">
+                <MapPin size={20} />
+              </span>
 
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-serif text-lg font-bold text-stone-800">
-                {meeting.location?.name ?? 'Noch offen'}
-              </p>
-              {/* Der Satz darunter ist die Adresse, wenn es eine gibt — eine
-                  Auskunft und keine Erklärung der Mechanik. */}
-              <p className="mt-0.5 truncate text-sm text-stone-500">
-                {meeting.location?.address ??
-                  (meeting.location
-                    ? 'Keine Adresse hinterlegt'
-                    : 'Trage einen Gastgeber oder Treffpunkt ein')}
-              </p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-serif text-lg font-bold text-stone-800">
+                  {meeting.location?.name ?? 'Noch offen'}
+                </p>
+                {/* Der Satz darunter ist die Adresse, wenn es eine gibt — eine
+                    Auskunft und keine Erklärung der Mechanik. */}
+                <p className="mt-0.5 truncate text-sm text-stone-500">
+                  {meeting.location?.address ??
+                    (meeting.location
+                      ? 'Keine Adresse hinterlegt'
+                      : 'Trage einen Gastgeber oder Treffpunkt ein')}
+                </p>
+              </div>
+
+              {/* **Den Ort ändern, hier, wo er steht** — Zuhause oder
+                  Treffpunkt, in beide Richtungen. Nicht an einem abgesagten
+                  Abend und nicht beim Nachlesen, wie die Stifte der Rollen. */}
+              {!cancelled && !reading && (
+                <IconButton
+                  label="Ort ändern"
+                  onClick={() => setChoosingVenue(true)}
+                >
+                  <MapPinPen size={17} />
+                </IconButton>
+              )}
             </div>
 
-            {/* Ohne Ort steht hier **kein** Knopf: Ein toter Knopf ist kein
-                Hinweis. */}
-            {/* Und beim Nachlesen auch nicht: „Wie komme ich hin" fragt an
-                einem Abend, der vorbei ist, niemand. */}
-            {/* Mobil nur das Symbol: Mit Wort nahm der Knopf Name und
-                Adresse daneben so viel Platz, dass beide abgeschnitten waren.
-                Was er tut, sagt `aria-label`. */}
-            {/* **Den Ort ändern, hier, wo er steht.** Bisher führte nur der
-                Stift der Host-Zeile ins Sheet — und nach einem Treffpunkt gab
-                es die Zeile nicht mehr (ein Treffpunkt braucht keinen
-                Gastgeber). Dieser Knopf öffnet dasselbe Sheet, in beiden
-                Fällen. Nicht an einem abgesagten Abend und nicht beim
-                Nachlesen, wie die Stifte der Rollen. */}
-            {!cancelled && !reading && (
-              <IconButton
-                label="Ort ändern"
-                onClick={() => setChoosingVenue(true)}
-              >
-                <MapPinPen size={17} />
-              </IconButton>
-            )}
-
+            {/* **Unter dem Ort, nicht daneben**: Zwei Knöpfe in einer Zeile
+                ließen Name und Adresse kaum Platz, und es sind zwei Absichten —
+                „anders" und „hin". Ohne Ort steht hier nichts (ein toter Knopf
+                ist kein Hinweis), beim Nachlesen auch nicht: „Wie komme ich
+                hin" fragt an einem Abend, der vorbei ist, niemand. */}
             {meeting.location && !reading && (
               <a
                 href={mapsUrl(meeting.location)}
                 target="_blank"
                 rel="noreferrer"
-                aria-label="In Maps öffnen"
                 className={cn(
-                  'flex size-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-terracotta-600 text-sm font-semibold text-white transition-colors sm:size-auto sm:px-4 sm:py-2',
-                  'hover:bg-terracotta-700 focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+                  'flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-canvas py-2.5 text-sm font-semibold text-stone-700 transition-colors',
+                  'hover:border-line-strong focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
                   PRESSABLE,
                 )}
               >
-                <Navigation size={15} className="hidden sm:block" />
-                <span className="hidden sm:inline">Maps</span>
-                <ExternalLink size={15} className="sm:size-[13px]" />
+                <Navigation size={15} className="text-terracotta-500" />
+                In Google Maps öffnen
+                <ExternalLink size={13} className="text-stone-400" />
               </a>
             )}
           </Card>
@@ -677,9 +680,8 @@ function Loaded({
 
         {/* Eine Zeile je Rolle, die es an **diesem** Abend gibt — dieselbe
             Aufstellung, nach der auch die Planungstabelle „fertig geplant"
-            entscheidet (`meetingRoles`). Ein Baustein, der aus ist, steht gar
-            nicht da; der Gastgeber steht immer, denn man trifft sich immer
-            irgendwo. */}
+            entscheidet (`meetingRoles`), nur ohne den Gastgeber: der steht
+            oben am Ort. Ein Baustein, der aus ist, steht gar nicht da. */}
         <section>
           <SectionTitle
             action={
@@ -697,11 +699,6 @@ function Loaded({
                 key={slot.role}
                 role={slot.role}
                 people={slot.people}
-                emptyLabel={
-                  slot.role === 'HOST' && !meeting.locationId
-                    ? 'Host oder Treffpunkt fehlt'
-                    : 'Noch niemand'
-                }
                 onEdit={
                   cancelled || reading ? undefined : () => openRole(slot.role)
                 }
@@ -878,12 +875,10 @@ function Loaded({
 function RoleRow({
   role,
   people,
-  emptyLabel,
   onEdit,
 }: {
   role: MeetingRole;
   people: PersonRef[];
-  emptyLabel: string;
   /**
    * Fehlt an einem abgesagten Abend — dort gibt es nichts mehr einzuteilen —
    * und in der Leseansicht eines vergangenen.
@@ -916,7 +911,7 @@ function RoleRow({
           Symbol. Ohne den Knopf daneben bleibt hier die ganze Kartenbreite. */}
       <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-11">
         {people.length === 0 ? (
-          <span className="text-sm text-stone-400 italic">{emptyLabel}</span>
+          <span className="text-sm text-stone-400 italic">Noch niemand</span>
         ) : (
           people.map((person) => (
             <span
