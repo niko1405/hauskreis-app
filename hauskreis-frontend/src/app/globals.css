@@ -77,6 +77,17 @@
   --color-alert-bg: #fdecee;
   --color-alert-line: #f6d5da;
 
+  /* Ein besonderer Termin — Geburtstag, Freizeit, ein Abend außer der Reihe.
+     Gold, aus derselben warmen Familie wie Terracotta und doch klar davon zu
+     unterscheiden: Terracotta ist der gewöhnliche Abend und die Auswahl, Grün
+     „läuft gerade", Rot der Geburtstag im Kalender. Eigene Namen und nicht
+     `warn`, auch wenn die Töne verwandt sind — „besonders" ist keine Warnung.
+     Die Linie ist kräftiger als die übrigen `-line`, weil sie allein als
+     Rahmen trägt, was früher ein Label sagte. */
+  --color-special: #a67c33;
+  --color-special-bg: #fdf3e1;
+  --color-special-line: #ecd29f;
+
   /* Die Umkehrung: dunkle Fläche im hellen Modus, helle im dunklen.
      Für die drei Stellen, die bewusst gegen die Seite stehen — der Toast,
      der aktive Sortier-Chip und das Kamera-Abzeichen am Profilbild. Sie
@@ -226,6 +237,10 @@
   --color-alert: #e0879a;
   --color-alert-bg: #3a1d24;
   --color-alert-line: #572c36;
+
+  --color-special: #d9b163;
+  --color-special-bg: #332715;
+  --color-special-line: #6b5228;
 
   /* Die Umkehrung kehrt sich mit um */
   --color-inverse: #efe7e0;

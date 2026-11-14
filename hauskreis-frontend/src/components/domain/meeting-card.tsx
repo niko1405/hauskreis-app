@@ -4,7 +4,7 @@
  * Eine Terminkarte in der Liste. Zeigt, was man beim Überfliegen braucht:
  * wann, was, wo, wer — und was noch offen ist.
  */
-import { Sparkles, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +39,8 @@ export function MeetingCard({
   const past = phase === 'past';
   // Abgesagt läuft nichts — auch wenn die Uhr es sagen würde.
   const running = phase === 'running' && !cancelled;
+  // Abgesagt ist nichts mehr besonders — der Abend steht gedämpft da.
+  const special = meeting.special && !cancelled;
   const counts = attendanceCounts(people.data ?? [], meeting.attendances);
   // An einem kommenden Abend die Menge, mit der geplant wird (Zusagen plus
   // Unentschiedene); an einem vergangenen oder abgesagten nur, wer da war.
@@ -63,7 +65,14 @@ export function MeetingCard({
           // Kein eigener Ton für den Lobpreisabend: Was für ein Abend das ist,
           // sagen die Überschrift und die Chips darunter — und eine getönte
           // Karte in einer Liste sähe aus, als sei sie hervorgehoben.
-          'border-line bg-card',
+          'bg-card',
+          // **Ein besonderer Termin trägt einen goldenen Rahmen** und ein
+          // goldenes Datums-Kästchen — statt eines Labels „Besonders" über dem
+          // Titel. Auffallen soll er beim Überfliegen, aber ohne Tönung der
+          // Fläche: Grün heißt „läuft", und eine getönte Karte sähe aus wie
+          // eine Auswahl. Der Rahmen sagt es mit der Form, die die Karte
+          // ohnehin hat.
+          special ? 'border-special-line' : 'border-line',
           // Dieselbe Tönung wie „Aktueller Termin" auf „Heute": Grün ist die
           // Farbe von „gilt gerade". In einer Liste über Wochen ist der Abend,
           // an dem man sitzt, der eine, den man sofort finden will.
@@ -78,7 +87,12 @@ export function MeetingCard({
               Ein Zeitraum bekommt keins: „14.–16." passt nicht in ein Kästchen,
               und eine Freizeit ist kein Tag. Dort steht die Spanne als Zeile
               über dem Titel. */}
-          {meeting.endDate === null && <DateBox day={meeting.date} />}
+          {meeting.endDate === null && (
+            <DateBox
+              day={meeting.date}
+              tone={special ? 'special' : 'default'}
+            />
+          )}
 
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
@@ -86,19 +100,13 @@ export function MeetingCard({
                 {/* Ein Zeitraum steht als einer da: „14. – 16. August" ist ein
                     Termin, keine Reihe aus dreien — und er hat kein Kästchen. */}
                 {meeting.endDate && (
-                  <span className="text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
+                  <span
+                    className={cn(
+                      'text-[10px] font-bold tracking-widest uppercase',
+                      special ? 'text-special' : 'text-terracotta-500',
+                    )}
+                  >
                     {formatDayRange(meeting.date, meeting.endDate)}
-                  </span>
-                )}
-                {/* Ein besonderer Termin — Geburtstag, Freizeit — fällt aus
-                    dem Rhythmus und soll beim Überfliegen auffallen, aber
-                    leise: eine Zeile wie der Zeitraum daneben, keine Tönung.
-                    Eine getönte Karte hieße „gilt gerade" (grün) oder sähe
-                    aus wie eine Auswahl. */}
-                {meeting.special && (
-                  <span className="flex items-center gap-1 text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
-                    <Sparkles size={11} aria-hidden />
-                    Besonders
                   </span>
                 )}
                 {!past && (

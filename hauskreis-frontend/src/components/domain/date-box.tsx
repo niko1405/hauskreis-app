@@ -10,6 +10,7 @@
  * vergäße man beim nächsten Griff.
  */
 import { Clock, MapPin } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { dayParts } from '@/lib/date';
 import { mapsUrl } from '@/lib/meeting';
 import type { CalendarDay } from '@/lib/date';
@@ -25,24 +26,66 @@ interface Place {
 /**
  * Wochentag, Tag, Monat — der Anker links an jeder Terminkarte.
  *
- * Ein Zeitraum bekommt keins: „14.–16." passt nicht hinein, und eine Freizeit
- * ist kein Tag. Das entscheidet die Karte, nicht dieses Kästchen — es kennt nur
- * den einen Tag, den es zeigt.
+ * Ein Zeitraum bekommt in der Liste keins: „14.–16." passt nicht hinein, und
+ * eine Freizeit ist kein Tag. Das entscheidet die Karte, nicht dieses Kästchen.
+ *
+ * **`size="sm"`** ist die Fassung unter dem Kalender: ohne Monat — der steht
+ * groß darüber — und schmaler, damit die Zeile kompakt bleibt. Dort darf es
+ * auch einen Zeitraum tragen (`until`, „14–16"): Neben dem Raster ist die
+ * Spanne die Auskunft, die man sucht.
+ *
+ * **`tone="special"`** ist ein besonderer Termin: dasselbe Kästchen in Gold
+ * statt Terracotta, passend zum goldenen Rahmen der Karte.
  */
-export function DateBox({ day }: { day: CalendarDay }) {
+export function DateBox({
+  day,
+  until,
+  size = 'md',
+  tone = 'default',
+}: {
+  day: CalendarDay;
+  /** Nur in der kleinen Fassung: der letzte Tag eines Zeitraums. */
+  until?: CalendarDay | null;
+  size?: 'md' | 'sm';
+  tone?: 'default' | 'special';
+}) {
   const tag = dayParts(day);
+  const small = size === 'sm';
+  const special = tone === 'special';
 
   return (
-    <span className="flex w-14 shrink-0 flex-col items-center rounded-xl border border-terracotta-100 bg-terracotta-50/60 py-2 leading-none">
-      <span className="text-[10px] font-bold tracking-wider text-terracotta-500 uppercase">
+    <span
+      className={cn(
+        'flex shrink-0 flex-col items-center rounded-xl border leading-none',
+        small ? 'w-11 py-1.5' : 'w-14 py-2',
+        special
+          ? 'border-special-line bg-special-bg'
+          : 'border-terracotta-100 bg-terracotta-50/60',
+      )}
+    >
+      <span
+        className={cn(
+          'font-bold tracking-wider uppercase',
+          small ? 'text-[9px]' : 'text-[10px]',
+          special ? 'text-special' : 'text-terracotta-500',
+        )}
+      >
         {tag.weekday}
       </span>
-      <span className="mt-1.5 font-serif text-2xl font-bold text-stone-800">
-        {tag.day}
+      <span
+        className={cn(
+          'font-serif font-bold text-stone-800',
+          small ? 'mt-1' : 'mt-1.5 text-2xl',
+          small && (until ? 'text-sm' : 'text-lg'),
+        )}
+      >
+        {small && until ? `${tag.day}–${dayParts(until).day}` : tag.day}
       </span>
-      <span className="mt-1.5 text-[9px] font-semibold tracking-wider text-stone-400 uppercase">
-        {tag.month}
-      </span>
+      {!small && (
+        <span className="mt-1.5 text-[9px] font-semibold tracking-wider text-stone-400 uppercase">
+          {tag.month}
+        </span>
+      )}
     </span>
   );
 }
@@ -74,6 +117,7 @@ export function TimeAndPlace({
   location,
   linkToMaps = false,
   extra,
+  size = 'md',
 }: {
   startTime: string;
   /** Ein Termin ohne Ort ist kein Fehler — z. B. draußen im Park. */
@@ -86,18 +130,31 @@ export function TimeAndPlace({
   linkToMaps?: boolean;
   /** Noch eine Angabe hinten dran, mit eigenem Trenner. */
   extra?: React.ReactNode;
+  /** Die knappe Fassung für die Zeilen unter dem Kalender: eine Zeile, kleiner. */
+  size?: 'md' | 'sm';
 }) {
+  const small = size === 'sm';
+  const iconSize = small ? 12 : 13;
   const place = (
     <>
-      <MapPin size={13} className="shrink-0 text-terracotta-500" />
-      {location?.name ?? 'Ort noch offen'}
+      <MapPin size={iconSize} className="shrink-0 text-terracotta-500" />
+      <span className={cn(small && 'truncate')}>
+        {location?.name ?? 'Ort noch offen'}
+      </span>
     </>
   );
 
   return (
-    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium text-stone-500">
-      <span className="flex items-center gap-1.5">
-        <Clock size={13} className="shrink-0 text-terracotta-500" />
+    <div
+      className={cn(
+        'flex items-center gap-x-2 font-medium text-stone-500',
+        small
+          ? 'mt-0.5 min-w-0 text-[12px]'
+          : 'mt-1.5 flex-wrap gap-y-1 text-[13px]',
+      )}
+    >
+      <span className="flex shrink-0 items-center gap-1.5">
+        <Clock size={iconSize} className="shrink-0 text-terracotta-500" />
         {startTime} Uhr
       </span>
 
@@ -113,7 +170,9 @@ export function TimeAndPlace({
           {place}
         </a>
       ) : (
-        <span className="flex items-center gap-1.5">{place}</span>
+        <span className={cn('flex items-center gap-1.5', small && 'min-w-0')}>
+          {place}
+        </span>
       )}
 
       {extra && (

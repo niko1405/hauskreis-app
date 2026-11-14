@@ -189,10 +189,12 @@ export class BirthdayService {
   }
 
   /**
-   * Die kommenden Geburtstage in einem Zeitraum — für die Terminliste.
+   * Die Geburtstage in einem Zeitraum, vergangene eingeschlossen — für den
+   * Kalender (`GET …/birthdays/occasions`).
    *
-   * Dieselbe Form wie in der Übersicht, damit die Karte an beiden Orten
-   * dieselbe sein kann.
+   * Dieselbe Form wie in der Übersicht, damit eine Zeile an beiden Orten
+   * dieselbe sein kann — samt der Regel, dass das Geburtstagskind von seiner
+   * eigenen Runde nichts erfährt (`shapeOccasion`).
    */
   async between(hauskreisId: string, viewerId: string, from: Date, to: Date) {
     const config = await this.config.get(hauskreisId);

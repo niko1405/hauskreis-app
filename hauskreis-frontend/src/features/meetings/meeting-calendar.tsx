@@ -12,13 +12,17 @@
  *
  * In der Liste darunter steht er trotzdem **einmal**: die Frage „was ist
  * diesen Monat" beantwortet man nicht dreimal hintereinander mit demselben.
+ *
+ * **Ein besonderer Termin ist golden** — Balken und Zeile, wie der Rahmen in
+ * der Terminliste. Gewöhnliche Abende sind terracotta, abgesagte grau, und der
+ * rote Punkt in der Ecke ist ein Geburtstag.
  */
 import { Cake, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { useMemo, useState } from 'react';
 import { IconButton } from '@/components/ui/button';
 import { CardSkeleton, ErrorState } from '@/components/ui/states';
-import { useBirthdays, useMe, useMeetingList } from '@/lib/api/hooks';
+import { useBirthdayOccasions, useMe, useMeetingList } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import {
   addDays,
@@ -26,7 +30,6 @@ import {
   endOfMonth,
   formatDay,
   formatDayMonth,
-  formatDayRange,
   formatMonth,
   isToday,
   parseDay,
@@ -35,17 +38,11 @@ import {
   toDay,
   today,
 } from '@/lib/date';
-import { meetingHeadline } from '@/lib/meeting';
-import {
-  AnswerButtons,
-  isAnswerable,
-} from '@/components/domain/answer-buttons';
-import { AnswerNoteSheet } from '@/components/domain/answer-note-sheet';
-import type {
-  AttendanceStatus,
-  BirthdayOccasion,
-  MeetingListItem,
-} from '@/lib/api/types';
+import { meetingHeadline, meetingPhase } from '@/lib/meeting';
+import { isAnswerable } from '@/components/domain/answer-buttons';
+import { ANSWER } from '@/components/domain/attendance-answers';
+import { DateBox, TimeAndPlace } from '@/components/domain/date-box';
+import type { BirthdayOccasion, MeetingListItem } from '@/lib/api/types';
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
@@ -57,22 +54,25 @@ export function MeetingCalendar() {
   const query = useMeetingList({ scope: 'all', from, to, take: 100 });
 
   const byDate = useMemo(() => spanByDate(query.items), [query.items]);
+  const days = useMemo(() => buildGrid(anchor), [anchor]);
 
   /**
-   * Geburtstage in diesem Monat.
+   * Geburtstage im sichtbaren Raster — **auch vergangene**.
    *
-   * Aus derselben Übersicht wie das Register „Geburtstage" — sie führt je
-   * Person genau ein Vorkommen, nämlich das nächste. Für den Kalender heißt
-   * das: Bis zu zwölf Monate voraus stimmt er, weiter zurück oder weiter
-   * voraus steht nichts. Das ist ehrlicher als eine Wiederholung, die aus
-   * einem Geburtsdatum errechnet wäre und dann eine Zuständigkeit behaupten
-   * würde, die es noch gar nicht gibt.
+   * Nicht aus der Übersicht: Die führt je Person nur das nächste Vorkommen,
+   * und wer im Kalender zurückblättert, sah den Geburtstag von letzter Woche
+   * nicht mehr. Vergangene Runden bleiben als Geschichte stehen und haben eine
+   * eigene Ansicht, also stehen sie hier auch (`…/birthdays/occasions`). Aus
+   * der Zeit vor der App steht nichts da — ehrlicher als eine Wiederholung,
+   * die aus einem Geburtsdatum errechnet wäre und eine Zuständigkeit
+   * behauptete, die es nie gab. Der Zeitraum ist das ganze Raster, damit auch
+   * die grauen Tage vom Vor- und Folgemonat ihren Punkt tragen.
    */
-  const birthdays = useBirthdays();
+  const birthdays = useBirthdayOccasions(days[0]!, days[days.length - 1]!);
   const birthdaysByDate = useMemo(() => {
     const map = new Map<string, BirthdayOccasion[]>();
 
-    for (const occasion of birthdays.data?.upcoming ?? []) {
+    for (const occasion of birthdays.data ?? []) {
       const existing = map.get(occasion.occursOn);
       if (existing) existing.push(occasion);
       else map.set(occasion.occursOn, [occasion]);
@@ -81,11 +81,9 @@ export function MeetingCalendar() {
     return map;
   }, [birthdays.data]);
 
-  const thisMonth = (birthdays.data?.upcoming ?? []).filter(
+  const thisMonth = (birthdays.data ?? []).filter(
     (occasion) => occasion.occursOn.slice(0, 7) === anchor.slice(0, 7),
   );
-
-  const days = useMemo(() => buildGrid(anchor), [anchor]);
 
   return (
     <div className="space-y-4">
@@ -160,7 +158,9 @@ export function MeetingCalendar() {
                       span
                         ? span.status === 'CANCELLED'
                           ? 'bg-stone-300'
-                          : 'bg-terracotta-500'
+                          : span.special
+                            ? 'bg-special'
+                            : 'bg-terracotta-500'
                         : 'bg-transparent',
                       span?.spans
                         ? cn(
@@ -251,76 +251,82 @@ export function MeetingCalendar() {
 }
 
 /**
- * Eine Zeile der Monatsliste — links der Termin, rechts die eigene Antwort.
+ * Eine Zeile der Monatsliste — kompakt, zum Nachsehen und Hineingehen.
  *
- * **Auch hier wird geantwortet.** Den Kalender macht man auf, um einen Tag zu
- * suchen — aber dabei fällt einem auf, dass man am 15. nicht kann. Zwei
- * Bildschirme, auf denen dieselbe Karte einmal fragt und einmal nicht, wären
- * schwerer zu erklären als einer mehr, der fragt.
+ * **Hier wird nicht geantwortet**, anders als in der Terminliste und am Termin.
+ * Den Kalender macht man auf, um einen Tag zu finden; die Knöpfe daneben
+ * machten aus jeder Zeile eine Frage und die Liste doppelt so unruhig. Was man
+ * selbst geantwortet hat, steht rechts als Punkt — die Auskunft bleibt, die
+ * Entscheidung fällt in der Liste oder am Abend.
  *
- * **Sie steht neben dem Termin, nicht darunter** (`compact`). Diese Kachel ist
- * schon drei Zeilen hoch; eine vierte für die Knöpfe hätte den Monat auf zwei
- * Bildschirmhöhen gebracht. Auf dem Telefon tragen die Knöpfe deshalb nur ihr
- * Symbol — was sie bedeuten, sagt `aria-label`, und ab `sm` steht das Wort
- * wieder dabei.
+ * Gebaut wie die Terminkarte, nur knapp: dasselbe Datums-Kästchen (klein, ohne
+ * Monat — der steht über dem Raster; ein Zeitraum als „14–16"), der Titel und
+ * die Zeile „wann und wo". Ein laufender Abend ist grün getönt, ein besonderer
+ * golden gerahmt, ein abgesagter gedämpft.
  *
- * **Der Link umfasst nur den Termin.** In der Terminliste liegen die Knöpfe im
- * Link und fangen den Klick ab; hier wäre das unnötig, weil links und rechts
- * ohnehin nebeneinander sitzen. Ein Knopf, der kein Link ist, ist der
- * ehrlichere Bau.
- *
- * Weiterhin **keine Teilnehmerzahl**, anders als auf der Terminkarte: Die Zeile
- * beantwortet „was ist wann", nicht „mit wie vielen".
+ * Weiterhin **keine Teilnehmerzahl**: Die Zeile beantwortet „was ist wann",
+ * nicht „mit wie vielen".
  */
 function MonthRow({ meeting }: { meeting: MeetingListItem }) {
   const { me } = useMe();
-  /** Welche Antwort gerade nach einem Satz fragt — `null` heißt: keine. */
-  const [noteFor, setNoteFor] = useState<AttendanceStatus | null>(null);
 
   const cancelled = meeting.status === 'CANCELLED';
-  const myRow = meeting.attendances.find((row) => row.personId === me?.id);
+  const running = !cancelled && meetingPhase(meeting) === 'running';
+  const special = meeting.special && !cancelled;
+  const mine = isAnswerable(meeting, me?.id)
+    ? ANSWER[
+        meeting.attendances.find((row) => row.personId === me?.id)?.status ??
+          'UNKNOWN'
+      ]
+    : null;
 
   return (
     <li>
-      <div
+      <Link
+        href={`/termin?id=${meeting.id}`}
         className={cn(
-          'flex items-center gap-3 rounded-md border border-line bg-card p-3 transition-colors focus-within:border-line-strong hover:border-line-strong',
-          // Wie auf der Terminkarte und am Punkt im Raster oben: ein abgesagter
-          // Abend steht gedämpft da.
+          'flex items-center gap-3 rounded-lg border bg-card p-2.5 pr-4 transition-colors',
+          'hover:border-line-strong focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+          special ? 'border-special-line' : 'border-line',
+          // Dieselbe Tönung wie in der Liste und auf „Heute": grün heißt
+          // „gilt gerade".
+          running && 'border-success-line bg-success-bg/30',
           cancelled && 'opacity-60',
         )}
       >
-        <Link href={`/termin?id=${meeting.id}`} className="min-w-0 flex-1">
-          <span className="block text-[11px] font-bold text-terracotta-500">
-            {meeting.endDate
-              ? formatDayRange(meeting.date, meeting.endDate)
-              : formatDay(meeting.date)}
-          </span>
-          <span className="block truncate text-sm font-semibold text-stone-800">
-            {meetingHeadline(meeting)}
-          </span>
-          <span className="block truncate text-[11px] text-stone-400">
-            {cancelled
-              ? 'Fällt aus'
-              : (meeting.location?.name ?? 'Ort noch offen')}
-          </span>
-        </Link>
-
-        {isAnswerable(meeting, me?.id) && (
-          <AnswerButtons meeting={meeting} compact onAnswered={setNoteFor} />
-        )}
-      </div>
-
-      {me && (
-        <AnswerNoteSheet
-          meetingId={meeting.id}
-          personId={me.id}
-          status={noteFor}
-          note={myRow?.note ?? null}
-          lateMinutes={myRow?.lateMinutes ?? null}
-          onClose={() => setNoteFor(null)}
+        <DateBox
+          day={meeting.date}
+          until={meeting.endDate}
+          size="sm"
+          tone={special ? 'special' : 'default'}
         />
-      )}
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-serif text-base leading-tight font-bold text-stone-900">
+            {meetingHeadline(meeting)}
+          </p>
+          {cancelled ? (
+            <p className="mt-0.5 text-[12px] font-semibold text-alert">
+              Fällt aus
+            </p>
+          ) : (
+            <TimeAndPlace
+              size="sm"
+              startTime={meeting.startTime}
+              location={meeting.location}
+            />
+          )}
+        </div>
+
+        {mine && (
+          <span
+            title={mine.short}
+            className={cn('size-2 shrink-0 rounded-full', mine.dot)}
+          >
+            <span className="sr-only">Deine Antwort: {mine.short}</span>
+          </span>
+        )}
+      </Link>
     </li>
   );
 }

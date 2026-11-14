@@ -2,6 +2,7 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import { BirthdayGiftMode } from '../../../generated/prisma/enums';
 import { MAX_FREEZE_DAYS, MIN_FREEZE_DAYS } from '../birthday-settings';
+import { isoDay } from '../../common/dto/iso-day';
 
 const hauskreisParams = { hauskreisId: z.uuid() };
 
@@ -103,4 +104,29 @@ export const updateGiftPairingsSchema = z.object({
 });
 export class UpdateGiftPairingsDto extends createZodDto(
   updateGiftPairingsSchema,
+) {}
+
+/** So viele Tage zeigt der Kalender höchstens: sechs Wochen plus Rand. */
+export const MAX_RANGE_DAYS = 62;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Ein Zeitraum für den Kalender — beide Enden eingeschlossen.
+ *
+ * Gedeckelt, weil die Antwort je Geburtstag die ganze Runde trägt: Ein Monat
+ * ist eine Handvoll Zeilen, „alles seit Gründung" wäre eine Abfrage, die
+ * niemand braucht.
+ */
+export const birthdayRangeQuerySchema = z
+  .object({ from: isoDay, to: isoDay })
+  .refine(({ from, to }) => from <= to, {
+    message: '„from" liegt nach „to"',
+  })
+  .refine(
+    ({ from, to }) =>
+      (to.getTime() - from.getTime()) / DAY_MS <= MAX_RANGE_DAYS,
+    { message: `Höchstens ${MAX_RANGE_DAYS} Tage auf einmal` },
+  );
+export class BirthdayRangeQueryDto extends createZodDto(
+  birthdayRangeQuerySchema,
 ) {}
