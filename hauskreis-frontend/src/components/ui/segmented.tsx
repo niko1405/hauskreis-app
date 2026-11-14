@@ -19,6 +19,11 @@
  * Feld ist und kein Umschalter neben einer Überschrift. Die Knöpfe teilen sich
  * den Platz nach ihrem Inhalt (`flex-auto`), nicht zu gleichen Teilen: Bei
  * fünf Stufen wäre „Normal" sonst so breit wie „Oft".
+ *
+ * `equal` teilt die volle Breite dagegen **gleich** auf — für Register, die
+ * eine ganze Seite umschalten („Übersicht | Planung | Geburtstage"): Dort sind
+ * die Teile gleichrangig, und gleich breit sehen sie auch so aus. Mit
+ * `size="lg"` sind sie so hoch wie ein Knopf.
  */
 import { cn } from '@/lib/cn';
 
@@ -29,15 +34,17 @@ export function Segmented<Value extends string>({
   size = 'md',
   label,
   fill = false,
+  equal = false,
   iconOnly = false,
 }: {
   value: Value;
   onChange: (value: Value) => void;
   options: { value: Value; label: string; icon?: React.ReactNode }[];
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   /** Wofür die Gruppe steht, für Screenreader. */
   label?: string;
   fill?: boolean;
+  equal?: boolean;
   iconOnly?: boolean;
 }) {
   return (
@@ -45,8 +52,9 @@ export function Segmented<Value extends string>({
       role="radiogroup"
       aria-label={label}
       className={cn(
-        'flex rounded-full border border-line bg-card p-0.5',
-        fill ? 'w-full' : 'shrink-0',
+        'flex rounded-full border border-line bg-card',
+        size === 'lg' ? 'p-1' : 'p-0.5',
+        fill || equal ? 'w-full' : 'shrink-0',
       )}
     >
       {options.map((option) => (
@@ -60,9 +68,12 @@ export function Segmented<Value extends string>({
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full font-semibold transition-colors',
             fill && 'flex-auto justify-center',
+            equal && 'min-w-0 flex-1 justify-center',
             size === 'sm'
               ? cn('py-1 text-xs', fill ? 'px-2 sm:px-3' : 'px-3')
-              : 'px-4 py-1.5 text-sm',
+              : size === 'lg'
+                ? 'px-3 py-2.5 text-sm font-bold'
+                : 'px-4 py-1.5 text-sm',
             value === option.value
               ? 'bg-terracotta-500 text-white'
               : 'text-stone-500 hover:text-stone-700',

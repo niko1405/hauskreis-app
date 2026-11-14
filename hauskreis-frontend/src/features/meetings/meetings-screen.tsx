@@ -1,8 +1,15 @@
 'use client';
 
 /**
- * „Termine" — vier Sichten: Liste, Mehrwochen-Planung, Kalender, Geburtstage.
+ * „Termine" — drei Register: Übersicht, Mehrwochen-Planung, Geburtstage.
  * Alles außer der Liste wird erst geladen, wenn man es auswählt.
+ *
+ * **Die Register stehen als ein Umschalter über die volle Breite**, gleich
+ * breit — drei gleichrangige Ansichten derselben Seite, keine Reihe Etiketten.
+ * **Der Kalender ist kein Register, sondern eine Darstellung der Übersicht**:
+ * dieselben Termine, nur als Monat. Er sitzt deshalb oben neben dem „+" als
+ * Knopf, der zwischen Kalender und Liste wechselt, und nur auf der Übersicht.
+ * Das „+" fehlt auf „Geburtstage": Dort legt man keinen Termin an.
  *
  * **Gesucht wird in einem eigenen Modus**, wie im Archiv: In Ruhe steht nur
  * eine Lupe neben dem Umschalter, ein Tipp darauf holt das Feld nach oben,
@@ -10,7 +17,14 @@
  * das immer dasteht, nahm einer Liste Platz, in der man meistens nur den
  * nächsten Dienstag sucht.
  */
-import { CalendarCheck, CalendarClock, Plus, Search } from 'lucide-react';
+import {
+  CalendarCheck,
+  CalendarClock,
+  CalendarDays,
+  List,
+  Plus,
+  Search,
+} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
@@ -57,27 +71,33 @@ const CreateMeetingSheet = dynamic(
   { loading: () => null },
 );
 
-type View = 'liste' | 'planung' | 'kalender' | 'geburtstage';
+type View = 'liste' | 'planung' | 'geburtstage';
 
-const VIEWS: { key: View; label: string }[] = [
-  { key: 'liste', label: 'Liste' },
-  { key: 'planung', label: 'Planung' },
-  { key: 'kalender', label: 'Kalender' },
+const VIEWS: { value: View; label: string }[] = [
+  { value: 'liste', label: 'Übersicht' },
+  { value: 'planung', label: 'Planung' },
   // Zuletzt, weil man hierher gezielt kommt und nicht beim Durchblättern: Wer
   // „Termine" öffnet, sucht meistens einen Abend.
-  { key: 'geburtstage', label: 'Geburtstage' },
+  { value: 'geburtstage', label: 'Geburtstage' },
 ];
 
 /**
  * Ob die Adresse ein bestimmtes Register meint.
  *
  * Nur beim ersten Rendern gelesen — gebraucht für den Weg von außen (eine
- * Benachrichtigung) und für den Weg **zurück**: Das gewählte Register schreibt
- * `selectView` in die Adresse, also kommt man von einem Geburtstag dorthin
- * zurück, wo man ihn angetippt hat — Liste oder Register.
+ * Benachrichtigung) und für den Weg **zurück**: Register und Kalender schreibt
+ * `show` in die Adresse, also kommt man von einem Geburtstag dorthin zurück,
+ * wo man ihn angetippt hat. `?tab=kalender` ist die Übersicht als Monat — so
+ * hieß es, als der Kalender noch ein Register war, und so bleibt es.
  */
 function initialView(tab: string | null): View {
-  return VIEWS.some((view) => view.key === tab) ? (tab as View) : 'liste';
+  return VIEWS.some((view) => view.value === tab) ? (tab as View) : 'liste';
+}
+
+/** Die Adresse zu Register und Darstellung — die Liste ist der Normalfall. */
+function urlOf(view: View, calendar: boolean): string {
+  if (view !== 'liste') return `/termine?tab=${view}`;
+  return calendar ? '/termine?tab=kalender' : '/termine';
 }
 
 /** Die Feder, mit der der Kopf ein- und ausklappt — dieselbe wie im Archiv. */
@@ -86,6 +106,8 @@ const HEAD_SPRING = { type: 'spring', damping: 30, stiffness: 260 } as const;
 export function MeetingsScreen() {
   const tab = useSearchParams().get('tab');
   const [view, setView] = useState<View>(() => initialView(tab));
+  /** Die Übersicht als Monat statt als Liste. */
+  const [calendar, setCalendar] = useState(tab === 'kalender');
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState('');
   const [searching, setSearching] = useState(false);
@@ -142,13 +164,10 @@ export function MeetingsScreen() {
    * viermal auf derselben Seite landen. Next gleicht den nativen Aufruf mit
    * seinem Router ab.
    */
-  const selectView = (key: View) => {
-    setView(key);
-    window.history.replaceState(
-      null,
-      '',
-      key === 'liste' ? '/termine' : `/termine?tab=${key}`,
-    );
+  const show = (nextView: View, nextCalendar: boolean) => {
+    setView(nextView);
+    setCalendar(nextCalendar);
+    window.history.replaceState(null, '', urlOf(nextView, nextCalendar));
   };
 
   return (
@@ -213,47 +232,65 @@ export function MeetingsScreen() {
         <PageHeader
           title="Termine"
           action={
-            <IconButton
-              label="Termin anlegen"
-              onClick={() => setCreating(true)}
-              className="bg-terracotta-500 text-white hover:bg-terracotta-700 hover:text-white"
-            >
-              <Plus size={18} />
-            </IconButton>
+            <div className="flex items-center gap-2">
+              {/* Nur auf der Übersicht: Planung und Geburtstage haben keinen
+                  Monat. Der Knopf zeigt, wohin er führt — im Kalender die
+                  Liste, getönt, damit man sieht, dass gerade etwas anderes
+                  gilt als sonst. */}
+              {view === 'liste' && (
+                <IconButton
+                  label={
+                    calendar ? 'Als Liste anzeigen' : 'Als Kalender anzeigen'
+                  }
+                  aria-pressed={calendar}
+                  onClick={() => show('liste', !calendar)}
+                  className={cn(
+                    'border',
+                    calendar
+                      ? 'border-terracotta-500/50 bg-terracotta-500/10 text-terracotta-500 hover:bg-terracotta-500/15 hover:text-terracotta-600'
+                      : 'border-line bg-card',
+                  )}
+                >
+                  {calendar ? <List size={18} /> : <CalendarDays size={18} />}
+                </IconButton>
+              )}
+              {view !== 'geburtstage' && (
+                <IconButton
+                  label="Termin anlegen"
+                  onClick={() => setCreating(true)}
+                  className="bg-terracotta-500 text-white hover:bg-terracotta-700 hover:text-white"
+                >
+                  <Plus size={18} />
+                </IconButton>
+              )}
+            </div>
           }
         />
 
-        <div className="no-scrollbar flex gap-2 overflow-x-auto px-5 pb-4">
-          {VIEWS.map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => selectView(key)}
-              aria-pressed={view === key}
-              className={cn(
-                'shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-colors',
-                PRESSABLE,
-                view === key
-                  ? 'border-terracotta-500 bg-terracotta-500 text-white'
-                  : 'border-line bg-card text-stone-500 hover:border-line-strong',
-              )}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="px-5 pb-5">
+          <Segmented
+            equal
+            size="lg"
+            label="Ansicht"
+            value={view}
+            onChange={(next) => show(next, next === 'liste' && calendar)}
+            options={VIEWS}
+          />
         </div>
       </motion.div>
 
       <div className="px-5">
-        {view === 'liste' && (
-          <MeetingListView
-            search={search}
-            searching={searching}
-            onSearch={enterSearch}
-          />
-        )}
+        {view === 'liste' &&
+          (calendar ? (
+            <MeetingCalendar />
+          ) : (
+            <MeetingListView
+              search={search}
+              searching={searching}
+              onSearch={enterSearch}
+            />
+          ))}
         {view === 'planung' && <AssignmentTable />}
-        {view === 'kalender' && <MeetingCalendar />}
         {view === 'geburtstage' && <BirthdaysScreen />}
       </div>
 
