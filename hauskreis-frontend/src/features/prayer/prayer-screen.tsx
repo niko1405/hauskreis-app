@@ -22,13 +22,15 @@ import {
   ArrowUpRight,
   CalendarCheck,
   CalendarClock,
+  ChevronRight,
   HeartHandshake,
   type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
 import { ScreenHeader } from '@/components/layout/screen-header';
 import { Avatar } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Button, PRESSABLE } from '@/components/ui/button';
+import Link from '@/components/ui/link';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { Segmented } from '@/components/ui/segmented';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
@@ -101,6 +103,21 @@ function Rounds() {
     (round) => round.periodStart !== current.data?.periodStart,
   );
 
+  /**
+   * Niemand ist eingeteilt — keine laufende Runde, oder eine ohne Gruppen.
+   *
+   * Dann steht oben eine Erklärung statt einer leeren Seite, unter der nur
+   * „Weiter voraus ist noch nichts geplant" stand. Die Liste der weiteren
+   * Runden fällt dann weg, solange sie nichts zu sagen hat: dieselbe Auskunft
+   * zweimal untereinander wäre eine zu viel.
+   */
+  const nobody =
+    !current.isLoading &&
+    !current.error &&
+    (!current.data || current.data.groups.length === 0);
+  const showRounds =
+    !nobody || scope === 'past' || rounds.isLoading || others.length > 0;
+
   return (
     <div>
       <ScreenHeader
@@ -125,7 +142,9 @@ function Rounds() {
           />
         )}
 
-        {current.data && !myGroup && (
+        {nobody && <NobodyAssigned admin={me.isAdmin} />}
+
+        {current.data && current.data.groups.length > 0 && !myGroup && (
           <EmptyState
             title="Du bist in dieser Runde keiner Gruppe zugeteilt"
             hint="Bei der nächsten Rotation bist du wieder dabei."
@@ -147,63 +166,108 @@ function Rounds() {
           </section>
         )}
 
-        <section>
-          {/* Eine eigene Zeile statt `SectionTitle`: Die richtet an der
+        {showRounds && (
+          <section>
+            {/* Eine eigene Zeile statt `SectionTitle`: Die richtet an der
               Grundlinie aus, und ein Umschalter aus Symbolen hat keine. */}
-          <div className="mb-3 flex items-center justify-between gap-3 px-1">
-            <h2 className="text-xs font-bold tracking-wider text-stone-400 uppercase">
-              Weitere Runden
-            </h2>
-            {/* Dieselben zwei Symbole wie in der Terminliste: die Uhr für
+            <div className="mb-3 flex items-center justify-between gap-3 px-1">
+              <h2 className="text-xs font-bold tracking-wider text-stone-400 uppercase">
+                Weitere Runden
+              </h2>
+              {/* Dieselben zwei Symbole wie in der Terminliste: die Uhr für
                 „steht noch an", der Haken für „war schon". */}
-            <Segmented
-              iconOnly
-              label="Welche Runden"
-              value={scope}
-              onChange={setScope}
-              options={[
-                {
-                  value: 'upcoming',
-                  label: 'Kommende Runden',
-                  icon: <CalendarClock size={16} />,
-                },
-                {
-                  value: 'past',
-                  label: 'Vergangene Runden',
-                  icon: <CalendarCheck size={16} />,
-                },
-              ]}
-            />
-          </div>
+              <Segmented
+                iconOnly
+                label="Welche Runden"
+                value={scope}
+                onChange={setScope}
+                options={[
+                  {
+                    value: 'upcoming',
+                    label: 'Kommende Runden',
+                    icon: <CalendarClock size={16} />,
+                  },
+                  {
+                    value: 'past',
+                    label: 'Vergangene Runden',
+                    icon: <CalendarCheck size={16} />,
+                  },
+                ]}
+              />
+            </div>
 
-          {rounds.isLoading && <CardSkeleton />}
-          {rounds.error && <ErrorState error={rounds.error} />}
+            {rounds.isLoading && <CardSkeleton />}
+            {rounds.error && <ErrorState error={rounds.error} />}
 
-          {!rounds.isLoading && others.length === 0 && (
-            <p className="px-1 text-sm text-stone-400 italic">
-              {SCOPE_EMPTY[scope]}
-            </p>
-          )}
+            {!rounds.isLoading && others.length === 0 && (
+              <p className="px-1 text-sm text-stone-400 italic">
+                {SCOPE_EMPTY[scope]}
+              </p>
+            )}
 
-          <div className="space-y-5">
-            {others.map((round) => (
-              <RoundBlock key={round.periodStart} round={round} />
-            ))}
-          </div>
+            <div className="space-y-5">
+              {others.map((round) => (
+                <RoundBlock key={round.periodStart} round={round} />
+              ))}
+            </div>
 
-          {rounds.hasNextPage && (
-            <Button
-              variant="secondary"
-              className="mt-4 w-full"
-              loading={rounds.isFetchingNextPage}
-              onClick={() => void rounds.fetchNextPage()}
-            >
-              {scope === 'past' ? 'Ältere Runden laden' : 'Weiter voraus'}
-            </Button>
-          )}
-        </section>
+            {rounds.hasNextPage && (
+              <Button
+                variant="secondary"
+                className="mt-4 w-full"
+                loading={rounds.isFetchingNextPage}
+                onClick={() => void rounds.fetchNextPage()}
+              >
+                {scope === 'past' ? 'Ältere Runden laden' : 'Weiter voraus'}
+              </Button>
+            )}
+          </section>
+        )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Noch niemand eingeteilt — eine Erklärung statt einer leeren Seite.
+ *
+ * Gebaut wie die Einladung ohne Lieder am Termin: Symbol-Kachel, Titel, ein
+ * Satz. Der Satz sagt, wann sich das ändert, denn das ist die Frage, mit der
+ * man hier steht. Admins bekommen den Weg dorthin, wo sich eine Runde sofort
+ * planen lässt — alle anderen könnten dort nichts tun.
+ */
+function NobodyAssigned({ admin }: { admin: boolean }) {
+  return (
+    <Card className="flex flex-col items-center px-6 py-8 text-center">
+      <span className="flex size-16 items-center justify-center rounded-2xl border border-terracotta-500/30 bg-terracotta-500/10 text-terracotta-500">
+        <HeartHandshake size={28} />
+      </span>
+      <p className="mt-5 font-serif text-lg font-bold text-stone-900">
+        Noch niemand eingeteilt
+      </p>
+      <p className="mt-1.5 max-w-xs text-sm leading-relaxed text-stone-500">
+        Die App teilt jede Nacht neu ein, sobald mindestens zwei von euch dabei
+        sind. Dann siehst du hier, mit wem du betest.
+      </p>
+      {admin && (
+        <>
+          <p className="mt-4 max-w-xs text-xs leading-relaxed text-stone-400">
+            {
+              'Unter „Läufe“ in der Verwaltung lässt sich die Runde auch sofort planen.'
+            }
+          </p>
+          <Link
+            href="/admin"
+            className={cn(
+              'mt-3 inline-flex items-center gap-1 rounded-full bg-terracotta-50 px-4 py-2 text-sm font-semibold text-terracotta-700 transition-colors hover:bg-terracotta-100',
+              PRESSABLE,
+            )}
+          >
+            Zur Verwaltung <ChevronRight size={15} />
+          </Link>
+        </>
+      )}
+    </Card>
   );
 }
 
