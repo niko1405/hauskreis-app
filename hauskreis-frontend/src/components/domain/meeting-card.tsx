@@ -73,10 +73,12 @@ export function MeetingCard({
           // eine Auswahl. Der Rahmen sagt es mit der Form, die die Karte
           // ohnehin hat.
           special ? 'border-special-line' : 'border-line',
-          // Dieselbe Tönung wie „Aktueller Termin" auf „Heute": Grün ist die
+          // Derselbe Rand wie „Aktueller Termin" auf „Heute": Grün ist die
           // Farbe von „gilt gerade". In einer Liste über Wochen ist der Abend,
-          // an dem man sitzt, der eine, den man sofort finden will.
-          running && 'border-success-line bg-success-bg/30',
+          // an dem man sitzt, der eine, den man sofort finden will. **Nur der
+          // Rand und das Abzeichen**, nicht die Fläche: Eine getönte Karte sah
+          // aus wie eine Auswahl.
+          running && 'border-success-line',
           cancelled && 'opacity-60',
         )}
       >
