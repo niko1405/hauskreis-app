@@ -99,6 +99,7 @@ import {
 } from '@/lib/api/hooks';
 import { hasChords, parseSheet, transposer } from '@/lib/chords';
 import { cn } from '@/lib/cn';
+import { navigateBack } from '@/lib/page-transition';
 import { formatDay } from '@/lib/date';
 import { isMeetingPast, mayPickSongs } from '@/lib/meeting';
 import {
@@ -918,7 +919,7 @@ function EveningBar({
   // Zurück dorthin, woher man kam — der Termin, an dem das Lied nicht mehr
   // steht. Ohne Vorgeschichte (ein geteilter Link) ersetzt der Termin die Seite.
   const backToMeeting = () => {
-    if (window.history.length > 1) router.back();
+    if (window.history.length > 1) navigateBack(() => router.back());
     else router.replace(`/termin?id=${meetingId}`);
   };
 

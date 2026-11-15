@@ -73,6 +73,7 @@ import {
   useUpdateTopicSession,
 } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
+import { markBackNavigation } from '@/lib/page-transition';
 import { formatDay, hasStarted } from '@/lib/date';
 import type { TopicSession } from '@/lib/api/types';
 
@@ -148,6 +149,7 @@ function Loaded({
       <div className="flex items-center justify-between gap-3">
         <Link
           href={zurueck.href}
+          onClick={markBackNavigation}
           className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-terracotta-600"
         >
           <ArrowLeft size={14} />

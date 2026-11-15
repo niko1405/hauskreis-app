@@ -213,6 +213,298 @@
   }
 }
 
+/* ── Seitenwechsel ──────────────────────────────────────────────────────────
+
+   Welche Bewegung, entscheidet `lib/page-transition.ts` und schreibt es als
+   `data-nav` an `<html>`; hier steht, wie sie aussieht.
+
+   **Mit View Transitions** (`<ViewTransition>` in `app/(app)/template.tsx`)
+   hält der Browser ein Bild der alten Seite (`page-out`) und eins der neuen
+   (`page-in`) fest und bewegt beide. Nur so kann die alte hinausgleiten: Im
+   DOM gibt es sie im selben Moment schon nicht mehr. Das Bild der neuen ist
+   lebendig — was dort nachlädt, erscheint mitten in der Bewegung.
+
+   **Ohne View Transitions** kommt die neue Seite per CSS herein wie bisher, und
+   die alte ist sofort weg (`page-enter-*`, unten). Ein Zurück über den Knopf
+   des Browsers kommt immer so herein (`animate-back-in`): Beim `popstate`
+   lässt React die View Transition aus. */
+
+/* Am Rechner sind Gruppe und Verwaltung Ziele der Seitenspalte wie die Tabs. */
+@media (min-width: 48rem) {
+  .page-enter-side,
+  .page-enter-group {
+    animation: fade-in 300ms var(--ease-ios) backwards;
+  }
+}
+
+@supports not (view-transition-name: none) {
+  .page-enter-push {
+    animation: push-in 460ms var(--ease-ios) backwards;
+  }
+
+  @media (max-width: 47.99rem) {
+    .page-enter-side {
+      animation: push-in 460ms var(--ease-ios) backwards;
+    }
+
+    .page-enter-group {
+      animation: sheet-in 500ms var(--ease-ios) backwards;
+    }
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100vh);
+  }
+}
+
+/* **Das Gerüst bleibt über den Seiten stehen.** Ein festgehaltenes Bild liegt
+   über allem, was nicht selbst eins ist — ohne eigene Namen verschwänden
+   Kopfleiste, Tab-Leiste und Seitenspalte für die Dauer eines Wechsels unter
+   der gleitenden Seite. Die Namen gelten nur, solange ein Wechsel läuft
+   (`:active-view-transition`): Dauerhaft machte `view-transition-name` jedes
+   dieser Elemente zu einem eigenen Stapelkontext. **Im neuen Bild nicht beim
+   Überblenden zwischen Tabs** (`fade`): Ein herausgehobenes Element ist für
+   seinen Glas-Effekt die ganze Welt, und die Tab-Leiste sähe für einen Moment
+   aus wie ohne Glas. Im alten Bild immer — `data-nav` steht dann auf `idle`:
+   Sonst läge die alte Seite über ihrer eigenen Kopfleiste.
+
+   Die alte Fassung ist sofort weg und die neue lebendig, ohne eigene
+   Bewegung: So verhält sich das Gerüst wie ohne View Transition — die Pille
+   der Tab-Leiste gleitet weiter, der Antwort-Balken steht sofort da. */
+:root:active-view-transition:not([data-nav='fade'], [data-nav='none'])
+  .vt-chrome-header {
+  view-transition-name: chrome-header;
+}
+:root:active-view-transition:not([data-nav='fade'], [data-nav='none'])
+  .vt-chrome-footer {
+  view-transition-name: chrome-footer;
+}
+:root:active-view-transition:not([data-nav='fade'], [data-nav='none'])
+  .vt-chrome-sidebar {
+  view-transition-name: chrome-sidebar;
+}
+:root:active-view-transition:not([data-nav='fade'], [data-nav='none'])
+  .vt-chrome-toasts {
+  view-transition-name: chrome-toasts;
+}
+:root:active-view-transition:not([data-nav='fade'], [data-nav='none'])
+  .vt-chrome-scrim {
+  view-transition-name: chrome-scrim;
+}
+:root:active-view-transition:not([data-nav='fade'], [data-nav='none'])
+  .vt-chrome-progress {
+  view-transition-name: chrome-progress;
+}
+
+::view-transition-group(chrome-header),
+::view-transition-group(chrome-footer),
+::view-transition-group(chrome-sidebar),
+::view-transition-group(chrome-toasts),
+::view-transition-group(chrome-scrim),
+::view-transition-group(chrome-progress) {
+  z-index: 10;
+  animation: none;
+}
+
+::view-transition-old(chrome-header),
+::view-transition-old(chrome-footer),
+::view-transition-old(chrome-sidebar),
+::view-transition-old(chrome-toasts),
+::view-transition-old(chrome-scrim),
+::view-transition-old(chrome-progress) {
+  animation: none;
+  opacity: 0;
+}
+
+::view-transition-new(chrome-header),
+::view-transition-new(chrome-footer),
+::view-transition-new(chrome-sidebar),
+::view-transition-new(chrome-toasts),
+::view-transition-new(chrome-scrim),
+::view-transition-new(chrome-progress) {
+  animation: none;
+}
+
+/* Bei einer echten Bewegung geht das alte Gerüst mit der alten Seite, statt im
+   ersten Bild zu verschwinden — beim Sheet bleibt es darunter stehen, bis es
+   zugedeckt ist. Zwischen Tabs nicht: Dort stünde die alte Pille über der
+   neuen, die schon gleitet. */
+:root[data-nav='push']::view-transition-old(chrome-header),
+:root[data-nav='push']::view-transition-old(chrome-footer),
+:root[data-nav='pop']::view-transition-old(chrome-header),
+:root[data-nav='pop']::view-transition-old(chrome-footer) {
+  opacity: 1;
+  animation: vt-fade-out 200ms ease-out both;
+}
+:root[data-nav='sheet-open']::view-transition-old(chrome-header),
+:root[data-nav='sheet-open']::view-transition-old(chrome-footer) {
+  opacity: 1;
+  animation: vt-fade-out 500ms var(--ease-ios) both;
+}
+
+/* Der Rest (Leinwand, Rahmen der Spalte) wechselt ohne Überblenden: Er ist
+   vorher und nachher derselbe. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-group(*.page-in),
+::view-transition-group(*.page-out) {
+  z-index: 1;
+}
+
+/* push — eine Unterseite. Die alte weicht nach links und ist schnell weg,
+   die neue kommt leicht von rechts: Zwei Seiten, die lange gleichzeitig
+   halb zu sehen sind, wären Text über Text. */
+:root[data-nav='push']::view-transition-old(*.page-out) {
+  animation:
+    vt-fade-out 200ms ease-out both,
+    vt-to-left 460ms var(--ease-ios) both;
+}
+:root[data-nav='push']::view-transition-new(*.page-in) {
+  animation:
+    vt-fade-in 360ms var(--ease-ios) 60ms both,
+    vt-from-right 460ms var(--ease-ios) both;
+}
+
+/* pop — Zurück. Die Unterseite geht nach rechts, die vorige kommt von links
+   zurück. Die gehende liegt oben, wie unter iOS. */
+:root[data-nav='pop']::view-transition-group(*.page-out) {
+  z-index: 2;
+}
+:root[data-nav='pop']::view-transition-old(*.page-out) {
+  animation:
+    vt-fade-out 240ms ease-out both,
+    vt-to-right 420ms var(--ease-ios) both;
+}
+:root[data-nav='pop']::view-transition-new(*.page-in) {
+  animation:
+    vt-fade-in 340ms var(--ease-ios) 60ms both,
+    vt-from-left 420ms var(--ease-ios) both;
+}
+
+/* sheet-open / sheet-close — die Gruppe auf dem Telefon. Sie fährt über
+   alles, auch über die Tab-Leiste, wie ein Sheet; darunter bleibt die Seite
+   stehen, von der man kam, und dunkelt ein wenig ab. Oben runde Ecken und ein
+   Schatten, die sich bis zum Ende der Bewegung auflösen: Die Gruppe hat
+   dieselbe Leinwand wie die Seite darunter, und ohne Kante sähe man nicht,
+   dass da etwas heraufkommt. Um die Höhe des Fensters, nicht die eigene: Eine
+   lange Seite käme sonst von weit unten und erst spät ins Bild. */
+:root[data-nav='sheet-open']::view-transition-group(*.page-in),
+:root[data-nav='sheet-close']::view-transition-group(*.page-out) {
+  z-index: 20;
+}
+:root[data-nav='sheet-open']::view-transition-old(*.page-out) {
+  animation: vt-dim 500ms var(--ease-ios) both;
+}
+:root[data-nav='sheet-close']::view-transition-new(*.page-in) {
+  animation: vt-undim 420ms var(--ease-ios) both;
+}
+:root[data-nav='sheet-open']::view-transition-new(*.page-in) {
+  animation: vt-sheet-up 500ms var(--ease-ios) both;
+}
+:root[data-nav='sheet-close']::view-transition-old(*.page-out) {
+  animation: vt-sheet-down 420ms var(--ease-ios) both;
+}
+
+/* fade — zwischen zwei Ebenen, und none — der Browser hat schon animiert:
+   Die alte ist sofort weg, die neue steht lebendig da und blendet, wo sie
+   ein Tab ist, über ihr eigenes `animate-tab-in` herein. */
+:root[data-nav='fade']::view-transition-old(*.page-out),
+:root[data-nav='none']::view-transition-old(*.page-out) {
+  animation: none;
+  opacity: 0;
+}
+:root[data-nav='fade']::view-transition-new(*.page-in),
+:root[data-nav='none']::view-transition-new(*.page-in) {
+  animation: none;
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-from-right {
+  from {
+    transform: translateX(56px);
+  }
+}
+
+@keyframes vt-to-left {
+  to {
+    transform: translateX(-32px);
+  }
+}
+
+@keyframes vt-from-left {
+  from {
+    transform: translateX(-40px);
+  }
+}
+
+@keyframes vt-to-right {
+  to {
+    transform: translateX(80px);
+  }
+}
+
+/* Zwei Richtungen und nicht eine mit `reverse`: Rückwärts liefe auch die
+   Kurve rückwärts — langsam los und schnell am Ende. */
+@keyframes vt-sheet-up {
+  from {
+    transform: translateY(100vh);
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+    box-shadow: 0 -16px 48px -16px rgb(0 0 0 / 0.5);
+  }
+  to {
+    border-radius: 0;
+    box-shadow: 0 -16px 48px -16px rgb(0 0 0 / 0);
+  }
+}
+
+@keyframes vt-sheet-down {
+  from {
+    border-radius: 0;
+    box-shadow: 0 -16px 48px -16px rgb(0 0 0 / 0);
+  }
+  to {
+    transform: translateY(100vh);
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+    box-shadow: 0 -16px 48px -16px rgb(0 0 0 / 0.5);
+  }
+}
+
+@keyframes vt-dim {
+  to {
+    filter: brightness(0.82);
+  }
+}
+
+@keyframes vt-undim {
+  from {
+    filter: brightness(0.82);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
 :root {
   color-scheme: light;
 

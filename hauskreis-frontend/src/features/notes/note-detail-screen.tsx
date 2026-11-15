@@ -44,6 +44,7 @@ import {
 import { formatTimestamp } from '@/lib/date';
 import { firstName, namesOf } from '@/lib/person';
 import type { Note } from '@/lib/api/types';
+import { markBackNavigation } from '@/lib/page-transition';
 import { NoteEditor } from './note-editor';
 import { NotePeopleSheet } from './note-people-sheet';
 
@@ -75,6 +76,7 @@ function BackLink() {
   return (
     <Link
       href="/archiv?register=notizen"
+      onClick={markBackNavigation}
       className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-terracotta-600"
     >
       <ArrowLeft size={14} />

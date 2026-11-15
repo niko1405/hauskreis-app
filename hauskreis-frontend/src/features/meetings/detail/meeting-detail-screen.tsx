@@ -48,6 +48,7 @@ import {
   ErrorState,
 } from '@/components/ui/states';
 import { cn } from '@/lib/cn';
+import { markBackNavigation } from '@/lib/page-transition';
 import { shortName } from '@/lib/person';
 import {
   useMe,
@@ -505,7 +506,9 @@ function Loaded({
   return (
     <div className="space-y-6 px-5 pt-safe-4 pb-10">
       <div className="flex items-center justify-between gap-2">
-        <Link href="/termine">
+        {/* Ein Link vorwärts auf die Liste, gemeint ist zurück — so geht die
+            Seite nach rechts hinaus (`markBackNavigation`). */}
+        <Link href="/termine" onClick={markBackNavigation}>
           <IconButton label="Zurück">
             <ArrowLeft size={18} />
           </IconButton>

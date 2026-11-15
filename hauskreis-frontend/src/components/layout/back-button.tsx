@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import { IconButton } from '@/components/ui/button';
 import { useConfirm } from '@/components/ui/confirm';
 import { useHasUnsaved } from '@/components/ui/unsaved';
+import { navigateBack } from '@/lib/page-transition';
 
 export function BackButton({
   fallback,
@@ -35,8 +36,9 @@ export function BackButton({
   const blocked = useHasUnsaved();
 
   const go = () => {
-    // `1` heißt: Diese Seite ist der erste Eintrag des Tabs.
-    if (window.history.length > 1) router.back();
+    // `1` heißt: Diese Seite ist der erste Eintrag des Tabs. Zurück gleitet
+    // die Seite hinaus (`navigateBack`).
+    if (window.history.length > 1) navigateBack(() => router.back());
     else router.push(fallback);
   };
 

@@ -42,7 +42,7 @@ export function GlobalProgress() {
       // `aria-hidden`: Für Bildschirmleser sagen die Ladezustände der
       // einzelnen Bereiche mehr als ein Strich am Seitenrand.
       aria-hidden
-      className="pointer-events-none fixed inset-x-0 top-0 z-50 h-[3px] overflow-hidden"
+      className="vt-chrome-progress pointer-events-none fixed inset-x-0 top-0 z-50 h-[3px] overflow-hidden"
     >
       <div
         className={`h-full w-2/5 rounded-full bg-terracotta-500 transition-opacity duration-200 ${

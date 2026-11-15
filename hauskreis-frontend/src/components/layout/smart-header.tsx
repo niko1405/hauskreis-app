@@ -94,7 +94,7 @@ export function SmartHeader() {
     <>
       <header
         className={cn(
-          'header-inset sticky top-0 z-40 transition-colors duration-200 md:hidden',
+          'header-inset vt-chrome-header sticky top-0 z-40 transition-colors duration-200 md:hidden',
           // Der Übergang gilt **nur beim Zurückkommen**. Beim Wegfahren fällt
           // die Klasse im selben Render weg, in dem die Verschiebung dazukommt:
           // Die Leiste ist damit sofort weg, statt sich sichtbar hinauszu-
@@ -185,7 +185,7 @@ function BellOnly({
 }) {
   return (
     <>
-      <div className="header-inset pointer-events-none relative z-40 md:hidden">
+      <div className="header-inset vt-chrome-header pointer-events-none relative z-40 md:hidden">
         <div className="h-header flex items-end justify-end px-4 pb-2.5">
           <div className="pointer-events-auto">
             <NotificationBell atTop onClick={() => onOpen(true)} />

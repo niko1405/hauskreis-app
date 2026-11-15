@@ -30,7 +30,7 @@ export function StatusBarScrim() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[env(safe-area-inset-top)] bg-gradient-to-b from-black/45 to-transparent"
+      className="vt-chrome-scrim pointer-events-none fixed inset-x-0 top-0 z-40 h-[env(safe-area-inset-top)] bg-gradient-to-b from-black/45 to-transparent"
     />
   );
 }

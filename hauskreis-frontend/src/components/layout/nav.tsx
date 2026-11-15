@@ -21,6 +21,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { GlidePill } from '@/components/ui/glide-pill';
+import { LEVEL_TRANSITION } from '@/lib/page-transition';
 import Link from '@/components/ui/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -71,6 +72,11 @@ export function isSidebarRoute(pathname: string): boolean {
   return [GROUP_ITEM.href, ADMIN_ITEM.href].some((href) =>
     matches(href, pathname),
   );
+}
+
+/** Der Bildschirm der Gruppe — auf dem Telefon kommt er von unten herauf. */
+export function isGroupRoute(pathname: string): boolean {
+  return matches(GROUP_ITEM.href, pathname);
 }
 
 /**
@@ -192,6 +198,9 @@ export function TabBar() {
               <Link
                 href={href}
                 aria-current={active ? 'page' : undefined}
+                // Zwischen zwei Tabs blendet die Seite nur über, ohne Bild der
+                // alten, das hinausgleitet (`lib/page-transition.ts`).
+                transitionTypes={[LEVEL_TRANSITION]}
                 // Der durchsichtige Rand hält die Maße, die die Pille früher
                 // als echter Rand hatte.
                 className={cn(
@@ -246,6 +255,7 @@ export function Sidebar() {
         <Link
           href={href}
           aria-current={active ? 'page' : undefined}
+          transitionTypes={[LEVEL_TRANSITION]}
           className={cn(
             'relative block rounded-md px-3 py-2.5 text-sm font-semibold transition-colors',
             active
@@ -272,7 +282,7 @@ export function Sidebar() {
     // **Gescrollt wird nur die Liste, nicht die Spalte.** Die Blase hinter der
     // Glocke ragt rechts über die Spalte hinaus; ein `overflow` an ihr schnitte
     // sie ab. `z-40` hebt sie samt Blase über den Inhalt daneben.
-    <aside className="hidden w-56 shrink-0 border-r border-line md:sticky md:top-0 md:z-40 md:flex md:h-dvh md:flex-col md:self-start print:hidden">
+    <aside className="vt-chrome-sidebar hidden w-56 shrink-0 border-r border-line md:sticky md:top-0 md:z-40 md:flex md:h-dvh md:flex-col md:self-start print:hidden">
       <nav
         aria-label="Hauptnavigation"
         // Der sichere Rand kommt zum vorhandenen Abstand dazu: Auf dem iPad vom
