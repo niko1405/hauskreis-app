@@ -73,7 +73,7 @@ export function AppearanceCard() {
         <div className="border-t border-line pt-3 md:hidden">
           <SwitchRow
             label="Kopfleiste anzeigen"
-            description="Ohne sie erreichst du die Gruppe über dein Profil, und die Glocke steht oben auf „Heute“ und im Profil."
+            description="Ohne sie erreichst du die Gruppe über dein Profil."
             checked={header.shown}
             onChange={header.setShown}
           />

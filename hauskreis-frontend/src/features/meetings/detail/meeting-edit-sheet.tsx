@@ -155,9 +155,7 @@ export function MeetingEditSheet({
       }
     >
       <div className="space-y-4">
-        <Field
-          label="Titel des Termins"
-        >
+        <Field label="Titel des Termins">
           <TextInput
             value={title}
             placeholder={placeholder}
@@ -165,9 +163,7 @@ export function MeetingEditSheet({
           />
         </Field>
 
-        <Field
-          label="Uhrzeit"
-        >
+        <Field label="Uhrzeit">
           <TextInput
             type="time"
             value={startTime}

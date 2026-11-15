@@ -16,7 +16,7 @@ import { ChevronRight, Shield, Users } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { Badge } from '@/components/ui/badge';
 import { PRESSABLE } from '@/components/ui/button';
-import { useHome, usePeople } from '@/lib/api/hooks';
+import { usePeople } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
 import { dayParts, daysBetween, formatDayShort, today } from '@/lib/date';
 import type { CalendarDay } from '@/lib/date';
@@ -79,15 +79,12 @@ function LinkRow({
  */
 export function GroupLink() {
   const people = usePeople();
-  const home = useHome();
 
   const count = people.data?.length;
-  const next = home.data?.currentMeeting ?? home.data?.nextMeeting ?? null;
 
   const subtitle = [
     count !== undefined &&
-      `${count} ${count === 1 ? 'Mitglied' : 'Mitglieder'}`,
-    next && `Nächstes Treffen ${whenOf(next.date)}`,
+      `${count} ${count === 1 ? 'Mitglied' : 'Mitglieder'}`
   ]
     .filter(Boolean)
     .join(' · ');

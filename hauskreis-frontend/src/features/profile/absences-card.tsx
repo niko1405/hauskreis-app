@@ -37,7 +37,7 @@ export function AbsencesCard({ personId }: { personId: string }) {
             framed={false}
             icon={<Plane size={22} />}
             title="Keine Abwesenheiten"
-            hint="Trag Urlaub oder Reisen ein — dann sagt die App die Termine für dich ab und gibt deine Aufgaben frei."
+            hint="Trag deinene Urlaub ein — die App sagt die Termine für dich ab und gibt deine Aufgaben frei."
           />
         )}
 

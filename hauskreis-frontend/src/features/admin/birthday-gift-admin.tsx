@@ -174,8 +174,7 @@ export function BirthdayGiftAdmin() {
                   </strong>{' '}
                   Ihr legt fest, wer für wen besorgt. Jede:r ist genau einmal
                   dran, und für jeden Geburtstag muss jemand eingetragen sein.
-                  Kommt jemand dazu oder geht, schließt die App die Lücke und
-                  sagt es hier.
+                  Kommt jemand dazu oder geht, schließt die App die Lücke.
                 </InfoTip>
               </p>
               <Segmented<Mode>
