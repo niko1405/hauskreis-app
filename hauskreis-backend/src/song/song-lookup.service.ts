@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
-import { GeminiClient } from './gemini.client';
+import { GeminiClient, type GroundingSource } from './gemini.client';
 import { SongService } from './song.service';
 import {
   lyricsUrlHost,
@@ -25,6 +25,11 @@ import {
  *
  * Höchstens einer je Seite und drei je Lauf: Ultimate Guitar kommt damit meist
  * erst beim zweiten Druck oder dann, wenn die anderen nichts haben.
+ *
+ * **Eine Vorliebe, keine Grenze.** Andere freie Seiten sind ebenso willkommen
+ * und stehen dahinter — gerade deutsche Lobpreislieder gibt es auf den vier
+ * oft gar nicht, und eine Liste, die nur diese kennt, fand dort nur Ultimate
+ * Guitar.
  *
  * Bewusst eine Konstante und keine Umgebungsvariable: die Liste ändert sich
  * vielleicht einmal im Jahr, und dann ist ein Commit ehrlicher als eine stille
@@ -118,6 +123,13 @@ export interface LyricsRetriever {
 
 /** Wie viele Vorschläge **ein Lauf** höchstens beisteuert. */
 const MAX_CANDIDATES = 3;
+
+/**
+ * Wie viele Fundstellen der Suche je Lauf abgerufen werden. Sie laufen
+ * parallel zu den Vorschlägen des Modells und kosten damit keine Wartezeit,
+ * nur Abrufe.
+ */
+const MAX_SOURCES = 6;
 
 /**
  * Wie lang die Liste über mehrere Läufe hinweg höchstens wird.
@@ -434,8 +446,13 @@ export class SongLookupService implements LyricsRetriever {
     /** Was schon dasteht — soll nicht noch einmal kommen. */
     exclude: readonly string[],
   ): Promise<LyricsLinkCandidate[]> {
+    let sources: GroundingSource[] = [];
+
     const result = await this.gemini.ask({
       label: 'link-suggestions',
+      onSources: (cited) => {
+        sources = cited;
+      },
       schema: candidatesSchema,
       tools: [{ type: 'google_search' }],
       timeoutMs: 30_000,
@@ -446,6 +463,10 @@ export class SongLookupService implements LyricsRetriever {
         '',
         'Bevorzugt Seiten ohne Bezahlschranke, in dieser Reihenfolge:',
         ...LYRICS_SITE_PREFERENCE.map((site, index) => `${index + 1}. ${site}`),
+        // Ohne diesen Satz hielt sich das Modell an die vier und fand bei
+        // deutschen Liedern, die es dort selten gibt, nur Ultimate Guitar.
+        'Andere frei zugängliche Seiten mit Text oder Akkorden sind ebenso gut —',
+        'gerade bei deutschen Liedern, die es auf den Seiten oben oft nicht gibt.',
         '',
         // Die bezahlten Fassungen stehen bei UG oft ganz oben in der Suche.
         '- Von ultimate-guitar.com nur kostenlose „Chords"- oder „Tabs"-Seiten,',
@@ -454,9 +475,15 @@ export class SongLookupService implements LyricsRetriever {
         '- Nur die Seite zu genau diesem Lied, keine Übersichten,',
         '  Bestenlisten, Alben- oder Interpretenseiten.',
         // Die Suche driftet sonst auf das naechstbeste Lied derselben Band ab.
-        // Ein anderes Lied ist hier schlimmer als gar kein Ergebnis.
-        `- Der Titel muss „${title}" sein, nicht ein ähnlicher.`,
-        '  Ein anderes Lied derselben Band ist kein Treffer.',
+        // Ein anderes Lied ist hier schlimmer als gar kein Ergebnis. Aber
+        // **dasselbe Lied, anders geschrieben, ist ein Treffer**: „Der Titel
+        // muss genau so lauten" liess aus „Batlle Belongs" eine leere Liste
+        // werden, obwohl jede Seite „Battle Belongs" kennt.
+        '- Es muss genau dieses Lied sein. Ein anderes Lied derselben Band ist',
+        '  kein Treffer.',
+        `- Ein Tippfehler oder eine andere Schreibweise in „${title}" ändert`,
+        '  daran nichts: Such dann nach dem richtigen Titel.',
+        '- Such mit Titel und Interpret und dazu „chords" oder „Akkorde".',
         '- `title` und `artist` so, wie sie auf der gefundenen Seite stehen —',
         '  daran ist zu erkennen, ob der Vorschlag passt.',
         '- `url` muss eine Adresse sein, die du in den Suchergebnissen',
@@ -479,14 +506,42 @@ export class SongLookupService implements LyricsRetriever {
       ].join('\n'),
     });
 
-    if (!result) return [];
-
     // Nachsehen kommt vor Sortieren, und das ist keine Geschmacksfrage: Vor dem
     // Abruf weiß niemand, auf welche Seite ein Vorschlag überhaupt zeigt.
-    const resolved = await Promise.all(
-      result.candidates
-        .slice(0, MAX_CANDIDATES * 2)
-        .map((raw) => this.resolve(raw)),
+    //
+    // **Zwei Quellen, gleichzeitig abgerufen.** Was das Modell ins JSON
+    // schreibt, hat es formuliert — bei einem kleinen Modell auch einmal eine
+    // Adresse, die es nie gab. Die Fundstellen der Suche hat es gefunden. Gehen
+    // seine Adressen ins Leere, stehen sie trotzdem da.
+    const [proposed, fromSearch] = await Promise.all([
+      Promise.all(
+        (result?.candidates ?? [])
+          .slice(0, MAX_CANDIDATES * 2)
+          .map((raw) => this.resolve(raw)),
+      ),
+      Promise.all(
+        sources
+          .slice(0, MAX_SOURCES)
+          .map((source) =>
+            this.resolve({ url: source.url, title: null, artist: null }),
+          ),
+      ),
+    ]);
+
+    const found = fromSearch.filter((entry) => entry !== null);
+    const seenBySearch = new Set(
+      found.map((entry) => urlKey(entry.candidate.url)),
+    );
+
+    const fromModel = proposed
+      .filter((entry) => entry !== null)
+      .map((entry) => ({
+        candidate: entry.candidate,
+        confirmed:
+          entry.confirmed || seenBySearch.has(urlKey(entry.candidate.url)),
+      }));
+    const modelKeys = new Set(
+      fromModel.map((entry) => urlKey(entry.candidate.url)),
     );
 
     const bekannt = new Set(exclude);
@@ -495,12 +550,16 @@ export class SongLookupService implements LyricsRetriever {
     // hält sich nicht immer an die Liste, **und** `resolve` folgt
     // Weiterleitungen — ein neuer Link kann am Ende auf einer längst bekannten
     // Seite landen.
-    const neu = resolved.filter(
-      (entry): entry is LyricsLinkCandidate =>
-        entry !== null && !bekannt.has(entry.url),
-    );
+    const neu = [
+      ...fromModel,
+      // Eine Fundstelle, die das Modell auch genannt hat, steht schon da —
+      // mit Titel und Interpret, die nur das Modell kennt.
+      ...found
+        .filter((entry) => !modelKeys.has(urlKey(entry.candidate.url)))
+        .map((entry) => ({ candidate: entry.candidate, confirmed: true })),
+    ].filter((entry) => !bekannt.has(entry.candidate.url));
 
-    return rank(dedupeBySite(neu)).slice(0, MAX_CANDIDATES);
+    return rankChecked(neu).slice(0, MAX_CANDIDATES);
   }
 
   /**
@@ -512,16 +571,18 @@ export class SongLookupService implements LyricsRetriever {
    * Link, der beim Anlegen funktioniert und im Herbst ins Leere zeigt. Wir
    * folgen der Weiterleitung deshalb bis zum Ziel und behalten **dieses**.
    *
-   * `403` zählt als „gibt es". Ultimate Guitar antwortet einem Server-Aufruf
-   * mit Cloudflares Prüfseite, liefert für ein nicht existierendes Lied aber
-   * weiterhin `404` — die Unterscheidung, auf die es ankommt, bleibt erhalten.
-   * Wer den Link später im Browser öffnet, sieht ohnehin die Seite.
+   * `403` zählt als „gibt es vielleicht". Ultimate Guitar antwortet einem
+   * Server-Aufruf mit Cloudflares Prüfseite, liefert für ein nicht existierendes
+   * Lied aber weiterhin `404`. Cifra Club und Genius sagen dagegen **immer**
+   * `403`, auch zu einer erfundenen Adresse — deshalb bleibt ein solcher Link
+   * stehen, aber unbestätigt (`confirmed`), und rückt hinter alles, was die
+   * Seite oder die Suche bestätigt hat.
    */
   private async resolve(raw: {
     url: string;
     title: string | null;
     artist: string | null;
-  }): Promise<LyricsLinkCandidate | null> {
+  }): Promise<Checked | null> {
     // Vor dem Abruf nur das, was ohne Netz zu klären ist: kein privates Netz,
     // keine Zugangsdaten. Ob die Adresse taugt, entscheidet ihr Ziel.
     const requested = safeExternalUrl(raw.url);
@@ -540,7 +601,13 @@ export class SongLookupService implements LyricsRetriever {
     if (!response) return null;
     if (response.status >= 400 && response.status !== 403) return null;
 
-    return toCandidate(response.url, raw);
+    const candidate = toCandidate(response.url, raw);
+    if (!candidate) return null;
+
+    // `403` heißt „gibt es vielleicht" — Cifra Club und Genius antworten so
+    // auch auf eine Adresse, die es nie gab. Bestätigt ist nur, was die Seite
+    // wirklich ausgeliefert hat.
+    return { candidate, confirmed: response.status < 400 };
   }
 
   private async probe(
@@ -780,18 +847,60 @@ function dedupeBySite(
   });
 }
 
+/** Ein abgerufener Vorschlag — und ob es ihn sicher gibt. */
+interface Checked {
+  candidate: LyricsLinkCandidate;
+  /**
+   * Die Seite hat ihn ausgeliefert, oder die Suche hat ihn gefunden. Nicht
+   * bestätigt ist ein Link hinter einer Bot-Prüfung, den nur das Modell nennt.
+   */
+  confirmed: boolean;
+}
+
+function siteRank(site: string): number {
+  const index = LYRICS_SITE_PREFERENCE.indexOf(site);
+  return index === -1 ? LYRICS_SITE_PREFERENCE.length : index;
+}
+
 /**
  * Bevorzugte Seiten nach oben, der Rest behält seine Reihenfolge — `sort` ist
  * stabil, und die Reihenfolge des Modells ist bei gleichem Rang die bessere
  * Auskunft als irgendein Alphabet.
  */
 function rank(candidates: LyricsLinkCandidate[]): LyricsLinkCandidate[] {
-  const rankOf = (site: string) => {
-    const index = LYRICS_SITE_PREFERENCE.indexOf(site);
-    return index === -1 ? LYRICS_SITE_PREFERENCE.length : index;
-  };
-
   return candidates.toSorted(
-    (left, right) => rankOf(left.site) - rankOf(right.site),
+    (left, right) => siteRank(left.site) - siteRank(right.site),
   );
+}
+
+/**
+ * Was es sicher gibt, vor dem, was nur das Modell behauptet — darin die
+ * bevorzugten Seiten zuerst. Erst danach einer je Seite: So gewinnt auf jeder
+ * Seite der bestätigte Link.
+ */
+function rankChecked(entries: Checked[]): LyricsLinkCandidate[] {
+  return dedupeBySite(
+    entries
+      .toSorted(
+        (left, right) =>
+          Number(right.confirmed) - Number(left.confirmed) ||
+          siteRank(left.candidate.site) - siteRank(right.candidate.site),
+      )
+      .map((entry) => entry.candidate),
+  );
+}
+
+/**
+ * Dieselbe Seite in anderer Schreibweise — `www.`, Schrägstrich am Ende,
+ * Groß und Klein im Host, Anhänge wie `?ref=`. Für den Vergleich; gespeichert
+ * wird die Adresse, wie sie ist.
+ */
+function urlKey(href: string): string {
+  try {
+    const url = new URL(href);
+    const host = url.hostname.toLowerCase().replace(/^www\./, '');
+    return `${host}${url.pathname.replace(/\/+$/, '')}`;
+  } catch {
+    return href;
+  }
 }
