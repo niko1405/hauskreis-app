@@ -18,20 +18,6 @@ import { Badge } from '@/components/ui/badge';
 import { PRESSABLE } from '@/components/ui/button';
 import { usePeople } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
-import { dayParts, daysBetween, formatDayShort, today } from '@/lib/date';
-import type { CalendarDay } from '@/lib/date';
-
-/**
- * „heute", „morgen", „Mi." innerhalb der Woche, sonst „3. Dez." — ein
- * Wochentag allein wäre ab sieben Tagen zweideutig.
- */
-function whenOf(day: CalendarDay): string {
-  const diff = daysBetween(today(), day);
-  if (diff <= 0) return 'heute';
-  if (diff === 1) return 'morgen';
-  if (diff < 7) return `${dayParts(day).weekday}.`;
-  return formatDayShort(day);
-}
 
 function LinkRow({
   href,
@@ -73,21 +59,17 @@ function LinkRow({
 }
 
 /**
- * „Zur Gruppe" — mit dem, was man dort zuerst wissen will: wie viele ihr seid
- * und wann ihr euch das nächste Mal seht. Beides liegt ohnehin im Cache
- * (Mitgliederliste, „Heute").
+ * „Zur Gruppe" — darunter, wie viele ihr seid. Die Mitgliederliste liegt
+ * ohnehin im Cache.
  */
 export function GroupLink() {
   const people = usePeople();
 
   const count = people.data?.length;
-
-  const subtitle = [
-    count !== undefined &&
-      `${count} ${count === 1 ? 'Mitglied' : 'Mitglieder'}`
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const subtitle =
+    count !== undefined
+      ? `${count} ${count === 1 ? 'Mitglied' : 'Mitglieder'}`
+      : '';
 
   return (
     <LinkRow

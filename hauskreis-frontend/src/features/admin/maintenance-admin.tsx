@@ -164,11 +164,7 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
     <>
       <section>
         <SectionTitle
-          info={
-            <>
-              Änderungen am Rhythmus gelten erst für zukünftige Termine.
-            </>
-          }
+          info={<>Änderungen am Rhythmus gelten erst für zukünftige Termine.</>}
         >
           Termin-Rhythmus
         </SectionTitle>
@@ -274,9 +270,9 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
                   hint="Der letzte Termin im Monat bekommt Lieder und Testimony automatisch vorbelegt."
                   info={
                     <>
-                      Dieses Einstellung hat sich in manchen Gruppen 
-                      so bewährt, ist aber rein optional. Du kannst sie jederzeit 
-                      an- oder abwählen, was erst für neue Termine gilt.
+                      Diese Einstellung hat sich in manchen Gruppen so bewährt,
+                      ist aber rein optional. Du kannst sie jederzeit an- oder
+                      abwählen, was erst für neue Termine gilt.
                     </>
                   }
                   checked={value.praiseEvenings}
@@ -291,8 +287,8 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
                   hint="Neue Termine bekommen die Rolle „Snacks“ vorbelegt."
                   info={
                     <>
-                      An einem einzelnen Abend lässt sich
-                      diese Rolle bei Bedarf immer anhaken, auch ohne diese Vorgabe.
+                      An einem einzelnen Abend lässt sich diese Rolle bei Bedarf
+                      immer anhaken, auch ohne diese Vorgabe.
                     </>
                   }
                   checked={value.snackSlot}
