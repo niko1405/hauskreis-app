@@ -41,6 +41,10 @@
  *   Register ganz oben auf einer Seite („Übersicht | Planung | Geburtstage"):
  *   Sie sind Bedienung, keine Überschrift, und eine gefüllte Fläche dort war
  *   das Lauteste auf dem Bildschirm.
+ * - `quiet` — derselbe Rahmen wie `glow`, aber neutral: Rand, ein Hauch Fläche,
+ *   dunklere Schrift, kein Terracotta. Für den kleinen Umschalter neben einem
+ *   großen („Kommende | Vergangene" unter den Registern): Zwei farbige
+ *   Wahlen übereinander fragten, welche die Seite bestimmt.
  * - `raised` — eine neutrale, leicht erhabene Fläche wie in iOS; nur das
  *   Symbol ist farbig. Für die Wahl zwischen zwei Wegen, unter der noch ein
  *   Knopf in Terracotta steht („Per Link | Per E-Mail").
@@ -57,12 +61,14 @@ import { GlidePill } from './glide-pill';
 const PILL_LOOK = {
   solid: 'bg-terracotta-500',
   glow: 'border border-terracotta-500/50 bg-terracotta-500/10 shadow-[0_0_18px_-8px_var(--color-terracotta-500)]',
+  quiet: 'border border-line-strong bg-stone-500/10',
   raised: 'border border-line-strong bg-card shadow-sm',
 } as const;
 
 const TEXT_LOOK = {
   solid: 'text-white',
   glow: 'text-terracotta-600',
+  quiet: 'text-stone-800',
   raised: 'text-stone-900',
 } as const;
 
@@ -94,7 +100,7 @@ export function Segmented<Value extends string>({
   fill?: boolean;
   equal?: boolean;
   iconOnly?: boolean;
-  look?: 'solid' | 'glow' | 'raised';
+  look?: keyof typeof PILL_LOOK;
   shape?: 'pill' | 'soft';
   surface?: 'card' | 'inset';
   labels?: 'responsive' | 'always';
@@ -148,11 +154,14 @@ export function Segmented<Value extends string>({
             <span className="relative inline-flex min-w-0 items-center gap-1.5">
               {option.icon && (
                 // Bei `glow` und `raised` trägt das Symbol der Wahl die Farbe
-                // — bei `raised` ist es das Einzige, was farbig ist.
+                // — bei `raised` ist es das Einzige, was farbig ist. `quiet`
+                // bleibt ganz ohne.
                 <span
                   className={cn(
                     'inline-flex shrink-0',
-                    chosen && look !== 'solid' && 'text-terracotta-500',
+                    chosen &&
+                      (look === 'glow' || look === 'raised') &&
+                      'text-terracotta-500',
                   )}
                 >
                   {option.icon}

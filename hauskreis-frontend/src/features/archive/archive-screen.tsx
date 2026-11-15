@@ -352,11 +352,13 @@ export function ArchiveScreen() {
                 ),
           )}
         >
+          {/* Gefüllt, anders als die Register auf „Termine": Die Kapsel klebt
+              beim Scrollen über den Listen und ist dort die einzige Bedienung
+              — sie muss sich vom Inhalt abheben, nicht zurücktreten. */}
           <div className="pointer-events-auto">
             <Segmented
               equal
               size="lg"
-              look="glow"
               label="Kategorie"
               value={tab}
               onChange={selectTab}

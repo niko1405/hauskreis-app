@@ -174,11 +174,12 @@ function Rounds() {
               <h2 className="text-xs font-bold tracking-wider text-stone-400 uppercase">
                 Weitere Runden
               </h2>
-              {/* Dieselben zwei Symbole wie in der Terminliste: die Uhr für
-                „steht noch an", der Haken für „war schon". */}
+              {/* Dieselben zwei Symbole wie in der Terminliste, in derselben
+                neutralen Form: die Uhr für „steht noch an", der Haken für
+                „war schon". */}
               <Segmented
                 iconOnly
-                look="glow"
+                look="quiet"
                 label="Welche Runden"
                 value={scope}
                 onChange={setScope}
