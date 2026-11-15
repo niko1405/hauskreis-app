@@ -277,11 +277,19 @@ body#keycloak-bg {
   border-color: var(--hk-line-strong);
 }
 
-.pf-v5-c-form-control:focus-within,
-.pf-v5-c-form-control > input:focus,
-.pf-v5-c-form-control > select:focus {
+.pf-v5-c-form-control:focus-within {
   border-color: #d68e75;
   box-shadow: 0 0 0 3px var(--hk-terracotta-soft);
+  outline: none;
+}
+
+/* Der Ring gehört dem runden Rahmen, nicht dem Feld darin. Bekam das innere
+   `<input>` beim Fokus denselben Rand und Schein, stand im fokussierten Feld
+   ein zweiter, eckiger Kasten. */
+.pf-v5-c-form-control > input:focus,
+.pf-v5-c-form-control > select:focus {
+  border: none;
+  box-shadow: none;
   outline: none;
 }
 
