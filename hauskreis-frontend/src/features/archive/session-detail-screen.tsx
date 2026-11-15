@@ -31,10 +31,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   CalendarDays,
-  CheckCircle2,
-  Circle,
   FileText,
-  Footprints,
   Info,
   Layers,
   Trash2,
@@ -62,6 +59,7 @@ import {
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { PeopleListEditor } from '@/components/domain/people-list-editor';
+import { ActionstepFeature } from '@/components/domain/actionstep-feature';
 import { PersonBubble } from '@/components/domain/person-bubble';
 import { errorMessage } from '@/lib/api/errors';
 import {
@@ -69,7 +67,6 @@ import {
   useMe,
   useNameTopic,
   usePeople,
-  useSetActionstepDone,
   useSetSessionResponsibles,
   useTopicSession,
   useUnnameTopic,
@@ -211,7 +208,7 @@ function Loaded({
       )}
 
       {session.contentVisible && session.actionstepText && (
-        <ActionstepFeature session={session} abhakbar={abhakbar} />
+        <SessionActionstep session={session} abhakbar={abhakbar} />
       )}
 
       {session.contentVisible && (
@@ -315,13 +312,11 @@ function TopicLink({ session }: { session: TopicSession }) {
 }
 
 /**
- * Der Actionstep — hervorgehoben, wie „Actionstep der Woche" auf „Heute".
- *
- * Er ist das, was man vom Abend mitnimmt. Ab dem Abend sitzt der eigene Haken
- * gleich vorn; abgehakt wird die Karte grün, wie auf „Heute". Davor steht dort
- * das Symbol: einen Vorsatz für heute Abend hakt man heute früh nicht ab.
+ * Der Actionstep der Einheit, hervorgehoben (`ActionstepFeature`). Der eigene
+ * Haken steht hier in einer Liste aller Haken der Einheit — die Nachbereitung
+ * am Termin kennt ihn dagegen schon als Ja/Nein.
  */
-function ActionstepFeature({
+function SessionActionstep({
   session,
   abhakbar,
 }: {
@@ -329,67 +324,17 @@ function ActionstepFeature({
   abhakbar: boolean;
 }) {
   const me = useMe();
-  // Der Haken hängt am Termin. Ohne Abend wird der Knopf nie gezeigt, und der
-  // Haken läuft ins Leere — Hooks gibt es trotzdem nur unbedingt.
-  const setDone = useSetActionstepDone(session.meeting?.id ?? '');
-  const done =
-    abhakbar &&
-    session.actionstepDone.some((row) => row.person.id === me.me?.id);
+  const done = session.actionstepDone.some(
+    (row) => row.person.id === me.me?.id,
+  );
 
   return (
-    <Card
-      className={cn(
-        'transition-colors',
-        done
-          ? 'border-success-line bg-success-bg/40'
-          : 'border-terracotta-100 bg-terracotta-50/40',
-      )}
-    >
-      <div className="flex items-start gap-4">
-        {abhakbar ? (
-          <button
-            type="button"
-            aria-pressed={done}
-            aria-label={done ? 'Haken wieder wegnehmen' : 'Actionstep abhaken'}
-            disabled={!me.me || setDone.isPending}
-            onClick={() => setDone.mutate(!done)}
-            className={cn(
-              'flex size-11 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-50',
-              'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
-              done
-                ? 'bg-success-bg text-success'
-                : 'bg-card text-stone-300 hover:text-terracotta-500',
-            )}
-          >
-            {done ? <CheckCircle2 size={22} /> : <Circle size={22} />}
-          </button>
-        ) : (
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-card text-terracotta-500">
-            <Footprints size={20} />
-          </span>
-        )}
-        <div className="min-w-0 pt-0.5">
-          <p
-            className={cn(
-              'text-[10px] font-bold tracking-widest uppercase',
-              done ? 'text-success' : 'text-terracotta-500',
-            )}
-          >
-            Actionstep
-          </p>
-          <p className="mt-0.5 font-serif text-lg leading-snug font-bold whitespace-pre-line text-stone-900">
-            {session.actionstepText}
-          </p>
-          {abhakbar && (
-            <p className="mt-1 text-[11px] text-stone-400">
-              {done
-                ? 'Du hast es geschafft.'
-                : 'Tipp auf den Kreis, wenn du es geschafft hast.'}
-            </p>
-          )}
-        </div>
-      </div>
-    </Card>
+    <ActionstepFeature
+      text={session.actionstepText ?? ''}
+      meetingId={session.meeting?.id ?? null}
+      done={done}
+      checkable={abhakbar}
+    />
   );
 }
 
