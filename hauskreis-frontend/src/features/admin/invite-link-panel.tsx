@@ -18,7 +18,7 @@
  *
  * Aktionen wie alles in der Mitgliederverwaltung: Sie wirken sofort.
  */
-import { Copy, Share2 } from 'lucide-react';
+import { Copy, Link2, Share2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/components/ui/confirm';
@@ -42,6 +42,13 @@ const VALIDITY = [
 ] as const;
 
 type Validity = (typeof VALIDITY)[number]['value'];
+
+/** Was rechts über der Auswahl steht — die Wahl als Satz. */
+const EXPIRY: Record<Validity, string> = {
+  '1': 'Läuft nach 1 Tag ab',
+  '7': 'Läuft nach 7 Tagen ab',
+  '30': 'Läuft nach 30 Tagen ab',
+};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -84,20 +91,30 @@ export function InviteLinkPanel() {
 
   if (!active) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div>
-          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-500">
-            Gültig für
-            <InfoTip label="Einladungslink">
-              Wer den Link öffnet, tritt mit einem bestehenden oder neuen Konto
-              bei — immer als Mitglied. Admin-Rechte vergibst du danach in der
-              Liste.
-            </InfoTip>
-          </p>
+          {/* Links die Frage, rechts die Antwort als Satz — so liest man die
+              Wahl, ohne die drei Kästen zu vergleichen. */}
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-stone-500">
+              Gültigkeit des Links
+              <InfoTip label="Einladungslink">
+                Wer den Link öffnet, tritt mit einem bestehenden oder neuen
+                Konto bei — immer als Mitglied. Admin-Rechte vergibst du danach
+                in der Liste.
+              </InfoTip>
+            </p>
+            <p className="text-xs font-semibold text-terracotta-500">
+              {EXPIRY[validity]}
+            </p>
+          </div>
           <Segmented
-            fill
-            size="sm"
-            label="Gültig für"
+            equal
+            size="lg"
+            look="glow"
+            shape="soft"
+            surface="inset"
+            label="Gültigkeit des Links"
             value={validity}
             onChange={setValidity}
             options={[...VALIDITY]}
@@ -105,7 +122,8 @@ export function InviteLinkPanel() {
         </div>
 
         <Button
-          className="w-full"
+          size="lg"
+          className="w-full shadow-[0_10px_24px_-12px_var(--color-terracotta-500)]"
           loading={replace.isPending}
           onClick={() =>
             replace.mutate(Number(validity) as InviteLinkValidDays, {
@@ -113,7 +131,8 @@ export function InviteLinkPanel() {
             })
           }
         >
-          Link erstellen
+          <Link2 size={17} />
+          Einladungslink erstellen
         </Button>
       </div>
     );
@@ -222,7 +241,12 @@ function ActiveLink({ link }: { link: InviteLink }) {
   return (
     <div className="space-y-3">
       <div>
-        <p className="rounded-md bg-canvas px-3 py-2 font-mono text-xs break-all text-stone-700 select-all">
+        <p className="flex items-start gap-2 rounded-xl border border-line bg-shell px-3 py-2.5 font-mono text-xs break-all text-stone-700 select-all">
+          <Link2
+            size={14}
+            aria-hidden
+            className="mt-px shrink-0 text-terracotta-500"
+          />
           {url}
         </p>
         <p className="mt-1.5 text-[11px] text-stone-400">
