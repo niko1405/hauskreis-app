@@ -29,11 +29,7 @@ import {
   ArrowLeft,
   CalendarDays,
   Clock,
-  ExternalLink,
   Info,
-  MapPin,
-  MapPinPen,
-  Navigation,
   Pencil,
   UserPen,
 } from 'lucide-react';
@@ -43,8 +39,8 @@ import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button, IconButton, PRESSABLE } from '@/components/ui/button';
-import { Card, SectionTitle } from '@/components/ui/card';
+import { Button, IconButton } from '@/components/ui/button';
+import { SectionTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
 import {
   CardSkeleton,
@@ -71,7 +67,6 @@ import {
   meetingKindLabel,
   ROLE_LABEL,
   activeMeetingRoles,
-  mapsUrl,
   mayPickSongs,
   meetingHeadline,
   meetingPhase,
@@ -91,6 +86,7 @@ import {
 import { MeetingEditSheet } from './meeting-edit-sheet';
 import { SLOT_LOSSES } from './slot-losses';
 import { NotesCard, NotesPrompt } from './notes-card';
+import { VenueCard } from './venue-card';
 import { PrayerRequestsCard } from './prayer-requests-card';
 import { SongsCard } from './songs-card';
 import { TopicCard } from './topic-card';
@@ -618,65 +614,13 @@ function Loaded({
             Frage als die Rollen: „wo treffen wir uns" gegen „wer macht was" —
             samt Adresse. Und er ist der **einzige** Ort, an dem man ihn
             ändert: Der Gastgeber steht nicht noch einmal unter
-            „Zuständigkeiten". */}
-        <section>
-          <SectionTitle>Ort & Anreise</SectionTitle>
-          <Card className="space-y-4">
-            <div className="flex items-center gap-4">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-terracotta-100 bg-terracotta-50 text-terracotta-600">
-                <MapPin size={20} />
-              </span>
-
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-serif text-lg font-bold text-stone-800">
-                  {meeting.location?.name ?? 'Noch offen'}
-                </p>
-                {/* Der Satz darunter ist die Adresse, wenn es eine gibt — eine
-                    Auskunft und keine Erklärung der Mechanik. */}
-                <p className="mt-0.5 truncate text-sm text-stone-500">
-                  {meeting.location?.address ??
-                    (meeting.location
-                      ? 'Keine Adresse hinterlegt'
-                      : 'Trage einen Gastgeber oder Treffpunkt ein')}
-                </p>
-              </div>
-
-              {/* **Den Ort ändern, hier, wo er steht** — Zuhause oder
-                  Treffpunkt, in beide Richtungen. Nicht an einem abgesagten
-                  Abend und nicht beim Nachlesen, wie die Stifte der Rollen. */}
-              {!cancelled && !reading && (
-                <IconButton
-                  label="Ort ändern"
-                  onClick={() => setChoosingVenue(true)}
-                >
-                  <MapPinPen size={17} />
-                </IconButton>
-              )}
-            </div>
-
-            {/* **Unter dem Ort, nicht daneben**: Zwei Knöpfe in einer Zeile
-                ließen Name und Adresse kaum Platz, und es sind zwei Absichten —
-                „anders" und „hin". Ohne Ort steht hier nichts (ein toter Knopf
-                ist kein Hinweis), beim Nachlesen auch nicht: „Wie komme ich
-                hin" fragt an einem Abend, der vorbei ist, niemand. */}
-            {meeting.location && !reading && (
-              <a
-                href={mapsUrl(meeting.location)}
-                target="_blank"
-                rel="noreferrer"
-                className={cn(
-                  'flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-canvas py-2.5 text-sm font-semibold text-stone-700 transition-colors',
-                  'hover:border-line-strong focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
-                  PRESSABLE,
-                )}
-              >
-                <Navigation size={15} className="text-terracotta-500" />
-                In Google Maps öffnen
-                <ExternalLink size={13} className="text-stone-400" />
-              </a>
-            )}
-          </Card>
-        </section>
+            „Zuständigkeiten". Die drei Zustände stehen in `venue-card.tsx`. */}
+        <VenueCard
+          meeting={meeting}
+          editable={!cancelled && !reading}
+          showMaps={!reading}
+          onChange={() => setChoosingVenue(true)}
+        />
 
         {/* Eine Zeile je Rolle, die es an **diesem** Abend gibt — dieselbe
             Aufstellung, nach der auch die Planungstabelle „fertig geplant"
