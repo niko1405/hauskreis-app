@@ -148,6 +148,24 @@
      niemand weiß, wie weit eine Anfrage ist — er wandert, statt einen
      Prozentsatz zu behaupten. */
   --animate-progress: progress 1.4s ease-in-out infinite;
+
+  /* Was hereinkommt: eine Seite, ein Register. Die Federn für alles, was
+     gezogen oder unterbrochen werden kann, stehen in `lib/motion.ts`.
+
+     **Nur Deckkraft und Verschiebung**, beides rechnet die Grafikkarte. Und
+     **`backwards`, nicht `both`**: Nach dem letzten Bild bleibt kein
+     `transform` am Element stehen. Ein stehendes `transform` machte es zum
+     Bezugsrahmen für jedes `position: fixed` darin — ein Sheet, das danach
+     aufgeht, säße dann in der Seite statt über ihr.
+
+     - `tab-in`: einer der fünf Tabs. Nur Überblenden — sie liegen
+       nebeneinander, keiner kommt „von irgendwo".
+     - `push-in`: eine Unterseite, ein Stück von rechts. Man geht hinein.
+     - `panel-in`: ein Register innerhalb einer Seite, kaum merklich von unten. */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-tab-in: fade-in 180ms var(--ease-out-soft) backwards;
+  --animate-push-in: push-in 250ms var(--ease-out-soft) backwards;
+  --animate-panel-in: panel-in 160ms var(--ease-out-soft) backwards;
 }
 
 @keyframes progress {
@@ -156,6 +174,26 @@
   }
   100% {
     transform: translateX(350%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes push-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
 }
 

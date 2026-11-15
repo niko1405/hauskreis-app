@@ -74,6 +74,7 @@ import {
   Users,
 } from 'lucide-react';
 import { AnimatePresence, motion, useAnimationControls } from 'motion/react';
+import { FADE, SPRING, SPRING_POP } from '@/lib/motion';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { lockOverlay } from '@/components/ui/overlay-lock';
@@ -229,7 +230,7 @@ export function NotificationInbox({
             initial={{ opacity: 0, scale: 0.96, ...place.from }}
             animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, ...place.from }}
-            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            transition={SPRING_POP}
             style={{ transformOrigin: place.origin }}
             className={cn(
               place.panel,
@@ -383,12 +384,12 @@ function SwipeToRead({
             // sonst erst, wenn die Antwort da ist — und bis dahin stünde er
             // halb weggeschoben da.
             void controls
-              .start({ x: '-100%', opacity: 0, transition: { duration: 0.18 } })
+              .start({ x: '-100%', opacity: 0, transition: FADE })
               .then(onRead);
           } else {
             void controls.start({
               x: 0,
-              transition: { type: 'spring', damping: 30, stiffness: 300 },
+              transition: SPRING,
             });
           }
         }}

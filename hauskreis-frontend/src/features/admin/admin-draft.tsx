@@ -25,6 +25,7 @@
  */
 import { Check } from 'lucide-react';
 import { motion } from 'motion/react';
+import { SPRING_POP } from '@/lib/motion';
 import {
   createContext,
   useCallback,
@@ -176,7 +177,7 @@ function SaveBar({ entries }: { entries: Entry[] }) {
       <motion.div
         initial={{ y: '100%', opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+        transition={SPRING_POP}
         className="pb-safe sticky bottom-0 z-30 border-t border-line bg-canvas/95 px-5 pt-3 backdrop-blur"
       >
         {invalid && (

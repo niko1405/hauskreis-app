@@ -12,8 +12,14 @@
  *   ToastProvider    — nur Anzeige, kommt zuletzt
  *   ConfirmProvider  — ebenso; liegt innen, damit eine Rückfrage einen Toast
  *                      auslösen kann und nicht umgekehrt
+ *
+ * Außen um alles: `MotionConfig reducedMotion="user"`. Wer am Gerät weniger
+ * Bewegung eingestellt hat, bekommt sie auch von motion/react nicht — Sheets,
+ * Toasts, gleitende Pillen. Für die CSS-Animationen sorgt die Regel am Ende
+ * von `globals.css`; beides zusammen ist eine Antwort (`lib/motion.ts`).
  */
 import { QueryClientProvider } from '@tanstack/react-query';
+import { MotionConfig } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { AuthProvider } from 'react-oidc-context';
 import { BOOT_READY_ATTRIBUTE } from '@/components/layout/boot-watchdog';
@@ -35,21 +41,23 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthProvider
-      userManager={getUserManager()}
-      // Modulfunktion, keine Pfeilfunktion: der Provider hat sie in der
-      // Abhängigkeitsliste seines Init-Effekts.
-      onSigninCallback={clearSigninParams}
-    >
-      <QueryClientProvider client={queryClient}>
-        <AuthBridge>
-          <HauskreisProvider>
-            <ToastProvider>
-              <ConfirmProvider>{children}</ConfirmProvider>
-            </ToastProvider>
-          </HauskreisProvider>
-        </AuthBridge>
-      </QueryClientProvider>
-    </AuthProvider>
+    <MotionConfig reducedMotion="user">
+      <AuthProvider
+        userManager={getUserManager()}
+        // Modulfunktion, keine Pfeilfunktion: der Provider hat sie in der
+        // Abhängigkeitsliste seines Init-Effekts.
+        onSigninCallback={clearSigninParams}
+      >
+        <QueryClientProvider client={queryClient}>
+          <AuthBridge>
+            <HauskreisProvider>
+              <ToastProvider>
+                <ConfirmProvider>{children}</ConfirmProvider>
+              </ToastProvider>
+            </HauskreisProvider>
+          </AuthBridge>
+        </QueryClientProvider>
+      </AuthProvider>
+    </MotionConfig>
   );
 }

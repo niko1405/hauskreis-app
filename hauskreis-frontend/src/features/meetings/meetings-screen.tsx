@@ -26,6 +26,7 @@ import {
   Search,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { FADE, SPRING_GENTLE } from '@/lib/motion';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
@@ -99,9 +100,6 @@ function urlOf(view: View, calendar: boolean): string {
   if (view !== 'liste') return `/termine?tab=${view}`;
   return calendar ? '/termine?tab=kalender' : '/termine';
 }
-
-/** Die Feder, mit der der Kopf ein- und ausklappt — dieselbe wie im Archiv. */
-const HEAD_SPRING = { type: 'spring', damping: 30, stiffness: 260 } as const;
 
 export function MeetingsScreen() {
   const tab = useSearchParams().get('tab');
@@ -183,7 +181,7 @@ export function MeetingsScreen() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={FADE}
             className="sticky top-0 z-30 flex items-center bg-canvas px-5 pt-safe-4 pb-3"
           >
             <div className="relative flex-1">
@@ -224,7 +222,7 @@ export function MeetingsScreen() {
         animate={
           searching ? { height: 0, opacity: 0 } : { height: 'auto', opacity: 1 }
         }
-        transition={HEAD_SPRING}
+        transition={SPRING_GENTLE}
         inert={searching}
         aria-hidden={searching}
         className="overflow-hidden"

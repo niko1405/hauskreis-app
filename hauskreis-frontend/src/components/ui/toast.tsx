@@ -8,6 +8,7 @@
  * gehört an die Stelle, an der es passiert ist, nicht hierher.
  */
 import { AnimatePresence, motion } from 'motion/react';
+import { SPRING_POP } from '@/lib/motion';
 import {
   createContext,
   useCallback,
@@ -84,7 +85,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               initial={{ opacity: 0, y: -40 }}
               animate={{ opacity: 1, y: 16 }}
               exit={{ opacity: 0, y: -40 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              transition={SPRING_POP}
               className="flex w-full max-w-sm items-start gap-3 rounded-md border border-inverse-line bg-inverse p-4 text-inverse-fg shadow-2xl"
             >
               {(() => {

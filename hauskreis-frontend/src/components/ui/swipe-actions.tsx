@@ -35,6 +35,7 @@
  * geschluckt; der nächste Druck setzt das zurück.
  */
 import { motion, useAnimationControls } from 'motion/react';
+import { SPRING } from '@/lib/motion';
 import {
   useEffect,
   useId,
@@ -122,7 +123,7 @@ export function SwipeActions({
     void controls.start({
       x: auf && !maus ? -breite : 0,
       marginRight: auf && maus ? breite : 0,
-      transition: { type: 'spring', damping: 30, stiffness: 300 },
+      transition: SPRING,
     });
   }, [auf, maus, breite, controls]);
 
