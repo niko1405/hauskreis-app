@@ -90,7 +90,10 @@ export function HomeScreen() {
 
       <ScreenHeader screen="home" title={gruß.hallo} subtitle={gruß.zeile} />
 
-      <div className="space-y-8 px-5">
+      {/* Luftig zwischen den Sektionen: „Heute" ist eine Übersicht, die man
+          überfliegt, und jede Sektion ist eine eigene Frage — mit wenig
+          Abstand lasen sich Karte und Überschrift der nächsten als eins. */}
+      <div className="space-y-10 px-5">
         {/* Ganz oben und nur einmal: Wer es angesehen oder weggeklickt hat,
             sieht hier nichts mehr. */}
         <ReleaseBanner />

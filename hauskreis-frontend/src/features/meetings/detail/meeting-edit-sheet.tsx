@@ -155,10 +155,7 @@ export function MeetingEditSheet({
       }
     >
       <div className="space-y-4">
-        <Field
-          label="Titel des Termins"
-          hint="Leer lassen: dann steht dort die Art des Termins."
-        >
+        <Field label="Titel des Termins">
           <TextInput
             value={title}
             placeholder={placeholder}
@@ -166,12 +163,7 @@ export function MeetingEditSheet({
           />
         </Field>
 
-        {/* Ein leeres Feld hieße „keine Uhrzeit", und die gibt es nicht — das
-            fängt der Knopf unten ab. */}
-        <Field
-          label="Uhrzeit"
-          hint="Ist das der nächste Termin, bekommen die anderen Bescheid."
-        >
+        <Field label="Uhrzeit">
           <TextInput
             type="time"
             value={startTime}
@@ -192,7 +184,7 @@ export function MeetingEditSheet({
         {!cancelled && (
           <CheckRow
             label="Besonderer Termin"
-            hint="Ein Geburtstag, eine Freizeit — alle werden kurz vorher erinnert, und er steht in der Liste hervorgehoben."
+            hint="Dann werden alle kurz vorher erinnert, und er steht in der Liste hervorgehoben."
             checked={special}
             onChange={setSpecial}
           />

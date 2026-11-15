@@ -28,8 +28,43 @@
  *
  * `count` steht klein hinter dem Wort („Lieder 3"), für Register, hinter denen
  * eine Liste liegt. Ohne Zahl steht nichts — „Orte 0" wäre keine Auskunft.
+ *
+ * Die gewählte Fläche **gleitet** zur neuen Wahl (`GlidePill`), wie die
+ * Pille in der Tab-Leiste.
+ *
+ * **Drei Arten, die Wahl zu zeigen** (`look`):
+ *
+ * - `solid` — gefüllt in Terracotta. Für Umschalter, die selbst die Frage
+ *   sind („Text | Akkorde").
+ * - `glow` — fast die Fläche des Behälters, abgehoben durch einen zarten
+ *   Terracotta-Rahmen, einen Hauch Schein und farbige Schrift. Für die
+ *   Register ganz oben auf einer Seite („Übersicht | Planung | Geburtstage"):
+ *   Sie sind Bedienung, keine Überschrift, und eine gefüllte Fläche dort war
+ *   das Lauteste auf dem Bildschirm.
+ * - `raised` — eine neutrale, leicht erhabene Fläche wie in iOS; nur das
+ *   Symbol ist farbig. Für die Wahl zwischen zwei Wegen, unter der noch ein
+ *   Knopf in Terracotta steht („Per Link | Per E-Mail").
+ *
+ * `shape="soft"` macht aus der Kapsel einen Kasten mit weichen Ecken und
+ * etwas mehr Höhe, `surface="inset"` legt ihn vertieft in ein Sheet.
+ * `labels="always"` lässt das Wort neben dem Symbol auch auf dem Telefon
+ * stehen.
  */
+import { useId } from 'react';
 import { cn } from '@/lib/cn';
+import { GlidePill } from './glide-pill';
+
+const PILL_LOOK = {
+  solid: 'bg-terracotta-500',
+  glow: 'border border-terracotta-500/50 bg-terracotta-500/10 shadow-[0_0_18px_-8px_var(--color-terracotta-500)]',
+  raised: 'border border-line-strong bg-card shadow-sm',
+} as const;
+
+const TEXT_LOOK = {
+  solid: 'text-white',
+  glow: 'text-terracotta-600',
+  raised: 'text-stone-900',
+} as const;
 
 export function Segmented<Value extends string>({
   value,
@@ -40,6 +75,10 @@ export function Segmented<Value extends string>({
   fill = false,
   equal = false,
   iconOnly = false,
+  look = 'solid',
+  shape = 'pill',
+  surface = 'card',
+  labels = 'responsive',
 }: {
   value: Value;
   onChange: (value: Value) => void;
@@ -55,54 +94,86 @@ export function Segmented<Value extends string>({
   fill?: boolean;
   equal?: boolean;
   iconOnly?: boolean;
+  look?: 'solid' | 'glow' | 'raised';
+  shape?: 'pill' | 'soft';
+  surface?: 'card' | 'inset';
+  labels?: 'responsive' | 'always';
 }) {
+  const pill = useId();
+  const soft = shape === 'soft';
+
   return (
     <div
       role="radiogroup"
       aria-label={label}
       className={cn(
-        'flex rounded-full border border-line bg-card',
-        size === 'lg' ? 'p-1' : 'p-0.5',
+        'flex border border-line',
+        surface === 'inset' ? 'bg-shell' : 'bg-card',
+        soft ? 'rounded-2xl p-1' : 'rounded-full',
+        !soft && (size === 'lg' ? 'p-1' : 'p-0.5'),
         fill || equal ? 'w-full' : 'shrink-0',
       )}
     >
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          role="radio"
-          aria-checked={value === option.value}
-          title={iconOnly ? option.label : undefined}
-          onClick={() => onChange(option.value)}
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-full font-semibold transition-colors',
-            fill && 'flex-auto justify-center',
-            equal && 'min-w-0 flex-1 justify-center',
-            size === 'sm'
-              ? cn('py-1 text-xs', fill ? 'px-2 sm:px-3' : 'px-3')
-              : size === 'lg'
-                ? 'px-2 py-1.5 text-[13px]'
-                : 'px-4 py-1.5 text-sm',
-            value === option.value
-              ? 'bg-terracotta-500 text-white'
-              : 'text-stone-500 hover:text-stone-700',
-          )}
-        >
-          {option.icon}
-          {option.icon ? (
-            <span className={cn('sr-only', !iconOnly && 'sm:not-sr-only')}>
-              {option.label}
+      {options.map((option) => {
+        const chosen = value === option.value;
+
+        return (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={chosen}
+            title={iconOnly ? option.label : undefined}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              'relative inline-flex items-center font-semibold transition-colors',
+              soft ? 'rounded-xl' : 'rounded-full',
+              fill && 'flex-auto justify-center',
+              equal && 'min-w-0 flex-1 justify-center',
+              size === 'sm'
+                ? cn('py-1 text-xs', fill ? 'px-2 sm:px-3' : 'px-3')
+                : size === 'lg'
+                  ? cn('px-2 text-[13px]', soft ? 'py-2.5' : 'py-1.5')
+                  : cn('px-4 text-sm', soft ? 'py-2' : 'py-1.5'),
+              chosen ? TEXT_LOOK[look] : 'text-stone-500 hover:text-stone-700',
+            )}
+          >
+            {chosen && (
+              <GlidePill
+                id={pill}
+                radius={soft ? 12 : 9999}
+                className={cn('inset-0', PILL_LOOK[look])}
+              />
+            )}
+            <span className="relative inline-flex min-w-0 items-center gap-1.5">
+              {option.icon && (
+                // Bei `glow` und `raised` trägt das Symbol der Wahl die Farbe
+                // — bei `raised` ist es das Einzige, was farbig ist.
+                <span
+                  className={cn(
+                    'inline-flex shrink-0',
+                    chosen && look !== 'solid' && 'text-terracotta-500',
+                  )}
+                >
+                  {option.icon}
+                </span>
+              )}
+              {option.icon && labels === 'responsive' ? (
+                <span className={cn('sr-only', !iconOnly && 'sm:not-sr-only')}>
+                  {option.label}
+                </span>
+              ) : (
+                <span className="truncate">{option.label}</span>
+              )}
+              {option.count !== undefined && (
+                <span className="-ml-0.5 shrink-0 text-[11px] opacity-70">
+                  {option.count}
+                </span>
+              )}
             </span>
-          ) : (
-            <span className="truncate">{option.label}</span>
-          )}
-          {option.count !== undefined && (
-            <span className="-ml-0.5 shrink-0 text-[11px] opacity-70">
-              {option.count}
-            </span>
-          )}
-        </button>
-      ))}
+          </button>
+        );
+      })}
     </div>
   );
 }

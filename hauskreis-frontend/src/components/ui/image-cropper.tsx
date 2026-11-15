@@ -14,6 +14,11 @@
  * wäre, Original **und** Ausschnittsrahmen zu speichern und bei jeder Auslieferung
  * zu rechnen — für vier Bilder, die man selten wechselt, ein eigenes Projekt.
  *
+ * **Schwarze Ränder fallen vorher weg** (`withoutBorders`). Ein Videostandbild
+ * oder ein Screenshot bringt seine Balken mit, und im Kopfbild stünden sie
+ * dann da — im breiten Fenster sichtbar, auf dem Telefon meist nicht, also
+ * leicht zu übersehen. Zugeschnitten wird deshalb gleich das Bild ohne sie.
+ *
  * **Ein Werkzeug für zwei Stellen.** Kopfbild (2:1) und Profilbild (1:1, rund)
  * unterscheiden sich in `aspect`, `shape` und der Zielgröße; alles andere —
  * Ziehen, Zoomen, Zeichnen, Verpacken — ist dasselbe. Genau das war die
@@ -21,6 +26,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import Cropper, { type Area } from 'react-easy-crop';
+import { contentBox } from '@/lib/image-borders';
 import { Button } from './button';
 import { Sheet } from './sheet';
 
@@ -90,26 +96,51 @@ export function ImageCropper({
   const [zoom, setZoom] = useState(1);
   const [area, setArea] = useState<Area | null>(null);
   const [working, setWorking] = useState(false);
+  /** Ob schwarze Ränder weggenommen wurden — das steht dann dabei. */
+  const [trimmed, setTrimmed] = useState(false);
 
   // Eine Objekt-Adresse statt `readAsDataURL`: Ein Foto vom Telefon wiegt
   // mehrere Megabyte, und als Base64 stünde es ein Drittel größer nochmal im
   // Speicher. Freigegeben wird sie, sobald eine andere Datei kommt oder das
   // Sheet zugeht — sonst hält der Browser das Bild bis zum Neuladen fest.
+  //
+  // Gezeigt wird erst nach dem Blick auf die Ränder. Zuerst das Original und
+  // dann das beschnittene hieße, dass der Ausschnitt unter dem Finger springt.
   useEffect(() => {
+    setTrimmed(false);
     if (!file) {
       setUrl(null);
       return;
     }
 
-    const next = URL.createObjectURL(file);
-    setUrl(next);
+    const original = URL.createObjectURL(file);
+    let cut: string | null = null;
+    let cancelled = false;
+
+    setUrl(null);
     // Bei jeder neuen Datei von vorn: Ein Zoom von der letzten Wahl wäre auf
     // einem anders geschnittenen Bild eine willkürliche Vergrößerung.
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setArea(null);
 
-    return () => URL.revokeObjectURL(next);
+    withoutBorders(original)
+      .catch(() => null)
+      .then((result) => {
+        if (cancelled) {
+          if (result) URL.revokeObjectURL(result);
+          return;
+        }
+        cut = result;
+        setUrl(result ?? original);
+        setTrimmed(result !== null);
+      });
+
+    return () => {
+      cancelled = true;
+      URL.revokeObjectURL(original);
+      if (cut) URL.revokeObjectURL(cut);
+    };
   }, [file]);
 
   const onCropComplete = useCallback((_: Area, pixels: Area) => {
@@ -181,6 +212,12 @@ export function ImageCropper({
 
           {target.trim && <TrimGuides trim={target.trim} />}
         </div>
+
+        {trimmed && (
+          <p className="text-[11px] leading-relaxed text-stone-500">
+            Schwarze Ränder am Bild wurden entfernt.
+          </p>
+        )}
 
         {/* Der Regler ist für die Maus da — auf dem Telefon zoomt man mit zwei
             Fingern, am Rechner gibt es die nicht. */}
@@ -278,6 +315,77 @@ function TrimGuides({ trim }: { trim: NonNullable<CropTarget['trim']> }) {
       />
     </div>
   );
+}
+
+/** Kantenlänge, auf die zum Messen verkleinert wird — genug für Balken. */
+const SAMPLE = 256;
+
+/**
+ * Das Bild ohne seine schwarzen Ränder, als neue Objekt-Adresse — oder `null`,
+ * wenn es keine hat.
+ *
+ * Gemessen wird an einer verkleinerten Fassung (`contentBox` über höchstens
+ * `SAMPLE` Pixel), geschnitten in voller Größe: Ein Foto vom Telefon Pixel für
+ * Pixel abzusuchen, kostete eine spürbare Pause vor dem Zuschnitt.
+ */
+async function withoutBorders(url: string): Promise<string | null> {
+  const image = await load(url);
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
+  if (width === 0 || height === 0) return null;
+
+  const scale = Math.min(1, SAMPLE / Math.max(width, height));
+  const sampleWidth = Math.max(1, Math.round(width * scale));
+  const sampleHeight = Math.max(1, Math.round(height * scale));
+
+  const sample = document.createElement('canvas');
+  sample.width = sampleWidth;
+  sample.height = sampleHeight;
+  const sampleContext = sample.getContext('2d', { willReadFrequently: true });
+  if (!sampleContext) return null;
+
+  sampleContext.drawImage(image, 0, 0, sampleWidth, sampleHeight);
+  const box = contentBox(
+    sampleContext.getImageData(0, 0, sampleWidth, sampleHeight).data,
+    sampleWidth,
+    sampleHeight,
+  );
+  if (!box) return null;
+
+  // Zurück in Pixel des Originals, nach innen gerundet: lieber ein Pixel Foto
+  // weniger als ein Pixel Balken mehr.
+  const factorX = width / sampleWidth;
+  const factorY = height / sampleHeight;
+  const left = Math.ceil(box.x * factorX);
+  const top = Math.ceil(box.y * factorY);
+  const right = Math.floor((box.x + box.width) * factorX);
+  const bottom = Math.floor((box.y + box.height) * factorY);
+  if (right <= left || bottom <= top) return null;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = right - left;
+  canvas.height = bottom - top;
+  const context = canvas.getContext('2d');
+  if (!context) return null;
+
+  context.drawImage(
+    image,
+    left,
+    top,
+    canvas.width,
+    canvas.height,
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
+
+  // Fast verlustfrei: Das hier ist ein Zwischenschritt, die eigentliche
+  // Kodierung kommt erst beim Übernehmen (`cutOut`).
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, 'image/webp', 0.95),
+  );
+  return blob ? URL.createObjectURL(blob) : null;
 }
 
 /**

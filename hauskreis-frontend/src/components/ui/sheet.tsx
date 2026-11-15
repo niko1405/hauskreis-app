@@ -21,6 +21,7 @@
  * hört nicht zu, es wird von oben angestoßen.
  */
 import { AnimatePresence, motion, useDragControls } from 'motion/react';
+import { SPRING_SHEET } from '@/lib/motion';
 import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { IconButton } from './button';
@@ -119,7 +120,7 @@ export function Sheet({
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+            transition={SPRING_SHEET}
             drag="y"
             // Nur die Steuerung oben startet die Geste — siehe oben.
             dragListener={false}

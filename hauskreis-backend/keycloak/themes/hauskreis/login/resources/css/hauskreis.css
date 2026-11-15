@@ -277,11 +277,19 @@ body#keycloak-bg {
   border-color: var(--hk-line-strong);
 }
 
-.pf-v5-c-form-control:focus-within,
-.pf-v5-c-form-control > input:focus,
-.pf-v5-c-form-control > select:focus {
+.pf-v5-c-form-control:focus-within {
   border-color: #d68e75;
   box-shadow: 0 0 0 3px var(--hk-terracotta-soft);
+  outline: none;
+}
+
+/* Der Ring gehört dem runden Rahmen, nicht dem Feld darin. Bekam das innere
+   `<input>` beim Fokus denselben Rand und Schein, stand im fokussierten Feld
+   ein zweiter, eckiger Kasten. */
+.pf-v5-c-form-control > input:focus,
+.pf-v5-c-form-control > select:focus {
+  border: none;
+  box-shadow: none;
   outline: none;
 }
 
@@ -418,9 +426,16 @@ body#keycloak-bg {
 /* -------------------------------------------------------------------------
  * „Weiter mit Google" und der Trenner darunter (login/hk-social.ftl)
  *
- * Wie der Sekundärknopf der App (`Button variant="secondary"`): dieselbe
- * Fläche, dieselbe Schrift, kein Rahmen. Steht oben in der Karte, auf
- * Anmeldung und Registrierung.
+ * Ein ruhiger Rahmenknopf in der Fläche der Karte, gerahmt wie die Felder —
+ * derselbe wie in der App (`idp-buttons.tsx`). **Nicht Terracotta**: Darunter
+ * steht „Anmelden" in Terracotta, und zwei farbige Knöpfe auf einer Karte
+ * fragen, welcher der richtige ist. Neutral mit dem bunten „G" ist zugleich,
+ * was Googles Richtlinien für Anmeldeknöpfe vorsehen. Steht oben in der
+ * Karte, auf Anmeldung und Registrierung.
+ *
+ * Die Klasse steht doppelt (`.hk-social .hk-social__button`), damit keine
+ * Link-Regel von PatternFly oder weiter unten (`a`, `a:hover`) die Farbe
+ * übernimmt.
  * ---------------------------------------------------------------------- */
 .hk-social {
   display: flex;
@@ -428,32 +443,43 @@ body#keycloak-bg {
   gap: 0.5rem;
 }
 
-.hk-social__button {
+.hk-social .hk-social__button {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.625rem;
+  box-sizing: border-box;
   width: 100%;
-  padding: 0.875rem 1.25rem;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid var(--hk-line-strong);
   border-radius: 999px;
-  background: var(--hk-terracotta-soft);
-  color: var(--hk-terracotta-dark);
+  background: var(--hk-card);
+  box-shadow: 0 1px 2px rgba(41, 37, 36, 0.05);
+  color: var(--hk-ink);
   font-size: 0.875rem;
   font-weight: 600;
+  line-height: 1.25;
   text-decoration: none;
-  transition: background-color 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
 }
 
-.hk-social__button:hover,
-.hk-social__button:focus {
-  background: var(--hk-terracotta-soft-hover);
-  color: var(--hk-terracotta-dark);
+.hk-social .hk-social__button:hover,
+.hk-social .hk-social__button:focus {
+  background: var(--hk-canvas);
+  border-color: #dfd1c4;
+  color: var(--hk-ink-strong);
   text-decoration: none;
 }
 
-.hk-social__button:focus-visible {
+.hk-social .hk-social__button:focus-visible {
   outline: 2px solid var(--hk-terracotta);
   outline-offset: 2px;
+}
+
+.hk-social .hk-social__button:active {
+  transform: scale(0.98);
 }
 
 .hk-social__button svg {

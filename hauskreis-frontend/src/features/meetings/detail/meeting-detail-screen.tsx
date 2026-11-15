@@ -471,8 +471,8 @@ function Loaded({
   };
 
   /**
-   * Die Nachbereitung ganz wegnehmen — danach steht wieder der Hinweis da, als
-   * wäre nichts gewesen. Mit derselben Rückfrage wie beim Wegnehmen eines
+   * Die Nachbereitung ganz wegnehmen, aus ihrem Sheet heraus — danach steht
+   * wieder der Hinweis da, als wäre nichts gewesen. Mit derselben Rückfrage wie beim Wegnehmen eines
    * Bausteins: gelöscht werden beide Texte und die Haken darunter.
    */
   const removeNotes = async () => {
@@ -488,7 +488,10 @@ function Loaded({
       if (!ok) return;
     }
 
-    patch({ hasNotesSlot: false });
+    update.mutate(
+      { hasNotesSlot: false },
+      { onSuccess: () => setWritingNotes(false) },
+    );
   };
 
   // Die Regel steht in `lib/meeting.ts`, weil die Liedseite sie auch braucht.
@@ -665,9 +668,7 @@ function Loaded({
             meeting={meeting}
             editable={!cancelled && !reading}
             started={started}
-            saving={update.isPending}
             onEdit={() => setWritingNotes(true)}
-            onRemove={() => void removeNotes()}
           />
         )}
 
@@ -756,6 +757,9 @@ function Loaded({
           meeting={meeting}
           saving={update.isPending}
           onSave={saveNotes}
+          // Nur wenn es schon eine gibt: Beim Anlegen gibt es nichts
+          // wegzunehmen, das Sheet schließt man dann einfach wieder.
+          onRemove={showNotes ? () => void removeNotes() : undefined}
           onClose={() => setWritingNotes(false)}
         />
       )}

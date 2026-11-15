@@ -14,8 +14,11 @@ import { cn } from '@/lib/cn';
  * Dunkel nachgezogen werden müsste. Die linke obere Ecke der Blase bleibt
  * eckig, damit er anschließt.
  *
- * `surface` ist die Fläche der Blase: `shell` in einer Karte, von der sie sich
- * abheben soll; `card` direkt auf der Seite, wo sie selbst die Karte ist.
+ * `surface` ist die Fläche der Blase: `warm` (voreingestellt) für das, was
+ * jemand sagt — ein Hauch Terracotta (`--color-bubble`), hell wie dunkel; im
+ * Dunkeln war die Blase sonst fast schwarz und las sich wie ein Loch in der
+ * Karte. `card` steht direkt auf der Seite, wo sie selbst die Karte ist und
+ * nur sagt, wer an etwas arbeitet (`PersonBubble`).
  *
  * `tail` sagt, wo der Sprecher steht: `left` neben der Blase (Gesicht links,
  * Blase rechts), `top` darüber — in der Zusagenliste hängt der Satz unter dem
@@ -23,26 +26,27 @@ import { cn } from '@/lib/cn';
  * Fassung für Listen, in denen die Blase nur einen Satz trägt.
  */
 export function SpeechBubble({
-  surface = 'shell',
+  surface = 'warm',
   tail = 'left',
   size = 'md',
   className,
   children,
 }: {
-  surface?: 'shell' | 'card';
+  surface?: 'warm' | 'card';
   tail?: 'left' | 'top';
   size?: 'sm' | 'md';
   className?: string;
   children: React.ReactNode;
 }) {
-  const fill = surface === 'card' ? 'bg-card' : 'bg-shell';
+  const fill =
+    surface === 'card' ? 'bg-card border-line' : 'bg-bubble border-bubble-line';
 
   return (
     <div className={cn('relative min-w-0', tail === 'left' && 'flex-1')}>
       <span
         aria-hidden
         className={cn(
-          'absolute size-2.5 rotate-45 border-l border-line',
+          'absolute size-2.5 rotate-45 border-l',
           // Links: auf Höhe der ersten Zeile aus der Blase heraus. Oben: kurz
           // hinter der Ecke nach oben heraus, zum Namen darüber.
           tail === 'left'
@@ -53,7 +57,7 @@ export function SpeechBubble({
       />
       <div
         className={cn(
-          'border border-line',
+          'border',
           // Eine Zeile Text in einer Blase mit dem großen Radius ist eine Pille;
           // die knappe Fassung bekommt deshalb einen kleineren.
           size === 'sm' ? 'rounded-xl px-3 py-1.5' : 'rounded-lg px-3.5 py-2.5',

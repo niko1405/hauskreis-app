@@ -16,6 +16,7 @@
 import {
   Clock,
   History,
+  Link2,
   Mail,
   Send,
   Shield,
@@ -371,6 +372,7 @@ function InviteSheet({
       open={open}
       onClose={onClose}
       title="Jemanden einladen"
+      subtitle="Neue Mitglieder für euren Hauskreis hinzufügen"
       // Beim Link wirkt jede Aktion sofort — es gibt nichts abzuschließen, und
       // zu geht das Sheet über sein ×.
       footer={
@@ -395,15 +397,22 @@ function InviteSheet({
       }
     >
       <div className="space-y-5">
+        {/* Erhaben und neutral, nur das Symbol in Farbe: Darunter steht der
+            Knopf in Terracotta, und zwei farbige Flächen übereinander
+            fragten, welche die Aktion ist. */}
         <Segmented
-          fill
-          size="sm"
+          equal
+          size="lg"
+          look="raised"
+          shape="soft"
+          surface="inset"
+          labels="always"
           label="Wie einladen"
           value={mode}
           onChange={setMode}
           options={[
-            { value: 'link', label: 'Per Link' },
-            { value: 'email', label: 'Per E-Mail' },
+            { value: 'link', label: 'Per Link', icon: <Link2 size={16} /> },
+            { value: 'email', label: 'Per E-Mail', icon: <Mail size={16} /> },
           ]}
         />
 

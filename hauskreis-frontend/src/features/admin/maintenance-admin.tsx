@@ -164,13 +164,7 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
     <>
       <section>
         <SectionTitle
-          info={
-            <>
-              Tag, Abstand, Uhrzeit und Zeitzone gelten für Termine, die die App
-              ab jetzt anlegt. Was schon im Kalender steht, behält seinen Tag
-              und seine Zeit — dafür hat längst jemand zugesagt.
-            </>
-          }
+          info={<>Änderungen am Rhythmus gelten erst für zukünftige Termine.</>}
         >
           Termin-Rhythmus
         </SectionTitle>
@@ -189,9 +183,7 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
               <>
                 Aus heißt: Ihr legt eure Termine selbst an. Was schon im
                 Kalender steht, bleibt stehen, und auch „Termine vorausplanen“
-                unter Läufe legt dann nichts an. Solange es an ist, sind von
-                Hand angelegte Termine als „besonders“ vorbelegt — sie sind dann
-                meistens ein Geburtstag oder eine Freizeit.
+                unter Läufe legt dann nichts an.
               </>
             }
             checked={value.autoGenerate}
@@ -275,12 +267,12 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
               <div className="space-y-1 border-t border-line pt-3">
                 <CheckRow
                   label="Lobpreis- und Gebetsabende"
-                  hint="Der letzte Termin im Monat bekommt Lieder und ein Testimony statt eines Themas."
+                  hint="Der letzte Termin im Monat bekommt Lieder und Testimony automatisch vorbelegt."
                   info={
                     <>
-                      Gilt für neue Termine — was schon im Kalender steht,
-                      behält seine Bausteine. Am einzelnen Abend lässt sich das
-                      jederzeit über „Bearbeiten“ umbauen.
+                      Diese Einstellung hat sich in manchen Gruppen so bewährt,
+                      ist aber rein optional. Du kannst sie jederzeit an- oder
+                      abwählen, was erst für neue Termine gilt.
                     </>
                   }
                   checked={value.praiseEvenings}
@@ -292,11 +284,11 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
                     nicht abwählen müssen. */}
                 <CheckRow
                   label="Snacks vorbelegen"
-                  hint="Neue Termine bekommen die Rolle „Snacks“ gleich mit."
+                  hint="Neue Termine bekommen die Rolle „Snacks“ vorbelegt."
                   info={
                     <>
-                      Gilt für neue Termine. An einem einzelnen Abend lässt sich
-                      der Baustein immer anhaken, auch ohne diese Vorgabe.
+                      An einem einzelnen Abend lässt sich diese Rolle bei Bedarf
+                      immer anhaken, auch ohne diese Vorgabe.
                     </>
                   }
                   checked={value.snackSlot}

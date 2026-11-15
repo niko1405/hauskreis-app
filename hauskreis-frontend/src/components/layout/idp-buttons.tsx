@@ -38,7 +38,10 @@ export function IdpButtons({
       {providers.map((alias) => (
         <Button
           key={alias}
-          variant="secondary"
+          // Neutral und gerahmt, wie auf Keycloaks eigenen Seiten
+          // (`hauskreis.css`, `.hk-social`): derselbe Knopf an beiden Orten,
+          // und keiner, der mit dem Terracotta daneben um die Wahl ringt.
+          variant="outline"
           size="lg"
           className="w-full"
           onClick={() => void auth.signinRedirect(idpHintArgs(alias, returnTo))}

@@ -46,10 +46,6 @@ findest du in Kapitel 3 den Knopf für Benachrichtigungen gar nicht — dort ste
 dann nur ein grauer Hinweis. Die App ist nicht kaputt, sie läuft nur am falschen
 Ort.
 
-Noch ein Hinweis fürs iPhone: Eine App vom Startbildschirm hat dort **ihren
-eigenen Speicher**, getrennt von Safari. Öffne sie nach dem Installieren einmal
-mit Internet — sonst hat sie beim ersten Start unterwegs noch nichts zu zeigen.
-
 ---
 
 ## 3. Erste Schritte

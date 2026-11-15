@@ -26,6 +26,7 @@ import {
   Search,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { FADE, SPRING_GENTLE } from '@/lib/motion';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
@@ -99,9 +100,6 @@ function urlOf(view: View, calendar: boolean): string {
   if (view !== 'liste') return `/termine?tab=${view}`;
   return calendar ? '/termine?tab=kalender' : '/termine';
 }
-
-/** Die Feder, mit der der Kopf ein- und ausklappt — dieselbe wie im Archiv. */
-const HEAD_SPRING = { type: 'spring', damping: 30, stiffness: 260 } as const;
 
 export function MeetingsScreen() {
   const tab = useSearchParams().get('tab');
@@ -183,7 +181,7 @@ export function MeetingsScreen() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={FADE}
             className="sticky top-0 z-30 flex items-center bg-canvas px-5 pt-safe-4 pb-3"
           >
             <div className="relative flex-1">
@@ -224,7 +222,7 @@ export function MeetingsScreen() {
         animate={
           searching ? { height: 0, opacity: 0 } : { height: 'auto', opacity: 1 }
         }
-        transition={HEAD_SPRING}
+        transition={SPRING_GENTLE}
         inert={searching}
         aria-hidden={searching}
         className="overflow-hidden"
@@ -271,6 +269,7 @@ export function MeetingsScreen() {
           <Segmented
             equal
             size="lg"
+            look="glow"
             label="Ansicht"
             value={view}
             onChange={(next) => show(next, next === 'liste' && calendar)}
@@ -279,7 +278,13 @@ export function MeetingsScreen() {
         </div>
       </motion.div>
 
-      <div className="px-5">
+      {/* Ein neues Register kommt kaum merklich von unten herein — der
+          Schlüssel legt den Kasten bei jedem Wechsel neu an, und damit
+          startet die Animation. Auch Liste und Kalender sind zwei Ansichten. */}
+      <div
+        key={`${view}-${calendar ? 'monat' : 'liste'}`}
+        className="animate-panel-in px-5"
+      >
         {view === 'liste' &&
           (calendar ? (
             <MeetingCalendar />
@@ -384,6 +389,7 @@ function MeetingListView({
             gewählte ist hervorgehoben. */}
         <Segmented
           iconOnly
+          look="glow"
           label="Welche Termine"
           value={scope}
           onChange={setScope}

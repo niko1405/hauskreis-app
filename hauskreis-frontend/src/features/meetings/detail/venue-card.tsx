@@ -8,9 +8,10 @@
  *   sagte dasselbe zweimal und verlangte, den Stift zu finden.
  * - **Treffpunkt**: Stecknadel, Name, Adresse.
  * - **Bei jemandem zu Hause**: Die Überschrift sagt es („Bei Gastgeber
- *   zuhause"), und statt der Stecknadel steht **das Gesicht des Gastgebers** mit
- *   einem kleinen Haus daran. Ein Zuhause heißt schon „Bei Niko" — wer das ist,
- *   sieht man so, ohne dass sein Name ein zweites Mal dasteht.
+ *   zuhause"), statt der Stecknadel steht ein Haus, und daran klein **das
+ *   Gesicht des Gastgebers**. Ein Zuhause heißt schon „Bei Niko" — wer das ist,
+ *   sieht man so, ohne dass sein Name ein zweites Mal dasteht. Das Haus ist das
+ *   Größere: Die Sektion beantwortet „wo", nicht „wer".
  *
  * **Der Stift ist der einzige Eingang zum Ort**, in beide Richtungen (Zuhause
  * oder Treffpunkt, `VenueSheet`); der Gastgeber steht deshalb nicht unter
@@ -97,20 +98,21 @@ export function VenueCard({
       </SectionTitle>
       <Card className="overflow-hidden p-0">
         <div className="flex items-center gap-4 p-4">
-          {home && meeting.host ? (
-            // Das Bild lässt sich groß ansehen wie überall; das Haus daran sagt,
-            // warum hier ein Gesicht statt einer Stecknadel steht.
-            <span className="relative shrink-0">
-              <Avatar person={meeting.host} size="lg" />
-              <span className="absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full bg-terracotta-500 text-white ring-2 ring-card">
-                <House size={12} strokeWidth={2.4} />
-              </span>
-            </span>
-          ) : (
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-terracotta-500/30 bg-terracotta-500/10 text-terracotta-500">
+          <span className="relative shrink-0">
+            <span className="flex size-12 items-center justify-center rounded-xl border border-terracotta-500/30 bg-terracotta-500/10 text-terracotta-500">
               {home ? <House size={21} /> : <MapPin size={21} />}
             </span>
-          )}
+            {/* Das Gesicht als Abzeichen am Haus: Die Kachel sagt, was für ein
+                Ort das ist, das Bild, wessen. Es lässt sich groß ansehen wie
+                überall — deshalb sitzt die Lage an einer Hülle: Mit Bild ist
+                der Avatar ein Knopf um das `<img>`, und eine Klasse am Avatar
+                landete am Bild darin. */}
+            {home && meeting.host && (
+              <span className="absolute -right-1.5 -bottom-1.5 flex rounded-full ring-2 ring-card">
+                <Avatar person={meeting.host} size="xs" />
+              </span>
+            )}
+          </span>
 
           <div className="min-w-0 flex-1">
             <p className="truncate font-serif text-lg font-bold text-stone-900">

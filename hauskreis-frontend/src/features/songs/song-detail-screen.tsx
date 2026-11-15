@@ -505,7 +505,7 @@ function SourceLink({
             Noch kein Link zum Liedtext
           </span>
           <span className="block text-xs text-stone-400">
-            Text oder Akkorde, etwa von Ultimate Guitar
+            Text oder Akkorde, etwa von Cifra Club oder Genius
           </span>
         </span>
         <Button size="sm" variant="secondary" onClick={onRequestEdit}>

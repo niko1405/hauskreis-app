@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import Link from '@/components/ui/link';
 import { AnimatePresence, motion } from 'motion/react';
+import { FADE, SPRING_GENTLE } from '@/lib/motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDeferredValue, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
@@ -97,9 +98,6 @@ function addressOf(tab: Tab, scope: SongScope, place: PlaceScope): string {
 function initialTab(value: string | null): Tab {
   return TABS.find((tab) => tab === value) ?? 'themen';
 }
-
-/** Die Feder, mit der der Kopf ein- und ausklappt — dieselbe wie auf „Termine". */
-const HEAD_SPRING = { type: 'spring', damping: 30, stiffness: 260 } as const;
 
 export function ArchiveScreen() {
   const params = useSearchParams();
@@ -265,7 +263,7 @@ export function ArchiveScreen() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              transition={FADE}
               className="flex items-center px-5 pt-safe-4 pb-3"
             >
               <div className="relative flex-1">
@@ -308,7 +306,7 @@ export function ArchiveScreen() {
               ? { height: 0, opacity: 0 }
               : { height: 'auto', opacity: 1 }
           }
-          transition={HEAD_SPRING}
+          transition={SPRING_GENTLE}
           inert={searching}
           aria-hidden={searching}
           className="overflow-hidden"
@@ -358,6 +356,7 @@ export function ArchiveScreen() {
             <Segmented
               equal
               size="lg"
+              look="glow"
               label="Kategorie"
               value={tab}
               onChange={selectTab}
@@ -367,9 +366,12 @@ export function ArchiveScreen() {
         </div>
       </div>
 
+      {/* Eine neue Kategorie kommt kaum merklich von unten herein; der
+          Schlüssel legt den Kasten bei jedem Wechsel neu an. */}
       <div
+        key={tab}
         className={cn(
-          'px-5',
+          'animate-panel-in px-5',
           (tab === 'themen' || tab === 'notizen' || tab === 'lieder') &&
             'pb-20',
         )}

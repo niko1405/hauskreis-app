@@ -13,7 +13,9 @@
  * Ein Haarstrich darunter über die volle Breite trennt die Bedienung von der
  * Liste. Er reicht mit `-mx-5` bis an den Rand, wie die Seite selbst.
  */
+import { useId } from 'react';
 import { PRESSABLE } from '@/components/ui/button';
+import { GlidePill } from '@/components/ui/glide-pill';
 import { cn } from '@/lib/cn';
 
 export function ListFilter<Value extends string>({
@@ -31,6 +33,8 @@ export function ListFilter<Value extends string>({
   /** Rechts in derselben Zeile, etwa die Sortierung. */
   action?: React.ReactNode;
 }) {
+  const pill = useId();
+
   return (
     <div className="-mx-5 flex items-center justify-between gap-3 border-b border-line px-5 pb-3">
       <div
@@ -49,21 +53,31 @@ export function ListFilter<Value extends string>({
               aria-selected={active}
               onClick={() => onChange(option.value)}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-semibold transition-colors',
+                'relative rounded-full border border-transparent px-3 py-1 text-[13px] font-semibold transition-colors',
                 PRESSABLE,
                 active
-                  ? 'border-line-strong bg-card text-stone-800 shadow-sm'
-                  : 'border-transparent text-stone-400 hover:text-stone-600',
+                  ? 'text-stone-800'
+                  : 'text-stone-400 hover:text-stone-600',
               )}
             >
-              {option.label}
-              {/* Ohne Klammern: Die Zahl gehört zum Wort, wie in der Kapsel
-                  darüber. */}
-              {option.count !== undefined && (
-                <span className="text-[11px] font-medium opacity-60">
-                  {option.count}
-                </span>
+              {/* Die helle Fläche gleitet zur neuen Wahl (`GlidePill`). */}
+              {active && (
+                <GlidePill
+                  id={pill}
+                  radius={9999}
+                  className="-inset-px border border-line-strong bg-card shadow-sm"
+                />
               )}
+              <span className="relative inline-flex items-center gap-1.5">
+                {option.label}
+                {/* Ohne Klammern: Die Zahl gehört zum Wort, wie in der Kapsel
+                    darüber. */}
+                {option.count !== undefined && (
+                  <span className="text-[11px] font-medium opacity-60">
+                    {option.count}
+                  </span>
+                )}
+              </span>
             </button>
           );
         })}

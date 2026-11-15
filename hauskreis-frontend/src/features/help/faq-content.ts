@@ -123,7 +123,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'start',
     question: 'Was sind erste Schritte?',
     answer:
-      'Folgendes passiert ausschließlich über das Profil - das sind sinnvolle Schritte sobald du dich registriert und eingeloggt hast:\n\n1. Lege dein Profilbild ganz oben fest, deinen Anzeigenamen und Geburtstag unter "Über dich".\n2. Lege unter "Was du übernimmst" fest, ob du ein Instrument spielst, und schalte die automatische Zusage ein. Die Schalter dort gelten sofort.\n3. Trage im Abschnitt "Wo du wohnst" die Adresse deiner Wohnung sowie die Kapazität dazu ein.\n4. Aktiviere Benachrichtigungen im unteren Abschnitt und lege dort deine Präferenzen fest.\n5. Wähle im Abschnitt "Darstellung" dein bevorzugtes helles/dunkles Design, ganz nach deinem Geschmack.\n6. Für Admins: Öffne die Admin-Verwaltung und erkunde die Funktionen (mehr dazu unter "Verwaltung").',
+      'Folgendes passiert ausschließlich über das Profil - das sind sinnvolle Schritte sobald du dich registriert und eingeloggt hast:\n\n1. Lege dein Profilbild ganz oben fest, deinen Anzeigenamen und Geburtstag unter "Über dich".\n2. Lege unter "Was du übernimmst" fest, ob du ein Instrument spielst, und schalte die automatische Zusage ein.\n3. Trage im Abschnitt "Wo du wohnst" die Adresse deiner Wohnung sowie die Kapazität dazu ein.\n4. Aktiviere Benachrichtigungen im unteren Abschnitt und lege dort deine Präferenzen fest.\n5. Wähle im Abschnitt "Darstellung" dein bevorzugtes helles/dunkles Design, ganz nach deinem Geschmack.\n6. Für Admins: Öffne die Admin-Verwaltung und erkunde die Funktionen (mehr dazu unter "Verwaltung").',
     keywords: ['erste', 'schritte', 'profil', 'einrichtung', 'setup', 'neu'],
   },
   {
@@ -131,7 +131,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'start',
     question: 'Was steht auf welchem Bildschirm?',
     answer:
-      '**Heute** — der nächste Abend, deine eigenen Aufgaben als Abzeichen, der offene Actionstep, deine aktuellen Gebetsbuddys und der letzte vergangene Termin.\n\n**Termine** — alle kommenden Abende, wahlweise als Liste, als Planungstabelle über mehrere Wochen oder als Kalender, dazu unter „Vergangene" die, die schon waren, und die Geburtstage.\n\n**Gebet** — die laufende Gebetsrunde und wer mit wem betet.\n\n**Archiv** — Themen, Lieder, Orte und Notizen; die Lupe oben durchsucht sie. Hier legst du auch Neues an, ohne auf einen Dienstag zu warten.\n\n**Profil** — deine Angaben, Abwesenheiten, Benachrichtigungen, Darstellung, dein Zuhause und diese Hilfe.',
+      '**Heute** — der nächste Termin, deine eigenen Aufgaben als Abzeichen, der offene Actionstep, deine aktuellen Gebetsbuddys und der letzte vergangene Termin.\n\n**Termine** — alle kommenden Termine, wahlweise als Liste, als Planungstabelle über mehrere Wochen oder als Kalender, dazu unter „Vergangene" die, die schon waren, und die Geburtstage.\n\n**Gebet** — die laufende Gebetsrunde und wer mit wem betet.\n\n**Archiv** — Themen, Lieder, Orte und Notizen; die Lupe oben durchsucht sie. Hier kannst du unabhängig von Terminen Neues anlegen.\n\n**Profil** — deine Angaben, Abwesenheiten, Benachrichtigungen, Darstellung, dein Zuhause und diese Hilfe.',
     keywords: ['menü', 'tabs', 'bildschirme', 'navigation', 'wo finde ich'],
   },
 
@@ -569,7 +569,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'songs',
     question: 'Was machen die beiden Knöpfe beim Eintragen eines Lieds?',
     answer:
-      'Zwei Abkürzungen, beide **nur auf Knopfdruck** — jeder Aufruf dauert ein paar Sekunden.\n\n**„Aus Link ausfüllen"** — du fügst eine Adresse ein, und die App liest Titel und Interpret von der Seite.\n\n**„Link suchen"** — umgekehrt: aus Titel und Interpret werden bis zu drei Links vorgeschlagen. Bevorzugt Ultimate Guitar, dann Genius — ein Akkordblatt ist genauso richtig wie ein Liedtext.\n\nJeder vorgeschlagene Link wird vorher geprüft, ob es die Seite wirklich gibt.\n\nDie Vorschläge können trotzdem ungenau sein: Schau kurz nach, bevor du sie übernimmst — der Knopf neben dem Link-Feld öffnet ihn.',
+      'Zwei Abkürzungen, beide **nur auf Knopfdruck** — jeder Aufruf dauert ein paar Sekunden.\n\n**„Aus Link ausfüllen"** — du fügst eine Adresse ein, und die App liest Titel und Interpret von der Seite.\n\n**„Link suchen"** — umgekehrt: aus Titel und Interpret werden bis zu drei Links vorgeschlagen. Bevorzugt werden Seiten, die ohne Abo aufgehen: Cifra Club und Worship Together für Akkorde, Genius für den Text, Ultimate Guitar zuletzt und nur mit kostenlosen Blättern — ein Akkordblatt ist genauso richtig wie ein Liedtext.\n\nJeder vorgeschlagene Link wird vorher geprüft, ob es die Seite wirklich gibt.\n\nDie Vorschläge können trotzdem ungenau sein: Schau kurz nach, bevor du sie übernimmst — der Knopf neben dem Link-Feld öffnet ihn.',
     keywords: ['ki', 'ai', 'gemini', 'link', 'automatisch', 'akkorde'],
   },
   {

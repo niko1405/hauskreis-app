@@ -36,6 +36,7 @@
  * Buchstaben eine Anfrage raus.
  */
 import { AnimatePresence, motion, useDragControls } from 'motion/react';
+import { SPRING_GENTLE } from '@/lib/motion';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BottomSlot } from '@/components/layout/bottom-slot';
 import { Button } from '@/components/ui/button';
@@ -256,7 +257,7 @@ function Bar({
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+              transition={SPRING_GENTLE}
               className="overflow-hidden"
             >
               <div className="space-y-2 px-5 pt-1 pb-4">

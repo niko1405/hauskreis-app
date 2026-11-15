@@ -52,6 +52,13 @@
   --color-line: #f0e5de;
   --color-line-strong: #eae0d5;
 
+  /* Sprechblasen — was jemand der Gruppe sagt (`speech-bubble.tsx`).
+     Ein Hauch Terracotta statt der Fläche der Seite: Im Dunkeln war die Blase
+     `shell`, also fast schwarz, und las sich wie ein Loch in der Karte; hell
+     war sie grau. Warm getönt ist sie eine Stimme und kein Feld. */
+  --color-bubble: #f9ebe5;
+  --color-bubble-line: #f0dace;
+
   /* Vier Bedeutungen — und keine Rollen.
      Sie hießen einmal `music` (grün) und `topic` (amber), nach den Rollen, für
      die sie erfunden wurden. Getragen haben sie an den meisten Stellen längst
@@ -141,6 +148,33 @@
      niemand weiß, wie weit eine Anfrage ist — er wandert, statt einen
      Prozentsatz zu behaupten. */
   --animate-progress: progress 1.4s ease-in-out infinite;
+
+  /* Was hereinkommt: eine Seite, ein Register. Die Federn für alles, was
+     gezogen oder unterbrochen werden kann, stehen in `lib/motion.ts`.
+
+     **Nur Deckkraft und Verschiebung**, beides rechnet die Grafikkarte. Und
+     **`backwards`, nicht `both`**: Nach dem letzten Bild bleibt kein
+     `transform` am Element stehen. Ein stehendes `transform` machte es zum
+     Bezugsrahmen für jedes `position: fixed` darin — ein Sheet, das danach
+     aufgeht, säße dann in der Seite statt über ihr.
+
+     - `tab-in`: einer der fünf Tabs. Nur Überblenden — sie liegen
+       nebeneinander, keiner kommt „von irgendwo".
+     - `push-in`: eine Unterseite, ein gutes Stück von rechts. Man geht
+       hinein.
+     - `back-in`: dieselbe Unterseite nach einem Zurück, ein kürzeres Stück von
+       links — wie unter iOS die Seite, zu der man zurückkehrt.
+     - `panel-in`: ein Register innerhalb einer Seite, kaum merklich von unten.
+
+     **Im Takt von iOS**: die Kurve, mit der iOS seine Ansichten bewegt (`--ease-ios`
+     — schnell los, lang und weich auslaufend), und Dauern, die man als
+     Bewegung sieht und nicht als Flackern. Kürzer wirkte es hastig, länger
+     ließe es auf die Seite warten: Klickbar ist sie vom ersten Bild an. */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-tab-in: fade-in 300ms var(--ease-ios) backwards;
+  --animate-push-in: push-in 460ms var(--ease-ios) backwards;
+  --animate-back-in: back-in 420ms var(--ease-ios) backwards;
+  --animate-panel-in: panel-in 300ms var(--ease-ios) backwards;
 }
 
 @keyframes progress {
@@ -149,6 +183,33 @@
   }
   100% {
     transform: translateX(350%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes push-in {
+  from {
+    opacity: 0;
+    transform: translateX(56px);
+  }
+}
+
+@keyframes back-in {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
   }
 }
 
@@ -206,6 +267,10 @@
   --color-card: #26201b;
   --color-line: #342c25;
   --color-line-strong: #453a30;
+
+  /* Sprechblasen: Terracotta über der Karte, nicht das Schwarz der Schale */
+  --color-bubble: #36261d;
+  --color-bubble-line: #4e3628;
 
   /* Terracotta — 600/700 sind jetzt heller als 500, nicht dunkler */
   --color-terracotta-50: #33211a;

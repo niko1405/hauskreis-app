@@ -10,17 +10,40 @@ import {
 } from './song-key';
 
 /**
- * Wonach zuerst gesucht wird.
+ * Wonach zuerst gesucht wird — **Seiten ohne Bezahlschranke vorn**.
  *
- * Ultimate Guitar zuerst, weil bei uns vier Leute spielen und ein Akkordblatt
- * dort verlässlicher zu finden ist als irgendwo sonst. Genius deckt den reinen
- * Text ab, gerade bei deutschen Titeln, wo Ultimate Guitar dünn wird.
+ * Ein Link wird auf jedem Handy der Gruppe geöffnet, und er taugt nur, wenn er
+ * dort auch aufgeht. Ultimate Guitar stand einmal vorn, weil Akkordblätter dort
+ * am verlässlichsten zu finden sind; aber auf einem Telefon mit der UG-App
+ * öffnet der Link die App, und die will ohne Abo nicht. Deshalb jetzt:
+ *
+ * 1. **Cifra Club** — freie Akkordblätter, auch für Lobpreis auf Englisch.
+ * 2. **Worship Together** — die Seiten der Verlage zu vielen Lobpreisliedern.
+ * 3. **Genius** — der reine Text, gerade bei deutschen Titeln.
+ * 4. **Ultimate Guitar** — zuletzt, und nur kostenlose Blätter
+ *    (`PAYWALLED`).
+ *
+ * Höchstens einer je Seite und drei je Lauf: Ultimate Guitar kommt damit meist
+ * erst beim zweiten Druck oder dann, wenn die anderen nichts haben.
  *
  * Bewusst eine Konstante und keine Umgebungsvariable: die Liste ändert sich
  * vielleicht einmal im Jahr, und dann ist ein Commit ehrlicher als eine stille
  * Einstellung auf dem Server, die niemand mehr findet.
  */
-export const LYRICS_SITE_PREFERENCE = ['ultimate-guitar.com', 'genius.com'];
+export const LYRICS_SITE_PREFERENCE = [
+  'cifraclub.com',
+  'worshiptogether.com',
+  'genius.com',
+  'ultimate-guitar.com',
+];
+
+/**
+ * Ultimate-Guitar-Blätter, die nur mit Abo aufgehen: „Official"-Fassungen und
+ * Guitar-Pro-Dateien. Die gewöhnlichen „Chords"- und „Tabs"-Seiten sind frei.
+ * Erkannt an der Adresse (`…-official-123456`, `…-guitar-pro-123456`, `/pro/`)
+ * — vor dem Abruf, und für Treffer aus dem eigenen Archiv genauso.
+ */
+const PAYWALLED = /-(?:official|guitar-pro)-\d+\/?$|\/pro\//i;
 
 /**
  * Seiten, die auf eine Songsuche hin oben stehen, aber nie das sind, was
@@ -421,9 +444,12 @@ export class SongLookupService implements LyricsRetriever {
         `Suche eine Seite mit Text oder Akkorden zum Lied „${title}"` +
           (artist ? ` von ${artist}.` : '.'),
         '',
-        'Bevorzugte Seiten, in dieser Reihenfolge:',
+        'Bevorzugt Seiten ohne Bezahlschranke, in dieser Reihenfolge:',
         ...LYRICS_SITE_PREFERENCE.map((site, index) => `${index + 1}. ${site}`),
         '',
+        // Die bezahlten Fassungen stehen bei UG oft ganz oben in der Suche.
+        '- Von ultimate-guitar.com nur kostenlose „Chords"- oder „Tabs"-Seiten,',
+        '  keine „Official"-Fassungen und keine Pro- oder Guitar-Pro-Tabs.',
         `- Höchstens ${MAX_CANDIDATES} Vorschläge, höchstens einer pro Seite.`,
         '- Nur die Seite zu genau diesem Lied, keine Übersichten,',
         '  Bestenlisten, Alben- oder Interpretenseiten.',
@@ -695,6 +721,9 @@ function toCandidate(
   // dorthin ist ein „gibt es nicht" mit freundlicherem Statuscode.
   if (url.pathname === '/') return null;
   if (NEVER_LINK.some((blocked) => isOn(host, blocked))) return null;
+  if (isOn(host, 'ultimate-guitar.com') && PAYWALLED.test(url.pathname)) {
+    return null;
+  }
 
   const site = LYRICS_SITE_PREFERENCE.find((preferred) =>
     isOn(host, preferred),
