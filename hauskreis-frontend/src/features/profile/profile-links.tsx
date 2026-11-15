@@ -9,12 +9,14 @@
  * übereinander sahen sie aus wie Aktionen dieser Seite.
  *
  * Die Gruppe ist **gefüllt in Terracotta**: Sie ist das Ziel, das ohne
- * Kopfleiste sonst nirgends steht. Die Verwaltung bleibt neutral — sie ist für
- * wenige und selten.
+ * Kopfleiste sonst nirgends steht. Die Verwaltung ebenso, dazu mit einem
+ * Hauch Terracotta in Rand und Fläche und einem Schein unter dem Kreis — sie
+ * ist für wenige da, und wer sie hat, soll sie in der langen Seite sofort
+ * finden. Statt eines „Admin"-Abzeichens sagt die Zeile darunter in
+ * Terracotta, was dort wartet.
  */
-import { ChevronRight, Shield, Users } from 'lucide-react';
+import { ChevronRight, ShieldCheck, Users } from 'lucide-react';
 import Link from '@/components/ui/link';
-import { Badge } from '@/components/ui/badge';
 import { PRESSABLE } from '@/components/ui/button';
 import { usePeople } from '@/lib/api/hooks';
 import { cn } from '@/lib/cn';
@@ -25,12 +27,16 @@ function LinkRow({
   title,
   subtitle,
   className,
+  subtitleClassName,
+  chevronClassName,
 }: {
   href: string;
   icon: React.ReactNode;
   title: React.ReactNode;
   subtitle?: string;
   className?: string;
+  subtitleClassName?: string;
+  chevronClassName?: string;
 }) {
   return (
     <Link
@@ -48,10 +54,22 @@ function LinkRow({
           {title}
         </div>
         {subtitle && (
-          <p className="mt-0.5 truncate text-xs text-stone-400">{subtitle}</p>
+          <p
+            className={cn(
+              'mt-0.5 truncate text-xs text-stone-400',
+              subtitleClassName,
+            )}
+          >
+            {subtitle}
+          </p>
         )}
       </div>
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-canvas text-stone-400 transition-colors group-hover:text-terracotta-500">
+      <span
+        className={cn(
+          'flex size-8 shrink-0 items-center justify-center rounded-full bg-canvas text-stone-400 transition-colors group-hover:text-terracotta-500',
+          chevronClassName,
+        )}
+      >
         <ChevronRight size={16} />
       </span>
     </Link>
@@ -90,15 +108,15 @@ export function AdminLink({ unread }: { unread: boolean }) {
   return (
     <LinkRow
       href="/admin"
+      className="border-terracotta-500/25 bg-linear-to-r from-terracotta-500/[0.07] to-card hover:border-terracotta-500/45"
       icon={
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-full border border-line bg-canvas text-stone-500">
-          <Shield size={19} />
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-terracotta-500 text-white shadow-[0_6px_18px_-6px_var(--color-terracotta-500)]">
+          <ShieldCheck size={21} />
         </span>
       }
       title={
         <>
-          Admin-Bereich
-          <Badge variant="terracotta">Admin</Badge>
+          <span className="text-[17px]">Admin-Bereich</span>
           {/* Bis man einmal drin war. Wer gerade ernannt wurde, sieht hier eine
               Zeile mehr und sonst nichts, das ihm sagt, was dahinter steht. */}
           {unread && (
@@ -109,6 +127,9 @@ export function AdminLink({ unread }: { unread: boolean }) {
           )}
         </>
       }
+      subtitle="Hauskreis verwalten"
+      subtitleClassName="font-semibold text-terracotta-500"
+      chevronClassName="size-9 border border-line text-terracotta-500"
     />
   );
 }
