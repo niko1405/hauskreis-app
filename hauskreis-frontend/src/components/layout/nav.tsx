@@ -20,6 +20,7 @@ import {
   UsersRound,
   type LucideIcon,
 } from 'lucide-react';
+import { GlidePill } from '@/components/ui/glide-pill';
 import Link from '@/components/ui/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -178,20 +179,33 @@ export function TabBar() {
                 aria-current={active ? 'page' : undefined}
                 // Das aktive Ziel ist eine eigene Pille in der Pille — getönt
                 // und umrandet in Terracotta, wie jede Auswahl in der App.
+                // **Sie gleitet zum nächsten Ziel** (`GlidePill`), statt dort
+                // neu aufzutauchen: Man sieht, wohin man gewechselt hat. Der
+                // durchsichtige Rand hält die Maße, die sie früher als echter
+                // Rand hatte.
                 className={cn(
-                  'flex flex-col items-center gap-1 rounded-[1.375rem] border py-2 text-[10px] font-semibold transition-colors',
+                  'relative block rounded-[1.375rem] border border-transparent py-2 text-[10px] font-semibold transition-[color,scale] duration-150 active:scale-95',
                   active
-                    ? 'border-terracotta-500/40 bg-terracotta-500/15 text-terracotta-500'
-                    : 'border-transparent text-stone-400 hover:text-stone-600',
+                    ? 'text-terracotta-500'
+                    : 'text-stone-400 hover:text-stone-600',
                 )}
               >
-                <NavIcon
-                  icon={Icon}
-                  size={20}
-                  strokeWidth={active ? 2.4 : 1.8}
-                  unread={unread && href === UNREAD_HREF}
-                />
-                {label}
+                {active && (
+                  <GlidePill
+                    id="tabbar-pill"
+                    radius={22}
+                    className="-inset-px border border-terracotta-500/40 bg-terracotta-500/15"
+                  />
+                )}
+                <span className="relative flex flex-col items-center gap-1">
+                  <NavIcon
+                    icon={Icon}
+                    size={20}
+                    strokeWidth={active ? 2.4 : 1.8}
+                    unread={unread && href === UNREAD_HREF}
+                  />
+                  {label}
+                </span>
               </Link>
             </li>
           );
@@ -229,14 +243,24 @@ export function Sidebar() {
           href={href}
           aria-current={active ? 'page' : undefined}
           className={cn(
-            'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition-colors',
+            'relative block rounded-md px-3 py-2.5 text-sm font-semibold transition-colors',
             active
-              ? 'bg-terracotta-50 text-terracotta-700'
+              ? 'text-terracotta-700'
               : 'text-stone-500 hover:bg-stone-100',
           )}
         >
-          <NavIcon icon={icon} size={18} unread={unread} />
-          {label}
+          {/* Dieselbe gleitende Fläche wie unten in der Tab-Leiste. */}
+          {active && (
+            <GlidePill
+              id="sidebar-pill"
+              radius={20}
+              className="inset-0 bg-terracotta-50"
+            />
+          )}
+          <span className="relative flex items-center gap-3">
+            <NavIcon icon={icon} size={18} unread={unread} />
+            {label}
+          </span>
         </Link>
       </li>
     );

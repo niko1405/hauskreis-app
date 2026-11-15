@@ -22,7 +22,8 @@
  */
 import { ArrowRight, CalendarOff, Coffee } from 'lucide-react';
 import Link from '@/components/ui/link';
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import { GlidePill } from '@/components/ui/glide-pill';
 import { Badge } from '@/components/ui/badge';
 import { PRESSABLE } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -65,6 +66,7 @@ export function MyRoles({
   nextMeetingId: string | null;
 }) {
   const [tab, setTab] = useState<Tab>('next');
+  const pill = useId();
 
   // Der Vergleich nur mit gesetztem `nextMeetingId`: sonst würde `null === null`
   // eine terminlose Rolle zur Rolle „am nächsten Treffen" machen.
@@ -95,11 +97,13 @@ export function MyRoles({
         className="mb-3 flex gap-1 rounded-md border border-line bg-canvas p-1"
       >
         <Segment
+          pill={pill}
           active={tab === 'next'}
           onSelect={() => setTab('next')}
           label="Nächstes"
         />
         <Segment
+          pill={pill}
           active={tab === 'later'}
           onSelect={() => setTab('later')}
           label="Zukünftige"
@@ -125,7 +129,13 @@ export function MyRoles({
               aria-label={panel === 'next' ? 'Nächstes' : 'Zukünftige'}
               aria-hidden={!active}
               inert={!active}
-              className={cn('[grid-area:1/1]', !active && 'invisible')}
+              // Überblenden statt Umspringen: Deckkraft und Sichtbarkeit
+              // gehen zusammen, damit das verdeckte Register nach dem
+              // Ausblenden auch wirklich weg ist (kein Tipp, kein Fokus).
+              className={cn(
+                '[grid-area:1/1] transition-[opacity,visibility] duration-200',
+                !active && 'invisible opacity-0',
+              )}
             >
               {items.length > 0 ? (
                 <Card className="overflow-hidden p-0">
@@ -162,11 +172,14 @@ export function MyRoles({
 }
 
 function Segment({
+  pill,
   active,
   onSelect,
   label,
   count,
 }: {
+  /** Die Kennung der gleitenden Fläche — dieselbe für beide Register. */
+  pill: string;
   active: boolean;
   onSelect: () => void;
   label: string;
@@ -179,16 +192,23 @@ function Segment({
       aria-selected={active}
       onClick={onSelect}
       className={cn(
-        'flex-1 rounded-sm border py-1.5 text-xs font-bold transition-colors',
-        active
-          ? 'border-line-strong bg-card text-stone-800 shadow-sm'
-          : 'border-transparent text-stone-400 hover:text-stone-600',
+        'relative flex-1 rounded-sm border border-transparent py-1.5 text-xs font-bold transition-colors',
+        active ? 'text-stone-800' : 'text-stone-400 hover:text-stone-600',
       )}
     >
-      {label}
-      {count !== undefined && (
-        <span className="ml-1 opacity-60">({count})</span>
+      {active && (
+        <GlidePill
+          id={pill}
+          radius={16}
+          className="-inset-px border border-line-strong bg-card shadow-sm"
+        />
       )}
+      <span className="relative">
+        {label}
+        {count !== undefined && (
+          <span className="ml-1 opacity-60">({count})</span>
+        )}
+      </span>
     </button>
   );
 }

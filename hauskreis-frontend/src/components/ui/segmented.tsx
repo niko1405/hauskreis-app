@@ -28,8 +28,13 @@
  *
  * `count` steht klein hinter dem Wort („Lieder 3"), für Register, hinter denen
  * eine Liste liegt. Ohne Zahl steht nichts — „Orte 0" wäre keine Auskunft.
+ *
+ * Die gewählte Fläche **gleitet** zur neuen Wahl (`GlidePill`), wie die
+ * Pille in der Tab-Leiste.
  */
+import { useId } from 'react';
 import { cn } from '@/lib/cn';
+import { GlidePill } from './glide-pill';
 
 export function Segmented<Value extends string>({
   value,
@@ -56,6 +61,8 @@ export function Segmented<Value extends string>({
   equal?: boolean;
   iconOnly?: boolean;
 }) {
+  const pill = useId();
+
   return (
     <div
       role="radiogroup"
@@ -75,7 +82,7 @@ export function Segmented<Value extends string>({
           title={iconOnly ? option.label : undefined}
           onClick={() => onChange(option.value)}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full font-semibold transition-colors',
+            'relative inline-flex items-center rounded-full font-semibold transition-colors',
             fill && 'flex-auto justify-center',
             equal && 'min-w-0 flex-1 justify-center',
             size === 'sm'
@@ -84,23 +91,32 @@ export function Segmented<Value extends string>({
                 ? 'px-2 py-1.5 text-[13px]'
                 : 'px-4 py-1.5 text-sm',
             value === option.value
-              ? 'bg-terracotta-500 text-white'
+              ? 'text-white'
               : 'text-stone-500 hover:text-stone-700',
           )}
         >
-          {option.icon}
-          {option.icon ? (
-            <span className={cn('sr-only', !iconOnly && 'sm:not-sr-only')}>
-              {option.label}
-            </span>
-          ) : (
-            <span className="truncate">{option.label}</span>
+          {value === option.value && (
+            <GlidePill
+              id={pill}
+              radius={9999}
+              className="inset-0 bg-terracotta-500"
+            />
           )}
-          {option.count !== undefined && (
-            <span className="-ml-0.5 shrink-0 text-[11px] opacity-70">
-              {option.count}
-            </span>
-          )}
+          <span className="relative inline-flex min-w-0 items-center gap-1.5">
+            {option.icon}
+            {option.icon ? (
+              <span className={cn('sr-only', !iconOnly && 'sm:not-sr-only')}>
+                {option.label}
+              </span>
+            ) : (
+              <span className="truncate">{option.label}</span>
+            )}
+            {option.count !== undefined && (
+              <span className="-ml-0.5 shrink-0 text-[11px] opacity-70">
+                {option.count}
+              </span>
+            )}
+          </span>
         </button>
       ))}
     </div>
