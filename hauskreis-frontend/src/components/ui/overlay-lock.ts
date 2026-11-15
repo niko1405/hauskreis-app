@@ -20,6 +20,9 @@
  *
  * Beides ist dieselbe Frage — „liegt gerade etwas darüber" —, und sie hat
  * genau eine Antwort. Deshalb ein Modul und keine zwei.
+ *
+ * Dazu kommt ein Drittes: **Eine Seite, die noch hereingleitet, ist sofort
+ * da**, wenn etwas über ihr aufgeht (`finishEntrances`).
  */
 import { useSyncExternalStore } from 'react';
 
@@ -43,6 +46,7 @@ function emit(): void {
  */
 export function lockOverlay(): () => void {
   if (open === 0) {
+    finishEntrances();
     restore = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
   }
@@ -65,6 +69,32 @@ export function lockOverlay(): () => void {
 
     emit();
   };
+}
+
+/** Die Animationen, mit denen Seiten und Register hereinkommen (`globals.css`). */
+const ENTRANCES = new Set(['fade-in', 'push-in', 'back-in', 'panel-in']);
+
+/**
+ * Bringt jede laufende Seiten- und Register-Animation an ihr Ende.
+ *
+ * Sie verschieben ihren Kasten per `transform`, und solange das läuft, ist er
+ * der Bezugsrahmen für jedes `position: fixed` darin — ein Sheet rendert ohne
+ * Portal und säße dann in der Seite, die gerade hereinfährt, statt über ihr,
+ * samt Schleier, der nur die Seite deckt. Wer in den ersten Zehnteln nach
+ * einem Wechsel etwas antippt, sähe das. Fertig gibt es kein `transform` mehr
+ * (`backwards`, nicht `both`), und unter dem Schleier fehlt nichts.
+ */
+function finishEntrances(): void {
+  if (typeof document.getAnimations !== 'function') return;
+
+  for (const animation of document.getAnimations()) {
+    if (
+      'animationName' in animation &&
+      ENTRANCES.has((animation as CSSAnimation).animationName)
+    ) {
+      animation.finish();
+    }
+  }
 }
 
 function subscribe(listener: () => void): () => void {
