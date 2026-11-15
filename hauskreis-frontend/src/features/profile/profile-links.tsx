@@ -10,9 +10,10 @@
  *
  * Die Gruppe ist **gefüllt in Terracotta**: Sie ist das Ziel, das ohne
  * Kopfleiste sonst nirgends steht. Die Verwaltung ebenso, dazu mit einem
- * Hauch Terracotta in Rand und Fläche und einem Schein unter dem Kreis — sie
+ * Hauch Terracotta in Rand und Fläche und einem etwas größeren Kreis — sie
  * ist für wenige da, und wer sie hat, soll sie in der langen Seite sofort
- * finden. Statt eines „Admin"-Abzeichens sagt die Zeile darunter in
+ * finden. Einen Schein um den Kreis hat sie nicht mehr: Mit der getönten
+ * Fläche zusammen war das einmal zu viel. Statt eines „Admin"-Abzeichens sagt die Zeile darunter in
  * Terracotta, was dort wartet.
  */
 import { ChevronRight, ShieldCheck, Users } from 'lucide-react';
@@ -110,7 +111,7 @@ export function AdminLink({ unread }: { unread: boolean }) {
       href="/admin"
       className="border-terracotta-500/25 bg-linear-to-r from-terracotta-500/[0.07] to-card hover:border-terracotta-500/45"
       icon={
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-terracotta-500 text-white shadow-[0_6px_18px_-6px_var(--color-terracotta-500)]">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-terracotta-500 text-white">
           <ShieldCheck size={21} />
         </span>
       }
