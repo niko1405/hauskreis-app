@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/layout/app-shell';
 import { RequireAdmin } from '@/components/layout/require-admin';
 import { AdminDraftProvider } from '@/features/admin/admin-draft';
+import { AdminReady } from '@/features/admin/admin-ready';
 import { BirthdayGiftAdmin } from '@/features/admin/birthday-gift-admin';
 import { GuideCard } from '@/features/admin/guide-card';
 import { HostWeightsAdmin } from '@/features/admin/host-weights-admin';
@@ -26,14 +27,16 @@ export default function AdminPage() {
         {/* Mitglieder, dann die Rhythmen (Termine, Gebet, Actionstep), dann
             Geschenke und Gewichtung, am Ende die Läufe — vom Häufigen zum
             Seltenen. */}
-        <div className="space-y-6 px-5">
-          <GuideCard />
-          <PeopleAdmin />
-          <GroupSettingsAdmin />
-          <BirthdayGiftAdmin />
-          <HostWeightsAdmin />
-          <JobsAdmin />
-        </div>
+        <AdminReady>
+          <div className="space-y-6 px-5">
+            <GuideCard />
+            <PeopleAdmin />
+            <GroupSettingsAdmin />
+            <BirthdayGiftAdmin />
+            <HostWeightsAdmin />
+            <JobsAdmin />
+          </div>
+        </AdminReady>
       </AdminDraftProvider>
     </RequireAdmin>
   );

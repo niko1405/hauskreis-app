@@ -71,6 +71,7 @@ import {
   useHasSmartHeader,
   useHeaderScroll,
 } from './use-header-scroll';
+import { WarmUp } from './warm-up';
 
 export function SmartHeader() {
   const show = useHasSmartHeader();
@@ -135,6 +136,9 @@ export function SmartHeader() {
           {/* Der eine Weg zur Gruppe, und der einzige hervorgehobene Knopf der
               Leiste. Ganz oben als Glas, damit er sich ins Foto einfügt; auf
               dem Balken hell gefüllt, weil er sich sonst darin verlöre. */}
+          {/* Ihr Bildschirm lädt schon vor, solange die Leiste dasteht — so
+              kommt er fertig von unten herauf (`warm-up.tsx`). */}
+          <WarmUp page="group" />
           <Link
             href="/hauskreis"
             className={cn(

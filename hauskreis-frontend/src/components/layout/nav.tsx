@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { GlidePill } from '@/components/ui/glide-pill';
 import { LEVEL_TRANSITION } from '@/lib/page-transition';
+import { WarmUp } from './warm-up';
 import Link from '@/components/ui/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -283,6 +284,11 @@ export function Sidebar() {
     // Glocke ragt rechts über die Spalte hinaus; ein `overflow` an ihr schnitte
     // sie ab. `z-40` hebt sie samt Blase über den Inhalt daneben.
     <aside className="vt-chrome-sidebar hidden w-56 shrink-0 border-r border-line md:sticky md:top-0 md:z-40 md:flex md:h-dvh md:flex-col md:self-start print:hidden">
+      {/* Gruppe und Verwaltung stehen hier dauernd im Bild: Ihre Daten laden
+          vor, damit sie fertig erscheinen (`warm-up.tsx`). Nur am Rechner —
+          mobil ist die Spalte nur versteckt, nicht weg. */}
+      <WarmUp page="group" media="(min-width: 48rem)" />
+      {me.isAdmin && <WarmUp page="admin" media="(min-width: 48rem)" />}
       <nav
         aria-label="Hauptnavigation"
         // Der sichere Rand kommt zum vorhandenen Abstand dazu: Auf dem iPad vom

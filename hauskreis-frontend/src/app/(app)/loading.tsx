@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Was dasteht, solange eine Seite noch nicht da ist.
  *
@@ -12,12 +14,25 @@
  * Erst nach einem Augenblick sichtbar (`animation-delay`): Ein Gerüst, das für
  * ein Zehntel aufblitzt, wirkt unruhiger als ein leerer Moment. Hoch wie der
  * Bildschirm, damit eine hereingleitende Seite keine halbe ist.
+ *
+ * **Danach blendet die Seite ein, statt aufzuspringen**: Das Gerüst markiert
+ * den Kasten der Seite (`data-revealing`), und `globals.css` lässt den Inhalt,
+ * der an seine Stelle tritt, kurz hereinkommen. Ohne Gerüst — die Seite war
+ * vorgeladen — gibt es die Markierung nicht und keine zweite Bewegung.
  */
+import { useLayoutEffect, useRef } from 'react';
 import { CardSkeleton, Skeleton } from '@/components/ui/states';
 
 export default function Loading() {
+  const self = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    self.current?.closest('[data-page]')?.setAttribute('data-revealing', '');
+  }, []);
+
   return (
     <div
+      ref={self}
       role="status"
       aria-label="Wird geladen"
       className="min-h-dvh animate-[fade-in_240ms_ease-out_160ms_backwards] space-y-4 px-5 pt-[calc(var(--safe-top)+1rem)]"

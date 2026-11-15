@@ -36,14 +36,20 @@ import {
 } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
-import { useHauskreisDetail, useUpdateHauskreis } from '@/lib/api/hooks';
+import { useUpdateHauskreis } from '@/lib/api/hooks';
+import { useReady } from '@/lib/use-ready';
+import { useGroupData } from './group-data';
 import { GroupPhotoPicker } from './group-photo-picker';
 import { IdeasCard } from './ideas-card';
 import { MembersCard } from './members-card';
 import type { Hauskreis } from '@/lib/api/types';
 
 export function GroupScreen() {
-  const detail = useHauskreisDetail();
+  // Bild und Name, Ideen und Mitglieder erscheinen zusammen (`useReady`):
+  // Einzeln sprangen sie auf, während der Bildschirm von unten heraufkam.
+  const data = useGroupData();
+  const [detail] = data;
+  const { ready, reveal } = useReady(data);
   const update = useUpdateHauskreis();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -59,7 +65,7 @@ export function GroupScreen() {
           „Heute" kam, woanders hin als dorthin, wo er war. */}
       <div className="flex items-center justify-between gap-2">
         <BackButton fallback="/" className="md:hidden" />
-        {hauskreis && (
+        {ready && hauskreis && (
           <Button
             variant="secondary"
             size="sm"
@@ -74,22 +80,24 @@ export function GroupScreen() {
 
       {update.conflict && <ConflictBanner onResolve={update.resolveConflict} />}
 
-      {detail.isLoading && <CardSkeleton />}
+      {!ready && <CardSkeleton />}
 
-      {!detail.isLoading && !hauskreis && (
+      {ready && !hauskreis && (
         <ErrorState
           error={detail.error}
           onRetry={() => void detail.refetch()}
         />
       )}
 
-      {hauskreis && (
+      {ready && hauskreis && (
         <>
-          <Identity hauskreis={hauskreis} />
+          <div className={cn('space-y-6', reveal)}>
+            <Identity hauskreis={hauskreis} />
 
-          <IdeasCard />
+            <IdeasCard />
 
-          <MembersCard />
+            <MembersCard />
+          </div>
 
           {/* Der Schlüssel wirft den Entwurf weg, sobald von außen eine neue
               Fassung kommt — sonst stünde nach dem Speichern der eigene Text

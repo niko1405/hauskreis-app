@@ -253,6 +253,13 @@
   }
 }
 
+/* Was an die Stelle des Ladegerüsts tritt (`app/(app)/loading.tsx`), kommt
+   kurz herein, statt aufzuspringen. Das Gerüst selbst ist ausgenommen: Es hat
+   seine eigene, verzögerte Einblendung. */
+[data-page][data-revealing] > :not([role='status']) {
+  animation: panel-in 300ms var(--ease-ios) backwards;
+}
+
 @keyframes sheet-in {
   from {
     transform: translateY(100vh);
