@@ -32,6 +32,37 @@ const TOP_THRESHOLD = 8;
  */
 const DIRECTION_THRESHOLD = 6;
 
+/**
+ * **Erst ab hier holt das Hochwischen die Leiste zurück.**
+ *
+ * Darunter ist man fast oben, und die Leiste käme für einen Augenblick, um
+ * gleich danach in den Schleier überzugehen — oder auf „Termine" ganz oben
+ * wieder zu verschwinden. Ein Balken, der nur kurz aufblitzt, sieht aus wie
+ * ein Fehler. Wer weiter unten hochwischt, bekommt sie wie bisher; wer nahe
+ * dem Anfang ist, ist ohnehin gleich oben.
+ */
+const REVEAL_MIN = 240;
+
+/**
+ * Wie die Kopfleiste auf einem Tab steht.
+ *
+ * - `full`: oben als Schleier über dem Kopfbild, beim Zurückwischen als Balken
+ *   — Heute, Gebet, Profil.
+ * - `scroll`: **nur** beim Zurückwischen, nie ganz oben. Auf „Termine" steht
+ *   oben der Titel mit eigenen Knöpfen, und darüber nur „Gruppe" und Glocke
+ *   ohne Bild wäre eine leere Zeile.
+ * - `none`: gar nicht. Im Archiv klebt beim Scrollen die Kapsel der
+ *   Kategorien oben, und eine Leiste, die beim Hochwischen darüberführe,
+ *   deckte genau sie zu.
+ */
+export type HeaderMode = 'full' | 'scroll' | 'none';
+
+export function headerModeOf(pathname: string): HeaderMode {
+  if (pathname.startsWith('/archiv')) return 'none';
+  if (pathname.startsWith('/termine')) return 'scroll';
+  return 'full';
+}
+
 export function useHeaderScroll(): {
   atTop: boolean;
   hidden: boolean;
@@ -76,15 +107,24 @@ export function useHeaderScroll(): {
 
       setAtTop(y < TOP_THRESHOLD);
 
+      // Ganz oben ist sie da (als Schleier), egal woher man kam — auch wenn
+      // der letzte Schritt dorthin kleiner war als die Richtungsschwelle.
+      if (y < TOP_THRESHOLD) {
+        last = y;
+        setHidden(false);
+        return;
+      }
+
       const delta = y - last;
       if (Math.abs(delta) < DIRECTION_THRESHOLD) return;
       last = y;
 
-      // Nach unten heißt weg, nach oben heißt sofort zurück. Beide `setState`
-      // dieses Durchlaufs fasst React zu einem Render zusammen — auch bei
-      // einem Fling von 0 auf 300 gibt es kein Zwischenbild, in dem die
-      // Leiste schon solide und noch da wäre.
-      setHidden(delta > 0 && y > 0);
+      // Nach unten heißt weg, nach oben heißt zurück — aber nur mit Anlauf
+      // (`REVEAL_MIN`). Beide `setState` dieses Durchlaufs fasst React zu
+      // einem Render zusammen — auch bei einem Fling von 0 auf 300 gibt es kein
+      // Zwischenbild, in dem die Leiste schon solide und noch da wäre.
+      if (delta > 0) setHidden(true);
+      else if (y > REVEAL_MIN) setHidden(false);
     };
 
     // Gedrosselt auf ein Bild: `scroll` feuert auf iOS bei jedem Frame, und
@@ -144,5 +184,24 @@ export function useHasSmartHeader(): boolean {
   const pathname = usePathname();
   const { shown } = useHeaderPreference();
 
-  return shown && isTabRoute(pathname);
+  return shown && isTabRoute(pathname) && headerModeOf(pathname) !== 'none';
+}
+
+/**
+ * Ob die Leiste **ganz oben** über dem Titel liegt — und der Kopf ihr deshalb
+ * Platz lassen muss (`PageHeader`). Auf „Termine" nicht: Dort kommt sie erst
+ * beim Zurückwischen, und oben stünde sonst eine leere Fläche über dem Titel.
+ */
+export function useHeaderOverTitle(): boolean {
+  const pathname = usePathname();
+  return useHasSmartHeader() && headerModeOf(pathname) === 'full';
+}
+
+/**
+ * Wo ohne Kopfleiste trotzdem die Glocke steht: auf „Heute" und im Profil,
+ * ganz oben und nicht klebend. Die Nachrichten-Box hängt an ihr, und ohne
+ * diesen einen Eingang wäre sie mit der Leiste ganz weg.
+ */
+export function isBellOnlyRoute(pathname: string): boolean {
+  return pathname === '/' || pathname.startsWith('/profil');
 }

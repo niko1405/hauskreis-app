@@ -16,7 +16,7 @@ import { GlobalProgress } from './global-progress';
 import { useInboxBadge } from './notification-bell';
 import { PullToRefresh } from './pull-to-refresh';
 import { SmartHeader } from './smart-header';
-import { useHasSmartHeader } from './use-header-scroll';
+import { useHeaderOverTitle } from './use-header-scroll';
 import { useInboxDeeplink } from './use-inbox-deeplink';
 import { isSidebarRoute, isTabRoute, Sidebar, TabBar } from './nav';
 
@@ -141,7 +141,7 @@ export function PageHeader({
   // Gefragt wird hier und nicht über eine Prop: Termine und Archiv tragen sie,
   // Verwaltung, Hilfe und „Was ist neu" nicht — und keine dieser Seiten sollte
   // sich das merken müssen.
-  const underHeader = useHasSmartHeader();
+  const underHeader = useHeaderOverTitle();
   const pathname = usePathname();
 
   return (

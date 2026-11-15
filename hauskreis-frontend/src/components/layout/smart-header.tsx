@@ -46,9 +46,17 @@
  * zum Bezugsrahmen für jedes `position: fixed` darin — dieselbe Eigenschaft,
  * wegen der `pull-to-refresh.tsx` den Inhalt nie verschiebt. Die Blase säße
  * sonst in einem 56 Pixel hohen Kasten statt unter der Glocke.
+ *
+ * **Nicht auf jedem Tab gleich** (`headerModeOf`): Auf „Termine" kommt sie nur
+ * beim Zurückwischen und steht oben nicht, im Archiv gar nicht.
+ *
+ * **Ohne Kopfleiste bleibt die Glocke** — auf „Heute" und im Profil, ganz oben
+ * und ohne zu kleben (`BellOnly`). Sonst wäre mit der Leiste auch die
+ * Nachrichten-Box weg.
  */
 import Link from '@/components/ui/link';
 import { Users } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { PRESSABLE } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
@@ -56,15 +64,31 @@ import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { GroupAvatar } from './group-avatar';
 import { NotificationBell } from './notification-bell';
 import { NotificationInbox } from './notification-inbox';
-import { useHasSmartHeader, useHeaderScroll } from './use-header-scroll';
+import { useHeaderPreference } from '@/lib/header-preference';
+import {
+  headerModeOf,
+  isBellOnlyRoute,
+  useHasSmartHeader,
+  useHeaderScroll,
+} from './use-header-scroll';
 
 export function SmartHeader() {
   const show = useHasSmartHeader();
-  const { atTop, hidden, suppressed } = useHeaderScroll();
+  const pathname = usePathname();
+  const preference = useHeaderPreference();
+  const { atTop, hidden: scrolledAway, suppressed } = useHeaderScroll();
   const { hauskreis } = useHauskreis();
   const [inbox, setInbox] = useState(false);
 
-  if (!show) return null;
+  if (!show) {
+    return !preference.shown && isBellOnlyRoute(pathname) ? (
+      <BellOnly open={inbox} onOpen={setInbox} />
+    ) : null;
+  }
+
+  // Auf „Termine" steht sie ganz oben nicht — dort ist sie nur der Weg zurück
+  // zu Gruppe und Glocke, wenn man weit unten ist.
+  const hidden = scrolledAway || (headerModeOf(pathname) === 'scroll' && atTop);
 
   return (
     <>
@@ -139,6 +163,36 @@ export function SmartHeader() {
 
       {/* Außerhalb der Leiste — siehe oben, `transform`. */}
       <NotificationInbox open={inbox} onClose={() => setInbox(false)} />
+    </>
+  );
+}
+
+/**
+ * Nur die Glocke, an der Stelle, an der sie in der Leiste säße — als Glas über
+ * dem Kopfbild.
+ *
+ * **`relative` und nicht `sticky`**: Sie scrollt mit der Seite weg. Wer die
+ * Leiste abgeschaltet hat, wollte oben nichts, das mitfährt; die Glocke ist nur
+ * der eine Eingang zur Nachrichten-Box, und den braucht man am Anfang einer
+ * Seite. Die Zeile selbst lässt Tipps durch, nur die Glocke nimmt sie an.
+ */
+function BellOnly({
+  open,
+  onOpen,
+}: {
+  open: boolean;
+  onOpen: (open: boolean) => void;
+}) {
+  return (
+    <>
+      <div className="header-inset pointer-events-none relative z-40 md:hidden">
+        <div className="h-header flex items-end justify-end px-4 pb-2.5">
+          <div className="pointer-events-auto">
+            <NotificationBell atTop onClick={() => onOpen(true)} />
+          </div>
+        </div>
+      </div>
+      <NotificationInbox open={open} onClose={() => onOpen(false)} />
     </>
   );
 }

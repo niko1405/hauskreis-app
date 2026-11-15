@@ -67,12 +67,13 @@ export function AppearanceCard() {
 
         {/* Auch eine Sache des Geräts und deshalb hier: Die Leiste ist ein
             Kompromiss — sie trägt den Weg zur Gruppe und die Glocke, liegt
-            dafür aber über den Kopfbildern. Wer sie nicht will, findet beides
-            danach im Profil. */}
+            dafür aber über den Kopfbildern. Wer sie nicht will, findet die
+            Gruppe danach im Profil und die Glocke oben auf „Heute" und im
+            Profil. */}
         <div className="border-t border-line pt-3 md:hidden">
           <SwitchRow
             label="Kopfleiste anzeigen"
-            description="Die Leiste über den Tabs mit Gruppenbild, „Gruppe“ und Glocke. Ohne sie erreichst du die Gruppe über dein Profil."
+            description="Die Leiste über den Tabs mit Gruppenbild, „Gruppe“ und Glocke. Ohne sie erreichst du die Gruppe über dein Profil, und die Glocke steht oben auf „Heute“ und im Profil."
             checked={header.shown}
             onChange={header.setShown}
           />
