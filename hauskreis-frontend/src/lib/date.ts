@@ -221,6 +221,27 @@ export function formatDayNumeric(day: CalendarDay): string {
   return `${date}.${month}`;
 }
 
+/**
+ * `heute`, `morgen`, `in 9d`, ab zwei Wochen `in 3W` — der Abstand so knapp,
+ * dass er mit dem Wochentag davor in die schmale Datumsspalte der Planung
+ * passt („Di, in 2d"). Dieselbe Kurzform wie „Noch 10d" auf „Heute".
+ *
+ * Wochen erst ab vierzehn Tagen: Darunter ist die genaue Zahl die Auskunft,
+ * darüber liest „in 37d" niemand mehr auf einen Blick.
+ */
+export function formatDayDistance(day: CalendarDay): string {
+  const diff = daysBetween(today(), day);
+
+  if (diff === 0) return 'heute';
+  if (diff === 1) return 'morgen';
+  if (diff === -1) return 'gestern';
+
+  const ahead = diff > 0;
+  const span = Math.abs(diff);
+  const amount = span < 14 ? `${span}d` : `${Math.round(span / 7)}W`;
+  return ahead ? `in ${amount}` : `vor ${amount}`;
+}
+
 /** `11. August` */
 export function formatDayMonth(day: CalendarDay): string {
   return DAY_MONTH.format(parseDay(day));

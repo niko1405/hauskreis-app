@@ -9,8 +9,9 @@
  * auf dem Telefon, mit Kurzformen im Kopf und kleinen Gesichtern. Wer mehr
  * lesen will, nimmt **„Reinzoomen"**: breitere Spalten und die volle
  * Bezeichnung — das Raster scrollt dann waagerecht, und die Datumsspalte bleibt
- * links stehen. **Dort so knapp wie möglich** („14.11"): Sie steht dauerhaft
- * im Bild, und jeder Pixel darin fehlt den Rollen daneben. Zwei Stufen statt eines Reglers: Es ist eine Frage
+ * links stehen. **Die Datumsspalte ist in beiden so knapp wie möglich** —
+ * „17.11", darunter „Di, in 2d": Sie steht dauerhaft im Bild, und jeder Pixel
+ * darin fehlt den Rollen daneben. Zwei Stufen statt eines Reglers: Es ist eine Frage
  * („alles sehen oder genauer hinsehen"), und drei Zwischengrößen beantworteten
  * sie nicht besser.
  *
@@ -43,10 +44,10 @@ import {
 } from '@/lib/api/hooks';
 import {
   addDays,
+  dayParts,
   formatDay,
+  formatDayDistance,
   formatDayNumeric,
-  formatDayShort,
-  formatRelativeDay,
   today,
 } from '@/lib/date';
 import {
@@ -346,15 +347,9 @@ function Row({
               zoom ? 'text-sm' : 'text-[13px]',
             )}
           >
-            {/* Gezoomt nur die Ziffern und abgesagt durchgestrichen — ein
-                „Fällt aus" darunter machte die ganze Spalte breiter. */}
-            <span
-              className={cn(zoom && cancelled && 'text-alert line-through')}
-            >
-              {zoom
-                ? formatDayNumeric(meeting.date)
-                : formatDayShort(meeting.date)}
-            </span>
+            {/* **In Ziffern, in beiden Größen** („17.11") — die Spalte steht
+                neben fünf Rollen, und jeder Pixel darin fehlt ihnen. */}
+            {formatDayNumeric(meeting.date)}
             {/* Nicht nur die Farbe: wer sie nicht unterscheidet, sieht das
                 Zeichen. Der Titel sagt dasselbe noch einmal in Worten. */}
             {fertig && (
@@ -365,23 +360,19 @@ function Row({
               />
             )}
           </span>
-          {!zoom && (
-            <span
-              className={cn(
-                'block truncate text-[10px]',
-                cancelled ? 'font-semibold text-alert' : 'text-stone-400',
-              )}
-            >
-              {cancelled
-                ? 'Fällt aus'
-                : // Die schmale Spalte fasst „in 2 Wochen", aber nicht
-                  // „in einer Woche" — dort steht die Zahl wie in den übrigen.
-                  formatRelativeDay(meeting.date).replace(
-                    'einer Woche',
-                    '1 Woche',
-                  )}
-            </span>
-          )}
+          {/* Darunter Wochentag und Abstand, knapp: „Di, in 2d". Ausgeschrieben
+              („in einer Woche") passte es nicht in die schmale Spalte. */}
+          <span
+            className={cn(
+              'block truncate whitespace-nowrap',
+              zoom ? 'text-[11px]' : 'text-[10px]',
+              cancelled ? 'font-semibold text-alert' : 'text-stone-400',
+            )}
+          >
+            {cancelled
+              ? 'Fällt aus'
+              : `${dayParts(meeting.date).weekday}, ${formatDayDistance(meeting.date)}`}
+          </span>
         </Link>
       </th>
 
