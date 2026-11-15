@@ -127,6 +127,44 @@ export function ArchiveScreen() {
   const [searching, setSearching] = useState(false);
   const field = useRef<HTMLInputElement>(null);
 
+  /**
+   * Ob die Kapsel gerade oben klebt — auch ohne Suchmodus.
+   *
+   * Wer im Archiv nach unten scrollt, behält die Kategorien oben, statt sie
+   * mit dem Kopf aus dem Bild zu schieben. Erst dann braucht die Zeile eine
+   * Fläche und einen Haarstrich; in Ruhe liegt sie durchsichtig über dem Ende
+   * des Kopfs. Gefragt wird die Zeile selbst: `sticky` hält sie bei 0, sobald
+   * sie dort ankommt — gedrosselt auf ein Bild wie in `use-header-scroll.ts`.
+   */
+  const bar = useRef<HTMLDivElement>(null);
+  const [pinned, setPinned] = useState(false);
+
+  useEffect(() => {
+    let frame = 0;
+
+    const read = () => {
+      frame = 0;
+      const element = bar.current;
+      if (!element) return;
+      setPinned(Math.abs(element.getBoundingClientRect().top) < 1);
+    };
+
+    const onScroll = () => {
+      if (frame !== 0) return;
+      frame = requestAnimationFrame(read);
+    };
+
+    read();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (frame !== 0) cancelAnimationFrame(frame);
+    };
+  }, []);
+
   // Wer sucht, will oben das Feld sehen und nicht Glocke und Gruppe darüber.
   useEffect(() => {
     if (!searching) return;
@@ -211,8 +249,15 @@ export function ArchiveScreen() {
           Das Feld steht **vor** dem Kopf und nicht an seiner Stelle — so ist
           es vom ersten Bild an oben, während der Kopf darunter einklappt
           (`enterSearch`). Die Kategorien bleiben stehen, denn gesucht wird in
-          der gewählten. */}
-      <div className={cn(searching && 'sticky top-0 z-30 bg-canvas')}>
+          der gewählten.
+
+          Ohne Suchmodus ist der Block `contents`: Dann klebt die Kapsel allein,
+          und zwar an der ganzen Seite — ein `sticky` hält sich nur innerhalb
+          seines Elternkastens, und der wäre sonst nur so hoch wie Kopf und
+          Kapsel. */}
+      <div
+        className={cn(searching ? 'sticky top-0 z-30 bg-canvas' : 'contents')}
+      >
         <AnimatePresence initial={false}>
           {searching && (
             <motion.div
@@ -286,16 +331,39 @@ export function ArchiveScreen() {
         </motion.div>
 
         {/* Die Kategorien als **eine** Kapsel, wie die Register auf „Termine" —
-            vier gleichrangige Teile desselben Archivs, keine Reihe Etiketten. */}
-        <div className={cn('px-5', searching ? 'pb-3' : 'pb-4')}>
-          <Segmented
-            equal
-            size="lg"
-            label="Kategorie"
-            value={tab}
-            onChange={selectTab}
-            options={tabs}
-          />
+            vier gleichrangige Teile desselben Archivs, keine Reihe Etiketten.
+
+            **Beim Runterscrollen klebt sie oben.** Den sicheren Rand trägt sie
+            dafür immer (`pt-safe-4`), und `-mt-safe-4` hebt ihn im Fluss wieder
+            auf: In Ruhe liegt sie, wo sie lag, und oben steht sie unter der
+            Statusleiste, ohne dass etwas umspringt. Der Rand ist in Ruhe
+            durchsichtig und lässt Tipps durch — er liegt über dem Kopf und der
+            Lupe darin. Die Kopfleiste kommt im Archiv nicht (`headerModeOf`),
+            also deckt nichts die Kapsel zu. */}
+        <div
+          ref={bar}
+          className={cn(
+            'px-5',
+            searching
+              ? 'pb-3'
+              : cn(
+                  'pointer-events-none sticky top-0 z-30 -mt-safe-4 pt-safe-4 pb-3 transition-[background-color,box-shadow] duration-200',
+                  pinned
+                    ? 'bg-canvas shadow-[0_1px_0_var(--color-line)]'
+                    : 'bg-transparent',
+                ),
+          )}
+        >
+          <div className="pointer-events-auto">
+            <Segmented
+              equal
+              size="lg"
+              label="Kategorie"
+              value={tab}
+              onChange={selectTab}
+              options={tabs}
+            />
+          </div>
         </div>
       </div>
 
