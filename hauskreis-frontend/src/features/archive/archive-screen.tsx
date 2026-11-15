@@ -356,6 +356,7 @@ export function ArchiveScreen() {
             <Segmented
               equal
               size="lg"
+              look="glow"
               label="Kategorie"
               value={tab}
               onChange={selectTab}

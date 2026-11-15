@@ -269,6 +269,7 @@ export function MeetingsScreen() {
           <Segmented
             equal
             size="lg"
+            look="glow"
             label="Ansicht"
             value={view}
             onChange={(next) => show(next, next === 'liste' && calendar)}
@@ -388,6 +389,7 @@ function MeetingListView({
             gewählte ist hervorgehoben. */}
         <Segmented
           iconOnly
+          look="glow"
           label="Welche Termine"
           value={scope}
           onChange={setScope}

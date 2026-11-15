@@ -178,6 +178,7 @@ function Rounds() {
                 „steht noch an", der Haken für „war schon". */}
               <Segmented
                 iconOnly
+                look="glow"
                 label="Welche Runden"
                 value={scope}
                 onChange={setScope}
