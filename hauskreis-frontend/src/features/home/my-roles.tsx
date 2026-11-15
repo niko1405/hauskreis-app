@@ -94,8 +94,13 @@ export function MyRoles({
       <div
         role="tablist"
         aria-label="Zeitraum"
-        className="mb-3 flex gap-1 rounded-md border border-line bg-canvas p-1"
+        className="relative mb-3 flex gap-1 rounded-md border border-line bg-canvas p-1"
       >
+        <GlidePill
+          group={pill}
+          active={tab}
+          className="rounded-sm border border-line-strong bg-card shadow-sm"
+        />
         <Segment
           pill={pill}
           active={tab === 'next'}
@@ -190,19 +195,13 @@ function Segment({
       type="button"
       role="tab"
       aria-selected={active}
+      data-glide={active ? pill : undefined}
       onClick={onSelect}
       className={cn(
         'relative flex-1 rounded-sm border border-transparent py-1.5 text-xs font-bold transition-colors',
         active ? 'text-stone-800' : 'text-stone-400 hover:text-stone-600',
       )}
     >
-      {active && (
-        <GlidePill
-          id={pill}
-          radius={16}
-          className="-inset-px border border-line-strong bg-card shadow-sm"
-        />
-      )}
       <span className="relative">
         {label}
         {count !== undefined && (

@@ -113,13 +113,19 @@ export function Segmented<Value extends string>({
       role="radiogroup"
       aria-label={label}
       className={cn(
-        'flex border border-line',
+        'relative flex border border-line',
         surface === 'inset' ? 'bg-shell' : 'bg-card',
         soft ? 'rounded-2xl p-1' : 'rounded-full',
         !soft && (size === 'lg' ? 'p-1' : 'p-0.5'),
         fill || equal ? 'w-full' : 'shrink-0',
       )}
     >
+      <GlidePill
+        group={pill}
+        active={value}
+        className={cn(soft ? 'rounded-xl' : 'rounded-full', PILL_LOOK[look])}
+      />
+
       {options.map((option) => {
         const chosen = value === option.value;
 
@@ -129,6 +135,7 @@ export function Segmented<Value extends string>({
             type="button"
             role="radio"
             aria-checked={chosen}
+            data-glide={chosen ? pill : undefined}
             title={iconOnly ? option.label : undefined}
             onClick={() => onChange(option.value)}
             className={cn(
@@ -144,13 +151,6 @@ export function Segmented<Value extends string>({
               chosen ? TEXT_LOOK[look] : 'text-stone-500 hover:text-stone-700',
             )}
           >
-            {chosen && (
-              <GlidePill
-                id={pill}
-                radius={soft ? 12 : 9999}
-                className={cn('inset-0', PILL_LOOK[look])}
-              />
-            )}
             <span className="relative inline-flex min-w-0 items-center gap-1.5">
               {option.icon && (
                 // Bei `glow` und `raised` trägt das Symbol der Wahl die Farbe

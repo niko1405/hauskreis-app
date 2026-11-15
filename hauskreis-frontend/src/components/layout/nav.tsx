@@ -169,20 +169,31 @@ export function TabBar() {
           Leinwand, kräftig weichgezeichnet und gesättigt, was darunter liegt,
           ein feiner Rand, oben eine Lichtkante und ein weicher Schatten nach
           unten. Das echte „Liquid Glass" gibt iOS nur eigenen Apps. */}
-      <ul className="pointer-events-auto flex items-stretch gap-1 rounded-[1.75rem] border border-line/70 bg-canvas/70 p-1.5 shadow-[0_12px_32px_-12px_rgb(0_0_0/0.5),inset_0_1px_0_rgb(255_255_255/0.08)] backdrop-blur-xl backdrop-saturate-150">
+      <ul className="pointer-events-auto relative flex items-stretch gap-1 rounded-[1.75rem] border border-line/70 bg-canvas/70 p-1.5 shadow-[0_12px_32px_-12px_rgb(0_0_0/0.5),inset_0_1px_0_rgb(255_255_255/0.08)] backdrop-blur-xl backdrop-saturate-150">
+        {/* Das aktive Ziel ist eine eigene Pille in der Pille — getönt und
+            umrandet in Terracotta, wie jede Auswahl in der App. **Sie gleitet
+            zum nächsten Ziel** (`GlidePill`), statt dort neu aufzutauchen:
+            Man sieht, wohin man gewechselt hat. Gemessen wird am Eintrag und
+            nicht am Link, der beim Drücken kleiner wird. */}
+        <GlidePill
+          as="li"
+          group="tabbar"
+          active={items.find(({ href }) => isActive(href))?.href ?? null}
+          className="rounded-[1.375rem] border border-terracotta-500/40 bg-terracotta-500/15"
+        />
         {items.map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (
-            <li key={href} className="flex-1">
+            <li
+              key={href}
+              data-glide={active ? 'tabbar' : undefined}
+              className="flex-1"
+            >
               <Link
                 href={href}
                 aria-current={active ? 'page' : undefined}
-                // Das aktive Ziel ist eine eigene Pille in der Pille — getönt
-                // und umrandet in Terracotta, wie jede Auswahl in der App.
-                // **Sie gleitet zum nächsten Ziel** (`GlidePill`), statt dort
-                // neu aufzutauchen: Man sieht, wohin man gewechselt hat. Der
-                // durchsichtige Rand hält die Maße, die sie früher als echter
-                // Rand hatte.
+                // Der durchsichtige Rand hält die Maße, die die Pille früher
+                // als echter Rand hatte.
                 className={cn(
                   'relative block rounded-[1.375rem] border border-transparent py-2 text-[10px] font-semibold transition-[color,scale] duration-150 active:scale-95',
                   active
@@ -190,13 +201,6 @@ export function TabBar() {
                     : 'text-stone-400 hover:text-stone-600',
                 )}
               >
-                {active && (
-                  <GlidePill
-                    id="tabbar-pill"
-                    radius={22}
-                    className="-inset-px border border-terracotta-500/40 bg-terracotta-500/15"
-                  />
-                )}
                 <span className="relative flex flex-col items-center gap-1">
                   <NavIcon
                     icon={Icon}
@@ -238,7 +242,7 @@ export function Sidebar() {
   ) => {
     const active = isActive(href);
     return (
-      <li key={href}>
+      <li key={href} data-glide={active ? 'sidebar' : undefined}>
         <Link
           href={href}
           aria-current={active ? 'page' : undefined}
@@ -249,14 +253,6 @@ export function Sidebar() {
               : 'text-stone-500 hover:bg-stone-100',
           )}
         >
-          {/* Dieselbe gleitende Fläche wie unten in der Tab-Leiste. */}
-          {active && (
-            <GlidePill
-              id="sidebar-pill"
-              radius={20}
-              className="inset-0 bg-terracotta-50"
-            />
-          )}
           <span className="relative flex items-center gap-3">
             <NavIcon icon={icon} size={18} unread={unread} />
             {label}
@@ -282,8 +278,18 @@ export function Sidebar() {
         // Der sichere Rand kommt zum vorhandenen Abstand dazu: Auf dem iPad vom
         // Home-Bildschirm reicht die App bis unter die Statusleiste, und dort
         // stünde sonst „Hauskreis" unter der Uhr.
-        className="min-h-0 flex-1 overflow-y-auto px-4 pt-[calc(var(--safe-top)+2rem)] pb-4"
+        className="relative min-h-0 flex-1 overflow-y-auto px-4 pt-[calc(var(--safe-top)+2rem)] pb-4"
       >
+        {/* Dieselbe gleitende Fläche wie unten in der Tab-Leiste — über beide
+            Listen hinweg, deshalb hängt sie an der Spalte. */}
+        <GlidePill
+          group="sidebar"
+          active={
+            [...main, ADMIN_ITEM].find(({ href }) => isActive(href))?.href ??
+            null
+          }
+          className="rounded-md bg-terracotta-50"
+        />
         <p className="mb-6 px-3 font-serif text-2xl font-bold text-stone-900">
           Hauskreis
         </p>
