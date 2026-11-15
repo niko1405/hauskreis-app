@@ -273,7 +273,6 @@ export function ArchiveScreen() {
               blättert. */}
           <PageHeader
             title="Archiv"
-            subtitle="Themen, Lieder, Orte & Notizen"
             action={
               <IconButton
                 label="Archiv durchsuchen"
