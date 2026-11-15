@@ -25,10 +25,10 @@
  * sondern die Form der Sache: Es gibt gar keine Adresse, unter der man an einer
  * fremden Zeile schreiben könnte (`…/prayer-requests/mine`).
  */
-import { Plus, Trash2 } from 'lucide-react';
+import { Heart, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Button, PRESSABLE } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { TextArea } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
@@ -71,6 +71,54 @@ export function PrayerRequestsCard({
   // ohne Anliegen wäre sie eine Erinnerung daran, dass niemand etwas hatte.
   if (entries.length === 0 && !mayAdd) return null;
 
+  const sheet = editing && (
+    // Nur solange es offen ist: So beginnt das Feld jedes Mal mit dem Stand,
+    // der gerade dasteht, und nicht mit einem halben Entwurf vom letzten Mal.
+    <PrayerRequestSheet
+      meetingId={meetingId}
+      current={mine?.text ?? null}
+      onClose={() => setEditing(false)}
+    />
+  );
+
+  // **Noch nichts da — eine Einladung statt einer leeren Liste.** Ein grauer
+  // Satz „Noch hat niemand etwas eingetragen" unter einem gestrichelten Knopf
+  // las sich wie ein Protokoll; die Frage „Was bewegt dich gerade?" ist das,
+  // was man an dieser Stelle eigentlich hören will. Gefüllt ist der Knopf
+  // nicht: Er ist eine Bitte, keine Pflicht vor dem Abend.
+  if (!requests.isLoading && entries.length === 0) {
+    return (
+      <section>
+        <SectionTitle>Gebetsanliegen</SectionTitle>
+        <Card className="flex flex-col items-center bg-linear-to-b from-terracotta-500/10 via-card to-card px-6 py-7 text-center">
+          <span className="flex size-12 items-center justify-center rounded-2xl border border-terracotta-500/30 bg-terracotta-500/10 text-terracotta-500">
+            <Heart size={22} />
+          </span>
+          <p className="mt-4 font-bold text-stone-900">
+            Was bewegt dich gerade?
+          </p>
+          <p className="mt-1 max-w-xs text-sm leading-relaxed text-stone-500">
+            Teile ein Anliegen oder einen Dank, wofür wir gemeinsam beten
+            können.
+          </p>
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className={cn(
+              'mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-terracotta-500/40 bg-terracotta-500/10 py-3 text-sm font-semibold text-terracotta-500 transition-colors hover:bg-terracotta-500/15',
+              'focus-visible:ring-2 focus-visible:ring-terracotta-500 focus-visible:outline-none',
+              PRESSABLE,
+            )}
+          >
+            <Plus size={16} />
+            Mein Gebetsanliegen hinzufügen
+          </button>
+        </Card>
+        {sheet}
+      </section>
+    );
+  }
+
   return (
     <section>
       <SectionTitle>Gebetsanliegen</SectionTitle>
@@ -101,24 +149,9 @@ export function PrayerRequestsCard({
             Mein Gebetsanliegen hinzufügen
           </button>
         )}
-
-        {entries.length === 0 && (
-          <p className="text-[11px] leading-relaxed text-stone-400">
-            Noch hat niemand etwas eingetragen.
-          </p>
-        )}
       </Card>
 
-      {/* Nur solange es offen ist: So beginnt das Feld jedes Mal mit dem
-          Stand, der gerade dasteht, und nicht mit einem halben Entwurf vom
-          letzten Mal. */}
-      {editing && (
-        <PrayerRequestSheet
-          meetingId={meetingId}
-          current={mine?.text ?? null}
-          onClose={() => setEditing(false)}
-        />
-      )}
+      {sheet}
     </section>
   );
 }
