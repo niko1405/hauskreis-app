@@ -85,7 +85,12 @@ import {
 } from './cancellation-card';
 import { MeetingEditSheet } from './meeting-edit-sheet';
 import { SLOT_LOSSES } from './slot-losses';
-import { NotesCard, NotesPrompt } from './notes-card';
+import {
+  NotesCard,
+  NotesPrompt,
+  NotesSheet,
+  type NotesInput,
+} from './notes-card';
 import { VenueCard } from './venue-card';
 import { PrayerRequestsCard } from './prayer-requests-card';
 import { SongsCard } from './songs-card';
@@ -207,15 +212,8 @@ function Loaded({
    */
   const [editMode, setEditMode] = useState(false);
 
-  /**
-   * Ob die Nachbereitungs-Karte gerade offensteht, obwohl noch nichts
-   * drinsteht.
-   *
-   * Der Hinweis „Nachbereitung hinzufügen" legt den Baustein an und öffnet die
-   * Karte; bleibt sie leer, soll beim nächsten Aufmachen wieder der Hinweis
-   * dastehen und keine leere Karte.
-   */
-  const [notesOpen, setNotesOpen] = useState(false);
+  /** Ob das Sheet der Nachbereitung offen ist — zum Anlegen wie zum Ändern. */
+  const [writingNotes, setWritingNotes] = useState(false);
 
   const update = useUpdateMeeting(meetingId);
   const songLeaders = useSongLeaders(meetingId);
@@ -258,9 +256,9 @@ function Loaded({
    * keine.
    *
    * Der **Weg hinein** bleibt dafür kurz. Fehlt die Nachbereitung noch, steht
-   * oben weiter der Hinweis, und ein Tipp darauf schaltet gleich in
-   * „Bearbeiten" (`addNotes`) — dorthin führt die Erinnerung am Morgen danach
-   * (`NOTES_REMINDER`). Der eigene Actionstep-Haken bleibt: Er ist der eigene
+   * oben weiter der Hinweis; er öffnet ihr Sheet, und nach dem Speichern steht
+   * der Abend gleich in „Bearbeiten" (`saveNotes`) — dorthin führt die
+   * Erinnerung am Morgen danach (`NOTES_REMINDER`). Der eigene Actionstep-Haken bleibt: Er ist der eigene
    * Vorsatz, kein Umbau des Abends.
    */
   const reading = past && !editMode;
@@ -431,15 +429,10 @@ function Loaded({
    *
    * Eine Karte, in der nichts steht, ist keine Nachbereitung, sondern ein
    * Formular mit zwei unerledigten Zeilen. Solange nichts geschrieben ist,
-   * steht deshalb der Hinweis da — es sei denn, jemand hat ihn gerade gedrückt
-   * (`notesOpen`): dann ist die Karte der Ort, an dem die beiden Stücke
-   * überhaupt erst entstehen.
+   * steht deshalb der Hinweis da; geschrieben wird im Sheet.
    */
   const notesContent = Boolean(meeting.summaryText || meeting.actionstepText);
-  // `!reading`: Wer eine leer geöffnete Karte mit „Fertig" verlässt, soll den
-  // Hinweis zurückbekommen und keine leere Karte, die er nicht mehr füllen kann.
-  const showNotes =
-    meeting.hasNotesSlot && (notesContent || (notesOpen && !reading));
+  const showNotes = meeting.hasNotesSlot && notesContent;
 
   /**
    * Ob der Hinweis „Nachbereitung hinzufügen" dasteht.
@@ -453,19 +446,28 @@ function Loaded({
     started && !cancelled && !meeting.hasTopicSlot && !showNotes;
 
   /**
-   * Der Hinweis legt die Karte an und macht sie auf — er ist ja die
-   * Aufforderung, etwas zu schreiben, und eine Karte, die erst beim ersten
-   * gespeicherten Satz erschiene, gäbe es nicht, in den man ihn tippt. Den
-   * Baustein schaltet er nur an, wenn er aus war: nach einer Karte, die leer
-   * geblieben ist, steht er noch.
+   * Die Nachbereitung schreiben — **ein** Schreibvorgang für Baustein und
+   * Texte. Der Server prüft die Texte gegen die Bausteine nach dieser Anfrage,
+   * also darf beides zusammen kommen.
    *
-   * An einem vergangenen Abend schaltet er zugleich in „Bearbeiten": Er ist
-   * dort der eine Einstieg, den die Leseansicht offenlässt.
+   * An einem vergangenen Abend steht er danach in „Bearbeiten": Der Hinweis
+   * ist dort der eine Einstieg, den die Leseansicht offenlässt, und wer gerade
+   * etwas nachgetragen hat, will vielleicht gleich weiter nachtragen.
    */
-  const addNotes = () => {
-    if (!meeting.hasNotesSlot) patch({ hasNotesSlot: true });
-    if (reading) setEditMode(true);
-    setNotesOpen(true);
+  const saveNotes = (input: NotesInput) => {
+    update.mutate(
+      {
+        ...(meeting.hasNotesSlot ? {} : { hasNotesSlot: true }),
+        summaryText: input.summaryText,
+        actionstepText: input.actionstepText,
+      },
+      {
+        onSuccess: () => {
+          setWritingNotes(false);
+          if (past) setEditMode(true);
+        },
+      },
+    );
   };
 
   /**
@@ -486,7 +488,6 @@ function Loaded({
       if (!ok) return;
     }
 
-    setNotesOpen(false);
     patch({ hasNotesSlot: false });
   };
 
@@ -606,9 +607,7 @@ function Loaded({
             Ein Klick genügt: eine Zusammenfassung schreibt man in dem Moment,
             in dem man vom Abend kommt, und nicht nachdem man erst einen
             Schalter gefunden hat. */}
-        {mayAddNotes && (
-          <NotesPrompt saving={update.isPending} onAdd={addNotes} />
-        )}
+        {mayAddNotes && <NotesPrompt onAdd={() => setWritingNotes(true)} />}
 
         {/* **Zwei Sektionen, nicht eine.** Der Ort beantwortet eine andere
             Frage als die Rollen: „wo treffen wir uns" gegen „wer macht was" —
@@ -654,6 +653,22 @@ function Loaded({
               ))}
             </div>
           </section>
+        )}
+
+        {/* **Gleich hinter den Zuständigkeiten**: Was von dem Abend bleibt, ist
+            nach „wer hat was gemacht" die nächste Frage — und weiter unten,
+            hinter Liedern und Anwesenheit, fand es niemand. Dieselben zwei
+            Felder wie an einer Einheit; beide Bausteine schließen einander aus,
+            es steht also nie beides da. */}
+        {showNotes && (
+          <NotesCard
+            meeting={meeting}
+            editable={!cancelled && !reading}
+            started={started}
+            saving={update.isPending}
+            onEdit={() => setWritingNotes(true)}
+            onRemove={() => void removeNotes()}
+          />
         )}
 
         {meeting.hasSongSlot && (
@@ -718,20 +733,6 @@ function Loaded({
             steht dort die Tab-Leiste wie überall sonst: Die Navigation
             aufzugeben lohnt nur, wo etwas Nützlicheres an ihrer Stelle steht. */}
         {!locked && <AnswerBar meeting={meeting} />}
-
-        {/* Dieselben zwei Felder ohne Thema, jedes einzeln und optional. Beide
-            Bausteine schließen einander aus, es steht also nie beides da. */}
-        {showNotes && (
-          <NotesCard
-            meeting={meeting}
-            editable={!cancelled && !reading}
-            started={started}
-            saving={update.isPending}
-            onSummary={(next) => patch({ summaryText: next })}
-            onActionstep={(next) => patch({ actionstepText: next })}
-            onRemove={cancelled || reading ? undefined : removeNotes}
-          />
-        )}
       </div>
 
       {!reading && (
@@ -747,6 +748,15 @@ function Loaded({
         <EditBar
           editing={editMode}
           onToggle={() => setEditMode((current) => !current)}
+        />
+      )}
+
+      {writingNotes && (
+        <NotesSheet
+          meeting={meeting}
+          saving={update.isPending}
+          onSave={saveNotes}
+          onClose={() => setWritingNotes(false)}
         />
       )}
 

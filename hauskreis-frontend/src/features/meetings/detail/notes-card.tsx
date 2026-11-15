@@ -4,39 +4,35 @@
  * Die Nachbereitung eines Abends **ohne** Thema.
  *
  * Ein Abend, an dem die Gruppe nur singt und betet, hat keine Einheit — der
- * Vorsatz der Woche entsteht dort aber genauso.
- *
- * Bewusst im selben Aufbau wie der Einheiten-Kasten in `topic-card.tsx`: es ist
- * dieselbe Sache, nur ohne einen Stoff darüber, der sich über mehrere Abende
- * zieht. Zwei verschiedene Formen für zweimal „was war, und was nehmen wir uns
- * vor" wären eine Unterscheidung ohne Unterschied.
+ * Vorsatz der Woche entsteht dort aber genauso. Zusammenfassung und Actionstep
+ * sehen deshalb aus wie an einer Einheit: der Actionstep hervorgehoben, mit dem
+ * eigenen Haken (`ActionstepFeature`).
  *
  * **Sie kommt und geht mit dem Abend.** Anders als Thema, Lieder und Testimony
  * steht sie nicht im Bausteinkasten: dort hätte man sie vorher angehakt, also zu
  * einem Zeitpunkt, an dem es nichts nachzubereiten gibt. Stattdessen erscheint
- * ab Terminbeginn ein Hinweis (`NotesPrompt`), ein Klick legt die Karte an, und
- * ein Knopf an ihrem Fuß nimmt sie wieder ganz weg — danach ist der Hinweis
- * zurück, als wäre nichts gewesen.
+ * ab Terminbeginn ein Hinweis (`NotesPrompt`), und ein Knopf an der Karte nimmt
+ * sie wieder ganz weg — danach ist der Hinweis zurück, als wäre nichts gewesen.
+ *
+ * **Geschrieben wird in einem Sheet** (`NotesSheet`) — beim Anlegen wie beim
+ * Ändern. Ein Formular für beide Wege: zwei wären zwei Meinungen darüber, was
+ * eine Nachbereitung ausmacht. Und die Karte bleibt zum Lesen: Zwei Stifte
+ * zwischen den Zeilen machten aus dem, was vom Abend bleibt, ein Formular.
  *
  * **Anders als beim Thema wird hier nichts zurückgehalten.** Der Inhalt einer
  * Einheit gehört bis zum Abendbeginn denen, die ihn vorbereiten — an der
  * Nachbereitung hängt aber niemand, sie entsteht während oder nach dem Abend.
- * Es gibt also niemanden, dem man sie vorenthalten würde. Nur der **Haken** hat
- * seine Uhrzeit: einen Vorsatz für heute Abend hakt man nicht heute früh ab.
- *
- * **Zusammenfassung und Actionstep sind zwei getrennte Stücke**, und jedes steht
- * nur da, wenn etwas drinsteht — sonst sähe eine gerade angelegte Karte aus
- * wie ein Formular mit zwei unerledigten Zeilen. Nicht jeder Abend braucht
- * beides: manchmal gibt es
- * nur einen Vorsatz und nichts zusammenzufassen. Ein Knopf legt das fehlende
- * Stück an; bleibt es leer, verschwindet es wieder.
+ * Nur der **Haken** hat seine Uhrzeit: einen Vorsatz für heute Abend hakt man
+ * nicht heute früh ab.
  */
-import { NotebookPen, Plus, Trash2 } from 'lucide-react';
+import { NotebookPen, Pencil, ScrollText, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { ActionstepFeature } from '@/components/domain/actionstep-feature';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
-import { FieldLabel, InlineEdit } from '@/components/ui/field';
-import { ActionstepCheck } from '@/components/domain/actionstep-check';
+import { Field, TextArea } from '@/components/ui/field';
+import { Sheet } from '@/components/ui/sheet';
+import { useMe } from '@/lib/api/hooks';
 import type { Meeting } from '@/lib/api/types';
 
 /**
@@ -50,13 +46,7 @@ import type { Meeting } from '@/lib/api/types';
  * Gestrichelt und ruhig wie die leere Actionstep-Karte auf dem Startbildschirm:
  * ein Angebot, kein offener Posten.
  */
-export function NotesPrompt({
-  saving,
-  onAdd,
-}: {
-  saving: boolean;
-  onAdd: () => void;
-}) {
+export function NotesPrompt({ onAdd }: { onAdd: () => void }) {
   return (
     <Card className="border-dashed bg-transparent shadow-none">
       <div className="flex items-center gap-4">
@@ -71,7 +61,7 @@ export function NotesPrompt({
             Für eine Zusammenfassung und ggf. einen Actionstep.
           </p>
         </div>
-        <Button variant="secondary" size="sm" loading={saving} onClick={onAdd}>
+        <Button variant="secondary" size="sm" onClick={onAdd}>
           Hinzufügen
         </Button>
       </div>
@@ -79,152 +69,180 @@ export function NotesPrompt({
   );
 }
 
+/** Was das Sheet schreibt — leer heißt: das Stück gibt es nicht. */
+export interface NotesInput {
+  summaryText: string | null;
+  actionstepText: string | null;
+}
+
 /**
- * Die Karte selbst. Sie steht nie leer da: der Bildschirm zeigt sie nur, wenn
- * etwas geschrieben ist **oder** gerade bearbeitet wird — sonst den Hinweis.
+ * Zusammenfassung und Actionstep in einem Formular — beide optional, aber eines
+ * muss dastehen: Eine Nachbereitung ohne beides ist keine.
+ *
+ * Gerendert wird es nur, solange es offen ist; so beginnt jedes Öffnen mit dem
+ * Stand, der gerade gilt, und nicht mit einem halben Entwurf vom letzten Mal.
+ */
+export function NotesSheet({
+  meeting,
+  saving,
+  onSave,
+  onClose,
+}: {
+  meeting: Meeting;
+  saving: boolean;
+  onSave: (input: NotesInput) => void;
+  onClose: () => void;
+}) {
+  const [summary, setSummary] = useState(meeting.summaryText ?? '');
+  const [actionstep, setActionstep] = useState(meeting.actionstepText ?? '');
+
+  const next: NotesInput = {
+    summaryText: summary.trim() || null,
+    actionstepText: actionstep.trim() || null,
+  };
+  const empty = next.summaryText === null && next.actionstepText === null;
+  const unchanged =
+    next.summaryText === (meeting.summaryText ?? null) &&
+    next.actionstepText === (meeting.actionstepText ?? null);
+
+  return (
+    <Sheet
+      open
+      onClose={onClose}
+      title="Nachbereitung"
+      subtitle="Was vom Abend bleibt — für alle, auch für die, die nicht da waren."
+      footer={
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
+            Abbrechen
+          </Button>
+          <Button
+            className="flex-1"
+            loading={saving}
+            disabled={empty || unchanged}
+            onClick={() => onSave(next)}
+          >
+            Speichern
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <Field label="Zusammenfassung" hint="Worum ging es an dem Abend?">
+          <TextArea
+            value={summary}
+            rows={6}
+            maxLength={5000}
+            placeholder="Wir haben über … gesprochen."
+            onChange={(event) => setSummary(event.target.value)}
+          />
+        </Field>
+        <Field
+          label="Actionstep"
+          hint="Was nehmen wir uns für die Woche vor? Erscheint auf „Heute“."
+        >
+          <TextArea
+            value={actionstep}
+            rows={2}
+            maxLength={2000}
+            placeholder="Diese Woche …"
+            onChange={(event) => setActionstep(event.target.value)}
+          />
+        </Field>
+      </div>
+    </Sheet>
+  );
+}
+
+/**
+ * Die Karte selbst. Sie steht nie leer da: Der Bildschirm zeigt sie nur, wenn
+ * etwas geschrieben ist — sonst den Hinweis.
  */
 export function NotesCard({
   meeting,
-  /**
-   * Ob geschrieben werden darf. An einem **vergangenen** Abend ja — die
-   * Nachbereitung entsteht ja erst danach —, aber nur unter „Bearbeiten": In
-   * der Leseansicht steht sie zum Lesen da, ohne Stift und ohne Löschknopf. An
-   * einem **abgesagten** gar nicht, dort gibt es nichts zu protokollieren.
-   */
   editable,
-  /** Ob der Abend schon angefangen hat. Entscheidet über den Abhak-Block. */
   started,
   saving,
-  onSummary,
-  onActionstep,
-  /** Fehlt an einem abgesagten Abend, wo es nichts zu löschen gibt. */
+  onEdit,
   onRemove,
 }: {
   meeting: Meeting;
+  /**
+   * Ob geschrieben werden darf. An einem **vergangenen** Abend ja — die
+   * Nachbereitung entsteht ja erst danach —, aber nur unter „Bearbeiten": In
+   * der Leseansicht steht sie zum Lesen da, ohne Knopf und ohne Löschen. An
+   * einem **abgesagten** gar nicht, dort gibt es nichts zu protokollieren.
+   */
   editable: boolean;
+  /** Ob der Abend schon angefangen hat. Entscheidet über den Haken. */
   started: boolean;
   saving: boolean;
-  onSummary: (next: string | null) => void;
-  onActionstep: (next: string | null) => void;
-  onRemove?: () => void;
+  onEdit: () => void;
+  onRemove: () => void;
 }) {
-  /**
-   * Ein Stück, das es am Termin noch gar nicht gibt und das gerade geschrieben
-   * wird. Nur hier, nicht am Server: ein leeres Feld ist nichts, was man
-   * speichert — es ist ein Feld, das noch nichts ist.
-   */
-  const [addingSummary, setAddingSummary] = useState(false);
-  const [addingActionstep, setAddingActionstep] = useState(false);
-
-  // `editable` zählt mit: An einem abgesagten Abend soll ein frisch angelegtes,
-  // noch leeres Feld nicht als leere Zeile stehen bleiben.
-  const showSummary =
-    Boolean(meeting.summaryText) || (editable && addingSummary);
-  const showActionstep =
-    Boolean(meeting.actionstepText) || (editable && addingActionstep);
+  const me = useMe();
 
   return (
     <section>
-      <SectionTitle>Nachbereitung</SectionTitle>
-      <Card className="space-y-3">
-        {showSummary ? (
-          <div>
-            <FieldLabel>Zusammenfassung</FieldLabel>
-            <InlineEdit
-              label="Zusammenfassung"
-              multiline
-              value={meeting.summaryText}
-              // Zu sehen nur, solange gespeichert wird: sonst steht dieses Feld
-              // gar nicht erst da, wenn nichts drinsteht.
-              emptyLabel="Noch nichts festgehalten"
-              placeholder="Worum ging es an dem Abend?"
-              startOpen={addingSummary}
-              onDiscard={() => setAddingSummary(false)}
-              saving={saving}
-              onSave={editable ? onSummary : undefined}
-            />
-          </div>
-        ) : (
-          editable && (
-            <AddPart saving={saving} onClick={() => setAddingSummary(true)}>
-              Zusammenfassung hinzufügen
-            </AddPart>
-          )
+      <SectionTitle
+        action={
+          editable ? (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="flex items-center gap-1 text-xs font-bold text-terracotta-500 normal-case hover:underline"
+            >
+              <Pencil size={12} />
+              Bearbeiten
+            </button>
+          ) : undefined
+        }
+      >
+        Nachbereitung
+      </SectionTitle>
+
+      <div className="space-y-3">
+        {meeting.summaryText && (
+          // Dieselbe Kante wie die Infos am Termin und die Zusammenfassung auf
+          // „Heute": terracotta links heißt „hier steht, was jemand der Gruppe
+          // sagt".
+          <Card className="border-l-[3px] border-l-terracotta-500">
+            <p className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-terracotta-500 uppercase">
+              <ScrollText size={12} />
+              Zusammenfassung
+            </p>
+            <p className="mt-2 text-[15px] leading-relaxed whitespace-pre-line text-stone-700">
+              {meeting.summaryText}
+            </p>
+          </Card>
         )}
 
-        {showActionstep ? (
-          <div className="rounded-lg border border-line-strong bg-canvas p-3">
-            <FieldLabel>Actionstep</FieldLabel>
-            <InlineEdit
-              label="Actionstep"
-              value={meeting.actionstepText}
-              emptyLabel="Noch kein Actionstep"
-              placeholder="Was nehmen wir uns für die Woche vor?"
-              startOpen={addingActionstep}
-              onDiscard={() => setAddingActionstep(false)}
-              saving={saving}
-              onSave={editable ? onActionstep : undefined}
-            />
-
-            {/* Abhaken darf jede:r für sich, auch wer den Text nicht ändern darf
-                — es ist der eigene Vorsatz. */}
-            {meeting.actionstepText && started && (
-              <ActionstepCheck
-                meetingId={meeting.id}
-                done={meeting.actionstepDone}
-              />
+        {meeting.actionstepText && (
+          <ActionstepFeature
+            text={meeting.actionstepText}
+            meetingId={meeting.id}
+            done={meeting.actionstepDone.some(
+              (row) => row.person.id === me.me?.id,
             )}
-          </div>
-        ) : (
-          editable && (
-            <AddPart saving={saving} onClick={() => setAddingActionstep(true)}>
-              Actionstep hinzufügen
-            </AddPart>
-          )
+            checkable={started}
+          />
         )}
 
         {/* Zurückhaltend und ganz unten: die ganze Sektion wieder wegnehmen ist
             keine Bearbeitung, sondern eine Entscheidung über den Abend. Danach
             steht wieder der Hinweis da, als wäre nichts gewesen. */}
-        {onRemove && (
+        {editable && (
           <button
             type="button"
             onClick={onRemove}
             disabled={saving}
-            className="flex items-center gap-1.5 pt-1 text-[11px] font-semibold text-stone-400 transition-colors hover:text-alert disabled:opacity-50"
+            className="flex items-center gap-1.5 px-1 text-[11px] font-semibold text-stone-400 transition-colors hover:text-alert disabled:opacity-50"
           >
             <Trash2 size={12} />
             Nachbereitung entfernen
           </button>
         )}
-      </Card>
+      </div>
     </section>
-  );
-}
-
-/**
- * Der Knopf für ein Stück, das noch fehlt — gestrichelt wie der Hinweis, aus
- * dem die ganze Karte kommt. Er legt kein leeres Feld an, sondern öffnet gleich
- * das Eingabefeld: was danach dasteht, hat Inhalt oder ist wieder weg.
- */
-function AddPart({
-  saving,
-  onClick,
-  children,
-}: {
-  saving: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={saving}
-      className="flex w-full items-center gap-2 rounded-lg border border-dashed border-line-strong px-3 py-2.5 text-[12px] font-semibold text-stone-400 transition-colors hover:border-terracotta-400 hover:text-terracotta-600 disabled:opacity-50"
-    >
-      <Plus size={14} />
-      {children}
-    </button>
   );
 }
