@@ -10,11 +10,18 @@
  *
  * **Was man nachschlägt, steht auf einem eigenen Bildschirm**: die zwanzig
  * Arten unter `/benachrichtigungen`, nach Bereichen sortiert und durchsuchbar.
+ *
+ * **An oder aus ist ein Schalter, und der Zustand steht groß daneben.** Ein
+ * kleiner „Aus"-Knopf neben einem Satz in Grau ließ offen, ob gerade etwas an
+ * ist. Und den Test braucht man genau einmal, nämlich gleich nach dem
+ * Einschalten — deshalb fragt die App dann danach, statt dauerhaft einen Knopf
+ * dafür stehen zu lassen.
  */
-import { Bell, BellOff, BellRing, ChevronRight, Send } from 'lucide-react';
+import { Bell, BellOff, BellRing, ChevronRight } from 'lucide-react';
 import Link from '@/components/ui/link';
-import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
+import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import {
@@ -22,6 +29,7 @@ import {
   useSendTestNotification,
 } from '@/lib/api/hooks';
 import { usePushSetup } from '@/lib/push/use-push-setup';
+import { cn } from '@/lib/cn';
 
 const BLOCKER_TEXT: Record<string, string> = {
   'ios-not-installed':
@@ -38,9 +46,38 @@ export function NotificationsCard() {
   const settings = useNotificationSettings();
   const test = useSendTestNotification();
   const toast = useToast();
+  const confirm = useConfirm();
 
   const alle = settings.data ?? [];
   const an = alle.filter((setting) => setting.enabled).length;
+
+  const on = push.subscribedHere === true;
+  const pending = push.subscribe.isPending || push.unsubscribe.isPending;
+
+  const sendTest = () =>
+    test.mutate(undefined, {
+      onSuccess: (result) =>
+        toast.success(
+          result.delivered > 0
+            ? 'Test verschickt — sie sollte gleich da sein.'
+            : 'Nichts zugestellt. Ist das Abo noch gültig?',
+        ),
+    });
+
+  // Einschalten, und dann gleich fragen, ob es ankommt — das ist der Moment,
+  // in dem man es wissen will.
+  const turnOn = () =>
+    push.subscribe.mutate(undefined, {
+      onSuccess: async () => {
+        const ok = await confirm({
+          title: 'Benachrichtigungen sind an',
+          body: 'Willst du gleich eine Test-Benachrichtigung schicken? Dann siehst du, ob sie auf diesem Gerät ankommt.',
+          confirmLabel: 'Test schicken',
+          cancelLabel: 'Nicht nötig',
+        });
+        if (ok) sendTest();
+      },
+    });
 
   return (
     <section>
@@ -52,33 +89,43 @@ export function NotificationsCard() {
           <p className="rounded-md bg-warn-bg p-3 text-xs leading-relaxed text-warn">
             {BLOCKER_TEXT[push.blocker]}
           </p>
-        ) : push.subscribedHere ? (
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-stone-500">
-              Dieses Gerät bekommt Benachrichtigungen
-              {push.deviceCount > 1 &&
-                ` (insgesamt ${push.deviceCount} Geräte)`}
-              .
-            </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              loading={push.unsubscribe.isPending}
-              onClick={() => push.unsubscribe.mutate(undefined)}
-            >
-              <BellOff size={14} />
-              Aus
-            </Button>
-          </div>
         ) : (
-          <Button
-            className="w-full"
-            loading={push.subscribe.isPending}
-            onClick={() => push.subscribe.mutate(undefined)}
-          >
-            <BellRing size={15} />
-            Auf diesem Gerät einschalten
-          </Button>
+          // Eine Zeile, deren Schalter man sofort sieht: grün getönt mit
+          // klingelnder Glocke, wenn an — gedämpft und durchgestrichen, wenn
+          // aus. Die ganze Zeile ist das Label, ein Tipp auf den Text legt um.
+          <label className="flex cursor-pointer items-center gap-4">
+            <span
+              className={cn(
+                'flex size-11 shrink-0 items-center justify-center rounded-xl border transition-colors',
+                on
+                  ? 'border-success-line bg-success-bg text-success'
+                  : 'border-line bg-canvas text-stone-400',
+              )}
+            >
+              {on ? <BellRing size={20} /> : <BellOff size={20} />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-stone-900">
+                {on ? 'Benachrichtigungen an' : 'Benachrichtigungen aus'}
+              </span>
+              <span className="mt-0.5 block text-xs text-stone-400">
+                {on
+                  ? `Dieses Gerät bekommt sie${
+                      push.deviceCount > 1
+                        ? ` (insgesamt ${push.deviceCount} Geräte)`
+                        : ''
+                    }.`
+                  : 'Auf diesem Gerät kommt nichts an.'}
+              </span>
+            </span>
+            <Switch
+              checked={on}
+              disabled={pending}
+              onChange={(next) =>
+                next ? turnOn() : push.unsubscribe.mutate(undefined)
+              }
+            />
+          </label>
         )}
 
         {/* Der Weg zur Liste, nicht die Liste. Die Zahl darunter ist der Grund,
@@ -101,28 +148,6 @@ export function NotificationsCard() {
           </div>
           <ChevronRight size={16} className="shrink-0 text-stone-400" />
         </Link>
-
-        {push.subscribedHere && (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="w-full"
-            loading={test.isPending}
-            onClick={() =>
-              test.mutate(undefined, {
-                onSuccess: (result) =>
-                  toast.success(
-                    result.delivered > 0
-                      ? 'Test verschickt — sie sollte gleich da sein.'
-                      : 'Nichts zugestellt. Ist das Abo noch gültig?',
-                  ),
-              })
-            }
-          >
-            <Send size={13} />
-            Test-Benachrichtigung
-          </Button>
-        )}
       </Card>
     </section>
   );
