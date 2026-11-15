@@ -52,6 +52,13 @@
   --color-line: #f0e5de;
   --color-line-strong: #eae0d5;
 
+  /* Sprechblasen — was jemand der Gruppe sagt (`speech-bubble.tsx`).
+     Ein Hauch Terracotta statt der Fläche der Seite: Im Dunkeln war die Blase
+     `shell`, also fast schwarz, und las sich wie ein Loch in der Karte; hell
+     war sie grau. Warm getönt ist sie eine Stimme und kein Feld. */
+  --color-bubble: #f9ebe5;
+  --color-bubble-line: #f0dace;
+
   /* Vier Bedeutungen — und keine Rollen.
      Sie hießen einmal `music` (grün) und `topic` (amber), nach den Rollen, für
      die sie erfunden wurden. Getragen haben sie an den meisten Stellen längst
@@ -206,6 +213,10 @@
   --color-card: #26201b;
   --color-line: #342c25;
   --color-line-strong: #453a30;
+
+  /* Sprechblasen: Terracotta über der Karte, nicht das Schwarz der Schale */
+  --color-bubble: #36261d;
+  --color-bubble-line: #4e3628;
 
   /* Terracotta — 600/700 sind jetzt heller als 500, nicht dunkler */
   --color-terracotta-50: #33211a;

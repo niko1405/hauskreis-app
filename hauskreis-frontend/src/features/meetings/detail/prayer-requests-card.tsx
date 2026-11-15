@@ -187,7 +187,7 @@ function PrayerRequestRow({
 
       <SpeechBubble
         className={cn(
-          onOpen && 'transition-colors group-hover:border-line-strong',
+          onOpen && 'transition-colors group-hover:border-terracotta-500/40',
         )}
       >
         <p className="text-sm font-bold text-terracotta-700">
