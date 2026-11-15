@@ -14,10 +14,8 @@ import {
   LogOut,
   Mic,
   Shield,
-  Users,
 } from 'lucide-react';
 import { HauskreisCard } from './hauskreis-card';
-import Link from '@/components/ui/link';
 import { useEffect, useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { ScreenHeader } from '@/components/layout/screen-header';
@@ -41,6 +39,7 @@ import { AppCard } from './app-card';
 import { AppearanceCard } from './appearance-card';
 import { HomeCard } from './home-card';
 import { PhotoPicker } from './photo-picker';
+import { AdminLink, GroupLink } from './profile-links';
 import { NotificationsCard } from './notifications-card';
 import { useUnreadAdmin } from '@/features/admin/use-unread-admin';
 import type { UpdatePersonInput } from '@/lib/api/types';
@@ -203,12 +202,7 @@ function Loaded({ personId }: { personId: string }) {
         {!header.shown && (
           <section className="md:hidden">
             <SectionTitle>Euer Hauskreis</SectionTitle>
-            <Link href="/hauskreis">
-              <Button variant="secondary" className="w-full">
-                <Users size={14} />
-                Zur Gruppe
-              </Button>
-            </Link>
+            <GroupLink />
           </section>
         )}
 
@@ -217,18 +211,7 @@ function Loaded({ personId }: { personId: string }) {
         {me.isAdmin && (
           <section className="md:hidden">
             <SectionTitle>Verwaltung</SectionTitle>
-            <Link href="/admin">
-              <Button variant="secondary" className="w-full">
-                <Shield size={14} />
-                Admin-Bereich
-                {/* Bis man einmal drin war. Wer gerade ernannt wurde, sieht
-                    hier einen Knopf mehr und sonst nichts, das ihm sagt, was
-                    dahinter steht. */}
-                {adminUnread && (
-                  <span className="size-1.5 rounded-full bg-terracotta-500" />
-                )}
-              </Button>
-            </Link>
+            <AdminLink unread={adminUnread} />
           </section>
         )}
 
