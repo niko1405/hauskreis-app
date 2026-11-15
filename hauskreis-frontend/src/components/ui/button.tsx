@@ -30,6 +30,11 @@ const VARIANTS = {
   secondary:
     'bg-terracotta-50 text-terracotta-700 hover:bg-terracotta-100 disabled:opacity-50',
   ghost: 'text-stone-500 hover:bg-stone-100 disabled:opacity-50',
+  // Ein ruhiger Rahmenknopf in der Fläche der Karte, gerahmt wie ein Feld —
+  // für den einen Weg neben dem Hauptknopf, der nicht mit ihm um die Farbe
+  // konkurrieren soll („Weiter mit Google" über „Anmelden").
+  outline:
+    'border border-line-strong bg-card text-stone-800 shadow-xs hover:bg-canvas disabled:opacity-50',
   danger: 'bg-alert-bg text-alert hover:bg-alert-line disabled:opacity-50',
 } as const;
 
