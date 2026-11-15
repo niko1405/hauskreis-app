@@ -11,8 +11,8 @@
  * **Sie kommt und geht mit dem Abend.** Anders als Thema, Lieder und Testimony
  * steht sie nicht im Bausteinkasten: dort hätte man sie vorher angehakt, also zu
  * einem Zeitpunkt, an dem es nichts nachzubereiten gibt. Stattdessen erscheint
- * ab Terminbeginn ein Hinweis (`NotesPrompt`), und ein Knopf an der Karte nimmt
- * sie wieder ganz weg — danach ist der Hinweis zurück, als wäre nichts gewesen.
+ * ab Terminbeginn ein Hinweis (`NotesPrompt`), und ein Knopf im Sheet nimmt sie
+ * wieder ganz weg — danach ist der Hinweis zurück, als wäre nichts gewesen.
  *
  * **Geschrieben wird in einem Sheet** (`NotesSheet`) — beim Anlegen wie beim
  * Ändern. Ein Formular für beide Wege: zwei wären zwei Meinungen darüber, was
@@ -86,11 +86,20 @@ export function NotesSheet({
   meeting,
   saving,
   onSave,
+  onRemove,
   onClose,
 }: {
   meeting: Meeting;
   saving: boolean;
   onSave: (input: NotesInput) => void;
+  /**
+   * Die ganze Nachbereitung wieder wegnehmen — nur, wenn es schon eine gibt.
+   *
+   * Hier und nicht an der Karte: Die Karte ist zum Lesen da, und ein
+   * Papierkorb unter dem, was vom Abend bleibt, lag dort jedem Lesenden im
+   * Weg. Wer ändern will, ist ohnehin hier.
+   */
+  onRemove?: () => void;
   onClose: () => void;
 }) {
   const [summary, setSummary] = useState(meeting.summaryText ?? '');
@@ -149,6 +158,23 @@ export function NotesSheet({
             onChange={(event) => setActionstep(event.target.value)}
           />
         </Field>
+
+        {/* Abgesetzt und leise: Die ganze Sektion wegzunehmen ist keine
+            Bearbeitung, sondern eine Entscheidung über den Abend. Danach steht
+            wieder der Hinweis da, als wäre nichts gewesen. */}
+        {onRemove && (
+          <div className="border-t border-line pt-3">
+            <button
+              type="button"
+              onClick={onRemove}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-1 text-xs font-semibold text-stone-400 transition-colors hover:text-alert disabled:opacity-50"
+            >
+              <Trash2 size={13} />
+              Nachbereitung entfernen
+            </button>
+          </div>
+        )}
       </div>
     </Sheet>
   );
@@ -162,23 +188,20 @@ export function NotesCard({
   meeting,
   editable,
   started,
-  saving,
   onEdit,
-  onRemove,
 }: {
   meeting: Meeting;
   /**
    * Ob geschrieben werden darf. An einem **vergangenen** Abend ja — die
    * Nachbereitung entsteht ja erst danach —, aber nur unter „Bearbeiten": In
-   * der Leseansicht steht sie zum Lesen da, ohne Knopf und ohne Löschen. An
-   * einem **abgesagten** gar nicht, dort gibt es nichts zu protokollieren.
+   * der Leseansicht steht sie zum Lesen da, ohne Knopf. An einem
+   * **abgesagten** gar nicht, dort gibt es nichts zu protokollieren. Entfernt
+   * wird sie im Sheet hinter „Bearbeiten".
    */
   editable: boolean;
   /** Ob der Abend schon angefangen hat. Entscheidet über den Haken. */
   started: boolean;
-  saving: boolean;
   onEdit: () => void;
-  onRemove: () => void;
 }) {
   const me = useMe();
 
@@ -226,21 +249,6 @@ export function NotesCard({
             )}
             checkable={started}
           />
-        )}
-
-        {/* Zurückhaltend und ganz unten: die ganze Sektion wieder wegnehmen ist
-            keine Bearbeitung, sondern eine Entscheidung über den Abend. Danach
-            steht wieder der Hinweis da, als wäre nichts gewesen. */}
-        {editable && (
-          <button
-            type="button"
-            onClick={onRemove}
-            disabled={saving}
-            className="flex items-center gap-1.5 px-1 text-[11px] font-semibold text-stone-400 transition-colors hover:text-alert disabled:opacity-50"
-          >
-            <Trash2 size={12} />
-            Nachbereitung entfernen
-          </button>
         )}
       </div>
     </section>
