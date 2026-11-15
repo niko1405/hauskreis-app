@@ -70,6 +70,7 @@ const song = (url: string, overrides: Partial<RawCandidate> = {}) => ({
 
 const UG = 'https://tabs.ultimate-guitar.com/tab/outbreakband/gott-ist-gut-123';
 const GENIUS = 'https://genius.com/Outbreakband-gott-ist-gut-lyrics';
+const CIFRA = 'https://www.cifraclub.com/outbreakband/gott-ist-gut/';
 
 describe('SongLookupService.search', () => {
   it('keeps a link the site answers for', async () => {
@@ -125,16 +126,66 @@ describe('SongLookupService.search', () => {
 
   it('puts the preferred site first', async () => {
     const { service } = setup({
-      answer: candidates(song(GENIUS), song(UG)),
-      reachability: { [GENIUS]: 200, [UG]: 200 },
+      answer: candidates(song(UG), song(GENIUS), song(CIFRA)),
+      reachability: { [GENIUS]: 200, [UG]: 200, [CIFRA]: 200 },
     });
 
     const found = await service.search('Gott ist gut');
 
+    // Frei vor Ultimate Guitar: Dessen Link oeffnet auf manchem Handy die
+    // App, und die will ohne Abo nicht.
     expect(found.map((entry) => entry.site)).toEqual([
-      'ultimate-guitar.com',
+      'cifraclub.com',
       'genius.com',
+      'ultimate-guitar.com',
     ]);
+  });
+
+  it.each([
+    [
+      'eine Official-Fassung',
+      'https://tabs.ultimate-guitar.com/tab/outbreakband/gott-ist-gut-official-2034811',
+    ],
+    [
+      'ein Guitar-Pro-Tab',
+      'https://tabs.ultimate-guitar.com/tab/outbreakband/gott-ist-gut-guitar-pro-998',
+    ],
+    [
+      'einen Pro-Pfad',
+      'https://www.ultimate-guitar.com/pro/outbreakband/gott-ist-gut',
+    ],
+  ])('drops %s, which only opens with a subscription', async (_case, url) => {
+    const { service } = setup({
+      answer: candidates(song(url)),
+      reachability: { [url]: 200 },
+    });
+
+    expect(await service.search('Gott ist gut')).toEqual([]);
+  });
+
+  it('keeps a free chords sheet from Ultimate Guitar', async () => {
+    const chords =
+      'https://tabs.ultimate-guitar.com/tab/outbreakband/gott-ist-gut-chords-4521';
+    const { service } = setup({
+      answer: candidates(song(chords)),
+      reachability: { [chords]: 200 },
+    });
+
+    expect(await service.search('Gott ist gut')).toEqual([
+      expect.objectContaining({ url: chords, site: 'ultimate-guitar.com' }),
+    ]);
+  });
+
+  it('asks the model for pages without a paywall', async () => {
+    const { service, ask } = setup({ answer: candidates() });
+
+    await service.search('Gott ist gut');
+
+    const { input } = askedWith(ask);
+    expect(input).toContain('ohne Bezahlschranke');
+    expect(input.indexOf('cifraclub.com')).toBeLessThan(
+      input.indexOf('ultimate-guitar.com'),
+    );
   });
 
   it('offers each site only once', async () => {

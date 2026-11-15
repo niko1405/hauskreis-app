@@ -569,7 +569,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'songs',
     question: 'Was machen die beiden Knöpfe beim Eintragen eines Lieds?',
     answer:
-      'Zwei Abkürzungen, beide **nur auf Knopfdruck** — jeder Aufruf dauert ein paar Sekunden.\n\n**„Aus Link ausfüllen"** — du fügst eine Adresse ein, und die App liest Titel und Interpret von der Seite.\n\n**„Link suchen"** — umgekehrt: aus Titel und Interpret werden bis zu drei Links vorgeschlagen. Bevorzugt Ultimate Guitar, dann Genius — ein Akkordblatt ist genauso richtig wie ein Liedtext.\n\nJeder vorgeschlagene Link wird vorher geprüft, ob es die Seite wirklich gibt.\n\nDie Vorschläge können trotzdem ungenau sein: Schau kurz nach, bevor du sie übernimmst — der Knopf neben dem Link-Feld öffnet ihn.',
+      'Zwei Abkürzungen, beide **nur auf Knopfdruck** — jeder Aufruf dauert ein paar Sekunden.\n\n**„Aus Link ausfüllen"** — du fügst eine Adresse ein, und die App liest Titel und Interpret von der Seite.\n\n**„Link suchen"** — umgekehrt: aus Titel und Interpret werden bis zu drei Links vorgeschlagen. Bevorzugt werden Seiten, die ohne Abo aufgehen: Cifra Club und Worship Together für Akkorde, Genius für den Text, Ultimate Guitar zuletzt und nur mit kostenlosen Blättern — ein Akkordblatt ist genauso richtig wie ein Liedtext.\n\nJeder vorgeschlagene Link wird vorher geprüft, ob es die Seite wirklich gibt.\n\nDie Vorschläge können trotzdem ungenau sein: Schau kurz nach, bevor du sie übernimmst — der Knopf neben dem Link-Feld öffnet ihn.',
     keywords: ['ki', 'ai', 'gemini', 'link', 'automatisch', 'akkorde'],
   },
   {
