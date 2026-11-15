@@ -277,7 +277,13 @@ export function MeetingsScreen() {
         </div>
       </motion.div>
 
-      <div className="px-5">
+      {/* Ein neues Register kommt kaum merklich von unten herein — der
+          Schlüssel legt den Kasten bei jedem Wechsel neu an, und damit
+          startet die Animation. Auch Liste und Kalender sind zwei Ansichten. */}
+      <div
+        key={`${view}-${calendar ? 'monat' : 'liste'}`}
+        className="animate-panel-in px-5"
+      >
         {view === 'liste' &&
           (calendar ? (
             <MeetingCalendar />

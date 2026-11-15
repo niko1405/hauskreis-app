@@ -365,9 +365,12 @@ export function ArchiveScreen() {
         </div>
       </div>
 
+      {/* Eine neue Kategorie kommt kaum merklich von unten herein; der
+          Schlüssel legt den Kasten bei jedem Wechsel neu an. */}
       <div
+        key={tab}
         className={cn(
-          'px-5',
+          'animate-panel-in px-5',
           (tab === 'themen' || tab === 'notizen' || tab === 'lieder') &&
             'pb-20',
         )}
