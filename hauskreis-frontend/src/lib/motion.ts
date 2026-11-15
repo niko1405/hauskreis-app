@@ -51,8 +51,8 @@ export const SPRING_SHEET = {
  */
 export const SPRING_PILL = {
   type: 'spring',
-  bounce: 0.15,
-  duration: 0.35,
+  bounce: 0.12,
+  duration: 0.45,
 } as const;
 
 /** Ein- und Ausblenden ohne Weg. */

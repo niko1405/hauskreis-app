@@ -160,12 +160,21 @@
 
      - `tab-in`: einer der fünf Tabs. Nur Überblenden — sie liegen
        nebeneinander, keiner kommt „von irgendwo".
-     - `push-in`: eine Unterseite, ein Stück von rechts. Man geht hinein.
-     - `panel-in`: ein Register innerhalb einer Seite, kaum merklich von unten. */
-  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
-  --animate-tab-in: fade-in 180ms var(--ease-out-soft) backwards;
-  --animate-push-in: push-in 250ms var(--ease-out-soft) backwards;
-  --animate-panel-in: panel-in 160ms var(--ease-out-soft) backwards;
+     - `push-in`: eine Unterseite, ein gutes Stück von rechts. Man geht
+       hinein.
+     - `back-in`: dieselbe Unterseite nach einem Zurück, ein kürzeres Stück von
+       links — wie unter iOS die Seite, zu der man zurückkehrt.
+     - `panel-in`: ein Register innerhalb einer Seite, kaum merklich von unten.
+
+     **Im Takt von iOS**: die Kurve, mit der iOS seine Ansichten bewegt (`--ease-ios`
+     — schnell los, lang und weich auslaufend), und Dauern, die man als
+     Bewegung sieht und nicht als Flackern. Kürzer wirkte es hastig, länger
+     ließe es auf die Seite warten: Klickbar ist sie vom ersten Bild an. */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-tab-in: fade-in 300ms var(--ease-ios) backwards;
+  --animate-push-in: push-in 460ms var(--ease-ios) backwards;
+  --animate-back-in: back-in 420ms var(--ease-ios) backwards;
+  --animate-panel-in: panel-in 300ms var(--ease-ios) backwards;
 }
 
 @keyframes progress {
@@ -186,14 +195,21 @@
 @keyframes push-in {
   from {
     opacity: 0;
-    transform: translateX(16px);
+    transform: translateX(56px);
+  }
+}
+
+@keyframes back-in {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
   }
 }
 
 @keyframes panel-in {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(6px);
   }
 }
 
