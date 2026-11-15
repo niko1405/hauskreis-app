@@ -23,6 +23,16 @@ const nextConfig = {
    * Adressen. Die gibt es nicht, die Ids entstehen im Betrieb.
    */
   output: 'export',
+
+  experimental: {
+    /**
+     * Seitenwechsel über die View Transitions des Browsers: `<ViewTransition>`
+     * in `app/(app)/template.tsx` und `transitionTypes` an den Links der
+     * Tab-Leiste. Erst damit kann eine Seite hinausgleiten, während die neue
+     * schon da ist (`lib/page-transition.ts`).
+     */
+    viewTransition: true,
+  },
 };
 
 /**

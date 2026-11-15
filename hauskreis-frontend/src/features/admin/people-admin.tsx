@@ -416,23 +416,28 @@ function InviteSheet({
           ]}
         />
 
-        {mode === 'link' ? (
-          <InviteLinkPanel />
-        ) : (
-          <EmailInviteFields
-            email={email}
-            onEmail={setEmail}
-            role={role}
-            onRole={setRole}
-            returning={returning}
-            onReturning={(next) => {
-              setReturning(next);
-              setFormerPersonId('');
-            }}
-            formerPersonId={formerPersonId}
-            onFormerPersonId={setFormerPersonId}
-          />
-        )}
+        {/* Der Weg wechselt den halben Inhalt und mit ihm die Höhe des Sheets;
+            der neue kommt kaum merklich herein, wie ein Register, statt
+            einfach dazustehen. */}
+        <div key={mode} className="animate-panel-in space-y-5">
+          {mode === 'link' ? (
+            <InviteLinkPanel />
+          ) : (
+            <EmailInviteFields
+              email={email}
+              onEmail={setEmail}
+              role={role}
+              onRole={setRole}
+              returning={returning}
+              onReturning={(next) => {
+                setReturning(next);
+                setFormerPersonId('');
+              }}
+              formerPersonId={formerPersonId}
+              onFormerPersonId={setFormerPersonId}
+            />
+          )}
+        </div>
       </div>
     </Sheet>
   );

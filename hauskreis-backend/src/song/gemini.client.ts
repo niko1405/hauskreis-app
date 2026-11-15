@@ -7,6 +7,19 @@ import { AppConfigService } from '../config/config.service';
 export type GeminiTool = { type: 'url_context' } | { type: 'google_search' };
 
 /**
+ * Eine Fundstelle der Google-Suche, auf die sich die Antwort stützt.
+ *
+ * Anders als die Adressen, die das Modell in sein JSON schreibt, hat es diese
+ * nicht formuliert, sondern gefunden — es gibt sie also. Meist ist `url` eine
+ * Weiterleitung über `vertexaisearch.cloud.google.com`, der man bis zum Ziel
+ * folgen muss.
+ */
+export interface GroundingSource {
+  url: string;
+  title: string | null;
+}
+
+/**
  * Zugang zur Gemini API — nur so viel davon, wie die Lied-Suche braucht.
  *
  * Nach dem Vorbild von `NotificationService`: fehlt der Schlüssel, schaltet
@@ -62,6 +75,12 @@ export class GeminiClient implements OnModuleInit {
     systemInstruction?: string;
     /** Für die Verbrauchszeile im Log — sonst stehen dort nur nackte Zahlen. */
     label: string;
+    /**
+     * Bekommt die Fundstellen der Suche (`url_citation`), sobald die Antwort
+     * da ist — auch dann, wenn ihr JSON nicht passt: Was die Suche gefunden
+     * hat, ist unabhängig davon brauchbar.
+     */
+    onSources?: (sources: GroundingSource[]) => void;
   }): Promise<T | null> {
     if (!this.client) return null;
 
@@ -97,6 +116,7 @@ export class GeminiClient implements OnModuleInit {
       );
 
       this.logUsage(params.label, interaction.usage, startedAt);
+      params.onSources?.(sourcesOf(interaction));
 
       const text = interaction.output_text;
       if (!text) {
@@ -148,6 +168,38 @@ export class GeminiClient implements OnModuleInit {
         (searches > 0 ? `, ${searches} Suchanfragen` : ''),
     );
   }
+}
+
+/**
+ * Die Fundstellen einer Antwort, ohne doppelte.
+ *
+ * Sie hängen als `url_citation` an den Textstücken der Modellausgabe. Gelesen
+ * wird strukturell und nachsichtig: Fehlt etwas, gibt es eben keine.
+ */
+export function sourcesOf(interaction: { steps?: unknown }): GroundingSource[] {
+  type Annotation = { type?: string; url?: string; title?: string };
+  type Step = { type?: string; content?: { annotations?: Annotation[] }[] };
+
+  const found = new Map<string, GroundingSource>();
+  const steps = Array.isArray(interaction.steps)
+    ? (interaction.steps as Step[])
+    : [];
+
+  for (const step of steps) {
+    if (step.type !== 'model_output') continue;
+    for (const content of step.content ?? []) {
+      for (const annotation of content.annotations ?? []) {
+        if (annotation.type !== 'url_citation' || !annotation.url) continue;
+        if (found.has(annotation.url)) continue;
+        found.set(annotation.url, {
+          url: annotation.url,
+          title: annotation.title?.trim() || null,
+        });
+      }
+    }
+  }
+
+  return [...found.values()];
 }
 
 /**

@@ -35,6 +35,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: '1.8.0',
+    date: '2026-11-15',
+    title: 'Einladen per Link, neue Terminansicht und flüssigere Bedienung',
+    highlights: [
+      'Einladen per Link: In der Verwaltung einen Link erstellen (1, 7 oder 30 Tage gültig) und z. B. in WhatsApp teilen. Anmelden geht jetzt auch mit Google.',
+      'Termine: Übersicht, Planung und Geburtstage als Register, der Kalender über den Knopf oben, Suche über die Lupe.',
+      'Am Termin: Ort und Gastgeber auf einen Blick, Lieder in einer Karte, Gebetsanliegen als Sprechblasen. Wer Gastgeber ist, erfährt, wer unsicher ist oder später kommt.',
+      'Geburtstage: Deinen Anteil am Geschenk hakst du selbst ab. Vergangene Geburtstage stehen im Kalender.',
+      'Archiv: Kategorien oben, Suche über die Lupe, „Meine | Alle" bei Themen und Liedern.',
+      'Lieder: Die Link-Vorschläge nennen zuerst Seiten ohne Abo und finden auch deutsche Lieder und Titel mit Tippfehler. Im Vollbild ziehst du die Schrift mit zwei Fingern größer.',
+      'Bedienung: Seiten wechseln sofort und gleiten hinein und wieder hinaus, die Gruppe öffnet sich von unten, die Tab-Leiste schwebt.',
+      'Kopfbilder: Schwarze Ränder werden beim Zuschneiden entfernt.',
+    ],
+  },
+  {
     version: '1.7.0',
     date: '2026-10-21',
     title: 'Notizen, eigene Liedtexte und Design-Updates',

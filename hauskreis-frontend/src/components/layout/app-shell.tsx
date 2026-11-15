@@ -83,7 +83,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               man in etwas drin, und der Weg heraus ist der Zurück-Pfeil. An
               ihrer Stelle steht dort nur der sichere Rand, sonst läge das
               Seitenende unter dem Home-Balken. */}
-            <div className="sticky bottom-0 z-30">
+            {/* `vt-chrome-footer`: Bei einem Seitenwechsel bleibt der Fuß über
+                den gleitenden Seiten stehen (`globals.css`). */}
+            <div className="vt-chrome-footer sticky bottom-0 z-30">
               <FloatingActionAnchor />
               <BottomSlotOutlet
                 fallback={

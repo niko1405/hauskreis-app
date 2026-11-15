@@ -40,8 +40,14 @@ export function ListFilter<Value extends string>({
       <div
         role="tablist"
         aria-label={label}
-        className="flex items-center gap-1"
+        className="relative flex items-center gap-1"
       >
+        {/* Die helle Fläche gleitet zur neuen Wahl (`GlidePill`). */}
+        <GlidePill
+          group={pill}
+          active={value}
+          className="rounded-full border border-line-strong bg-card shadow-sm"
+        />
         {options.map((option) => {
           const active = option.value === value;
 
@@ -51,6 +57,7 @@ export function ListFilter<Value extends string>({
               type="button"
               role="tab"
               aria-selected={active}
+              data-glide={active ? pill : undefined}
               onClick={() => onChange(option.value)}
               className={cn(
                 'relative rounded-full border border-transparent px-3 py-1 text-[13px] font-semibold transition-colors',
@@ -60,14 +67,6 @@ export function ListFilter<Value extends string>({
                   : 'text-stone-400 hover:text-stone-600',
               )}
             >
-              {/* Die helle Fläche gleitet zur neuen Wahl (`GlidePill`). */}
-              {active && (
-                <GlidePill
-                  id={pill}
-                  radius={9999}
-                  className="-inset-px border border-line-strong bg-card shadow-sm"
-                />
-              )}
               <span className="relative inline-flex items-center gap-1.5">
                 {option.label}
                 {/* Ohne Klammern: Die Zahl gehört zum Wort, wie in der Kapsel

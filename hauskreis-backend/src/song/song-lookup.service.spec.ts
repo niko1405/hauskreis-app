@@ -22,8 +22,15 @@ function setup(options: {
   enabled?: boolean;
   /** Was in der eigenen Song-Tabelle steht — leer heisst „kennen wir nicht". */
   db?: { title: string; artist: string | null; lyricsUrl: string }[];
+  /** Die Fundstellen der Suche, die mit der Antwort kommen (`url_citation`). */
+  sources?: { url: string; title: string | null }[];
 }) {
-  const ask = jest.fn().mockResolvedValue(options.answer ?? null);
+  const ask = jest.fn(
+    async (params: { onSources?: (sources: unknown[]) => void }) => {
+      params.onSources?.(options.sources ?? []);
+      return options.answer ?? null;
+    },
+  );
   const gemini = {
     ask,
     get isEnabled() {
@@ -271,6 +278,130 @@ describe('SongLookupService.search', () => {
 
   it('returns nothing rather than throwing when the model is unavailable', async () => {
     const { service } = setup({ answer: null });
+
+    expect(await service.search('Gott ist gut')).toEqual([]);
+  });
+
+  it('accepts a typo in the title instead of insisting on it', async () => {
+    // „Der Titel muss genau so lauten" machte aus „Batlle Belongs" eine leere
+    // Liste, obwohl jede Seite „Battle Belongs" kennt.
+    const { service, ask } = setup({ answer: candidates() });
+
+    await service.search('Batlle Belongs', 'Phil Wickham');
+
+    const { input } = askedWith(ask);
+    expect(input).toContain('Tippfehler');
+    expect(input).not.toContain('nicht ein ähnlicher');
+    expect(input).toContain('Ein anderes Lied derselben Band ist');
+  });
+
+  it('allows other free sites beside the preferred ones', async () => {
+    const { service, ask } = setup({ answer: candidates() });
+
+    await service.search('Der Sieg gehört dir allein');
+
+    expect(askedWith(ask).input).toContain('Andere frei zugängliche Seiten');
+  });
+});
+
+/** Eine Weiterleitung der Suche, die bei `target` landet. */
+const redirectTo = (
+  fetchMock: jest.Mock,
+  targets: Record<string, { status: number; url: string }>,
+) => {
+  fetchMock.mockImplementation(async (url: string) => {
+    const target = targets[url];
+    if (!target) throw new Error('ECONNREFUSED');
+    return target as Response;
+  });
+};
+
+describe('SongLookupService.search — Fundstellen der Suche', () => {
+  const REDIRECT =
+    'https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZ1';
+  const SONGTEXTE =
+    'https://www.songtexte.com/songtext/outbreakband/gott-ist-gut-123.html';
+
+  it('offers what the search found when the model links nowhere', async () => {
+    const invented = 'https://www.worshiptogether.com/songs/gott-ist-gut/';
+    const { service, fetchMock } = setup({
+      answer: candidates(song(invented)),
+      sources: [{ url: REDIRECT, title: 'songtexte.com' }],
+    });
+    redirectTo(fetchMock, {
+      [invented]: { status: 404, url: invented },
+      [REDIRECT]: { status: 200, url: SONGTEXTE },
+    });
+
+    // Ohne Titel vom Modell: Den kennt nur, wer die Seite gelesen hat. Das
+    // Formular zeigt dann den eingetippten.
+    expect(await service.search('Gott ist gut')).toEqual([
+      { url: SONGTEXTE, title: null, artist: null, site: 'songtexte.com' },
+    ]);
+  });
+
+  it('uses the sources even when the answer itself is unusable', async () => {
+    const { service, fetchMock } = setup({
+      answer: null,
+      sources: [{ url: REDIRECT, title: null }],
+    });
+    redirectTo(fetchMock, { [REDIRECT]: { status: 200, url: SONGTEXTE } });
+
+    expect(await service.search('Gott ist gut')).toEqual([
+      expect.objectContaining({ url: SONGTEXTE }),
+    ]);
+  });
+
+  it('puts a confirmed link ahead of one only the model vouches for', async () => {
+    // Cifra Club sagt einem Server immer 403, auch zu einer erfundenen
+    // Adresse. Was die Suche gefunden hat, gibt es sicher.
+    const { service, fetchMock } = setup({
+      answer: candidates(song(CIFRA)),
+      sources: [{ url: REDIRECT, title: null }],
+    });
+    redirectTo(fetchMock, {
+      [CIFRA]: { status: 403, url: CIFRA },
+      [REDIRECT]: { status: 200, url: UG },
+    });
+
+    const found = await service.search('Gott ist gut');
+
+    expect(found.map((entry) => entry.site)).toEqual([
+      'ultimate-guitar.com',
+      'cifraclub.com',
+    ]);
+  });
+
+  it('trusts a link behind a bot check once the search found it too', async () => {
+    const { service, fetchMock } = setup({
+      answer: candidates(song(CIFRA), song(UG)),
+      sources: [{ url: REDIRECT, title: null }],
+    });
+    // Dieselbe Seite, nur ohne Schrägstrich am Ende.
+    redirectTo(fetchMock, {
+      [CIFRA]: { status: 403, url: CIFRA },
+      [UG]: { status: 200, url: UG },
+      [REDIRECT]: { status: 403, url: CIFRA.replace(/\/$/, '') },
+    });
+
+    const found = await service.search('Gott ist gut');
+
+    // Bestätigt sind jetzt beide — es gilt wieder die Vorliebe, und der Link
+    // des Modells bleibt der mit Titel und Interpret.
+    expect(found).toEqual([
+      expect.objectContaining({ url: CIFRA, title: 'Gott ist gut' }),
+      expect.objectContaining({ url: UG }),
+    ]);
+  });
+
+  it('still drops what the search found on a paywall', async () => {
+    const official =
+      'https://tabs.ultimate-guitar.com/tab/outbreakband/gott-ist-gut-official-2034811';
+    const { service, fetchMock } = setup({
+      answer: candidates(),
+      sources: [{ url: REDIRECT, title: null }],
+    });
+    redirectTo(fetchMock, { [REDIRECT]: { status: 200, url: official } });
 
     expect(await service.search('Gott ist gut')).toEqual([]);
   });

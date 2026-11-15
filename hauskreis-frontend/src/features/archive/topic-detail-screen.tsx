@@ -74,6 +74,7 @@ import {
 } from '@/lib/api/hooks';
 import { formatDay } from '@/lib/date';
 import { cn } from '@/lib/cn';
+import { markBackNavigation } from '@/lib/page-transition';
 import { namesOf } from '@/lib/person';
 import type {
   AdoptableSession,
@@ -135,6 +136,7 @@ function Loaded({ topic }: { topic: Topic }) {
       <div className="flex items-center justify-between gap-2">
         <Link
           href="/archiv"
+          onClick={markBackNavigation}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-terracotta-600"
         >
           <ArrowLeft size={14} />

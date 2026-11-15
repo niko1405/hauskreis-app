@@ -115,7 +115,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'start',
     question: 'Wie bekomme ich die App auf den Startbildschirm?',
     answer:
-      'Es gibt sie nicht im App Store — sie läuft im Browser und lässt sich von dort ablegen.\n\n**iPhone:** In Safari öffnen, unten auf Teilen tippen, „Zum Home-Bildschirm". Nur so funktionieren übrigens auch die Benachrichtigungen; im normalen Safari-Tab schaltet Apple sie ab.\n\n**Android:** Chrome bietet „App installieren" von selbst an, sonst steht es im Menü oben rechts.\n\nEin Hinweis fürs iPhone: Eine App vom Home-Bildschirm hat dort **ihren eigenen Speicher**, getrennt von Safari. Öffne sie nach dem Installieren einmal mit Internet — sonst hat sie beim ersten Start im Flugmodus noch nichts, was sie zeigen könnte.',
+      'Es gibt sie nicht im App Store — sie läuft im Browser und lässt sich von dort ablegen.\n\n**iPhone:** In Safari öffnen, unten auf Teilen tippen, „Zum Home-Bildschirm". Nur so funktionieren übrigens auch die Benachrichtigungen; im normalen Safari-Tab schaltet Apple sie ab.\n\n**Android:** Chrome bietet „App installieren" von selbst an, sonst steht es im Menü oben rechts.',
     keywords: ['pwa', 'installieren', 'homescreen', 'startbildschirm', 'ios'],
   },
   {
@@ -1085,7 +1085,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'app',
     question: 'Funktioniert die App ohne Internet?',
     answer:
-      'Teilweise. Die App selbst startet, diese Hilfe ist vollständig da, und deine eigenen Lied-Versionen auch.\n\nAlles, was die Gruppe teilt, braucht Netz: Termine, Themen, Lieder, wer zugesagt hat. Dafür siehst du einen Hinweis, dass gerade keine Verbindung besteht.\n\nEin Hinweis fürs iPhone: Eine App vom Home-Bildschirm hat dort ihren eigenen Speicher, getrennt von Safari. Nach dem Installieren muss sie **einmal mit Internet** geöffnet werden — vorher hat sie nichts, was sie im Flugmodus zeigen könnte.',
+      'Teilweise. Die App selbst startet, diese Hilfe ist vollständig da, und deine eigenen Lied-Versionen auch.\n\nAlles, was die Gruppe teilt, braucht Netz: Termine, Themen, Lieder, wer zugesagt hat. Dafür siehst du einen Hinweis, dass gerade keine Verbindung besteht.',
     keywords: ['offline', 'flugmodus', 'kein internet', 'unterwegs'],
   },
   {

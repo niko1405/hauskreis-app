@@ -386,10 +386,12 @@ function MeetingListView({
         </p>
         {/* Zwei Symbole statt eines Worts: So stehen beide Richtungen da — die
             Uhr für „steht noch an", der Haken für „war schon" —, und die
-            gewählte ist hervorgehoben. */}
+            gewählte ist hervorgehoben. **Neutral** (`quiet`): Darüber stehen
+            die Register in Terracotta, und zwei farbige Wahlen übereinander
+            fragten, welche die Seite bestimmt. */}
         <Segmented
           iconOnly
-          look="glow"
+          look="quiet"
           label="Welche Termine"
           value={scope}
           onChange={setScope}

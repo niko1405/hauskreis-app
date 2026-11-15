@@ -71,6 +71,7 @@ import {
   useHasSmartHeader,
   useHeaderScroll,
 } from './use-header-scroll';
+import { WarmUp } from './warm-up';
 
 export function SmartHeader() {
   const show = useHasSmartHeader();
@@ -94,7 +95,7 @@ export function SmartHeader() {
     <>
       <header
         className={cn(
-          'header-inset sticky top-0 z-40 transition-colors duration-200 md:hidden',
+          'header-inset vt-chrome-header sticky top-0 z-40 transition-colors duration-200 md:hidden',
           // Der Übergang gilt **nur beim Zurückkommen**. Beim Wegfahren fällt
           // die Klasse im selben Render weg, in dem die Verschiebung dazukommt:
           // Die Leiste ist damit sofort weg, statt sich sichtbar hinauszu-
@@ -135,6 +136,9 @@ export function SmartHeader() {
           {/* Der eine Weg zur Gruppe, und der einzige hervorgehobene Knopf der
               Leiste. Ganz oben als Glas, damit er sich ins Foto einfügt; auf
               dem Balken hell gefüllt, weil er sich sonst darin verlöre. */}
+          {/* Ihr Bildschirm lädt schon vor, solange die Leiste dasteht — so
+              kommt er fertig von unten herauf (`warm-up.tsx`). */}
+          <WarmUp page="group" />
           <Link
             href="/hauskreis"
             className={cn(
@@ -185,7 +189,7 @@ function BellOnly({
 }) {
   return (
     <>
-      <div className="header-inset pointer-events-none relative z-40 md:hidden">
+      <div className="header-inset vt-chrome-header pointer-events-none relative z-40 md:hidden">
         <div className="h-header flex items-end justify-end px-4 pb-2.5">
           <div className="pointer-events-auto">
             <NotificationBell atTop onClick={() => onOpen(true)} />
