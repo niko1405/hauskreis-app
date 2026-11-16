@@ -4,10 +4,11 @@
  * Sechs Schalter am Termin, und sie sagen es als Einzige. Eine Terminart
  * daneben gibt es nicht; wie ein Abend heißt, ergibt sich aus den Schaltern.
  *
- * **Fünf davon plant man, den sechsten nicht.** Thema, Lieder, Testimony,
- * Gebetsanliegen und Snacks hakt man vor dem Abend an; die Nachbereitung steht
- * nicht im Bausteinkasten, weil man sie dort *vor* dem Abend anhaken müsste —
- * also als es noch nichts nachzubereiten gab.
+ * **Alle sechs plant man.** Auch die Nachbereitung: Ob ein Abend eine hat,
+ * entscheidet sich vorher, wie bei den anderen — geschrieben wird sie erst ab
+ * Terminbeginn, und erst dann fragt die App danach. Früher kam sie nur über
+ * diesen Hinweis dazu, und dann stand er an jedem Abend ohne Thema, auch an
+ * denen, die keine brauchen.
  *
  * **Einen Gastgeber-Schalter gibt es nicht.** Man trifft sich immer irgendwo;
  * ein Schalter, der nie aus darf, ist keiner. Dass an einem Abend *niemand*
@@ -16,11 +17,9 @@
  *
  * Reine Funktionen, kein Dienst: die Regeln kennen keine Datenbank und lassen
  * sich so an jeder Stelle prüfen, an der sie gelten — im Service, im Generator
- * und im Test. Die einzige Abhängigkeit ist `eveningReached`, selbst eine reine
- * Funktion; die Uhr kommt als Parameter herein.
+ * und im Test.
  */
 import { BadRequestException } from '@nestjs/common';
-import { eveningReached } from '../common/time/local-evening';
 
 export interface MeetingSlots {
   hasTopicSlot: boolean;
@@ -32,10 +31,11 @@ export interface MeetingSlots {
    * Ein Lobpreisabend, an dem die Gruppe sich etwas für die Woche vornimmt,
    * hat keine Einheit — der Vorsatz entsteht dort aber genauso.
    *
-   * Der einzige Baustein, der **nicht zur Planung** gehört: er lässt sich erst
-   * ab Terminbeginn anschalten (`assertNotesSlotNotAhead`) und steht im Frontend
-   * deshalb auch nicht im Bausteinkasten, sondern hinter einem Hinweis am Abend
-   * selbst.
+   * Geplant wie die übrigen: An heißt „an diesem Abend wird etwas
+   * festgehalten", und ab Terminbeginn steht dann der Hinweis da, der danach
+   * fragt. Von Hand angelegte Abende haben sie nicht, erzeugte ohne Thema
+   * schon (`PRAISE_SLOTS`). Neben einem Thema gibt es sie nie
+   * (`assertSlotsExclusive`).
    */
   hasNotesSlot: boolean;
   /**
@@ -68,11 +68,10 @@ export interface MeetingSlots {
 /**
  * Die drei Belegungen, mit denen ein Abend anfängt.
  *
- * Die **Nachbereitung** steht überall auf `false`, auch beim Lobpreisabend, wo
- * sie am naheliegendsten wäre. Sie ist der einzige Baustein, der nichts
- * vorbereitet und niemanden einteilt — man schaltet ihn dazu, wenn an dem Abend
- * etwas festzuhalten war. Ihn vorzugeben hieße, jeder Gruppe ein leeres
- * Textfeld hinzustellen und daran zu erinnern, dass sie es nicht gefüllt hat.
+ * Die **Nachbereitung** hat nur der Lobpreisabend: Am Themenabend tragen
+ * Zusammenfassung und Actionstep die Einheit, und ein von Hand angelegter
+ * Abend — ein Geburtstag, eine Freizeit — braucht meistens keine. Wer doch
+ * eine will, hakt sie an.
  *
  * Die **Gebetsanliegen** stehen überall auf `true`, als einzige. Auch ein
  * Geburtstag muss nichts erfüllen — aber beten kann man an ihm genauso, und
@@ -87,12 +86,17 @@ export const EVENING_SLOTS: MeetingSlots = {
   hasSnackSlot: false,
 };
 
-/** Kein Thema, dafür ein Testimony — oder auch nur Lieder (CLAUDE.md §5). */
+/**
+ * Kein Thema, dafür ein Testimony — oder auch nur Lieder (CLAUDE.md §5).
+ *
+ * Das Testimony nimmt der Terminplaner wieder heraus, wenn die Gruppe es
+ * abgeschaltet hat (`meeting_schedule_config.testimony`).
+ */
 export const PRAISE_SLOTS: MeetingSlots = {
   hasTopicSlot: false,
   hasSongSlot: true,
   hasTestimonySlot: true,
-  hasNotesSlot: false,
+  hasNotesSlot: true,
   hasPrayerSlot: true,
   hasSnackSlot: false,
 };
@@ -268,36 +272,6 @@ export function assertSlotsExclusive(slots: MeetingSlots): void {
   if (slots.hasTopicSlot && slots.hasNotesSlot) {
     throw new BadRequestException(
       'Zusammenfassung und Actionstep gehören entweder zum Thema oder zum Abend — nicht zu beidem',
-    );
-  }
-}
-
-/**
- * Die Nachbereitung lässt sich erst ab Terminbeginn dazunehmen.
- *
- * Sie ist der einzige Baustein, der nicht zur **Planung** eines Abends gehört,
- * sondern zu dem, was danach übrig bleibt. Sie vorher anzubieten hieße, nach
- * einer Zusammenfassung von etwas zu fragen, das noch nicht stattgefunden hat.
- *
- * Nur der Übergang **aus → an** wird geprüft. Ein PATCH, der den Schalter gar
- * nicht anfasst, darf nicht daran scheitern, und wegnehmen darf man immer:
- * hätte man sich vertan, wäre man sonst damit eingesperrt.
- *
- * Dieselbe Grenze wie beim Abhaken des Actionsteps (`eveningReached`), und
- * gemeint ist die Anfangszeit **nach** dem Aufruf — wer Uhrzeit und Baustein in
- * einem PATCH ändert, meint die neue.
- */
-export function assertNotesSlotNotAhead(
-  before: MeetingSlots,
-  after: MeetingSlots,
-  evening: { date: Date; startMinutes: number; zone: string },
-  now?: Date,
-): void {
-  if (before.hasNotesSlot || !after.hasNotesSlot) return;
-
-  if (!eveningReached(evening.date, evening.zone, now, evening.startMinutes)) {
-    throw new BadRequestException(
-      'Die Nachbereitung gibt es erst, wenn der Abend angefangen hat',
     );
   }
 }

@@ -18,6 +18,7 @@ type CreateManyArgs = {
     startMinutes: number;
     hasTopicSlot: boolean;
     hasTestimonySlot: boolean;
+    hasNotesSlot: boolean;
     hasSnackSlot: boolean;
   }[];
   skipDuplicates?: boolean;
@@ -136,6 +137,26 @@ describe('MeetingGeneratorService.generateFor', () => {
     expect(byDate.get('2026-08-25')).toEqual([false, true]);
     expect(byDate.get('2026-08-04')).toEqual([true, false]);
     expect(byDate.get('2026-09-08')).toEqual([true, false]);
+  });
+
+  /**
+   * Die Nachbereitung hat nur der Abend ohne Thema — am Themenabend tragen
+   * Zusammenfassung und Actionstep die Einheit.
+   */
+  it('gibt die Nachbereitung dem Lobpreisabend und nicht dem Themenabend', async () => {
+    const { service, createMany } = setup();
+
+    await service.generateFor('hk-1', MONDAY);
+
+    const notes = new Map(
+      createMany.mock.calls[0][0].data.map((m) => [
+        isoOf(m.date),
+        m.hasNotesSlot,
+      ]),
+    );
+
+    expect(notes.get('2026-07-28')).toBe(true);
+    expect(notes.get('2026-08-04')).toBe(false);
   });
 
   it('schreibt an jeden erzeugten Abend, dass er erzeugt ist', async () => {

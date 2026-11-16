@@ -133,18 +133,23 @@ export const SLOT_LABEL: Record<MeetingSlotKey, string> = {
 export const MEETING_SLOT_KEYS = Object.keys(SLOT_LABEL) as MeetingSlotKey[];
 
 /**
- * Die Bausteine, die man beim **Planen** eines Abends anhakt.
+ * Die Bausteine, die man beim **Planen** eines Abends anhakt — alle sechs.
  *
- * Fünf, nicht sechs: die **Nachbereitung** steht bewusst nicht dabei. Sie gehört
- * nicht zur Planung, sondern zu dem, was danach übrig bleibt, und kommt über
- * einen Hinweis am Abend selbst dazu; der Server lehnt ein früheres Anschalten
- * ab.
+ * Auch die **Nachbereitung**: Ob ein Abend eine hat, entscheidet sich vorher,
+ * und nur dann fragt er ab Terminbeginn danach. Sie steht direkt unter dem
+ * Thema, weil die beiden einander ausschließen — ist das Thema angehakt, ist sie
+ * ausgegraut (`SlotToggles`).
  */
 export const MEETING_SLOTS = [
   {
     key: 'hasTopicSlot',
     label: SLOT_LABEL.hasTopicSlot,
     hint: 'Mit Zusammenfassung und Actionstep danach.',
+  },
+  {
+    key: 'hasNotesSlot',
+    label: SLOT_LABEL.hasNotesSlot,
+    hint: 'Zusammenfassung und Actionstep nach dem Abend.',
   },
   {
     key: 'hasSongSlot',

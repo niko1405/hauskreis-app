@@ -227,8 +227,8 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
                 info={
                   <>
                     Ab dieser Uhrzeit hat ein Abend begonnen: Dann sehen alle
-                    den Inhalt seines Themas, und die Nachbereitung lässt sich
-                    anlegen.
+                    den Inhalt seines Themas, und wo eine Nachbereitung
+                    dazugehört, fragt der Abend danach.
                   </>
                 }
               >

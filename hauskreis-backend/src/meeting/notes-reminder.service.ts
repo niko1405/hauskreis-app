@@ -40,10 +40,11 @@ const MAX_TAGE = 3;
  * beantwortet — auch wenn nur eins der beiden Felder gefüllt ist: Nicht jeder
  * Abend hat beides, manchmal gibt es nur einen Vorsatz.
  *
- * Der Baustein selbst muss dabei **nicht** an sein: Er lässt sich mit einem
- * Klick auf der Terminseite dazuschalten, und genau dorthin führt die
- * Nachricht. Ihn zur Bedingung zu machen hieße, nur die zu erinnern, die schon
- * angefangen haben.
+ * **Und nur, wenn der Abend eine Nachbereitung hat** (`hasNotesSlot`). Ob er
+ * eine hat, wird geplant wie die übrigen Bausteine; nur an solchen Abenden
+ * steht auf der Terminseite der Hinweis, zu dem die Nachricht führt. Eine
+ * Frage nach einer Zusammenfassung, die niemand vorgesehen hat, wäre an einem
+ * Geburtstag nur Lärm.
  */
 @Injectable()
 export class NotesReminderService {
@@ -82,6 +83,7 @@ export class NotesReminderService {
         date: { gte: addDays(today, -MAX_TAGE) },
         status: { not: MeetingStatus.CANCELLED },
         hasTopicSlot: false,
+        hasNotesSlot: true,
         summaryText: null,
         actionstepText: null,
       },

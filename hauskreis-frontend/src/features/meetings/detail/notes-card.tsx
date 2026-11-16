@@ -8,11 +8,11 @@
  * sehen deshalb aus wie an einer Einheit: der Actionstep hervorgehoben, mit dem
  * eigenen Haken (`ActionstepFeature`).
  *
- * **Sie kommt und geht mit dem Abend.** Anders als Thema, Lieder und Testimony
- * steht sie nicht im Bausteinkasten: dort hätte man sie vorher angehakt, also zu
- * einem Zeitpunkt, an dem es nichts nachzubereiten gibt. Stattdessen erscheint
- * ab Terminbeginn ein Hinweis (`NotesPrompt`), und ein Knopf im Sheet nimmt sie
- * wieder ganz weg — danach ist der Hinweis zurück, als wäre nichts gewesen.
+ * **Ob ein Abend eine hat, wird geplant** — im Bausteinkasten wie Thema, Lieder
+ * und Testimony; von Hand angelegte haben sie nicht, erzeugte ohne Thema schon.
+ * Geschrieben wird sie erst danach: Ab Terminbeginn erscheint ein Hinweis
+ * (`NotesPrompt`), und ein Knopf im Sheet nimmt das Geschriebene wieder weg —
+ * danach ist der Hinweis zurück, als wäre nichts gewesen.
  *
  * **Geschrieben wird in einem Sheet** (`NotesSheet`) — beim Anlegen wie beim
  * Ändern. Ein Formular für beide Wege: zwei wären zwei Meinungen darüber, was
@@ -36,7 +36,7 @@ import { useMe } from '@/lib/api/hooks';
 import type { Meeting } from '@/lib/api/types';
 
 /**
- * Der Weg zur Nachbereitung — ab Terminbeginn, an einem Abend ohne Thema.
+ * Der Weg zur Nachbereitung — ab Terminbeginn, an einem Abend, der eine hat.
  *
  * Bewusst ein Hinweis und keine Karte, die von selbst dasteht: **nicht jeder
  * Abend braucht eine Nachbereitung.** Eine leere Karte an jedem Termin wäre eine

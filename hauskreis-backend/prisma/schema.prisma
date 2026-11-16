@@ -524,9 +524,10 @@ model Meeting {
   hasTopicSlot        Boolean              @default(true) @map("has_topic_slot")
   hasSongSlot         Boolean              @default(true) @map("has_song_slot")
   hasTestimonySlot    Boolean              @default(false) @map("has_testimony_slot")
-  /// Zusammenfassung und Actionstep **ohne** Thema. Bei jeder Terminart
-  /// voreingestellt aus: ein Standard-Abend hat sein Thema, und wo keins ist,
-  /// soll die Karte eine Entscheidung sein und keine Vorgabe.
+  /// Zusammenfassung und Actionstep **ohne** Thema. Geplant wie die übrigen:
+  /// Nur wo er an ist, fragt der Abend ab Terminbeginn danach. Von Hand
+  /// angelegte Abende haben ihn nicht, erzeugte ohne Thema (Lobpreisabend)
+  /// schon; neben einem Thema gibt es ihn nie.
   hasNotesSlot        Boolean              @default(false) @map("has_notes_slot")
   /// Wofür die Gruppe an dem Abend beten will — je Person ein Anliegen.
   ///

@@ -231,7 +231,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Was sind die Bausteine, und was kann ich an- und ausschalten?',
     answer:
-      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Lieder**, **Testimony**, **Gebetsanliegen** und **Snacks**. Sie bestimmen, was der Abend ist — auch sein Name kommt daher.\n\nDu findest sie auf der Terminseite unter **„Bearbeiten"** oben rechts, im Abschnitt **„Was gehört dazu"**. Gespeichert wird mit „Speichern"; geht dabei etwas verloren, fragt die App vorher.\n\nDie **Nachbereitung** ist der sechste Teil, steht aber nicht dabei — sie lässt sich erst ab dem Beginn des Abends dazuschalten. Vorher gäbe es ja nichts nachzubereiten.\n\nDie **Gebetsanliegen** sind überall voreingestellt an, die **Snacks** überall aus: Beten kann man an jedem Abend, und wer nie über Essen gesprochen hat, soll keine offene Zuständigkeit vorfinden.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
+      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Nachbereitung**, **Lieder**, **Testimony**, **Gebetsanliegen** und **Snacks**. Sie bestimmen, was der Abend ist — auch sein Name kommt daher.\n\nDu findest sie auf der Terminseite unter **„Bearbeiten"** oben rechts, im Abschnitt **„Was gehört dazu"**, und beim Anlegen eines Termins. Gespeichert wird mit „Speichern"; geht dabei etwas verloren, fragt die App vorher.\n\nDie **Nachbereitung** heißt: Nach dem Abend werden Zusammenfassung und Actionstep festgehalten. Selbst angelegte Termine haben sie nicht, die erzeugten Abende ohne Thema schon. Neben einem Thema ist sie ausgegraut — dort gehören beide an dessen Einheit.\n\nDie **Gebetsanliegen** sind überall voreingestellt an, die **Snacks** überall aus: Beten kann man an jedem Abend, und wer nie über Essen gesprochen hat, soll keine offene Zuständigkeit vorfinden.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
     keywords: ['slots', 'schalter', 'baukasten', 'thema', 'lieder', 'snacks'],
   },
   {
@@ -951,10 +951,10 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
   {
     id: 'notes-erst-am-abend',
     category: 'notes',
-    question: 'Warum kann ich die Nachbereitung erst am Abend hinzufügen?',
+    question: 'Wann steht „Nachbereitung hinzufügen?" da?',
     answer:
-      'Weil man sie nicht vorplant. Stünde sie bei den Bausteinen, hätte man sie **vor** dem Abend angehakt — also als es noch nichts nachzubereiten gab.\n\nAb der Treffpunktzeit steht an einem Abend ohne Thema ganz oben der Hinweis „Nachbereitung hinzufügen?". Ein Klick legt die Karte an; am Fuß der Karte nimmst du sie auch wieder ganz weg, dann steht wieder der Hinweis da.\n\nNicht jeder Abend braucht eine.\n\nHatte der Abend ein **Thema**, steht der Hinweis nicht da — dort stehen Zusammenfassung und Actionstep an der Einheit. War es nachträglich betrachtet doch keines, leer die Rolle „Thema": Nach einer Rückfrage fällt der Baustein weg und der Hinweis erscheint.',
-    keywords: ['hinzufügen', 'später', 'hinweis', 'karte'],
+      'Ab der Treffpunktzeit, an einem Abend, der eine Nachbereitung hat. Ob er eine hat, steht unter **„Bearbeiten"** im Abschnitt **„Was gehört dazu"** — beim Anlegen kannst du sie gleich anhaken. Selbst angelegte Termine haben sie nicht, die erzeugten Abende ohne Thema schon: Nicht jeder Abend braucht eine.\n\nEin Tipp auf den Hinweis öffnet das Formular. Unten darin nimmst du das Geschriebene auch wieder weg, dann steht wieder der Hinweis da. Soll der Abend gar keine haben, nimm das Häkchen unter „Bearbeiten" heraus.\n\nHatte der Abend ein **Thema**, gibt es keine Nachbereitung — dort stehen Zusammenfassung und Actionstep an der Einheit. War es nachträglich betrachtet doch keines, leer die Rolle „Thema": Nach einer Rückfrage fällt der Baustein weg und der Hinweis erscheint.',
+    keywords: ['hinzufügen', 'später', 'hinweis', 'karte', 'planen', 'anhaken'],
   },
   {
     id: 'notes-einzeln',

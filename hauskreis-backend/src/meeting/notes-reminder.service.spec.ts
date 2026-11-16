@@ -79,6 +79,7 @@ describe('NotesReminderService.sendDueReminders', () => {
     // Ohne Thema: Dort gehören die beiden Texte der Einheit, und schreiben darf
     // sie nur deren Crew.
     expect(where.hasTopicSlot).toBe(false);
+    expect(where.hasNotesSlot).toBe(true);
     // Und nur, solange nichts dasteht.
     expect(where.summaryText).toBeNull();
     expect(where.actionstepText).toBeNull();

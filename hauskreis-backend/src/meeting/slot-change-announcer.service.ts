@@ -17,8 +17,10 @@ import {
  * Die Bausteine, die man **plant** — und über die man deshalb Bescheid wissen
  * muss.
  *
- * Die Nachbereitung fehlt mit Absicht: Sie kommt erst am Abend selbst dazu,
- * wenn es etwas nachzubereiten gibt. Wer sie anschaltet, plant nichts um.
+ * Die Nachbereitung fehlt mit Absicht. Geplant wird sie zwar auch, aber auf
+ * sie bereitet sich niemand vor: Geschrieben wird sie nach dem Abend, und
+ * danach fragt dann ohnehin der Hinweis auf der Terminseite. Wer sie an- oder
+ * abschaltet, plant für die anderen nichts um.
  */
 export const ANNOUNCED_SLOTS = [
   'hasTopicSlot',
