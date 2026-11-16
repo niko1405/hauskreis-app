@@ -1407,40 +1407,30 @@ ein Tipp daneben — Abbrechen. An `pull-to-refresh.tsx` war nichts zu tun; es
 steigt aus, sobald ein Overlay angemeldet ist, und das Sheet meldet sich seit
 jeher über `lockOverlay()` an.
 
-### Die Nachbereitung entsteht am Abend, nicht davor
+### Die Nachbereitung wird geplant, geschrieben wird sie danach
 
 Zusammenfassung und Actionstep eines Abends **ohne** Thema hängen am Baustein
-`hasNotesSlot` — dem einzigen, der nicht im Bausteinkasten steht. Dort hätte man
-ihn _vor_ dem Abend angehakt, also als es noch nichts nachzubereiten gab.
+`hasNotesSlot`. Er steht im Bausteinkasten (`SlotToggles`) direkt unter dem
+Thema, beim Anlegen wie beim Bearbeiten: **von Hand angelegte Abende haben ihn
+nicht, erzeugte ohne Thema schon**. Neben einem Thema ist er ausgegraut und aus,
+mit dem Grund als Untertitel — die beiden schließen einander aus.
 
-**Der Hinweis steht ganz oben, die Karte unten.** Ab Terminbeginn ist er die
-Hauptsache dieses Bildschirms — wer vom Abend heimkommt, soll ihn sehen, ohne an
-Anwesenheit, Gebetsanliegen und Thema vorbeizuscrollen. Die Karte steht unten:
-Sobald etwas
-drinsteht, ist es Inhalt und gehört zum Nachklang des Abends. Beides zugleich
-gibt es nie — `showNotes` und `mayAddNotes` schließen einander aus.
+**Der Hinweis steht ganz oben, die Karte weiter unten.** Ab Terminbeginn ist er
+die Hauptsache dieses Bildschirms — wer vom Abend heimkommt, soll ihn sehen,
+ohne an allem anderen vorbeizuscrollen. Sobald etwas drinsteht, ist es Inhalt
+und gehört hinter die Zuständigkeiten. Beides zugleich gibt es nie.
 
-Stattdessen ein Ablauf in drei Zuständen, und keiner davon zeigt ein leeres Feld:
+| Was dasteht   | Wann                                                          |
+| ------------- | ------------------------------------------------------------- |
+| nichts        | der Abend hat keine Nachbereitung, oder er hat nicht begonnen |
+| `NotesPrompt` | ab Terminbeginn, solange nichts geschrieben ist               |
+| `NotesCard`   | sobald etwas drinsteht                                        |
 
-| Was dasteht   | Wann                                                 |
-| ------------- | ---------------------------------------------------- |
-| nichts        | vor der Treffpunktzeit, oder der Abend hat ein Thema |
-| `NotesPrompt` | ab Terminbeginn, solange nichts geschrieben ist      |
-| `NotesCard`   | sobald etwas drinsteht — oder gerade angelegt        |
-
-Der Hinweis schaltet den Baustein an **und** macht die Karte auf (`notesOpen`):
-er ist die Aufforderung, etwas zu schreiben, und eine Karte, die erst beim
-ersten gespeicherten Satz erschiene, gäbe es nicht, in den man ihn tippt. Bleibt
-sie leer, steht beim nächsten Aufmachen wieder der Hinweis da.
-Innerhalb der Karte ist jedes der beiden Stücke
-einzeln: ein Knopf legt das fehlende an und öffnet gleich das Feld (`startOpen`
-an `InlineEdit`), bleibt es leer, nimmt `onDiscard` es wieder weg. So gibt es
-kein Feld ohne Inhalt — und manchmal gibt es eben nur einen Vorsatz und nichts
-zusammenzufassen.
-
-Wegnehmen geht über „Nachbereitung entfernen" am Fuß der Karte, mit derselben
-Rückfrage wie bei den anderen Bausteinen: gelöscht werden beide Texte und die
-Haken darunter. Danach steht wieder der Hinweis da, als wäre nichts gewesen.
+Geschrieben wird im `NotesSheet`, beim Anlegen wie beim Ändern. Wegnehmen geht
+über „Nachbereitung entfernen" unten im Sheet, mit derselben Rückfrage wie bei
+den anderen Bausteinen: gelöscht werden beide Texte und die Haken darunter —
+**der Baustein bleibt**, und danach steht wieder der Hinweis da. Ob der Abend
+überhaupt eine Nachbereitung hat, sagt allein das Häkchen im Bearbeiten-Dialog.
 
 ### Absagen: die eigene und die des ganzen Abends
 
@@ -1450,10 +1440,15 @@ durchgesetzt vom Server) und fragt nach einem Grund. Der ist freiwillig, aber
 der eigentliche Zweck des Zwischenschritts: ein „fällt aus" ohne Erklärung
 erzeugt genau die Rückfragen in WhatsApp, die die App abschaffen soll.
 
-Ein abgesagter Abend sieht dann auch danach aus (`detail/cancellation-card.tsx`):
-oben eine `alert`-Karte mit Grund, Person und Zeitpunkt, darunter alles gedämpft
-und schreibgeschützt (`locked = past || cancelled`) — einem Termin, den es nicht
-mehr gibt, weist man keine Lieder und Rollen zu. Für Admins steht in der Karte
+Ein abgesagter Abend ist eine **eigene Seite** (`CancelledView` in
+`detail/cancellation-card.tsx`; die Terminseite gibt sie nach ihren Hooks
+zurück): mittig eine Pille „Fällt aus", Titel, Datum und Uhrzeit, ein kurzer
+Strich, „Abgesagt von **Name**" samt Grund und ein ruhiger Knopf. Sonst nichts —
+kein „Bearbeiten", keine Abschnitte; einem Termin, den es nicht mehr gibt,
+weist man keine Lieder und Rollen zu, und gedämpft in voller Länge darunter
+war das Geplante nur Ballast. Oben rechts steht für Admins das Löschen
+(`useDeleteMeetingFlow`, derselbe Ablauf wie der Knopf unten an einem
+stattfindenden Termin). Nach einer Absage von Hand steht dort für Admins
 „Absage zurücknehmen".
 
 **Der Abend, den niemand absagt und der trotzdem ausfällt.** Haben alle aktiven
@@ -1462,12 +1457,13 @@ sagt danach jemand doch zu, lebt er wieder auf. Beides schickt eine
 Benachrichtigung. Wer noch nicht geantwortet hat, verhindert die Absage — die
 Einzelheiten stehen im Backend-README.
 
-Dafür steht in der „Fällt aus"-Karte ein Knopf **„Ich bin doch dabei"** — für
-alle, nicht nur für Admins: Die Karte verspricht „sagt jemand doch zu, findet er
-wieder statt", aber „Wer kommt" ist an einem abgesagten Abend schreibgeschützt
-und die Karten in Liste und Kalender blenden ihren Schalter aus. Der
-Admin-Knopf „Absage zurücknehmen" nimmt die selbst gegebenen Absagen mit
-zurück.
+Dafür steht auf dieser Seite statt „Abgesagt von" ein „Alle haben abgesagt." und
+der Knopf **„Ich bin doch dabei"** — für alle, nicht nur für Admins: „Wer kommt"
+gibt es dort nicht, und die Karten in Liste und Kalender blenden ihren Schalter
+aus. „Absage zurücknehmen" steht an einem kommenden Abend dieser Art nicht
+daneben; der Weg zurück ist eine Zusage. Erst an einem vergangenen, an dem eine
+Zusage nichts mehr bewirkt, bekommen Admins ihn wieder — er nimmt dann die selbst
+gegebenen Absagen mit zurück.
 
 In der Planungstabelle steht ein abgesagter Abend blass da, statt zu
 verschwinden: dass er ausfällt, ist die Antwort auf „was ist am 12. Mai" —
