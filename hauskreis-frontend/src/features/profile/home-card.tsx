@@ -132,7 +132,7 @@ export function HomeCard({
               )}
             >
               <MapPin size={15} className="text-terracotta-500" />
-              In Google Maps prüfen
+              In Maps prüfen
               <ExternalLink size={13} className="text-stone-400" />
             </a>
           </>
