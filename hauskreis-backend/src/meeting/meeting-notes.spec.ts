@@ -239,17 +239,13 @@ describe('Nachbereitung schreiben', () => {
 });
 
 describe('Nachbereitung an- und abschalten', () => {
-  it('lässt sich vor dem Abend nicht dazunehmen', async () => {
+  /**
+   * Geplant wie die übrigen Bausteine: Ob ein Abend eine Nachbereitung hat,
+   * entscheidet sich vorher. Geschrieben wird sie erst danach — dann steht der
+   * Hinweis da, der danach fragt.
+   */
+  it('lässt sich schon vor dem Abend dazunehmen', async () => {
     jetzt(VORMITTAGS);
-    const { service } = setup();
-
-    await expect(
-      service.update('hk1', 'm1', { hasNotesSlot: true } as never, ICH, EGAL),
-    ).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('lässt sich ab der Treffpunktzeit dazunehmen', async () => {
-    jetzt(ABENDS);
     const { service, state } = setup();
 
     await service.update(
@@ -261,24 +257,6 @@ describe('Nachbereitung an- und abschalten', () => {
     );
 
     expect(state.current.hasNotesSlot).toBe(true);
-  });
-
-  /**
-   * Die Grenze kommt vom Termin: um halb acht ist eine 18-Uhr-Gruppe längst
-   * dabei, eine 20-Uhr-Gruppe noch nicht.
-   */
-  it('verschiebt sich mit der Anfangszeit des Abends', async () => {
-    jetzt(new Date('2026-08-11T17:30:00.000Z'));
-
-    await expect(
-      setup({ startMinutes: 1200 }).service.update(
-        'hk1',
-        'm1',
-        { hasNotesSlot: true } as never,
-        ICH,
-        EGAL,
-      ),
-    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   /**
@@ -318,6 +296,38 @@ describe('Nachbereitung an- und abschalten', () => {
     expect(state.current.hasNotesSlot).toBe(false);
     // Beide Texte weg — und die Haken darunter auch, sonst stünde ein neuer
     // Actionstep später rätselhaft schon abgehakt da.
+    expect(state.current.summaryText).toBeNull();
+    expect(state.current.actionstepText).toBeNull();
+    expect(deleteActionstepDone).toHaveBeenCalledWith({
+      where: { meetingId: 'm1' },
+    });
+  });
+
+  /**
+   * So nimmt „Nachbereitung entfernen" im Sheet sie weg: Die Texte gehen, der
+   * Baustein bleibt — danach steht wieder der Hinweis da. Die Haken unter dem
+   * Actionstep gehen mit, aus demselben Grund wie beim Abschalten.
+   */
+  it('räumt beim Leeren des Actionsteps die Haken, der Baustein bleibt', async () => {
+    jetzt(ABENDS);
+    const { service, state, deleteActionstepDone } = setup({
+      hasNotesSlot: true,
+    });
+    state.current = {
+      ...state.current,
+      summaryText: 'Schön war’s',
+      actionstepText: 'Jeden Tag einen Psalm',
+    };
+
+    await service.update(
+      'hk1',
+      'm1',
+      { summaryText: null, actionstepText: null } as never,
+      ICH,
+      EGAL,
+    );
+
+    expect(state.current.hasNotesSlot).toBe(true);
     expect(state.current.summaryText).toBeNull();
     expect(state.current.actionstepText).toBeNull();
     expect(deleteActionstepDone).toHaveBeenCalledWith({

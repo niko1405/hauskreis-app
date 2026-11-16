@@ -62,6 +62,13 @@ export interface FaqEntry {
    * beschriebe etwas, das es dort nicht gibt.
    */
   requiresIdp?: string;
+  /**
+   * Nur, wenn die Gruppe diesen Baustein hat. Eine Antwort über das Testimony
+   * in einer Gruppe, die es abgeschaltet hat, beschriebe etwas, das es dort
+   * nicht gibt — dieselbe Überlegung wie bei den Gebetsbuddys, die ihre ganze
+   * Kategorie mitnehmen.
+   */
+  requiresFeature?: 'testimony';
   /** Wonach jemand sucht, ohne dass es im Text vorkommt. */
   keywords?: string[];
 }
@@ -231,12 +238,13 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     category: 'meetings',
     question: 'Was sind die Bausteine, und was kann ich an- und ausschalten?',
     answer:
-      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Lieder**, **Testimony**, **Gebetsanliegen** und **Snacks**. Sie bestimmen, was der Abend ist — auch sein Name kommt daher.\n\nDu findest sie auf der Terminseite unter **„Bearbeiten"** oben rechts, im Abschnitt **„Was gehört dazu"**. Gespeichert wird mit „Speichern"; geht dabei etwas verloren, fragt die App vorher.\n\nDie **Nachbereitung** ist der sechste Teil, steht aber nicht dabei — sie lässt sich erst ab dem Beginn des Abends dazuschalten. Vorher gäbe es ja nichts nachzubereiten.\n\nDie **Gebetsanliegen** sind überall voreingestellt an, die **Snacks** überall aus: Beten kann man an jedem Abend, und wer nie über Essen gesprochen hat, soll keine offene Zuständigkeit vorfinden.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
+      'Ein Abend besteht aus Teilen, die du einzeln zu- und wegschalten kannst: **Thema**, **Nachbereitung**, **Lieder**, **Testimony**, **Gebetsanliegen** und **Snacks**. Sie bestimmen, was der Abend ist — auch sein Name kommt daher.\n\nDu findest sie auf der Terminseite unter **„Bearbeiten"** oben rechts, im Abschnitt **„Was gehört dazu"**, und beim Anlegen eines Termins. Gespeichert wird mit „Speichern"; geht dabei etwas verloren, fragt die App vorher.\n\nDie **Nachbereitung** heißt: Nach dem Abend werden Zusammenfassung und Actionstep festgehalten. Selbst angelegte Termine haben sie nicht, die erzeugten Abende ohne Thema schon. Neben einem Thema ist sie ausgegraut — dort gehören beide an dessen Einheit.\n\nDie **Gebetsanliegen** sind überall voreingestellt an, die **Snacks** überall aus: Beten kann man an jedem Abend, und wer nie über Essen gesprochen hat, soll keine offene Zuständigkeit vorfinden.\n\nEinen Schalter für den Gastgeber gibt es nicht: Man trifft sich immer irgendwo. Ein Abend im Schlosspark hat einfach kein Zuhause als Ort — das Feld bleibt leer, und das ist kein Fehler.',
     keywords: ['slots', 'schalter', 'baukasten', 'thema', 'lieder', 'snacks'],
   },
   {
     id: 'meetings-ausschluss',
     category: 'meetings',
+    requiresFeature: 'testimony',
     question: 'Warum kann ich Thema und Testimony nicht zusammen anhaken?',
     answer:
       'Weil ein Abend das eine oder das andere trägt. Beides zusammen wäre zu viel für einen Abend, und die App will euch das nicht erst am Abend selbst merken lassen.\n\nDasselbe gilt für **Thema und Nachbereitung**: Wo es ein Thema gibt, gehören Zusammenfassung und Actionstep an dessen Einheit — sonst gäbe es beides zweimal.\n\n**Testimony und Nachbereitung zusammen sind dagegen erlaubt** — das ist genau der Lobpreisabend, an dem jemand seine Geschichte erzählt und die Gruppe etwas mitnimmt.\n\nDie App nimmt dir das Nachdenken ab: Hakst du Thema an, gehen Testimony und Nachbereitung von selbst weg, und umgekehrt.',
@@ -309,6 +317,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
   {
     id: 'meetings-testimony-einmal',
     category: 'meetings',
+    requiresFeature: 'testimony',
     question: 'Warum werde ich fürs Testimony nicht vorgeschlagen?',
     answer:
       'Weil man sein Testimony einmal erzählt. Wer dran war, steht nicht mehr in den Vorschlägen — und zwischen allen anderen entscheidet nur, wer an dem Abend am wenigsten zu tun hat. „Wer war am längsten nicht dran" ergibt hier keinen Sinn: Von denen, die noch dastehen, war niemand je dran.\n\nDie App zählt dazu die Abende, die sie selbst kennt. Warst du **vorher** schon dran — der Hauskreis ist ja älter als die App —, schalte im Profil **„Mein Testimony habe ich schon erzählt"** ein.\n\nEintragen lässt sich trotzdem jede:r. Wer ein zweites erzählen will, darf; unter der Rangliste stehen die anderen mit genau diesem Hinweis.\n\nEin Testimony, für das du an einem **kommenden** Abend schon eingeteilt bist, nimmt dich nicht heraus — es zählt wie jede andere Aufgabe und rutscht dich nur nach unten. Wirst du trotzdem für den früheren Abend eingetragen, zieht die Rolle mit dir um: Der andere Abend ist danach wieder offen.',
@@ -951,10 +960,10 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
   {
     id: 'notes-erst-am-abend',
     category: 'notes',
-    question: 'Warum kann ich die Nachbereitung erst am Abend hinzufügen?',
+    question: 'Wann steht „Nachbereitung hinzufügen?" da?',
     answer:
-      'Weil man sie nicht vorplant. Stünde sie bei den Bausteinen, hätte man sie **vor** dem Abend angehakt — also als es noch nichts nachzubereiten gab.\n\nAb der Treffpunktzeit steht an einem Abend ohne Thema ganz oben der Hinweis „Nachbereitung hinzufügen?". Ein Klick legt die Karte an; am Fuß der Karte nimmst du sie auch wieder ganz weg, dann steht wieder der Hinweis da.\n\nNicht jeder Abend braucht eine.\n\nHatte der Abend ein **Thema**, steht der Hinweis nicht da — dort stehen Zusammenfassung und Actionstep an der Einheit. War es nachträglich betrachtet doch keines, leer die Rolle „Thema": Nach einer Rückfrage fällt der Baustein weg und der Hinweis erscheint.',
-    keywords: ['hinzufügen', 'später', 'hinweis', 'karte'],
+      'Ab der Treffpunktzeit, an einem Abend, der eine Nachbereitung hat. Ob er eine hat, steht unter **„Bearbeiten"** im Abschnitt **„Was gehört dazu"** — beim Anlegen kannst du sie gleich anhaken. Selbst angelegte Termine haben sie nicht, die erzeugten Abende ohne Thema schon: Nicht jeder Abend braucht eine.\n\nEin Tipp auf den Hinweis öffnet das Formular. Unten darin nimmst du das Geschriebene auch wieder weg, dann steht wieder der Hinweis da. Soll der Abend gar keine haben, nimm das Häkchen unter „Bearbeiten" heraus.\n\nHatte der Abend ein **Thema**, gibt es keine Nachbereitung — dort stehen Zusammenfassung und Actionstep an der Einheit. War es nachträglich betrachtet doch keines, leer die Rolle „Thema": Nach einer Rückfrage fällt der Baustein weg und der Hinweis erscheint.',
+    keywords: ['hinzufügen', 'später', 'hinweis', 'karte', 'planen', 'anhaken'],
   },
   {
     id: 'notes-einzeln',
@@ -1205,6 +1214,21 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     answer:
       'Er entscheidet, ob der Vorsatz vom letzten Abend die Woche über auf **„Heute"** steht und ob die wöchentliche Erinnerung daran kommt.\n\n**Aus** heißt: keine Karte auf „Heute", keine Erinnerung, und die Benachrichtigungsart verschwindet aus den Einstellungen. Zusammenfassung und Actionstep am Abend bzw. an der Einheit bleiben, und wenn dort einer eingetragen wird, bekommen die anderen weiterhin Bescheid.',
     keywords: ['actionstep', 'woche', 'heute', 'ausschalten', 'vorsatz'],
+  },
+  {
+    id: 'admin-testimony',
+    category: 'admin',
+    adminOnly: true,
+    question: 'Kann man das Testimony abschalten?',
+    answer:
+      'Ja, in der Verwaltung unter **„Testimony"**. Nicht jede Gruppe hat diesen Teil des Abends.\n\n**Aus** heißt: Das Testimony steht nicht mehr beim Anlegen und Bearbeiten eines Termins, nicht in der Planung und nicht im Profil, und der Lobpreisabend am Monatsende bekommt nur noch Lieder. Die Erinnerung dazu verschwindet aus den Benachrichtigungen.\n\n**Beim Abschalten** verlieren alle kommenden Termine das Testimony, samt Einteilung — darauf weist die App vor dem Speichern hin. Vergangene bleiben, wie sie waren, und zeigen weiter, wer erzählt hat.\n\n**Wieder einschalten** gilt für neue Termine. Was beim Abschalten weggefallen ist, kommt nicht zurück.',
+    keywords: [
+      'testimony',
+      'abschalten',
+      'ausschalten',
+      'erzählen',
+      'lobpreis',
+    ],
   },
   {
     id: 'admin-rhythmus',

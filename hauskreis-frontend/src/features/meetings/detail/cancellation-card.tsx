@@ -3,11 +3,10 @@
 /**
  * Ein abgesagter Abend soll wie einer aussehen — und sagen, warum er ausfällt.
  *
- * Drei Stücke: der Hinweis, der ganz oben steht und die Fragen
- * beantwortet (seit wann, von wem, warum), der Absage-Knopf ganz unten —
- * **nur für Admins** —, und daneben das Löschen für einen selbst angelegten Termin.
- * Den ganzen Abend abzusagen ist etwas anderes, als selbst nicht zu kommen;
- * letzteres steht in „Wer kommt".
+ * Drei Stücke: die Seite eines abgesagten Abends (`CancelledView`), der
+ * Absage-Knopf ganz unten an einem stattfindenden — **nur für Admins** —, und
+ * das Löschen. Den ganzen Abend abzusagen ist etwas anderes, als selbst nicht
+ * zu kommen; letzteres steht in „Wer kommt".
  *
  * Absagen und Löschen sind ebenfalls nicht dasselbe: ein Dienstag, der
  * ausfällt, gehört in die Geschichte der Gruppe. Ein Termin, den jemand
@@ -15,8 +14,9 @@
  */
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { CalendarX, Check, RotateCcw, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowLeft, CalendarX, Check, RotateCcw, Trash2 } from 'lucide-react';
+import Link from '@/components/ui/link';
+import { Button, IconButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
 import { TextInput } from '@/components/ui/field';
@@ -28,90 +28,159 @@ import {
   useSetAttendance,
   useUncancelMeeting,
 } from '@/lib/api/hooks';
-import { formatTimestamp } from '@/lib/date';
+import { formatDayFull, formatDayRange, formatWeekday } from '@/lib/date';
 import { isMeetingPast, meetingHeadline } from '@/lib/meeting';
+import { markBackNavigation } from '@/lib/page-transition';
 import type { Meeting } from '@/lib/api/types';
 
-export function CancelledNotice({ meeting }: { meeting: Meeting }) {
+/**
+ * Die Seite eines abgesagten Abends — und nichts sonst.
+ *
+ * **Eine eigene Ansicht statt der gedämpften Terminseite.** Was an dem Abend
+ * geplant war — Ort, Rollen, Lieder, Anwesenheit —, ist keine Auskunft mehr,
+ * auf die jemand hinarbeitet, und unter einem Hinweis stand es trotzdem in
+ * voller Länge da. Übrig bleibt die eine Nachricht, mittig: dass er ausfällt,
+ * welcher es ist, wer ihn abgesagt hat. Kein „Bearbeiten": An einem Abend,
+ * den es nicht gibt, ändert man nichts. Oben rechts nur das Löschen, für
+ * Admins — ein abgesagter Termin ist oft genau der, den man loswerden will.
+ *
+ * **Zwei Fassungen**, nach dem Weg in die Absage (`cancelSource`):
+ *
+ * - **Von Hand** sagt, wer es war, und den Grund. Zurücknehmen dürfen Admins.
+ * - **Alle haben abgesagt** sagt das, und der Weg zurück ist eine Zusage, für
+ *   jede:n — kein Admin-Eingriff: Der Server erkennt beim Abgleich, dass nicht
+ *   mehr alle abgesagt haben, und holt den Abend von selbst zurück. Ist der
+ *   Abend vorbei, bewirkt eine Zusage nichts mehr (der Abgleich lässt
+ *   vergangene aus); dann bleibt Admins das Zurücknehmen wie bei der anderen
+ *   Fassung.
+ */
+export function CancelledView({ meeting }: { meeting: Meeting }) {
   const { isAdmin, me } = useMe();
   const uncancel = useUncancelMeeting(meeting.id);
   const attend = useSetAttendance(meeting.id);
+  const remove = useDeleteMeetingFlow(meeting);
   const toast = useToast();
 
   const automatic = meeting.cancelSource === 'ALL_DECLINED';
+  const past = isMeetingPast(meeting);
 
-  /**
-   * „Sagt jemand doch zu, findet er wieder statt" — und hier lässt sich das
-   * einlösen: „Wer kommt" ist an einem abgesagten Abend schreibgeschützt, und
-   * die Karten in Liste und Kalender blenden ihren Schalter aus.
-   *
-   * Deshalb hier, für alle und nicht nur für Admins: eine Zusage genügt. Der
-   * Server erkennt beim Abgleich, dass nicht mehr alle abgesagt haben, und holt
-   * den Abend von selbst zurück.
-   */
-  const mayAttend = automatic && me && !isMeetingPast(meeting);
+  const mayAttend = automatic && !past && Boolean(me);
+  const mayUncancel = isAdmin && (!automatic || past);
+
+  // Wie im Kopf der Terminseite: bei einem Zeitraum von wann bis wann.
+  const when = meeting.endDate
+    ? formatDayRange(meeting.date, meeting.endDate)
+    : `${formatWeekday(meeting.date)}, ${formatDayFull(meeting.date)}`;
 
   return (
-    <Card className="space-y-3 border-alert-line bg-alert-bg">
-      <div className="flex items-start gap-3">
-        <CalendarX size={18} className="mt-0.5 shrink-0 text-alert" />
-        <div className="min-w-0">
-          <p className="font-serif text-lg font-bold text-alert">Fällt aus</p>
-          <p className="mt-0.5 text-xs leading-relaxed text-stone-500">
-            {automatic
-              ? 'Alle hatten für diesen Abend abgesagt. Sagt jemand doch zu, findet er wieder statt.'
-              : meeting.cancelledBy
-                ? `Abgesagt von ${meeting.cancelledBy.name}.`
-                : 'Abgesagt.'}
-            {meeting.cancelledAt && ` ${formatTimestamp(meeting.cancelledAt)}`}
-          </p>
-        </div>
+    <div className="flex min-h-[calc(100dvh-var(--safe-top)-4rem)] flex-col px-5 pt-safe-4 pb-10">
+      <div className="flex items-center justify-between gap-2">
+        {/* Ein Link vorwärts auf die Liste, gemeint ist zurück — so geht die
+            Seite nach rechts hinaus (`markBackNavigation`). */}
+        <Link href="/termine" onClick={markBackNavigation}>
+          <IconButton label="Zurück">
+            <ArrowLeft size={18} />
+          </IconButton>
+        </Link>
+        {remove.allowed && (
+          <IconButton
+            label="Termin löschen"
+            className="text-alert hover:bg-alert-bg hover:text-alert"
+            disabled={remove.pending}
+            onClick={() => void remove.ask()}
+          >
+            <Trash2 size={17} />
+          </IconButton>
+        )}
       </div>
 
-      {meeting.cancelReason && (
-        <p className="rounded-md bg-card/70 px-3 py-2 text-sm leading-relaxed text-stone-700">
-          {meeting.cancelReason}
+      <div className="flex flex-1 animate-panel-in flex-col items-center justify-center px-2 pb-12 text-center">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-alert-line bg-alert-bg px-3 py-1 text-[11px] font-bold tracking-wider text-alert uppercase">
+          <span aria-hidden className="size-1.5 rounded-full bg-current" />
+          {past ? 'Fiel aus' : 'Fällt aus'}
+        </span>
+
+        <h1 className="mt-4 font-serif text-3xl leading-tight font-bold text-stone-900">
+          {meetingHeadline(meeting)}
+        </h1>
+        <p className="mt-2 text-sm text-stone-500">
+          {when} · {meeting.startTime} Uhr
         </p>
-      )}
 
-      {mayAttend && (
-        <Button
-          className="w-full"
-          loading={attend.isPending}
-          onClick={() =>
-            attend.mutate(
-              { personId: me.id, status: 'ATTENDING' },
-              {
+        <span aria-hidden className="my-6 h-px w-12 bg-line-strong" />
+
+        {automatic ? (
+          <>
+            <p className="text-sm font-semibold text-stone-800">
+              Alle haben abgesagt.
+            </p>
+            {!past && (
+              <p className="mt-1 max-w-xs text-xs leading-relaxed text-stone-500">
+                Sagt jemand doch zu, findet der Abend wieder statt.
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-stone-600">
+            {meeting.cancelledBy ? (
+              <>
+                Abgesagt von{' '}
+                <span className="font-bold text-stone-900">
+                  {meeting.cancelledBy.name}
+                </span>
+              </>
+            ) : (
+              'Abgesagt'
+            )}
+          </p>
+        )}
+
+        {meeting.cancelReason && (
+          <p className="mt-2 max-w-xs text-sm leading-relaxed text-stone-500">
+            „{meeting.cancelReason}"
+          </p>
+        )}
+
+        {mayAttend && me && (
+          <Button
+            variant="outline"
+            className="mt-6 text-terracotta-500"
+            loading={attend.isPending}
+            onClick={() =>
+              attend.mutate(
+                { personId: me.id, status: 'ATTENDING' },
+                {
+                  onSuccess: () =>
+                    toast.success(
+                      'Der Abend findet wieder statt — du bist dabei.',
+                    ),
+                },
+              )
+            }
+          >
+            <Check size={15} />
+            Ich bin doch dabei
+          </Button>
+        )}
+
+        {mayUncancel && (
+          <Button
+            variant="outline"
+            className="mt-6 text-terracotta-500"
+            loading={uncancel.isPending}
+            onClick={() =>
+              uncancel.mutate(undefined, {
                 onSuccess: () =>
-                  toast.success(
-                    'Der Abend findet wieder statt — du bist dabei.',
-                  ),
-              },
-            )
-          }
-        >
-          <Check size={15} />
-          Ich bin doch dabei
-        </Button>
-      )}
-
-      {isAdmin && (
-        <Button
-          variant="secondary"
-          size="sm"
-          className="w-full"
-          loading={uncancel.isPending}
-          onClick={() =>
-            uncancel.mutate(undefined, {
-              onSuccess: () => toast.success('Der Abend findet wieder statt.'),
-            })
-          }
-        >
-          <RotateCcw size={14} />
-          Absage zurücknehmen
-        </Button>
-      )}
-    </Card>
+                  toast.success('Der Abend findet wieder statt.'),
+              })
+            }
+          >
+            <RotateCcw size={14} />
+            Absage zurücknehmen
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -208,17 +277,15 @@ export function CancelMeetingBlock({
  * Server merkt sich das Datum. Das sagt die Rückfrage, denn es ist der
  * Unterschied, den man sonst erst nächste Woche bemerkt.
  *
- * Auch an einem abgesagten Termin sichtbar: Ein abgesagter Termin ist oft
- * genau der, den man loswerden will.
+ * Ein Ablauf, zwei Knöpfe: unten an einem stattfindenden Termin
+ * (`DeleteMeetingBlock`), oben rechts an einem abgesagten (`CancelledView`).
  */
-export function DeleteMeetingBlock({ meeting }: { meeting: Meeting }) {
+function useDeleteMeetingFlow(meeting: Meeting) {
   const router = useRouter();
   const { isAdmin } = useMe();
   const remove = useDeleteMeeting();
   const confirm = useConfirm();
   const toast = useToast();
-
-  if (!isAdmin) return null;
 
   const ask = async () => {
     const ok = await confirm({
@@ -241,13 +308,21 @@ export function DeleteMeetingBlock({ meeting }: { meeting: Meeting }) {
     });
   };
 
+  return { allowed: isAdmin, ask, pending: remove.isPending };
+}
+
+export function DeleteMeetingBlock({ meeting }: { meeting: Meeting }) {
+  const remove = useDeleteMeetingFlow(meeting);
+
+  if (!remove.allowed) return null;
+
   return (
     <div>
       <Button
         variant="ghost"
         className="w-full text-alert"
-        loading={remove.isPending}
-        onClick={ask}
+        loading={remove.pending}
+        onClick={() => void remove.ask()}
       >
         <Trash2 size={15} />
         Termin löschen

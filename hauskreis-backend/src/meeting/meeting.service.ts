@@ -50,9 +50,9 @@ import {
 } from './meeting-schedule';
 import { touchMeeting } from './meeting-version';
 import {
-  assertNotesSlotNotAhead,
   assertSlotsAllow,
   assertSlotsExclusive,
+  assertTestimonyAvailable,
   clearedByTurningOff,
   resolveSlots,
   EMPTY_SLOTS,
@@ -232,14 +232,7 @@ export class MeetingService {
     const rhythm = await this.schedule.getRhythm(hauskreisId);
     const startMinutes = dto.startTime ?? rhythm.startMinutes;
     const special = dto.special ?? rhythm.autoGenerate;
-
-    // Auch beim Anlegen: die API ist aus Bruno und aus jedem Skript erreichbar,
-    // und ein rückdatierter Termin passiert die Regel korrekt.
-    assertNotesSlotNotAhead(EMPTY_SLOTS, slots, {
-      date,
-      startMinutes,
-      zone: await this.clock.zoneOf(hauskreisId),
-    });
+    assertTestimonyAvailable(EMPTY_SLOTS, slots, rhythm.testimony);
 
     const venue = await this.resolveVenue(hauskreisId, dto, {
       hostPersonId: null,
@@ -317,13 +310,12 @@ export class MeetingService {
     const slots = resolveSlots(before, dto);
     assertSlotsAllow(slots, dto);
     assertSlotsExclusive(slots);
-    // Die Anfangszeit **nach** diesem Aufruf: wer Uhrzeit und Baustein zugleich
-    // ändert, meint die neue.
-    assertNotesSlotNotAhead(before, slots, {
-      date: before.date,
-      startMinutes: dto.startTime ?? before.startTime,
-      zone: await this.clock.zoneOf(hauskreisId),
-    });
+    // Nur beim Anschalten gefragt: Ein Abend, der den Baustein schon hat — ein
+    // vergangener vor allem —, bleibt nachzutragen und abzuschalten.
+    if (!before.hasTestimonySlot && slots.hasTestimonySlot) {
+      const rhythm = await this.schedule.getRhythm(hauskreisId);
+      assertTestimonyAvailable(before, slots, rhythm.testimony);
+    }
     const cleared = clearedByTurningOff(before, slots);
 
     const endDate =
@@ -451,7 +443,13 @@ export class MeetingService {
     // Tabelle. Stehenzulassen wäre nicht bloß Unordnung — wer den Baustein
     // später wieder anschaltet und etwas Neues hineinschreibt, fände es
     // rätselhaft schon abgehakt vor.
-    if (before.hasNotesSlot && !slots.hasNotesSlot) {
+    //
+    // Und ebenso, wenn der Actionstep des Abends ausdrücklich geleert wird,
+    // der Baustein aber bleibt: So nimmt „Nachbereitung entfernen" sie weg —
+    // ob der Abend eine hat, sagt das Häkchen im Bearbeiten-Dialog.
+    const actionstepCleared =
+      before.actionstepText !== null && dto.actionstepText === null;
+    if ((before.hasNotesSlot && !slots.hasNotesSlot) || actionstepCleared) {
       await this.prisma.$transaction(async (tx) => {
         await tx.meetingActionstepDone.deleteMany({ where: { meetingId: id } });
         await touchMeeting(tx, id);

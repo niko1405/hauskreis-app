@@ -99,6 +99,7 @@ export class NotificationPreferenceService {
         activeMembers: 0,
         prayerBuddies: false,
         weeklyActionstep: false,
+        testimony: false,
       };
     }
 

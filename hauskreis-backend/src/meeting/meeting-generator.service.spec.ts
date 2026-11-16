@@ -18,6 +18,7 @@ type CreateManyArgs = {
     startMinutes: number;
     hasTopicSlot: boolean;
     hasTestimonySlot: boolean;
+    hasNotesSlot: boolean;
     hasSnackSlot: boolean;
   }[];
   skipDuplicates?: boolean;
@@ -31,6 +32,7 @@ const TUESDAY_AT_SIX = {
   startMinutes: 18 * 60,
   praiseEvenings: true,
   snackSlot: false,
+  testimony: true,
 };
 
 function setup(
@@ -136,6 +138,46 @@ describe('MeetingGeneratorService.generateFor', () => {
     expect(byDate.get('2026-08-25')).toEqual([false, true]);
     expect(byDate.get('2026-08-04')).toEqual([true, false]);
     expect(byDate.get('2026-09-08')).toEqual([true, false]);
+  });
+
+  /**
+   * Hat die Gruppe das Testimony abgeschaltet, bleibt der Lobpreisabend einer —
+   * mit Liedern, Gebet und Nachbereitung, nur ohne jemanden, der erzählt.
+   */
+  it('lässt das Testimony weg, wenn die Gruppe es abgeschaltet hat', async () => {
+    const { service, createMany } = setup([], { testimony: false });
+
+    await service.generateFor('hk-1', MONDAY);
+
+    const lobpreis = createMany.mock.calls[0][0].data.find(
+      (m) => isoOf(m.date) === '2026-07-28',
+    );
+
+    expect(lobpreis).toMatchObject({
+      hasTopicSlot: false,
+      hasTestimonySlot: false,
+      hasNotesSlot: true,
+    });
+  });
+
+  /**
+   * Die Nachbereitung hat nur der Abend ohne Thema — am Themenabend tragen
+   * Zusammenfassung und Actionstep die Einheit.
+   */
+  it('gibt die Nachbereitung dem Lobpreisabend und nicht dem Themenabend', async () => {
+    const { service, createMany } = setup();
+
+    await service.generateFor('hk-1', MONDAY);
+
+    const notes = new Map(
+      createMany.mock.calls[0][0].data.map((m) => [
+        isoOf(m.date),
+        m.hasNotesSlot,
+      ]),
+    );
+
+    expect(notes.get('2026-07-28')).toBe(true);
+    expect(notes.get('2026-08-04')).toBe(false);
   });
 
   it('schreibt an jeden erzeugten Abend, dass er erzeugt ist', async () => {

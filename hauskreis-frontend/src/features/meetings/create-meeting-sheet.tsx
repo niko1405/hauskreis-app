@@ -24,6 +24,7 @@ import { useToast } from '@/components/ui/toast';
 import { CheckRow } from '@/components/ui/check-row';
 import { SlotToggles } from '@/components/domain/slot-toggles';
 import { useCreateMeeting, useMeetingSchedule } from '@/lib/api/hooks';
+import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { EMPTY_SLOTS, applySlotToggle } from '@/lib/meeting';
 import { addDays, today } from '@/lib/date';
 import type { MeetingSlotKey, MeetingSlots } from '@/lib/meeting';
@@ -56,6 +57,8 @@ export function CreateMeetingSheet({
 
   const schedule = useMeetingSchedule();
   const create = useCreateMeeting();
+  // Hat die Gruppe das Testimony abgeschaltet, steht es hier nicht zur Wahl.
+  const testimony = useHauskreis().hauskreis?.features.testimony ?? true;
   const toast = useToast();
 
   const gruppenzeit = schedule.data?.data.startTime ?? '18:00';
@@ -146,7 +149,11 @@ export function CreateMeetingSheet({
           label="Was gehört dazu"
           hint="Lässt sich später jederzeit ändern."
         >
-          <SlotToggles slots={slots} onToggle={toggle} />
+          <SlotToggles
+            slots={slots}
+            hidden={testimony ? undefined : ['hasTestimonySlot']}
+            onToggle={toggle}
+          />
         </Field>
 
         <div className="flex gap-2 pt-2">

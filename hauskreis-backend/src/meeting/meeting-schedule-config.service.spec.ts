@@ -24,15 +24,20 @@ function setup(existing: Record<string, unknown> | null = null) {
   );
   const updateMany = jest.fn().mockResolvedValue({ count: 1 });
   const touchHauskreis = jest.fn().mockResolvedValue({ count: 1 });
+  const meetings = {
+    findMany: jest.fn().mockResolvedValue([] as unknown[]),
+    updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+  };
 
   const service = withClock(
     new MeetingScheduleConfigService({
       meetingScheduleConfig: { findUnique, create, updateMany },
       hauskreis: { updateMany: touchHauskreis },
+      meeting: meetings,
     } as unknown as PrismaService),
   );
 
-  return { service, findUnique, create, updateMany, touchHauskreis };
+  return { service, findUnique, create, updateMany, touchHauskreis, meetings };
 }
 
 describe('getConfig', () => {
@@ -98,6 +103,7 @@ describe('getRhythm', () => {
       startMinutes: DEFAULT_START_MINUTES,
       praiseEvenings: true,
       snackSlot: false,
+      testimony: true,
     });
     expect(create).not.toHaveBeenCalled();
   });
@@ -169,6 +175,75 @@ describe('updateConfig', () => {
       where: { id: 'hk-1' },
       data: { version: { increment: 1 } },
     });
+  });
+
+  /**
+   * Abschalten räumt auf — an den Abenden, die noch nicht angefangen haben.
+   * Dienstag, 11. August 2026, 19 Uhr Ortszeit: Der Abend um 18 Uhr läuft
+   * schon und bleibt, wie er ist; der um 20 Uhr und der nächste Dienstag
+   * verlieren Baustein und Einteilung.
+   */
+  it('nimmt beim Abschalten das Testimony von kommenden Abenden', async () => {
+    const { service, meetings, touchHauskreis } = setup({
+      id: 'cfg-1',
+      weekday: 2,
+      startMinutes: 1080,
+      testimony: true,
+      version: 0,
+      updatedBy: null,
+    });
+    const tag = new Date('2026-08-11T00:00:00.000Z');
+    meetings.findMany.mockResolvedValue([
+      { id: 'laeuft', date: tag, startMinutes: 1080 },
+      { id: 'spaeter', date: tag, startMinutes: 1200 },
+      {
+        id: 'naechste-woche',
+        date: new Date('2026-08-18T00:00:00.000Z'),
+        startMinutes: 1080,
+      },
+    ]);
+
+    await service.updateConfig(
+      'hk-1',
+      { testimony: false },
+      'niko',
+      EGAL,
+      new Date('2026-08-11T17:00:00.000Z'),
+    );
+
+    expect(meetings.findMany.mock.calls[0][0].where).toEqual({
+      hauskreisId: 'hk-1',
+      hasTestimonySlot: true,
+      date: { gte: tag },
+    });
+    expect(meetings.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['spaeter', 'naechste-woche'] } },
+      data: {
+        hasTestimonySlot: false,
+        testimonyPersonId: null,
+        version: { increment: 1 },
+      },
+    });
+    // Der Schalter steht als `features` am Hauskreis.
+    expect(touchHauskreis).toHaveBeenCalled();
+  });
+
+  /** Wieder einschalten gilt für neue Abende — es stellt nichts wieder her. */
+  it('räumt beim Einschalten nichts', async () => {
+    const { service, meetings, touchHauskreis } = setup({
+      id: 'cfg-1',
+      weekday: 2,
+      startMinutes: 1080,
+      testimony: false,
+      version: 0,
+      updatedBy: null,
+    });
+
+    await service.updateConfig('hk-1', { testimony: true }, 'niko', EGAL);
+
+    expect(meetings.findMany).not.toHaveBeenCalled();
+    expect(meetings.updateMany).not.toHaveBeenCalled();
+    expect(touchHauskreis).toHaveBeenCalled();
   });
 
   it('lässt den Hauskreis in Ruhe, wenn sich der Schalter nicht ändert', async () => {

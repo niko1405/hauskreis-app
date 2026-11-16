@@ -292,17 +292,29 @@ sind genau das, was später versehentlich benutzt wird.
 
 ### Was die Gruppe benutzt
 
-Zwei Bausteine lassen sich abschalten, und jeder wohnt bei **seiner eigenen**
+Drei Bausteine lassen sich abschalten, und jeder wohnt bei **seiner eigenen**
 Einstellung:
 
 | Baustein             | Spalte                                      | Vorgabe |
 | -------------------- | ------------------------------------------- | ------- |
 | Gebetsbuddys         | `prayer_buddy_cycle_config.enabled`         | `true`  |
 | Actionstep der Woche | `meeting_schedule_config.weekly_actionstep` | `true`  |
+| Testimony            | `meeting_schedule_config.testimony`         | `true`  |
 
-Keine gemeinsame Tabelle dafür: Beide bestehenden halten schon fest, _wer_ wann
+Keine gemeinsame Tabelle dafür: Die bestehenden halten schon fest, _wer_ wann
 etwas umgestellt hat — genau der Grund, aus dem sie eigene Tabellen sind. Eine
-dritte für zwei Boolesche wäre ein dritter Ort für dieselbe Frage.
+weitere für ein paar Boolesche wäre ein weiterer Ort für dieselbe Frage.
+
+**Das Testimony ist der einzige, der beim Abschalten aufräumt**
+(`MeetingScheduleConfigService.removeUpcomingTestimonies`): Alle Abende ab heute,
+die noch nicht angefangen haben (`eveningReached`), verlieren Baustein und
+Einteilung, abgesagte eingeschlossen — eine Einteilung für eine Rolle, die es
+nicht mehr gibt, liefe in Erinnerungen und stünde auf „Heute". Vergangene und
+der laufende Abend bleiben. Eine Nachricht geht nicht raus, und Zusagen mit
+Quelle `ROLE` bleiben stehen. Danach lehnt der Server das Anschalten des
+Bausteins ab (`assertTestimonyAvailable`, nur der Übergang aus → an — ein
+Abend, der ihn schon hat, bleibt nachzutragen), und der Terminplaner gibt dem
+Lobpreisabend keins mehr. Wieder einschalten stellt nichts wieder her.
 
 Gefragt wird über [`GroupFeaturesService`](src/hauskreis/group-features.service.ts),
 gebaut wie `GroupClockService`: `@Global`, hängt außer Prisma an nichts, liest
@@ -315,13 +327,13 @@ Frage an, und ein Schalter, den man gerade umgelegt hat und der noch eine Minute
 lang alt antwortet, wäre schlimmer als eine Abfrage mehr. Fehlt die Zeile — beide
 Tabellen entstehen erst beim ersten Lesen in der Verwaltung —, gilt die Vorgabe.
 
-Nach außen stehen beide als `features` an der **Hauskreis-Antwort**, abgeleitet
+Nach außen stehen alle als `features` an der **Hauskreis-Antwort**, abgeleitet
 und nicht dort gespeichert: `hauskreis` trägt Identität, keine Einstellungen. Sie
 hängen dort, weil sie genau da gebraucht werden, wo ohnehin schon der Name steht
 — in der Navigation des Frontends und auf dem Startbildschirm. Ein eigener
 Endpunkt wäre ein zweiter Ladezustand für ein Ja/Nein.
 
-Kippt einer der beiden Schalter, springt `hauskreis.version` in derselben
+Kippt einer der Schalter, springt `hauskreis.version` in derselben
 Anfrage mit (`touchHauskreis` in
 [`hauskreis-version.ts`](src/hauskreis/hauskreis-version.ts)) — sonst bekäme
 `GET /hauskreise/:id` ein `304` und behielte die alten `features`. Die
@@ -792,7 +804,7 @@ jeder mit Label, Begründung und Default-Rhythmus.
 | `HOST_CAPACITY_UNLOCKED` | genug Absagen, dass eine kleine Wohnung passt | Bewohner:innen dieser Wohnung                          | sofort        |
 | `MEMBER_LEFT`            | jemand verlässt den Hauskreis                 | alle Verbleibenden                                     | sofort        |
 | `MEETING_TODAY`          | heute ist Hauskreis                           | alle — der Text richtet sich nach der eigenen Antwort  | morgens       |
-| `NOTES_REMINDER`         | Abend **ohne Thema** ohne Nachbereitung       | wer zugesagt hatte                                     | am Tag danach |
+| `NOTES_REMINDER`         | Abend mit leerer Nachbereitung                | wer zugesagt hatte                                     | am Tag danach |
 | `ADMIN_GRANTED`          | jemand macht dich zum Admin                   | die ernannte Person                                    | sofort        |
 
 Die Tabelle ist nicht vollständig — Geburtstage, Testimony, besondere Termine
@@ -1457,15 +1469,17 @@ Aussage darüber, was der Abend ist. Angelegt wird mit einer von drei Belegungen
 | Belegung        | Thema | Nachbereitung¹ | Lieder | Testimony | Gebetsanliegen² | Snacks³ | wann                            |
 | --------------- | ----- | -------------- | ------ | --------- | --------------- | ------- | ------------------------------- |
 | `EVENING_SLOTS` | ✓     | –              | ✓      | –         | ✓               | –       | erzeugt, gewöhnlicher Abend     |
-| `PRAISE_SLOTS`  | –     | –              | ✓      | ✓         | ✓               | –       | erzeugt, letzter Abend im Monat |
+| `PRAISE_SLOTS`  | –     | ✓              | ✓      | ✓⁴        | ✓               | –       | erzeugt, letzter Abend im Monat |
 | `EMPTY_SLOTS`   | –     | –              | –      | –         | ✓               | –       | von Hand angelegt               |
 
-¹ überall aus und erst **ab Terminbeginn** anschaltbar — siehe unten.
+¹ nur beim Lobpreisabend vorbelegt, neben einem Thema nie — siehe unten.
 ² überall an, schließt nichts aus, teilt niemanden ein — siehe unten.
 ³ überall aus, schließt nichts aus. Der Generator setzt ihn **nach** der
 Belegung aus `meeting_schedule_config.snack_slot` (Vorgabe aus): Snacks hängen
 nicht daran, ob der Abend ein Thema oder ein Testimony hat — gegessen wird an
 beiden.
+⁴ nur, solange die Gruppe das Testimony hat (`meeting_schedule_config.testimony`);
+der Generator setzt es nach der Belegung.
 
 **Eine Terminart gibt es nicht**; woraus ein Abend besteht, sagt diese Tabelle.
 Übrig sind zwei Spalten, die kein Baustein beantwortet:
@@ -1494,13 +1508,16 @@ Themas, und ein Abend, an dem die Gruppe nur singt und betet, hatte für den
 Vorsatz der Woche keinen Ort. Der Haken darunter braucht dafür nichts Neues:
 `MeetingActionstepDone` hing schon immer am Termin.
 
-Sie ist außerdem der einzige, den man **nicht vorausplant**. Anschalten geht erst
-**ab der Treffpunktzeit** (`assertNotesSlotNotAhead`, dieselbe
-`eveningReached`-Grenze wie beim Abhaken); vorher wäre es die Frage nach der
-Zusammenfassung von etwas, das noch nicht stattgefunden hat. Deshalb steht sie im
-Frontend auch nicht bei den Bausteinen im Bearbeiten-Dialog, sondern hinter
-einem Hinweis am Abend selbst. Abschalten geht dagegen jederzeit — wer sich vertut, wäre sonst damit
-eingesperrt.
+Geplant wird sie wie die übrigen: Der Schalter sagt, **ob** an dem Abend etwas
+festgehalten wird, und geht jederzeit — auch vor dem Abend. Von Hand angelegte
+Abende haben ihn nicht, der Lobpreisabend schon. Geschrieben wird erst danach:
+Ab der Treffpunktzeit fragt das Frontend an Abenden **mit** Nachbereitung nach
+ihr, und am Morgen danach `NOTES_REMINDER` — beide nur, wo der Schalter an ist.
+Früher ließ er sich erst ab Terminbeginn anschalten, und der Hinweis stand an
+jedem Abend ohne Thema; die Migration `notes_slot_planned` gab den erzeugten
+Abenden ohne Thema den Schalter nachträglich, damit sie ihren Hinweis behalten.
+Werden die Texte ausdrücklich geleert, der Schalter aber nicht, gehen die Haken
+unter dem Actionstep mit — so nimmt das Frontend eine Nachbereitung wieder weg.
 
 **Die Gebetsanliegen** sind der jüngste Baustein und in mehr als einer Hinsicht
 die Ausnahme: der einzige, der überall **voreingestellt an** ist, der einzige,
@@ -1513,8 +1530,8 @@ Feldliste, weil die Anliegen in einer eigenen Tabelle liegen; weggeräumt werden
 sie beim Abschalten in `MeetingService.update`, wie die Lieder.
 
 **Umschalten geht auch an einem vergangenen Termin**, nur an einem abgesagten
-nicht. Die einzige Sperre gilt der Richtung nach vorn (`assertNotesSlotNotAhead`)
-— wem hinterher auffällt, dass am Dienstag doch Lieder waren, trägt es nach.
+nicht — wem hinterher auffällt, dass am Dienstag doch Lieder waren, trägt es
+nach.
 
 **Zwei Paare schließen einander aus, ein drittes nicht.** Thema und Testimony,
 weil beides der Beitrag ist, um den sich der Abend dreht. Thema und

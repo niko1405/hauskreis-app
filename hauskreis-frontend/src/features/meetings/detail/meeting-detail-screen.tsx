@@ -47,7 +47,6 @@ import {
   ConflictBanner,
   ErrorState,
 } from '@/components/ui/states';
-import { cn } from '@/lib/cn';
 import { markBackNavigation } from '@/lib/page-transition';
 import { shortName } from '@/lib/person';
 import {
@@ -80,7 +79,7 @@ import type { AssignmentRole, PersonRef } from '@/lib/api/types';
 import { AnswerBar } from './answer-bar';
 import { AttendanceCard } from './attendance-card';
 import {
-  CancelledNotice,
+  CancelledView,
   CancelMeetingBlock,
   DeleteMeetingBlock,
 } from './cancellation-card';
@@ -421,7 +420,10 @@ function Loaded({
     // Abgelehnt heißt: gar nichts. Die Rolle bleibt, wie sie war — eine
     // geleerte Rolle unter einem weiter eingeschalteten Baustein wäre genau
     // der Zustand, den die Frage vermeiden soll.
-    if (ok) patch({ hasTopicSlot: false });
+    //
+    // Die Nachbereitung kommt gleich mit: Die Rückfrage verspricht sie, und
+    // der Hinweis darauf steht nur an einem Abend, der eine hat.
+    if (ok) patch({ hasTopicSlot: false, hasNotesSlot: true });
   };
 
   /**
@@ -438,13 +440,13 @@ function Loaded({
   /**
    * Ob der Hinweis „Nachbereitung hinzufügen" dasteht.
    *
-   * Erst **ab Terminbeginn** — vorher gibt es nichts nachzubereiten, und der
-   * Server lehnt das Anschalten dann auch ab. Nicht an einem Abend mit
-   * **Thema**: dort trägt die Einheit Zusammenfassung und Actionstep, zwei
-   * davon gibt es nicht. Und nicht an einem **abgesagten**: da war nichts.
+   * Nur, wenn der Abend eine hat — das entscheidet das Häkchen im
+   * Bearbeiten-Dialog, und neben einem Thema gibt es sie nie. Erst **ab
+   * Terminbeginn**: vorher gibt es nichts nachzubereiten. Und nicht an einem
+   * **abgesagten**: da war nichts.
    */
   const mayAddNotes =
-    started && !cancelled && !meeting.hasTopicSlot && !showNotes;
+    started && !cancelled && meeting.hasNotesSlot && !notesContent;
 
   /**
    * Die Nachbereitung schreiben — **ein** Schreibvorgang für Baustein und
@@ -472,9 +474,14 @@ function Loaded({
   };
 
   /**
-   * Die Nachbereitung ganz wegnehmen, aus ihrem Sheet heraus — danach steht
-   * wieder der Hinweis da, als wäre nichts gewesen. Mit derselben Rückfrage wie beim Wegnehmen eines
-   * Bausteins: gelöscht werden beide Texte und die Haken darunter.
+   * Die Nachbereitung wegnehmen, aus ihrem Sheet heraus — danach steht wieder
+   * der Hinweis da, als wäre nichts gewesen. Mit derselben Rückfrage wie beim
+   * Wegnehmen eines Bausteins: gelöscht werden beide Texte und die Haken
+   * darunter.
+   *
+   * **Geleert wird, der Baustein bleibt.** Ob der Abend überhaupt eine
+   * Nachbereitung hat, sagt das Häkchen im Bearbeiten-Dialog; wer hier
+   * wegnimmt, nimmt den Text weg, nicht die Frage.
    */
   const removeNotes = async () => {
     const loss = SLOT_LOSSES.hasNotesSlot(meeting);
@@ -490,7 +497,7 @@ function Loaded({
     }
 
     update.mutate(
-      { hasNotesSlot: false },
+      { summaryText: null, actionstepText: null },
       { onSuccess: () => setWritingNotes(false) },
     );
   };
@@ -502,6 +509,15 @@ function Loaded({
     leaders: songLeaders.data ?? [],
     meId: me.me?.id,
   });
+
+  /**
+   * Ein abgesagter Abend ist eine eigene Seite (`CancelledView`): mittig die
+   * Nachricht, oben rechts das Löschen — und sonst nichts, auch kein
+   * „Bearbeiten". Erst hier und nicht oben in `MeetingDetailScreen`, weil die
+   * Hooks davor bei jedem Rendern gleich laufen müssen; wird die Absage
+   * zurückgenommen, steht dieselbe Komponente wieder als Terminseite da.
+   */
+  if (cancelled) return <CancelledView meeting={meeting} />;
 
   return (
     <div className="space-y-6 px-5 pt-safe-4 pb-10">
@@ -519,7 +535,6 @@ function Loaded({
               weiterhin kein Abzeichen — dass er noch kommt, steht schon im
               Datum darüber. */}
           {phase === 'running' && <Badge variant="success">Läuft</Badge>}
-          {cancelled && <Badge variant="alert">Abgesagt</Badge>}
 
           {/* **Oben, wo man ankommt.** Er meint Titel, Uhrzeit, Infos und
               Bausteine zusammen: Angaben derselben Sache, hinter einem Knopf
@@ -593,13 +608,7 @@ function Loaded({
         )}
       </header>
 
-      {/* Direkt unter dem Kopf und außerhalb des gedämpften Teils: das ist die
-          Nachricht der Seite, nicht eine Randnotiz. */}
-      {cancelled && <CancelledNotice meeting={meeting} />}
-
-      {/* Gedämpft, aber nicht versteckt: was an dem Abend geplant war, bleibt
-          lesbar — es ist bloß nichts mehr, worauf man hinarbeitet. */}
-      <div className={cn('space-y-6', cancelled && 'opacity-55')}>
+      <div className="space-y-6">
         {/* **Ganz oben.** Ab Terminbeginn ist das die Hauptsache dieses
             Bildschirms: Wer gerade vom Abend
             heimkommt, soll die Frage sehen, ohne an Uhrzeit, Ort, Rollen,
@@ -622,7 +631,7 @@ function Loaded({
             „Zuständigkeiten". Die drei Zustände stehen in `venue-card.tsx`. */}
         <VenueCard
           meeting={meeting}
-          editable={!cancelled && !reading}
+          editable={!reading}
           showMaps={!reading}
           onChange={() => setChoosingVenue(true)}
         />
@@ -652,9 +661,7 @@ function Loaded({
                   key={slot.role}
                   role={slot.role}
                   people={slot.people}
-                  onEdit={
-                    cancelled || reading ? undefined : () => openRole(slot.role)
-                  }
+                  onEdit={reading ? undefined : () => openRole(slot.role)}
                 />
               ))}
             </div>
@@ -669,7 +676,7 @@ function Loaded({
         {showNotes && (
           <NotesCard
             meeting={meeting}
-            editable={!cancelled && !reading}
+            editable={!reading}
             started={started}
             onEdit={() => setWritingNotes(true)}
           />
@@ -729,25 +736,24 @@ function Loaded({
         <AttendanceCard
           meeting={meeting}
           readOnly={locked}
-          editSelf={past && editMode && !cancelled}
+          editSelf={past && editMode}
         />
 
         {/* Unten am Bildschirm statt hier in der Seite — und nur, solange es
-            etwas zu antworten gibt. An einem vergangenen oder abgesagten Abend
-            steht dort die Tab-Leiste wie überall sonst: Die Navigation
-            aufzugeben lohnt nur, wo etwas Nützlicheres an ihrer Stelle steht. */}
+            etwas zu antworten gibt. An einem vergangenen Abend steht dort der
+            Balken „Bearbeiten". */}
         {!locked && <AnswerBar meeting={meeting} />}
       </div>
 
       {!reading && (
         <>
-          {!cancelled && <CancelMeetingBlock meeting={meeting} past={past} />}
+          <CancelMeetingBlock meeting={meeting} past={past} />
           <DeleteMeetingBlock meeting={meeting} />
         </>
       )}
 
       {/* Nur an einem vergangenen Abend. Am kommenden steht dort der
-          Antwort-Balken, an einem abgesagten kommenden die Tab-Leiste. */}
+          Antwort-Balken. */}
       {past && (
         <EditBar
           editing={editMode}
@@ -771,7 +777,6 @@ function Loaded({
         open={editing}
         meeting={meeting}
         placeholder={meetingKindLabel(meeting)}
-        cancelled={cancelled}
         saving={update.isPending}
         onSave={patch}
         onClose={() => setEditing(false)}

@@ -29,6 +29,7 @@ import { Field, FieldLabel, TextArea, TextInput } from '@/components/ui/field';
 import { Sheet } from '@/components/ui/sheet';
 import { CheckRow } from '@/components/ui/check-row';
 import { SlotToggles } from '@/components/domain/slot-toggles';
+import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { MEETING_SLOT_KEYS, applySlotToggle } from '@/lib/meeting';
 import type { MeetingSlots } from '@/lib/meeting';
 import type { Meeting, UpdateMeetingInput } from '@/lib/api/types';
@@ -50,7 +51,6 @@ export function MeetingEditSheet({
   open,
   meeting,
   placeholder,
-  cancelled,
   saving,
   onSave,
   onClose,
@@ -59,8 +59,6 @@ export function MeetingEditSheet({
   meeting: Meeting;
   /** Der Name, den der Abend ohne eigenen Titel trägt — als Platzhalter. */
   placeholder: string;
-  /** An einem abgesagten Abend gibt es nichts umzubauen. */
-  cancelled: boolean;
   saving: boolean;
   onSave: (input: UpdateMeetingInput) => void;
   onClose: () => void;
@@ -71,6 +69,14 @@ export function MeetingEditSheet({
   const [slots, setSlots] = useState<MeetingSlots>(() => slotsOf(meeting));
   const [special, setSpecial] = useState(meeting.special);
   const confirm = useConfirm();
+  /**
+   * Hat die Gruppe das Testimony abgeschaltet, fehlt der Baustein — außer an
+   * einem Abend, der ihn schon hat (gespeicherter Stand, nicht der Entwurf):
+   * Ein vergangener Testimony-Abend bleibt so lesbar und lässt sich
+   * korrigieren, und wer den Haken herausnimmt, sieht ihn bis zum Speichern.
+   */
+  const testimony = useHauskreis().hauskreis?.features.testimony ?? true;
+  const hideTestimony = !testimony && !meeting.hasTestimonySlot;
 
   /**
    * Beim Öffnen zurück auf den gespeicherten Stand.
@@ -181,26 +187,23 @@ export function MeetingEditSheet({
           />
         </Field>
 
-        {!cancelled && (
-          <CheckRow
-            label="Besonderer Termin"
-            hint="Dann werden alle kurz vorher erinnert, und er steht in der Liste hervorgehoben."
-            checked={special}
-            onChange={setSpecial}
-          />
-        )}
+        <CheckRow
+          label="Besonderer Termin"
+          hint="Dann werden alle kurz vorher erinnert, und er steht in der Liste hervorgehoben."
+          checked={special}
+          onChange={setSpecial}
+        />
 
-        {!cancelled && (
-          <div>
-            <FieldLabel>Was gehört dazu</FieldLabel>
-            <SlotToggles
-              slots={slots}
-              onToggle={(key, value) =>
-                setSlots((current) => applySlotToggle(current, key, value))
-              }
-            />
-          </div>
-        )}
+        <div>
+          <FieldLabel>Was gehört dazu</FieldLabel>
+          <SlotToggles
+            slots={slots}
+            hidden={hideTestimony ? ['hasTestimonySlot'] : undefined}
+            onToggle={(key, value) =>
+              setSlots((current) => applySlotToggle(current, key, value))
+            }
+          />
+        </div>
       </div>
     </Sheet>
   );

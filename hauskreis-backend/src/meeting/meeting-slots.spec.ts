@@ -14,6 +14,7 @@ import {
   EMPTY_SLOTS,
   EVENING_SLOTS,
   PRAISE_SLOTS,
+  assertTestimonyAvailable,
   SLOT_FIELDS,
   type MeetingSlots,
 } from './meeting-slots';
@@ -40,9 +41,12 @@ describe('Die drei Belegungen', () => {
     expect(an(EVENING_SLOTS)).toEqual(['topic', 'song', 'prayer']);
   });
 
-  /** Kein Thema, dafür ein Testimony — oder auch nur Lieder (CLAUDE.md §5). */
+  /**
+   * Kein Thema, dafür ein Testimony — oder auch nur Lieder (CLAUDE.md §5). Und
+   * die Nachbereitung, die am Themenabend die Einheit trägt.
+   */
   it('tauscht beim Lobpreisabend das Thema gegen ein Testimony', () => {
-    expect(an(PRAISE_SLOTS)).toEqual(['song', 'testimony', 'prayer']);
+    expect(an(PRAISE_SLOTS)).toEqual(['song', 'testimony', 'notes', 'prayer']);
   });
 
   /**
@@ -101,15 +105,14 @@ describe('Die drei Belegungen', () => {
   });
 
   /**
-   * Auch am Lobpreisabend, wo sie am naheliegendsten wäre: die Nachbereitung ist
-   * der einzige Baustein, der nichts vorbereitet und niemanden einteilt. Sie
-   * vorzugeben hieße, jeder Gruppe ein leeres Textfeld hinzustellen und daran zu
-   * erinnern, dass sie es nicht gefüllt hat.
+   * Nur dem Lobpreisabend: Am Themenabend trägt die Einheit Zusammenfassung und
+   * Actionstep, und ein von Hand angelegter Abend braucht meistens keine — wer
+   * doch eine will, hakt sie an.
    */
-  it('gibt die Nachbereitung nirgends vor', () => {
-    for (const slots of BELEGUNGEN) {
-      expect(slots.hasNotesSlot).toBe(false);
-    }
+  it('gibt die Nachbereitung nur dem Lobpreisabend vor', () => {
+    expect(EVENING_SLOTS.hasNotesSlot).toBe(false);
+    expect(PRAISE_SLOTS.hasNotesSlot).toBe(true);
+    expect(EMPTY_SLOTS.hasNotesSlot).toBe(false);
   });
 });
 
@@ -313,5 +316,29 @@ describe('assertSlotsExclusive', () => {
   /** Ein Geburtstagsabend hat weder das eine noch das andere. */
   it('lässt einen Abend ohne beides zu', () => {
     expect(() => assertSlotsExclusive(EMPTY_SLOTS)).not.toThrow();
+  });
+});
+
+describe('assertTestimonyAvailable', () => {
+  const ohne = EMPTY_SLOTS;
+  const mit = { ...EMPTY_SLOTS, hasTestimonySlot: true };
+
+  it('lehnt das Anschalten ab, wenn die Gruppe es abgeschaltet hat', () => {
+    expect(() => assertTestimonyAvailable(ohne, mit, false)).toThrow(
+      BadRequestException,
+    );
+  });
+
+  /**
+   * Ein vergangener Abend, der eines hatte, bleibt nachzutragen — was gewesen
+   * ist, schreibt ein Schalter in der Verwaltung nicht um.
+   */
+  it('lässt einen Abend, der es schon hat, in Ruhe', () => {
+    expect(() => assertTestimonyAvailable(mit, mit, false)).not.toThrow();
+    expect(() => assertTestimonyAvailable(mit, ohne, false)).not.toThrow();
+  });
+
+  it('lässt alles zu, solange es an ist', () => {
+    expect(() => assertTestimonyAvailable(ohne, mit, true)).not.toThrow();
   });
 });

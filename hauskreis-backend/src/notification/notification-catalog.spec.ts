@@ -77,6 +77,7 @@ const kontext = (
   activeMembers: 9,
   prayerBuddies: true,
   weeklyActionstep: true,
+  testimony: true,
   ...overrides,
 });
 
@@ -127,6 +128,13 @@ describe('appliesTo', () => {
     expect(regel(kontext({ weeklyActionstep: false }))).toBe(false);
   });
 
+  it('verschweigt das Testimony, wenn die Gruppe es abgeschaltet hat', () => {
+    const regel = regelFuer(NotificationType.TESTIMONY_REMINDER);
+
+    expect(regel(kontext())).toBe(true);
+    expect(regel(kontext({ testimony: false }))).toBe(false);
+  });
+
   /**
    * Der Rest des Katalogs bleibt ungefiltert. `appliesTo` ist die Ausnahme für
    * Schalter, deren Anlass an einer Bedingung hängt — nicht der Normalfall.
@@ -142,6 +150,7 @@ describe('appliesTo', () => {
         NotificationType.PRAYER_BUDDY_ASSIGNED,
         NotificationType.PRAYER_BUDDY_HALFTIME,
         NotificationType.HOST_CAPACITY_UNLOCKED,
+        NotificationType.TESTIMONY_REMINDER,
       ].toSorted(),
     );
   });

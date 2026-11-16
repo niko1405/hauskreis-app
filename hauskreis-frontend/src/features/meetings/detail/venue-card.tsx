@@ -141,7 +141,7 @@ export function VenueCard({
             )}
           >
             <Navigation size={15} />
-            In Google Maps öffnen
+            In Maps öffnen
           </a>
         )}
       </Card>

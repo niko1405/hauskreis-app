@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, SectionTitle } from '@/components/ui/card';
 import { CheckRow } from '@/components/ui/check-row';
+import { useConfirm } from '@/components/ui/confirm';
 import { Field, Select, TextInput } from '@/components/ui/field';
 import { InfoTip } from '@/components/ui/info-tip';
 import { ConflictBanner } from '@/components/ui/states';
@@ -103,11 +104,13 @@ function scheduleOf(current: MeetingSchedule | undefined): Schedule {
     praiseEvenings: current?.praiseEvenings ?? true,
     snackSlot: current?.snackSlot ?? false,
     weeklyActionstep: current?.weeklyActionstep ?? true,
+    testimony: current?.testimony ?? true,
   };
 }
 
 /**
- * Termin-Rhythmus und Actionstep der Woche — zwei Karten, **ein** Entwurf.
+ * Termin-Rhythmus, Actionstep der Woche und Testimony — drei Karten, **ein**
+ * Entwurf.
  *
  * Beide stehen in derselben Zeile am Server (`meeting_schedule_config`), und
  * die schreibt man mit `If-Match`. Zwei Entwürfe wären zwei Schreibvorgänge
@@ -123,6 +126,7 @@ function scheduleOf(current: MeetingSchedule | undefined): Schedule {
 function ScheduleSettings({ between }: { between?: React.ReactNode }) {
   const schedule = useMeetingSchedule();
   const update = useUpdateMeetingSchedule();
+  const confirm = useConfirm();
   const [draft, setDraft] = useState<Schedule | null>(null);
 
   const current = schedule.data?.data;
@@ -143,6 +147,14 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
     : changes;
   // Ein geleertes Uhrzeit-Feld ist kein Fall für den Server.
   const timeMissing = !/^([01]\d|2[0-3]):[0-5]\d$/.test(value.startTime);
+  /**
+   * Das Testimony abschalten räumt auf: Beim Speichern verliert jeder kommende
+   * Abend Baustein und Einteilung. Darauf weist der Satz unter dem Haken hin,
+   * und vor dem Schreiben fragt die App noch einmal — anders als die übrigen
+   * Einstellungen hier lässt sich das nicht mit einem zweiten Haken
+   * rückgängig machen.
+   */
+  const removingTestimony = saved.testimony && !value.testimony;
 
   useAdminDraftSection('schedule', {
     dirty: current !== undefined && changes.length > 0,
@@ -151,6 +163,18 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
         ? 'Beim Termin-Rhythmus fehlt die Uhrzeit.'
         : undefined,
     save: async () => {
+      if (removingTestimony) {
+        const ok = await confirm({
+          title: 'Testimony abschalten?',
+          body: 'Aus allen kommenden Terminen verschwindet das Testimony, samt Einteilung. Vergangene bleiben, wie sie waren. Wieder einschalten gilt nur für neue Termine.',
+          confirmLabel: 'Abschalten',
+          tone: 'danger',
+        });
+        // Abgebrochen heißt: nichts geschrieben, auch nicht der Rest dieses
+        // Entwurfs. Der Balken unten fängt das ab und lässt alles stehen.
+        if (!ok) throw new Error('Testimony abschalten abgebrochen');
+      }
+
       const input: UpdateMeetingScheduleInput = Object.fromEntries(
         sent.map((key) => [key, value[key]]),
       );
@@ -227,8 +251,8 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
                 info={
                   <>
                     Ab dieser Uhrzeit hat ein Abend begonnen: Dann sehen alle
-                    den Inhalt seines Themas, und die Nachbereitung lässt sich
-                    anlegen.
+                    den Inhalt seines Themas, und wo eine Nachbereitung
+                    dazugehört, fragt der Abend danach.
                   </>
                 }
               >
@@ -267,7 +291,11 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
               <div className="space-y-1 border-t border-line pt-3">
                 <CheckRow
                   label="Lobpreis- und Gebetsabende"
-                  hint="Der letzte Termin im Monat bekommt Lieder und Testimony automatisch vorbelegt."
+                  hint={
+                    value.testimony
+                      ? 'Der letzte Termin im Monat bekommt Lieder und Testimony automatisch vorbelegt.'
+                      : 'Der letzte Termin im Monat bekommt statt eines Themas Lieder vorbelegt.'
+                  }
                   info={
                     <>
                       Diese Einstellung hat sich in manchen Gruppen so bewährt,
@@ -324,6 +352,35 @@ function ScheduleSettings({ between }: { between?: React.ReactNode }) {
             checked={value.weeklyActionstep}
             onChange={(next) => set({ weeklyActionstep: next })}
           />
+        </Card>
+      </section>
+
+      {/* Außerhalb des Rhythmus und nicht an „Termine automatisch anlegen"
+          gebunden: Er gilt genauso für die Abende, die ihr von Hand anlegt. */}
+      <section>
+        <SectionTitle>Testimony</SectionTitle>
+        <Card className="space-y-2">
+          <CheckRow
+            label="Testimony als Baustein"
+            hint="Jemand erzählt seine Geschichte mit Gott — statt eines Themas."
+            info={
+              <>
+                Aus heißt: Das Testimony steht nicht mehr beim Anlegen und
+                Bearbeiten eines Termins, nicht in der Planung und nicht im
+                Profil. Kommende Termine verlieren es samt Einteilung;
+                vergangene bleiben, wie sie waren, und zeigen weiter, wer
+                erzählt hat.
+              </>
+            }
+            checked={value.testimony}
+            onChange={(next) => set({ testimony: next })}
+          />
+          {removingTestimony && (
+            <p className="text-xs leading-relaxed font-semibold text-alert">
+              Beim Speichern verschwindet es aus allen kommenden Terminen, samt
+              Einteilung. Vergangene bleiben.
+            </p>
+          )}
         </Card>
       </section>
     </>

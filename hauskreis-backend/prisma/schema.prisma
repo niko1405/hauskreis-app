@@ -524,9 +524,10 @@ model Meeting {
   hasTopicSlot        Boolean              @default(true) @map("has_topic_slot")
   hasSongSlot         Boolean              @default(true) @map("has_song_slot")
   hasTestimonySlot    Boolean              @default(false) @map("has_testimony_slot")
-  /// Zusammenfassung und Actionstep **ohne** Thema. Bei jeder Terminart
-  /// voreingestellt aus: ein Standard-Abend hat sein Thema, und wo keins ist,
-  /// soll die Karte eine Entscheidung sein und keine Vorgabe.
+  /// Zusammenfassung und Actionstep **ohne** Thema. Geplant wie die übrigen:
+  /// Nur wo er an ist, fragt der Abend ab Terminbeginn danach. Von Hand
+  /// angelegte Abende haben ihn nicht, erzeugte ohne Thema (Lobpreisabend)
+  /// schon; neben einem Thema gibt es ihn nie.
   hasNotesSlot        Boolean              @default(false) @map("has_notes_slot")
   /// Wofür die Gruppe an dem Abend beten will — je Person ein Anliegen.
   ///
@@ -1067,6 +1068,19 @@ model MeetingScheduleConfig {
   /// Nur für **neu** erzeugte Termine. Was schon im Kalender steht, ändert man
   /// an ihm selbst — wie beim Lobpreisabend.
   snackSlot         Boolean  @default(false) @map("snack_slot")
+  /// Ob es in dieser Gruppe den Baustein „Testimony" gibt.
+  ///
+  /// Hier, neben dem Actionstep der Woche, und nicht in einer eigenen Tabelle:
+  /// Er sagt etwas über die Art der Abende, wie `praiseEvenings`.
+  ///
+  /// **Anders als die anderen beiden Schalter räumt das Abschalten auf**: An
+  /// allen kommenden Abenden, die noch nicht angefangen haben, fallen Baustein
+  /// und Einteilung weg (`MeetingScheduleConfigService.updateConfig`). Eine
+  /// Einteilung für eine Rolle, die es nicht mehr gibt, wäre eine falsche
+  /// Aussage — sie stünde auf „Heute" und liefe in Erinnerungen. Vergangene
+  /// bleiben, wie sie waren. Wieder einschalten stellt nichts wieder her; es
+  /// gilt für neue Abende.
+  testimony         Boolean  @default(true)
   updatedByPersonId String?  @map("updated_by_person_id") @db.Uuid
   updatedAt         DateTime @updatedAt @map("updated_at")
   /// Optimistic locking counter, see docs/conditional requests.

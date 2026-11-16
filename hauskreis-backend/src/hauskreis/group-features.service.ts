@@ -4,9 +4,10 @@ import { PrismaService } from '../prisma/prisma.service';
 /**
  * Welche Bausteine eine Gruppe überhaupt benutzt.
  *
- * **Warum es diesen Dienst gibt.** Die beiden Schalter stehen bei ihrer eigenen
- * Einstellung — `prayer_buddy_cycle_config.enabled` und
- * `meeting_schedule_config.weekly_actionstep` —, gefragt wird aber überall:
+ * **Warum es diesen Dienst gibt.** Die Schalter stehen bei ihrer eigenen
+ * Einstellung — `prayer_buddy_cycle_config.enabled`,
+ * `meeting_schedule_config.weekly_actionstep` und `…testimony` —, gefragt wird
+ * aber überall:
  * vom Startbildschirm, von den nächtlichen Läufen, von der
  * Benachrichtigungsliste und vom Hauskreis selbst. Jede dieser Stellen an den
  * jeweiligen Fachdienst zu hängen zöge den Modulgraphen zu Kreisen zusammen
@@ -29,7 +30,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class GroupFeaturesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Beide Schalter in einer Runde — für alle, die ohnehin beide brauchen. */
+  /** Alle Schalter in einer Runde — für alle, die ohnehin mehrere brauchen. */
   async of(hauskreisId: string): Promise<GroupFeatures> {
     const [prayer, schedule] = await Promise.all([
       this.prisma.prayerBuddyCycleConfig.findUnique({
@@ -38,13 +39,14 @@ export class GroupFeaturesService {
       }),
       this.prisma.meetingScheduleConfig.findUnique({
         where: { hauskreisId },
-        select: { weeklyActionstep: true },
+        select: { weeklyActionstep: true, testimony: true },
       }),
     ]);
 
     return {
       prayerBuddies: prayer?.enabled ?? true,
       weeklyActionstep: schedule?.weeklyActionstep ?? true,
+      testimony: schedule?.testimony ?? true,
     };
   }
 
@@ -65,12 +67,22 @@ export class GroupFeaturesService {
 
     return row?.weeklyActionstep ?? true;
   }
+
+  async testimony(hauskreisId: string): Promise<boolean> {
+    const row = await this.prisma.meetingScheduleConfig.findUnique({
+      where: { hauskreisId },
+      select: { testimony: true },
+    });
+
+    return row?.testimony ?? true;
+  }
 }
 
 /** Was eine Gruppe benutzt — die Antwort, die auch im Frontend ankommt. */
 export interface GroupFeatures {
   prayerBuddies: boolean;
   weeklyActionstep: boolean;
+  testimony: boolean;
 }
 
 /**
