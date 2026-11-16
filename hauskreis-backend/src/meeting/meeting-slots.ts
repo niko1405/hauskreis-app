@@ -275,3 +275,24 @@ export function assertSlotsExclusive(slots: MeetingSlots): void {
     );
   }
 }
+
+/**
+ * Das Testimony gibt es nur, solange die Gruppe es hat
+ * (`meeting_schedule_config.testimony`).
+ *
+ * Nur der Übergang **aus → an** wird geprüft, wie beim Anlegen (dort ist
+ * `before` die leere Belegung): Ein vergangener Abend, der eines hatte, bleibt
+ * lesbar, nachzutragen und abzuschalten — was gewesen ist, schreibt ein
+ * Schalter in der Verwaltung nicht um.
+ */
+export function assertTestimonyAvailable(
+  before: MeetingSlots,
+  after: MeetingSlots,
+  enabled: boolean,
+): void {
+  if (enabled || before.hasTestimonySlot || !after.hasTestimonySlot) return;
+
+  throw new BadRequestException(
+    'Testimony ist in eurer Gruppe abgeschaltet — in der Verwaltung lässt es sich wieder einschalten',
+  );
+}

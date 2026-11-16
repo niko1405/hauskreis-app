@@ -217,6 +217,9 @@ export class MeetingGeneratorService {
           // beiden. Was darüber entscheidet, ist allein die Einstellung der
           // Gruppe, und die steht voreingestellt auf aus.
           hasSnackSlot: rhythm.snackSlot,
+          // Und das Testimony nur, solange die Gruppe es hat: Abgeschaltet ist
+          // ein Lobpreisabend Lieder, Gebet und Nachbereitung.
+          hasTestimonySlot: praise && rhythm.testimony,
         };
       }),
       // Belt and braces against a concurrent run: the unique index on

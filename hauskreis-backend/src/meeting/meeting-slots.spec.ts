@@ -14,6 +14,7 @@ import {
   EMPTY_SLOTS,
   EVENING_SLOTS,
   PRAISE_SLOTS,
+  assertTestimonyAvailable,
   SLOT_FIELDS,
   type MeetingSlots,
 } from './meeting-slots';
@@ -315,5 +316,29 @@ describe('assertSlotsExclusive', () => {
   /** Ein Geburtstagsabend hat weder das eine noch das andere. */
   it('lässt einen Abend ohne beides zu', () => {
     expect(() => assertSlotsExclusive(EMPTY_SLOTS)).not.toThrow();
+  });
+});
+
+describe('assertTestimonyAvailable', () => {
+  const ohne = EMPTY_SLOTS;
+  const mit = { ...EMPTY_SLOTS, hasTestimonySlot: true };
+
+  it('lehnt das Anschalten ab, wenn die Gruppe es abgeschaltet hat', () => {
+    expect(() => assertTestimonyAvailable(ohne, mit, false)).toThrow(
+      BadRequestException,
+    );
+  });
+
+  /**
+   * Ein vergangener Abend, der eines hatte, bleibt nachzutragen — was gewesen
+   * ist, schreibt ein Schalter in der Verwaltung nicht um.
+   */
+  it('lässt einen Abend, der es schon hat, in Ruhe', () => {
+    expect(() => assertTestimonyAvailable(mit, mit, false)).not.toThrow();
+    expect(() => assertTestimonyAvailable(mit, ohne, false)).not.toThrow();
+  });
+
+  it('lässt alles zu, solange es an ist', () => {
+    expect(() => assertTestimonyAvailable(ohne, mit, true)).not.toThrow();
   });
 });

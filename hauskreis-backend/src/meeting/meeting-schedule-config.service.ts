@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { updateWithVersionCheck } from '../common/http/optimistic-update';
 import { touchHauskreis } from '../hauskreis/hauskreis-version';
 import type { IfMatchCondition } from '../common/http/etag';
-import { EVENING_HOUR } from '../common/time/local-evening';
+import { EVENING_HOUR, eveningReached } from '../common/time/local-evening';
 import { GroupClockService } from './group-clock.service';
 import type { UpdateMeetingScheduleDto } from './dto/meeting.dto';
 
@@ -29,6 +29,8 @@ export interface MeetingRhythm {
   praiseEvenings: boolean;
   /** Ob erzeugte Termine den Baustein „Snacks" schon mitbringen. */
   snackSlot: boolean;
+  /** Ob es den Baustein „Testimony" in der Gruppe gibt. */
+  testimony: boolean;
 }
 
 const configInclude = {
@@ -87,6 +89,7 @@ export class MeetingScheduleConfigService {
         startMinutes: true,
         praiseEvenings: true,
         snackSlot: true,
+        testimony: true,
       },
     });
 
@@ -103,6 +106,7 @@ export class MeetingScheduleConfigService {
         praiseEvenings: true,
         // Als einziger aus: Snacks sind eine Einladung und kein Abschalten.
         snackSlot: false,
+        testimony: true,
       }
     );
   }
@@ -120,6 +124,7 @@ export class MeetingScheduleConfigService {
     dto: UpdateMeetingScheduleDto,
     updatedByPersonId: string | null,
     condition?: IfMatchCondition,
+    now: Date = new Date(),
   ) {
     const before = await this.getConfig(hauskreisId);
 
@@ -142,6 +147,7 @@ export class MeetingScheduleConfigService {
             weeklyActionstep: dto.weeklyActionstep,
             praiseEvenings: dto.praiseEvenings,
             snackSlot: dto.snackSlot,
+            testimony: dto.testimony,
             updatedByPersonId,
             version: { increment: 1 },
           },
@@ -154,15 +160,69 @@ export class MeetingScheduleConfigService {
       notFoundMessage: `No meeting schedule for Hauskreis ${hauskreisId}`,
     });
 
-    // Der Schalter steht als `features` auch in der Antwort des Hauskreises.
-    if (
-      dto.weeklyActionstep !== undefined &&
-      dto.weeklyActionstep !== before.weeklyActionstep
-    ) {
+    // Die Schalter stehen als `features` auch in der Antwort des Hauskreises.
+    const flipped = (key: 'weeklyActionstep' | 'testimony') =>
+      dto[key] !== undefined && dto[key] !== before[key];
+
+    if (flipped('testimony') && dto.testimony === false) {
+      await this.removeUpcomingTestimonies(hauskreisId, now);
+    }
+
+    if (flipped('weeklyActionstep') || flipped('testimony')) {
       await touchHauskreis(this.prisma, hauskreisId);
     }
 
     return updated;
+  }
+
+  /**
+   * Nimmt das Testimony von allen Abenden, die noch kommen — samt Einteilung.
+   *
+   * „Kommend" heißt hier **noch nicht angefangen**, nicht bloß „heute oder
+   * später": Ein Abend, der gerade läuft, wird schon gehalten, und was an ihm
+   * steht, gehört wie die vergangenen zur Geschichte der Gruppe. Deshalb erst
+   * nach Tag eingegrenzt und dann an der Treffpunktzeit geprüft — die Zahl der
+   * Kandidaten ist klein (die erzeugten reichen sieben Termine weit).
+   *
+   * Auch abgesagte: Wird die Absage zurückgenommen, stünde sonst eine Rolle
+   * da, die es nicht mehr gibt. Eine Nachricht geht nicht raus — das ist eine
+   * Entscheidung der Verwaltung, kein Umbau eines einzelnen Abends. Zusagen,
+   * die mit der Rolle kamen, bleiben: Wer aus einer Rolle fällt, behält seine
+   * Zusage.
+   */
+  private async removeUpcomingTestimonies(
+    hauskreisId: string,
+    now: Date,
+  ): Promise<number> {
+    const [today, zone] = await Promise.all([
+      this.clock.today(hauskreisId, now),
+      this.clock.zoneOf(hauskreisId),
+    ]);
+
+    const candidates = await this.prisma.meeting.findMany({
+      where: { hauskreisId, hasTestimonySlot: true, date: { gte: today } },
+      select: { id: true, date: true, startMinutes: true },
+    });
+
+    const ids = candidates
+      .filter(
+        (meeting) =>
+          !eveningReached(meeting.date, zone, now, meeting.startMinutes),
+      )
+      .map((meeting) => meeting.id);
+
+    if (ids.length === 0) return 0;
+
+    const { count } = await this.prisma.meeting.updateMany({
+      where: { id: { in: ids } },
+      data: {
+        hasTestimonySlot: false,
+        testimonyPersonId: null,
+        version: { increment: 1 },
+      },
+    });
+
+    return count;
   }
 }
 

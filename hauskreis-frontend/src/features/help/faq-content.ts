@@ -62,6 +62,13 @@ export interface FaqEntry {
    * beschriebe etwas, das es dort nicht gibt.
    */
   requiresIdp?: string;
+  /**
+   * Nur, wenn die Gruppe diesen Baustein hat. Eine Antwort über das Testimony
+   * in einer Gruppe, die es abgeschaltet hat, beschriebe etwas, das es dort
+   * nicht gibt — dieselbe Überlegung wie bei den Gebetsbuddys, die ihre ganze
+   * Kategorie mitnehmen.
+   */
+  requiresFeature?: 'testimony';
   /** Wonach jemand sucht, ohne dass es im Text vorkommt. */
   keywords?: string[];
 }
@@ -237,6 +244,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
   {
     id: 'meetings-ausschluss',
     category: 'meetings',
+    requiresFeature: 'testimony',
     question: 'Warum kann ich Thema und Testimony nicht zusammen anhaken?',
     answer:
       'Weil ein Abend das eine oder das andere trägt. Beides zusammen wäre zu viel für einen Abend, und die App will euch das nicht erst am Abend selbst merken lassen.\n\nDasselbe gilt für **Thema und Nachbereitung**: Wo es ein Thema gibt, gehören Zusammenfassung und Actionstep an dessen Einheit — sonst gäbe es beides zweimal.\n\n**Testimony und Nachbereitung zusammen sind dagegen erlaubt** — das ist genau der Lobpreisabend, an dem jemand seine Geschichte erzählt und die Gruppe etwas mitnimmt.\n\nDie App nimmt dir das Nachdenken ab: Hakst du Thema an, gehen Testimony und Nachbereitung von selbst weg, und umgekehrt.',
@@ -309,6 +317,7 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
   {
     id: 'meetings-testimony-einmal',
     category: 'meetings',
+    requiresFeature: 'testimony',
     question: 'Warum werde ich fürs Testimony nicht vorgeschlagen?',
     answer:
       'Weil man sein Testimony einmal erzählt. Wer dran war, steht nicht mehr in den Vorschlägen — und zwischen allen anderen entscheidet nur, wer an dem Abend am wenigsten zu tun hat. „Wer war am längsten nicht dran" ergibt hier keinen Sinn: Von denen, die noch dastehen, war niemand je dran.\n\nDie App zählt dazu die Abende, die sie selbst kennt. Warst du **vorher** schon dran — der Hauskreis ist ja älter als die App —, schalte im Profil **„Mein Testimony habe ich schon erzählt"** ein.\n\nEintragen lässt sich trotzdem jede:r. Wer ein zweites erzählen will, darf; unter der Rangliste stehen die anderen mit genau diesem Hinweis.\n\nEin Testimony, für das du an einem **kommenden** Abend schon eingeteilt bist, nimmt dich nicht heraus — es zählt wie jede andere Aufgabe und rutscht dich nur nach unten. Wirst du trotzdem für den früheren Abend eingetragen, zieht die Rolle mit dir um: Der andere Abend ist danach wieder offen.',
@@ -1205,6 +1214,21 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
     answer:
       'Er entscheidet, ob der Vorsatz vom letzten Abend die Woche über auf **„Heute"** steht und ob die wöchentliche Erinnerung daran kommt.\n\n**Aus** heißt: keine Karte auf „Heute", keine Erinnerung, und die Benachrichtigungsart verschwindet aus den Einstellungen. Zusammenfassung und Actionstep am Abend bzw. an der Einheit bleiben, und wenn dort einer eingetragen wird, bekommen die anderen weiterhin Bescheid.',
     keywords: ['actionstep', 'woche', 'heute', 'ausschalten', 'vorsatz'],
+  },
+  {
+    id: 'admin-testimony',
+    category: 'admin',
+    adminOnly: true,
+    question: 'Kann man das Testimony abschalten?',
+    answer:
+      'Ja, in der Verwaltung unter **„Testimony"**. Nicht jede Gruppe hat diesen Teil des Abends.\n\n**Aus** heißt: Das Testimony steht nicht mehr beim Anlegen und Bearbeiten eines Termins, nicht in der Planung und nicht im Profil, und der Lobpreisabend am Monatsende bekommt nur noch Lieder. Die Erinnerung dazu verschwindet aus den Benachrichtigungen.\n\n**Beim Abschalten** verlieren alle kommenden Termine das Testimony, samt Einteilung — darauf weist die App vor dem Speichern hin. Vergangene bleiben, wie sie waren, und zeigen weiter, wer erzählt hat.\n\n**Wieder einschalten** gilt für neue Termine. Was beim Abschalten weggefallen ist, kommt nicht zurück.',
+    keywords: [
+      'testimony',
+      'abschalten',
+      'ausschalten',
+      'erzählen',
+      'lobpreis',
+    ],
   },
   {
     id: 'admin-rhythmus',

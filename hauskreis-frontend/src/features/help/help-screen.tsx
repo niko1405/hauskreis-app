@@ -70,6 +70,7 @@ export function HelpScreen() {
   // etwas, das es hier nicht gibt. Die leere Kategorie fällt gleich darunter
   // von selbst weg.
   const prayer = hauskreis?.features.prayerBuddies ?? true;
+  const testimony = hauskreis?.features.testimony ?? true;
 
   const visible = useMemo(
     () =>
@@ -77,9 +78,10 @@ export function HelpScreen() {
         (entry) =>
           (isAdmin || !entry.adminOnly) &&
           (prayer || entry.category !== 'prayer') &&
+          (testimony || entry.requiresFeature !== 'testimony') &&
           fitsIdentityProviders(entry, IDENTITY_PROVIDERS),
       ),
-    [isAdmin, prayer],
+    [isAdmin, prayer, testimony],
   );
 
   // Eine Kategorie, von der nichts übrig ist, hat auch keine Pille verdient.

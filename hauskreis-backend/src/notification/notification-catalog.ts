@@ -48,6 +48,8 @@ export interface NotificationContext {
   prayerBuddies: boolean;
   /** Ob der Actionstep der Woche auf dem Startbildschirm steht. */
   weeklyActionstep: boolean;
+  /** Ob es in der Gruppe den Baustein „Testimony" gibt. */
+  testimony: boolean;
 }
 
 /**
@@ -134,6 +136,9 @@ export const NOTIFICATION_CATALOG: readonly NotificationDefinition[] = [
   {
     type: NotificationType.TESTIMONY_REMINDER,
     category: 'Deine Rollen',
+    // Hat die Gruppe das Testimony abgeschaltet, gibt es hier nichts
+    // einzustellen — beim Abschalten fielen alle kommenden Einteilungen weg.
+    appliesTo: (context) => context.testimony,
     label: 'Du erzählst dein Testimony',
     description:
       'Erinnerung, bevor du an einem Lobpreis- und Gebetsabend deine Geschichte erzählst.',

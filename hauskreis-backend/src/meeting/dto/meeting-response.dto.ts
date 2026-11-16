@@ -208,6 +208,8 @@ export const meetingScheduleSchema = z.object({
   praiseEvenings: z.boolean(),
   /// Ob erzeugte Termine den Baustein „Snacks" schon mitbringen.
   snackSlot: z.boolean(),
+  /// Ob es den Baustein „Testimony" in dieser Gruppe gibt.
+  testimony: z.boolean(),
   updatedByPersonId: z.uuid().nullable(),
   updatedAt: isoDateTimeOut,
   version: z.number().int().nonnegative(),

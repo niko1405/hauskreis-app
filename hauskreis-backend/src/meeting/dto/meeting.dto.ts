@@ -199,6 +199,11 @@ export const updateMeetingScheduleSchema = z
     /// eine Einladung, und wer sie nicht will, soll sie nicht abschalten
     /// müssen.
     snackSlot: z.boolean().optional(),
+    /// Ob es den Baustein „Testimony" überhaupt gibt.
+    ///
+    /// Abschalten nimmt ihn samt Einteilung von allen kommenden Abenden, die
+    /// noch nicht angefangen haben; vergangene bleiben.
+    testimony: z.boolean().optional(),
   })
   .refine(
     (dto) =>

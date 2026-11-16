@@ -59,6 +59,7 @@ import {
 } from '@/lib/meeting';
 import { cn } from '@/lib/cn';
 import type { MeetingListItem, PersonRef } from '@/lib/api/types';
+import { useHauskreis } from '@/lib/hauskreis/hauskreis-context';
 import { useRoleAssignment } from './detail/use-role-assignment';
 
 /*
@@ -155,6 +156,16 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
   const to = addDays(from, weeks * 7);
   const query = useMeetingList({ scope: 'upcoming', from, to, take: 100 });
 
+  /**
+   * Die Spalten — ohne Testimony, wenn die Gruppe es abgeschaltet hat. Die
+   * Tabelle zeigt nur Kommende, und dort hat das Abschalten es abgeräumt; eine
+   * Spalte mit lauter Strichen wäre nur Platz, der den übrigen fehlt.
+   */
+  const testimony = useHauskreis().hauskreis?.features.testimony ?? true;
+  const columns = MEETING_ROLE_ORDER.filter(
+    (role) => testimony || role !== 'TESTIMONY',
+  );
+
   /** `false` heißt „Alle Spalten" — die Vorgabe. */
   const [zoom, setZoom] = useState(false);
   const [editing, setEditing] = useState<{
@@ -221,7 +232,7 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
             {!zoom && (
               <colgroup>
                 <col className="w-[5.25rem]" />
-                {MEETING_ROLE_ORDER.map((role) => (
+                {columns.map((role) => (
                   <col key={role} />
                 ))}
               </colgroup>
@@ -241,7 +252,7 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
                 </th>
                 {/* Aus derselben Aufstellung wie die Zellen darunter — warum,
                     steht bei `MEETING_ROLE_ORDER`. */}
-                {MEETING_ROLE_ORDER.map((role) => (
+                {columns.map((role) => (
                   <th
                     key={role}
                     scope="col"
@@ -265,6 +276,7 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
                 <Row
                   key={meeting.id}
                   meeting={meeting}
+                  columns={columns}
                   zoom={zoom}
                   onEdit={(role) => setEditing({ meetingId: meeting.id, role })}
                 />
@@ -287,10 +299,13 @@ export function AssignmentTable({ weeks = 8 }: { weeks?: number }) {
 
 function Row({
   meeting,
+  columns,
   zoom,
   onEdit,
 }: {
   meeting: MeetingListItem;
+  /** Welche Spalten die Tabelle zeigt — dieselben wie im Kopf. */
+  columns: readonly Column[];
   zoom: boolean;
   onEdit: (role: Column) => void;
 }) {
@@ -306,7 +321,9 @@ function Row({
   // Dieselbe Aufstellung, die auch die Zuständigkeiten am Termin zeichnen und
   // `planningComplete` prüft — zwei Antworten auf „welche Rollen hat dieser
   // Abend" liefen irgendwann auseinander.
-  const cells: Cell[] = meetingRoles(meeting);
+  const cells: Cell[] = meetingRoles(meeting).filter((cell) =>
+    columns.includes(cell.role),
+  );
 
   return (
     <tr

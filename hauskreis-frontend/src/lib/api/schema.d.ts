@@ -1742,6 +1742,7 @@ export interface components {
       features: {
         prayerBuddies: boolean;
         weeklyActionstep: boolean;
+        testimony: boolean;
       };
       /** Format: date-time */
       photoUpdatedAt: string | null;
@@ -1757,6 +1758,7 @@ export interface components {
       features: {
         prayerBuddies: boolean;
         weeklyActionstep: boolean;
+        testimony: boolean;
       };
       /** Format: date-time */
       photoUpdatedAt: string | null;
@@ -3098,6 +3100,7 @@ export interface components {
       weeklyActionstep: boolean;
       praiseEvenings: boolean;
       snackSlot: boolean;
+      testimony: boolean;
       /** Format: uuid */
       updatedByPersonId: string | null;
       /** Format: date-time */
@@ -3120,6 +3123,7 @@ export interface components {
       weeklyActionstep?: boolean;
       praiseEvenings?: boolean;
       snackSlot?: boolean;
+      testimony?: boolean;
     };
     MeetingResponseDto: {
       /** Format: uuid */

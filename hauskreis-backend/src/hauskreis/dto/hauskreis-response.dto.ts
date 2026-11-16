@@ -30,6 +30,7 @@ export const hauskreisResponseSchema = z.object({
   features: z.object({
     prayerBuddies: z.boolean(),
     weeklyActionstep: z.boolean(),
+    testimony: z.boolean(),
   }),
   /// Wann das Gruppenbild zuletzt gesetzt wurde; `null` heißt „keins".
   ///

@@ -308,19 +308,23 @@ function Loaded({ personId }: { personId: string }) {
 
             {/* Steht als Letztes, weil man es genau einmal anfasst: Ein
                 Testimony erzählt man einmal, und wer es hier erzählt hat, ist
-                ohnehin raus — dieser Schalter ist für alles davor. */}
-            <SwitchRow
-              className="py-3.5"
-              icon={<Mic size={17} />}
-              label="Mein Testimony habe ich schon erzählt"
-              description={
-                flag('testimonyToldBefore')
-                  ? 'Die App schlägt dich fürs Testimony nicht mehr vor.'
-                  : 'Du stehst bei Testimony zur Wahl.'
-              }
-              checked={flag('testimonyToldBefore')}
-              onChange={toggle('testimonyToldBefore')}
-            />
+                ohnehin raus — dieser Schalter ist für alles davor. Hat die
+                Gruppe das Testimony abgeschaltet, fehlt er: Er beantwortete
+                eine Frage, die niemand mehr stellt. Gespeichert bleibt er. */}
+            {(hauskreis.hauskreis?.features.testimony ?? true) && (
+              <SwitchRow
+                className="py-3.5"
+                icon={<Mic size={17} />}
+                label="Mein Testimony habe ich schon erzählt"
+                description={
+                  flag('testimonyToldBefore')
+                    ? 'Die App schlägt dich fürs Testimony nicht mehr vor.'
+                    : 'Du stehst bei Testimony zur Wahl.'
+                }
+                checked={flag('testimonyToldBefore')}
+                onChange={toggle('testimonyToldBefore')}
+              />
+            )}
           </Card>
         </section>
 

@@ -52,6 +52,7 @@ import { touchMeeting } from './meeting-version';
 import {
   assertSlotsAllow,
   assertSlotsExclusive,
+  assertTestimonyAvailable,
   clearedByTurningOff,
   resolveSlots,
   EMPTY_SLOTS,
@@ -231,6 +232,7 @@ export class MeetingService {
     const rhythm = await this.schedule.getRhythm(hauskreisId);
     const startMinutes = dto.startTime ?? rhythm.startMinutes;
     const special = dto.special ?? rhythm.autoGenerate;
+    assertTestimonyAvailable(EMPTY_SLOTS, slots, rhythm.testimony);
 
     const venue = await this.resolveVenue(hauskreisId, dto, {
       hostPersonId: null,
@@ -308,6 +310,12 @@ export class MeetingService {
     const slots = resolveSlots(before, dto);
     assertSlotsAllow(slots, dto);
     assertSlotsExclusive(slots);
+    // Nur beim Anschalten gefragt: Ein Abend, der den Baustein schon hat — ein
+    // vergangener vor allem —, bleibt nachzutragen und abzuschalten.
+    if (!before.hasTestimonySlot && slots.hasTestimonySlot) {
+      const rhythm = await this.schedule.getRhythm(hauskreisId);
+      assertTestimonyAvailable(before, slots, rhythm.testimony);
+    }
     const cleared = clearedByTurningOff(before, slots);
 
     const endDate =

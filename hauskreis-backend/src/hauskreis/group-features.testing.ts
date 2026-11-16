@@ -26,6 +26,7 @@ export function testFeatures(
   const features: GroupFeatures = {
     prayerBuddies: true,
     weeklyActionstep: true,
+    testimony: true,
     ...overrides,
   };
 
@@ -33,5 +34,6 @@ export function testFeatures(
     of: () => Promise.resolve(features),
     prayerBuddies: () => Promise.resolve(features.prayerBuddies),
     weeklyActionstep: () => Promise.resolve(features.weeklyActionstep),
+    testimony: () => Promise.resolve(features.testimony),
   } as unknown as GroupFeaturesService;
 }

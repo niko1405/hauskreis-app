@@ -13003,11 +13003,15 @@
                 },
                 "weeklyActionstep": {
                   "type": "boolean"
+                },
+                "testimony": {
+                  "type": "boolean"
                 }
               },
               "required": [
                 "prayerBuddies",
-                "weeklyActionstep"
+                "weeklyActionstep",
+                "testimony"
               ],
               "additionalProperties": false
             },
@@ -13063,11 +13067,15 @@
               },
               "weeklyActionstep": {
                 "type": "boolean"
+              },
+              "testimony": {
+                "type": "boolean"
               }
             },
             "required": [
               "prayerBuddies",
-              "weeklyActionstep"
+              "weeklyActionstep",
+              "testimony"
             ],
             "additionalProperties": false
           },
@@ -18035,6 +18043,9 @@
           "snackSlot": {
             "type": "boolean"
           },
+          "testimony": {
+            "type": "boolean"
+          },
           "updatedByPersonId": {
             "type": "string",
             "format": "uuid",
@@ -18089,6 +18100,7 @@
           "weeklyActionstep",
           "praiseEvenings",
           "snackSlot",
+          "testimony",
           "updatedByPersonId",
           "updatedAt",
           "version",
@@ -18126,6 +18138,9 @@
             "type": "boolean"
           },
           "snackSlot": {
+            "type": "boolean"
+          },
+          "testimony": {
             "type": "boolean"
           }
         }
