@@ -47,7 +47,6 @@ import {
   ConflictBanner,
   ErrorState,
 } from '@/components/ui/states';
-import { cn } from '@/lib/cn';
 import { markBackNavigation } from '@/lib/page-transition';
 import { shortName } from '@/lib/person';
 import {
@@ -80,7 +79,7 @@ import type { AssignmentRole, PersonRef } from '@/lib/api/types';
 import { AnswerBar } from './answer-bar';
 import { AttendanceCard } from './attendance-card';
 import {
-  CancelledNotice,
+  CancelledView,
   CancelMeetingBlock,
   DeleteMeetingBlock,
 } from './cancellation-card';
@@ -503,6 +502,15 @@ function Loaded({
     meId: me.me?.id,
   });
 
+  /**
+   * Ein abgesagter Abend ist eine eigene Seite (`CancelledView`): mittig die
+   * Nachricht, oben rechts das Löschen — und sonst nichts, auch kein
+   * „Bearbeiten". Erst hier und nicht oben in `MeetingDetailScreen`, weil die
+   * Hooks davor bei jedem Rendern gleich laufen müssen; wird die Absage
+   * zurückgenommen, steht dieselbe Komponente wieder als Terminseite da.
+   */
+  if (cancelled) return <CancelledView meeting={meeting} />;
+
   return (
     <div className="space-y-6 px-5 pt-safe-4 pb-10">
       <div className="flex items-center justify-between gap-2">
@@ -519,7 +527,6 @@ function Loaded({
               weiterhin kein Abzeichen — dass er noch kommt, steht schon im
               Datum darüber. */}
           {phase === 'running' && <Badge variant="success">Läuft</Badge>}
-          {cancelled && <Badge variant="alert">Abgesagt</Badge>}
 
           {/* **Oben, wo man ankommt.** Er meint Titel, Uhrzeit, Infos und
               Bausteine zusammen: Angaben derselben Sache, hinter einem Knopf
@@ -593,13 +600,7 @@ function Loaded({
         )}
       </header>
 
-      {/* Direkt unter dem Kopf und außerhalb des gedämpften Teils: das ist die
-          Nachricht der Seite, nicht eine Randnotiz. */}
-      {cancelled && <CancelledNotice meeting={meeting} />}
-
-      {/* Gedämpft, aber nicht versteckt: was an dem Abend geplant war, bleibt
-          lesbar — es ist bloß nichts mehr, worauf man hinarbeitet. */}
-      <div className={cn('space-y-6', cancelled && 'opacity-55')}>
+      <div className="space-y-6">
         {/* **Ganz oben.** Ab Terminbeginn ist das die Hauptsache dieses
             Bildschirms: Wer gerade vom Abend
             heimkommt, soll die Frage sehen, ohne an Uhrzeit, Ort, Rollen,
@@ -622,7 +623,7 @@ function Loaded({
             „Zuständigkeiten". Die drei Zustände stehen in `venue-card.tsx`. */}
         <VenueCard
           meeting={meeting}
-          editable={!cancelled && !reading}
+          editable={!reading}
           showMaps={!reading}
           onChange={() => setChoosingVenue(true)}
         />
@@ -652,9 +653,7 @@ function Loaded({
                   key={slot.role}
                   role={slot.role}
                   people={slot.people}
-                  onEdit={
-                    cancelled || reading ? undefined : () => openRole(slot.role)
-                  }
+                  onEdit={reading ? undefined : () => openRole(slot.role)}
                 />
               ))}
             </div>
@@ -669,7 +668,7 @@ function Loaded({
         {showNotes && (
           <NotesCard
             meeting={meeting}
-            editable={!cancelled && !reading}
+            editable={!reading}
             started={started}
             onEdit={() => setWritingNotes(true)}
           />
@@ -729,25 +728,24 @@ function Loaded({
         <AttendanceCard
           meeting={meeting}
           readOnly={locked}
-          editSelf={past && editMode && !cancelled}
+          editSelf={past && editMode}
         />
 
         {/* Unten am Bildschirm statt hier in der Seite — und nur, solange es
-            etwas zu antworten gibt. An einem vergangenen oder abgesagten Abend
-            steht dort die Tab-Leiste wie überall sonst: Die Navigation
-            aufzugeben lohnt nur, wo etwas Nützlicheres an ihrer Stelle steht. */}
+            etwas zu antworten gibt. An einem vergangenen Abend steht dort der
+            Balken „Bearbeiten". */}
         {!locked && <AnswerBar meeting={meeting} />}
       </div>
 
       {!reading && (
         <>
-          {!cancelled && <CancelMeetingBlock meeting={meeting} past={past} />}
+          <CancelMeetingBlock meeting={meeting} past={past} />
           <DeleteMeetingBlock meeting={meeting} />
         </>
       )}
 
       {/* Nur an einem vergangenen Abend. Am kommenden steht dort der
-          Antwort-Balken, an einem abgesagten kommenden die Tab-Leiste. */}
+          Antwort-Balken. */}
       {past && (
         <EditBar
           editing={editMode}
@@ -771,7 +769,6 @@ function Loaded({
         open={editing}
         meeting={meeting}
         placeholder={meetingKindLabel(meeting)}
-        cancelled={cancelled}
         saving={update.isPending}
         onSave={patch}
         onClose={() => setEditing(false)}

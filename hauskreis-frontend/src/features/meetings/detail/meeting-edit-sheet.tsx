@@ -50,7 +50,6 @@ export function MeetingEditSheet({
   open,
   meeting,
   placeholder,
-  cancelled,
   saving,
   onSave,
   onClose,
@@ -59,8 +58,6 @@ export function MeetingEditSheet({
   meeting: Meeting;
   /** Der Name, den der Abend ohne eigenen Titel trägt — als Platzhalter. */
   placeholder: string;
-  /** An einem abgesagten Abend gibt es nichts umzubauen. */
-  cancelled: boolean;
   saving: boolean;
   onSave: (input: UpdateMeetingInput) => void;
   onClose: () => void;
@@ -181,26 +178,22 @@ export function MeetingEditSheet({
           />
         </Field>
 
-        {!cancelled && (
-          <CheckRow
-            label="Besonderer Termin"
-            hint="Dann werden alle kurz vorher erinnert, und er steht in der Liste hervorgehoben."
-            checked={special}
-            onChange={setSpecial}
-          />
-        )}
+        <CheckRow
+          label="Besonderer Termin"
+          hint="Dann werden alle kurz vorher erinnert, und er steht in der Liste hervorgehoben."
+          checked={special}
+          onChange={setSpecial}
+        />
 
-        {!cancelled && (
-          <div>
-            <FieldLabel>Was gehört dazu</FieldLabel>
-            <SlotToggles
-              slots={slots}
-              onToggle={(key, value) =>
-                setSlots((current) => applySlotToggle(current, key, value))
-              }
-            />
-          </div>
-        )}
+        <div>
+          <FieldLabel>Was gehört dazu</FieldLabel>
+          <SlotToggles
+            slots={slots}
+            onToggle={(key, value) =>
+              setSlots((current) => applySlotToggle(current, key, value))
+            }
+          />
+        </div>
       </div>
     </Sheet>
   );
